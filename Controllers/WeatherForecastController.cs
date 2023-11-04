@@ -18,6 +18,10 @@ namespace PowerLmsServer.Controllers
             _logger = logger;
         }
 
+        /// <summary>
+        /// 基准样例。无实际意义。
+        /// </summary>
+        /// <returns></returns>
         [HttpGet(Name = "GetWeatherForecast")]
         public IEnumerable<WeatherForecast> Get()
         {
