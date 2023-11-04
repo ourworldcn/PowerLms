@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using PowerLmsServer.EfData;
 using PowerLmsWebApi.Dto;
 
 namespace PowerLmsWebApi.Controllers
@@ -12,10 +13,12 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 
         /// </summary>
-        public MultilingualController()
+        public MultilingualController(PowerLmsUserDbContext db)
         {
-
+            _Db = db;
         }
+
+        PowerLmsUserDbContext _Db;
 
         /// <summary>
         /// 
@@ -26,7 +29,9 @@ namespace PowerLmsWebApi.Controllers
         [HttpGet]
         public ActionResult<MultilingualGetReturnDto> Get(Guid? Token, string prefix)
         {
-            return new MultilingualGetReturnDto();
+            var result=new MultilingualGetReturnDto();
+            result.Multilinguals.AddRange(_Db.Multilinguals);
+            return result;
         }
     }
 }

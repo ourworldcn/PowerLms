@@ -18,6 +18,9 @@ namespace PowerLmsServer.EfData
             
         }
 
+        /// <summary>
+        /// 数据库唯一Id。
+        /// </summary>
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.None)]
         public Guid Id { get; set; } = Guid.NewGuid();

@@ -9,7 +9,7 @@
             多语言资源相关功能控制器。
             </summary>
         </member>
-        <member name="M:PowerLmsWebApi.Controllers.MultilingualController.#ctor">
+        <member name="M:PowerLmsWebApi.Controllers.MultilingualController.#ctor(PowerLmsServer.EfData.PowerLmsUserDbContext)">
             <summary>
             
             </summary>
