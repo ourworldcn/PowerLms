@@ -1,10 +1,16 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
+using PowerLmsServer.EfData;
+using PowerLmsServer.Managers;
 
 var builder = WebApplication.CreateBuilder(args);
+var services = builder.Services;
 
 // Add services to the container.
 
 builder.Services.AddControllers();
+
+#region ≈‰÷√Swagger
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 
@@ -27,6 +33,16 @@ builder.Services.AddSwaggerGen(c =>
     }
     c.OrderActionsBy(c => c.RelativePath);
 });
+#endregion ≈‰÷√Swagger
+
+#region ≈‰÷√ ˝æ›ø‚
+var userDbConnectionString = builder.Configuration.GetConnectionString("UserDbConnection").Replace("{Env}", builder.Environment.EnvironmentName);
+//services.AddDbContext<PowerLmsUserDbContext>(options => options.UseLazyLoadingProxies().UseSqlServer(userDbConnectionString).EnableSensitiveDataLogging());
+services.AddDbContextFactory<PowerLmsUserDbContext>(options => options.UseLazyLoadingProxies().UseSqlServer(userDbConnectionString).EnableSensitiveDataLogging());
+
+#endregion ≈‰÷√ ˝æ›ø‚
+
+services.AddHostedService<InitializerService>();
 
 var app = builder.Build();
 

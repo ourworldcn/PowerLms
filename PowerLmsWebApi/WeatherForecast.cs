@@ -23,7 +23,7 @@ namespace PowerLmsWebApi
         /// <summary>
         /// 
         /// </summary>
-        public string? Summary { get; set; }
+        public string Summary { get; set; }
 
         /// <summary>
         /// 当前环境名。

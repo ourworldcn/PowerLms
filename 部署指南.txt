@@ -34,3 +34,6 @@ builder.Services.AddSwaggerGen(c =>
         c.RoutePrefix = string.Empty;//设置根节点访问
     });
 }
+
+Enable-Migrations –EnableAutomaticMigrations -Context PowerLmsUserDbContext
+Add-Migration 23110301 -Context PowerLmsUserDbContext

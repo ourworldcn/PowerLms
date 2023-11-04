@@ -4,6 +4,29 @@
         <name>PowerLmsWebApi</name>
     </assembly>
     <members>
+        <member name="T:PowerLmsWebApi.Controllers.MultilingualController">
+            <summary>
+            多语言资源相关功能控制器。
+            </summary>
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.MultilingualController.#ctor">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.MultilingualController.Get(System.Nullable{System.Guid},System.String)">
+            <summary>
+            
+            </summary>
+            <param name="Token"></param>
+            <param name="prefix"></param>
+            <returns></returns>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.OwControllerBase">
+            <summary>
+            控制器基类。
+            </summary>
+        </member>
         <member name="T:PowerLmsWebApi.Controllers.WeatherForecastController">
             <summary>
             测试控制器。
