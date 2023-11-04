@@ -4,6 +4,8 @@
     <TargetFramework>net6.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <DocumentationFile>PowerLmsWebApiApiDoc.xml</DocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -12,6 +14,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\PowerLmsServer\PowerLmsServer.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="PowerLmsWebApiApiDoc.xml">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

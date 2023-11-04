@@ -2,6 +2,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace PowerLmsWebApi.Controllers
 {
+    /// <summary>
+    /// 测试控制器。
+    /// </summary>
     [ApiController]
     [Route("[controller]")]
     public class WeatherForecastController : ControllerBase
@@ -13,19 +16,29 @@ namespace PowerLmsWebApi.Controllers
 
         private readonly ILogger<WeatherForecastController> _logger;
 
+        /// <summary>
+        /// 构造函数。
+        /// </summary>
+        /// <param name="logger"></param>
         public WeatherForecastController(ILogger<WeatherForecastController> logger)
         {
             _logger = logger;
         }
 
+        /// <summary>
+        /// 测试方法。
+        /// </summary>
+        /// <param name="hostEnvironment"></param>
+        /// <returns></returns>
         [HttpGet(Name = "GetWeatherForecast")]
-        public IEnumerable<WeatherForecast> Get()
+        public IEnumerable<WeatherForecast> Get([FromServices] IWebHostEnvironment hostEnvironment)
         {
             return Enumerable.Range(1, 5).Select(index => new WeatherForecast
             {
                 Date = DateTime.Now.AddDays(index),
                 TemperatureC = Random.Shared.Next(-20, 55),
-                Summary = Summaries[Random.Shared.Next(Summaries.Length)]
+                Summary = Summaries[Random.Shared.Next(Summaries.Length)],
+                EnvironmentName= hostEnvironment.EnvironmentName,
             })
             .ToArray();
         }

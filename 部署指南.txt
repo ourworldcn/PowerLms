@@ -1,1 +1,36 @@
-ï»¿
+ÔËĞĞÊ±ÕËºÅ LmsServer//{25AF736F-AB8C-45A9-B552-8968E16B65E6}
+
+°²×°IIS
+°²×°NetCore°ó¶¨
+
+¶àÏîÄ¿½â¾ö·½°¸ĞèÒªĞŞ¸ÄÒ»ÏÂ´úÂë
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Version = "v1",
+        Title = $"PowerLms",
+        Description = "½Ó¿ÚÎÄµµv2.0.0",
+        Contact = new OpenApiContact() { }
+    });
+    // Îª Swagger ÉèÖÃxmlÎÄµµ×¢ÊÍÂ·¾¶
+    var fileNames = Directory.GetFiles(AppContext.BaseDirectory, "*ApiDoc.xml");
+    foreach (var item in fileNames) //¼ÓÈë¶à¸öxmlÃèÊöÎÄ¼ş
+    {
+        var xmlPath = Path.Combine(AppContext.BaseDirectory, item);
+        c.IncludeXmlComments(xmlPath, true);
+    }
+    c.OrderActionsBy(c => c.RelativePath);
+});
+
+//if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    //ÆôÓÃÖĞ¼ä¼ş·şÎñÉú³ÉSwaggerUI£¬Ö¸¶¨Swagger JSONÖÕ½áµã
+    app.UseSwaggerUI(c =>
+    {
+        //c.SwaggerEndpoint("/swagger/v2/swagger.json", env.EnvironmentName + $" V2");
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", $"{env.EnvironmentName} V1");
+        c.RoutePrefix = string.Empty;//ÉèÖÃ¸ù½Úµã·ÃÎÊ
+    });
+}

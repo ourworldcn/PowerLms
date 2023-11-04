@@ -1,0 +1,56 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>PowerLmsWebApi</name>
+    </assembly>
+    <members>
+        <member name="T:PowerLmsWebApi.Controllers.WeatherForecastController">
+            <summary>
+            测试控制器。
+            </summary>
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.WeatherForecastController.#ctor(Microsoft.Extensions.Logging.ILogger{PowerLmsWebApi.Controllers.WeatherForecastController})">
+            <summary>
+            构造函数。
+            </summary>
+            <param name="logger"></param>
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.WeatherForecastController.Get(Microsoft.AspNetCore.Hosting.IWebHostEnvironment)">
+            <summary>
+            测试方法。
+            </summary>
+            <param name="hostEnvironment"></param>
+            <returns></returns>
+        </member>
+        <member name="T:PowerLmsWebApi.WeatherForecast">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.WeatherForecast.Date">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.WeatherForecast.TemperatureC">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.WeatherForecast.TemperatureF">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.WeatherForecast.Summary">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.WeatherForecast.EnvironmentName">
+            <summary>
+            当前环境名。
+            </summary>
+        </member>
+    </members>
+</doc>
