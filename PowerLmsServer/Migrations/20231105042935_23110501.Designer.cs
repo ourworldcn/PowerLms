@@ -13,8 +13,8 @@ using PowerLmsServer.EfData;
 namespace PowerLmsServer.Migrations
 {
     [DbContext(typeof(PowerLmsUserDbContext))]
-    [Migration("20231104080632_23110301")]
-    partial class _23110301
+    [Migration("20231105042935_23110501")]
+    partial class _23110501
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -28,20 +28,25 @@ namespace PowerLmsServer.Migrations
             modelBuilder.Entity("PowerLmsServer.EfData.Multilingual", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnOrder(0);
 
                     b.Property<string>("Key")
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("LanguageTag")
+                        .HasMaxLength(12)
+                        .HasColumnType("varchar(12)");
 
                     b.Property<string>("Text")
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Key")
+                    b.HasIndex("LanguageTag", "Key")
                         .IsUnique()
-                        .HasFilter("[Key] IS NOT NULL");
+                        .HasFilter("[LanguageTag] IS NOT NULL AND [Key] IS NOT NULL");
 
                     b.ToTable("Multilinguals");
                 });

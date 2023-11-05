@@ -14,12 +14,26 @@
             
             </summary>
         </member>
-        <member name="M:PowerLmsWebApi.Controllers.MultilingualController.Get(System.Nullable{System.Guid},System.String)">
+        <member name="M:PowerLmsWebApi.Controllers.MultilingualController.Get(System.Nullable{System.Guid},System.String,System.String)">
             <summary>
-            
+            获取一组语言资源。
             </summary>
-            <param name="Token"></param>
-            <param name="prefix"></param>
+            <param name="token">登录令牌，未登录则为空。</param>
+            <param name="languageTag">语言的标准缩写名。未登录则必须填写。</param>
+            <param name="prefix">前缀。理论上可以通过空来获取所有资源键值，但这样存在性能隐患。</param>
+            <returns></returns>
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.MultilingualController.Set(PowerLmsWebApi.Dto.MultilingualSetParamsDto)">
+            <summary>
+            更新或追加多语言资源。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.MultilingualController.GetLanguageDataDic">
+            <summary>
+            获取语言字典表。此功能暂时不考虑分页。此表暂时不考虑追加/修改/删除。
+            </summary>
             <returns></returns>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.OwControllerBase">
@@ -44,6 +58,88 @@
             </summary>
             <param name="hostEnvironment"></param>
             <returns></returns>
+        </member>
+        <member name="T:PowerLmsWebApi.Dto.TokenDtoBase">
+            <summary>
+            带有令牌命令的入参基类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Dto.TokenDtoBase.Token">
+            <summary>
+            令牌。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Dto.ReturnDtoBase">
+            <summary>
+            返回对象的基类。
+            </summary>
+        </member>
+        <member name="M:PowerLmsWebApi.Dto.ReturnDtoBase.#ctor">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Dto.ReturnDtoBase.HasError">
+            <summary>
+            是否有错误。不设置则使用<see cref="P:PowerLmsWebApi.Dto.ReturnDtoBase.ErrorCode"/>来判定。
+            </summary>
+            <value>0没有错误，其它数值含义由应用定义。</value>
+        </member>
+        <member name="P:PowerLmsWebApi.Dto.ReturnDtoBase.ErrorCode">
+            <summary>
+            错误码，参见 ErrorCodes。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Dto.ReturnDtoBase.DebugMessage">
+            <summary>
+            调试信息，如果发生错误，这里给出简要说明。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Dto.MultilingualGetReturnDto">
+            <summary>
+            获取多语言资源的返回值封装类。
+            </summary>
+        </member>
+        <member name="M:PowerLmsWebApi.Dto.MultilingualGetReturnDto.#ctor">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Dto.MultilingualGetReturnDto.Multilinguals">
+            <summary>
+            多语言资源的集合。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Dto.MultilingualSetParamsDto">
+            <summary>
+            修改或追加多语言资源功能的参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Dto.MultilingualSetParamsDto.AddOrUpdateDatas">
+            <summary>
+            追加或修改的内容。
+            若Id不存在则追加，若已经存在则修改。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Dto.MultilingualSetParamsDto.DeleteIds">
+            <summary>
+            要删除的多语言资源的Id集合。若要删除必须登录。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Dto.MultilingualSetReturnDto">
+            <summary>
+            修改或追加多语言资源功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Dto.GetLanguageDataDicReturnDto">
+            <summary>
+            获取语言字典表功能返回值封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Dto.GetLanguageDataDicReturnDto.Results">
+            <summary>
+            语言数据字典。
+            </summary>
         </member>
         <member name="T:PowerLmsWebApi.WeatherForecast">
             <summary>

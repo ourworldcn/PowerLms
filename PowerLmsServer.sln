@@ -3,12 +3,13 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.6.33829.357
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PowerLmsWebApi", "PowerLmsWebApi\PowerLmsWebApi.csproj", "{AA2300EC-165B-419E-A2CB-30ED353D873E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PowerLmsWebApi", "PowerLmsWebApi\PowerLmsWebApi.csproj", "{AA2300EC-165B-419E-A2CB-30ED353D873E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PowerLmsServer", "PowerLmsServer\PowerLmsServer.csproj", "{DE4C03F8-B4AE-422F-B4B5-A8B04C1FC4CA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PowerLmsServer", "PowerLmsServer\PowerLmsServer.csproj", "{DE4C03F8-B4AE-422F-B4B5-A8B04C1FC4CA}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "解决方案项", "解决方案项", "{485FC0C8-DBF6-4F3C-9AD3-C57F52100CD2}"
 	ProjectSection(SolutionItems) = preProject
+		云霄用Id表.txt = 云霄用Id表.txt
 		部署指南.txt = 部署指南.txt
 	EndProjectSection
 EndProject

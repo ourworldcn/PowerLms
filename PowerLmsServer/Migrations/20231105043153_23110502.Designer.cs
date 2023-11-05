@@ -13,8 +13,8 @@ using PowerLmsServer.EfData;
 namespace PowerLmsServer.Migrations
 {
     [DbContext(typeof(PowerLmsUserDbContext))]
-    [Migration("20231104080632_23110301")]
-    partial class _23110301
+    [Migration("20231105043153_23110502")]
+    partial class _23110502
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -25,23 +25,45 @@ namespace PowerLmsServer.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder, 1L, 1);
 
+            modelBuilder.Entity("PowerLmsServer.EfData.LanguageDataDic", b =>
+                {
+                    b.Property<string>("LanguageTag")
+                        .HasMaxLength(12)
+                        .HasColumnType("varchar(12)");
+
+                    b.Property<string>("DisplayName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Lcid")
+                        .HasColumnType("int");
+
+                    b.HasKey("LanguageTag");
+
+                    b.ToTable("LanguageDataDics");
+                });
+
             modelBuilder.Entity("PowerLmsServer.EfData.Multilingual", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnOrder(0);
 
                     b.Property<string>("Key")
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("LanguageTag")
+                        .HasMaxLength(12)
+                        .HasColumnType("varchar(12)");
 
                     b.Property<string>("Text")
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Key")
+                    b.HasIndex("LanguageTag", "Key")
                         .IsUnique()
-                        .HasFilter("[Key] IS NOT NULL");
+                        .HasFilter("[LanguageTag] IS NOT NULL AND [Key] IS NOT NULL");
 
                     b.ToTable("Multilinguals");
                 });
