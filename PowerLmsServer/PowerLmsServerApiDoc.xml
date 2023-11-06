@@ -4,108 +4,6 @@
         <name>PowerLmsServer</name>
     </assembly>
     <members>
-        <member name="T:PowerLmsServer.EfData.Multilingual">
-            <summary>
-            多语言资源表。
-            </summary>
-        </member>
-        <member name="M:PowerLmsServer.EfData.Multilingual.#ctor">
-            <summary>
-            构造函数。
-            </summary>
-        </member>
-        <member name="P:PowerLmsServer.EfData.Multilingual.Id">
-            <summary>
-            数据库唯一Id。
-            </summary>
-        </member>
-        <member name="P:PowerLmsServer.EfData.Multilingual.LanguageTag">
-            <summary>
-            主键，也是语言的标准缩写名。
-            </summary>
-        </member>
-        <member name="P:PowerLmsServer.EfData.Multilingual.Key">
-            <summary>
-            键值字符串。如:未登录.登录.标题。
-            </summary>
-        </member>
-        <member name="P:PowerLmsServer.EfData.Multilingual.Text">
-            <summary>
-            内容。
-            </summary>
-        </member>
-        <member name="T:PowerLmsServer.EfData.LanguageDataDic">
-            <summary>
-            语言字典。
-            参见 https://learn.microsoft.com/zh-cn/openspecs/windows_protocols/ms-lcid/a9eac961-e77d-41a6-90a5-ce1a8b0cdb9c，可能需要翻译。
-            </summary>
-        </member>
-        <member name="P:PowerLmsServer.EfData.LanguageDataDic.LanguageTag">
-            <summary>
-            主键，也是语言的标准缩写名。
-            </summary>
-        </member>
-        <member name="P:PowerLmsServer.EfData.LanguageDataDic.Lcid">
-            <summary>
-            语言Id。
-            </summary>
-        </member>
-        <member name="P:PowerLmsServer.EfData.LanguageDataDic.DisplayName">
-            <summary>
-            语言名。
-            </summary>
-        </member>
-        <member name="T:PowerLmsServer.EfData.MigrateDbInitializer">
-            <summary>
-            
-            </summary>
-        </member>
-        <member name="M:PowerLmsServer.EfData.MigrateDbInitializer.Initialize(PowerLmsServer.EfData.PowerLmsUserDbContext)">
-            <summary>
-            
-            </summary>
-            <param name="context"></param>
-        </member>
-        <member name="T:PowerLmsServer.EfData.PowerLmsUserDbContext">
-            <summary>
-            
-            </summary>
-        </member>
-        <member name="M:PowerLmsServer.EfData.PowerLmsUserDbContext.#ctor">
-            <summary>
-            
-            </summary>
-        </member>
-        <member name="M:PowerLmsServer.EfData.PowerLmsUserDbContext.#ctor(Microsoft.EntityFrameworkCore.DbContextOptions)">
-            <summary>
-            
-            </summary>
-            <param name="options"></param>
-        </member>
-        <member name="M:PowerLmsServer.EfData.PowerLmsUserDbContext.AddOrUpdate``1(System.Collections.Generic.IEnumerable{``0})">
-            <summary>
-            更新或追加一组数据。
-            </summary>
-            <typeparam name="T"></typeparam>
-            <param name="datas">主键若已经存在则更新数据，主键若不存在则追加数据。</param>
-        </member>
-        <member name="M:PowerLmsServer.EfData.PowerLmsUserDbContext.Delete``1(System.Collections.Generic.List{System.Guid})">
-            <summary>
-            删除一组指定Id的对象。
-            </summary>
-            <typeparam name="T"></typeparam>
-            <param name="deleteIds"></param>
-        </member>
-        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.Multilinguals">
-            <summary>
-            多语言资源表。
-            </summary>
-        </member>
-        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.LanguageDataDics">
-            <summary>
-            语言字典。
-            </summary>
-        </member>
         <member name="T:PowerLmsServer.Managers.InitializerService">
             <summary>
             初始化服务。
@@ -123,6 +21,53 @@
             <inheritdoc/>
             </summary>
             <param name="stoppingToken"></param>
+            <returns></returns>
+        </member>
+        <member name="M:PowerLmsServer.Managers.InitializerService.CreateSystemResource">
+            <summary>
+            创建必要的系统资源。
+            </summary>
+            <exception cref="T:System.NotImplementedException"></exception>
+        </member>
+        <member name="M:PowerLmsServer.Managers.InitializerService.CreateAdmin">
+            <summary>
+            创建管理员。
+            </summary>
+            <exception cref="T:System.NotImplementedException"></exception>
+        </member>
+        <member name="T:PowerLmsServer.Managers.MultilingualManager">
+            <summary>
+            多语言管理器。
+            </summary>
+        </member>
+        <member name="M:PowerLmsServer.Managers.MultilingualManager.#ctor(PowerLmsServer.Managers.NpoiManager)">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
+        <member name="M:PowerLmsServer.Managers.MultilingualManager.Import(System.IO.Stream,PowerLmsServer.EfData.PowerLmsUserDbContext)">
+            <summary>
+            
+            </summary>
+            <param name="stream"></param>
+            <param name="db"></param>
+        </member>
+        <member name="T:PowerLmsServer.Managers.NpoiManager">
+            <summary>
+            NOPI基础代码辅助管理器。
+            </summary>
+        </member>
+        <member name="M:PowerLmsServer.Managers.NpoiManager.#ctor">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
+        <member name="M:PowerLmsServer.Managers.NpoiManager.ReadExcelFunc(NPOI.SS.UserModel.IWorkbook,NPOI.SS.UserModel.ISheet)">
+            <summary>
+            读取Excel信息
+            </summary>
+            <param name="workbook">工作区</param>
+            <param name="sheet">sheet</param>
             <returns></returns>
         </member>
     </members>

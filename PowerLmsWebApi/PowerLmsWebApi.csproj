@@ -19,6 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\PowerLmsData\PowerLmsData.csproj" />
     <ProjectReference Include="..\PowerLmsServer\PowerLmsServer.csproj" />
   </ItemGroup>
 

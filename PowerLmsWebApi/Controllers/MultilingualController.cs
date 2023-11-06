@@ -2,7 +2,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ActionConstraints;
 using Microsoft.EntityFrameworkCore;
+using PowerLms.Data;
 using PowerLmsServer.EfData;
+using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
 
 namespace PowerLmsWebApi.Controllers
@@ -15,12 +17,14 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 
         /// </summary>
-        public MultilingualController(PowerLmsUserDbContext db)
+        public MultilingualController(PowerLmsUserDbContext db, MultilingualManager multilingualManager)
         {
             _Db = db;
+            _MultilingualManager = multilingualManager;
         }
 
         PowerLmsUserDbContext _Db;
+        MultilingualManager _MultilingualManager;
 
         /// <summary>
         /// 获取一组语言资源。
@@ -58,7 +62,7 @@ namespace PowerLmsWebApi.Controllers
         {
             var result = new MultilingualSetReturnDto();
             //检验Token
-            
+
             _Db.AddOrUpdate(model.AddOrUpdateDatas);
             _Db.Delete<Multilingual>(model.DeleteIds);
             _Db.SaveChanges();
@@ -73,10 +77,23 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetLanguageDataDicReturnDto> GetLanguageDataDic()
         {
             var result = new GetLanguageDataDicReturnDto();
-            var coll=from tmp in _Db.LanguageDataDics
-                     select tmp;
+            var coll = from tmp in _Db.LanguageDataDics
+                       select tmp;
             result.Results.AddRange(coll.AsNoTracking());
             return result;
+        }
+
+        /// <summary>
+        /// 上传语言字典文件。相当于删除所有数据后再导入。
+        /// </summary>
+        /// <param name="formFile"></param>
+        /// <param name="token"></param>
+        /// <returns></returns>
+        [HttpPost,]
+        public ActionResult ImportLanguageDataDic(IFormFile formFile, Guid token)
+        {
+            _MultilingualManager.Import(formFile.OpenReadStream(), _Db);
+            return Ok();
         }
     }
 

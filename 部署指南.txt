@@ -37,3 +37,5 @@ builder.Services.AddSwaggerGen(c =>
 
 Enable-Migrations ®CEnableAutomaticMigrations -Context PowerLmsUserDbContext
 Add-Migration 23110301 -Context PowerLmsUserDbContext
+
+≥¨π‹’À∫≈ 868d61ae-3a86-42a8-8a8c-1ed6cfa90817//1D381427-86BB-4D88-8CB0-5D92F8E1BADF

@@ -13,6 +13,11 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="6.0.24" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="6.0.24" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="6.0.0" />
+    <PackageReference Include="NPOI" Version="2.6.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PowerLmsData\PowerLmsData.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -44,6 +44,9 @@ services.AddDbContextFactory<PowerLmsUserDbContext>(options => options.UseLazyLo
 
 services.AddHostedService<InitializerService>();
 
+services.AddSingleton<MultilingualManager>();
+services.AddSingleton<NpoiManager>();
+
 var app = builder.Build();
 
 IWebHostEnvironment env = app.Environment;

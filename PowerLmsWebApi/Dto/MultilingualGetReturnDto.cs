@@ -1,4 +1,5 @@
-﻿using PowerLmsServer.EfData;
+﻿using PowerLms.Data;
+using PowerLmsServer.EfData;
 
 namespace PowerLmsWebApi.Dto
 {

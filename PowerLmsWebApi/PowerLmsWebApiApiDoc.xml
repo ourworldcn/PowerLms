@@ -4,12 +4,59 @@
         <name>PowerLmsWebApi</name>
     </assembly>
     <members>
+        <member name="T:PowerLmsWebApi.Controllers.AccountController">
+            <summary>
+            账号功能控制器。
+            </summary>
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AccountController.#ctor(PowerLmsServer.EfData.PowerLmsUserDbContext)">
+            <summary>
+            构造函数。
+            </summary>
+            <param name="dbContext"></param>
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AccountController.Login(PowerLmsWebApi.Dto.LoginParamsDto)">
+            <summary>
+            登录。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="400">参数错误，这里特指用户名或密码不正确。</response>  
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AdminController">
+            <summary>
+            管理员功能控制器。
+            </summary>
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.#ctor(PowerLmsServer.EfData.PowerLmsUserDbContext)">
+            <summary>
+            
+            </summary>
+            <param name="context"></param>
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.GetSystemResource">
+            <summary>
+            获取系统资源列表。
+            </summary>
+            <param name="token"></param>
+            <returns></returns>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetSystemResourceReturnDto">
+            <summary>
+            获取系统资源列表功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.GetSystemResourceReturnDto.Resources">
+            <summary>
+            系统资源集合。
+            </summary>
+        </member>
         <member name="T:PowerLmsWebApi.Controllers.MultilingualController">
             <summary>
             多语言资源相关功能控制器。
             </summary>
         </member>
-        <member name="M:PowerLmsWebApi.Controllers.MultilingualController.#ctor(PowerLmsServer.EfData.PowerLmsUserDbContext)">
+        <member name="M:PowerLmsWebApi.Controllers.MultilingualController.#ctor(PowerLmsServer.EfData.PowerLmsUserDbContext,PowerLmsServer.Managers.MultilingualManager)">
             <summary>
             
             </summary>
@@ -36,6 +83,14 @@
             </summary>
             <returns></returns>
         </member>
+        <member name="M:PowerLmsWebApi.Controllers.MultilingualController.ImportLanguageDataDic(Microsoft.AspNetCore.Http.IFormFile,System.Guid)">
+            <summary>
+            上传语言字典文件。相当于删除所有数据后再导入。
+            </summary>
+            <param name="formFile"></param>
+            <param name="token"></param>
+            <returns></returns>
+        </member>
         <member name="T:PowerLmsWebApi.Controllers.OwControllerBase">
             <summary>
             控制器基类。
@@ -58,6 +113,36 @@
             </summary>
             <param name="hostEnvironment"></param>
             <returns></returns>
+        </member>
+        <member name="T:PowerLmsWebApi.Dto.LoginParamsDto">
+            <summary>
+            登录功能参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Dto.LoginParamsDto.LoginName">
+            <summary>
+            登录名。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Dto.LoginParamsDto.Pwd">
+            <summary>
+            登录密码。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Dto.LoginParamsDto.LanguageTag">
+            <summary>
+            使用的首选语言标准缩写。如:zh-CN。如果省略或为空则使用上次成功登录的首选语言，如果没有指定默认为zh-CN。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Dto.LoginReturnDto">
+            <summary>
+            登录功能返回值封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Dto.LoginReturnDto.Token">
+            <summary>
+            若成功登录这里返沪票据。用于后续操作。
+            </summary>
         </member>
         <member name="T:PowerLmsWebApi.Dto.TokenDtoBase">
             <summary>
