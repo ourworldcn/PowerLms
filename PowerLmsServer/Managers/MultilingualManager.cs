@@ -39,7 +39,7 @@ namespace PowerLmsServer.Managers
             db.TruncateTable("[dbo].[LanguageDataDics]");
             
             var dt = _NpoiManager.ReadExcelFunc(workbook, sheet);
-            _NpoiManager.WriteDb<LanguageDataDic>(dt, db, nameof(db.LanguageDataDics), default, default);
+            _NpoiManager.WriteToDb<LanguageDataDic>(dt, db, nameof(db.LanguageDataDics));
         }
 
     }

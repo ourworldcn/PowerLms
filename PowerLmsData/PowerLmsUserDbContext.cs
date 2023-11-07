@@ -2,8 +2,10 @@
 using PowerLms.Data;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Reflection;
 using System.Reflection.Metadata;
 using System.Text;
 using System.Threading.Tasks;
@@ -64,12 +66,17 @@ namespace PowerLmsServer.EfData
         }
 
         /// <summary>
-        /// 删除一组指定Id的对象。
+        /// 删除一组指定Id的对象。立即生效。
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="deleteIds"></param>
-        public void Delete<T>(List<Guid> deleteIds)
+        /// <param name="db"></param>
+        /// <returns></returns>
+        public int Delete<T>(List<Guid> deleteIds, DbContext db)
         {
+            var ids = string.Join(',', deleteIds.Select(c => c.ToString()));
+            var sql = $"Delete From Where [Id] In ({ids})";
+            return db.Database.ExecuteSqlRaw(sql);
         }
 
         #endregion 方法
@@ -115,11 +122,12 @@ namespace PowerLmsServer.EfData
         /// <typeparam name="T"></typeparam>
         /// <param name="context"></param>
         /// <param name="entity"></param>
-        /// <param name="getIdCallback"></param>
-        public static void InsertOrUpdate<T>(this DbContext context, T entity, Func<T, object> getIdCallback) where T : class
+        /// 
+        public static void InsertOrUpdate<T>(this DbContext context, T entity) where T : class
         {
+            var keyPi = typeof(T).GetProperties().OfType<PropertyInfo>().First(c => c.GetCustomAttribute<KeyAttribute>() is not null);
             var set = context.Set<T>();
-            var existingBlog = context.Set<T>().Find(getIdCallback(entity));
+            var existingBlog = context.Set<T>().Find(keyPi.GetValue(entity));
             if (existingBlog == null)
             {
                 set.Add(entity);
@@ -131,22 +139,27 @@ namespace PowerLmsServer.EfData
         }
 
         /// <summary>
-        /// 插入或更新一个实体。
+        /// 插入或更新一组实体。
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="context"></param>
-        /// <param name="entity"></param>
-        public static void InsertOrUpdate<T>(this DbContext context, T entity) where T : class, IEntityWithSingleKey<Guid>
+        /// <param name="entities"></param>
+        public static void InsertOrUpdate<T>(this DbContext context, IEnumerable<T> entities) where T : class
         {
             var set = context.Set<T>();
-            var existingBlog = context.Set<T>().Find(entity.Id);
-            if (existingBlog == null)
+            set.Load();
+            var keyPi = typeof(T).GetProperties().OfType<PropertyInfo>().First(c => c.GetCustomAttribute<KeyAttribute>() is not null);
+            foreach (var entity in entities)
             {
-                set.Add(entity);
-            }
-            else
-            {
-                context.Entry(entity).CurrentValues.SetValues(entity);
+                var existingBlog = set.Find(keyPi.GetValue(entity));
+                if (existingBlog is null)
+                {
+                    set.Add(entity);
+                }
+                else
+                {
+                    context.Entry(entity).CurrentValues.SetValues(entity);
+                }
             }
         }
 

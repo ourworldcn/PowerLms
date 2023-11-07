@@ -17,14 +17,16 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 
         /// </summary>
-        public MultilingualController(PowerLmsUserDbContext db, MultilingualManager multilingualManager)
+        public MultilingualController(PowerLmsUserDbContext db, MultilingualManager multilingualManager, NpoiManager npoiManager)
         {
             _Db = db;
             _MultilingualManager = multilingualManager;
+            _NpoiManager = npoiManager;
         }
 
         PowerLmsUserDbContext _Db;
         MultilingualManager _MultilingualManager;
+        NpoiManager _NpoiManager;
 
         /// <summary>
         /// 获取一组语言资源。
@@ -63,8 +65,8 @@ namespace PowerLmsWebApi.Controllers
             var result = new MultilingualSetReturnDto();
             //检验Token
 
-            _Db.AddOrUpdate(model.AddOrUpdateDatas);
-            _Db.Delete<Multilingual>(model.DeleteIds);
+            _Db.Delete<Multilingual>(model.DeleteIds, _Db);
+            _Db.InsertOrUpdate(model.AddOrUpdateDatas as IEnumerable<Multilingual>);
             _Db.SaveChanges();
             return result;
         }
@@ -84,14 +86,17 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// 上传语言字典文件。相当于删除所有数据后再导入。
+        /// 请改用 Admin/ImportDataDic"。上传语言字典文件。相当于删除所有数据后再导入。
         /// </summary>
         /// <param name="formFile"></param>
-        /// <param name="token"></param>
+        /// <param name="token">登录令牌。</param>
         /// <returns></returns>
-        [HttpPost,]
+        [HttpPost,Obsolete("请改用 Admin/ImportDataDic")]
         public ActionResult ImportLanguageDataDic(IFormFile formFile, Guid token)
         {
+            var workbook = _NpoiManager.GetWorkbookFromStream(formFile.OpenReadStream());
+            var sheet = workbook.GetSheetAt(0);
+            _NpoiManager.WriteToDb(sheet, _Db, _Db.LanguageDataDics);
             _MultilingualManager.Import(formFile.OpenReadStream(), _Db);
             return Ok();
         }

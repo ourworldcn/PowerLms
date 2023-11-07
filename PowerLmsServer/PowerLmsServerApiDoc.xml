@@ -9,12 +9,13 @@
             初始化服务。
             </summary>
         </member>
-        <member name="M:PowerLmsServer.Managers.InitializerService.#ctor(Microsoft.Extensions.Logging.ILogger{PowerLmsServer.Managers.InitializerService},Microsoft.Extensions.DependencyInjection.IServiceScopeFactory)">
+        <member name="M:PowerLmsServer.Managers.InitializerService.#ctor(Microsoft.Extensions.Logging.ILogger{PowerLmsServer.Managers.InitializerService},Microsoft.Extensions.DependencyInjection.IServiceScopeFactory,PowerLmsServer.Managers.NpoiManager)">
             <summary>
             构造函数。
             </summary>
             <param name="logger"></param>
             <param name="serviceScopeFactory"></param>
+            <param name="npoiManager"></param>
         </member>
         <member name="M:PowerLmsServer.Managers.InitializerService.ExecuteAsync(System.Threading.CancellationToken)">
             <summary>
@@ -62,6 +63,27 @@
             构造函数。
             </summary>
         </member>
+        <member name="M:PowerLmsServer.Managers.NpoiManager.GetWorkbookFromStream(System.IO.Stream)">
+            <summary>
+            从流获取Excel工作表。
+            </summary>
+            <param name="stream"></param>
+            <returns></returns>
+        </member>
+        <member name="M:PowerLmsServer.Managers.NpoiManager.GetColumnName(NPOI.SS.UserModel.ISheet)">
+            <summary>
+            获取指定Excel工作表的列名。
+            </summary>
+            <param name="sheet"></param>
+            <returns></returns>
+        </member>
+        <member name="M:PowerLmsServer.Managers.NpoiManager.GetJson(NPOI.SS.UserModel.ISheet)">
+            <summary>
+            将表转换为Json。
+            </summary>
+            <param name="sheet"></param>
+            <returns></returns>
+        </member>
         <member name="M:PowerLmsServer.Managers.NpoiManager.ReadExcelFunc(NPOI.SS.UserModel.IWorkbook,NPOI.SS.UserModel.ISheet)">
             <summary>
             读取Excel信息
@@ -69,6 +91,24 @@
             <param name="workbook">工作区</param>
             <param name="sheet">sheet</param>
             <returns></returns>
+        </member>
+        <member name="M:PowerLmsServer.Managers.NpoiManager.WriteToDb``1(System.Data.DataTable,Microsoft.EntityFrameworkCore.DbContext,System.String)">
+            <summary>
+            将指定表复制到数据库指定表中。
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="dt"></param>
+            <param name="context"></param>
+            <param name="destinationTableName"></param>
+        </member>
+        <member name="M:PowerLmsServer.Managers.NpoiManager.WriteToDb``1(NPOI.SS.UserModel.ISheet,Microsoft.EntityFrameworkCore.DbContext,Microsoft.EntityFrameworkCore.DbSet{``0})">
+            <summary>
+            将表写入指定的对象集合。需要调用<see cref="M:Microsoft.EntityFrameworkCore.DbContext.SaveChanges"/>才会写入数据库。
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="sheet"></param>
+            <param name="context"></param>
+            <param name="destSet"></param>
         </member>
     </members>
 </doc>

@@ -22,15 +22,18 @@ namespace PowerLmsServer.Managers
         /// </summary>
         /// <param name="logger"></param>
         /// <param name="serviceScopeFactory"></param>
-        public InitializerService(ILogger<InitializerService> logger, IServiceScopeFactory serviceScopeFactory)
+        /// <param name="npoiManager"></param>
+        public InitializerService(ILogger<InitializerService> logger, IServiceScopeFactory serviceScopeFactory, NpoiManager npoiManager)
         {
             _Logger = logger;
             _ServiceScopeFactory = serviceScopeFactory;
+            _NpoiManager = npoiManager;
         }
 
         ILogger<InitializerService> _Logger;
         PowerLmsUserDbContext _DbContext;
         IServiceScopeFactory _ServiceScopeFactory;
+        NpoiManager _NpoiManager;
 
         /// <summary>
         /// <inheritdoc/>
@@ -39,9 +42,9 @@ namespace PowerLmsServer.Managers
         /// <returns></returns>
         protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            CreateDb();
             return Task.Run(() =>
             {
-                CreateDb();
                 CreateSystemResource();
                 CreateAdmin();
                 Test();
@@ -58,19 +61,13 @@ namespace PowerLmsServer.Managers
             var svc = scope.ServiceProvider;
             _DbContext = svc.GetRequiredService<PowerLmsUserDbContext>();
 
-            _DbContext.InsertOrUpdate(new SystemResource
-            {
-                Id = Guid.Parse("{BD7B4671-D11F-42FC-9818-8DA456BDA8BC}"),
-                DisplayName = nameof(_DbContext.LanguageDataDics),
-                Remark = "语言字典表",
-            });
+            var filePath = Path.Combine(AppContext.BaseDirectory, "系统资源", "系统资源.xlsx");
+            using var file = File.OpenRead(filePath);
 
-            _DbContext.InsertOrUpdate(new SystemResource
-            {
-                Id = Guid.Parse("{6AE3BBB3-BAC9-4509-BF82-C8578830CD24}"),
-                DisplayName = nameof(_DbContext.Multilinguals),
-                Remark = "多语言资源表",
-            });
+            using var workbook = _NpoiManager.GetWorkbookFromStream(file);
+            var sheet = workbook.GetSheetAt(0);
+
+            _NpoiManager.WriteToDb(sheet, _DbContext, _DbContext.SystemResources);
 
 
             _DbContext.SaveChanges();

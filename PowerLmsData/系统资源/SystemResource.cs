@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
@@ -10,13 +11,14 @@ namespace PowerLms.Data
     /// <summary>
     /// 系统资源。
     /// </summary>
+    [Index(nameof(Name),IsUnique =true)]
     public class SystemResource : GuidKeyObjectBase
     {
         /// <summary>
         /// 系统资源名称。
         /// </summary>
         [MaxLength(64)]
-        public string DisplayName { get; set; }
+        public string Name { get; set; }
 
         /// <summary>
         /// 说明。

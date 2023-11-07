@@ -117,7 +117,7 @@
             系统资源。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.SystemResource.DisplayName">
+        <member name="P:PowerLms.Data.SystemResource.Name">
             <summary>
             系统资源名称。
             </summary>
@@ -220,12 +220,14 @@
             <typeparam name="T"></typeparam>
             <param name="datas">主键若已经存在则更新数据，主键若不存在则追加数据。</param>
         </member>
-        <member name="M:PowerLmsServer.EfData.PowerLmsUserDbContext.Delete``1(System.Collections.Generic.List{System.Guid})">
+        <member name="M:PowerLmsServer.EfData.PowerLmsUserDbContext.Delete``1(System.Collections.Generic.List{System.Guid},Microsoft.EntityFrameworkCore.DbContext)">
             <summary>
-            删除一组指定Id的对象。
+            删除一组指定Id的对象。立即生效。
             </summary>
             <typeparam name="T"></typeparam>
             <param name="deleteIds"></param>
+            <param name="db"></param>
+            <returns></returns>
         </member>
         <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.SystemResources">
             <summary>
@@ -252,15 +254,6 @@
             数据库上下文的扩展方法。
             </summary>
         </member>
-        <member name="M:PowerLmsServer.EfData.OwDbContextExtensions.InsertOrUpdate``1(Microsoft.EntityFrameworkCore.DbContext,``0,System.Func{``0,System.Object})">
-            <summary>
-            插入或更新一个实体。
-            </summary>
-            <typeparam name="T"></typeparam>
-            <param name="context"></param>
-            <param name="entity"></param>
-            <param name="getIdCallback"></param>
-        </member>
         <member name="M:PowerLmsServer.EfData.OwDbContextExtensions.InsertOrUpdate``1(Microsoft.EntityFrameworkCore.DbContext,``0)">
             <summary>
             插入或更新一个实体。
@@ -268,6 +261,15 @@
             <typeparam name="T"></typeparam>
             <param name="context"></param>
             <param name="entity"></param>
+            
+        </member>
+        <member name="M:PowerLmsServer.EfData.OwDbContextExtensions.InsertOrUpdate``1(Microsoft.EntityFrameworkCore.DbContext,System.Collections.Generic.IEnumerable{``0})">
+            <summary>
+            插入或更新一组实体。
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="context"></param>
+            <param name="entities"></param>
         </member>
         <member name="M:PowerLmsServer.EfData.OwDbContextExtensions.TruncateTable(Microsoft.EntityFrameworkCore.DbContext,System.String)">
             <summary>
