@@ -1,4 +1,5 @@
-﻿using NPOI.HSSF.UserModel;
+﻿using Microsoft.Extensions.DependencyInjection;
+using NPOI.HSSF.UserModel;
 using NPOI.SS.UserModel;
 using NPOI.Util;
 using PowerLms.Data;
@@ -15,6 +16,7 @@ namespace PowerLmsServer.Managers
     /// <summary>
     /// 多语言管理器。
     /// </summary>
+    [OwAutoInjection(ServiceLifetime.Singleton)]
     public class MultilingualManager
     {
         /// <summary>

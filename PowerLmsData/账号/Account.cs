@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -18,6 +19,13 @@ namespace PowerLms.Data
     public class Account : GuidKeyObjectBase
     {
         /// <summary>
+        /// 时间戳。
+        /// </summary>
+        [Timestamp]
+        [JsonIgnore]
+        public byte[] Timestamp { get; set; }
+
+        /// <summary>
         /// 登录名。
         /// </summary>
         public string LoginName { get; set; }
@@ -25,6 +33,8 @@ namespace PowerLms.Data
         /// <summary>
         /// 密码的Hash值。
         /// </summary>
+        [MaxLength(32)]
+        [Comment("密码的Hash值")]
         public byte[] PwdHash { get; set; }
 
         /// <summary>
@@ -54,13 +64,18 @@ namespace PowerLms.Data
         [JsonConverter(typeof(TimeSpanJsonConverter))]
         public TimeSpan Timeout { get; set; } = TimeSpan.FromMinutes(15);
 
-        #region 瞬时属性
-
         /// <summary>
         /// 最后一次操作的时间。
         /// </summary>
-        [NotMapped]
         public DateTime LastModifyDateTimeUtc { get; set; } = OwHelper.WorldNow;
+
+        /// <summary>
+        /// 最近使用的Token。
+        /// </summary>
+        [JsonIgnore]
+        public Guid? Token { get; set; }
+
+        #region 瞬时属性
 
         #endregion 瞬时属性
 
@@ -74,7 +89,7 @@ namespace PowerLms.Data
         {
             if (PwdHash is null && pwd is null)
                 return true;
-            var hash = SHA1.HashData(Encoding.UTF8.GetBytes(pwd ?? string.Empty));
+            var hash = SHA256.HashData(Encoding.UTF8.GetBytes(pwd ?? string.Empty));
             return hash.SequenceEqual(PwdHash ?? Array.Empty<byte>());
         }
 
@@ -84,7 +99,7 @@ namespace PowerLms.Data
         /// <param name="pwd"></param>
         public void SetPwd(string pwd)
         {
-            PwdHash = SHA1.HashData(Encoding.UTF8.GetBytes(pwd ?? string.Empty));
+            PwdHash = SHA256.HashData(Encoding.UTF8.GetBytes(pwd ?? string.Empty));
         }
 
         #endregion 方法

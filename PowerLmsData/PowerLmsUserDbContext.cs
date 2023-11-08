@@ -56,16 +56,6 @@ namespace PowerLmsServer.EfData
         #region 方法
 
         /// <summary>
-        /// 更新或追加一组数据。
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="datas">主键若已经存在则更新数据，主键若不存在则追加数据。</param>
-        public void AddOrUpdate<T>(IEnumerable<T> datas) where T : class
-        {
-
-        }
-
-        /// <summary>
         /// 删除一组指定Id的对象。立即生效。
         /// </summary>
         /// <typeparam name="T"></typeparam>

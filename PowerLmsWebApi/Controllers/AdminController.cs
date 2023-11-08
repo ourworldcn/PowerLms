@@ -1,10 +1,14 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using NPOI.HSSF.UserModel;
 using NPOI.SS.Formula.Functions;
+using NPOI.SS.UserModel;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
+using System.Net;
 using System.Reflection;
 
 namespace PowerLmsWebApi.Controllers
@@ -111,6 +115,83 @@ namespace PowerLmsWebApi.Controllers
                     break;
             }
             return result;
+        }
+
+        /// <summary>
+        /// 通用获取数据字典表功能。
+        /// </summary>
+        /// <param name="token"></param>
+        /// <param name="rId"></param>
+        /// <returns></returns>
+        [HttpGet]
+        [ProducesResponseType(typeof(FileResult), (int)HttpStatusCode.OK)]
+        public FileStreamResult ExportDataDic(Guid token, Guid rId)
+        {
+            var srTask = _Context.SystemResources.FindAsync(rId).AsTask();
+            var sr = srTask.Result;
+            using var workbook = new HSSFWorkbook();
+            var sheet = workbook.CreateSheet("Sheet0");//创建一个名称为Sheet0的表  
+            var fileName = $"{sr.Name}.xls";
+            switch (sr.Name)
+            {
+                case nameof(_Context.Multilinguals):
+                    {
+                        _NpoiManager.WriteToExcel(_Context.Multilinguals.AsNoTracking(), typeof(Multilingual).GetProperties().Select(c => c.Name).ToArray(), sheet);
+                    }
+                    break;
+                case nameof(_Context.LanguageDataDics):
+                    {
+                        _NpoiManager.WriteToExcel(_Context.LanguageDataDics.AsNoTracking(), typeof(LanguageDataDic).GetProperties().Select(c => c.Name).ToArray(), sheet);
+                    }
+                    break;
+                default:
+                    break;
+            }
+            var stream = new MemoryStream();
+            workbook.Write(stream, true);
+            workbook.Close();
+            stream.Seek(0, SeekOrigin.Begin);
+            return File(stream, "application/octet-stream", fileName);
+            //var path = Path.Combine(AppContext.BaseDirectory, "系统资源", "系统资源.xlsx");
+            //stream = new FileStream(path, FileMode.Open);
+            //return new PhysicalFileResult(path, "application/octet-stream") { FileDownloadName = Path.GetFileName(path) };
+        }
+
+        /// <summary>
+        /// 导出模板。
+        /// </summary>
+        /// <param name="token"></param>
+        /// <param name="rId"></param>
+        /// <returns></returns>
+        [HttpGet]
+        [ProducesResponseType(typeof(FileResult), (int)HttpStatusCode.OK)]
+        public FileStreamResult ExportDataDicTemplate(Guid token, Guid rId)
+        {
+            var srTask = _Context.SystemResources.FindAsync(rId).AsTask();
+            var sr = srTask.Result;
+            using var workbook = new HSSFWorkbook();
+            var sheet = workbook.CreateSheet("Sheet0");//创建一个名称为Sheet0的表  
+            var fileName = $"{sr.Name}.xls";
+            switch (sr.Name)
+            {
+                case nameof(_Context.Multilinguals):
+                    {
+                        _NpoiManager.WriteToExcel(_Context.Multilinguals.Take(0), typeof(Multilingual).GetProperties().Select(c => c.Name).ToArray(), sheet);
+                    }
+                    break;
+                case nameof(_Context.LanguageDataDics):
+                    {
+                        _NpoiManager.WriteToExcel(_Context.LanguageDataDics.Take(0), typeof(LanguageDataDic).GetProperties().Select(c => c.Name).ToArray(), sheet);
+                    }
+                    break;
+                default:
+                    break;
+            }
+            var stream = new MemoryStream();
+            workbook.Write(stream, true);
+            workbook.Close();
+            stream.Seek(0, SeekOrigin.Begin);
+            return File(stream, "application/octet-stream", fileName);
         }
     }
 

@@ -1,7 +1,11 @@
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.OpenApi.Models;
+using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
+using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
 var services = builder.Services;
@@ -39,13 +43,17 @@ builder.Services.AddSwaggerGen(c =>
 var userDbConnectionString = builder.Configuration.GetConnectionString("UserDbConnection").Replace("{Env}", builder.Environment.EnvironmentName);
 //services.AddDbContext<PowerLmsUserDbContext>(options => options.UseLazyLoadingProxies().UseSqlServer(userDbConnectionString).EnableSensitiveDataLogging());
 services.AddDbContextFactory<PowerLmsUserDbContext>(options => options.UseLazyLoadingProxies().UseSqlServer(userDbConnectionString).EnableSensitiveDataLogging());
-
 #endregion 配置数据库
 
 services.AddHostedService<InitializerService>();
 
-services.AddSingleton<MultilingualManager>();
-services.AddSingleton<NpoiManager>();
+#region 配置应用的一般服务
+var assemblies = new Assembly[] { typeof(PowerLmsUserDbContext).Assembly, typeof(Account).Assembly, typeof(SystemResourceManager).Assembly };   //避免有尚未加载的情况
+HashSet<Assembly> hsAssm = new HashSet<Assembly>(AppDomain.CurrentDomain.GetAssemblies());
+assemblies.ForEach(c => hsAssm.Add(c));
+services.AutoRegister(hsAssm);
+#endregion 配置应用的一般服务
+
 
 var app = builder.Build();
 
@@ -64,6 +72,24 @@ IWebHostEnvironment env = app.Environment;
     });
 }
 
+#region 静态资源访问
+app.UseStaticFiles();
+//var basePath = AppContext.BaseDirectory;
+//var path = Path.Combine(basePath, "Files/");
+//Directory.CreateDirectory(path);
+//// 添加MIME支持
+//var provider = new FileExtensionContentTypeProvider(new Dictionary<string, string>
+//{
+//    { ".xlsx","application/octet-stream"}
+//});
+//app.UseStaticFiles(new StaticFileOptions
+//{
+//    FileProvider = new PhysicalFileProvider(path),
+//    ContentTypeProvider = provider,
+//    RequestPath = path,
+//});
+
+#endregion 静态资源访问
 app.UseAuthorization();
 
 app.MapControllers();

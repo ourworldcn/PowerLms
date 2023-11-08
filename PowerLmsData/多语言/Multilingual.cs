@@ -25,10 +25,11 @@ namespace PowerLms.Data
         }
 
         /// <summary>
-        /// 数据库唯一Id。
+        /// 主键。
         /// </summary>
         [Key, Column(Order = 0)]
         [DatabaseGenerated(DatabaseGeneratedOption.None)]
+        [Comment("主键。")]
         public Guid Id { get; set; } = Guid.NewGuid();
 
         /// <summary>
@@ -37,17 +38,20 @@ namespace PowerLms.Data
         [MaxLength(12)]
         [Column(TypeName = "varchar")]
         [Required]
+        [Comment("主键，也是语言的标准缩写名。")]
         public string LanguageTag { get; set; }
 
         /// <summary>
         /// 键值字符串。如:未登录.登录.标题。
         /// </summary>
         [MaxLength(64)]
+        [Comment("键值字符串。如:未登录.登录.标题。")]
         public string Key { get; set; }
 
         /// <summary>
         /// 内容。
         /// </summary>
+        [Comment("内容。")]
         public string Text { get; set; }
     }
 
@@ -55,6 +59,7 @@ namespace PowerLms.Data
     /// 语言字典。
     /// 参见 https://learn.microsoft.com/zh-cn/openspecs/windows_protocols/ms-lcid/a9eac961-e77d-41a6-90a5-ce1a8b0cdb9c，可能需要翻译。
     /// </summary>
+    [Comment("语言字典，参见 https://learn.microsoft.com/zh-cn/openspecs/windows_protocols/ms-lcid/a9eac961-e77d-41a6-90a5-ce1a8b0cdb9c。")]
     public class LanguageDataDic
     {
         /// <summary>
@@ -64,16 +69,19 @@ namespace PowerLms.Data
         [DatabaseGenerated(DatabaseGeneratedOption.None)]
         [MaxLength(12)]
         [Column(TypeName = "varchar")]
+        [Comment("主键，也是语言的标准缩写名。")]
         public string LanguageTag { get; set; }
 
         /// <summary>
         /// 语言Id。
         /// </summary>
+        [Comment("语言Id。")]
         public int Lcid { get; set; }
 
         /// <summary>
         /// 语言名。
         /// </summary>
+        [Comment("语言名。")]
         public string DisplayName { get; set; }
 
     }

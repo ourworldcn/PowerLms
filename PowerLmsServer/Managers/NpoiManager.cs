@@ -1,8 +1,12 @@
 ﻿using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.ObjectPool;
+using NPOI.HSSF.UserModel;
+using NPOI.SS.Formula.Functions;
 using NPOI.SS.UserModel;
 using NPOI.Util;
+using NPOI.XSSF.Streaming.Values;
 using NPOI.XWPF.UserModel;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
@@ -21,6 +25,7 @@ namespace PowerLmsServer.Managers
     /// <summary>
     /// NOPI基础代码辅助管理器。
     /// </summary>
+    [OwAutoInjection(ServiceLifetime.Singleton)]
     public class NpoiManager
     {
         /// <summary>
@@ -220,5 +225,106 @@ namespace PowerLmsServer.Managers
             context.InsertOrUpdate(list as IEnumerable<T>);
         }
 
+        /// <summary>
+        /// 将数据集合写入excel表。
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="collection">可以是空集合，此时仅写入表头。</param>
+        /// <param name="columnNames"></param>
+        /// <param name="sheet"></param>
+        public void WriteToExcel<T>(IEnumerable<T> collection, string[] columnNames, ISheet sheet)
+        {
+            if (!collection.TryGetNonEnumeratedCount(out var rowCount))
+                rowCount = collection.Count();//行数  
+            int columnCount = columnNames.Length;//列数  
+            var mapping = columnNames.Select(c => (c, typeof(T).GetProperty(c))).ToArray();
+
+            foreach (var obj in collection)
+            {
+                foreach (var pi in mapping)
+                {
+                    pi.Item2.GetValue(obj, null);
+                }
+            }
+            int i;
+            //设置列头  
+            var row = sheet.CreateRow(0);//excel第一行设为列头  
+            for (i = 0; i < columnCount; i++)
+            {
+                var cell = row.CreateCell(i);
+                cell.SetValue(mapping[i].c);
+            }
+            //设置每行每列的单元格
+            i = 0;
+            foreach (var item in collection)
+            {
+                row = sheet.CreateRow(i + 1);   //excel第二行开始写入数据
+                for (int j = 0; j < columnCount; j++)
+                {
+                    var cell = row.CreateCell(j);   //cell.SetCellValue(dt.Rows[i][j].ToString());
+                    var obj = mapping[j].Item2.GetValue(item);    //取属性值
+
+                    cell.SetValue(obj);
+                }
+                i++;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 扩展方法封装类。
+    /// </summary>
+    public static class NpoiManagerExtensions
+    {
+        /// <summary>
+        /// 设置单元格的值。
+        /// </summary>
+        /// <param name="cell"></param>
+        /// <param name="val"></param>
+        public static void SetValue(this NPOI.SS.UserModel.ICell cell, object val)
+        {
+            switch (Type.GetTypeCode(val.GetType()))
+            {
+                case TypeCode.Empty:
+                    cell.SetBlank();
+                    break;
+                case TypeCode.Object:
+                    if (val is null)
+                        cell.SetBlank();
+                    else if (val is Guid guid)
+                        cell.SetCellValue(guid.ToString());
+                    break;
+                case TypeCode.DBNull:
+                    cell.SetBlank();
+                    break;
+                case TypeCode.Boolean:
+                    cell.SetCellValue((bool)val);
+                    break;
+                case TypeCode.Char:
+                    cell.SetCellValue(val.ToString());
+                    break;
+                case TypeCode.SByte:
+                case TypeCode.Byte:
+                case TypeCode.Int16:
+                case TypeCode.UInt16:
+                case TypeCode.Int32:
+                case TypeCode.UInt32:
+                case TypeCode.Int64:
+                case TypeCode.UInt64:
+                case TypeCode.Single:
+                case TypeCode.Double:
+                case TypeCode.Decimal:
+                    cell.SetCellValue(Convert.ToDouble(val));
+                    break;
+                case TypeCode.DateTime:
+                    cell.SetCellValue((DateTime)val);
+                    break;
+                case TypeCode.String:
+                    cell.SetCellValue(val as string);
+                    break;
+                default:
+                    break;
+            }
+        }
     }
 }

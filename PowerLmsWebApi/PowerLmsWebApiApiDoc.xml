@@ -60,6 +60,22 @@
             <param name="rId">从资源列表中获取，指定资源的Id。如:6AE3BBB3-BAC9-4509-BF82-C8578830CD24 表示 多语言资源表。Id是不会变化的。</param>
             <returns></returns>
         </member>
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.ExportDataDic(System.Guid,System.Guid)">
+            <summary>
+            通用获取数据字典表功能。
+            </summary>
+            <param name="token"></param>
+            <param name="rId"></param>
+            <returns></returns>
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.ExportDataDicTemplate(System.Guid,System.Guid)">
+            <summary>
+            导出模板。
+            </summary>
+            <param name="token"></param>
+            <param name="rId"></param>
+            <returns></returns>
+        </member>
         <member name="T:PowerLmsWebApi.Controllers.MultilingualController">
             <summary>
             多语言资源相关功能控制器。

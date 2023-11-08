@@ -41,6 +41,9 @@ namespace PowerLmsWebApi.Controllers
             if (user is null) return BadRequest();
             if (!user.IsPwd(model.Pwd)) return BadRequest();
             result.Token = Guid.NewGuid();
+            user.LastModifyDateTimeUtc = OwHelper.WorldNow;
+            user.Token = result.Token;
+            _DbContext.SaveChanges();
             return result;
         }
     }

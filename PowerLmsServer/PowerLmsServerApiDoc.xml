@@ -4,6 +4,18 @@
         <name>PowerLmsServer</name>
     </assembly>
     <members>
+        <member name="T:PowerLmsServer.Managers.AccountManager">
+            <summary>
+            账号管理器。
+            </summary>
+        </member>
+        <member name="M:PowerLmsServer.Managers.AccountManager.SetToken(System.IServiceProvider)">
+            <summary>
+            
+            </summary>
+            <param name="scope"></param>
+            <returns></returns>
+        </member>
         <member name="T:PowerLmsServer.Managers.InitializerService">
             <summary>
             初始化服务。
@@ -109,6 +121,32 @@
             <param name="sheet"></param>
             <param name="context"></param>
             <param name="destSet"></param>
+        </member>
+        <member name="M:PowerLmsServer.Managers.NpoiManager.WriteToExcel``1(System.Collections.Generic.IEnumerable{``0},System.String[],NPOI.SS.UserModel.ISheet)">
+            <summary>
+            将数据集合写入excel表。
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="collection">可以是空集合，此时仅写入表头。</param>
+            <param name="columnNames"></param>
+            <param name="sheet"></param>
+        </member>
+        <member name="T:PowerLmsServer.Managers.NpoiManagerExtensions">
+            <summary>
+            扩展方法封装类。
+            </summary>
+        </member>
+        <member name="M:PowerLmsServer.Managers.NpoiManagerExtensions.SetValue(NPOI.SS.UserModel.ICell,System.Object)">
+            <summary>
+            设置单元格的值。
+            </summary>
+            <param name="cell"></param>
+            <param name="val"></param>
+        </member>
+        <member name="T:PowerLmsServer.Managers.SystemResourceManager">
+            <summary>
+            
+            </summary>
         </member>
     </members>
 </doc>

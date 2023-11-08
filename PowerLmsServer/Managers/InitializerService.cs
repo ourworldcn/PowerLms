@@ -91,16 +91,18 @@ namespace PowerLmsServer.Managers
                     LanguageTag = "zh-CN",
                     LastModifyDateTimeUtc = OwHelper.WorldNow,
                 };
-                admin.SetPwd("1D381427-86BB-4D88-8CB0-5D92F8E1BADF");
+                //admin.SetPwd("1D381427-86BB-4D88-8CB0-5D92F8E1BADF");
                 _DbContext.Accounts.Add(admin);
-                _DbContext.SaveChanges();
+                //_DbContext.SaveChanges();
             }
+            admin.SetPwd("1D381427-86BB-4D88-8CB0-5D92F8E1BADF");
+            _DbContext.SaveChanges();
         }
 
         private void Test()
         {
-            var str = "sds";
-            var b = str.StartsWith("");
+            string fileName = Path.ChangeExtension("sr", ".xls");
+
         }
 
         private void CreateDb()

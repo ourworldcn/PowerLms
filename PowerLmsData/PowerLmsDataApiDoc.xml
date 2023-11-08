@@ -73,7 +73,7 @@
         </member>
         <member name="P:PowerLms.Data.Multilingual.Id">
             <summary>
-            数据库唯一Id。
+            主键。
             </summary>
         </member>
         <member name="P:PowerLms.Data.Multilingual.LanguageTag">
@@ -137,6 +137,11 @@
             账号相关信息数据库类。
             </summary>
         </member>
+        <member name="P:PowerLms.Data.Account.Timestamp">
+            <summary>
+            时间戳。
+            </summary>
+        </member>
         <member name="P:PowerLms.Data.Account.LoginName">
             <summary>
             登录名。
@@ -171,6 +176,11 @@
         <member name="P:PowerLms.Data.Account.LastModifyDateTimeUtc">
             <summary>
             最后一次操作的时间。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.Account.Token">
+            <summary>
+            最近使用的Token。
             </summary>
         </member>
         <member name="M:PowerLms.Data.Account.IsPwd(System.String)">
@@ -212,13 +222,6 @@
             
             </summary>
             <param name="options"></param>
-        </member>
-        <member name="M:PowerLmsServer.EfData.PowerLmsUserDbContext.AddOrUpdate``1(System.Collections.Generic.IEnumerable{``0})">
-            <summary>
-            更新或追加一组数据。
-            </summary>
-            <typeparam name="T"></typeparam>
-            <param name="datas">主键若已经存在则更新数据，主键若不存在则追加数据。</param>
         </member>
         <member name="M:PowerLmsServer.EfData.PowerLmsUserDbContext.Delete``1(System.Collections.Generic.List{System.Guid},Microsoft.EntityFrameworkCore.DbContext)">
             <summary>
