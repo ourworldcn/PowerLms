@@ -28,12 +28,14 @@
             管理员功能控制器。
             </summary>
         </member>
-        <member name="M:PowerLmsWebApi.Controllers.AdminController.#ctor(PowerLmsServer.EfData.PowerLmsUserDbContext,PowerLmsServer.Managers.NpoiManager)">
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.#ctor(PowerLmsServer.EfData.PowerLmsUserDbContext,PowerLmsServer.Managers.NpoiManager,PowerLmsServer.Managers.AccountManager,System.IServiceProvider)">
             <summary>
             
             </summary>
             <param name="context"></param>
             <param name="npoiManager"></param>
+            <param name="accountManager"></param>
+            <param name="scope"></param>
         </member>
         <member name="M:PowerLmsWebApi.Controllers.AdminController.GetSystemResource">
             <summary>
@@ -59,6 +61,8 @@
             <param name="token"></param>
             <param name="rId">从资源列表中获取，指定资源的Id。如:6AE3BBB3-BAC9-4509-BF82-C8578830CD24 表示 多语言资源表。Id是不会变化的。</param>
             <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
         </member>
         <member name="M:PowerLmsWebApi.Controllers.AdminController.ExportDataDic(System.Guid,System.Guid)">
             <summary>
@@ -67,6 +71,7 @@
             <param name="token"></param>
             <param name="rId"></param>
             <returns></returns>
+            <response code="401">无效令牌。</response>  
         </member>
         <member name="M:PowerLmsWebApi.Controllers.AdminController.ExportDataDicTemplate(System.Guid,System.Guid)">
             <summary>
@@ -75,6 +80,7 @@
             <param name="token"></param>
             <param name="rId"></param>
             <returns></returns>
+            <response code="401">无效令牌。</response>  
         </member>
         <member name="T:PowerLmsWebApi.Controllers.MultilingualController">
             <summary>

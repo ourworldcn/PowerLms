@@ -1,15 +1,11 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NPOI.HSSF.UserModel;
-using NPOI.SS.Formula.Functions;
-using NPOI.SS.UserModel;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
 using System.Net;
-using System.Reflection;
 
 namespace PowerLmsWebApi.Controllers
 {
@@ -23,14 +19,20 @@ namespace PowerLmsWebApi.Controllers
         /// </summary>
         /// <param name="context"></param>
         /// <param name="npoiManager"></param>
-        public AdminController(PowerLmsUserDbContext context, NpoiManager npoiManager)
+        /// <param name="accountManager"></param>
+        /// <param name="scope"></param>
+        public AdminController(PowerLmsUserDbContext context, NpoiManager npoiManager, AccountManager accountManager, IServiceProvider scope)
         {
             _Context = context;
             _NpoiManager = npoiManager;
+            _AccountManager = accountManager;
+            _Scope = scope;
         }
 
         PowerLmsUserDbContext _Context;
         NpoiManager _NpoiManager;
+        AccountManager _AccountManager;
+        IServiceProvider _Scope;
 
         /// <summary>
         /// 获取系统资源列表。
@@ -40,7 +42,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetSystemResourceReturnDto> GetSystemResource()
         {
             var result = new GetSystemResourceReturnDto();
-            result.Resources.AddRange(_Context.SystemResources);
+            result.Resources.AddRange(_Context.SystemResources.AsNoTracking());
             return result;
         }
 
@@ -86,9 +88,14 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="token"></param>
         /// <param name="rId">从资源列表中获取，指定资源的Id。如:6AE3BBB3-BAC9-4509-BF82-C8578830CD24 表示 多语言资源表。Id是不会变化的。</param>
         /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
         [HttpPost]
+        [ProducesResponseType(typeof(ImportDataDicReturnDto),(int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
         public ActionResult<ImportDataDicReturnDto> ImportDataDic(IFormFile formFile, Guid token, Guid rId)
         {
+            if (!_AccountManager.GetAccountFromToken(_Scope, token, out var account)) return Unauthorized();
             var result = new ImportDataDicReturnDto();
             var srTask = _Context.SystemResources.FindAsync(rId).AsTask();
             var workbook = _NpoiManager.GetWorkbookFromStream(formFile.OpenReadStream());
@@ -123,10 +130,13 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="token"></param>
         /// <param name="rId"></param>
         /// <returns></returns>
+        /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        [ProducesResponseType(typeof(FileResult), (int)HttpStatusCode.OK)]
-        public FileStreamResult ExportDataDic(Guid token, Guid rId)
+        [ProducesResponseType(typeof(FileStreamResult), 200)]
+        [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
+        public ActionResult ExportDataDic(Guid token, Guid rId)
         {
+            if (!_AccountManager.GetAccountFromToken(_Scope, token, out var account)) return Unauthorized();
             var srTask = _Context.SystemResources.FindAsync(rId).AsTask();
             var sr = srTask.Result;
             using var workbook = new HSSFWorkbook();
@@ -163,10 +173,13 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="token"></param>
         /// <param name="rId"></param>
         /// <returns></returns>
+        /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        [ProducesResponseType(typeof(FileResult), (int)HttpStatusCode.OK)]
-        public FileStreamResult ExportDataDicTemplate(Guid token, Guid rId)
+        [ProducesResponseType(typeof(FileStreamResult), (int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
+        public ActionResult ExportDataDicTemplate(Guid token, Guid rId)
         {
+            if (!_AccountManager.GetAccountFromToken(_Scope, token, out var account)) return Unauthorized();
             var srTask = _Context.SystemResources.FindAsync(rId).AsTask();
             var sr = srTask.Result;
             using var workbook = new HSSFWorkbook();

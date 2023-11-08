@@ -16,6 +16,8 @@ namespace PowerLms.Data
     /// <summary>
     /// 账号相关信息数据库类。
     /// </summary>
+    [Index(nameof(Token), IsUnique = false)]
+    [Index(nameof(LoginName), IsUnique = false)]
     public class Account : GuidKeyObjectBase
     {
         /// <summary>
@@ -28,19 +30,22 @@ namespace PowerLms.Data
         /// <summary>
         /// 登录名。
         /// </summary>
+        [MaxLength(64)]
         public string LoginName { get; set; }
 
         /// <summary>
         /// 密码的Hash值。
         /// </summary>
-        [MaxLength(32)]
         [Comment("密码的Hash值")]
+        [MaxLength(32)]
         public byte[] PwdHash { get; set; }
 
         /// <summary>
         /// 使用的首选语言标准缩写。如:zh-CN
         /// </summary>
         [Required]
+        [Column(TypeName = "varchar")]
+        [MaxLength(12)]
         public string LanguageTag { get; set; }
 
         /// <summary>

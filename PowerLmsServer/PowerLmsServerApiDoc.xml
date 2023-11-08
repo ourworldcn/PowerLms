@@ -9,12 +9,29 @@
             账号管理器。
             </summary>
         </member>
-        <member name="M:PowerLmsServer.Managers.AccountManager.SetToken(System.IServiceProvider)">
+        <member name="M:PowerLmsServer.Managers.AccountManager.GetAccountFromToken(System.IServiceProvider,System.Guid,PowerLms.Data.Account@)">
             <summary>
-            
+            获取上线文对象。暂时不考虑缓存。
             </summary>
             <param name="scope"></param>
+            <param name="token"></param>
+            <param name="account"></param>
             <returns></returns>
+        </member>
+        <member name="T:PowerLmsServer.Managers.OwContext">
+            <summary>
+            与Token生存期对应的上下文。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.Managers.OwContext.Token">
+            <summary>
+            令牌。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.Managers.OwContext.User">
+            <summary>
+            账号对象。
+            </summary>
         </member>
         <member name="T:PowerLmsServer.Managers.InitializerService">
             <summary>
