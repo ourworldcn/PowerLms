@@ -31,7 +31,15 @@ namespace PowerLms.Data
         /// 登录名。
         /// </summary>
         [MaxLength(64)]
+        [Comment("登录名")]
         public string LoginName { get; set; }
+
+        /// <summary>
+        /// 用户的显示名。
+        /// </summary>
+        [MaxLength(64)]
+        [Comment("用户的显示名")]
+        public string DisplayName { get; set; }
 
         /// <summary>
         /// 密码的Hash值。
@@ -60,6 +68,7 @@ namespace PowerLms.Data
         /// <summary>
         /// 创建该对象的世界时间。
         /// </summary>
+        [Comment("创建该对象的世界时间")]
         public DateTime CreateUtc { get; set; } = OwHelper.WorldNow;
 
         /// <summary>
@@ -78,11 +87,56 @@ namespace PowerLms.Data
         /// 最近使用的Token。
         /// </summary>
         [JsonIgnore]
+        [Comment("最近使用的Token")]
         public Guid? Token { get; set; }
+
+        /// <summary>
+        /// 用户状态。0是正常使用用户，1是锁定用户。
+        /// </summary>
+        [Comment("用户状态。0是正常使用用户，1是锁定用户。")]
+        public byte State { get; set; }
 
         #region 瞬时属性
 
         #endregion 瞬时属性
+
+        #region 导航属性
+
+        /// <summary>
+        /// 所属组织机构Id。
+        /// </summary>
+        [Comment("所属组织机构Id")]
+        public Guid? OrgId { get; set; }
+
+        #region 数据字典属性
+
+        /// <summary>
+        /// 工作状态编码。
+        /// </summary>
+        [Comment("工作状态编码")]
+        public Guid? WorkingStatusCode { get; set; }
+
+        /// <summary>
+        /// 在职状态编码。
+        /// </summary>
+        [Comment("在职状态编码")]
+        public Guid? IncumbencyCode { get; set; }
+
+        /// <summary>
+        /// 性别编码。
+        /// </summary>
+        [Comment("性别编码")]
+        public Guid? GenderCode { get; set; }
+
+        /// <summary>
+        /// 学历编码。
+        /// </summary>
+        [Comment("学历编码")]
+        public Guid? QualificationsCode { get; set; }
+
+        #endregion  数据字典属性
+
+        #endregion 导航属性
 
         #region 方法
         /// <summary>

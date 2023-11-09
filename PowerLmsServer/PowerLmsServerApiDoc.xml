@@ -160,6 +160,11 @@
             <param name="cell"></param>
             <param name="val"></param>
         </member>
+        <member name="T:PowerLmsServer.Managers.OrganizationManager">
+            <summary>
+            组织机构管理器。
+            </summary>
+        </member>
         <member name="T:PowerLmsServer.Managers.SystemResourceManager">
             <summary>
             

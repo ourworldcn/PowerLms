@@ -22,10 +22,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="基础支持\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\OwBaseCore\OwBaseCore.csproj" />
   </ItemGroup>
 

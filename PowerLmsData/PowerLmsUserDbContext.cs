@@ -98,7 +98,34 @@ namespace PowerLmsServer.EfData
         /// </summary>
         public DbSet<Account> Accounts { get; set; }
 
+        /// <summary>
+        /// 工作状态表。
+        /// </summary>
+        public DbSet<WorkingStatusDataDic> WorkingStatusDataDics { get;set; }
+
+        /// <summary>
+        /// 在职状态表。
+        /// </summary>
+        public DbSet<IncumbencyDataDic> IncumbencyDataDics { get; set; }
+
+        /// <summary>
+        /// 性别表。
+        /// </summary>
+        public DbSet<GenderDataDic> GenderDataDics { get; set; }
+
+        /// <summary>
+        /// 学历表。
+        /// </summary>
+        public DbSet<QualificationsDataDic> QualificationsDataDics { get; set; }
+
         #endregion 账号相关
+
+        #region 组织机构相关
+        /// <summary>
+        /// 组织机构表。
+        /// </summary>
+        public DbSet<PlOrganization> PlOrganizations { get; set; }
+        #endregion 组织机构相关
     }
 
     /// <summary>

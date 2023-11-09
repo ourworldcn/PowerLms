@@ -61,6 +61,121 @@
             该属性第一次读取时才初始化。并有利于id的池化处理。
             </summary>
         </member>
+        <member name="T:PowerLms.Data.IDataDic">
+            <summary>
+            数据字典的标识接口。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.DataDicBase">
+            <summary>
+            数据字典的基础类。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DataDicBase.DisplayNameMlId">
+            <summary>
+            显示名的多语言Id。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.WorkingStatusDataDic">
+            <summary>
+            工作状态字典。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.WorkingStatusDataDic.Code">
+            <summary>
+            工作状态编码。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.WorkingStatusDataDic.DisplayNameMlId">
+            <summary>
+            工作状态的多语言Id。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.IncumbencyDataDic">
+            <summary>
+            在职状态字典。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.IncumbencyDataDic.Code">
+            <summary>
+            在职状态编码。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.IncumbencyDataDic.DisplayNameMlId">
+            <summary>
+            在职状态名称多语言Id。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.GenderDataDic">
+            <summary>
+            性别字典。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.GenderDataDic.Code">
+            <summary>
+            性别编码。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.GenderDataDic.DisplayNameMlId">
+            <summary>
+            性别的多语言Id。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.QualificationsDataDic">
+            <summary>
+            学历字典。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.QualificationsDataDic.Code">
+            <summary>
+            性别编码。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.QualificationsDataDic.DisplayNameMlId">
+            <summary>
+            学历名称的多语言Id。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.PlAddress">
+            <summary>
+            地址类。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlAddress.Tel">
+            <summary>
+            电话。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlAddress.Fax">
+            <summary>
+            传真。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlAddress.FullAddress">
+            <summary>
+            详细地址。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.PlComplexAddress">
+            <summary>
+            嵌套在其他类中的地址类。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlComplexAddress.Tel">
+            <summary>
+            电话。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlComplexAddress.Fax">
+            <summary>
+            传真。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlComplexAddress.FullAddress">
+            <summary>
+            详细地址。
+            </summary>
+        </member>
         <member name="T:PowerLms.Data.Multilingual">
             <summary>
             多语言资源表。
@@ -112,6 +227,51 @@
             语言名。
             </summary>
         </member>
+        <member name="T:PowerLms.Data.PlOrganization">
+            <summary>
+            商户及组织机构。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlOrganization.Name">
+            <summary>
+            组织机构名称。这个有一定的正式的意义。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlOrganization.Description">
+            <summary>
+            组织机构描述。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlOrganization.ShortcutName">
+            <summary>
+            机构编码。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlOrganization.Otc">
+            <summary>
+            机构类型。1商户，2公司，4下属机构
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlOrganization.Address">
+            <summary>
+            嵌套地址类。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlOrganization.Parent">
+            <summary>
+            所属组织机构的导航属性。没有父的组织机构是顶层节点即"商户"。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlOrganization.ParentId">
+            <summary>
+            所属组织机构Id。没有父的组织机构是顶层节点即"商户"
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlOrganization.Children">
+            <summary>
+            拥有的子组织机构。
+            </summary>
+        </member>
         <member name="T:PowerLms.Data.SystemResource">
             <summary>
             系统资源。
@@ -145,6 +305,11 @@
         <member name="P:PowerLms.Data.Account.LoginName">
             <summary>
             登录名。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.Account.DisplayName">
+            <summary>
+            用户的显示名。
             </summary>
         </member>
         <member name="P:PowerLms.Data.Account.PwdHash">
@@ -181,6 +346,36 @@
         <member name="P:PowerLms.Data.Account.Token">
             <summary>
             最近使用的Token。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.Account.State">
+            <summary>
+            用户状态。0是正常使用用户，1是锁定用户。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.Account.OrgId">
+            <summary>
+            所属组织机构Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.Account.WorkingStatusCode">
+            <summary>
+            工作状态编码。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.Account.IncumbencyCode">
+            <summary>
+            在职状态编码。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.Account.GenderCode">
+            <summary>
+            性别编码。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.Account.QualificationsCode">
+            <summary>
+            学历编码。
             </summary>
         </member>
         <member name="M:PowerLms.Data.Account.IsPwd(System.String)">
@@ -250,6 +445,31 @@
         <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.Accounts">
             <summary>
             账号表。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.WorkingStatusDataDics">
+            <summary>
+            工作状态表。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.IncumbencyDataDics">
+            <summary>
+            在职状态表。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.GenderDataDics">
+            <summary>
+            性别表。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.QualificationsDataDics">
+            <summary>
+            学历表。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.PlOrganizations">
+            <summary>
+            组织机构表。
             </summary>
         </member>
         <member name="T:PowerLmsServer.EfData.OwDbContextExtensions">
