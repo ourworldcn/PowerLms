@@ -77,6 +77,16 @@ namespace PowerLmsServer.EfData
         /// </summary>
         public DbSet<SystemResource> SystemResources { get; set; }
 
+        /// <summary>
+        /// 数据字典目录表。
+        /// </summary>
+        public DbSet<DataDicCatalog> DataDicCatalogs { get; set; }
+
+        /// <summary>
+        /// 简单数据字典表。
+        /// </summary>
+        public DbSet<SimpleDataDic> SimpleDataDics { get; set; }
+
         #endregion 系统资源相关
 
         #region 多语言相关
@@ -97,26 +107,6 @@ namespace PowerLmsServer.EfData
         /// 账号表。
         /// </summary>
         public DbSet<Account> Accounts { get; set; }
-
-        /// <summary>
-        /// 工作状态表。
-        /// </summary>
-        public DbSet<WorkingStatusDataDic> WorkingStatusDataDics { get;set; }
-
-        /// <summary>
-        /// 在职状态表。
-        /// </summary>
-        public DbSet<IncumbencyDataDic> IncumbencyDataDics { get; set; }
-
-        /// <summary>
-        /// 性别表。
-        /// </summary>
-        public DbSet<GenderDataDic> GenderDataDics { get; set; }
-
-        /// <summary>
-        /// 学历表。
-        /// </summary>
-        public DbSet<QualificationsDataDic> QualificationsDataDics { get; set; }
 
         #endregion 账号相关
 

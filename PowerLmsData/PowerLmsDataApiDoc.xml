@@ -68,72 +68,62 @@
         </member>
         <member name="T:PowerLms.Data.DataDicBase">
             <summary>
-            数据字典的基础类。
+            数据字典条目的基础类。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.DataDicBase.DisplayNameMlId">
+        <member name="M:PowerLms.Data.DataDicBase.#ctor">
             <summary>
-            显示名的多语言Id。
+            构造函数。
             </summary>
         </member>
-        <member name="T:PowerLms.Data.WorkingStatusDataDic">
+        <member name="P:PowerLms.Data.DataDicBase.Code">
             <summary>
-            工作状态字典。
+            编码。对本系统有一定意义的编码。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.WorkingStatusDataDic.Code">
+        <member name="P:PowerLms.Data.DataDicBase.DisplayName">
             <summary>
-            工作状态编码。
+            显示的名称。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.WorkingStatusDataDic.DisplayNameMlId">
+        <member name="P:PowerLms.Data.DataDicBase.ShortcutName">
             <summary>
-            工作状态的多语言Id。
+            快捷输入名。如"as6"则在键盘输入按as6能选择到此项。
             </summary>
         </member>
-        <member name="T:PowerLms.Data.IncumbencyDataDic">
+        <member name="T:PowerLms.Data.SimpleDataDic">
             <summary>
-            在职状态字典。
+            简单数据字典条目类。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.IncumbencyDataDic.Code">
+        <member name="M:PowerLms.Data.SimpleDataDic.#ctor">
             <summary>
-            在职状态编码。
+            构造函数。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.IncumbencyDataDic.DisplayNameMlId">
+        <member name="P:PowerLms.Data.SimpleDataDic.CustomsCode">
             <summary>
-            在职状态名称多语言Id。
+            海关码。项目类型决定有大量与海关的EDI行为，交换使用的码。
             </summary>
         </member>
-        <member name="T:PowerLms.Data.GenderDataDic">
+        <member name="P:PowerLms.Data.SimpleDataDic.DataDicId">
             <summary>
-            性别字典。
+            所属数据字典的的Id。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.GenderDataDic.Code">
+        <member name="T:PowerLms.Data.DataDicCatalog">
             <summary>
-            性别编码。
+            数据字典目录类。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.GenderDataDic.DisplayNameMlId">
+        <member name="P:PowerLms.Data.DataDicCatalog.Code">
             <summary>
-            性别的多语言Id。
+            编码。对本系统有一定意义的编码。
             </summary>
         </member>
-        <member name="T:PowerLms.Data.QualificationsDataDic">
+        <member name="P:PowerLms.Data.DataDicCatalog.DisplayName">
             <summary>
-            学历字典。
-            </summary>
-        </member>
-        <member name="P:PowerLms.Data.QualificationsDataDic.Code">
-            <summary>
-            性别编码。
-            </summary>
-        </member>
-        <member name="P:PowerLms.Data.QualificationsDataDic.DisplayNameMlId">
-            <summary>
-            学历名称的多语言Id。
+            显示的名称。
             </summary>
         </member>
         <member name="T:PowerLms.Data.PlAddress">
@@ -432,6 +422,16 @@
             系统资源表。
             </summary>
         </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.DataDicCatalogs">
+            <summary>
+            数据字典目录表。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.SimpleDataDics">
+            <summary>
+            简单数据字典表。
+            </summary>
+        </member>
         <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.Multilinguals">
             <summary>
             多语言资源表。
@@ -445,26 +445,6 @@
         <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.Accounts">
             <summary>
             账号表。
-            </summary>
-        </member>
-        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.WorkingStatusDataDics">
-            <summary>
-            工作状态表。
-            </summary>
-        </member>
-        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.IncumbencyDataDics">
-            <summary>
-            在职状态表。
-            </summary>
-        </member>
-        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.GenderDataDics">
-            <summary>
-            性别表。
-            </summary>
-        </member>
-        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.QualificationsDataDics">
-            <summary>
-            学历表。
             </summary>
         </member>
         <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.PlOrganizations">

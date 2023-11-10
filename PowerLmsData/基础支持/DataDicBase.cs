@@ -1,6 +1,9 @@
-﻿using System;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -16,13 +19,37 @@ namespace PowerLms.Data
     }
 
     /// <summary>
-    /// 数据字典的基础类。
+    /// 数据字典条目的基础类。
     /// </summary>
-    public abstract class DataDicBase:GuidKeyObjectBase, IDataDic
+    public abstract class DataDicBase : GuidKeyObjectBase, IDataDic
     {
         /// <summary>
-        /// 显示名的多语言Id。
+        /// 构造函数。
         /// </summary>
-        abstract public string DisplayNameMlId { get; set; }
+        public DataDicBase()
+        {
+            
+        }
+
+        /// <summary>
+        /// 编码。对本系统有一定意义的编码。
+        /// </summary>
+        [Comment("编码，对本系统有一定意义的编码")]
+        [Column(TypeName = "varchar"), MaxLength(32), Required(AllowEmptyStrings = false)]   //最多32个ASCII字符
+        public virtual string Code { get; set; }
+
+        /// <summary>
+        /// 显示的名称。
+        /// </summary>
+        [Comment("显示的名称")]
+        public virtual string DisplayName { get; set; }
+
+        /// <summary>
+        /// 快捷输入名。如"as6"则在键盘输入按as6能选择到此项。
+        /// </summary>
+        [Comment("快捷输入名")]
+        [Column(TypeName = "char"), MaxLength(8)]   //8个ASCII字符不足的尾部填充空格
+        public virtual string ShortcutName { get; set; }
+
     }
 }

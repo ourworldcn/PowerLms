@@ -13,82 +13,48 @@ using System.Threading.Tasks;
 namespace PowerLms.Data
 {
     /// <summary>
-    /// 工作状态字典。
+    /// 简单数据字典条目类。
     /// </summary>
-    public class WorkingStatusDataDic: DataDicBase
+    public class SimpleDataDic : DataDicBase
     {
         /// <summary>
-        /// 工作状态编码。
+        /// 构造函数。
         /// </summary>
-        [Comment("工作状态编码")]
-        [Column(TypeName = "varchar"), MaxLength(12)]   //至多12个ASCII字符
-        public string Code { get; set; }
+        public SimpleDataDic()
+        {
+            
+        }
 
         /// <summary>
-        /// 工作状态的多语言Id。
+        /// 海关码。项目类型决定有大量与海关的EDI行为，交换使用的码。
         /// </summary>
-        [Comment("工作状态的多语言Id")]
-        [MaxLength(64)]
-        public override string DisplayNameMlId { get; set; }
+        [Comment("海关码。项目类型决定有大量与海关的EDI行为，交换使用的码。")]
+        public string CustomsCode { get; set; }
+
+        /// <summary>
+        /// 所属数据字典的的Id。
+        /// </summary>
+        [Comment("所属数据字典的的Id")]
+        public virtual Guid? DataDicId { get; set; }
     }
 
     /// <summary>
-    /// 在职状态字典。
+    /// 数据字典目录类。
     /// </summary>
-    public class IncumbencyDataDic: DataDicBase
+    public class DataDicCatalog : GuidKeyObjectBase
     {
         /// <summary>
-        /// 在职状态编码。
+        /// 编码。对本系统有一定意义的编码。
         /// </summary>
-        [Comment("在职状态编码")]
-        [Column(TypeName = "varchar"), MaxLength(12)]   //至多12个ASCII字符
-        public string Code { get; set; }
+        [Comment("编码，对本系统有一定意义的编码")]
+        [Column(TypeName = "varchar"), MaxLength(32)]   //最多32个ASCII字符
+        public virtual string Code { get; set; }
 
         /// <summary>
-        /// 在职状态名称多语言Id。
+        /// 显示的名称。
         /// </summary>
-        [Comment("在职状态名称多语言Id")]
-        [MaxLength(64)]
-        public override string DisplayNameMlId { get; set; }
-    }
+        [Comment("显示的名称")]
+        public virtual string DisplayName { get; set; }
 
-    /// <summary>
-    /// 性别字典。
-    /// </summary>
-    public class GenderDataDic: DataDicBase
-    {
-        /// <summary>
-        /// 性别编码。
-        /// </summary>
-        [Comment("在职状态编码")]
-        [Column(TypeName = "varchar"), MaxLength(12)]   //至多12个ASCII字符
-        public string Code { get; set; }
-
-        /// <summary>
-        /// 性别的多语言Id。
-        /// </summary>
-        [Comment("性别的多语言Id")]
-        [MaxLength(64)]
-        public override string DisplayNameMlId { get; set; }
-    }
-
-    /// <summary>
-    /// 学历字典。
-    /// </summary>
-    public class QualificationsDataDic : DataDicBase
-    {
-        /// <summary>
-        /// 性别编码。
-        /// </summary>
-        [Comment("学历编码")]
-        [Column(TypeName = "varchar"), MaxLength(12)]   //至多12个ASCII字符
-        public string Code { get; set; }
-
-        /// <summary>
-        /// 学历名称的多语言Id。
-        /// </summary>
-        [Comment("学历名称的多语言Id")]
-        [MaxLength(64)]
-        public override string DisplayNameMlId { get; set; }
     }
 }
