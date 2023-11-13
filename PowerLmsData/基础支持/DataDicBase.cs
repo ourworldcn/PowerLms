@@ -45,7 +45,7 @@ namespace PowerLms.Data
         public virtual string DisplayName { get; set; }
 
         /// <summary>
-        /// 快捷输入名。如"as6"则在键盘输入按as6能选择到此项。
+        /// 快捷输入名。如"as6"则在键盘输入按as6能选择到此项，8个ASCII字符不足的尾部填充空格。服务器并不使用该字段。
         /// </summary>
         [Comment("快捷输入名")]
         [Column(TypeName = "char"), MaxLength(8)]   //8个ASCII字符不足的尾部填充空格

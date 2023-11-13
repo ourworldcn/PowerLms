@@ -56,6 +56,16 @@ namespace PowerLmsServer.EfData
         #region 方法
 
         /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        /// <param name="modelBuilder"></param>
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<AccountPlOrganization>().HasKey(nameof(AccountPlOrganization.UserId), nameof(AccountPlOrganization.OrgId));
+            base.OnModelCreating(modelBuilder);
+        }
+
+        /// <summary>
         /// 删除一组指定Id的对象。立即生效。
         /// </summary>
         /// <typeparam name="T"></typeparam>
@@ -73,14 +83,9 @@ namespace PowerLmsServer.EfData
 
         #region 系统资源相关
         /// <summary>
-        /// 系统资源表。
+        /// 系统资源表。包含数据字典目录。
         /// </summary>
         public DbSet<SystemResource> SystemResources { get; set; }
-
-        /// <summary>
-        /// 数据字典目录表。
-        /// </summary>
-        public DbSet<DataDicCatalog> DataDicCatalogs { get; set; }
 
         /// <summary>
         /// 简单数据字典表。
@@ -107,6 +112,11 @@ namespace PowerLmsServer.EfData
         /// 账号表。
         /// </summary>
         public DbSet<Account> Accounts { get; set; }
+
+        /// <summary>
+        /// 用户所属组织机构表。
+        /// </summary>
+        public DbSet<AccountPlOrganization> AccountPlOrganizations { get; set; }
 
         #endregion 账号相关
 
@@ -154,11 +164,11 @@ namespace PowerLmsServer.EfData
         public static void InsertOrUpdate<T>(this DbContext context, IEnumerable<T> entities) where T : class
         {
             var set = context.Set<T>();
-            set.Load();
             var keyPi = typeof(T).GetProperties().OfType<PropertyInfo>().First(c => c.GetCustomAttribute<KeyAttribute>() is not null);
             foreach (var entity in entities)
             {
-                var existingBlog = set.Find(keyPi.GetValue(entity));
+                var id = keyPi.GetValue(entity);
+                var existingBlog = set.Find(id);
                 if (existingBlog is null)
                 {
                     set.Add(entity);

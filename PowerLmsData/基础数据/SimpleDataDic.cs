@@ -36,25 +36,11 @@ namespace PowerLms.Data
         /// </summary>
         [Comment("所属数据字典的的Id")]
         public virtual Guid? DataDicId { get; set; }
-    }
-
-    /// <summary>
-    /// 数据字典目录类。
-    /// </summary>
-    public class DataDicCatalog : GuidKeyObjectBase
-    {
-        /// <summary>
-        /// 编码。对本系统有一定意义的编码。
-        /// </summary>
-        [Comment("编码，对本系统有一定意义的编码")]
-        [Column(TypeName = "varchar"), MaxLength(32)]   //最多32个ASCII字符
-        public virtual string Code { get; set; }
 
         /// <summary>
-        /// 显示的名称。
+        /// 所属组织机构Id。
         /// </summary>
-        [Comment("显示的名称")]
-        public virtual string DisplayName { get; set; }
-
+        [Comment("所属组织机构Id")]
+        public Guid? OriId { get; set; }
     }
 }

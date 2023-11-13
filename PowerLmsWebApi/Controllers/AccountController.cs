@@ -3,7 +3,9 @@
  * */
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using PowerLms.Data;
 using PowerLmsServer.EfData;
+using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
 using System.Net;
 
@@ -18,21 +20,27 @@ namespace PowerLmsWebApi.Controllers
         /// 构造函数。
         /// </summary>
         /// <param name="dbContext"></param>
-        public AccountController(PowerLmsUserDbContext dbContext)
+        /// <param name="accountManager"></param>
+        /// <param name="serviceProvider"></param>
+        public AccountController(PowerLmsUserDbContext dbContext, AccountManager accountManager, IServiceProvider serviceProvider)
         {
             _DbContext = dbContext;
+            _AccountManager = accountManager;
+            _ServiceProvider = serviceProvider;
         }
 
+        IServiceProvider _ServiceProvider { get; }
         PowerLmsUserDbContext _DbContext;
+        AccountManager _AccountManager;
 
         /// <summary>
         /// 登录。
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
+        /// <response code="200">未发生系统级错误。</response>  
         /// <response code="400">参数错误，这里特指用户名或密码不正确。</response>  
         [HttpPost]
-        [ProducesResponseType(200)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         public ActionResult<LoginReturnDto> Login(LoginParamsDto model)
         {
@@ -43,9 +51,99 @@ namespace PowerLmsWebApi.Controllers
             result.Token = Guid.NewGuid();
             user.LastModifyDateTimeUtc = OwHelper.WorldNow;
             user.Token = result.Token;
+            //设置直属组织机构信息。
+            var orgIds = _DbContext.AccountPlOrganizations.Where(c => c.UserId == user.Id).Select(c => c.OrgId);
+            result.Orgs.AddRange(_DbContext.PlOrganizations.Where(c => orgIds.Contains(c.Id)));
             _DbContext.SaveChanges();
+            return result;
+        }
+
+        /// <summary>
+        /// 创建账户。随后应调用 获取账号信息 和 设置账号信息功能。否则该账号无法正常使用。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。</response>  
+        /// <response code="400">登录名重复。</response>  
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(BadRequestObjectResult), (int)HttpStatusCode.BadRequest)]
+        [HttpPost]
+        public ActionResult<CreateAccountReturnDto> CreateAccount(CreateAccountParamsDto model)
+        {
+            var result = new CreateAccountReturnDto();
+            var pwd = model.Pwd;
+            var b = _AccountManager.CreateNew(model.LoginName, ref pwd, out Guid id, _ServiceProvider);
+            if (b)
+            {
+                result.Pwd = pwd;
+                result.Id = id;
+            }
+            else
+            {
+                return BadRequest("登录名重复。");
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// 获取账号信息。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。</response>  
+        /// <response code="401">Token无效或无权限获取指定账号信息。</response>  
+        /// <response code="404">未找到指定Id的用户。</response>  
+        [HttpPost]
+        public ActionResult<GetAccountInfoReturnDto> GetAccountInfo(GetAccountInfoParamsDto model)
+        {
+            var result = new GetAccountInfoReturnDto();
+            result.Account = _DbContext.Accounts.Find(model.UserId);
+            if (result.Account is null)
+            {
+                return NotFound();
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// 登陆后设置用的一些必要信息，如当前组织机构等信息，这个接口可能会逐步增加参数中属性。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。</response>  
+        [HttpPost]
+        public ActionResult<SetUserInfoReturnDto> SetUserInfo(SetUserInfoParams model)
+        {
+            var result = new SetUserInfoReturnDto();
+            var context = _AccountManager.GetAccountFromToken(model.Token, _ServiceProvider);
+            if (!_DbContext.AccountPlOrganizations.Any(c => c.UserId == context.User.Id && c.OrgId == model.CurrentOrgId)) return BadRequest("错误的当前组织机构Id。");
+            context.User.OrgId = model.CurrentOrgId;
+            context.User.CurrentLanguageTag = model.LanguageTag;
+            context.Nop();
+            context.SaveChanges();
             return result;
         }
     }
 
+    /// <summary>
+    /// 获取账号信息功能参数封装类。
+    /// </summary>
+    public class GetAccountInfoParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 要获取信息的账号唯一Id。
+        /// </summary>
+        public Guid UserId { get; set; }
+    }
+
+    /// <summary>
+    /// 获取账号信息封装类。
+    /// </summary>
+    public class GetAccountInfoReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 成功时返回账号信息。
+        /// </summary>
+        public Account Account { get; set; }
+    }
 }

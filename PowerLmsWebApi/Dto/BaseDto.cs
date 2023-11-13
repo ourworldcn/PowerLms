@@ -1,4 +1,6 @@
-﻿namespace PowerLmsWebApi.Dto
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace PowerLmsWebApi.Dto
 {
     /// <summary>
     /// 带有令牌命令的入参基类。
@@ -8,6 +10,7 @@
         /// <summary>
         /// 令牌。
         /// </summary>
+        [Required]
         public Guid Token { get; set; }
     }
 

@@ -39,9 +39,9 @@ namespace PowerLms.Data
         public int Otc { get; set; }
 
         /// <summary>
-        /// 嵌套地址类。
+        /// 机构地址。
         /// </summary>
-        public PlComplexAddress Address { get; set; }
+        public  PlComplexAddress Address { get; set; }
 
         #region 导航属性
 
@@ -57,7 +57,7 @@ namespace PowerLms.Data
         /// </summary>
         [ForeignKey(nameof(Parent))]
         [Comment("所属组织机构Id。没有父的组织机构是顶层节点即\"商户\"。")]
-        public Guid? ParentId { get; set; }
+        public virtual Guid? ParentId { get; set; }
 
         List<PlOrganization> _Children;
         /// <summary>

@@ -88,7 +88,7 @@ namespace PowerLmsServer.Managers
                 admin = new Account
                 {
                     LoginName = "868d61ae-3a86-42a8-8a8c-1ed6cfa90817",
-                    LanguageTag = "zh-CN",
+                    CurrentLanguageTag= "zh-CN",
                     LastModifyDateTimeUtc = OwHelper.WorldNow,
                 };
                 //admin.SetPwd("1D381427-86BB-4D88-8CB0-5D92F8E1BADF");
@@ -113,8 +113,8 @@ namespace PowerLmsServer.Managers
             {
                 _DbContext = svc.GetRequiredService<PowerLmsUserDbContext>();
                 MigrateDbInitializer.Initialize(_DbContext);
+                _DbContext.SaveChanges();
                 _Logger.LogTrace("用户数据库已正常升级。");
-
                 //var loggingDb = services.GetService<GameLoggingDbContext>();
                 //if (loggingDb != null)
                 //{

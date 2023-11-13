@@ -58,7 +58,8 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetDataDicReturnDto> GetDataDic(Guid token, Guid rId, int startIndex, int count = -1)
         {
             var result = new GetDataDicReturnDto();
-            var sr = _Context.SystemResources.Find(rId);
+            if (_Context.Set<Account>().FirstOrDefault(c => c.Token == token) is not Account user) return Unauthorized();
+            if (_Context.SystemResources.Find(rId) is not SystemResource sr) return BadRequest($"找不到{rId}指定的系统资源。");
             switch (sr.Name)
             {
                 case nameof(_Context.Multilinguals):
@@ -75,7 +76,9 @@ namespace PowerLmsWebApi.Controllers
                         result.Result.AddRange(coll);
                     }
                     break;
-                default:
+                default:    //简单字典
+                    {
+                    }
                     break;
             }
             return result;
@@ -91,7 +94,7 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpPost]
-        [ProducesResponseType(typeof(ImportDataDicReturnDto),(int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ImportDataDicReturnDto), (int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
         public ActionResult<ImportDataDicReturnDto> ImportDataDic(IFormFile formFile, Guid token, Guid rId)
         {

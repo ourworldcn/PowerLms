@@ -46,15 +46,16 @@ namespace PowerLms.Data
         /// </summary>
         [Comment("密码的Hash值")]
         [MaxLength(32)]
+        [JsonIgnore]
         public byte[] PwdHash { get; set; }
 
         /// <summary>
         /// 使用的首选语言标准缩写。如:zh-CN
         /// </summary>
-        [Required]
         [Column(TypeName = "varchar")]
         [MaxLength(12)]
-        public string LanguageTag { get; set; }
+        [Comment("使用的首选语言标准缩写。如:zh-CN")]
+        public string CurrentLanguageTag { get; set; }
 
         /// <summary>
         /// 当前承载此用户的服务器节点号。空则表示此用户尚未被任何节点承载（未在线）。但有节点号，不代表用户登录，可能只是维护等其他目的将用户承载到服务器中。
@@ -103,9 +104,9 @@ namespace PowerLms.Data
         #region 导航属性
 
         /// <summary>
-        /// 所属组织机构Id。
+        /// 当前使用的组织机构Id。在登陆后要首先设置。
         /// </summary>
-        [Comment("所属组织机构Id")]
+        [Comment("当前使用的组织机构Id。在登陆后要首先设置")]
         public Guid? OrgId { get; set; }
 
         #region 数据字典属性
@@ -162,5 +163,24 @@ namespace PowerLms.Data
         }
 
         #endregion 方法
+    }
+
+    /// <summary>
+    /// 账号所属组织机构多对多表。
+    /// </summary>
+    [Comment("账号所属组织机构多对多表")]
+    public class AccountPlOrganization
+    {
+        /// <summary>
+        /// 用户Id。
+        /// </summary>
+        [Comment("用户Id")]
+        public Guid UserId { get; set; }
+
+        /// <summary>
+        /// 所属组织机构Id。
+        /// </summary>
+        [Comment("直属组织机构Id")]
+        public Guid OrgId { get; set; }
     }
 }

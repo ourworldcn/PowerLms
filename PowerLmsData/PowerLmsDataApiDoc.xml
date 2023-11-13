@@ -88,42 +88,7 @@
         </member>
         <member name="P:PowerLms.Data.DataDicBase.ShortcutName">
             <summary>
-            快捷输入名。如"as6"则在键盘输入按as6能选择到此项。
-            </summary>
-        </member>
-        <member name="T:PowerLms.Data.SimpleDataDic">
-            <summary>
-            简单数据字典条目类。
-            </summary>
-        </member>
-        <member name="M:PowerLms.Data.SimpleDataDic.#ctor">
-            <summary>
-            构造函数。
-            </summary>
-        </member>
-        <member name="P:PowerLms.Data.SimpleDataDic.CustomsCode">
-            <summary>
-            海关码。项目类型决定有大量与海关的EDI行为，交换使用的码。
-            </summary>
-        </member>
-        <member name="P:PowerLms.Data.SimpleDataDic.DataDicId">
-            <summary>
-            所属数据字典的的Id。
-            </summary>
-        </member>
-        <member name="T:PowerLms.Data.DataDicCatalog">
-            <summary>
-            数据字典目录类。
-            </summary>
-        </member>
-        <member name="P:PowerLms.Data.DataDicCatalog.Code">
-            <summary>
-            编码。对本系统有一定意义的编码。
-            </summary>
-        </member>
-        <member name="P:PowerLms.Data.DataDicCatalog.DisplayName">
-            <summary>
-            显示的名称。
+            快捷输入名。如"as6"则在键盘输入按as6能选择到此项，8个ASCII字符不足的尾部填充空格。服务器并不使用该字段。
             </summary>
         </member>
         <member name="T:PowerLms.Data.PlAddress">
@@ -164,6 +129,31 @@
         <member name="P:PowerLms.Data.PlComplexAddress.FullAddress">
             <summary>
             详细地址。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.SimpleDataDic">
+            <summary>
+            简单数据字典条目类。
+            </summary>
+        </member>
+        <member name="M:PowerLms.Data.SimpleDataDic.#ctor">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.SimpleDataDic.CustomsCode">
+            <summary>
+            海关码。项目类型决定有大量与海关的EDI行为，交换使用的码。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.SimpleDataDic.DataDicId">
+            <summary>
+            所属数据字典的的Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.SimpleDataDic.OriId">
+            <summary>
+            所属组织机构Id。
             </summary>
         </member>
         <member name="T:PowerLms.Data.Multilingual">
@@ -244,7 +234,7 @@
         </member>
         <member name="P:PowerLms.Data.PlOrganization.Address">
             <summary>
-            嵌套地址类。
+            机构地址。
             </summary>
         </member>
         <member name="P:PowerLms.Data.PlOrganization.Parent">
@@ -269,7 +259,12 @@
         </member>
         <member name="P:PowerLms.Data.SystemResource.Name">
             <summary>
-            系统资源名称。
+            系统资源名称。包含各种数据字典。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.SystemResource.DisplayName">
+            <summary>
+            显示的名称。
             </summary>
         </member>
         <member name="P:PowerLms.Data.SystemResource.Remark">
@@ -307,7 +302,7 @@
             密码的Hash值。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.Account.LanguageTag">
+        <member name="P:PowerLms.Data.Account.CurrentLanguageTag">
             <summary>
             使用的首选语言标准缩写。如:zh-CN
             </summary>
@@ -345,7 +340,7 @@
         </member>
         <member name="P:PowerLms.Data.Account.OrgId">
             <summary>
-            所属组织机构Id。
+            当前使用的组织机构Id。在登陆后要首先设置。
             </summary>
         </member>
         <member name="P:PowerLms.Data.Account.WorkingStatusCode">
@@ -381,6 +376,21 @@
             </summary>
             <param name="pwd"></param>
         </member>
+        <member name="T:PowerLms.Data.AccountPlOrganization">
+            <summary>
+            账号所属组织机构多对多表。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.AccountPlOrganization.UserId">
+            <summary>
+            用户Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.AccountPlOrganization.OrgId">
+            <summary>
+            所属组织机构Id。
+            </summary>
+        </member>
         <member name="T:PowerLmsServer.EfData.MigrateDbInitializer">
             <summary>
             
@@ -408,6 +418,12 @@
             </summary>
             <param name="options"></param>
         </member>
+        <member name="M:PowerLmsServer.EfData.PowerLmsUserDbContext.OnModelCreating(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <summary>
+            <inheritdoc/>
+            </summary>
+            <param name="modelBuilder"></param>
+        </member>
         <member name="M:PowerLmsServer.EfData.PowerLmsUserDbContext.Delete``1(System.Collections.Generic.List{System.Guid},Microsoft.EntityFrameworkCore.DbContext)">
             <summary>
             删除一组指定Id的对象。立即生效。
@@ -419,12 +435,7 @@
         </member>
         <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.SystemResources">
             <summary>
-            系统资源表。
-            </summary>
-        </member>
-        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.DataDicCatalogs">
-            <summary>
-            数据字典目录表。
+            系统资源表。包含数据字典目录。
             </summary>
         </member>
         <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.SimpleDataDics">
@@ -445,6 +456,11 @@
         <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.Accounts">
             <summary>
             账号表。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.AccountPlOrganizations">
+            <summary>
+            用户所属组织机构表。
             </summary>
         </member>
         <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.PlOrganizations">

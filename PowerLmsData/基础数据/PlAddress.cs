@@ -39,6 +39,7 @@ namespace PowerLms.Data
     /// 嵌套在其他类中的地址类。
     /// </summary>
     [ComplexType]
+    [Owned]
     public class PlComplexAddress
     {
         /// <summary>

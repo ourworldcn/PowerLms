@@ -3,17 +3,20 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PowerLmsServer.EfData;
 
 #nullable disable
+#pragma warning disable CS1591 // 缺少对公共可见类型或成员的 XML 注释
 
 namespace PowerLmsData.Migrations
 {
     [DbContext(typeof(PowerLmsUserDbContext))]
-    partial class PowerLmsUserDbContextModelSnapshot : ModelSnapshot
+    [Migration("20231113050756_23111301")]
+    partial class _23111301
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -32,11 +35,6 @@ namespace PowerLmsData.Migrations
                         .HasColumnType("datetime2")
                         .HasComment("创建该对象的世界时间");
 
-                    b.Property<string>("CurrentLanguageTag")
-                        .HasMaxLength(12)
-                        .HasColumnType("varchar(12)")
-                        .HasComment("使用的首选语言标准缩写。如:zh-CN");
-
                     b.Property<string>("DisplayName")
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)")
@@ -49,6 +47,11 @@ namespace PowerLmsData.Migrations
                     b.Property<Guid?>("IncumbencyCode")
                         .HasColumnType("uniqueidentifier")
                         .HasComment("在职状态编码");
+
+                    b.Property<string>("LanguageTag")
+                        .IsRequired()
+                        .HasMaxLength(12)
+                        .HasColumnType("varchar(12)");
 
                     b.Property<DateTime>("LastModifyDateTimeUtc")
                         .HasColumnType("datetime2");
@@ -63,7 +66,7 @@ namespace PowerLmsData.Migrations
 
                     b.Property<Guid?>("OrgId")
                         .HasColumnType("uniqueidentifier")
-                        .HasComment("当前使用的组织机构Id。在登陆后要首先设置");
+                        .HasComment("所属组织机构Id");
 
                     b.Property<byte[]>("PwdHash")
                         .HasMaxLength(32)
@@ -103,21 +106,24 @@ namespace PowerLmsData.Migrations
                     b.ToTable("Accounts");
                 });
 
-            modelBuilder.Entity("PowerLms.Data.AccountPlOrganization", b =>
+            modelBuilder.Entity("PowerLms.Data.DataDicCatalog", b =>
                 {
-                    b.Property<Guid>("UserId")
+                    b.Property<Guid>("Id")
                         .HasColumnType("uniqueidentifier")
-                        .HasComment("用户Id");
+                        .HasColumnOrder(0);
 
-                    b.Property<Guid>("OrgId")
-                        .HasColumnType("uniqueidentifier")
-                        .HasComment("直属组织机构Id");
+                    b.Property<string>("Code")
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)")
+                        .HasComment("编码，对本系统有一定意义的编码");
 
-                    b.HasKey("UserId", "OrgId");
+                    b.Property<string>("DisplayName")
+                        .HasColumnType("nvarchar(max)")
+                        .HasComment("显示的名称");
 
-                    b.ToTable("AccountPlOrganizations");
+                    b.HasKey("Id");
 
-                    b.HasComment("账号所属组织机构多对多表");
+                    b.ToTable("DataDicCatalogs");
                 });
 
             modelBuilder.Entity("PowerLms.Data.LanguageDataDic", b =>
@@ -230,10 +236,6 @@ namespace PowerLmsData.Migrations
                         .HasColumnType("nvarchar(max)")
                         .HasComment("显示的名称");
 
-                    b.Property<Guid?>("OriId")
-                        .HasColumnType("uniqueidentifier")
-                        .HasComment("所属组织机构Id");
-
                     b.Property<string>("ShortcutName")
                         .HasMaxLength(8)
                         .HasColumnType("char(8)")
@@ -250,22 +252,15 @@ namespace PowerLmsData.Migrations
                         .HasColumnType("uniqueidentifier")
                         .HasColumnOrder(0);
 
-                    b.Property<string>("DisplayName")
-                        .HasColumnType("nvarchar(max)")
-                        .HasComment("显示的名称");
-
                     b.Property<string>("Name")
-                        .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)")
-                        .HasComment("编码，对本系统有一定意义的编码");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<Guid?>("ParentId")
-                        .HasColumnType("uniqueidentifier")
-                        .HasComment("父资源的Id。可能分类用");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Remark")
-                        .HasColumnType("nvarchar(max)")
-                        .HasComment("说明");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
@@ -322,3 +317,4 @@ namespace PowerLmsData.Migrations
         }
     }
 }
+#pragma warning restore CS1591 // 缺少对公共可见类型或成员的 XML 注释
