@@ -3,6 +3,7 @@
  * */
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using NPOI.OpenXmlFormats.Dml.Diagram;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
@@ -106,6 +107,25 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
+        /// 设置/修改账号信息。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。</response>  
+        /// <response code="401">Token无效或无权限获取指定账号信息。</response>  
+        /// <response code="404">指定的账号Id不存在。</response>  
+        [HttpPost]
+        public ActionResult<SetAccountInfoReturnDto> SetAccountInfo(SetAccountInfoParamsDto model)
+        {
+            var result = new SetAccountInfoReturnDto();
+            var acount = _DbContext.Accounts.Find(model.Account.Id);
+            if (acount is null) return NotFound();
+            _DbContext.Entry(model.Account).CurrentValues.SetValues(model.Account);
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        /// <summary>
         /// 登陆后设置用的一些必要信息，如当前组织机构等信息，这个接口可能会逐步增加参数中属性。
         /// </summary>
         /// <param name="model"></param>
@@ -125,25 +145,4 @@ namespace PowerLmsWebApi.Controllers
         }
     }
 
-    /// <summary>
-    /// 获取账号信息功能参数封装类。
-    /// </summary>
-    public class GetAccountInfoParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 要获取信息的账号唯一Id。
-        /// </summary>
-        public Guid UserId { get; set; }
-    }
-
-    /// <summary>
-    /// 获取账号信息封装类。
-    /// </summary>
-    public class GetAccountInfoReturnDto : ReturnDtoBase
-    {
-        /// <summary>
-        /// 成功时返回账号信息。
-        /// </summary>
-        public Account Account { get; set; }
-    }
 }

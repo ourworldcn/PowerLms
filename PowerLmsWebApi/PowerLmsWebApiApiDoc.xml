@@ -35,7 +35,7 @@
             <response code="200">未发生系统级错误。</response>  
             <response code="400">登录名重复。</response>  
         </member>
-        <member name="M:PowerLmsWebApi.Controllers.AccountController.GetAccountInfo(PowerLmsWebApi.Controllers.GetAccountInfoParamsDto)">
+        <member name="M:PowerLmsWebApi.Controllers.AccountController.GetAccountInfo(PowerLmsWebApi.Dto.GetAccountInfoParamsDto)">
             <summary>
             获取账号信息。
             </summary>
@@ -45,6 +45,16 @@
             <response code="401">Token无效或无权限获取指定账号信息。</response>  
             <response code="404">未找到指定Id的用户。</response>  
         </member>
+        <member name="M:PowerLmsWebApi.Controllers.AccountController.SetAccountInfo(PowerLmsWebApi.Dto.SetAccountInfoParamsDto)">
+            <summary>
+            设置/修改账号信息。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。</response>  
+            <response code="401">Token无效或无权限获取指定账号信息。</response>  
+            <response code="404">指定的账号Id不存在。</response>  
+        </member>
         <member name="M:PowerLmsWebApi.Controllers.AccountController.SetUserInfo(PowerLmsWebApi.Dto.SetUserInfoParams)">
             <summary>
             登陆后设置用的一些必要信息，如当前组织机构等信息，这个接口可能会逐步增加参数中属性。
@@ -52,26 +62,6 @@
             <param name="model"></param>
             <returns></returns>
             <response code="200">未发生系统级错误。</response>  
-        </member>
-        <member name="T:PowerLmsWebApi.Controllers.GetAccountInfoParamsDto">
-            <summary>
-            获取账号信息功能参数封装类。
-            </summary>
-        </member>
-        <member name="P:PowerLmsWebApi.Controllers.GetAccountInfoParamsDto.UserId">
-            <summary>
-            要获取信息的账号唯一Id。
-            </summary>
-        </member>
-        <member name="T:PowerLmsWebApi.Controllers.GetAccountInfoReturnDto">
-            <summary>
-            获取账号信息封装类。
-            </summary>
-        </member>
-        <member name="P:PowerLmsWebApi.Controllers.GetAccountInfoReturnDto.Account">
-            <summary>
-            成功时返回账号信息。
-            </summary>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.AdminController">
             <summary>
@@ -278,6 +268,41 @@
         <member name="P:PowerLmsWebApi.Dto.CreateAccountReturnDto.Pwd">
             <summary>
             密码的明文。这是唯一能获取密码的地方，请用户记得。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Dto.SetAccountInfoParamsDto">
+            <summary>
+            设置/修改账号信息功能参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Dto.SetAccountInfoParamsDto.Account">
+            <summary>
+            账号的信息，可从Account/GetAccountInfo 获取，修改后调用设置/修改账号信息功能。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Dto.SetAccountInfoReturnDto">
+            <summary>
+            设置/修改账号信息功能返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Dto.GetAccountInfoParamsDto">
+            <summary>
+            获取账号信息功能参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Dto.GetAccountInfoParamsDto.UserId">
+            <summary>
+            要获取信息的账号唯一Id。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Dto.GetAccountInfoReturnDto">
+            <summary>
+            获取账号信息封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Dto.GetAccountInfoReturnDto.Account">
+            <summary>
+            成功时返回账号信息。
             </summary>
         </member>
         <member name="T:PowerLmsWebApi.Dto.GetSystemResourceReturnDto">

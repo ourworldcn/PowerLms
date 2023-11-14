@@ -99,4 +99,44 @@ namespace PowerLmsWebApi.Dto
         public string Pwd { get; set; }
     }
 
+    /// <summary>
+    /// 设置/修改账号信息功能参数封装类。
+    /// </summary>
+    public class SetAccountInfoParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 账号的信息，可从Account/GetAccountInfo 获取，修改后调用设置/修改账号信息功能。
+        /// </summary>
+        public Account Account { get; set; }
+    }
+
+    /// <summary>
+    /// 设置/修改账号信息功能返回值封装类。
+    /// </summary>
+    public class SetAccountInfoReturnDto : ReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 获取账号信息功能参数封装类。
+    /// </summary>
+    public class GetAccountInfoParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 要获取信息的账号唯一Id。
+        /// </summary>
+        public Guid UserId { get; set; }
+    }
+
+    /// <summary>
+    /// 获取账号信息封装类。
+    /// </summary>
+    public class GetAccountInfoReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 成功时返回账号信息。
+        /// </summary>
+        public Account Account { get; set; }
+    }
+
 }
