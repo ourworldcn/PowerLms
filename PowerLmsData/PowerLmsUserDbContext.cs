@@ -68,15 +68,14 @@ namespace PowerLmsServer.EfData
         /// <summary>
         /// 删除一组指定Id的对象。立即生效。
         /// </summary>
-        /// <typeparam name="T"></typeparam>
         /// <param name="deleteIds"></param>
-        /// <param name="db"></param>
+        /// <param name="tableName"></param>
         /// <returns></returns>
-        public int Delete<T>(List<Guid> deleteIds, DbContext db)
+        public int Delete(List<Guid> deleteIds,string tableName)
         {
             var ids = string.Join(',', deleteIds.Select(c => c.ToString()));
-            var sql = $"Delete From Where [Id] In ({ids})";
-            return db.Database.ExecuteSqlRaw(sql);
+            var sql = $"Delete From {tableName} Where [Id] In ({ids})";
+            return Database.ExecuteSqlRaw(sql);
         }
 
         #endregion 方法

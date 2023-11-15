@@ -65,7 +65,7 @@ namespace PowerLmsWebApi.Controllers
             var result = new MultilingualSetReturnDto();
             //检验Token
 
-            _Db.Delete<Multilingual>(model.DeleteIds, _Db);
+            _Db.Delete(model.DeleteIds, nameof(_Db.Multilinguals));
             _Db.InsertOrUpdate(model.AddOrUpdateDatas as IEnumerable<Multilingual>);
             _Db.SaveChanges();
             return result;
@@ -91,7 +91,7 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="formFile"></param>
         /// <param name="token">登录令牌。</param>
         /// <returns></returns>
-        [HttpPost,Obsolete("请改用 Admin/ImportDataDic")]
+        [HttpPost, Obsolete("请改用 Admin/ImportDataDic")]
         public ActionResult ImportLanguageDataDic(IFormFile formFile, Guid token)
         {
             var workbook = _NpoiManager.GetWorkbookFromStream(formFile.OpenReadStream());

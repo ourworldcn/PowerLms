@@ -24,15 +24,6 @@
             <param name="id"></param>
             <param name="service">当前范围的服务容器。</param>
         </member>
-        <member name="M:PowerLmsServer.Managers.AccountManager.GetAccountFromToken(System.IServiceProvider,System.Guid,PowerLms.Data.Account@)">
-            <summary>
-            获取上线文对象。暂时不考虑缓存。
-            </summary>
-            <param name="scope"></param>
-            <param name="token"></param>
-            <param name="account"></param>
-            <returns></returns>
-        </member>
         <member name="M:PowerLmsServer.Managers.AccountManager.GetAccountFromToken(System.Guid,System.IServiceProvider)">
             <summary>
             获取缓存上下文。当前版本未实现缓存，未来将使用缓存加速。

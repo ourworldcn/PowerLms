@@ -162,6 +162,55 @@
             <param name="token">登录令牌。</param>
             <returns></returns>
         </member>
+        <member name="T:PowerLmsWebApi.Controllers.OrganizationController">
+            <summary>
+            组织机构控制器。
+            </summary>
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.OrganizationController.#ctor(PowerLmsServer.Managers.AccountManager,System.IServiceProvider,PowerLmsServer.EfData.PowerLmsUserDbContext)">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.OrganizationController.GetOrg(PowerLmsWebApi.Dto.GetOrgParamsDto)">
+            <summary>
+            获取组织机构。暂不考虑分页。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.OrganizationController.ModifyOrg(PowerLmsWebApi.Controllers.ModifyOrgParamsDto)">
+            <summary>
+            修改组织机构。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.ModifyOrgParamsDto">
+            <summary>
+            修改组织机构功能的参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.ModifyOrgParamsDto.Root">
+            <summary>
+            要修改的组织机构Id的根节点。节点（包括下属节点）的Id若不存在则新加，否则是修改。注意增加顶层节点，必须是商户类型。(<see cref="P:PowerLms.Data.PlOrganization.Otc"/>=1)
+            可以为null，表示不添加/修改节点，仅删除节点。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.ModifyOrgParamsDto.DeleteIds">
+            <summary>
+            要删除了组织机构的Id集合。删除的节点需要在这里额外指定其Id。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.ModifyOrgReturnDto">
+            <summary>
+            修改组织机构功能的返回值封装类。
+            </summary>
+        </member>
         <member name="T:PowerLmsWebApi.Controllers.OwControllerBase">
             <summary>
             控制器基类。
@@ -410,6 +459,31 @@
         <member name="P:PowerLmsWebApi.Dto.GetLanguageDataDicReturnDto.Results">
             <summary>
             语言数据字典。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Dto.GetOrgParamsDto">
+            <summary>
+            获取组织机构功能参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Dto.GetOrgParamsDto.RootId">
+            <summary>
+            根组织机构的Id。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Dto.GetOrgParamsDto.IncludeChildren">
+            <summary>
+            是否包含子机构。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Dto.GetOrgReturnDto">
+            <summary>
+            获取组织机构功能返回值封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Dto.GetOrgReturnDto.Result">
+            <summary>
+            返回的组机构。
             </summary>
         </member>
         <member name="T:PowerLmsWebApi.WeatherForecast">

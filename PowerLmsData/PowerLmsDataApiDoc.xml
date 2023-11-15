@@ -111,22 +111,22 @@
             详细地址。
             </summary>
         </member>
-        <member name="T:PowerLms.Data.PlComplexAddress">
+        <member name="T:PowerLms.Data.PlSimpleOwnedAddress">
             <summary>
             嵌套在其他类中的地址类。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.PlComplexAddress.Tel">
+        <member name="P:PowerLms.Data.PlSimpleOwnedAddress.Tel">
             <summary>
             电话。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.PlComplexAddress.Fax">
+        <member name="P:PowerLms.Data.PlSimpleOwnedAddress.Fax">
             <summary>
             传真。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.PlComplexAddress.FullAddress">
+        <member name="P:PowerLms.Data.PlSimpleOwnedAddress.FullAddress">
             <summary>
             详细地址。
             </summary>
@@ -229,7 +229,7 @@
         </member>
         <member name="P:PowerLms.Data.PlOrganization.Otc">
             <summary>
-            机构类型。1商户，2公司，4下属机构
+            机构类型。1商户，2公司，4下属机构。商户不能有父节点。
             </summary>
         </member>
         <member name="P:PowerLms.Data.PlOrganization.Address">
@@ -424,13 +424,12 @@
             </summary>
             <param name="modelBuilder"></param>
         </member>
-        <member name="M:PowerLmsServer.EfData.PowerLmsUserDbContext.Delete``1(System.Collections.Generic.List{System.Guid},Microsoft.EntityFrameworkCore.DbContext)">
+        <member name="M:PowerLmsServer.EfData.PowerLmsUserDbContext.Delete(System.Collections.Generic.List{System.Guid},System.String)">
             <summary>
             删除一组指定Id的对象。立即生效。
             </summary>
-            <typeparam name="T"></typeparam>
             <param name="deleteIds"></param>
-            <param name="db"></param>
+            <param name="tableName"></param>
             <returns></returns>
         </member>
         <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.SystemResources">

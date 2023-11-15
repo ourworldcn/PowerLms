@@ -98,7 +98,7 @@ namespace PowerLmsWebApi.Controllers
         [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
         public ActionResult<ImportDataDicReturnDto> ImportDataDic(IFormFile formFile, Guid token, Guid rId)
         {
-            if (!_AccountManager.GetAccountFromToken(_Scope, token, out var account)) return Unauthorized();
+            if (_AccountManager.GetAccountFromToken(token, _Scope) is not OwContext context) return Unauthorized(OwHelper.GetLastErrorMessage());
             var result = new ImportDataDicReturnDto();
             var srTask = _Context.SystemResources.FindAsync(rId).AsTask();
             var workbook = _NpoiManager.GetWorkbookFromStream(formFile.OpenReadStream());
@@ -139,7 +139,7 @@ namespace PowerLmsWebApi.Controllers
         [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
         public ActionResult ExportDataDic(Guid token, Guid rId)
         {
-            if (!_AccountManager.GetAccountFromToken(_Scope, token, out var account)) return Unauthorized();
+            if (_AccountManager.GetAccountFromToken(token, _Scope) is not OwContext context) return Unauthorized(OwHelper.GetLastErrorMessage());
             var srTask = _Context.SystemResources.FindAsync(rId).AsTask();
             var sr = srTask.Result;
             using var workbook = new HSSFWorkbook();
@@ -182,7 +182,7 @@ namespace PowerLmsWebApi.Controllers
         [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
         public ActionResult ExportDataDicTemplate(Guid token, Guid rId)
         {
-            if (!_AccountManager.GetAccountFromToken(_Scope, token, out var account)) return Unauthorized();
+            if (_AccountManager.GetAccountFromToken(token, _Scope) is not OwContext context) return Unauthorized(OwHelper.GetLastErrorMessage());
             var srTask = _Context.SystemResources.FindAsync(rId).AsTask();
             var sr = srTask.Result;
             using var workbook = new HSSFWorkbook();

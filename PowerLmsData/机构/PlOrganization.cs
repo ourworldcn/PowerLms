@@ -33,7 +33,7 @@ namespace PowerLms.Data
         public string ShortcutName { get; set; }
 
         /// <summary>
-        /// 机构类型。1商户，2公司，4下属机构
+        /// 机构类型。1商户，2公司，4下属机构。商户不能有父节点。
         /// </summary>
         [Comment("机构类型，1商户，2公司，4下属机构")]
         public int Otc { get; set; }
@@ -41,7 +41,7 @@ namespace PowerLms.Data
         /// <summary>
         /// 机构地址。
         /// </summary>
-        public  PlComplexAddress Address { get; set; }
+        public  PlSimpleOwnedAddress Address { get; set; }
 
         #region 导航属性
 

@@ -40,7 +40,7 @@ namespace PowerLms.Data
     /// </summary>
     [ComplexType]
     [Owned]
-    public class PlComplexAddress
+    public class PlSimpleOwnedAddress
     {
         /// <summary>
         /// 电话。

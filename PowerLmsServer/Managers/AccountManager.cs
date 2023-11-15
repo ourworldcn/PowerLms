@@ -57,28 +57,6 @@ namespace PowerLmsServer.Managers
         }
 
         /// <summary>
-        /// 获取上线文对象。暂时不考虑缓存。
-        /// </summary>
-        /// <param name="scope"></param>
-        /// <param name="token"></param>
-        /// <param name="account"></param>
-        /// <returns></returns>
-        public bool GetAccountFromToken(IServiceProvider scope, Guid token, out Account account)
-        {
-            var db = scope.GetService<PowerLmsUserDbContext>();
-            var user = db.Accounts.FirstOrDefault(c => c.Token == token);
-            if (user is null) goto lbErr;
-            account = user;
-            var context = scope.GetRequiredService<OwContext>();
-            context.Token = token;
-            context.User = user;
-            return true;
-        lbErr:
-            account = null;
-            return false;
-        }
-
-        /// <summary>
         /// 获取缓存上下文。当前版本未实现缓存，未来将使用缓存加速。
         /// </summary>
         /// <param name="token">登录令牌。</param>
@@ -94,6 +72,7 @@ namespace PowerLmsServer.Managers
             context.User = user;
             return context;
         lbErr:
+            OwHelper.SetLastError(315);
             return null;
         }
     }
