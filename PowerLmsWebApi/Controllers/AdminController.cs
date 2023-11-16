@@ -185,6 +185,37 @@ namespace PowerLmsWebApi.Controllers
             stream.Seek(0, SeekOrigin.Begin);
             return File(stream, "application/octet-stream", fileName);
         }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        [HttpPost]
+        public ActionResult AddSimpleDataDic()
+        {
+            return Ok();
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        [HttpPost]
+        public ActionResult ModifySimpleDataDic()
+        {
+            return Ok();
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        [HttpPost]
+        public ActionResult RemoveSimpleDataDic()
+        {
+            return Ok();
+        }
+
     }
 
 }

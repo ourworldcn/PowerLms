@@ -58,5 +58,11 @@ namespace PowerLms.Data
         [Column(TypeName = "char"), MaxLength(8)]   //8个ASCII字符不足的尾部填充空格
         public virtual string ShortcutName { get; set; }
 
+        /// <summary>
+        /// 所属组织机构Id。通常这里为null则有不同解释，如通用的模板或超管使用的数据字典。
+        /// </summary>
+        [Comment("所属组织机构Id。通常这里为null则有不同解释，如通用的模板或超管使用的数据字典。")]
+        public Guid? OrgId { get; set; }
+
     }
 }

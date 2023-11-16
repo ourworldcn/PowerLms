@@ -49,6 +49,7 @@ namespace PowerLmsWebApi.Controllers
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         public ActionResult<LoginReturnDto> Login(LoginParamsDto model)
         {
+            //TODO:增加 手机号，邮箱支持
             var result = new LoginReturnDto();
             var user = _DbContext.Accounts.FirstOrDefault(c => c.LoginName == model.LoginName);
             if (user is null) return BadRequest();
@@ -147,6 +148,39 @@ namespace PowerLmsWebApi.Controllers
             context.SaveChanges();
             return result;
         }
+
+        /// <summary>
+        /// 延续指定令牌的自动注销时间。会自动换一个新令牌并返回。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。</response>  
+        [HttpPost]
+        public ActionResult<NopReturnDto> Nop(NopParamsDto model)
+        {
+            var result=new NopReturnDto();
+            return result;
+        }
+
+        [HttpPost]
+        public ActionResult ModifyPwd()
+        {
+            return Ok();
+        }
+
+        [HttpPost]
+        public ActionResult ResetPwd()
+        {
+            return Ok();
+        }
     }
 
+    public class NopParamsDto : TokenDtoBase
+    {
+    }
+
+    public class NopReturnDto : ReturnDtoBase
+    {
+        public Guid NewToken { get; set; }
+    }
 }

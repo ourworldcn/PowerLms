@@ -74,6 +74,14 @@
             <returns></returns>
             <response code="200">未发生系统级错误。</response>  
         </member>
+        <member name="M:PowerLmsWebApi.Controllers.AccountController.Nop(PowerLmsWebApi.Controllers.NopParamsDto)">
+            <summary>
+            延续指定令牌的自动注销时间。会自动换一个新令牌并返回。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。</response>  
+        </member>
         <member name="T:PowerLmsWebApi.Controllers.AdminController">
             <summary>
             管理员功能控制器。
@@ -132,6 +140,24 @@
             <param name="rId"></param>
             <returns></returns>
             <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.AddSimpleDataDic">
+            <summary>
+            
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.ModifySimpleDataDic">
+            <summary>
+            
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.RemoveSimpleDataDic">
+            <summary>
+            
+            </summary>
+            <returns></returns>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.MultilingualController">
             <summary>
@@ -252,7 +278,7 @@
         </member>
         <member name="P:PowerLmsWebApi.Dto.LoginParamsDto.LoginName">
             <summary>
-            登录名。
+            登录名。可用手机号，邮箱。
             </summary>
         </member>
         <member name="P:PowerLmsWebApi.Dto.LoginParamsDto.Pwd">

@@ -135,6 +135,14 @@ namespace PowerLms.Data
         [Comment("学历编码")]
         public Guid? QualificationsCode { get; set; }
 
+        public string EMail
+        {
+            get => default;
+            set
+            {
+            }
+        }
+
         #endregion  数据字典属性
 
         #endregion 导航属性
