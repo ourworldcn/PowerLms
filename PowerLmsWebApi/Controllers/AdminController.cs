@@ -69,13 +69,6 @@ namespace PowerLmsWebApi.Controllers
                         result.Result.AddRange(coll);
                     }
                     break;
-                case nameof(_Context.LanguageDataDics):
-                    {
-                        var coll = _Context.LanguageDataDics.OrderBy(c => c.LanguageTag).Skip(startIndex);
-                        coll = count == -1 ? coll : coll.Take(count);
-                        result.Result.AddRange(coll);
-                    }
-                    break;
                 default:    //简单字典
                     {
                     }
@@ -113,13 +106,6 @@ namespace PowerLmsWebApi.Controllers
                         _Context.SaveChanges();
                     }
                     break;
-                case nameof(_Context.LanguageDataDics):
-                    {
-                        _Context.TruncateTable(nameof(_Context.LanguageDataDics));
-                        _NpoiManager.WriteToDb(sheet, _Context, _Context.LanguageDataDics);
-                        _Context.SaveChanges();
-                    }
-                    break;
                 default:
                     result.ErrorCode = 400;
                     break;
@@ -150,11 +136,6 @@ namespace PowerLmsWebApi.Controllers
                 case nameof(_Context.Multilinguals):
                     {
                         _NpoiManager.WriteToExcel(_Context.Multilinguals.AsNoTracking(), typeof(Multilingual).GetProperties().Select(c => c.Name).ToArray(), sheet);
-                    }
-                    break;
-                case nameof(_Context.LanguageDataDics):
-                    {
-                        _NpoiManager.WriteToExcel(_Context.LanguageDataDics.AsNoTracking(), typeof(LanguageDataDic).GetProperties().Select(c => c.Name).ToArray(), sheet);
                     }
                     break;
                 default:
@@ -193,11 +174,6 @@ namespace PowerLmsWebApi.Controllers
                 case nameof(_Context.Multilinguals):
                     {
                         _NpoiManager.WriteToExcel(_Context.Multilinguals.Take(0), typeof(Multilingual).GetProperties().Select(c => c.Name).ToArray(), sheet);
-                    }
-                    break;
-                case nameof(_Context.LanguageDataDics):
-                    {
-                        _NpoiManager.WriteToExcel(_Context.LanguageDataDics.Take(0), typeof(LanguageDataDic).GetProperties().Select(c => c.Name).ToArray(), sheet);
                     }
                     break;
                 default:

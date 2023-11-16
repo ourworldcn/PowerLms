@@ -4,18 +4,29 @@
         <name>PowerLmsWebApi</name>
     </assembly>
     <members>
+        <member name="T:PowerLmsWebApi.AutoMappper.AutoMapperProfile">
+            <summary>
+            配置本项目AutoMapper的特殊类。
+            </summary>
+        </member>
+        <member name="M:PowerLmsWebApi.AutoMappper.AutoMapperProfile.#ctor">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
         <member name="T:PowerLmsWebApi.Controllers.AccountController">
             <summary>
             账号功能控制器。
             </summary>
         </member>
-        <member name="M:PowerLmsWebApi.Controllers.AccountController.#ctor(PowerLmsServer.EfData.PowerLmsUserDbContext,PowerLmsServer.Managers.AccountManager,System.IServiceProvider)">
+        <member name="M:PowerLmsWebApi.Controllers.AccountController.#ctor(PowerLmsServer.EfData.PowerLmsUserDbContext,PowerLmsServer.Managers.AccountManager,System.IServiceProvider,AutoMapper.IMapper)">
             <summary>
             构造函数。
             </summary>
             <param name="dbContext"></param>
             <param name="accountManager"></param>
             <param name="serviceProvider"></param>
+            <param name="mapper"></param>
         </member>
         <member name="M:PowerLmsWebApi.Controllers.AccountController.Login(PowerLmsWebApi.Dto.LoginParamsDto)">
             <summary>

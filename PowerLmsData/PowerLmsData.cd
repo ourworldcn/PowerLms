@@ -1,0 +1,100 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Class Name="PowerLms.Data.SimpleDataDic">
+    <Position X="0.75" Y="4.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAABAAAAAAA=</HashCode>
+      <FileName>基础数据\SimpleDataDic.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="PowerLms.Data.PlAddress" Collapsed="true">
+    <Position X="11.75" Y="1" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAgAAAgQAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>基础数据\PlAddress.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="PowerLms.Data.PlSimpleOwnedAddress" Collapsed="true">
+    <Position X="9.5" Y="1" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAgAAAgQAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>基础数据\PlAddress.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="PowerLms.Data.DataDicBase">
+    <Position X="0.75" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAEAAAAAAAAAAAAAAgAAAAAAAAAIEAAAAAAAAAAAA=</HashCode>
+      <FileName>基础支持\DataDicBase.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="PowerLms.Data.SystemResource">
+    <Position X="14" Y="3" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAEAAAAAAAAAAAAAAAAAQAAAAAAAAAAgAAAAAAAQA=</HashCode>
+      <FileName>系统资源\SystemResource.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="PowerLms.Data.PlOrganization">
+    <Position X="12" Y="2.5" Width="1.5" />
+    <AssociationLine Name="Parent" Type="PowerLms.Data.PlOrganization" ManuallyRouted="true">
+      <Path>
+        <Point X="12.532" Y="5.426" />
+        <Point X="12.532" Y="5.979" />
+        <Point X="12.978" Y="5.979" />
+        <Point X="12.978" Y="5.426" />
+      </Path>
+    </AssociationLine>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAgAAAAAAAUQAQAAAACAAECAgAAAAAQAAA=</HashCode>
+      <FileName>机构\PlOrganization.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="Parent" />
+    </ShowAsAssociation>
+  </Class>
+  <Class Name="PowerLms.Data.Account">
+    <Position X="7.25" Y="2.5" Width="2" />
+    <TypeIdentifier>
+      <HashCode>gGAEEAAAAAAgAAAAAAASAAAAIAAEAgYAAQAABIABAAA=</HashCode>
+      <FileName>账号\Account.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="PowerLms.Data.AccountPlOrganization">
+    <Position X="9.75" Y="3.75" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAgAAAAEAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>账号\Account.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="PowerLms.Data.Multilingual">
+    <Position X="4.75" Y="1" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAACAAAAAACAAAQAAAAAAAAAAAAAAAAAAAAACAAAAAA=</HashCode>
+      <FileName>多语言\Multilingual.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="PowerLms.Data.LanguageDataDic">
+    <Position X="13.5" Y="0.5" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAEAAAAACAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>多语言\Multilingual.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="PowerLms.Data.DataDicCatalog">
+    <Position X="2.75" Y="3" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAEQAAAAAAAAAAAAAgAAAAAAAEAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>基础数据\DataDicCatalog.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Interface Name="PowerLms.Data.IDataDic" Collapsed="true">
+    <Position X="10" Y="2.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>基础支持\DataDicBase.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Font Name="Microsoft YaHei UI" Size="9" />
+</ClassDiagram>

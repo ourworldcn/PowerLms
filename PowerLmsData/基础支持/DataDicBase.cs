@@ -28,7 +28,7 @@ namespace PowerLms.Data
         /// </summary>
         public DataDicBase()
         {
-            
+
         }
 
         /// <summary>
@@ -43,6 +43,13 @@ namespace PowerLms.Data
         /// </summary>
         [Comment("显示的名称")]
         public virtual string DisplayName { get; set; }
+
+        /// <summary>
+        /// 缩写名。
+        /// </summary>
+        [Comment("缩写名")]
+        [MaxLength(32)]
+        public string ShortName { get; set; }
 
         /// <summary>
         /// 快捷输入名。如"as6"则在键盘输入按as6能选择到此项，8个ASCII字符不足的尾部填充空格。服务器并不使用该字段。

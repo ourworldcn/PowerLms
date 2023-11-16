@@ -111,13 +111,6 @@
             构造函数。
             </summary>
         </member>
-        <member name="M:PowerLmsServer.Managers.MultilingualManager.Import(System.IO.Stream,PowerLmsServer.EfData.PowerLmsUserDbContext)">
-            <summary>
-            
-            </summary>
-            <param name="stream"></param>
-            <param name="db"></param>
-        </member>
         <member name="T:PowerLmsServer.Managers.NpoiManager">
             <summary>
             NOPI基础代码辅助管理器。

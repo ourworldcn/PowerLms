@@ -8,6 +8,7 @@ using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using static Org.BouncyCastle.Math.EC.ECCurve;
 
 
@@ -62,7 +63,7 @@ internal class Program
 
         app.UseAuthorization();
         app.MapControllers();
-
+        
         app.Run();
     }
 
@@ -113,15 +114,22 @@ internal class Program
         services.AddDbContextFactory<PowerLmsUserDbContext>(options => options.UseLazyLoadingProxies().UseSqlServer(userDbConnectionString).EnableSensitiveDataLogging());
         #endregion 配置数据库
 
-        services.AddHostedService<InitializerService>();
 
         #region 配置应用的一般服务
+        services.AddHostedService<InitializerService>();
         services.AddSingleton<PasswordGenerator>(); //密码生成服务
-        var assemblies = new Assembly[] { typeof(PowerLmsUserDbContext).Assembly, typeof(Account).Assembly, typeof(SystemResourceManager).Assembly };   //避免有尚未加载的情况
+        var assemblies = new Assembly[] { typeof(PowerLmsUserDbContext).Assembly, typeof(Account).Assembly, typeof(SystemResourceManager).Assembly};   //避免有尚未加载的情况
         HashSet<Assembly> hsAssm = new HashSet<Assembly>(AppDomain.CurrentDomain.GetAssemblies());
         assemblies.ForEach(c => hsAssm.Add(c));
         services.AutoRegister(hsAssm);
+
         #endregion 配置应用的一般服务
+
+        #region 配置 AutoMapper
+
+        services.AddAutoMapper(hsAssm);
+        #endregion 配置 AutoMapper
+
         return builder;
     }
 }

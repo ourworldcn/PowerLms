@@ -76,13 +76,14 @@ namespace PowerLmsWebApi.Controllers
         /// </summary>
         /// <returns></returns>
         [HttpGet]
+        [Obsolete("已经并入简单字典")]
         public ActionResult<GetLanguageDataDicReturnDto> GetLanguageDataDic()
         {
-            var result = new GetLanguageDataDicReturnDto();
-            var coll = from tmp in _Db.LanguageDataDics
-                       select tmp;
-            result.Results.AddRange(coll.AsNoTracking());
-            return result;
+            //var result = new GetLanguageDataDicReturnDto();
+            //var coll = from tmp in _Db.LanguageDataDics
+            //           select tmp;
+            //result.Results.AddRange(coll.AsNoTracking());
+            return NotFound();
         }
 
         /// <summary>
@@ -94,11 +95,11 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost, Obsolete("请改用 Admin/ImportDataDic")]
         public ActionResult ImportLanguageDataDic(IFormFile formFile, Guid token)
         {
-            var workbook = _NpoiManager.GetWorkbookFromStream(formFile.OpenReadStream());
-            var sheet = workbook.GetSheetAt(0);
-            _NpoiManager.WriteToDb(sheet, _Db, _Db.LanguageDataDics);
-            _MultilingualManager.Import(formFile.OpenReadStream(), _Db);
-            return Ok();
+            //var workbook = _NpoiManager.GetWorkbookFromStream(formFile.OpenReadStream());
+            //var sheet = workbook.GetSheetAt(0);
+            //_NpoiManager.WriteToDb(sheet, _Db, _Db.LanguageDataDics);
+            //_MultilingualManager.Import(formFile.OpenReadStream(), _Db);
+            return NotFound();
         }
     }
 

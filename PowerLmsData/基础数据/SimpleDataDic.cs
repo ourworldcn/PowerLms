@@ -36,11 +36,5 @@ namespace PowerLms.Data
         /// </summary>
         [Comment("所属数据字典的的Id")]
         public virtual Guid? DataDicId { get; set; }
-
-        /// <summary>
-        /// 所属组织机构Id。
-        /// </summary>
-        [Comment("所属组织机构Id")]
-        public Guid? OriId { get; set; }
     }
 }

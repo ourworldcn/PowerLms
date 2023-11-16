@@ -100,10 +100,10 @@ namespace PowerLmsServer.EfData
         /// </summary>
         public DbSet<Multilingual> Multilinguals { get; set; }
 
-        /// <summary>
-        /// 语言字典。
-        /// </summary>
-        public DbSet<LanguageDataDic> LanguageDataDics { get; set; }
+        ///// <summary>
+        ///// 语言字典。已并入简单字典。
+        ///// </summary>
+        //public DbSet<LanguageDataDic> LanguageDataDics { get; set; }
         #endregion 多语言相关
 
         #region 账号相关

@@ -1,6 +1,7 @@
 ﻿/*
  * 账号相关功能控制器。
  * */
+using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NPOI.OpenXmlFormats.Dml.Diagram;
@@ -23,16 +24,19 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="dbContext"></param>
         /// <param name="accountManager"></param>
         /// <param name="serviceProvider"></param>
-        public AccountController(PowerLmsUserDbContext dbContext, AccountManager accountManager, IServiceProvider serviceProvider)
+        /// <param name="mapper"></param>
+        public AccountController(PowerLmsUserDbContext dbContext, AccountManager accountManager, IServiceProvider serviceProvider, IMapper mapper)
         {
             _DbContext = dbContext;
             _AccountManager = accountManager;
             _ServiceProvider = serviceProvider;
+            _Mapper = mapper;
         }
 
         IServiceProvider _ServiceProvider { get; }
         PowerLmsUserDbContext _DbContext;
         AccountManager _AccountManager;
+        IMapper _Mapper;
 
         /// <summary>
         /// 登录。

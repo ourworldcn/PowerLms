@@ -6,6 +6,7 @@ using PowerLms.Data;
 using PowerLmsServer.EfData;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -102,7 +103,8 @@ namespace PowerLmsServer.Managers
         private void Test()
         {
             string fileName = Path.ChangeExtension("sr", ".xls");
-
+            var cul = new CultureInfo("zh-CN");
+            var ss = cul.LCID;
         }
 
         private void CreateDb()

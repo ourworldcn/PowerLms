@@ -29,20 +29,5 @@ namespace PowerLmsServer.Managers
 
         NpoiManager _NpoiManager;
         
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="stream"></param>
-        /// <param name="db"></param>
-        public void Import(Stream stream, PowerLmsUserDbContext db)
-        {
-            IWorkbook workbook = WorkbookFactory.Create(stream);
-            var sheet = workbook.GetSheetAt(0);
-            db.TruncateTable("[dbo].[LanguageDataDics]");
-            
-            var dt = _NpoiManager.ReadExcelFunc(workbook, sheet);
-            _NpoiManager.WriteToDb<LanguageDataDic>(dt, db, nameof(db.LanguageDataDics));
-        }
-
     }
 }
