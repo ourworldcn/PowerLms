@@ -73,5 +73,13 @@ namespace PowerLms.Data
         public virtual List<PlOrganization> Children { get => _Children ??= new List<PlOrganization>(); set => _Children = value; }
 
         #endregion 导航属性
+
+        public string ContractName
+        {
+            get => default;
+            set
+            {
+            }
+        }
     }
 }

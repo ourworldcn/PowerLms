@@ -11,7 +11,7 @@ namespace PowerLmsWebApi.Dto
         /// <summary>
         /// 根组织机构的Id。
         /// </summary>
-        public Guid RootId { get; set; }
+        public Guid? RootId { get; set; }
 
         /// <summary>
         /// 是否包含子机构。

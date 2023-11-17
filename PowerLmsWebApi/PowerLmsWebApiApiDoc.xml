@@ -74,6 +74,14 @@
             <returns></returns>
             <response code="200">未发生系统级错误。</response>  
         </member>
+        <member name="M:PowerLmsWebApi.Controllers.AccountController.Nop(PowerLmsWebApi.Controllers.NopParamsDto)">
+            <summary>
+            延续指定令牌的自动注销时间。会自动换一个新令牌并返回。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。</response>  
+        </member>
         <member name="T:PowerLmsWebApi.Controllers.AdminController">
             <summary>
             管理员功能控制器。
@@ -133,32 +141,23 @@
             <returns></returns>
             <response code="401">无效令牌。</response>  
         </member>
-        <member name="T:PowerLmsWebApi.Controllers.MerchantController">
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.AddSimpleDataDic">
             <summary>
-            操作商户的控制器。
+            
             </summary>
-        </member>
-        <member name="M:PowerLmsWebApi.Controllers.MerchantController.#ctor(PowerLmsServer.EfData.PowerLmsUserDbContext)">
-            <summary>
-            构造函数。
-            </summary>
-            <param name="dbContext"></param>
-        </member>
-        <member name="M:PowerLmsWebApi.Controllers.MerchantController.Get(System.Guid)">
-            <summary>
-            获取全部商户。
-            </summary>
-            <param name="token">登录令牌。</param>
             <returns></returns>
         </member>
-        <member name="M:PowerLmsWebApi.Controllers.MerchantController.Get(System.Guid,System.Guid)">
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.ModifySimpleDataDic">
             <summary>
-            获取指定商户的数据。
+            
             </summary>
-            <param name="token"></param>
-            <param name="id"></param>
-            <returns>可能返回空值，表示没有找到。</returns>
-            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <returns></returns>
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.RemoveSimpleDataDic">
+            <summary>
+            
+            </summary>
+            <returns></returns>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.MultilingualController">
             <summary>
@@ -279,7 +278,7 @@
         </member>
         <member name="P:PowerLmsWebApi.Dto.LoginParamsDto.LoginName">
             <summary>
-            登录名。
+            登录名。可用手机号，邮箱。
             </summary>
         </member>
         <member name="P:PowerLmsWebApi.Dto.LoginParamsDto.Pwd">

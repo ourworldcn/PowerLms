@@ -96,6 +96,11 @@
             快捷输入名。如"as6"则在键盘输入按as6能选择到此项，8个ASCII字符不足的尾部填充空格。服务器并不使用该字段。
             </summary>
         </member>
+        <member name="P:PowerLms.Data.DataDicBase.OrgId">
+            <summary>
+            所属组织机构Id。通常这里为null则有不同解释，如通用的模板或超管使用的数据字典。
+            </summary>
+        </member>
         <member name="T:PowerLms.Data.DataDicCatalog">
             <summary>
             专门针对数据字典的目录。
@@ -109,11 +114,6 @@
         <member name="P:PowerLms.Data.DataDicCatalog.DisplayName">
             <summary>
             显示名称。
-            </summary>
-        </member>
-        <member name="P:PowerLms.Data.DataDicCatalog.OrgId">
-            <summary>
-            所属组织机构Id。通常这里为null则有不同解释，如通用的模板或超管使用的数据字典。
             </summary>
         </member>
         <member name="P:PowerLms.Data.DataDicCatalog.DataDicType">

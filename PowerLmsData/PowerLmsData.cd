@@ -1,9 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ClassDiagram MajorVersion="1" MinorVersion="1">
   <Class Name="PowerLms.Data.SimpleDataDic">
-    <Position X="0.75" Y="4.5" Width="1.5" />
+    <Position X="0.5" Y="4.5" Width="1.75" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAABAAAAAAA=</HashCode>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAQEAAAAAAAACBAAAAAAA=</HashCode>
       <FileName>基础数据\SimpleDataDic.cs</FileName>
     </TypeIdentifier>
   </Class>
@@ -24,7 +24,7 @@
   <Class Name="PowerLms.Data.DataDicBase">
     <Position X="0.75" Y="1.5" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAEAAAAAAAAAAAAAAgAAAAAAAAAIEAAAAAAAAAAAA=</HashCode>
+      <HashCode>AAAAEAAAAAAAAAAAAAAgAAAAAAAEAIEAAAAAAAAAAAA=</HashCode>
       <FileName>基础支持\DataDicBase.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="0.2" />
@@ -40,14 +40,14 @@
     <Position X="12" Y="2.5" Width="1.5" />
     <AssociationLine Name="Parent" Type="PowerLms.Data.PlOrganization" ManuallyRouted="true">
       <Path>
-        <Point X="12.532" Y="5.426" />
+        <Point X="12.532" Y="5.611" />
         <Point X="12.532" Y="5.979" />
         <Point X="12.978" Y="5.979" />
-        <Point X="12.978" Y="5.426" />
+        <Point X="12.978" Y="5.611" />
       </Path>
     </AssociationLine>
     <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAgAAAAAAAUQAQAAAACAAECAgAAAAAQAAA=</HashCode>
+      <HashCode>AAAAAAAAAAAgCAAAAAAUQAQAAAACAAECAgAAAAAQAAA=</HashCode>
       <FileName>机构\PlOrganization.cs</FileName>
     </TypeIdentifier>
     <ShowAsAssociation>
@@ -55,9 +55,9 @@
     </ShowAsAssociation>
   </Class>
   <Class Name="PowerLms.Data.Account">
-    <Position X="7.25" Y="2.5" Width="2" />
+    <Position X="7" Y="2" Width="2" />
     <TypeIdentifier>
-      <HashCode>gGAEEAAAAAAgAAAAAAASAAAAIAAEAgYAAQAABIABAAA=</HashCode>
+      <HashCode>gGAEEAAAAAAgAAAAAAASAAAAICAEAgYAAQAABIABAAA=</HashCode>
       <FileName>账号\Account.cs</FileName>
     </TypeIdentifier>
   </Class>
@@ -83,9 +83,9 @@
     </TypeIdentifier>
   </Class>
   <Class Name="PowerLms.Data.DataDicCatalog">
-    <Position X="2.75" Y="3" Width="1.5" />
+    <Position X="3" Y="3.5" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAEQAAAAAAAAAAAAAgAAAAAAAEAAAAAAAAAAAAAAA=</HashCode>
+      <HashCode>AAAAEQAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
       <FileName>基础数据\DataDicCatalog.cs</FileName>
     </TypeIdentifier>
   </Class>

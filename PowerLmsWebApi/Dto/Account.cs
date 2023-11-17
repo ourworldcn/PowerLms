@@ -9,7 +9,7 @@ namespace PowerLmsWebApi.Dto
     public class LoginParamsDto
     {
         /// <summary>
-        /// 登录名。
+        /// 登录名。可用手机号，邮箱。
         /// </summary>
         [Required]
         public string LoginName { get; set; }
