@@ -201,6 +201,16 @@
             所属数据字典的的Id。
             </summary>
         </member>
+        <member name="P:PowerLms.Data.SimpleDataDic.CreateAccountId">
+            <summary>
+            创建人账号Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.SimpleDataDic.CreateDateTime">
+            <summary>
+            创建时间。
+            </summary>
+        </member>
         <member name="T:PowerLms.Data.Multilingual">
             <summary>
             多语言资源表。
@@ -315,6 +325,11 @@
         <member name="P:PowerLms.Data.PlOrganization.Address">
             <summary>
             机构地址。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlOrganization.ContractName">
+            <summary>
+            联系人名字。
             </summary>
         </member>
         <member name="P:PowerLms.Data.PlOrganization.Parent">
@@ -443,6 +458,16 @@
             学历编码。
             </summary>
         </member>
+        <member name="P:PowerLms.Data.Account.EMail">
+            <summary>
+            eMail地址。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.Account.Mobile">
+            <summary>
+            移动电话号码。
+            </summary>
+        </member>
         <member name="M:PowerLms.Data.Account.IsPwd(System.String)">
             <summary>
             密码是否正确。
@@ -455,6 +480,13 @@
             设置密码。
             </summary>
             <param name="pwd"></param>
+        </member>
+        <member name="M:PowerLms.Data.Account.GetPwdHash(System.String)">
+            <summary>
+            获取指定密码的Hash值。
+            </summary>
+            <param name="pwd"></param>
+            <returns></returns>
         </member>
         <member name="T:PowerLms.Data.AccountPlOrganization">
             <summary>

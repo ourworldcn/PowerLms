@@ -42,13 +42,19 @@ namespace PowerLms.Data
         /// <summary>
         /// 机构类型。2公司，4下属机构。
         /// </summary>
-        [Comment("机构类型，1商户，2公司，4下属机构")]
+        [Comment("机构类型，2公司，4下属机构")]
         public int Otc { get; set; }
 
         /// <summary>
         /// 机构地址。
         /// </summary>
         public PlSimpleOwnedAddress Address { get; set; }
+
+        /// <summary>
+        /// 联系人名字。
+        /// </summary>
+        [Comment("联系人名字")]
+        public string ContractName { get; set; }
 
         #region 导航属性
 
@@ -74,12 +80,5 @@ namespace PowerLms.Data
 
         #endregion 导航属性
 
-        public string ContractName
-        {
-            get => default;
-            set
-            {
-            }
-        }
     }
 }

@@ -39,7 +39,7 @@ namespace PowerLmsWebApi.Controllers
         IMapper _Mapper;
 
         /// <summary>
-        /// 登录。
+        /// 登录。随后应调用Account/SetUserInfo。
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
@@ -49,18 +49,19 @@ namespace PowerLmsWebApi.Controllers
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         public ActionResult<LoginReturnDto> Login(LoginParamsDto model)
         {
-            //TODO:增加 手机号，邮箱支持
             var result = new LoginReturnDto();
-            var user = _DbContext.Accounts.FirstOrDefault(c => c.LoginName == model.LoginName);
+            var pwdHash = Account.GetPwdHash(model.Pwd);
+            var user = _DbContext.Accounts.FirstOrDefault(c => (c.LoginName == model.LoginName || c.Mobile == model.LoginName || c.EMail == model.LoginName) && c.PwdHash==pwdHash);
             if (user is null) return BadRequest();
             if (!user.IsPwd(model.Pwd)) return BadRequest();
             result.Token = Guid.NewGuid();
             user.LastModifyDateTimeUtc = OwHelper.WorldNow;
             user.Token = result.Token;
+            user.CurrentLanguageTag = model.LanguageTag;
+            _DbContext.SaveChanges();
             //设置直属组织机构信息。
             var orgIds = _DbContext.AccountPlOrganizations.Where(c => c.UserId == user.Id).Select(c => c.OrgId);
             result.Orgs.AddRange(_DbContext.PlOrganizations.Where(c => orgIds.Contains(c.Id)));
-            _DbContext.SaveChanges();
             return result;
         }
 
@@ -155,32 +156,102 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="model"></param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。</response>  
+        /// <response code="401">无效令牌。</response>  
         [HttpPost]
         public ActionResult<NopReturnDto> Nop(NopParamsDto model)
         {
-            var result=new NopReturnDto();
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new NopReturnDto();
+            context.User.Token = Guid.NewGuid();
+            context.Nop();
+            context.SaveChanges();
+            result.NewToken = context.User.Token.Value;
             return result;
         }
 
+        /// <summary>
+        /// 修改用户自己的密码。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="400">旧密码不正确。</response>  
         [HttpPost]
-        public ActionResult ModifyPwd()
+        public ActionResult<ModifyPwdReturnDto> ModifyPwd(ModifyPwdParamsDto model)
         {
-            return Ok();
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new ModifyPwdReturnDto();
+            if (!context.User.IsPwd(model.OldPwd)) return BadRequest();
+            context.User.SetPwd(model.NewPwd);
+            context.SaveChanges();
+            return result;
         }
 
+        /// <summary>
+        /// 重置密码。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
         [HttpPost]
-        public ActionResult ResetPwd()
+        public ActionResult<ResetPwdReturnDto> ResetPwd(ResetPwdParamsDto model)
         {
             return Ok();
         }
     }
 
+    /// <summary>
+    /// 重置密码功能的参数封装类。
+    /// </summary>
+    public class ResetPwdParamsDto
+    {
+    }
+
+    /// <summary>
+    /// 重置密码功能的返回值封装类。
+    /// </summary>
+    public class ResetPwdReturnDto
+    {
+    }
+
+    /// <summary>
+    /// 修改用户自己的密码功能的参数封装类。
+    /// </summary>
+    public class ModifyPwdParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 原有密码。
+        /// </summary>
+        public string OldPwd { get; set; }
+
+        /// <summary>
+        /// 新密码。
+        /// </summary>
+        public string NewPwd { get; set; }
+    }
+
+    /// <summary>
+    /// 修改用户自己的密码功能的返回值封装类。
+    /// </summary>
+    public class ModifyPwdReturnDto : ReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 延迟令牌失效功能的参数封装类。
+    /// </summary>
     public class NopParamsDto : TokenDtoBase
     {
     }
 
+    /// <summary>
+    /// 延迟令牌失效功能的返回值封装类。
+    /// </summary>
     public class NopReturnDto : ReturnDtoBase
     {
+        /// <summary>
+        /// 新令牌。
+        /// </summary>
         public Guid NewToken { get; set; }
     }
 }

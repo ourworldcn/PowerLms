@@ -37,20 +37,16 @@ namespace PowerLms.Data
         [Comment("所属数据字典的的Id")]
         public virtual Guid? DataDicId { get; set; }
 
-        public Guid? CreateAccountId
-        {
-            get => default;
-            set
-            {
-            }
-        }
+        /// <summary>
+        /// 创建人账号Id。
+        /// </summary>
+        [Comment("创建人账号Id")]
+        public Guid? CreateAccountId { get; set; }
 
-        public DateTime? CreateDateTime
-        {
-            get => default;
-            set
-            {
-            }
-        }
+        /// <summary>
+        /// 创建时间。
+        /// </summary>
+        [Comment("创建时间")]
+        public DateTime? CreateDateTime { get; set; }
     }
 }

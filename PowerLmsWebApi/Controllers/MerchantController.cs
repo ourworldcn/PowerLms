@@ -1,6 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using NuGet.Common;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
+using PowerLmsServer.Managers;
+using PowerLmsWebApi.Dto;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -15,21 +18,30 @@ namespace PowerLmsWebApi.Controllers
         /// 构造函数。
         /// </summary>
         /// <param name="dbContext"></param>
-        public MerchantController(PowerLmsUserDbContext dbContext)
+        /// <param name="accountManager"></param>
+        /// <param name="serviceProvider"></param>
+        public MerchantController(PowerLmsUserDbContext dbContext, AccountManager accountManager, IServiceProvider serviceProvider)
         {
             _DbContext = dbContext;
+            _AccountManager = accountManager;
+            _ServiceProvider = serviceProvider;
         }
 
         PowerLmsUserDbContext _DbContext;
+        AccountManager _AccountManager;
+        IServiceProvider _ServiceProvider;
 
         /// <summary>
         /// 获取全部商户。
         /// </summary>
         /// <param name="token">登录令牌。</param>
         /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public IEnumerable<PlMerchant> Get(Guid token)
+        public ActionResult<IEnumerable<PlMerchant>> GetAll(Guid token)
         {
+            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
             return _DbContext.Merchants;
         }
 
@@ -40,11 +52,110 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="id"></param>
         /// <returns>可能返回空值，表示没有找到。</returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public string Get(Guid token, Guid id)
+        public ActionResult<PlMerchant> Get(Guid token, Guid id)
         {
-            return "value";
+            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            return _DbContext.Merchants.Find(id);
         }
 
+        /// <summary>
+        /// 修改商户信息。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定Id的商户不存在。</response>  
+        [HttpPut]
+        public ActionResult<ModifyMerchantReturnDto> ModifyMerchant(ModifyMerchantParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new ModifyMerchantReturnDto();
+            if (_DbContext.Merchants.Find(model.Merchant.Id) is not PlMerchant mcht) return NotFound();
+            _DbContext.Entry(mcht).CurrentValues.SetValues(model.Merchant);
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        /// <summary>
+        /// 增加新商户。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPost]
+        public ActionResult<AddMerchantReturnDto> AddMerchant(AddMerchantParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new AddMerchantReturnDto();
+            model.Merchant.GenerateNewId();
+            _DbContext.Merchants.Add(model.Merchant);
+            _DbContext.SaveChanges();
+            result.Id = model.Merchant.Id;
+            return result;
+        }
+
+        /// <summary>
+        /// 删除指定Id的商户。慎用！
+        /// </summary>
+        /// <param name="token">令牌。</param>
+        /// <param name="id">商户Id。</param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定Id的商户不存在。</response>  
+        [HttpDelete]
+        public ActionResult Remove(Guid token, Guid id)
+        {
+            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_DbContext.Merchants.Find(id) is not PlMerchant mcht) return NotFound();
+            _DbContext.Remove(mcht);
+            //TODO 连锁删除所有信息，待最后实施
+            _DbContext.SaveChanges();
+            return Ok();
+        }
+    }
+
+    /// <summary>
+    /// 增加新商户功能参数封装类。
+    /// </summary>
+    public class AddMerchantParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 新商户信息。其中Id可以是任何值，返回时会指定新值。
+        /// </summary>
+        public PlMerchant Merchant { get; set; }
+    }
+
+    /// <summary>
+    /// 增加新商户功能返回值封装类。
+    /// </summary>
+    public class AddMerchantReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 如果成功添加，这里返回新商户的Id。
+        /// </summary>
+        public Guid Id { get; set; }
+    }
+
+    /// <summary>
+    /// 修改商户信息功能参数封装类。
+    /// </summary>
+    public class ModifyMerchantParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 商户数据。
+        /// </summary>
+        public PlMerchant Merchant { get; set; }
+    }
+
+    /// <summary>
+    /// 修改商户信息功能返回值封装类。
+    /// </summary>
+    public class ModifyMerchantReturnDto : ReturnDtoBase
+    {
     }
 }

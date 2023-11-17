@@ -5,24 +5,23 @@
 
 namespace PowerLmsData.Migrations
 {
-    public partial class _23111703 : Migration
+    public partial class _23111705 : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<int>(
-                name: "StatusCode",
-                table: "Merchants",
-                type: "int",
-                nullable: false,
-                defaultValue: 0,
-                comment: "状态码。0=正常，1=停用。");
+            migrationBuilder.AddColumn<string>(
+                name: "Mobile",
+                table: "Accounts",
+                type: "nvarchar(max)",
+                nullable: true,
+                comment: "移动电话号码");
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(
-                name: "StatusCode",
-                table: "Merchants");
+                name: "Mobile",
+                table: "Accounts");
         }
     }
 }

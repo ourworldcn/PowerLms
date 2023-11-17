@@ -135,14 +135,19 @@ namespace PowerLms.Data
         [Comment("学历编码")]
         public Guid? QualificationsCode { get; set; }
 
-        public string EMail
-        {
-            get => default;
-            set
-            {
-            }
-        }
+        /// <summary>
+        /// eMail地址。
+        /// </summary>
+        [Comment("eMail地址")]
+        [EmailAddress]
+        public string EMail { get; set; }
 
+        /// <summary>
+        /// 移动电话号码。
+        /// </summary>
+        [Comment("移动电话号码")]
+        [Phone]
+        public string Mobile { get; set; }
         #endregion  数据字典属性
 
         #endregion 导航属性
@@ -170,6 +175,15 @@ namespace PowerLms.Data
             PwdHash = SHA256.HashData(Encoding.UTF8.GetBytes(pwd ?? string.Empty));
         }
 
+        /// <summary>
+        /// 获取指定密码的Hash值。
+        /// </summary>
+        /// <param name="pwd"></param>
+        /// <returns></returns>
+        public static byte[] GetPwdHash(string pwd)
+        {
+            return SHA256.HashData(Encoding.UTF8.GetBytes(pwd ?? string.Empty));
+        }
         #endregion 方法
     }
 

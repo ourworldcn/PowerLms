@@ -30,7 +30,7 @@
         </member>
         <member name="M:PowerLmsWebApi.Controllers.AccountController.Login(PowerLmsWebApi.Dto.LoginParamsDto)">
             <summary>
-            登录。
+            登录。随后应调用Account/SetUserInfo。
             </summary>
             <param name="model"></param>
             <returns></returns>
@@ -81,6 +81,69 @@
             <param name="model"></param>
             <returns></returns>
             <response code="200">未发生系统级错误。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AccountController.ModifyPwd(PowerLmsWebApi.Controllers.ModifyPwdParamsDto)">
+            <summary>
+            修改用户自己的密码。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。</response>  
+            <response code="401">无效令牌。</response>  
+            <response code="400">旧密码不正确。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AccountController.ResetPwd(PowerLmsWebApi.Controllers.ResetPwdParamsDto)">
+            <summary>
+            重置密码。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.ResetPwdParamsDto">
+            <summary>
+            重置密码功能的参数封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.ResetPwdReturnDto">
+            <summary>
+            重置密码功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.ModifyPwdParamsDto">
+            <summary>
+            修改用户自己的密码功能的参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.ModifyPwdParamsDto.OldPwd">
+            <summary>
+            原有密码。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.ModifyPwdParamsDto.NewPwd">
+            <summary>
+            新密码。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.ModifyPwdReturnDto">
+            <summary>
+            修改用户自己的密码功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.NopParamsDto">
+            <summary>
+            延迟令牌失效功能的参数封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.NopReturnDto">
+            <summary>
+            延迟令牌失效功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.NopReturnDto.NewToken">
+            <summary>
+            新令牌。
+            </summary>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.AdminController">
             <summary>
@@ -158,6 +221,103 @@
             
             </summary>
             <returns></returns>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.MerchantController">
+            <summary>
+            操作商户的控制器。
+            </summary>
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.MerchantController.#ctor(PowerLmsServer.EfData.PowerLmsUserDbContext,PowerLmsServer.Managers.AccountManager,System.IServiceProvider)">
+            <summary>
+            构造函数。
+            </summary>
+            <param name="dbContext"></param>
+            <param name="accountManager"></param>
+            <param name="serviceProvider"></param>
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.MerchantController.GetAll(System.Guid)">
+            <summary>
+            获取全部商户。
+            </summary>
+            <param name="token">登录令牌。</param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.MerchantController.Get(System.Guid,System.Guid)">
+            <summary>
+            获取指定商户的数据。
+            </summary>
+            <param name="token"></param>
+            <param name="id"></param>
+            <returns>可能返回空值，表示没有找到。</returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.MerchantController.ModifyMerchant(PowerLmsWebApi.Controllers.ModifyMerchantParamsDto)">
+            <summary>
+            修改商户信息。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+            <response code="404">指定Id的商户不存在。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.MerchantController.AddMerchant(PowerLmsWebApi.Controllers.AddMerchantParamsDto)">
+            <summary>
+            增加新商户。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.MerchantController.Remove(System.Guid,System.Guid)">
+            <summary>
+            删除指定Id的商户。慎用！
+            </summary>
+            <param name="token">令牌。</param>
+            <param name="id">商户Id。</param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+            <response code="404">指定Id的商户不存在。</response>  
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddMerchantParamsDto">
+            <summary>
+            增加新商户功能参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.AddMerchantParamsDto.Merchant">
+            <summary>
+            新商户信息。其中Id可以是任何值，返回时会指定新值。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddMerchantReturnDto">
+            <summary>
+            增加新商户功能返回值封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.AddMerchantReturnDto.Id">
+            <summary>
+            如果成功添加，这里返回新商户的Id。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.ModifyMerchantParamsDto">
+            <summary>
+            修改商户信息功能参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.ModifyMerchantParamsDto.Merchant">
+            <summary>
+            商户数据。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.ModifyMerchantReturnDto">
+            <summary>
+            修改商户信息功能返回值封装类。
+            </summary>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.MultilingualController">
             <summary>
