@@ -1,8 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using PowerLms.Data;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
@@ -54,6 +56,20 @@ namespace PowerLmsServer.EfData
         }
 
         #region 方法
+
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        /// <param name="optionsBuilder"></param>
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            if (!optionsBuilder.IsConfigured)
+            {
+                optionsBuilder.UseSqlServer("Data Source=.;Database=PowerLmsUserDevelopment;Integrated Security=True;Trusted_Connection=True;MultipleActiveResultSets=true;Pooling=True");
+                Trace.WriteLine("OnConfiguring被调用");
+            }
+            base.OnConfiguring(optionsBuilder);
+        }
 
         /// <summary>
         /// <inheritdoc/>
@@ -120,6 +136,12 @@ namespace PowerLmsServer.EfData
         #endregion 账号相关
 
         #region 组织机构相关
+
+        /// <summary>
+        /// 商户。
+        /// </summary>
+        public DbSet<PlMerchant> Merchants { get; set; }
+
         /// <summary>
         /// 组织机构表。
         /// </summary>

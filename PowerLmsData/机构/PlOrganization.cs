@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
@@ -10,15 +11,20 @@ using System.Threading.Tasks;
 namespace PowerLms.Data
 {
     /// <summary>
-    /// 商户及组织机构。
+    /// 组织机构。
     /// </summary>
     public class PlOrganization : GuidKeyObjectBase
     {
         /// <summary>
-        /// 组织机构名称。这个有一定的正式的意义。
+        /// 商户Id。
         /// </summary>
-        [Comment("组织机构名称")]
-        public string Name { get; set; }
+        public Guid? MerchantId { get; set; }
+
+        /// <summary>
+        /// 名称类。
+        /// </summary>
+        [Comment("名称嵌入类")]
+        public PlOwnedName Name { get; set; }
 
         /// <summary>
         /// 组织机构描述。
@@ -27,13 +33,14 @@ namespace PowerLms.Data
         public string Description { get; set; }
 
         /// <summary>
-        /// 机构编码。
+        /// 快捷输入码。服务器不使用。8个ASCII字符不足的尾部填充空格（写入时可不填充，但读回后会自动加入）。
         /// </summary>
-        [Comment("机构编码")]
-        public string ShortcutName { get; set; }
+        [Column(TypeName = "char"), MaxLength(8)]
+        [Comment("快捷输入码。服务器不使用。8个ASCII字符不足的尾部填充空格（写入时可不填充，但读回后会自动加入）。")]
+        public string ShortcutCode { get; set; }
 
         /// <summary>
-        /// 机构类型。1商户，2公司，4下属机构。商户不能有父节点。
+        /// 机构类型。2公司，4下属机构。
         /// </summary>
         [Comment("机构类型，1商户，2公司，4下属机构")]
         public int Otc { get; set; }
@@ -41,7 +48,7 @@ namespace PowerLms.Data
         /// <summary>
         /// 机构地址。
         /// </summary>
-        public  PlSimpleOwnedAddress Address { get; set; }
+        public PlSimpleOwnedAddress Address { get; set; }
 
         #region 导航属性
 
@@ -53,7 +60,7 @@ namespace PowerLms.Data
         public virtual PlOrganization Parent { get => _Parent; set => _Parent = value; }
 
         /// <summary>
-        /// 所属组织机构Id。没有父的组织机构是顶层节点即"商户"
+        /// 所属组织机构Id。
         /// </summary>
         [ForeignKey(nameof(Parent))]
         [Comment("所属组织机构Id。没有父的组织机构是顶层节点即\"商户\"。")]

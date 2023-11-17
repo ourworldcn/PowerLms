@@ -62,4 +62,32 @@ namespace PowerLms.Data
         [Comment("详细地址")]
         public string FullAddress { get; set; }
     }
+
+    /// <summary>
+    /// 对实体名称描述的自含复杂类。此类嵌入在不同实体中有不同的解释。
+    /// </summary>
+    [ComplexType]
+    [Owned]
+    public class PlOwnedName
+    {
+        /// <summary>
+        /// 正式名称，拥有相对稳定性。
+        /// </summary>
+        [Comment("正式名称，拥有相对稳定性")]
+        public string Name { get; set; }
+
+        /// <summary>
+        /// 正式简称。对正式的组织机构通常简称也是规定的。
+        /// </summary>
+        [Comment("正式简称，对正式的组织机构通常简称也是规定的")]
+        [MaxLength (32)]
+        public string ShortName { get; set; }
+
+        /// <summary>
+        /// 显示名，有时它是昵称或简称(系统内)的意思。
+        /// </summary>
+        [Comment("显示名，有时它是昵称或简称(系统内)的意思")]
+        public string DisplayName { get; set; }
+
+    }
 }

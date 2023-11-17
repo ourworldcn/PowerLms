@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PowerLmsServer.EfData;
 
@@ -11,9 +12,10 @@ using PowerLmsServer.EfData;
 namespace PowerLmsData.Migrations
 {
     [DbContext(typeof(PowerLmsUserDbContext))]
-    partial class PowerLmsUserDbContextModelSnapshot : ModelSnapshot
+    [Migration("20231117030523_23111701")]
+    partial class _23111701
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -151,32 +153,6 @@ namespace PowerLmsData.Migrations
                     b.ToTable("Multilinguals");
                 });
 
-            modelBuilder.Entity("PowerLms.Data.PlMerchant", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier")
-                        .HasColumnOrder(0);
-
-                    b.Property<string>("Description")
-                        .HasColumnType("nvarchar(max)")
-                        .HasComment("描述");
-
-                    b.Property<string>("ShortcutCode")
-                        .HasMaxLength(8)
-                        .HasColumnType("char(8)")
-                        .HasComment("快捷输入码。服务器不使用。8个ASCII字符不足的尾部填充空格（写入时可不填充，但读回后会自动加入）。");
-
-                    b.Property<int>("StatusCode")
-                        .HasColumnType("int")
-                        .HasComment("状态码。0=正常，1=停用。");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Merchants");
-
-                    b.HasComment("商户");
-                });
-
             modelBuilder.Entity("PowerLms.Data.PlOrganization", b =>
                 {
                     b.Property<Guid>("Id")
@@ -281,38 +257,15 @@ namespace PowerLmsData.Migrations
                     b.ToTable("SystemResources");
                 });
 
-            modelBuilder.Entity("PowerLms.Data.PlMerchant", b =>
+            modelBuilder.Entity("PowerLms.Data.PlOrganization", b =>
                 {
-                    b.OwnsOne("PowerLms.Data.PlSimpleOwnedAddress", "Address", b1 =>
-                        {
-                            b1.Property<Guid>("PlMerchantId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<string>("Fax")
-                                .HasMaxLength(28)
-                                .HasColumnType("nvarchar(28)")
-                                .HasComment("传真");
-
-                            b1.Property<string>("FullAddress")
-                                .HasColumnType("nvarchar(max)")
-                                .HasComment("详细地址");
-
-                            b1.Property<string>("Tel")
-                                .HasMaxLength(28)
-                                .HasColumnType("nvarchar(28)")
-                                .HasComment("电话");
-
-                            b1.HasKey("PlMerchantId");
-
-                            b1.ToTable("Merchants");
-
-                            b1.WithOwner()
-                                .HasForeignKey("PlMerchantId");
-                        });
+                    b.HasOne("PowerLms.Data.PlOrganization", "Parent")
+                        .WithMany("Children")
+                        .HasForeignKey("ParentId");
 
                     b.OwnsOne("PowerLms.Data.PlOwnedName", "Name", b1 =>
                         {
-                            b1.Property<Guid>("PlMerchantId")
+                            b1.Property<Guid>("PlOrganizationId")
                                 .HasColumnType("uniqueidentifier");
 
                             b1.Property<string>("DisplayName")
@@ -327,44 +280,6 @@ namespace PowerLmsData.Migrations
                                 .HasMaxLength(32)
                                 .HasColumnType("nvarchar(32)")
                                 .HasComment("正式简称，对正式的组织机构通常简称也是规定的");
-
-                            b1.HasKey("PlMerchantId");
-
-                            b1.ToTable("Merchants");
-
-                            b1.WithOwner()
-                                .HasForeignKey("PlMerchantId");
-                        });
-
-                    b.Navigation("Address");
-
-                    b.Navigation("Name");
-                });
-
-            modelBuilder.Entity("PowerLms.Data.PlOrganization", b =>
-                {
-                    b.HasOne("PowerLms.Data.PlOrganization", "Parent")
-                        .WithMany("Children")
-                        .HasForeignKey("ParentId");
-
-                    b.OwnsOne("PowerLms.Data.PlSimpleOwnedAddress", "Address", b1 =>
-                        {
-                            b1.Property<Guid>("PlOrganizationId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<string>("Fax")
-                                .HasMaxLength(28)
-                                .HasColumnType("nvarchar(28)")
-                                .HasComment("传真");
-
-                            b1.Property<string>("FullAddress")
-                                .HasColumnType("nvarchar(max)")
-                                .HasComment("详细地址");
-
-                            b1.Property<string>("Tel")
-                                .HasMaxLength(28)
-                                .HasColumnType("nvarchar(28)")
-                                .HasComment("电话");
 
                             b1.HasKey("PlOrganizationId");
 
@@ -374,23 +289,24 @@ namespace PowerLmsData.Migrations
                                 .HasForeignKey("PlOrganizationId");
                         });
 
-                    b.OwnsOne("PowerLms.Data.PlOwnedName", "Name", b1 =>
+                    b.OwnsOne("PowerLms.Data.PlSimpleOwnedAddress", "Address", b1 =>
                         {
                             b1.Property<Guid>("PlOrganizationId")
                                 .HasColumnType("uniqueidentifier");
 
-                            b1.Property<string>("DisplayName")
-                                .HasColumnType("nvarchar(max)")
-                                .HasComment("显示名，有时它是昵称或简称(系统内)的意思");
+                            b1.Property<string>("Fax")
+                                .HasMaxLength(28)
+                                .HasColumnType("nvarchar(28)")
+                                .HasComment("传真");
 
-                            b1.Property<string>("Name")
+                            b1.Property<string>("FullAddress")
                                 .HasColumnType("nvarchar(max)")
-                                .HasComment("正式名称，拥有相对稳定性");
+                                .HasComment("详细地址");
 
-                            b1.Property<string>("ShortName")
-                                .HasMaxLength(32)
-                                .HasColumnType("nvarchar(32)")
-                                .HasComment("正式简称，对正式的组织机构通常简称也是规定的");
+                            b1.Property<string>("Tel")
+                                .HasMaxLength(28)
+                                .HasColumnType("nvarchar(28)")
+                                .HasComment("电话");
 
                             b1.HasKey("PlOrganizationId");
 

@@ -161,6 +161,26 @@
             详细地址。
             </summary>
         </member>
+        <member name="T:PowerLms.Data.PlOwnedName">
+            <summary>
+            对实体名称描述的自含复杂类。此类嵌入在不同实体中有不同的解释。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlOwnedName.Name">
+            <summary>
+            正式名称，拥有相对稳定性。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlOwnedName.ShortName">
+            <summary>
+            正式简称。对正式的组织机构通常简称也是规定的。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlOwnedName.DisplayName">
+            <summary>
+            显示名，有时它是昵称或简称(系统内)的意思。
+            </summary>
+        </member>
         <member name="T:PowerLms.Data.SimpleDataDic">
             <summary>
             简单数据字典条目类。
@@ -232,14 +252,49 @@
             语言名。
             </summary>
         </member>
+        <member name="T:PowerLms.Data.PlMerchant">
+            <summary>
+            商户。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlMerchant.Name">
+            <summary>
+            名称类。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlMerchant.Description">
+            <summary>
+            描述。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlMerchant.ShortcutCode">
+            <summary>
+            快捷输入码。服务器不使用。8个ASCII字符不足的尾部填充空格（写入时可不填充，但读回后会自动加入）。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlMerchant.Address">
+            <summary>
+            机构地址。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlMerchant.StatusCode">
+            <summary>
+            状态码。0=正常，1=停用。
+            </summary>
+        </member>
         <member name="T:PowerLms.Data.PlOrganization">
             <summary>
-            商户及组织机构。
+            组织机构。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlOrganization.MerchantId">
+            <summary>
+            商户Id。
             </summary>
         </member>
         <member name="P:PowerLms.Data.PlOrganization.Name">
             <summary>
-            组织机构名称。这个有一定的正式的意义。
+            名称类。
             </summary>
         </member>
         <member name="P:PowerLms.Data.PlOrganization.Description">
@@ -247,14 +302,14 @@
             组织机构描述。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.PlOrganization.ShortcutName">
+        <member name="P:PowerLms.Data.PlOrganization.ShortcutCode">
             <summary>
-            机构编码。
+            快捷输入码。服务器不使用。8个ASCII字符不足的尾部填充空格（写入时可不填充，但读回后会自动加入）。
             </summary>
         </member>
         <member name="P:PowerLms.Data.PlOrganization.Otc">
             <summary>
-            机构类型。1商户，2公司，4下属机构。商户不能有父节点。
+            机构类型。2公司，4下属机构。
             </summary>
         </member>
         <member name="P:PowerLms.Data.PlOrganization.Address">
@@ -269,7 +324,7 @@
         </member>
         <member name="P:PowerLms.Data.PlOrganization.ParentId">
             <summary>
-            所属组织机构Id。没有父的组织机构是顶层节点即"商户"
+            所属组织机构Id。
             </summary>
         </member>
         <member name="P:PowerLms.Data.PlOrganization.Children">
@@ -443,6 +498,12 @@
             </summary>
             <param name="options"></param>
         </member>
+        <member name="M:PowerLmsServer.EfData.PowerLmsUserDbContext.OnConfiguring(Microsoft.EntityFrameworkCore.DbContextOptionsBuilder)">
+            <summary>
+            <inheritdoc/>
+            </summary>
+            <param name="optionsBuilder"></param>
+        </member>
         <member name="M:PowerLmsServer.EfData.PowerLmsUserDbContext.OnModelCreating(Microsoft.EntityFrameworkCore.ModelBuilder)">
             <summary>
             <inheritdoc/>
@@ -480,6 +541,11 @@
         <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.AccountPlOrganizations">
             <summary>
             用户所属组织机构表。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.Merchants">
+            <summary>
+            商户。
             </summary>
         </member>
         <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.PlOrganizations">
