@@ -555,6 +555,11 @@
             系统资源表。包含数据字典目录。
             </summary>
         </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.DataDicCatalogs">
+            <summary>
+            数据字典目录。
+            </summary>
+        </member>
         <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.SimpleDataDics">
             <summary>
             简单数据字典表。

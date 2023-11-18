@@ -26,6 +26,7 @@ internal class Program
         //app.UseRouting();
 
         // Configure the HTTP request pipeline.
+        app.UseResponseCompression();
         //if (app.Environment.IsDevelopment())
         {
             app.UseSwagger();
@@ -37,7 +38,6 @@ internal class Program
                 c.RoutePrefix = string.Empty;//设置根节点访问
             });
         }
-
 
         #region 静态资源访问
         app.UseStaticFiles();
@@ -80,8 +80,12 @@ internal class Program
 
 
         // Add services to the container.
+        services.AddResponseCompression(options =>
+        {
+            options.EnableForHttps = true;
+        });
 
-        builder.Services.AddControllers();
+        services.AddControllers();
 
         #region 配置Swagger
         // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle

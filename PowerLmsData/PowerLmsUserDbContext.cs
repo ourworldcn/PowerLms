@@ -103,6 +103,11 @@ namespace PowerLmsServer.EfData
         public DbSet<SystemResource> SystemResources { get; set; }
 
         /// <summary>
+        /// 数据字典目录。
+        /// </summary>
+        public DbSet<DataDicCatalog> DataDicCatalogs { get; set; }
+
+        /// <summary>
         /// 简单数据字典表。
         /// </summary>
         public DbSet<SimpleDataDic> SimpleDataDics { get; set; }

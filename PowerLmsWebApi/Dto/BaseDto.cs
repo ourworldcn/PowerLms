@@ -45,4 +45,90 @@ namespace PowerLmsWebApi.Dto
 
     }
 
+    /// <summary>
+    /// 返回分页数据的封装类的基类
+    /// </summary>
+    /// <typeparam name="T">集合元素的类型。</typeparam>
+    public abstract class PagingReturnDtoBase<T> : ReturnDtoBase
+    {
+        /// <summary>
+        /// 构造函数。
+        /// </summary>
+        public PagingReturnDtoBase()
+        {
+
+        }
+
+        /// <summary>
+        /// 集合元素的最大总数量。
+        /// </summary>
+        public int Total { get; set; }
+
+        /// <summary>
+        /// 返回的集合。
+        /// </summary>
+        public List<T> Result { get; set; } = new List<T>();
+    }
+
+    /// <summary>
+    /// 增加实体功能的参数封装类的基类。
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    public class AddParamsDtoBase<T> : TokenDtoBase
+    {
+        /// <summary>
+        /// 要增加的项。其中Id被忽略，在返回时会指定。
+        /// </summary>
+        public T Item { get; set; }
+    }
+
+    /// <summary>
+    /// 增加实体功能的返回值封装类的基类.
+    /// </summary>
+    public class AddReturnDtoBase : ReturnDtoBase
+    {
+        /// <summary>
+        /// 增加实体的Id。
+        /// </summary>
+        public Guid Id { get; set; }
+    }
+
+    /// <summary>
+    /// 修改实体功能的参数封装类的基类。
+    /// </summary>
+    /// <typeparam name="T">实体的类型。</typeparam>
+    public class ModifyParamsDtoBase<T> : TokenDtoBase
+    {
+        /// <summary>
+        /// 要修改的实体集合，其中Id必须已经存在。
+        /// </summary>
+        public List<T> Items { get; set; } = new List<T>();
+    }
+
+    /// <summary>
+    /// 修改实体功能的返回值封装类的基类。
+    /// </summary>
+    public class ModifyReturnDtoBase : ReturnDtoBase
+    {
+
+    }
+
+    /// <summary>
+    /// 删除实体功能的参数封装类的基类。
+    /// </summary>
+    public class RemoveParamsDtoBase : TokenDtoBase
+    {
+        /// <summary>
+        /// 要删除实体的Id。
+        /// </summary>
+        public Guid Id { get; set; }
+    }
+
+    /// <summary>
+    /// 删除实体功能的返回值封装类的基类。
+    /// </summary>
+    public class RemoveReturnDtoBase : ReturnDtoBase
+    {
+
+    }
 }
