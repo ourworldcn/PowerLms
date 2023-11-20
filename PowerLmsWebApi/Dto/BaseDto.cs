@@ -77,7 +77,7 @@ namespace PowerLmsWebApi.Dto
     public class AddParamsDtoBase<T> : TokenDtoBase
     {
         /// <summary>
-        /// 要增加的项。其中Id被忽略，在返回时会指定。
+        /// 要增加的项。其中Id被忽略，在返回时会指定。此实体的Id不起作用，操作成功在返回时返回指定的有效Id。
         /// </summary>
         public T Item { get; set; }
     }

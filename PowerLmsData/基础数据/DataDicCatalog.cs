@@ -13,6 +13,7 @@ namespace PowerLms.Data
     /// 专门针对数据字典的目录。
     /// </summary>
     [Comment("专门针对数据字典的目录。")]
+    [Index(nameof(Code), IsUnique = true)]
     public class DataDicCatalog : GuidKeyObjectBase
     {
         /// <summary>
