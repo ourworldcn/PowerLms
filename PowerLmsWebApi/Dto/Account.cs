@@ -40,6 +40,11 @@ namespace PowerLmsWebApi.Dto
         /// 如果成功登录，这里返回直接所属的一组机构信息。
         /// </summary>
         public List<PlOrganization> Orgs { get; set; } = new List<PlOrganization>();
+
+        /// <summary>
+        /// 返回登录账号的信息。
+        /// </summary>
+        public Account User { get; set; }
     }
 
     /// <summary>

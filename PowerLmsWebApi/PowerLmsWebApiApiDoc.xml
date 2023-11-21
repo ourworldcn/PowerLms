@@ -30,7 +30,7 @@
         </member>
         <member name="M:PowerLmsWebApi.Controllers.AccountController.Login(PowerLmsWebApi.Dto.LoginParamsDto)">
             <summary>
-            登录。随后应调用Account/SetUserInfo。
+            登录。随后应调用Account/SetUserInfo。通过Account/GetAccountInfo可以获取自身信息。
             </summary>
             <param name="model"></param>
             <returns></returns>
@@ -318,6 +318,11 @@
             给指定简单数据字典增加一项的功能参数封装类，
             </summary>
         </member>
+        <member name="P:PowerLmsWebApi.Controllers.AddSimpleDataDicParamsDto.CopyToChildren">
+            <summary>
+            是否同步到子公司/组织机构。对于超管复制到所有字典中，对于商户管理员复制到商户所有字典中。
+            </summary>
+        </member>
         <member name="T:PowerLmsWebApi.Controllers.AddSimpleDataDicReturnDto">
             <summary>
             给指定简单数据字典增加一项的功能返回值封装类。
@@ -593,6 +598,11 @@
         <member name="P:PowerLmsWebApi.Dto.LoginReturnDto.Orgs">
             <summary>
             如果成功登录，这里返回直接所属的一组机构信息。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Dto.LoginReturnDto.User">
+            <summary>
+            返回登录账号的信息。
             </summary>
         </member>
         <member name="T:PowerLmsWebApi.Dto.SetUserInfoParams">

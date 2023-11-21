@@ -434,6 +434,10 @@ namespace PowerLmsWebApi.Controllers
     /// </summary>
     public class AddSimpleDataDicParamsDto : AddParamsDtoBase<SimpleDataDic>
     {
+        /// <summary>
+        /// 是否同步到子公司/组织机构。对于超管复制到所有字典中，对于商户管理员复制到商户所有字典中。
+        /// </summary>
+        public bool CopyToChildren { get; set; }
     }
 
     /// <summary>

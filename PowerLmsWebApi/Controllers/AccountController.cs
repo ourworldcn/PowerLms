@@ -39,14 +39,13 @@ namespace PowerLmsWebApi.Controllers
         IMapper _Mapper;
 
         /// <summary>
-        /// 登录。随后应调用Account/SetUserInfo。
+        /// 登录。随后应调用Account/SetUserInfo。通过Account/GetAccountInfo可以获取自身信息。
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。</response>  
         /// <response code="400">参数错误，这里特指用户名或密码不正确。</response>  
         [HttpPost]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         public ActionResult<LoginReturnDto> Login(LoginParamsDto model)
         {
             var result = new LoginReturnDto();
@@ -62,6 +61,7 @@ namespace PowerLmsWebApi.Controllers
             //设置直属组织机构信息。
             var orgIds = _DbContext.AccountPlOrganizations.Where(c => c.UserId == user.Id).Select(c => c.OrgId);
             result.Orgs.AddRange(_DbContext.PlOrganizations.Where(c => orgIds.Contains(c.Id)));
+            result.User=user;
             return result;
         }
 

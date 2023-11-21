@@ -9,11 +9,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PowerLmsServer", "PowerLmsS
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "解决方案项", "解决方案项", "{485FC0C8-DBF6-4F3C-9AD3-C57F52100CD2}"
 	ProjectSection(SolutionItems) = preProject
+		Notes.txt = Notes.txt
 		云霄用Id表.txt = 云霄用Id表.txt
 		部署指南.txt = 部署指南.txt
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PowerLmsData", "PowerLmsData\PowerLmsData.csproj", "{C385D591-63B3-4BF3-8AA0-767FCD8C4D39}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PowerLmsData", "PowerLmsData\PowerLmsData.csproj", "{C385D591-63B3-4BF3-8AA0-767FCD8C4D39}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OwBaseCore", "OwBaseCore\OwBaseCore.csproj", "{B5C615B9-8A9D-49C2-83E7-43E77D4DA18B}"
 EndProject
