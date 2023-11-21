@@ -36,6 +36,8 @@ namespace PowerLmsWebApi.Controllers
         AccountManager _AccountManager;
         IServiceProvider _ServiceProvider;
 
+        #region 字典目录
+
         /// <summary>
         /// 获取所有数据字典的目录列表。
         /// </summary>
@@ -66,11 +68,16 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="model"></param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定的Code已经存在。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpPost]
         public ActionResult<AddDataDicCatalogReturnDto> AddDataDicCatalog(AddDataDicCatalogParamsDto model)
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_DbContext.DataDicCatalogs.Any(c => c.Code == model.Item.Code))
+            {
+                return BadRequest();
+            }
             var result = new AddDataDicCatalogReturnDto();
             model.Item.GenerateNewId();
             _DbContext.DataDicCatalogs.Add(model.Item);
@@ -129,6 +136,8 @@ namespace PowerLmsWebApi.Controllers
             return result;
         }
 
+        #endregion 字典目录
+
         /// <summary>
         /// 获取系统资源列表。
         /// </summary>
@@ -138,37 +147,6 @@ namespace PowerLmsWebApi.Controllers
         {
             var result = new GetSystemResourceReturnDto();
             result.Resources.AddRange(_DbContext.SystemResources.AsNoTracking());
-            return result;
-        }
-
-        /// <summary>
-        /// 通用的获取数据字典。
-        /// </summary>
-        /// <param name="token"></param>
-        /// <param name="rId">从资源列表中获取，指定资源的Id。如:6AE3BBB3-BAC9-4509-BF82-C8578830CD24 表示 多语言资源表。Id是不会变化的。</param>
-        /// <param name="startIndex">获取的起始索引。可用于分页。</param>
-        /// <param name="count">获取的最大数量，-1表示全获取。</param>
-        /// <returns></returns>
-        [HttpGet]
-        public ActionResult<GetDataDicReturnDto> GetDataDic(Guid token, Guid rId, int startIndex, int count = -1)
-        {
-            var result = new GetDataDicReturnDto();
-            if (_DbContext.Set<Account>().FirstOrDefault(c => c.Token == token) is not Account user) return Unauthorized();
-            if (_DbContext.SystemResources.Find(rId) is not SystemResource sr) return BadRequest($"找不到{rId}指定的系统资源。");
-            switch (sr.Name)
-            {
-                case nameof(_DbContext.Multilinguals):
-                    {
-                        var coll = _DbContext.Multilinguals.OrderBy(c => c.Id).Skip(startIndex);
-                        coll = count == -1 ? coll : coll.Take(count);
-                        result.Result.AddRange(coll);
-                    }
-                    break;
-                default:    //简单字典
-                    {
-                    }
-                    break;
-            }
             return result;
         }
 
@@ -281,36 +259,188 @@ namespace PowerLmsWebApi.Controllers
             return File(stream, "application/octet-stream", fileName);
         }
 
+        #region 简单字典的CRUD
         /// <summary>
-        /// 
+        /// 通用的获取数据字典。
         /// </summary>
+        /// <param name="token"></param>
+        /// <param name="rId">从资源列表中获取，指定资源的Id。如:6AE3BBB3-BAC9-4509-BF82-C8578830CD24 表示 多语言资源表。Id是不会变化的。</param>
+        /// <param name="startIndex">获取的起始索引。可用于分页。</param>
+        /// <param name="count">获取的最大数量，-1表示全获取。</param>
         /// <returns></returns>
-        [HttpPost]
-        public ActionResult AddSimpleDataDic()
+        [HttpGet]
+        public ActionResult<GetDataDicReturnDto> GetDataDic(Guid token, Guid rId, int startIndex, int count = -1)
         {
-            return Ok();
+            var result = new GetDataDicReturnDto();
+            if (_DbContext.Set<Account>().FirstOrDefault(c => c.Token == token) is not Account user) return Unauthorized();
+            if (_DbContext.SystemResources.Find(rId) is not SystemResource sr) return BadRequest($"找不到{rId}指定的系统资源。");
+            switch (sr.Name)
+            {
+                case nameof(_DbContext.Multilinguals):
+                    {
+                        var coll = _DbContext.Multilinguals.OrderBy(c => c.Id).Skip(startIndex);
+                        coll = count == -1 ? coll : coll.Take(count);
+                        result.Result.AddRange(coll);
+                    }
+                    break;
+                default:    //简单字典
+                    {
+                    }
+                    break;
+            }
+            return result;
         }
 
         /// <summary>
-        /// 
+        /// 获取指定类别数据字典的全部内容。
         /// </summary>
+        /// <param name="token">登录令牌。</param>
+        /// <param name="catalogId">数据字典类别的Id。</param>
+        /// <param name="startIndex">起始位置，从0开始。</param>
+        /// <param name="count">最大返回数量。-1表示全返回。</param>
         /// <returns></returns>
-        [HttpPost]
-        public ActionResult ModifySimpleDataDic()
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定类别Id无效。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        public ActionResult<GetAllDataDicReturnDto> GetAllDataDic(Guid token, Guid catalogId,
+            [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [Range(-1, int.MaxValue)] int count = -1)
         {
-            return Ok();
+            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetAllDataDicReturnDto();
+            var collBase = _DbContext.SimpleDataDics.AsNoTracking().Where(c => c.DataDicId == catalogId);
+            var coll = collBase.OrderBy(c => c.Id).Skip(startIndex);
+            if (count > -1)
+                coll = coll.Take(count);
+            result.Total = collBase.Count();
+            result.Result.AddRange(coll);
+            return result;
         }
 
         /// <summary>
-        /// 
+        /// 给指定简单数据字典增加一项。
         /// </summary>
+        /// <param name="model"></param>
         /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">在同一类别同一组织机构下指定了重复的Code。</response>  
+        /// <response code="401">无效令牌。</response>  
         [HttpPost]
-        public ActionResult RemoveSimpleDataDic()
+        public ActionResult<AddSimpleDataDicReturnDto> AddSimpleDataDic(AddSimpleDataDicParamsDto model)
         {
-            return Ok();
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new AddSimpleDataDicReturnDto();
+            if (_DbContext.SimpleDataDics.Any(c => c.OrgId == model.Item.OrgId && c.DataDicId == model.Item.DataDicId && c.Code == model.Item.Code))
+                return BadRequest();
+            model.Item.GenerateNewId();
+            _DbContext.SimpleDataDics.Add(model.Item);
+            _DbContext.SaveChanges();
+            result.Id = model.Item.Id;
+            return result;
         }
 
+        /// <summary>
+        /// 修改简单字典的项。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPut]
+        public ActionResult<ModifySimpleDataDicReturnDto> ModifySimpleDataDic(ModifySimpleDataDicParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new ModifySimpleDataDicReturnDto();
+            var ids = model.Items.Select(c => c.Id).ToArray();
+            var coll = _DbContext.SimpleDataDics.Where(c => ids.Contains(c.Id));
+            foreach (var item in model.Items)
+            {
+                _DbContext.Entry(item).CurrentValues.SetValues(item);
+            }
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        /// <summary>
+        /// 删除简单数据字典中的一项。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpDelete]
+        public ActionResult<RemoveSimpleDataDicReturnDto> RemoveSimpleDataDic(RemoveSimpleDataDicParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new RemoveSimpleDataDicReturnDto();
+            var id = model.Id;
+            DbSet<SimpleDataDic> dbSet = _DbContext.SimpleDataDics;
+            var item = dbSet.Find(id);
+            if (item is null) return BadRequest();
+            var catalogId = item.DataDicId;
+            _DbContext.SimpleDataDics.Remove(item);
+            _DbContext.SaveChanges();
+            //if (item.DataDicType == 1) //若是简单字典
+            //    _DbContext.Database.ExecuteSqlRaw($"delete from {nameof(_DbContext.SimpleDataDics)} where {nameof(SimpleDataDic.DataDicId)}='{id.ToString()}'");
+            //else //其他字典待定
+            //{
+
+            //}
+            return result;
+        }
+
+        #endregion 简单字典的CRUD
+    }
+
+    /// <summary>
+    /// 获取指定类别数据字典的全部内容的功能返回值封装类。
+    /// </summary>
+    public class GetAllDataDicReturnDto : PagingReturnDtoBase<SimpleDataDic>
+    {
+    }
+
+    /// <summary>
+    /// 删除简单数据字典中的一项的功能参数封装类。
+    /// </summary>
+    public class RemoveSimpleDataDicParamsDto : RemoveParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 删除简单数据字典中的一项的功能返回值封装类。
+    /// </summary>
+    public class RemoveSimpleDataDicReturnDto : RemoveReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 修改简单字典的项的功能参数封装类。
+    /// </summary>
+    public class ModifySimpleDataDicParamsDto : ModifyParamsDtoBase<SimpleDataDic>
+    {
+    }
+
+    /// <summary>
+    /// 修改简单字典的项的功能返回值封装类。
+    /// </summary>
+    public class ModifySimpleDataDicReturnDto : ModifyReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 给指定简单数据字典增加一项的功能参数封装类，
+    /// </summary>
+    public class AddSimpleDataDicParamsDto : AddParamsDtoBase<SimpleDataDic>
+    {
+    }
+
+    /// <summary>
+    /// 给指定简单数据字典增加一项的功能返回值封装类。
+    /// </summary>
+    public class AddSimpleDataDicReturnDto : AddReturnDtoBase
+    {
     }
 
     /// <summary>

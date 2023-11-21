@@ -15,6 +15,7 @@ namespace PowerLms.Data
     /// <summary>
     /// 简单数据字典条目类。
     /// </summary>
+    [Index(nameof(OrgId), nameof(DataDicId))]   //大量情况是在特定机构下的
     public class SimpleDataDic : DataDicBase
     {
         /// <summary>
@@ -22,7 +23,7 @@ namespace PowerLms.Data
         /// </summary>
         public SimpleDataDic()
         {
-            
+
         }
 
         /// <summary>

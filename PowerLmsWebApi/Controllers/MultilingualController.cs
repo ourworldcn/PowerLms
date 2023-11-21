@@ -70,37 +70,6 @@ namespace PowerLmsWebApi.Controllers
             _Db.SaveChanges();
             return result;
         }
-
-        /// <summary>
-        /// 获取语言字典表。此功能暂时不考虑分页。此表暂时不考虑追加/修改/删除。
-        /// </summary>
-        /// <returns></returns>
-        [HttpGet]
-        [Obsolete("已经并入简单字典")]
-        public ActionResult<GetLanguageDataDicReturnDto> GetLanguageDataDic()
-        {
-            //var result = new GetLanguageDataDicReturnDto();
-            //var coll = from tmp in _Db.LanguageDataDics
-            //           select tmp;
-            //result.Results.AddRange(coll.AsNoTracking());
-            return NotFound();
-        }
-
-        /// <summary>
-        /// 请改用 Admin/ImportDataDic"。上传语言字典文件。相当于删除所有数据后再导入。
-        /// </summary>
-        /// <param name="formFile"></param>
-        /// <param name="token">登录令牌。</param>
-        /// <returns></returns>
-        [HttpPost, Obsolete("请改用 Admin/ImportDataDic")]
-        public ActionResult ImportLanguageDataDic(IFormFile formFile, Guid token)
-        {
-            //var workbook = _NpoiManager.GetWorkbookFromStream(formFile.OpenReadStream());
-            //var sheet = workbook.GetSheetAt(0);
-            //_NpoiManager.WriteToDb(sheet, _Db, _Db.LanguageDataDics);
-            //_MultilingualManager.Import(formFile.OpenReadStream(), _Db);
-            return NotFound();
-        }
     }
 
 }

@@ -177,6 +177,7 @@
             <param name="model"></param>
             <returns></returns>
             <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="400">指定的Code已经存在。</response>  
             <response code="401">无效令牌。</response>  
         </member>
         <member name="M:PowerLmsWebApi.Controllers.AdminController.ModifyDataDicCatalog(PowerLmsWebApi.Controllers.ModifyDataDicCatalogParamsDto)">
@@ -203,16 +204,6 @@
             <summary>
             获取系统资源列表。
             </summary>
-            <returns></returns>
-        </member>
-        <member name="M:PowerLmsWebApi.Controllers.AdminController.GetDataDic(System.Guid,System.Guid,System.Int32,System.Int32)">
-            <summary>
-            通用的获取数据字典。
-            </summary>
-            <param name="token"></param>
-            <param name="rId">从资源列表中获取，指定资源的Id。如:6AE3BBB3-BAC9-4509-BF82-C8578830CD24 表示 多语言资源表。Id是不会变化的。</param>
-            <param name="startIndex">获取的起始索引。可用于分页。</param>
-            <param name="count">获取的最大数量，-1表示全获取。</param>
             <returns></returns>
         </member>
         <member name="M:PowerLmsWebApi.Controllers.AdminController.ImportDataDic(Microsoft.AspNetCore.Http.IFormFile,System.Guid,System.Guid)">
@@ -244,23 +235,93 @@
             <returns></returns>
             <response code="401">无效令牌。</response>  
         </member>
-        <member name="M:PowerLmsWebApi.Controllers.AdminController.AddSimpleDataDic">
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.GetDataDic(System.Guid,System.Guid,System.Int32,System.Int32)">
             <summary>
-            
+            通用的获取数据字典。
             </summary>
+            <param name="token"></param>
+            <param name="rId">从资源列表中获取，指定资源的Id。如:6AE3BBB3-BAC9-4509-BF82-C8578830CD24 表示 多语言资源表。Id是不会变化的。</param>
+            <param name="startIndex">获取的起始索引。可用于分页。</param>
+            <param name="count">获取的最大数量，-1表示全获取。</param>
             <returns></returns>
         </member>
-        <member name="M:PowerLmsWebApi.Controllers.AdminController.ModifySimpleDataDic">
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.GetAllDataDic(System.Guid,System.Guid,System.Int32,System.Int32)">
             <summary>
-            
+            获取指定类别数据字典的全部内容。
             </summary>
+            <param name="token">登录令牌。</param>
+            <param name="catalogId">数据字典类别的Id。</param>
+            <param name="startIndex">起始位置，从0开始。</param>
+            <param name="count">最大返回数量。-1表示全返回。</param>
             <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="400">指定类别Id无效。</response>  
+            <response code="401">无效令牌。</response>  
         </member>
-        <member name="M:PowerLmsWebApi.Controllers.AdminController.RemoveSimpleDataDic">
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.AddSimpleDataDic(PowerLmsWebApi.Controllers.AddSimpleDataDicParamsDto)">
             <summary>
-            
+            给指定简单数据字典增加一项。
             </summary>
+            <param name="model"></param>
             <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="400">在同一类别同一组织机构下指定了重复的Code。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.ModifySimpleDataDic(PowerLmsWebApi.Controllers.ModifySimpleDataDicParamsDto)">
+            <summary>
+            修改简单字典的项。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.RemoveSimpleDataDic(PowerLmsWebApi.Controllers.RemoveSimpleDataDicParamsDto)">
+            <summary>
+            删除简单数据字典中的一项。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetAllDataDicReturnDto">
+            <summary>
+            获取指定类别数据字典的全部内容的功能返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RemoveSimpleDataDicParamsDto">
+            <summary>
+            删除简单数据字典中的一项的功能参数封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RemoveSimpleDataDicReturnDto">
+            <summary>
+            删除简单数据字典中的一项的功能返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.ModifySimpleDataDicParamsDto">
+            <summary>
+            修改简单字典的项的功能参数封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.ModifySimpleDataDicReturnDto">
+            <summary>
+            修改简单字典的项的功能返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddSimpleDataDicParamsDto">
+            <summary>
+            给指定简单数据字典增加一项的功能参数封装类，
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddSimpleDataDicReturnDto">
+            <summary>
+            给指定简单数据字典增加一项的功能返回值封装类。
+            </summary>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.RemoveDataDicCatalogParamsDto">
             <summary>
@@ -425,20 +486,6 @@
             更新或追加多语言资源。
             </summary>
             <param name="model"></param>
-            <returns></returns>
-        </member>
-        <member name="M:PowerLmsWebApi.Controllers.MultilingualController.GetLanguageDataDic">
-            <summary>
-            获取语言字典表。此功能暂时不考虑分页。此表暂时不考虑追加/修改/删除。
-            </summary>
-            <returns></returns>
-        </member>
-        <member name="M:PowerLmsWebApi.Controllers.MultilingualController.ImportLanguageDataDic(Microsoft.AspNetCore.Http.IFormFile,System.Guid)">
-            <summary>
-            请改用 Admin/ImportDataDic"。上传语言字典文件。相当于删除所有数据后再导入。
-            </summary>
-            <param name="formFile"></param>
-            <param name="token">登录令牌。</param>
             <returns></returns>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.OrganizationController">
