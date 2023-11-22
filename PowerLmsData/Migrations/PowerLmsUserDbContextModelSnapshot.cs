@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PowerLmsServer.EfData;
 
 #nullable disable
+#pragma warning disable CS1591 // 缺少对公共可见类型或成员的 XML 注释
 
 namespace PowerLmsData.Migrations
 {
@@ -147,6 +148,10 @@ namespace PowerLmsData.Migrations
                         .HasColumnType("nvarchar(max)")
                         .HasComment("显示名称");
 
+                    b.Property<Guid?>("OrgId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("所属组织机构Id。通常这里为null则有不同解释，如通用的模板或超管使用的数据字典。");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Code")
@@ -284,9 +289,9 @@ namespace PowerLmsData.Migrations
                         .HasColumnType("nvarchar(max)")
                         .HasComment("显示的名称");
 
-                    b.Property<Guid?>("OrgId")
-                        .HasColumnType("uniqueidentifier")
-                        .HasComment("所属组织机构Id。通常这里为null则有不同解释，如通用的模板或超管使用的数据字典。");
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("bit")
+                        .HasComment("是否已标记为删除。false(默认)未标记为删除，true标记为删除。");
 
                     b.Property<string>("ShortName")
                         .HasMaxLength(32)
@@ -300,7 +305,7 @@ namespace PowerLmsData.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OrgId", "DataDicId");
+                    b.HasIndex("DataDicId");
 
                     b.ToTable("SimpleDataDics");
                 });

@@ -35,5 +35,12 @@ namespace PowerLms.Data
         [Comment("数据字典的类型。1=简单字典，其它值随后逐步定义。")]
         public int DataDicType { get; set; }
 
+        /// <summary>
+        /// 所属组织机构Id。通常这里为null则有不同解释，如通用的模板或超管使用的数据字典。
+        /// </summary>
+        [Comment("所属组织机构Id。通常这里为null则有不同解释，如通用的模板或超管使用的数据字典。")]
+        public Guid? OrgId { get; set; }
+
+
     }
 }

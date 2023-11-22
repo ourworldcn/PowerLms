@@ -298,13 +298,15 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="catalogId">数据字典类别的Id。</param>
         /// <param name="startIndex">起始位置，从0开始。</param>
         /// <param name="count">最大返回数量。-1表示全返回。</param>
+        /// <param name="conditional">查询的条件。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定类别Id无效。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
         public ActionResult<GetAllDataDicReturnDto> GetAllDataDic(Guid token, Guid catalogId,
-            [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [Range(-1, int.MaxValue)] int count = -1)
+            [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [FromQuery][Range(-1, int.MaxValue)] int count = -1,
+            [FromQuery] Dictionary<string, string> conditional = null)
         {
             if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllDataDicReturnDto();
@@ -330,12 +332,26 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddSimpleDataDicReturnDto();
-            if (_DbContext.SimpleDataDics.Any(c => c.OrgId == model.Item.OrgId && c.DataDicId == model.Item.DataDicId && c.Code == model.Item.Code))
+            if (_DbContext.SimpleDataDics.Any(c => c.DataDicId == model.Item.DataDicId && c.Code == model.Item.Code))   //若重复
                 return BadRequest();
             model.Item.GenerateNewId();
+            var id = model.Item.Id;
             _DbContext.SimpleDataDics.Add(model.Item);
+            if (model.CopyToChildren)    //若需要向下传播
+            {
+                if (_DbContext.DataDicCatalogs.FirstOrDefault(c => c.Id == model.Item.DataDicId) is DataDicCatalog catalog)  //若有字典
+                {
+                    var allCatalog = _DbContext.DataDicCatalogs.Where(c => c.Code == catalog.Code);
+                    foreach (var item in allCatalog)
+                    {
+                        var sdd = (SimpleDataDic)model.Item.Clone();
+                        sdd.DataDicId = item.Id;
+                        _DbContext.SimpleDataDics.Add(sdd);
+                    }
+                }
+            }
             _DbContext.SaveChanges();
-            result.Id = model.Item.Id;
+            result.Id = id;
             return result;
         }
 
@@ -380,7 +396,8 @@ namespace PowerLmsWebApi.Controllers
             var item = dbSet.Find(id);
             if (item is null) return BadRequest();
             var catalogId = item.DataDicId;
-            _DbContext.SimpleDataDics.Remove(item);
+            //_DbContext.SimpleDataDics.Remove(item);
+            item.IsDelete = true;
             _DbContext.SaveChanges();
             //if (item.DataDicType == 1) //若是简单字典
             //    _DbContext.Database.ExecuteSqlRaw($"delete from {nameof(_DbContext.SimpleDataDics)} where {nameof(SimpleDataDic.DataDicId)}='{id.ToString()}'");

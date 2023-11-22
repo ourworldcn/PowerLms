@@ -15,8 +15,8 @@ namespace PowerLms.Data
     /// <summary>
     /// 简单数据字典条目类。
     /// </summary>
-    [Index(nameof(OrgId), nameof(DataDicId))]   //大量情况是在特定机构下的
-    public class SimpleDataDic : DataDicBase
+    [Index(nameof(DataDicId))]   //大量情况是在特定机构下的
+    public class SimpleDataDic : DataDicBase, ICloneable
     {
         /// <summary>
         /// 构造函数。
@@ -49,5 +49,32 @@ namespace PowerLms.Data
         /// </summary>
         [Comment("创建时间")]
         public DateTime? CreateDateTime { get; set; }
+
+        /// <summary>
+        /// 是否已标记为删除。false(默认)未标记为删除，true标记为删除。
+        /// </summary>
+        [Comment("是否已标记为删除。false(默认)未标记为删除，true标记为删除。")]
+        public bool IsDelete { get; set; }
+
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        /// <returns>返回除<see cref="GuidKeyObjectBase.Id"/>属性外，其余属性完全相同的对象。</returns>
+        public object Clone()
+        {
+            var result = new SimpleDataDic
+            {
+                DataDicId = DataDicId,
+                CreateAccountId = CreateAccountId,
+                CreateDateTime = CreateDateTime,
+                IsDelete = IsDelete,
+                Code = Code,
+                CustomsCode = CustomsCode,
+                DisplayName = DisplayName,
+                ShortcutName = ShortcutName,
+                ShortName = ShortName,
+            };
+            return result;
+        }
     }
 }

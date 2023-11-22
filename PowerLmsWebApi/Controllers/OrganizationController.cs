@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
@@ -41,10 +42,30 @@ namespace PowerLmsWebApi.Controllers
             var root = _DbContext.PlOrganizations.FirstOrDefault(c => c.Id == model.RootId);
             if (!model.IncludeChildren)
             {
-                _DbContext.Entry(root).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                _DbContext.Entry(root).State = EntityState.Detached;
                 root.Children.Clear();
             }
             result.Result = root;
+            return result;
+        }
+
+        /// <summary>
+        /// 增加一个组织机构。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPost]
+        public ActionResult<AddOrgReturnDto> AddOrg(AddOrgParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new AddOrgReturnDto();
+            model.Item.GenerateNewId();
+            var id = model.Item.Id;
+            _DbContext.PlOrganizations.Add(model.Item);
+            _DbContext.SaveChanges();
+            result.Id = id;
             return result;
         }
 
@@ -55,50 +76,84 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
-        [HttpPost]
+        [HttpPut]
         public ActionResult<ModifyOrgReturnDto> ModifyOrg(ModifyOrgParamsDto model)
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized(OwHelper.GetLastErrorMessage());
             var result = new ModifyOrgReturnDto();
-            if (model.Root is not null)
+            foreach (var item in model.Items)
             {
-                var root = _DbContext.PlOrganizations.Find(model.Root.Id);
-                if (root is null)   //若新增节点
-                {
-                    _DbContext.PlOrganizations.Add(model.Root);
-                }
-                else
-                {
-                    _DbContext.Entry(root).CurrentValues.SetValues(model.Root);
-                }
-                _DbContext.SaveChanges();
+                //_DbContext.UpdateRange(item);
+                _DbContext.Entry(item).CurrentValues.SetValues(item);
             }
-            _DbContext.Delete(model.DeleteIds, nameof(_DbContext.PlOrganizations));
+            _DbContext.SaveChanges();
             return result;
         }
+
+        /// <summary>
+        /// 删除一个组织机构。该机构必须没有子组织机构。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpDelete]
+        public ActionResult<RemoveOrgReturnDto> RemoveOrg(RemoveOrgParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new RemoveOrgReturnDto();
+            var id = model.Id;
+            var dbSet = _DbContext.PlOrganizations;
+            var item = dbSet.Find(id);
+            if (item is null) return BadRequest();
+            dbSet.Remove(item);
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+    }
+
+    /// <summary>
+    /// 删除组织机构的功能参数封装类。
+    /// </summary>
+    public class RemoveOrgParamsDto : RemoveParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 删除组织机构的功能返回值封装类。
+    /// </summary>
+    public class RemoveOrgReturnDto : RemoveReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 增加一个组织机构的功能参数封装类。
+    /// </summary>
+    public class AddOrgParamsDto : AddParamsDtoBase<PlOrganization>
+    {
+    }
+
+    /// <summary>
+    /// 增加一个组织机构的功能返回值封装类。
+    /// </summary>
+    public class AddOrgReturnDto : AddReturnDtoBase
+    {
     }
 
     /// <summary>
     /// 修改组织机构功能的参数封装类。
     /// </summary>
-    public class ModifyOrgParamsDto : TokenDtoBase
+    public class ModifyOrgParamsDto : ModifyParamsDtoBase<PlOrganization>
     {
-        /// <summary>
-        /// 要修改的组织机构Id的根节点。节点（包括下属节点）的Id若不存在则新加，否则是修改。注意增加顶层节点，必须是商户类型。(<see cref="PlOrganization.Otc"/>=1)
-        /// 可以为null，表示不添加/修改节点，仅删除节点。
-        /// </summary>
-        public PlOrganization Root { get; set; }
 
-        /// <summary>
-        /// 要删除了组织机构的Id集合。删除的节点需要在这里额外指定其Id。
-        /// </summary>
-        public List<Guid> DeleteIds { get; set; } = new List<Guid>();
     }
 
     /// <summary>
     /// 修改组织机构功能的返回值封装类。
     /// </summary>
-    public class ModifyOrgReturnDto : ReturnDtoBase
+    public class ModifyOrgReturnDto : ModifyReturnDtoBase
     {
     }
 }

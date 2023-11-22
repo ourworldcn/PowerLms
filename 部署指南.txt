@@ -1,4 +1,5 @@
 运行时账号 LmsServer//{25AF736F-AB8C-45A9-B552-8968E16B65E6}
+#pragma warning disable CS1591 // 缺少对公共可见类型或成员的 XML 注释
 
 安装IIS
 安装NetCore绑定

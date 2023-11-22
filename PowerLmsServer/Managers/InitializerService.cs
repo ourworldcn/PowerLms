@@ -89,7 +89,7 @@ namespace PowerLmsServer.Managers
                 admin = new Account
                 {
                     LoginName = "868d61ae-3a86-42a8-8a8c-1ed6cfa90817",
-                    CurrentLanguageTag= "zh-CN",
+                    CurrentLanguageTag = "zh-CN",
                     LastModifyDateTimeUtc = OwHelper.WorldNow,
                 };
                 //admin.SetPwd("1D381427-86BB-4D88-8CB0-5D92F8E1BADF");
@@ -102,9 +102,13 @@ namespace PowerLmsServer.Managers
 
         private void Test()
         {
-            string fileName = Path.ChangeExtension("sr", ".xls");
-            var cul = new CultureInfo("zh-CN");
-            var ss = cul.LCID;
+            using var scope = _ServiceScopeFactory.CreateScope();
+            var svc = scope.ServiceProvider;
+            _DbContext = svc.GetRequiredService<PowerLmsUserDbContext>();
+            var org = _DbContext.PlOrganizations.Find(new Guid("329BE0F5-BD13-4484-A8B7-6DD9AB392D53"));
+            //_DbContext.SaveChanges();
+
+
         }
 
         private void CreateDb()

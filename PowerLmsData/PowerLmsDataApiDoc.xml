@@ -96,11 +96,6 @@
             快捷输入名。如"as6"则在键盘输入按as6能选择到此项，8个ASCII字符不足的尾部填充空格。服务器并不使用该字段。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.DataDicBase.OrgId">
-            <summary>
-            所属组织机构Id。通常这里为null则有不同解释，如通用的模板或超管使用的数据字典。
-            </summary>
-        </member>
         <member name="T:PowerLms.Data.DataDicCatalog">
             <summary>
             专门针对数据字典的目录。
@@ -119,6 +114,11 @@
         <member name="P:PowerLms.Data.DataDicCatalog.DataDicType">
             <summary>
             数据字典的类型。1=简单字典，其它值随后逐步定义。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DataDicCatalog.OrgId">
+            <summary>
+            所属组织机构Id。通常这里为null则有不同解释，如通用的模板或超管使用的数据字典。
             </summary>
         </member>
         <member name="T:PowerLms.Data.PlAddress">
@@ -210,6 +210,17 @@
             <summary>
             创建时间。
             </summary>
+        </member>
+        <member name="P:PowerLms.Data.SimpleDataDic.IsDelete">
+            <summary>
+            是否已标记为删除。false(默认)未标记为删除，true标记为删除。
+            </summary>
+        </member>
+        <member name="M:PowerLms.Data.SimpleDataDic.Clone">
+            <summary>
+            <inheritdoc/>
+            </summary>
+            <returns>返回除<see cref="P:PowerLms.Data.GuidKeyObjectBase.Id"/>属性外，其余属性完全相同的对象。</returns>
         </member>
         <member name="T:PowerLms.Data.Multilingual">
             <summary>
