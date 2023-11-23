@@ -1,0 +1,10 @@
+D:\Users\光元\source\repos\GY2021001\OW.BaseCore\bin\Release\netcoreapp3.1\OwBaseCore.deps.json
+D:\Users\光元\source\repos\GY2021001\OW.BaseCore\bin\Release\netcoreapp3.1\OwBaseCore.dll
+D:\Users\光元\source\repos\GY2021001\OW.BaseCore\bin\Release\netcoreapp3.1\OwBaseCore.pdb
+D:\Users\光元\source\repos\GY2021001\OW.BaseCore\obj\Release\netcoreapp3.1\OwBaseCore.csproj.AssemblyReference.cache
+D:\Users\光元\source\repos\GY2021001\OW.BaseCore\obj\Release\netcoreapp3.1\OwBaseCore.GeneratedMSBuildEditorConfig.editorconfig
+D:\Users\光元\source\repos\GY2021001\OW.BaseCore\obj\Release\netcoreapp3.1\OwBaseCore.AssemblyInfoInputs.cache
+D:\Users\光元\source\repos\GY2021001\OW.BaseCore\obj\Release\netcoreapp3.1\OwBaseCore.AssemblyInfo.cs
+D:\Users\光元\source\repos\GY2021001\OW.BaseCore\obj\Release\netcoreapp3.1\OwBaseCore.csproj.CoreCompileInputs.cache
+D:\Users\光元\source\repos\GY2021001\OW.BaseCore\obj\Release\netcoreapp3.1\OwBaseCore.dll
+D:\Users\光元\source\repos\GY2021001\OW.BaseCore\obj\Release\netcoreapp3.1\OwBaseCore.pdb
