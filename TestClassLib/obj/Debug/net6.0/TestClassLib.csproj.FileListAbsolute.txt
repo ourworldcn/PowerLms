@@ -1,0 +1,12 @@
+d:\Users\光元\Source\Repos\Bak\TestClassLib\bin\Debug\net6.0\TestClassLib.deps.json
+d:\Users\光元\Source\Repos\Bak\TestClassLib\bin\Debug\net6.0\TestClassLib.dll
+d:\Users\光元\Source\Repos\Bak\TestClassLib\bin\Debug\net6.0\TestClassLib.pdb
+d:\Users\光元\Source\Repos\Bak\TestClassLib\obj\Debug\net6.0\TestClassLib.GeneratedMSBuildEditorConfig.editorconfig
+d:\Users\光元\Source\Repos\Bak\TestClassLib\obj\Debug\net6.0\TestClassLib.AssemblyInfoInputs.cache
+d:\Users\光元\Source\Repos\Bak\TestClassLib\obj\Debug\net6.0\TestClassLib.AssemblyInfo.cs
+d:\Users\光元\Source\Repos\Bak\TestClassLib\obj\Debug\net6.0\TestClassLib.csproj.CoreCompileInputs.cache
+d:\Users\光元\Source\Repos\Bak\TestClassLib\obj\Debug\net6.0\TestClassLib.sourcelink.json
+d:\Users\光元\Source\Repos\Bak\TestClassLib\obj\Debug\net6.0\TestClassLib.dll
+d:\Users\光元\Source\Repos\Bak\TestClassLib\obj\Debug\net6.0\refint\TestClassLib.dll
+d:\Users\光元\Source\Repos\Bak\TestClassLib\obj\Debug\net6.0\TestClassLib.pdb
+d:\Users\光元\Source\Repos\Bak\TestClassLib\obj\Debug\net6.0\ref\TestClassLib.dll
