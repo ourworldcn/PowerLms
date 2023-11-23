@@ -40,6 +40,8 @@ namespace PowerLmsWebApi.Controllers
             var result = new GetOrgReturnDto();
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized(OwHelper.GetLastErrorMessage());
             var root = _DbContext.PlOrganizations.FirstOrDefault(c => c.Id == model.RootId);
+            if (root == null)
+                root = _DbContext.PlOrganizations.FirstOrDefault(c => c.MerchantId == model.RootId);
             if (!model.IncludeChildren)
             {
                 _DbContext.Entry(root).State = EntityState.Detached;

@@ -39,15 +39,31 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="token">登录令牌。</param>
         /// <param name="startIndex">起始位置，从0开始。</param>
         /// <param name="count">最大返回数量。</param>
+        /// <param name="conditional">查询的条件。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetMerchantReturnDto> GetAll(Guid token, [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [Range(-1, int.MaxValue)] int count = -1)
+        public ActionResult<GetMerchantReturnDto> GetAll(Guid token, [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [Range(-1, int.MaxValue)] int count = -1,
+            [FromQuery] Dictionary<string, string> conditional = null)
         {
             if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetMerchantReturnDto();
             var coll = _DbContext.Merchants.AsNoTracking().OrderBy(c => c.Id).Skip(startIndex);
+            foreach (var item in conditional)
+                if (string.Equals(item.Key, "id", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (OwConvert.TryToGuid(item.Value, out var id))
+                        coll = coll.Where(c => c.Id == id);
+                }
+                else if (string.Equals(item.Key, "code", StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.Name.Name == item.Value);
+                }
+                else if (string.Equals(item.Key, "displayname", StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.Name.DisplayName.Contains(item.Value));
+                }
             if (count > -1)
                 coll = coll.Take(count);
             result.Total = _DbContext.Merchants.Count();

@@ -16,8 +16,9 @@ namespace PowerLms.Data
     public class PlOrganization : GuidKeyObjectBase
     {
         /// <summary>
-        /// 商户Id。
+        /// 商户Id。仅总公司(ParentId 是null)需要此字段指向所属商户，其它情况忽略此字段。
         /// </summary>
+        [Comment("商户Id。仅总公司(ParentId 是null)需要此字段指向所属商户，其它情况忽略此字段。")]
         public Guid? MerchantId { get; set; }
 
         /// <summary>

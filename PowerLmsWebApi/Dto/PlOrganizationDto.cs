@@ -9,7 +9,7 @@ namespace PowerLmsWebApi.Dto
     public class GetOrgParamsDto : TokenDtoBase
     {
         /// <summary>
-        /// 根组织机构的Id。
+        /// 根组织机构的Id。或商户的Id。
         /// </summary>
         public Guid? RootId { get; set; }
 
