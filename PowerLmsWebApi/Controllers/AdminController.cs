@@ -108,7 +108,7 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// 修改一个数据字典目录。
+        /// 修改数据字典目录。
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
@@ -120,11 +120,12 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyDataDicCatalogReturnDto();
-            var ids = model.Items.Select(c => c.Id).ToArray();
-            var coll = _DbContext.DataDicCatalogs.Where(c => ids.Contains(c.Id));
+            var dbSet = _DbContext.DataDicCatalogs;
             foreach (var item in model.Items)
             {
-                _DbContext.Entry(item).CurrentValues.SetValues(item);
+                var tmp = dbSet.Find(item.Id);
+                if (tmp is null) { return BadRequest($"找不到{item.Id}"); }
+                _DbContext.Entry(tmp).CurrentValues.SetValues(item);
             }
             _DbContext.SaveChanges();
             return result;
@@ -373,11 +374,12 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifySimpleDataDicReturnDto();
-            var ids = model.Items.Select(c => c.Id).ToArray();
-            var coll = _DbContext.SimpleDataDics.Where(c => ids.Contains(c.Id));
+            var dbSet = _DbContext.SimpleDataDics;
             foreach (var item in model.Items)
             {
-                _DbContext.Entry(item).CurrentValues.SetValues(item);
+                var tmp = dbSet.Find(item.Id);
+                if (tmp is null) { return BadRequest($"找不到{item.Id}"); }
+                _DbContext.Entry(tmp).CurrentValues.SetValues(item);
             }
             _DbContext.SaveChanges();
             return result;

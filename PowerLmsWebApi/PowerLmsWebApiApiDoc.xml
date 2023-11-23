@@ -183,7 +183,7 @@
         </member>
         <member name="M:PowerLmsWebApi.Controllers.AdminController.ModifyDataDicCatalog(PowerLmsWebApi.Controllers.ModifyDataDicCatalogParamsDto)">
             <summary>
-            修改一个数据字典目录。
+            修改数据字典目录。
             </summary>
             <param name="model"></param>
             <returns></returns>
