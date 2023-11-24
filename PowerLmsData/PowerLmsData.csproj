@@ -22,11 +22,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\OwBaseCore\OwBaseCore.csproj" />
+    <Folder Include="Migrations\" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Migrations\" />
+    <ProjectReference Include="..\..\..\repos\Bak\OwBaseCore\OwBaseCore.csproj" />
   </ItemGroup>
 
 </Project>

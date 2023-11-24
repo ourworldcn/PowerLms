@@ -16,7 +16,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "解决方案项", "解决�
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PowerLmsData", "PowerLmsData\PowerLmsData.csproj", "{C385D591-63B3-4BF3-8AA0-767FCD8C4D39}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OwBaseCore", "OwBaseCore\OwBaseCore.csproj", "{B5C615B9-8A9D-49C2-83E7-43E77D4DA18B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OwBaseCore", "..\..\repos\Bak\OwBaseCore\OwBaseCore.csproj", "{53CABA37-1D8F-454B-B5FB-9FF6BE94D3BF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -36,10 +36,10 @@ Global
 		{C385D591-63B3-4BF3-8AA0-767FCD8C4D39}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C385D591-63B3-4BF3-8AA0-767FCD8C4D39}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C385D591-63B3-4BF3-8AA0-767FCD8C4D39}.Release|Any CPU.Build.0 = Release|Any CPU
-		{B5C615B9-8A9D-49C2-83E7-43E77D4DA18B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B5C615B9-8A9D-49C2-83E7-43E77D4DA18B}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B5C615B9-8A9D-49C2-83E7-43E77D4DA18B}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B5C615B9-8A9D-49C2-83E7-43E77D4DA18B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{53CABA37-1D8F-454B-B5FB-9FF6BE94D3BF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{53CABA37-1D8F-454B-B5FB-9FF6BE94D3BF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{53CABA37-1D8F-454B-B5FB-9FF6BE94D3BF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{53CABA37-1D8F-454B-B5FB-9FF6BE94D3BF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
