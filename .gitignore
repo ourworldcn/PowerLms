@@ -1,0 +1,10 @@
+﻿################################################################################
+# 此 .gitignore 文件已由 Microsoft(R) Visual Studio 自动创建。
+################################################################################
+
+/OwBaseCore/bin/Debug/net6.0/OwBaseCore.dll
+/OwBaseCore/bin/Debug/net6.0/OwBaseCore.pdb
+/OwBaseCore/obj/Debug/net6.0/ref/OwBaseCore.dll
+/OwBaseCore/obj/Debug/net6.0/refint/OwBaseCore.dll
+/OwBaseCore/obj/Debug/net6.0/OwBaseCore.dll
+/OwBaseCore/obj/Debug/net6.0/OwBaseCore.pdb
