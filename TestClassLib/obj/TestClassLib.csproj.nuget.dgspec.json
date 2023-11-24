@@ -1,15 +1,15 @@
 {
   "format": 1,
   "restore": {
-    "d:\\Users\\光元\\Source\\Repos\\Bak\\TestClassLib\\TestClassLib.csproj": {}
+    "d:\\Users\\光元\\source\\repos\\Bak\\TestClassLib\\TestClassLib.csproj": {}
   },
   "projects": {
-    "d:\\Users\\光元\\Source\\Repos\\Bak\\TestClassLib\\TestClassLib.csproj": {
+    "d:\\Users\\光元\\source\\repos\\Bak\\TestClassLib\\TestClassLib.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "d:\\Users\\光元\\Source\\Repos\\Bak\\TestClassLib\\TestClassLib.csproj",
+        "projectUniqueName": "d:\\Users\\光元\\source\\repos\\Bak\\TestClassLib\\TestClassLib.csproj",
         "projectName": "TestClassLib",
-        "projectPath": "d:\\Users\\光元\\Source\\Repos\\Bak\\TestClassLib\\TestClassLib.csproj",
+        "projectPath": "d:\\Users\\光元\\source\\repos\\Bak\\TestClassLib\\TestClassLib.csproj",
         "packagesPath": "C:\\Users\\光元\\.nuget\\packages\\",
         "outputPath": "d:\\Users\\光元\\Source\\Repos\\Bak\\TestClassLib\\obj\\",
         "projectStyle": "PackageReference",

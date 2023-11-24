@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("OW")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+274df0b11dce36afa6f7bff6ad83f5fbf6005e44")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+fb1e8d58991ef9fc263c3800ad142ff4ef871180")]
 [assembly: System.Reflection.AssemblyProductAttribute("OwBaseCore")]
 [assembly: System.Reflection.AssemblyTitleAttribute("OwBaseCore")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
