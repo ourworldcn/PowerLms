@@ -10,3 +10,17 @@ d:\Users\光元\source\repos\Gy02\OwBaseCore\obj\Release\net6.0\OwBaseCore.dll
 d:\Users\光元\source\repos\Gy02\OwBaseCore\obj\Release\net6.0\refint\OwBaseCore.dll
 d:\Users\光元\source\repos\Gy02\OwBaseCore\obj\Release\net6.0\OwBaseCore.pdb
 d:\Users\光元\source\repos\Gy02\OwBaseCore\obj\Release\net6.0\ref\OwBaseCore.dll
+d:\Users\光元\source\repos\Bak\OwBaseCore\bin\Release\net6.0\OwBaseCore.deps.json
+d:\Users\光元\source\repos\Bak\OwBaseCore\bin\Release\net6.0\OwBaseCore.dll
+d:\Users\光元\source\repos\Bak\OwBaseCore\bin\Release\net6.0\OwBaseCore.pdb
+d:\Users\光元\source\repos\Bak\OwBaseCore\bin\Release\net6.0\OwBaseCoreApiDoc.xml
+d:\Users\光元\source\repos\Bak\OwBaseCore\obj\Release\net6.0\OwBaseCore.csproj.AssemblyReference.cache
+d:\Users\光元\source\repos\Bak\OwBaseCore\obj\Release\net6.0\OwBaseCore.GeneratedMSBuildEditorConfig.editorconfig
+d:\Users\光元\source\repos\Bak\OwBaseCore\obj\Release\net6.0\OwBaseCore.AssemblyInfoInputs.cache
+d:\Users\光元\source\repos\Bak\OwBaseCore\obj\Release\net6.0\OwBaseCore.AssemblyInfo.cs
+d:\Users\光元\source\repos\Bak\OwBaseCore\obj\Release\net6.0\OwBaseCore.csproj.CoreCompileInputs.cache
+d:\Users\光元\source\repos\Bak\OwBaseCore\obj\Release\net6.0\OwBaseCore.sourcelink.json
+d:\Users\光元\source\repos\Bak\OwBaseCore\obj\Release\net6.0\OwBaseCore.dll
+d:\Users\光元\source\repos\Bak\OwBaseCore\obj\Release\net6.0\refint\OwBaseCore.dll
+d:\Users\光元\source\repos\Bak\OwBaseCore\obj\Release\net6.0\OwBaseCore.pdb
+d:\Users\光元\source\repos\Bak\OwBaseCore\obj\Release\net6.0\ref\OwBaseCore.dll

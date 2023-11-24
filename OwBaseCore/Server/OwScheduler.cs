@@ -599,8 +599,8 @@ namespace OW.Server
 
         }
 
-        ConcurrentDictionary<object, OwTimerSchedulerEntry> keys;
-        PriorityQueue<object, DateTime> values;
+        //ConcurrentDictionary<object, OwTimerSchedulerEntry> keys;
+        //PriorityQueue<object, DateTime> values;
 
         public void Add()
         {

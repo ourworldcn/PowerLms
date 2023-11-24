@@ -337,7 +337,7 @@ namespace System
         {
             Span<byte> span = stackalloc byte[/*Marshal.SizeOf<Guid>()*/16];
             var b = guid.TryWriteBytes(span);
-            Trace.Assert(b);
+            Debug.Assert(b);
             return Convert.ToBase64String(span);
         }
 
