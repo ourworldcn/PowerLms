@@ -24,3 +24,4 @@ D:\Users\光元\source\repos\Bak\OwBaseCore\obj\Debug\net6.0\OwBaseCore.dll
 D:\Users\光元\source\repos\Bak\OwBaseCore\obj\Debug\net6.0\refint\OwBaseCore.dll
 D:\Users\光元\source\repos\Bak\OwBaseCore\obj\Debug\net6.0\OwBaseCore.pdb
 D:\Users\光元\source\repos\Bak\OwBaseCore\obj\Debug\net6.0\ref\OwBaseCore.dll
+D:\Users\光元\source\repos\Bak\OwBaseCore\bin\Debug\net6.0\OwBaseCoreApiDoc.xml

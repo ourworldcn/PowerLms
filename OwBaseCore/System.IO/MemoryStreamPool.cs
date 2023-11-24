@@ -22,7 +22,7 @@ namespace System.IO
             }
 
             /// <summary>
-            /// 还入对象必须是<see cref="MemoryStream.MemoryStream"/>构造函数构造的。
+            /// 还入对象必须是<see cref="MemoryStream.MemoryStream()"/>构造函数构造的。
             /// </summary>
             /// <param name="obj"></param>
             /// <returns></returns>

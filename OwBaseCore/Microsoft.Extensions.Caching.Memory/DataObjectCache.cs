@@ -46,6 +46,7 @@ namespace Microsoft.Extensions.Caching.Memory
             /// 构造函数。
             /// </summary>
             /// <param name="key"></param>
+            /// <param name="cache"></param>
             public DataObjectCacheEntry(object key, DataObjectCache cache) : base(key, cache)
             {
                 SlidingExpiration = TimeSpan.FromMinutes(1);
@@ -256,7 +257,7 @@ namespace Microsoft.Extensions.Caching.Memory
         /// <param name="key"></param>
         /// <param name="timeout">锁定超时。省略或为null则使用<see cref="OwMemoryCacheOptions.DefaultLockTimeout"/>。</param>
         /// <returns>true成功保存，false保存时出错。
-        /// 调用<see cref="OwHelper.GetLastError"/>可获取详细信息。258=锁定超时，698=键已存在，1168=键不存在。
+        /// 调用<see cref="OwHelper.GetLastError()"/>可获取详细信息。258=锁定超时，698=键已存在，1168=键不存在。
         /// </returns>
         /// <exception cref="ObjectDisposedException">对象已处置。</exception>
         public bool EnsureSaved(object key, TimeSpan? timeout = null)
@@ -309,7 +310,7 @@ namespace Microsoft.Extensions.Caching.Memory
         /// <param name="result"></param>
         /// <param name="timeout">锁定超时。省略或为null则使用<see cref="OwMemoryCacheOptions.DefaultLockTimeout"/>。</param>
         /// <returns>true=成功，false=超时无法锁定键 - 或 - 键不存在。
-        /// 调用<see cref="OwHelper.GetLastError"/>可获取详细信息。258=锁定超时，698=键已存在，1168=键不存在。
+        /// 调用<see cref="OwHelper.GetLastError()"/>可获取详细信息。258=锁定超时，698=键已存在，1168=键不存在。
         /// </returns>
         public bool EnsureInitialized(object key, out DataObjectCacheEntry result, TimeSpan? timeout = null)
         {
@@ -341,7 +342,7 @@ namespace Microsoft.Extensions.Caching.Memory
         /// <param name="entry"></param>
         /// <param name="timeout">工作超时。实施者自行定义超时后的行为，此实现忽略该参数。</param>
         /// <returns>true=成功初始化，false=已经初始化。
-        /// 调用<see cref="OwHelper.GetLastError"/>可获取详细信息。
+        /// 调用<see cref="OwHelper.GetLastError()"/>可获取详细信息。
         /// </returns>
         /// <exception cref="InvalidOperationException">所有初始化手段均失败。</exception>
         protected virtual bool EnsureInitializedCore(DataObjectCacheEntry entry, TimeSpan timeout)
@@ -404,6 +405,7 @@ namespace Microsoft.Extensions.Caching.Memory
         /// <summary>
         /// 派生类可以重载此函数。非公有函数不会自动对键加锁，若需要则调用者需负责加/解锁。
         /// </summary>
+        /// <param name="key"></param>
         /// <param name="entry"></param>
         /// <returns>该实现会确保初始化成功完成<seealso cref="EnsureInitializedCore(DataObjectCacheEntry, TimeSpan)"/>，然后调用基类实现--<inheritdoc/>。</returns>
         /// <exception cref="ObjectDisposedException">对象已处置。</exception>

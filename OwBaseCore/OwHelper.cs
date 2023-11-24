@@ -229,7 +229,8 @@ namespace System
         /// <summary>
         /// 复制集合对象。
         /// </summary>
-        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="TSrc"></typeparam>
+        /// <typeparam name="TDest"></typeparam>
         /// <param name="src"></param>
         /// <param name="dest"></param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -262,7 +263,7 @@ namespace System
         }
 
         /// <summary>
-        /// 使用池<see cref="DictionaryPool{TKey, TValue}"/>创建对象复制指定内容病返回。
+        /// 使用池<see cref="AutoClearPool{T}"/>创建对象复制指定内容病返回。
         /// </summary>
         /// <typeparam name="TKey">键，如果有重复键值不会报错，后面的覆盖前面。</typeparam>
         /// <typeparam name="TValue"></typeparam>
@@ -404,7 +405,7 @@ namespace System
         /// <typeparam name="T"></typeparam>
         /// <param name="items"></param>
         /// <param name="random"></param>
-        /// <returns>如果出错则返回null，此时调用<see cref="GetLastError"/>获取详细信息。</returns>
+        /// <returns>如果出错则返回null，此时调用<see cref="GetLastError()"/>获取详细信息。</returns>
         public static (T, decimal)? GetRandom<T>(IEnumerable<(T, decimal)> items, Random random = null)
         {
             decimal totalWeight = 0;    //总权重

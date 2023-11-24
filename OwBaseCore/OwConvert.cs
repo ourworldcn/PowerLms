@@ -87,9 +87,8 @@ namespace System
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="dic"></param>
-        /// <param name="key"></param>
-        /// <param name="defaultVal"></param>
+        /// <param name="obj"></param>
+        /// <param name="result"></param>
         /// <returns></returns>
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         public static bool TryToFloat(object obj, out float result)

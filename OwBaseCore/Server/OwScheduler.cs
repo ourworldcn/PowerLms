@@ -182,6 +182,8 @@ namespace OW.Server
         /// 构造函数。
         /// </summary>
         /// <param name="options"></param>
+        /// <param name="logger"></param>
+        /// <param name="hostApplicationLifetime"></param>
         public OwScheduler(IOptions<OwSchedulerOptions> options, ILogger<OwScheduler> logger, IHostApplicationLifetime hostApplicationLifetime)
         {
             Options = options.Value;

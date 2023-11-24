@@ -376,7 +376,7 @@ namespace OW.SyncCommand
     public static class SyncCommandBaseExtensions
     {
         /// <summary>
-        /// 从<see cref="VWorld"/>对象获取错误信息。
+        /// 从<see cref="OwHelper.GetLastError()"/>对象获取错误信息。
         /// </summary>
         /// <param name="obj"></param>
         public static void FillErrorFromWorld(this IResultCommand obj)

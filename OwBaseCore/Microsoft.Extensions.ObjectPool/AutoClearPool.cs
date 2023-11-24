@@ -61,7 +61,7 @@ namespace Microsoft.Extensions.ObjectPool
         }
 
         /// <summary>
-        /// 可重复使用 <see cref="GeneralPool{T}"/> 类型实例的资源池的公有实例。
+        /// 可重复使用 <see cref="ObjectPool{T}"/> 类型实例的资源池的公有实例。
         /// </summary>
         public static readonly ObjectPool<T> Shared;
 

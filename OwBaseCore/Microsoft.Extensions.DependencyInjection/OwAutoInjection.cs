@@ -64,6 +64,7 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <summary>
         /// 要尽快创建第一个实例的服务类型。
         /// </summary>
+        /// <param name="service"></param>
         /// <param name="serviceTypes"></param>
         public OwAutoInjection(IServiceProvider service, IEnumerable<(Type, bool)> serviceTypes)
         {

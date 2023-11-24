@@ -77,7 +77,7 @@ namespace OW
     }
 
     /// <summary>
-    /// 定义该接口的初衷是打算配合NetCore的服务依赖注入功能一起使用，但如果直接使用<see cref="IObserver{T}{T}"/>担心与其它库相冲突，所以定义了此接口。
+    /// 定义该接口的初衷是打算配合NetCore的服务依赖注入功能一起使用，但如果直接使用<see cref="IObserver{T}"/>担心与其它库相冲突，所以定义了此接口。
     /// </summary>
     /// <typeparam name="T"><inheritdoc/></typeparam>
     public interface IOwObserver<in T> : IObserver<T>

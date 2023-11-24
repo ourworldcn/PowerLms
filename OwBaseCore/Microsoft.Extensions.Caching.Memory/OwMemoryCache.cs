@@ -83,6 +83,7 @@ namespace Microsoft.Extensions.Caching.Memory
             /// <summary>
             /// 构造函数。
             /// </summary>
+            /// <param name="key"></param>
             /// <param name="cache">指定所属缓存对象，在调用<see cref="Dispose"/>时可以加入该对象。</param>
             protected internal OwMemoryCacheEntry(object key, OwMemoryCache cache)
             {
@@ -147,7 +148,6 @@ namespace Microsoft.Extensions.Caching.Memory
 
             /// <summary>
             /// 使此配置项加入或替换缓存对象。内部会试图锁定键。
-            /// 在完成时自动调用<see cref="AddItemCore(ICacheEntry)"/>(在锁内)。
             /// </summary>
             /// <exception cref="TimeoutException">试图锁定键超时。</exception>
             public virtual void Dispose()
@@ -166,14 +166,6 @@ namespace Microsoft.Extensions.Caching.Memory
             #endregion IDisposable接口相关
 
             #endregion ICacheEntry接口相关
-
-            //internal Lazy<List<BeforeEvictionCallbackRegistration>> _BeforeEvictionCallbacksLazyer = new Lazy<List<BeforeEvictionCallbackRegistration>>(true);
-            /// <summary>
-            /// 获取或设置从缓存中即将逐出缓存项时将触发的回叫。
-            /// 所有的函数调用完毕才会解锁键对象。
-            /// 支持并发初始化，但返回集合本身不能支持并发。
-            /// </summary>
-            //public IList<BeforeEvictionCallbackRegistration> BeforeEvictionCallbacks => _BeforeEvictionCallbacksLazyer.Value;
 
             /// <summary>
             /// 最后一次使用的Utc时间。
@@ -343,7 +335,7 @@ namespace Microsoft.Extensions.Caching.Memory
         }
 
         /// <summary>
-        /// 通过检测<see cref="OwHelper.GetLastError"/>返回值是否为258(WAIT_TIMEOUT)决定是否抛出异常<seealso cref="TimeoutException"/>。
+        /// 通过检测<see cref="OwHelper.GetLastError()"/>返回值是否为258(WAIT_TIMEOUT)决定是否抛出异常<seealso cref="TimeoutException"/>。
         /// </summary>
         /// <param name="msg"></param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -354,7 +346,7 @@ namespace Microsoft.Extensions.Caching.Memory
         }
 
         /// <summary>
-        /// 根据<see cref="OwHelper.GetLastError"/>返回值判断是否抛出锁定键超时的异常。
+        /// 根据<see cref="OwHelper.GetLastError()"/>返回值判断是否抛出锁定键超时的异常。
         /// </summary>
         /// <param name="key"></param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -439,7 +431,6 @@ namespace Microsoft.Extensions.Caching.Memory
         /// <summary>
         /// 压缩缓存数据。
         /// </summary>
-        /// <param name="percentage">回收比例。</param>
         public void Compact()
         {
             ThrowIfDisposed();

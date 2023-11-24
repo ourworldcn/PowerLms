@@ -1,0 +1,2147 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>OwBaseCore</name>
+    </assembly>
+    <members>
+        <member name="T:OW.DDD.OwCommandManager">
+            <summary>
+            命令服务。
+            </summary>
+        </member>
+        <member name="P:OW.DDD.CommandResultBase`1.HasError">
+            <summary>
+            是否有错误。不设置则使用<see cref="P:OW.DDD.CommandResultBase`1.ErrorCode"/>来判定。
+            </summary>
+            <value>0没有错误，其它数值含义由应用定义。</value>
+        </member>
+        <member name="P:OW.DDD.CommandResultBase`1.ErrorCode">
+            <summary>
+            错误码。
+            </summary>
+        </member>
+        <member name="F:OW.DDD.CommandResultBase`1._ErrorMessage">
+            <summary>
+            调试用的提示性信息。
+            </summary>
+        </member>
+        <member name="P:OW.DDD.CommandResultBase`1.DebugMessage">
+            <summary>
+            调试信息，如果发生错误，这里给出简要说明。
+            </summary>
+        </member>
+        <member name="M:OW.DDD.CommandHandlerBase`2.Handle(`0)">
+            <summary>
+            
+            </summary>
+            <param name="command"></param>
+            <returns></returns>
+        </member>
+        <member name="P:OW.DDD.IEntity.Id">
+            <summary>
+            实体对象的唯一Id。
+            </summary>
+        </member>
+        <member name="T:OW.DDD.INotification">
+            <summary>
+            实现此接口的类就被认为是发布的事件类。确切的说是事件数据。
+            </summary>
+        </member>
+        <member name="T:OW.DDD.INotificationHandler`1">
+            <summary>
+            实现此接口的类就被认为是订阅 <typeparamref name="T"/> 事件的类。
+            </summary>
+            <typeparam name="T"></typeparam>
+        </member>
+        <member name="P:OW.DDD.ICommandResult`1.ErrorCode">
+            <summary>
+            错误码。
+            </summary>
+        </member>
+        <member name="P:OW.DDD.ICommandResult`1.DebugMessage">
+            <summary>
+            错误信息。
+            </summary>
+        </member>
+        <member name="T:OW.Game.OwEventBus">
+            <summary>
+            事件总线服务的实现。
+            该实现不专注于跨服务器边界的实施，仅考虑单机单进程单应用程序域(AppDomain)内的实现，并以此为前提假设提供更多的功能。
+            </summary>
+        </member>
+        <member name="M:OW.Game.OwEventBus.#ctor(System.IServiceProvider)">
+            <summary>
+            构造函数。
+            </summary>
+            <param name="service">范围服务，需要此接口，以获取其它事件处理接口。</param>
+        </member>
+        <member name="M:OW.Game.OwEventBus.Add(OW.DDD.INotification,System.Type)">
+            <summary>
+            增加一个事件数据。
+            </summary>
+            <param name="eventData"></param>
+            <param name="notificationType">保留未用。</param>
+        </member>
+        <member name="M:OW.Game.OwEventBus.Raise">
+            <summary>
+            引发队列中所有事件。
+            </summary>
+        </member>
+        <member name="M:OW.Game.EventBusManagerExtensions.AddOwEventBus(Microsoft.Extensions.DependencyInjection.IServiceCollection)">
+            <summary>
+            
+            </summary>
+            <param name="services"></param>
+            <returns></returns>
+        </member>
+        <member name="P:OW.SyncCommand.SyncCommandManager.Service">
+            <summary>
+            该服务使用的范围服务容器。
+            </summary>
+        </member>
+        <member name="P:OW.SyncCommand.SyncCommandManager.Items">
+            <summary>
+            当前范围内的一些数据。
+            </summary>
+        </member>
+        <member name="M:OW.SyncCommand.SyncCommandManager.HandleCore``1(``0,System.Collections.Generic.ICollection{System.Exception})">
+            <summary>
+            处理单个命令。
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="command"></param>
+            <param name="exceptions">该函数不会抛出异常，将所有异常追加到此集合。省略或为null则忽略异常。</param>
+        </member>
+        <member name="M:OW.SyncCommand.SyncCommandManager.HandleCore(OW.SyncCommand.ISyncCommand,System.Collections.Generic.ICollection{System.Exception})">
+            <summary>
+            处理单个命令。
+            </summary>
+            <param name="command"></param>
+            <param name="exceptions">该函数不会抛出异常，将所有异常追加到此集合。省略或为null则忽略异常。</param>
+        </member>
+        <member name="P:OW.SyncCommand.SyncCommandManager.Post">
+            <summary>
+            后续处理的命令。
+            </summary>
+        </member>
+        <member name="P:OW.SyncCommand.SyncCommandManager.NestedCommand">
+            <summary>
+            命令栈，顶层是当前在处理的命令。
+            </summary>
+        </member>
+        <member name="P:OW.SyncCommand.SyncCommandManager.NestedCount">
+            <summary>
+            获取命令处理器的嵌套深度。没有处理命令时是0，1表示正在处理顶层命令。
+            </summary>
+        </member>
+        <member name="P:OW.SyncCommand.SyncCommandManager.OrderNumber">
+            <summary>
+            命令处理的顺序。
+            </summary>
+        </member>
+        <member name="T:OW.SyncCommand.ISyncCommand">
+            <summary>
+            在同一个线程(net)中处理的命令对象的专用标记接口。
+            </summary>
+        </member>
+        <member name="T:OW.SyncCommand.IResultCommand">
+            <summary>
+            有通用返回值的命令。
+            </summary>
+        </member>
+        <member name="P:OW.SyncCommand.IResultCommand.ErrorCode">
+            <summary>
+            错误码，参见 ErrorCodes。
+            </summary>
+        </member>
+        <member name="P:OW.SyncCommand.IResultCommand.HasError">
+            <summary>
+            是否有错误。不设置则使用<see cref="P:OW.SyncCommand.IResultCommand.ErrorCode"/>来判定。
+            </summary>
+            <value>0没有错误，其它数值含义由应用定义。</value>
+        </member>
+        <member name="P:OW.SyncCommand.IResultCommand.DebugMessage">
+            <summary>
+            调试信息，如果发生错误，这里给出简要说明。
+            </summary>
+        </member>
+        <member name="T:OW.SyncCommand.ISyncCommandHandler`1">
+            <summary>
+            游戏命令处理器的基础接口。
+            </summary>
+            <typeparam name="T"></typeparam>
+        </member>
+        <member name="M:OW.SyncCommand.ISyncCommandHandler`1.Handle(`0)">
+            <summary>
+            命令处理函数。
+            </summary>
+            <param name="command"></param>
+        </member>
+        <member name="T:OW.SyncCommand.ISyncCommandHandling`1">
+            <summary>
+            对命令预处理的接口。多个同命令的预处理接口被调用的顺序无法确定。
+            </summary>
+            <typeparam name="TCommand"></typeparam>
+        </member>
+        <member name="T:OW.SyncCommand.ISyncCommandHandled`1">
+            <summary>
+            对命令进行后处理的接口。多个同命令的后处理接口被调用的顺序无法确定。
+            </summary>
+            <typeparam name="TCommand"></typeparam>
+        </member>
+        <member name="M:OW.SyncCommand.ISyncCommandHandled`1.Handled(`0,System.Exception)">
+            <summary>
+            对命令进行后处理。
+            </summary>
+            <param name="command">处理的命令，更改该对象内容，导致返回时的内容发生变化，不建议在这里更改命令内容。</param>
+            <param name="exception">若命令的处理过程中(<see cref="T:OW.SyncCommand.ISyncCommandHandler`1"/>)引发了异常则在此给出，否则为空引用。</param>
+        </member>
+        <member name="T:OW.SyncCommand.SyncCommandBase">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="M:OW.SyncCommand.SyncCommandBase.#ctor">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
+        <member name="P:OW.SyncCommand.SyncCommandBase.HasError">
+            <summary>
+            是否有错误。不设置则使用<see cref="P:OW.SyncCommand.SyncCommandBase.ErrorCode"/>来判定。
+            </summary>
+            <value>0没有错误，其它数值含义由应用定义。</value>
+        </member>
+        <member name="P:OW.SyncCommand.SyncCommandBase.ErrorCode">
+            <summary>
+            错误码，参见 ErrorCodes。
+            </summary>
+        </member>
+        <member name="F:OW.SyncCommand.SyncCommandBase._ErrorMessage">
+            <summary>
+            调试用的提示性信息。
+            </summary>
+        </member>
+        <member name="P:OW.SyncCommand.SyncCommandBase.DebugMessage">
+            <summary>
+            调试信息，如果发生错误，这里给出简要说明。
+            </summary>
+        </member>
+        <member name="T:OW.SyncCommand.SyncCommandHandlerBase`1">
+            <summary>
+            命令处理类的基类，可以在构造函数中注入必须的对象。
+            </summary>
+            <typeparam name="T"></typeparam>
+        </member>
+        <member name="T:OW.SyncCommand.SyncCommandBaseExtensions">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="M:OW.SyncCommand.SyncCommandBaseExtensions.FillErrorFromWorld(OW.SyncCommand.IResultCommand)">
+            <summary>
+            从<see cref="M:System.OwHelper.GetLastError"/>对象获取错误信息。
+            </summary>
+            <param name="obj"></param>
+        </member>
+        <member name="M:OW.SyncCommand.SyncCommandBaseExtensions.FillErrorFrom(OW.SyncCommand.IResultCommand,OW.SyncCommand.IResultCommand)">
+            <summary>
+            从另一个对象填充错误。
+            </summary>
+            <param name="obj"></param>
+            <param name="src"></param>
+        </member>
+        <member name="T:OW.OwDisposableBase">
+            <summary>
+            帮助实现 <see cref="T:System.IDisposable"/> 和 <see cref="T:System.IAsyncDisposable"/> 接口的抽象类。
+            </summary>
+        </member>
+        <member name="M:OW.OwDisposableBase.ThrowIfDisposed">
+            <summary>
+            如果对象已经被处置则抛出<see cref="T:System.ObjectDisposedException"/>异常。
+            </summary>
+        </member>
+        <member name="P:OW.OwDisposableBase.IsDisposed">
+            <summary>
+            获取或设置对象是否已经处置的属性，派生类需要自己切换该属性。
+            </summary>
+        </member>
+        <member name="M:OW.OwDisposableBase.Dispose(System.Boolean)">
+            <summary>
+            调用此实现以切换 <see cref="P:OW.OwDisposableBase.IsDisposed"/> 属性。
+            </summary>
+            <param name="disposing"></param>
+        </member>
+        <member name="M:OW.OwDisposableBase.Dispose">
+            <summary>
+            处置对象。
+            </summary>
+        </member>
+        <member name="T:OW.OwServiceBase`2">
+            <summary>
+            服务的基类。
+            </summary>
+            <typeparam name="TOptions"></typeparam>
+            <typeparam name="TService"></typeparam>
+        </member>
+        <member name="T:OW.OwPooledObjectBase`1">
+            <summary>
+            提供池化对象的基类，派生类重载<seealso cref="M:OW.OwPooledObjectBase`1.Dispose(System.Boolean)"/>在参数为True时，不是真的处置对象，而是将对象状态清理，并试图返回池。
+            </summary>
+            <typeparam name="T">池化对象的类型。</typeparam>
+        </member>
+        <member name="T:OW.IOwObservable`1">
+            <summary>
+            定义该接口的初衷是打算配合NetCore的服务依赖注入功能一起使用，但如果直接使用<see cref="T:System.IObservable`1"/>担心与其它库相冲突，所以定义了此接口。
+            </summary>
+            <typeparam name="T"><inheritdoc/></typeparam>
+        </member>
+        <member name="T:OW.IOwObserver`1">
+            <summary>
+            定义该接口的初衷是打算配合NetCore的服务依赖注入功能一起使用，但如果直接使用<see cref="T:System.IObserver`1"/>担心与其它库相冲突，所以定义了此接口。
+            </summary>
+            <typeparam name="T"><inheritdoc/></typeparam>
+        </member>
+        <member name="T:OW.PasswordGenerator">
+            <summary>
+            随机密码生成器。
+            </summary>
+        </member>
+        <member name="M:OW.PasswordGenerator.Generate(System.Int32)">
+            <summary>
+            生成密码。
+            </summary>
+            <param name="length"></param>
+            <returns></returns>
+        </member>
+        <member name="T:OW.Server.OwTaskType">
+            <summary>
+            任务类型。
+            </summary>
+        </member>
+        <member name="F:OW.Server.OwTaskType.Unknow">
+            <summary>
+            未知类型。
+            </summary>
+        </member>
+        <member name="F:OW.Server.OwTaskType.Idempotent">
+            <summary>
+            幂等任务。调用多次与调用一次结果一样。成功执行一次就会自动清除。
+            </summary>
+        </member>
+        <member name="F:OW.Server.OwTaskType.Timer">
+            <summary>
+            定时任务。
+            </summary>
+        </member>
+        <member name="F:OW.Server.OwTaskType.LongRunning">
+            <summary>
+            长时间运行任务。
+            </summary>
+        </member>
+        <member name="T:OW.Server.OwSchedulerEntry">
+            <summary>
+            任务项的详细配置类。
+            </summary>
+        </member>
+        <member name="P:OW.Server.OwSchedulerEntry.Key">
+            <summary>
+            任务的唯一标识对象。
+            </summary>
+        </member>
+        <member name="P:OW.Server.OwSchedulerEntry.TaskCallback">
+            <summary>
+            (键，state)。返回值如果是true则标识成功，否则将在下次扫描时继续执行该任务。
+            </summary>
+        </member>
+        <member name="P:OW.Server.OwSchedulerEntry.State">
+            <summary>
+            任务回调的第二个参数。
+            </summary>
+        </member>
+        <member name="P:OW.Server.OwSchedulerEntry.Period">
+            <summary>
+            调用任务的周期。
+            </summary>
+            <value>可以是<see cref="F:System.Threading.Timeout.InfiniteTimeSpan"/>或任何大于0的间隔。</value>
+        </member>
+        <member name="P:OW.Server.OwSchedulerEntry.LastUtc">
+            <summary>
+            上次执行的时间点。null表示尚未运行过。
+            </summary>
+        </member>
+        <member name="M:OW.Server.OwSchedulerEntry.IsValid">
+            <summary>
+            
+            </summary>
+            <exception cref="T:System.InvalidOperationException"></exception>
+        </member>
+        <member name="M:OW.Server.OwSchedulerEntry.IsExpired(System.DateTime)">
+            <summary>
+            是否到期。
+            </summary>
+            <param name="now"></param>
+            <returns>true已经到期，false未到期。</returns>
+        </member>
+        <member name="M:OW.Server.OwSchedulerEntry.SetExpired(System.DateTime)">
+            <summary>
+            增加最后运行时间。
+            </summary>
+            <param name="now">指定当前时间。</param>
+        </member>
+        <member name="T:OW.Server.OwSchedulerOptions">
+            <summary>
+            OwScheduler 服务的配置数据类。
+            </summary>
+        </member>
+        <member name="P:OW.Server.OwSchedulerOptions.Frequency">
+            <summary>
+            默认的任务执行频度。
+            </summary>
+            <value>默认值：1分钟。</value>
+        </member>
+        <member name="P:OW.Server.OwSchedulerOptions.LockCallback">
+            <summary>
+            设置或获取锁定键的回调。应支持递归与<see cref="P:OW.Server.OwSchedulerOptions.UnlockCallback"/>配对使用。
+            默认值是<see cref="M:System.Threading.SingletonLocker.TryEnter(System.Object,System.TimeSpan)"/>。
+            </summary>
+        </member>
+        <member name="P:OW.Server.OwSchedulerOptions.UnlockCallback">
+            <summary>
+            设置或获取释放键的回调。应支持递归与<see cref="P:OW.Server.OwSchedulerOptions.LockCallback"/>配对使用。
+            默认值是<see cref="M:System.Threading.SingletonLocker.Exit(System.Object)"/>。
+            </summary>
+        </member>
+        <member name="P:OW.Server.OwSchedulerOptions.IsEnteredCallback">
+            <summary>
+            确定当前线程是否保留指定键上的锁。
+            默认值是<see cref="M:System.Threading.SingletonLocker.IsEntered(System.Object)"/>
+            </summary>
+        </member>
+        <member name="T:OW.Server.OwScheduler">
+            <summary>
+            一个用于处理长时间任务的任务计划器。
+            默认它仅用一个线程（不并行），因为假设的场景是一个服务器的IO线程。
+            每个任务会有一个唯一标识key，调用任务会首先锁定key,若不能锁定则会再下次扫描时调用任务。
+            每个任务都有一个object型的key,用于标识任务，但不同类型的任务即使key一样也被认为是不同的任务。
+            </summary>
+        </member>
+        <member name="M:OW.Server.OwScheduler.#ctor(Microsoft.Extensions.Options.IOptions{OW.Server.OwSchedulerOptions},Microsoft.Extensions.Logging.ILogger{OW.Server.OwScheduler},Microsoft.Extensions.Hosting.IHostApplicationLifetime)">
+            <summary>
+            构造函数。
+            </summary>
+            <param name="options"></param>
+            <param name="logger"></param>
+            <param name="hostApplicationLifetime"></param>
+        </member>
+        <member name="M:OW.Server.OwScheduler.Initializer">
+            <summary>
+            初始化函数。
+            </summary>
+        </member>
+        <member name="P:OW.Server.OwScheduler.Options">
+            <summary>
+            配置对象。
+            </summary>
+        </member>
+        <member name="F:OW.Server.OwScheduler._Items">
+            <summary>
+            任务项。
+            </summary>
+        </member>
+        <member name="F:OW.Server.OwScheduler._Plans">
+            <summary>
+            优先执行任务的列表。键是锁定项的键，使用此类可避免锁定。
+            </summary>
+        </member>
+        <member name="F:OW.Server.OwScheduler._IdempotentEntries">
+            <summary>
+            记录所有幂等任务的数据结构，(任务的键，任务条目).
+            </summary>
+        </member>
+        <member name="F:OW.Server.OwScheduler._IdempotentThread">
+            <summary>
+            幂等任务的工作线程。
+            </summary>
+        </member>
+        <member name="M:OW.Server.OwScheduler.IdempotentWorker">
+            <summary>
+            执行幂等任务的工作函数。
+            </summary>
+        </member>
+        <member name="M:OW.Server.OwScheduler.RunAll(System.DateTime)">
+            <summary>
+            运行所有任务。
+            </summary>
+            <param name="now"></param>
+        </member>
+        <member name="M:OW.Server.OwScheduler.RunPlans">
+            <summary>
+            运行优先执行任务。
+            </summary>
+        </member>
+        <member name="M:OW.Server.OwScheduler.RunCore(OW.Server.OwSchedulerEntry,System.Exception@)">
+            <summary>
+            执行指定键值的任务。
+            非公有函数不会自动对键加锁，若需要则调用者需负责加/解锁。
+            </summary>
+            <param name="entry"></param>
+            <param name="exception">任务函数抛出的异常，可能是null。</param>
+            <returns>同步执行时返回任务的返回值。异步执行时返回true。
+            执行函数如果抛出异常，则也会返回false。
+            </returns>
+        </member>
+        <member name="M:OW.Server.OwScheduler.Run(System.Object,System.Boolean)">
+            <summary>
+            执行指定键值的任务。
+            </summary>
+            <param name="key"></param>
+            <param name="sync">true同步执行，false(默认)计划优先执行。</param>
+            <returns>同步执行时返回任务的返回值。异步执行时返回true标识成功增加优先任务，false表示优先队列中有一个同样的项尚未执行。</returns>
+        </member>
+        <member name="M:OW.Server.OwScheduler.TryAddIdempotent(System.Object,System.Func{System.Object,System.Object,System.Boolean},System.Object)">
+            <summary>
+            增加一个幂等任务。
+            </summary>
+            <param name="key"></param>
+            <param name="task"></param>
+            <param name="state"></param>
+        </member>
+        <member name="M:OW.Server.OwScheduler.EnsureComplateIdempotent(System.Object,System.TimeSpan)">
+            <summary>
+            确保指定键的幂等任务完成。
+            </summary>
+            <param name="key"></param>
+            <param name="timeout">锁定键等待的超时时间。</param>
+            <returns>true成功执行并移除或不存在指定key的幂等操作任务；false无法锁定key或任务无法成功完成。
+            </returns>
+        </member>
+        <member name="M:OW.Server.OwScheduler.TryAdd(System.Object,OW.Server.OwSchedulerEntry)">
+            <summary>
+            增加一个任务项。
+            </summary>
+            <param name="key"></param>
+            <param name="value"></param>
+            <returns>true成功加入，false已经存在指定的 <paramref name="key"/>。</returns>
+        </member>
+        <member name="M:OW.Server.OwScheduler.TryRemove(System.Object)">
+            <summary>
+            移除一个任务项。
+            </summary>
+            <param name="key"></param>
+            <returns>true成功删除，否则返回false,可能是指定key不存在 -或- 作为优先执行任务却无法执行成功执行。</returns>
+        </member>
+        <member name="M:OW.Server.OwScheduler.ExecuteAsync(System.Threading.CancellationToken)">
+            <summary>
+            <inheritdoc/>
+            </summary>
+            <param name="stoppingToken"></param>
+            <returns></returns>
+        </member>
+        <member name="P:OW.Server.OwScheduler.Disposed">
+            <summary>
+            是否已经被处置。
+            </summary>
+        </member>
+        <member name="T:OW.Server.OwDelayScheduler">
+            <summary>
+            一次性的定时任务
+            </summary>
+        </member>
+        <member name="T:System.DisposerWrapper">
+            <summary>
+            帮助调用清理代码帮助器。应配合 C#8.0 using语法使用。
+            对象本身就支持对象池，不要将此对象放在其他池中。
+            </summary>
+        </member>
+        <member name="T:System.DisposerWrapper.DisposerWrapperPolicy">
+            <summary>
+            对象池策略类。
+            </summary>
+        </member>
+        <member name="M:System.DisposerWrapper.#ctor">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
+        <member name="T:System.DisposeHelper`1">
+            <summary>
+            清理代码帮助器结构。实测比使用对象池要快20%左右。
+            </summary>
+            <typeparam name="T">清理时调用函数的参数。</typeparam>
+        </member>
+        <member name="M:System.DisposeHelper`1.#ctor(System.Action{`0},`0)">
+            <summary>
+            构造函数。
+            </summary>
+            <param name="action">要运行的清理函数。</param>
+            <param name="state">清理函数的参数。</param>
+        </member>
+        <member name="F:System.DisposeHelper`1.Action">
+            <summary>
+            获取取清理的委托。
+            </summary>
+        </member>
+        <member name="F:System.DisposeHelper`1.State">
+            <summary>
+            获取清理委托使用的参数。
+            </summary>
+        </member>
+        <member name="P:System.DisposeHelper`1.IsEmpty">
+            <summary>
+            判断此结构是不是一个空结构。
+            </summary>
+        </member>
+        <member name="M:System.DisposeHelper`1.Dispose">
+            <summary>
+            处置函数。配合c#的using语法使用。
+            </summary>
+        </member>
+        <member name="M:System.DisposeHelper.Create``1(System.Action{``0},``0)">
+            <summary>
+            创建一个在using释放时自动调用的补偿操作。
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="action"></param>
+            <param name="state"></param>
+            <returns></returns>
+        </member>
+        <member name="M:System.DisposeHelper.Create``1(System.Func{``0,System.TimeSpan,System.Boolean},System.Action{``0},``0,System.TimeSpan)">
+            <summary>
+            锁定对象创建一个可以释放的结构，在自动释放。
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="lockFunc">锁定的函数。</param>
+            <param name="unlockFunc">解锁函数。</param>
+            <param name="lockObject">锁定对象。</param>
+            <param name="timeout">超时。</param>
+            <returns><see cref="P:System.DisposeHelper`1.IsEmpty"/>是true则说明锁定失败。</returns>
+        </member>
+        <member name="M:System.DisposeHelper.CreateMuti``1(System.Func{``0,System.TimeSpan,System.Boolean},System.Action{``0},System.Collections.Generic.IEnumerable{``0},System.TimeSpan)">
+            <summary>
+            按顺序锁定一组对象，并返回一个可以释放的结构。
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="lockFunc"></param>
+            <param name="unlockFunc"></param>
+            <param name="lockObject"></param>
+            <param name="timeout"></param>
+            <returns><see cref="P:System.DisposeHelper`1.IsEmpty"/>是true则说明锁定失败，此时没有任何对象被锁定。</returns>
+        </member>
+        <member name="M:System.DisposeHelper.Empty``1">
+            <summary>
+            返回一个空的结构。
+            </summary>
+            <typeparam name="T"></typeparam>
+            <returns></returns>
+        </member>
+        <member name="T:System.OwConvert">
+            <summary>
+            额外的转换函数汇总类。
+            </summary>
+        </member>
+        <member name="M:System.OwConvert.TryToDecimal(System.Object,System.Decimal@)">
+            <summary>
+            试图把对象转换为数值。
+            </summary>
+            <param name="obj">null导致立即返回false。</param>
+            <param name="result"></param>
+            <returns></returns>
+        </member>
+        <member name="M:System.OwConvert.TryToFloat(System.Object,System.Single@)">
+            <summary>
+            
+            </summary>
+            <param name="obj"></param>
+            <param name="result"></param>
+            <returns></returns>
+        </member>
+        <member name="M:System.OwConvert.TryToGuid(System.String,System.Guid@)">
+            <summary>
+            又字符串试图转换为Guid类型。
+            </summary>
+            <param name="str"></param>
+            <param name="result"></param>
+            <returns></returns>
+        </member>
+        <member name="M:System.OwConvert.TryGetGuid(System.Object,System.Guid@)">
+            <summary>
+            尽可能转换为Guid类型。
+            </summary>
+            <param name="obj">是null会立即返回flase。</param>
+            <param name="result"></param>
+            <returns>true成功转换，false未成功。</returns>
+        </member>
+        <member name="M:System.OwConvert.TryGetBoolean(System.Object,System.Boolean@)">
+            <summary>
+            尽可能转换为Guid类型。
+            </summary>
+            <param name="obj"></param>
+            <param name="result"></param>
+            <returns></returns>
+        </member>
+        <member name="M:System.OwConvert.Copy(System.Collections.Generic.IReadOnlyDictionary{System.String,System.Object},System.Text.StringBuilder)">
+            <summary>
+            从属性字典获取字符串表现形式,填充到<see cref="T:System.Text.StringBuilder"/>对象。
+            </summary>
+            <param name="dic"></param>
+            <param name="stringBuilder"></param>
+        </member>
+        <member name="M:System.OwConvert.Copy(System.String,System.Collections.Generic.IDictionary{System.String,System.Object})">
+            <summary>
+            用字串形式属性，填充属性字典。
+            </summary>
+            <param name="str"></param>
+            <param name="dic"></param>
+        </member>
+        <member name="M:System.OwConvert.ToString(System.Collections.Generic.IReadOnlyDictionary{System.String,System.Object})">
+            <summary>
+            从属性字典获取字符串表现形式。
+            </summary>
+            <param name="dic"></param>
+            <returns></returns>
+        </member>
+        <member name="M:System.OwConvert.ToGuid(System.String)">
+            <summary>
+            将字符串转换为Guid类型。
+            </summary>
+            <param name="str">可以是<see cref="M:System.Guid.TryParse(System.String,System.Guid@)"/>接受的格式，
+            也可以是Base64表示的内存数组模式，即<see cref="M:System.Guid.ToByteArray"/>的Base64编码模式。
+            对于空和空字符串会返回<see cref="F:System.Guid.Empty"/></param>
+            <returns></returns>
+            <exception cref="T:System.FormatException">字符串格式不对。</exception>
+        </member>
+        <member name="M:System.OwConvert.ToBase64String(System.Guid)">
+            <summary>
+            用Base64编码Guid类型。
+            </summary>
+            <param name="guid"></param>
+            <returns></returns>
+        </member>
+        <member name="M:System.OwConvert.TryGetDateTime(System.Object,System.DateTime@)">
+            <summary>
+            试图转换为日期类型。
+            </summary>
+            <param name="obj">可以为null。支持日期型，字符串型，以及 JsonElement 类型(如果JsonElement.TryGetDateTime调用成功)。</param>
+            <param name="result"></param>
+            <returns>true转换成功，此时result是转换的结果；否则失败，此时result未定义。</returns>
+        </member>
+        <member name="M:System.OwConvert.ToUriString``1(``0)">
+            <summary>
+            
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="obj">null,return <see cref="F:System.String.Empty"/></param>
+            <returns></returns>
+        </member>
+        <member name="M:System.OwConvert.FromUriString``1(System.String)">
+            <summary>
+            
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="str"><see cref="M:System.String.IsNullOrWhiteSpace(System.String)"/>return true,return new T()</param>
+            <returns></returns>
+        </member>
+        <member name="M:System.GameMath.ToSum1``2(System.Collections.Generic.IEnumerable{``0},System.Func{``0,System.Decimal},System.Func{``0,System.Decimal,``1})">
+            <summary>
+            对一组概率规范化，使其总和为1。
+            </summary>
+            <typeparam name="T"></typeparam>
+            <typeparam name="TResult"></typeparam>
+            <param name="src"></param>
+            <param name="getProb"></param>
+            <param name="getResult"></param>
+            <returns></returns>
+        </member>
+        <member name="M:System.GameMath.ProbAdd(System.Decimal@,System.Decimal)">
+            <summary>
+            给概率增加一个偏移量，如果超出概率允许的范围，则规范在[0,1]范围内，返回实际增减的偏移量。
+            </summary>
+            <param name="value"></param>
+            <param name="diff"></param>
+            <returns></returns>
+        </member>
+        <member name="T:System.OwHelper">
+            <summary>
+            封装一些未详细分类的函数。
+            </summary>
+        </member>
+        <member name="F:System.OwHelper._Offset">
+            <summary>
+            游戏内使用的时间与Utc时间的偏移量。
+            </summary>
+        </member>
+        <member name="P:System.OwHelper.WorldNow">
+            <summary>
+            应用内使用的时间。
+            </summary>
+        </member>
+        <member name="F:System.OwHelper.CommaArrayWithCN">
+            <summary>
+            中英文逗号数组。分割字符串常用此数组，避免生成新对象。
+            </summary>
+        </member>
+        <member name="F:System.OwHelper.SemicolonArrayWithCN">
+            <summary>
+            中英文分号数组。分割字符串常用此数组，避免生成新对象。
+            </summary>
+        </member>
+        <member name="F:System.OwHelper.ColonArrayWithCN">
+            <summary>
+            中英文冒号数组。分割字符串常用此数组，避免生成新对象。
+            </summary>
+        </member>
+        <member name="F:System.OwHelper.DoubleQuotesWithCN">
+            <summary>
+            中英文双引号。
+            </summary>
+        </member>
+        <member name="F:System.OwHelper.PathSeparatorChar">
+            <summary>
+            路径分隔符。
+            </summary>
+        </member>
+        <member name="F:System.OwHelper._LastErrorMessage">
+            <summary>
+            存储当前线程最后的错误信息。
+            </summary>
+        </member>
+        <member name="M:System.OwHelper.GetLastErrorMessage">
+            <summary>
+            获取最后的错误信息。
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:System.OwHelper.SetLastErrorMessage(System.String)">
+            <summary>
+            设置最后错误信息。
+            </summary>
+            <param name="msg"></param>
+        </member>
+        <member name="M:System.OwHelper.GetLastError">
+            <summary>
+            获取最后发生错误的错误码。
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:System.OwHelper.SetLastError(System.Int32)">
+            <summary>
+            设置最后一次错误的错误码。
+            </summary>
+            <param name="errorCode"></param>
+        </member>
+        <member name="M:System.OwHelper.SetLastErrorAndMessage(System.Int32,System.String)">
+            <summary>
+            设置最后一次错误的错误码和错误信息。
+            </summary>
+            <param name="errorCode"></param>
+            <param name="msg"></param>
+        </member>
+        <member name="M:System.OwHelper.Copy``3(System.Collections.Generic.IReadOnlyDictionary{``0,``1},System.Collections.Generic.IDictionary{``0,``2},System.Func{``0,System.Boolean})">
+            <summary>
+            复制字典。
+            </summary>
+            <typeparam name="Tkey"></typeparam>
+            <typeparam name="TSrc"></typeparam>
+            <typeparam name="TDest"></typeparam>
+            <param name="src"></param>
+            <param name="dest">追加或覆盖该字典的内容。</param>
+            <param name="predicate">过滤器，返回false则不会复制，省略或者为null，则不调用过滤器。</param>
+        </member>
+        <member name="M:System.OwHelper.Copy``2(System.Collections.Generic.IEnumerable{``0},System.Collections.Generic.ICollection{``1})">
+            <summary>
+            复制集合对象。
+            </summary>
+            <typeparam name="TSrc"></typeparam>
+            <typeparam name="TDest"></typeparam>
+            <param name="src"></param>
+            <param name="dest"></param>
+        </member>
+        <member name="M:System.OwHelper.CopyIfNotNull``2(System.Collections.Generic.IEnumerable{``0},System.Collections.Generic.ICollection{``1})">
+            <summary>
+            复制集合。任何参数为null，则立即返回。
+            </summary>
+            <typeparam name="TSrc"></typeparam>
+            <typeparam name="TDest"></typeparam>
+            <param name="src"></param>
+            <param name="dest"></param>
+        </member>
+        <member name="M:System.OwHelper.DictionaryFrom``2(System.Collections.Generic.IEnumerable{System.ValueTuple{``0,``1}})">
+            <summary>
+            使用池<see cref="T:Microsoft.Extensions.ObjectPool.AutoClearPool`1"/>创建对象复制指定内容病返回。
+            </summary>
+            <typeparam name="TKey">键，如果有重复键值不会报错，后面的覆盖前面。</typeparam>
+            <typeparam name="TValue"></typeparam>
+            <param name="src"></param>
+        </member>
+        <member name="M:System.OwHelper.RoundWithAwayFromZero(System.Decimal)">
+            <summary>
+            四舍五入取整。
+            </summary>
+            <param name="result"></param>
+        </member>
+        <member name="M:System.OwHelper.GetAllSubItemsOfTree``1(System.Collections.Generic.IEnumerable{``0},System.Func{``0,System.Collections.Generic.IEnumerable{``0}})">
+            <summary>
+            遍历一个树结构的所有子项。深度优先算法遍历子树。
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="roots">多个根的节点集合。</param>
+            <param name="getChildren">从每个节点获取其所有子节点的委托。</param>
+            <returns>一个可枚举集合，包含所有根下的所有节点。</returns>
+        </member>
+        <member name="M:System.OwHelper.GetAllSubItemsOfTreeWithBfs``1(System.Func{``0,System.Collections.Generic.IEnumerable{``0}},``0[])">
+            <summary>
+            遍历一个树结构的所有子项。广度优先算法遍历子树。
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="getChildren">从每个节点获取其所有子节点的委托。</param>
+            <param name="roots">多个根的节点对象。</param>
+            <returns>一个可枚举集合，包含所有根下的所有节点(不含根节点)。</returns>
+        </member>
+        <member name="M:System.OwHelper.ApartWithWithRepeated``3(System.Collections.Generic.IEnumerable{``0},System.Collections.Generic.IEnumerable{``1},System.Func{``0,``2},System.Func{``1,``2},System.Collections.Generic.ICollection{``0},System.Collections.Generic.ICollection{System.ValueTuple{``0,``1}},System.Collections.Generic.ICollection{``1})">
+            <summary>
+            分拣左右两个序列中的元素到三个集合中，三个集合的条件如下：仅左侧序列拥有的元素，两个序列都有的元素，仅右侧序列拥有的元素。
+            如果序列中有重复元素则分别计数。结果集合中元素顺序不稳定。
+            </summary>
+            <typeparam name="TLeft"></typeparam>
+            <typeparam name="TRight"></typeparam>
+            <typeparam name="TKey"></typeparam>
+            <param name="source"></param>
+            <param name="right"></param>
+            <param name="getLeftKey"></param>
+            <param name="getRightKey"></param>
+            <param name="leftOnly">追加仅包含在左侧序列元素的集合，可以是null,则忽略。</param>
+            <param name="boths">追加两个序列都包含的元素集合，可以是null,则忽略。</param>
+            <param name="rightOnly">追加仅包含在右侧序列元素的集合，可以是null,则忽略。</param>
+        </member>
+        <member name="M:System.OwHelper.RandomSelect``1(System.Collections.Generic.IEnumerable{``0},System.Func{``0,System.Decimal},System.Double)">
+            <summary>
+            在一组相对概率中选择一个元素。
+            </summary>
+            <typeparam name="TSource"></typeparam>
+            <param name="source"></param>
+            <param name="getProb">所有元素要是非负数。序列不可为空，不可全为0(此时行为未知)</param>
+            <param name="rnd">随机数，要在区间[0,1)中。</param>
+            <returns></returns>
+            <exception cref="T:System.ArgumentOutOfRangeException"></exception>
+            <exception cref="T:System.ArgumentException"></exception>
+        </member>
+        <member name="M:System.OwHelper.GetRandom``1(System.Collections.Generic.IEnumerable{System.ValueTuple{``0,System.Decimal}},System.Random)">
+            <summary>
+            按权重抽取一个随机项。
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="items"></param>
+            <param name="random"></param>
+            <returns>如果出错则返回null，此时调用<see cref="M:System.OwHelper.GetLastError"/>获取详细信息。</returns>
+        </member>
+        <member name="M:System.OwHelper.GetRandom``1(System.Collections.Generic.IEnumerable{System.ValueTuple{``0,System.Decimal}},System.Int32,System.Random)">
+            <summary>
+            按概率权重获取无重复的多项数据。
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="items"></param>
+            <param name="count"></param>
+            <param name="random"></param>
+            <returns></returns>
+        </member>
+        <member name="M:System.OwHelper.ComputeTimeout(System.DateTime,System.TimeSpan)">
+            <summary>
+            用<see cref="P:System.OwHelper.WorldNow"/>计算超时剩余时间。
+            </summary>
+            <param name="start">起始时间点。使用UTC时间。</param>
+            <param name="timeout">超时值，可以是<see cref="F:System.Threading.Timeout.InfiniteTimeSpan"/></param>
+            <returns><see cref="F:System.TimeSpan.Zero"/>表示超时，否则是剩余的时间。
+            如果<paramref name="timeout"/>是<see cref="F:System.Threading.Timeout.InfiniteTimeSpan"/>，则立即返回<see cref="F:System.Threading.Timeout.InfiniteTimeSpan"/>。</returns>
+        </member>
+        <member name="M:System.OwHelper.ComputeTimeout(System.DateTime,System.DateTime)">
+            <summary>
+            计算剩余时间间隔，若<paramref name="end"/>在<paramref name="start"/>之前则返回<see cref="F:System.TimeSpan.Zero"/>。
+            </summary>
+            <param name="start"></param>
+            <param name="end"></param>
+            <returns></returns>
+        </member>
+        <member name="M:System.OwHelper.LockWithOrder``1(System.Linq.IOrderedEnumerable{``0},System.Func{``0,System.TimeSpan,System.Boolean},System.Action{``0},System.TimeSpan)">
+            <summary>
+            按顺序锁定一组对象。
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="source">已经排序的枚举接口，按枚举顺序逐个锁定元素（避免乱序死锁）。</param>
+            <param name="locker">可以引发异常，视同失败。此时必须未锁定。</param>
+            <param name="unlocker">解锁函数。<inheritdoc/></param>
+            <param name="timeout"><see cref="F:System.TimeSpan.Zero"/>表示用参数尝试锁定各个对象只要有一个失败就立即返回。
+            <see cref="F:System.Threading.Timeout.InfiniteTimeSpan"/>表示永不超时，通常这不是一个好的工程代码。</param>
+            <returns>解锁接口。</returns>
+        </member>
+        <member name="M:System.OwHelper.LockWithOrder``1(System.Linq.IOrderedEnumerable{``0},System.Func{``0,System.TimeSpan,System.IDisposable},System.TimeSpan)">
+            <summary>
+            按顺序锁定一组对象。
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="source">使用默认排序方法对元素进行去重和排序。</param>
+            <param name="locker">可以引发异常，视同失败。此时必须未锁定。没有锁定成功应返回null。</param>
+            <param name="timeout"></param>
+            <returns></returns>
+        </member>
+        <member name="F:System.OwHelper.StringInterning">
+            <summary>
+            字符串暂存池。
+            </summary>
+        </member>
+        <member name="M:System.OwHelper.Intern(System.String)">
+            <summary>
+            获取原有引用或新引用。
+            </summary>
+            <param name="str"></param>
+            <remarks>由于使用 Ngen.exe (本机映像生成器) 以便在运行时提前编译程序集时，不会在模块之间暂存字符串。
+            所以，非常依赖于锁定同一个字符串实例的大型应用不宜使用<see cref="M:System.String.Intern(System.String)"/></remarks>
+            <returns>如果暂存了 str，则返回系统对其的引用；否则返回对值为 str 的字符串的引用并暂存。</returns>
+        </member>
+        <member name="M:System.OwHelper.IsInterned(System.String)">
+            <summary>
+            
+            </summary>
+            <param name="str"></param>
+            <returns>如果 str 在暂存池中，则返回对它的引用；否则返回 null。</returns>
+        </member>
+        <member name="M:System.OwHelper.TryEnterAll``1(System.Collections.Generic.IEnumerable{``0},System.Func{``0,System.TimeSpan,System.Boolean},System.Action{``0},System.TimeSpan)">
+            <summary>
+            按顺序锁定一组对象。
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="objs"></param>
+            <param name="enterCallback"></param>
+            <param name="exitCallback"></param>
+            <param name="timeout"></param>
+            <returns>若全部锁定则返回true，否则返回false,此时没有任何对象被锁定。</returns>
+        </member>
+        <member name="T:System.Collections.Generic.DictionaryExtensions">
+            <summary>
+            一些字典的扩展属性。
+            </summary>
+        </member>
+        <member name="T:System.Collections.Generic.StringObjectDictionaryExtensions">
+            <summary>
+            <see cref="T:System.Collections.Generic.Dictionary`2"/> 类型的辅助方法封装类。"🐂, 🐄, 🐆,"
+            </summary>
+        </member>
+        <member name="M:System.Collections.Generic.StringObjectDictionaryExtensions.GetValuesWithoutPrefix(System.Collections.Generic.IReadOnlyDictionary{System.String,System.Object},System.String)">
+            <summary>
+            针对字典中包含以下键值进行结构：mctid0=xxx;mccount0=1,mctid1=kn2,mccount=2。将其前缀去掉，数字后缀变为键，如{后缀,(去掉前后缀的键,值)}，注意后缀可能是空字符串即没有后缀
+            </summary>
+            <param name="dic"></param>
+            <param name="prefix">前缀，可以是空引用或空字符串，都表示没有前缀。</param>
+        </member>
+        <member name="M:System.Collections.Generic.StringObjectDictionaryExtensions.GetSuffixOfDigit(System.String)">
+            <summary>
+            获取十进制数字后缀。
+            </summary>
+            <param name="str"></param>
+            <returns></returns>
+        </member>
+        <member name="M:System.Collections.Generic.StringObjectDictionaryExtensions.Get3Segment(System.String,System.String)">
+            <summary>
+            分解字符串为三段，前缀，词根，数字后缀(字符串形式)。
+            </summary>
+            <param name="str"></param>
+            <param name="prefix">前缀，可以是空引用或空字符串，都表示没有前缀。</param>
+            <returns></returns>
+        </member>
+        <member name="M:System.Collections.Generic.StringObjectDictionaryExtensions.TryGetGuid(System.Collections.Generic.IReadOnlyDictionary{System.String,System.Object},System.String,System.Guid@)">
+            <summary>
+            
+            </summary>
+            <param name="dic"></param>
+            <param name="name"></param>
+            <param name="result"></param>
+            <returns></returns>
+        </member>
+        <member name="M:System.Collections.Generic.StringObjectDictionaryExtensions.GetGuidOrDefault(System.Collections.Generic.IReadOnlyDictionary{System.String,System.Object},System.String,System.Guid)">
+            <summary>
+            获取指定键的值，并转换为Guid类型，如果没有指定键或不能转换则返回默认值。
+            </summary>
+            <param name="dic"></param>
+            <param name="name"></param>
+            <param name="defaultVal"></param>
+            <returns></returns>
+        </member>
+        <member name="M:System.Collections.Generic.StringObjectDictionaryExtensions.TryGetDecimal(System.Collections.Generic.IReadOnlyDictionary{System.String,System.Object},System.String,System.Decimal@)">
+            <summary>
+            
+            </summary>
+            <param name="dic"></param>
+            <param name="name"></param>
+            <param name="result"></param>
+            <returns></returns>
+        </member>
+        <member name="M:System.Collections.Generic.StringObjectDictionaryExtensions.GetDecimalOrDefault(System.Collections.Generic.IReadOnlyDictionary{System.String,System.Object},System.String,System.Decimal)">
+            <summary>
+            
+            </summary>
+            <param name="dic"></param>
+            <param name="name"></param>
+            <param name="defaultVal"></param>
+            <returns></returns>
+        </member>
+        <member name="M:System.Collections.Generic.StringObjectDictionaryExtensions.TryGetDateTime(System.Collections.Generic.IReadOnlyDictionary{System.String,System.Object},System.String,System.DateTime@)">
+            <summary>
+            
+            </summary>
+            <param name="dic"></param>
+            <param name="name"></param>
+            <param name="result"></param>
+            <returns></returns>
+        </member>
+        <member name="M:System.Collections.Generic.StringObjectDictionaryExtensions.TryGetString(System.Collections.Generic.IReadOnlyDictionary{System.String,System.Object},System.String,System.String@)">
+            <summary>
+            
+            </summary>
+            <param name="dic"></param>
+            <param name="name"></param>
+            <param name="result"></param>
+            <returns></returns>
+        </member>
+        <member name="M:System.Collections.Generic.StringObjectDictionaryExtensions.GetDateTimeOrDefault(System.Collections.Generic.IReadOnlyDictionary{System.String,System.Object},System.String,System.DateTime)">
+            <summary>
+            获取指定键值，并尽可能转换为日期。
+            </summary>
+            <param name="dic"></param>
+            <param name="name"></param>
+            <param name="defaultVal"></param>
+            <returns></returns>
+        </member>
+        <member name="M:System.Collections.Generic.StringObjectDictionaryExtensions.GetStringOrDefault(System.Collections.Generic.IReadOnlyDictionary{System.String,System.Object},System.String,System.String)">
+            <summary>
+            获取指定键值的值，或转换为字符串。
+            </summary>
+            <param name="dic"></param>
+            <param name="name"></param>
+            <param name="defaultVal"></param>
+            <returns></returns>
+        </member>
+        <member name="M:System.Collections.Generic.StringObjectDictionaryExtensions.GetFloatOrDefalut(System.Collections.Generic.IReadOnlyDictionary{System.String,System.Object},System.String,System.Single)">
+            <summary>
+            
+            </summary>
+            <param name="dic"></param>
+            <param name="key"></param>
+            <param name="defaultVal"></param>
+            <returns></returns>
+        </member>
+        <member name="M:System.Collections.Generic.StringObjectDictionaryExtensions.GetBooleanOrDefaut(System.Collections.Generic.IReadOnlyDictionary{System.String,System.Object},System.String,System.Boolean)">
+            <summary>
+            
+            </summary>
+            <param name="dic"></param>
+            <param name="key"></param>
+            <param name="defaultVal"></param>
+            <returns></returns>
+        </member>
+        <member name="M:System.Collections.Generic.StringObjectDictionaryExtensions.Get3State(System.Collections.Generic.IReadOnlyDictionary{System.String,System.Object},System.String)">
+            <summary>
+            获取三态bool类型值。
+            </summary>
+            <param name="dic"></param>
+            <param name="key"></param>
+            <returns></returns>
+        </member>
+        <member name="M:System.Collections.Generic.StringObjectDictionaryExtensions.Set3State(System.Collections.Generic.IDictionary{System.String,System.Object},System.Nullable{System.Boolean},System.String)">
+            <summary>
+            设置三态bool类型的值。
+            </summary>
+            <param name="dic"></param>
+            <param name="val"></param>
+            <param name="key"></param>
+        </member>
+        <member name="M:System.Collections.Generic.StringStringDictionaryExtensions.TryGetGuid(System.Collections.Generic.IReadOnlyDictionary{System.String,System.String},System.String,System.Guid@)">
+            <summary>
+            
+            </summary>
+            <param name="dic"></param>
+            <param name="name"></param>
+            <param name="result"></param>
+            <returns></returns>
+        </member>
+        <member name="M:System.Collections.Generic.StringStringDictionaryExtensions.GetGuidOrDefault(System.Collections.Generic.IReadOnlyDictionary{System.String,System.String},System.String,System.Guid)">
+            <summary>
+            获取指定键的值，并转换为Guid类型，如果没有指定键或不能转换则返回默认值。
+            </summary>
+            <param name="dic"></param>
+            <param name="name"></param>
+            <param name="defaultVal"></param>
+            <returns></returns>
+        </member>
+        <member name="M:System.Collections.Generic.StringStringDictionaryExtensions.TryGetDecimal(System.Collections.Generic.IReadOnlyDictionary{System.String,System.String},System.String,System.Decimal@)">
+            <summary>
+            
+            </summary>
+            <param name="dic"></param>
+            <param name="name"></param>
+            <param name="result"></param>
+            <returns></returns>
+        </member>
+        <member name="M:System.Collections.Generic.StringStringDictionaryExtensions.GetDecimalOrDefault(System.Collections.Generic.IReadOnlyDictionary{System.String,System.String},System.String,System.Decimal)">
+            <summary>
+            
+            </summary>
+            <param name="dic"></param>
+            <param name="name"></param>
+            <param name="defaultVal"></param>
+            <returns></returns>
+        </member>
+        <member name="M:System.Collections.Generic.OwEnumerableExtensions.ForEach``1(System.Collections.Generic.IEnumerable{``0},System.Action{``0})">
+            <summary>
+            对 集合 的每个元素执行指定操作。
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="obj"></param>
+            <param name="action"></param>
+            <exception cref="T:System.ArgumentNullException">action 为 null。</exception>
+            <exception cref="T:System.InvalidOperationException">已修改集合中的某个元素。</exception>
+        </member>
+        <member name="M:System.Collections.Generic.OwEnumerableExtensions.SafeForEach``1(System.Collections.Generic.IEnumerable{``0},System.Action{``0})">
+            <summary>
+            对 集合 的每个元素执行指定操作。
+            每个操作引发的异常会归并到一起，最终用<see cref="T:System.AggregateException"/>引发。
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="obj"></param>
+            <param name="action">注意不要修改集合<paramref name="obj"/>。</param>
+            <exception cref="T:System.AggregateException">其中是每个操作引发的异常。</exception>
+        </member>
+        <member name="M:System.Collections.Generic.OwEnumerableExtensions.TryToCollection``1(System.Collections.Generic.IEnumerable{``0})">
+            <summary>
+            返回指定枚举的实体状态，若能转换为<see cref="T:System.Collections.Generic.ICollection`1"/>则返回该接口，否则生成其数组并返回。
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="source"></param>
+            <returns></returns>
+        </member>
+        <member name="M:System.Collections.DictionaryUtil.TryGetValue``2(``0,``1@,System.Collections.Generic.IReadOnlyDictionary{``0,``1}[])">
+            <summary>
+            在多个字典中存在的第一个值。
+            </summary>
+            <typeparam name="TKey"></typeparam>
+            <typeparam name="TValue"></typeparam>
+            <param name="key"></param>
+            <param name="result"></param>
+            <param name="dics">字典参数数组，特别地，忽略null参数，视同没有指定键。</param>
+            <returns></returns>
+        </member>
+        <member name="M:System.Collections.DictionaryUtil.TryGetDecimal(System.String,System.Decimal@,System.Collections.Generic.IReadOnlyDictionary{System.String,System.Object}[])">
+            <summary>
+            在多个字典中存在的第一个值。
+            </summary>
+            <param name="key"></param>
+            <param name="result"></param>
+            <param name="dics">字典参数数组，特别地，忽略null参数，视同没有指定键。</param>
+            <returns>true成功获取，false没有指定的键</returns>
+        </member>
+        <member name="M:System.Collections.DictionaryUtil.TryGetString(System.String,System.String@,System.Collections.Generic.IReadOnlyDictionary{System.String,System.Object}[])">
+            <summary>
+            在多个字典中存在的第一个值。
+            </summary>
+            <param name="key"></param>
+            <param name="result"></param>
+            <param name="dics">字典参数数组，特别地，忽略null参数，视同没有指定键。</param>
+            <returns></returns>
+        </member>
+        <member name="M:System.Collections.ObjectModel.CollectionExtensions.RemoveAll``1(System.Collections.ObjectModel.Collection{``0},System.Predicate{``0})">
+            <summary>
+            移除与指定的谓词所定义的条件相匹配的所有元素。
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="obj"></param>
+            <param name="match">用于定义要移除的元素应满足的条件。</param>
+            <returns>移除的元素数。</returns>
+        </member>
+        <member name="T:System.TimeSpanEx">
+            <summary>
+            支持一种文字化显示时间间隔及不确定间隔的类。支持：s秒，d天，w周，m月，y年
+            如1m，1y分别表示一月和一年，其中一些是不确定时长度的间间隔，但在实际应用中却常有需求。
+            </summary>
+        </member>
+        <member name="F:System.TimeSpanEx.UnitChars">
+            <summary>
+            支持的单位符号。
+            秒，日，周，月，年。
+            </summary>
+        </member>
+        <member name="M:System.TimeSpanEx.#ctor(System.String)">
+            <summary>
+            构造函数。
+            </summary>
+            <param name="str">空字符串标识无限的周期。</param>
+        </member>
+        <member name="M:System.TimeSpanEx.#ctor(System.Int32,System.Char)">
+            <summary>
+            构造函数。
+            </summary>
+            <param name="value"></param>
+            <param name="unit"></param>
+        </member>
+        <member name="F:System.TimeSpanEx.Value">
+            <summary>
+            数值。
+            </summary>
+        </member>
+        <member name="F:System.TimeSpanEx.Unit">
+            <summary>
+            表示时间长度单位，支持：s秒，d天，w周，m月，y年
+            </summary>
+        </member>
+        <member name="M:System.TimeSpanEx.op_Addition(System.DateTime,System.TimeSpanEx)">
+            <summary>
+            重载计算加法的运算符。
+            </summary>
+            <param name="dt"></param>
+            <param name="ts"></param>
+            <returns></returns>
+        </member>
+        <member name="M:System.TimeSpanEx.op_Addition(System.TimeSpanEx,System.DateTime)">
+            <summary>
+            重载计算加法的运算符。
+            </summary>
+            <param name="ts"></param>
+            <param name="dt"></param>
+            <returns></returns>
+        </member>
+        <member name="T:System.DateTimePeriod">
+            <summary>
+            指定起始时间的周期对象。
+            </summary>
+        </member>
+        <member name="P:System.DateTimePeriod.StartDateTime">
+            <summary>
+            起始时间。
+            </summary>
+        </member>
+        <member name="P:System.DateTimePeriod.Period">
+            <summary>
+            周期。
+            </summary>
+        </member>
+        <member name="M:System.DateTimePeriod.GetPeriodStart(System.DateTime)">
+            <summary>
+            获取指定时间所处周期的起始时间点。
+            </summary>
+            <param name="dt"></param>
+            <returns></returns>
+        </member>
+        <member name="M:System.IO.MemoryStreamPool.MemoryStreamPoolPolicy.Return(System.IO.MemoryStream)">
+            <summary>
+            还入对象必须是<see cref="M:System.IO.MemoryStream.#ctor"/>构造函数构造的。
+            </summary>
+            <param name="obj"></param>
+            <returns></returns>
+        </member>
+        <member name="T:System.Text.Json.Serialization.GuidJsonConverter">
+            <summary>
+            用于将Guid类型Base64编码的Json转换器。
+            </summary>
+        </member>
+        <member name="M:System.Text.Json.Serialization.GuidJsonConverter.Read(System.Text.Json.Utf8JsonReader@,System.Type,System.Text.Json.JsonSerializerOptions)">
+            <summary>
+            <inheritdoc/>
+            </summary>
+            <param name="reader"><inheritdoc/></param>
+            <param name="typeToConvert"><inheritdoc/></param>
+            <param name="options"><inheritdoc/></param>
+            <returns><inheritdoc/></returns>
+        </member>
+        <member name="M:System.Text.Json.Serialization.GuidJsonConverter.Write(System.Text.Json.Utf8JsonWriter,System.Guid,System.Text.Json.JsonSerializerOptions)">
+            <summary>
+            <inheritdoc/>
+            </summary>
+            <param name="writer"><inheritdoc/></param>
+            <param name="value"><inheritdoc/></param>
+            <param name="options"><inheritdoc/></param>
+        </member>
+        <member name="T:System.Threading.SingletonLocker">
+            <summary>
+            依据对象值相等<see cref="T:System.IEquatable`1"/>锁定第一个实例。
+            虽然可以使用该类锁定值对象，且逻辑上也正确，但每次都装箱(后续装箱对象将被抛弃，可以GC)导致性能低下。
+            </summary>
+        </member>
+        <member name="M:System.Threading.SingletonLocker.IsInterned(System.Object)">
+            <summary>
+            如果 key 在暂存池中，则返回对它的引用；否则返回 null。
+            </summary>
+            <param name="str">测试值相等的字符串。</param>
+            <returns>如果 key 值相等的实例在暂存池中，则返回池中对象的引用；否则返回 null。</returns>
+        </member>
+        <member name="M:System.Threading.SingletonLocker.Intern(System.Object)">
+            <summary>
+            检索对指定 对象 的引用。
+            </summary>
+            <param name="obj"></param>
+            <returns>如果暂存了 obj 值相等的实例在暂存池中，则返回池中的引用；否则返回对值为 key 的字符串的新引用，并加入池中。</returns>
+            <exception cref="T:System.ArgumentNullException">obj 为 null。</exception>
+        </member>
+        <member name="M:System.Threading.SingletonLocker.IsEntered(System.Object)">
+            <summary>
+            确定当前线程是否保留指定对象上的锁。
+            参见<seealso cref="M:System.Threading.Monitor.IsEntered(System.Object)"/>
+            </summary>
+            <param name="obj"></param>
+            <returns>检测</returns>
+        </member>
+        <member name="M:System.Threading.SingletonLocker.TryEnter(System.Object@,System.TimeSpan)">
+            <summary>
+            锁定字符串在当前应用程序域内的唯一实例。
+            </summary>
+            <param name="obj">试图锁定的字符串的值，返回时可能变为池中原有对象，或无变化，锁是加在该对象上的</param>
+            <param name="timeout"></param>
+            <returns></returns>
+        </member>
+        <member name="M:System.Threading.SingletonLocker.TryEnter(System.Object,System.TimeSpan)">
+            <summary>
+            <seealso cref="M:System.Threading.SingletonLocker.TryEnter(System.Object@,System.TimeSpan)"/>
+            </summary>
+            <param name="obj"></param>
+            <param name="timeout"></param>
+            <returns></returns>
+        </member>
+        <member name="M:System.Threading.SingletonLocker.Exit(System.Object)">
+            <summary>
+            在对象在当前应用程序域内的唯一实例上进行解锁。
+            </summary>
+            <param name="obj"></param>
+            <exception cref="T:System.ArgumentNullException">obj 参数为 null。或指定对象没有锁定。</exception>
+        </member>
+        <member name="M:System.Threading.SingletonLocker.TrimExcess">
+            <summary>
+            清理字符串拘留池中没有锁定的对象。
+            </summary>
+        </member>
+        <member name="T:Microsoft.Extensions.Caching.Memory.DataObjectCacheOptions">
+            <summary>
+            数据对象缓存类的配置类。
+            </summary>
+        </member>
+        <member name="T:Microsoft.Extensions.Caching.Memory.DataObjectCache">
+            <summary>
+            数据对象的缓存类。
+            数据对象的加载需要经过IO,且需要保存，并且其有唯一的键值。
+            </summary>
+        </member>
+        <member name="T:Microsoft.Extensions.Caching.Memory.DataObjectCache.DataObjectCacheEntry">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.DataObjectCache.DataObjectCacheEntry.#ctor(System.Object,Microsoft.Extensions.Caching.Memory.DataObjectCache)">
+            <summary>
+            构造函数。
+            </summary>
+            <param name="key"></param>
+            <param name="cache"></param>
+        </member>
+        <member name="P:Microsoft.Extensions.Caching.Memory.DataObjectCache.DataObjectCacheEntry.LoadCallback">
+            <summary>
+            加载时调用。
+            在对键加锁的范围内调用。
+            key,state,返回值。
+            特别地，返回null表示后备存储中没有该对象，此时会调用<see cref="P:Microsoft.Extensions.Caching.Memory.DataObjectCache.DataObjectCacheEntry.CreateCallback"/>来创建对象。
+            </summary>
+        </member>
+        <member name="P:Microsoft.Extensions.Caching.Memory.DataObjectCache.DataObjectCacheEntry.LoadCallbackState">
+            <summary>
+            <see cref="P:Microsoft.Extensions.Caching.Memory.DataObjectCache.DataObjectCacheEntry.LoadCallback"/>的用户参数。
+            </summary>
+        </member>
+        <member name="P:Microsoft.Extensions.Caching.Memory.DataObjectCache.DataObjectCacheEntry.CreateCallback">
+            <summary>
+            创建对象时调用。
+            在对键加锁的范围内调用。
+            key,state,返回值。
+            </summary>
+        </member>
+        <member name="P:Microsoft.Extensions.Caching.Memory.DataObjectCache.DataObjectCacheEntry.CreateCallbackState">
+            <summary>
+            <see cref="P:Microsoft.Extensions.Caching.Memory.DataObjectCache.DataObjectCacheEntry.CreateCallback"/>的用户参数
+            </summary>
+        </member>
+        <member name="P:Microsoft.Extensions.Caching.Memory.DataObjectCache.DataObjectCacheEntry.SaveCallback">
+            <summary>
+            需要保存时调用。
+            在对键加锁的范围内调用。
+            回调参数是要保存的对象，附加数据，返回true表示成功，否则是没有保存成功,若没有设置该回调，则说明无需保存，也就视同保存成功。
+            (value,state)
+            </summary>
+        </member>
+        <member name="P:Microsoft.Extensions.Caching.Memory.DataObjectCache.DataObjectCacheEntry.SaveCallbackState">
+            <summary>
+            <see cref="P:Microsoft.Extensions.Caching.Memory.DataObjectCache.DataObjectCacheEntry.SaveCallback"/>的用户参数。
+            </summary>
+        </member>
+        <member name="F:Microsoft.Extensions.Caching.Memory.DataObjectCache.DataObjectCacheEntry._IsInitialized">
+            <summary>
+            是否已经初始化了<see cref="P:Microsoft.Extensions.Caching.Memory.OwMemoryCache.OwMemoryCacheEntry.Value"/>的值。
+            </summary>
+        </member>
+        <member name="P:Microsoft.Extensions.Caching.Memory.DataObjectCache.DataObjectCacheEntry.IsInitialized">
+            <summary>
+            是否已经初始化了<see cref="P:Microsoft.Extensions.Caching.Memory.OwMemoryCache.OwMemoryCacheEntry.Value"/>的值。
+            </summary>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.DataObjectCache.#ctor(Microsoft.Extensions.Options.IOptions{Microsoft.Extensions.Caching.Memory.DataObjectCacheOptions})">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.DataObjectCache.Initialize">
+            <summary>
+            内部初始化函数。
+            </summary>
+        </member>
+        <member name="F:Microsoft.Extensions.Caching.Memory.DataObjectCache._Timer">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.DataObjectCache.TimerCallback(System.Object)">
+            <summary>
+            
+            </summary>
+            <param name="state"></param>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.DataObjectCache.SaveFunc">
+            <summary>
+            此函数需要运行在独立线程中。
+            </summary>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.DataObjectCache.Save">
+            <summary>
+            对标记为脏的数据进行保存。
+            未能锁定或保存的数据都会再次放到队列中，等待下次保存。
+            </summary>
+        </member>
+        <member name="F:Microsoft.Extensions.Caching.Memory.DataObjectCache._Dirty">
+            <summary>
+            脏队列。操作此对象需要锁定此对象。对此对象发脉冲，有概率立即唤醒保存线程开始保存数据。
+            </summary>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.DataObjectCache.SetDirty(System.Object,System.Boolean)">
+            <summary>
+            设置一个键关联的数据对象需要保存。
+            该函数仅在一个集合中标记需要保存的对象的键，所以无需考虑锁定问题。
+            </summary>
+            <param name="key"></param>
+            <param name="start">是否立即唤醒保存线程开始保存。</param>
+            <returns></returns>
+            <exception cref="T:System.ObjectDisposedException">对象已处置。</exception>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.DataObjectCache.EnsureSaved(System.Object,System.Nullable{System.TimeSpan})">
+            <summary>
+            无论缓存是否需要都强制同步的确保指定键的关联对象被保存。
+            此函数会首先试图对键加锁，成功后才会进行实质工作，并解锁。
+            </summary>
+            <param name="key"></param>
+            <param name="timeout">锁定超时。省略或为null则使用<see cref="P:Microsoft.Extensions.Caching.Memory.OwMemoryCacheOptions.DefaultLockTimeout"/>。</param>
+            <returns>true成功保存，false保存时出错。
+            调用<see cref="M:System.OwHelper.GetLastError"/>可获取详细信息。258=锁定超时，698=键已存在，1168=键不存在。
+            </returns>
+            <exception cref="T:System.ObjectDisposedException">对象已处置。</exception>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.DataObjectCache.EnsureSavedCore(Microsoft.Extensions.Caching.Memory.DataObjectCache.DataObjectCacheEntry)">
+            <summary>
+            实际确保缓存项保存的函数。
+            派生类可以重载此函数。非公有函数不会自动对键加锁，若需要调用者需要负责加/解锁。
+            </summary>
+            <param name="entry"></param>
+            <returns>true成功保存(或未指定保存回调)，false保存时出错。</returns>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.DataObjectCache.EnsureInitialized(System.Object,Microsoft.Extensions.Caching.Memory.DataObjectCache.DataObjectCacheEntry@,System.Nullable{System.TimeSpan})">
+            <summary>
+            确保初始化了缓存项的加载。
+            此函数会首先试图对键加锁，成功后才会进行实质工作，并解锁。
+            </summary>
+            <param name="key"></param>
+            <param name="result"></param>
+            <param name="timeout">锁定超时。省略或为null则使用<see cref="P:Microsoft.Extensions.Caching.Memory.OwMemoryCacheOptions.DefaultLockTimeout"/>。</param>
+            <returns>true=成功，false=超时无法锁定键 - 或 - 键不存在。
+            调用<see cref="M:System.OwHelper.GetLastError"/>可获取详细信息。258=锁定超时，698=键已存在，1168=键不存在。
+            </returns>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.DataObjectCache.EnsureInitializedCore(Microsoft.Extensions.Caching.Memory.DataObjectCache.DataObjectCacheEntry,System.TimeSpan)">
+            <summary>
+            确保初始化了缓存项的加载。
+            派生类可以重载此函数。非公有函数不会自动对键加锁，若需要调用者需要负责加/解锁。
+            </summary>
+            <param name="entry"></param>
+            <param name="timeout">工作超时。实施者自行定义超时后的行为，此实现忽略该参数。</param>
+            <returns>true=成功初始化，false=已经初始化。
+            调用<see cref="M:System.OwHelper.GetLastError"/>可获取详细信息。
+            </returns>
+            <exception cref="T:System.InvalidOperationException">所有初始化手段均失败。</exception>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.DataObjectCache.AddOrUpdateEntryCore(Microsoft.Extensions.Caching.Memory.OwMemoryCache.OwMemoryCacheEntry)">
+            <summary>
+            <inheritdoc/>
+            </summary>
+            <param name="entry"></param>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.DataObjectCache.CreateEntryCore(System.Object)">
+            <summary>
+            <inheritdoc/>
+            </summary>
+            <param name="key"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.DataObjectCache.TryGetValueCore(System.Object,Microsoft.Extensions.Caching.Memory.OwMemoryCache.OwMemoryCacheEntry@)">
+            <summary>
+            派生类可以重载此函数。非公有函数不会自动对键加锁，若需要则调用者需负责加/解锁。
+            </summary>
+            <param name="key"></param>
+            <param name="entry"></param>
+            <returns>该实现会确保初始化成功完成<seealso cref="M:Microsoft.Extensions.Caching.Memory.DataObjectCache.EnsureInitializedCore(Microsoft.Extensions.Caching.Memory.DataObjectCache.DataObjectCacheEntry,System.TimeSpan)"/>，然后调用基类实现--<inheritdoc/>。</returns>
+            <exception cref="T:System.ObjectDisposedException">对象已处置。</exception>
+        </member>
+        <member name="T:Microsoft.Extensions.Caching.Memory.OwMemoryCacheOptions">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="P:Microsoft.Extensions.Caching.Memory.OwMemoryCacheOptions.LockCallback">
+            <summary>
+            设置或获取锁定键的回调。应支持递归与<see cref="P:Microsoft.Extensions.Caching.Memory.OwMemoryCacheOptions.UnlockCallback"/>配对使用。
+            默认值是<see cref="M:System.Threading.SingletonLocker.TryEnter(System.Object,System.TimeSpan)"/>。
+            </summary>
+        </member>
+        <member name="P:Microsoft.Extensions.Caching.Memory.OwMemoryCacheOptions.UnlockCallback">
+            <summary>
+            设置或获取释放键的回调。应支持递归与<see cref="P:Microsoft.Extensions.Caching.Memory.OwMemoryCacheOptions.LockCallback"/>配对使用。
+            默认值是<see cref="M:System.Threading.SingletonLocker.Exit(System.Object)"/>。
+            </summary>
+        </member>
+        <member name="P:Microsoft.Extensions.Caching.Memory.OwMemoryCacheOptions.IsEnteredCallback">
+            <summary>
+            确定当前线程是否保留指定键上的锁。
+            默认值是<see cref="M:System.Threading.SingletonLocker.IsEntered(System.Object)"/>
+            </summary>
+        </member>
+        <member name="P:Microsoft.Extensions.Caching.Memory.OwMemoryCacheOptions.DefaultLockTimeout">
+            <summary>
+            默认的锁定超时时间。
+            </summary>
+            <value>默认值:3秒。</value>
+        </member>
+        <member name="P:Microsoft.Extensions.Caching.Memory.OwMemoryCacheOptions.ExpirationScanFrequency">
+            <summary>
+            Gets or sets the minimum length of time between successive scans for expired items.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Extensions.Caching.Memory.OwMemoryCacheOptions.CompactionPercentage">
+            <summary>
+            Gets or sets the amount to compact the cache by when the maximum size is exceeded.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Extensions.Caching.Memory.OwMemoryCache">
+            <summary>
+            内存缓存的类。
+            针对每个项操作都会对其键值加锁，对高并发而言，不应有多个线程试图访问同一个键下的项。这样可以避免锁的碰撞。对基本单线程操作而言，此类性能较低。
+            此类公共成员（除嵌套类）可以多线程并发调用。3446377c-dad1-46d9-8717-bb4f420c1cc8
+            </summary>
+        </member>
+        <member name="T:Microsoft.Extensions.Caching.Memory.OwMemoryCache.OwMemoryCacheEntry">
+            <summary>
+            缓存项的配置信息类。
+            </summary>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.OwMemoryCache.OwMemoryCacheEntry.#ctor(System.Object,Microsoft.Extensions.Caching.Memory.OwMemoryCache)">
+            <summary>
+            构造函数。
+            </summary>
+            <param name="key"></param>
+            <param name="cache">指定所属缓存对象，在调用<see cref="M:Microsoft.Extensions.Caching.Memory.OwMemoryCache.OwMemoryCacheEntry.Dispose"/>时可以加入该对象。</param>
+        </member>
+        <member name="P:Microsoft.Extensions.Caching.Memory.OwMemoryCache.OwMemoryCacheEntry.Cache">
+            <summary>
+            所属的缓存对象。
+            </summary>
+        </member>
+        <member name="P:Microsoft.Extensions.Caching.Memory.OwMemoryCache.OwMemoryCacheEntry.AbsoluteExpiration">
+            <summary>
+            未实装，不起作用。
+            </summary>
+        </member>
+        <member name="P:Microsoft.Extensions.Caching.Memory.OwMemoryCache.OwMemoryCacheEntry.ExpirationTokens">
+            <summary>
+            未实装不起作用。
+            </summary>
+        </member>
+        <member name="P:Microsoft.Extensions.Caching.Memory.OwMemoryCache.OwMemoryCacheEntry.PostEvictionCallbacks">
+            <summary>
+            所有的函数调用完毕才会解锁键对象。
+            </summary>
+        </member>
+        <member name="P:Microsoft.Extensions.Caching.Memory.OwMemoryCache.OwMemoryCacheEntry.Priority">
+            <summary>
+            未实装，不起作用。
+            </summary>
+        </member>
+        <member name="P:Microsoft.Extensions.Caching.Memory.OwMemoryCache.OwMemoryCacheEntry.Size">
+            <summary>
+            未实装，不起作用。
+            </summary>
+        </member>
+        <member name="P:Microsoft.Extensions.Caching.Memory.OwMemoryCache.OwMemoryCacheEntry.IsDisposed">
+            <summary>
+            对象是否已经被处置，此类型特殊，被处置意味着已经加入到缓存配置表中，而非真的被处置。
+            </summary>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.OwMemoryCache.OwMemoryCacheEntry.Dispose">
+            <summary>
+            使此配置项加入或替换缓存对象。内部会试图锁定键。
+            </summary>
+            <exception cref="T:System.TimeoutException">试图锁定键超时。</exception>
+        </member>
+        <member name="P:Microsoft.Extensions.Caching.Memory.OwMemoryCache.OwMemoryCacheEntry.LastUseUtc">
+            <summary>
+            最后一次使用的Utc时间。
+            </summary>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.OwMemoryCache.OwMemoryCacheEntry.IsExpired(System.DateTime)">
+            <summary>
+            获取此配置项是否超期。
+            </summary>
+            <param name="utcNow"></param>
+            <returns></returns>
+        </member>
+        <member name="F:Microsoft.Extensions.Caching.Memory.OwMemoryCache._Items">
+            <summary>
+            记录所有缓存项。
+            键是缓存项的键，值缓存配置项数据。
+            </summary>
+        </member>
+        <member name="P:Microsoft.Extensions.Caching.Memory.OwMemoryCache.Items">
+            <summary>
+            获取缓存内的所有内容。更改其中内容的结果未知。
+            </summary>
+        </member>
+        <member name="P:Microsoft.Extensions.Caching.Memory.OwMemoryCache.Options">
+            <summary>
+            配置信息。
+            </summary>
+            <value>默认值是<see cref="T:Microsoft.Extensions.Caching.Memory.OwMemoryCacheOptions"/>的默认对象。</value>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.OwMemoryCache.#ctor(Microsoft.Extensions.Options.IOptions{Microsoft.Extensions.Caching.Memory.OwMemoryCacheOptions})">
+            <summary>
+            构造函数。
+            </summary>
+            <param name="options"></param>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.OwMemoryCache.CreateEntry(System.Object)">
+            <summary>
+            <inheritdoc/>
+            </summary>
+            <param name="key"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.OwMemoryCache.Remove(System.Object)">
+            <summary>
+            
+            </summary>
+            <param name="key"></param>
+            <exception cref="T:System.TimeoutException"></exception>
+            <exception cref="T:System.Collections.Generic.KeyNotFoundException"></exception>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.OwMemoryCache.TryGetValue(System.Object,System.Object@)">
+            <summary>
+            
+            </summary>
+            <param name="key"></param>
+            <param name="value"></param>
+            <returns></returns>
+            <exception cref="T:System.TimeoutException"></exception>
+            <exception cref="T:System.InvalidOperationException"></exception>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.OwMemoryCache.TryGetValueCore(System.Object,Microsoft.Extensions.Caching.Memory.OwMemoryCache.OwMemoryCacheEntry@)">
+            <summary>
+            派生类可以重载此函数。非公有函数不会自动对键加锁，若需要则调用者需负责加/解锁。不会自动重置最后使用时间。
+            </summary>
+            <param name="key">键。</param>
+            <param name="entry">如果返回true则此处返回配置项。</param>
+            <returns>true则返回指定键的配置项。false表示没有找到指定的键。</returns>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.OwMemoryCache.CreateEntryCore(System.Object)">
+            <summary>
+            调用此函数创建内部使用的配置项对象。
+            默认实现劲通过<see cref="M:Microsoft.Extensions.Caching.Memory.OwMemoryCache.OwMemoryCacheEntry.#ctor(System.Object,Microsoft.Extensions.Caching.Memory.OwMemoryCache)"/>创建一个对象并返回。
+            非公有函数不会自动对键加锁，若需要调用者需要负责加/解锁。
+            </summary>
+            <param name="key"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.OwMemoryCache.RemoveCore(Microsoft.Extensions.Caching.Memory.OwMemoryCache.OwMemoryCacheEntry,Microsoft.Extensions.Caching.Memory.EvictionReason)">
+            <summary>
+            以指定原因移除缓存项。
+            此函数会移除配置项后调用所有<see cref="P:Microsoft.Extensions.Caching.Memory.OwMemoryCache.OwMemoryCacheEntry.PostEvictionCallbacks"/>回调。但回在回调完成后才对键值解锁键。
+            回调的异常均被忽略。
+            派生类可以重载此函数。
+            非公有函数不会自动对键加锁，若需要调用者需要负责加/解锁。
+            </summary>
+            <param name="entry"></param>
+            <param name="reason"></param>
+            <returns>true=成功移除，false=没有找到指定键。</returns>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.OwMemoryCache.ThrowIfDisposed">
+            <summary>
+            如果对象已经被处置则抛出<see cref="T:System.ObjectDisposedException"/>异常。
+            </summary>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.OwMemoryCache.ThrowIfTimeout(System.String)">
+            <summary>
+            通过检测<see cref="M:System.OwHelper.GetLastError"/>返回值是否为258(WAIT_TIMEOUT)决定是否抛出异常<seealso cref="T:System.TimeoutException"/>。
+            </summary>
+            <param name="msg"></param>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.OwMemoryCache.ThrowIfLockKeyTimeout(System.Object)">
+            <summary>
+            根据<see cref="M:System.OwHelper.GetLastError"/>返回值判断是否抛出锁定键超时的异常。
+            </summary>
+            <param name="key"></param>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.OwMemoryCache.AddOrUpdateEntryCore(Microsoft.Extensions.Caching.Memory.OwMemoryCache.OwMemoryCacheEntry)">
+            <summary>
+            某一项加入缓存时被调用。
+            派生类可以重载此函数。非公有函数不会自动对键加锁，若需要调用者需要负责加/解锁。
+            </summary>
+            <param name="entry"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.OwMemoryCache.GetEntry(System.Object)">
+            <summary>
+            获取设置项数据，需要首先锁定键，解锁键将导致配置生效。
+            </summary>
+            <param name="key"></param>
+            <returns>配置数据，如果不存在指定键，则返回null。</returns>
+            <exception cref="T:System.InvalidOperationException">未锁定键，尽在调试状态下会检测。</exception>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.OwMemoryCache.Compact">
+            <summary>
+            压缩缓存数据。
+            </summary>
+        </member>
+        <member name="F:Microsoft.Extensions.Caching.Memory.OwMemoryCache._CompactTick">
+            <summary>
+            最后一次压缩的时间的刻度。
+            </summary>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.OwMemoryCache.Compact(System.Int64)">
+            <summary>
+            压缩缓存。
+            </summary>
+            <param name="removalSizeTarget">最多驱逐多少项。</param>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.OwMemoryCache.IsExpired(Microsoft.Extensions.Caching.Memory.OwMemoryCache.OwMemoryCacheEntry,System.DateTime)">
+            <summary>
+            是否超期。
+            </summary>
+            <param name="entry"></param>
+            <param name="now"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.OwMemoryCache.TryEnter(System.Object,System.TimeSpan)">
+            <summary>
+            锁定指定键对象，以备进行操作。
+            </summary>
+            <param name="key">要锁定的键。</param>
+            <param name="timeout">允许的最大的超时时间。</param>
+            <returns></returns>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.OwMemoryCache.Exit(System.Object)">
+            <summary>
+            释放锁定的键。
+            </summary>
+            <param name="key">要释放的键。</param>
+        </member>
+        <member name="P:Microsoft.Extensions.Caching.Memory.OwServerCacheOptions.TryEnterCallback">
+            <summary>
+            设置或获取锁定键的回调。应支持递归与<see cref="P:Microsoft.Extensions.Caching.Memory.OwServerCacheOptions.ExitCallback"/>配对使用。
+            默认值是<see cref="M:System.Threading.SingletonLocker.TryEnter(System.Object,System.TimeSpan)"/>。
+            </summary>
+        </member>
+        <member name="P:Microsoft.Extensions.Caching.Memory.OwServerCacheOptions.ExitCallback">
+            <summary>
+            设置或获取释放键的回调。应支持递归与<see cref="P:Microsoft.Extensions.Caching.Memory.OwServerCacheOptions.TryEnterCallback"/>配对使用。
+            默认值是<see cref="M:System.Threading.SingletonLocker.Exit(System.Object)"/>。
+            </summary>
+        </member>
+        <member name="P:Microsoft.Extensions.Caching.Memory.OwServerCacheOptions.IsEnteredCallback">
+            <summary>
+            确定当前线程是否保留指定键上的锁。
+            默认值是<see cref="M:System.Threading.SingletonLocker.IsEntered(System.Object)"/>
+            </summary>
+        </member>
+        <member name="P:Microsoft.Extensions.Caching.Memory.OwServerCacheOptions.EnterKeyTimeout">
+            <summary>
+            默认的锁定超时时间。
+            </summary>
+            <value>默认值:3秒。</value>
+        </member>
+        <member name="P:Microsoft.Extensions.Caching.Memory.OwServerCacheOptions.ExpirationScanFrequency">
+            <summary>
+            Gets or sets the minimum length of time between successive scans for expired items.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Extensions.Caching.Memory.OwServerCacheOptions.SizeLimit">
+            <summary>
+            Gets or sets the maximum size of the cache.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Extensions.Caching.Memory.OwServerCacheOptions.CompactionPercentage">
+            <summary>
+            Gets or sets the amount to compact the cache by when the maximum size is exceeded.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.CacheEntryHelper.ExitScope(Microsoft.Extensions.Caching.Memory.OwServerCacheEntry,Microsoft.Extensions.Caching.Memory.OwServerCacheEntry)">
+            <summary>
+            
+            </summary>
+            <param name="current"></param>
+            <param name="previous"></param>
+        </member>
+        <member name="P:Microsoft.Extensions.Caching.Memory.OwServerCacheEntry.AbsoluteExpiration">
+            <summary>
+            Gets or sets an absolute expiration date for the cache entry.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Extensions.Caching.Memory.OwServerCacheEntry.AbsoluteExpirationRelativeToNow">
+            <summary>
+            Gets or sets an absolute expiration time, relative to now.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Extensions.Caching.Memory.OwServerCacheEntry.SlidingExpiration">
+            <summary>
+            Gets or sets how long a cache entry can be inactive (e.g. not accessed) before it will be removed.
+            This will not extend the entry lifetime beyond the absolute expiration (if set).
+            </summary>
+        </member>
+        <member name="P:Microsoft.Extensions.Caching.Memory.OwServerCacheEntry.ExpirationTokens">
+            <summary>
+            Gets the <see cref="T:Microsoft.Extensions.Primitives.IChangeToken"/> instances which cause the cache entry to expire.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Extensions.Caching.Memory.OwServerCacheEntry.PostEvictionCallbacks">
+            <summary>
+            Gets or sets the callbacks will be fired after the cache entry is evicted from the cache.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Extensions.Caching.Memory.OwServerCacheEntry.Priority">
+            <summary>
+            Gets or sets the priority for keeping the cache entry in the cache during a
+            memory pressure triggered cleanup. The default is <see cref="F:Microsoft.Extensions.Caching.Memory.CacheItemPriority.Normal"/>.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Extensions.Caching.Memory.OwServerCacheEntry.Size">
+            <summary>
+            Gets or sets the size of the cache entry value.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Extensions.Caching.Memory.OwServerMemoryCache">
+            <summary>
+            An implementation of <see cref="T:Microsoft.Extensions.Caching.Memory.IMemoryCache"/> using a dictionary to
+            store its entries.
+            针对每个项操作都会对其键值加锁，对高并发而言，不应有多个线程试图访问同一个键下的项。这样可以避免锁的碰撞。对基本单线程操作而言，此类性能较低。
+            此类公共成员（除嵌套类）可以多线程并发调用。
+            </summary>
+        </member>
+        <member name="P:Microsoft.Extensions.Caching.Memory.OwServerMemoryCache.Options">
+            <summary>
+            获取配置信息，注意不可以更改，否则行为未知。
+            </summary>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.OwServerMemoryCache.#ctor(Microsoft.Extensions.Options.IOptions{Microsoft.Extensions.Caching.Memory.OwServerCacheOptions})">
+            <summary>
+            Creates a new <see cref="T:Microsoft.Extensions.Caching.Memory.OwServerMemoryCache"/> instance.
+            </summary>
+            <param name="optionsAccessor">The options of the cache.</param>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.OwServerMemoryCache.#ctor(Microsoft.Extensions.Options.IOptions{Microsoft.Extensions.Caching.Memory.OwServerCacheOptions},Microsoft.Extensions.Logging.ILoggerFactory)">
+            <summary>
+            Creates a new <see cref="T:Microsoft.Extensions.Caching.Memory.OwServerMemoryCache"/> instance.
+            </summary>
+            <param name="optionsAccessor">The options of the cache.</param>
+            <param name="loggerFactory">The factory used to create loggers.</param>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.OwServerMemoryCache.TryEnterKey(System.Object,System.TimeSpan)">
+            <summary>
+            锁定键。
+            </summary>
+            <param name="key"></param>
+            <param name="timeout"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.OwServerMemoryCache.TryEnterKey(System.Object,System.Nullable{System.TimeSpan})">
+            <summary>
+            锁定键。
+            </summary>
+            <param name="key"></param>
+            <param name="timeout">省略或null表示使用默认超时:<see cref="P:Microsoft.Extensions.Caching.Memory.OwServerCacheOptions.EnterKeyTimeout"/>。</param>
+            <returns></returns>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.OwServerMemoryCache.Finalize">
+            <summary>
+            Cleans up the background collection events.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Extensions.Caching.Memory.OwServerMemoryCache.Count">
+            <summary>
+            Gets the count of the current entries for diagnostic purposes.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.OwServerMemoryCache.CreateEntry(System.Object)">
+            <summary>
+            <inheritdoc/>
+            </summary>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.OwServerMemoryCache.TryGetValue(System.Object,System.Object@)">
+            <summary>
+            <inheritdoc/>
+            </summary>
+            <param name="key"></param>
+            <param name="result"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.OwServerMemoryCache.Remove(System.Object)">
+            <summary>
+            <inheritdoc />
+            </summary>
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.OwServerMemoryCache.Compact(System.Double)">
+            Remove at least the given percentage (0.10 for 10%) of the total entries (or estimated memory?), according to the following policy:
+            1. Remove all expired items.
+            2. Bucket by CacheItemPriority.
+            3. Least recently used objects.
+            ?. Items with the soonest absolute expiration.
+            ?. Items with the soonest sliding expiration.
+            ?. Larger objects - estimated by object graph size, inaccurate.
+        </member>
+        <member name="M:Microsoft.Extensions.Caching.Memory.OwServerMemoryCache.Dispose">
+            <summary>
+            <inheritdoc/>
+            </summary>
+        </member>
+        <member name="T:Microsoft.Extensions.Caching.Memory.OwServerMemoryCacheExtensions">
+            <summary>
+            封装扩展方法。
+            </summary>
+        </member>
+        <member name="T:Microsoft.Extensions.DependencyInjection.OwAutoInjectionAttribute">
+            <summary>
+            自动将类注册为服务。
+            </summary>
+        </member>
+        <member name="M:Microsoft.Extensions.DependencyInjection.OwAutoInjectionAttribute.#ctor(Microsoft.Extensions.DependencyInjection.ServiceLifetime)">
+            <summary>
+            构造函数。
+            </summary>
+            <param name="lifetime">服务的生存期。</param>
+        </member>
+        <member name="P:Microsoft.Extensions.DependencyInjection.OwAutoInjectionAttribute.Lifetime">
+            <summary>
+            获取或设置服务的类型。
+            </summary>
+        </member>
+        <member name="P:Microsoft.Extensions.DependencyInjection.OwAutoInjectionAttribute.ServiceType">
+            <summary>
+            服务的类型。可能返回null,表示使用实现类相同类型的服务类型。
+            </summary>
+        </member>
+        <member name="P:Microsoft.Extensions.DependencyInjection.OwAutoInjectionAttribute.CreateCallbackName">
+            <summary>
+            创建服务对象的函数。
+            如果不设置则直接用 <see cref="T:Microsoft.Extensions.DependencyInjection.IServiceCollection"/>.AddXXX&lt;T&gt; 加入。
+            函数签名是 static object XXX(IServiceProvider)
+            </summary>
+        </member>
+        <member name="P:Microsoft.Extensions.DependencyInjection.OwAutoInjectionAttribute.AutoCreateFirst">
+            <summary>
+            是否自动创建第一个实例。
+            true将在后台线程自动创建一个实例以完成必要的初始化。
+            </summary>
+        </member>
+        <member name="M:Microsoft.Extensions.DependencyInjection.OwAutoInjection.#ctor(System.IServiceProvider,System.Collections.Generic.IEnumerable{System.ValueTuple{System.Type,System.Boolean}})">
+            <summary>
+            要尽快创建第一个实例的服务类型。
+            </summary>
+            <param name="service"></param>
+            <param name="serviceTypes"></param>
+        </member>
+        <member name="M:Microsoft.Extensions.DependencyInjection.OwAutoInjection.ExecuteAsync(System.Threading.CancellationToken)">
+            <summary>
+            <inheritdoc/>
+            </summary>
+            <param name="stoppingToken"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Microsoft.Extensions.DependencyInjection.OwAutoInjection.AutoCreate(System.IServiceProvider,System.Collections.Generic.IEnumerable{System.ValueTuple{System.Type,System.Boolean}})">
+            <summary>
+            按参数指定的，逐一创建一个实例。
+            </summary>
+            <param name="service"></param>
+            <param name="serviceTypes"></param>
+        </member>
+        <member name="M:Microsoft.Extensions.DependencyInjection.OwAutoInjectionExtensions.AutoRegister(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.Collections.Generic.IEnumerable{System.Reflection.Assembly})">
+            <summary>
+            自动注册指定程序集内的服务类型，这些类型必须是用<see cref="T:Microsoft.Extensions.DependencyInjection.OwAutoInjectionAttribute"/>标记的可实例化类。
+            </summary>
+            <param name="services"></param>
+            <param name="assemblies"></param>
+            <returns></returns>
+        </member>
+        <member name="T:Microsoft.Extensions.ObjectPool.AutoClearPool`1">
+            <summary>
+            对象的内存池。
+            若类型支持公共方法且签名为Clear()，则在对象回池前会自动调用。
+            </summary>
+            <remarks>
+            此类有助于避免GC。通常这是服务器编程才会使用到的类。
+            </remarks>
+            <typeparam name="T"></typeparam>
+        </member>
+        <member name="M:Microsoft.Extensions.ObjectPool.AutoClearPool`1.AutoClearPooledObjectPolicy.#ctor(System.Reflection.MethodInfo)">
+            <summary>
+            构造函数。
+            </summary>
+            <param name="clear">必须是一个无参数且无返回值的实例方法。</param>
+        </member>
+        <member name="M:Microsoft.Extensions.ObjectPool.AutoClearPool`1.AutoClearPooledObjectPolicy.#ctor">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
+        <member name="F:Microsoft.Extensions.ObjectPool.AutoClearPool`1.Shared">
+            <summary>
+            可重复使用 <see cref="T:Microsoft.Extensions.ObjectPool.ObjectPool`1"/> 类型实例的资源池的公有实例。
+            </summary>
+        </member>
+        <member name="M:Microsoft.Extensions.ObjectPool.AutoClearPool`1.#ctor">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
+        <member name="M:Microsoft.Extensions.ObjectPool.AutoClearPool`1.#ctor(Microsoft.Extensions.ObjectPool.IPooledObjectPolicy{`0})">
+            <summary>
+            构造函数。
+            netcore v3.1实测最大容量是是CPU内核数的2倍。12cpu23元素数组。
+            </summary>
+            <param name="policy"></param>
+        </member>
+        <member name="M:Microsoft.Extensions.ObjectPool.AutoClearPool`1.#ctor(Microsoft.Extensions.ObjectPool.IPooledObjectPolicy{`0},System.Int32)">
+            <summary>
+            构造函数。
+            </summary>
+            <param name="policy"></param>
+            <param name="maximumRetained">最大</param>
+        </member>
+        <member name="M:Microsoft.Extensions.ObjectPool.AutoClearPool`1.#cctor">
+            <summary>
+            静态构造函数。
+            </summary>
+        </member>
+    </members>
+</doc>

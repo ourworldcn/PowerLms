@@ -78,7 +78,7 @@ namespace System.Threading
         }
 
         /// <summary>
-        /// <seealso cref="TryEnter(ref string, TimeSpan)"/>
+        /// <seealso cref="TryEnter(ref object, TimeSpan)"/>
         /// </summary>
         /// <param name="obj"></param>
         /// <param name="timeout"></param>
