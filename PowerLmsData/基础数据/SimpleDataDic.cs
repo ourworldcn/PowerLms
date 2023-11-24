@@ -2,6 +2,7 @@
  * 与人员相关的字典表
  */
 using Microsoft.EntityFrameworkCore;
+using OW.Data;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -49,6 +50,12 @@ namespace PowerLms.Data
         /// </summary>
         [Comment("创建时间")]
         public DateTime? CreateDateTime { get; set; }
+
+        /// <summary>
+        /// 备注.
+        /// </summary>
+        [Comment("备注")]
+        public string Remark { get; set; }
 
         /// <summary>
         /// 是否已标记为删除。false(默认)未标记为删除，true标记为删除。

@@ -13,8 +13,8 @@ using PowerLmsServer.EfData;
 namespace PowerLmsData.Migrations
 {
     [DbContext(typeof(PowerLmsUserDbContext))]
-    [Migration("20231122065740_23112201")]
-    partial class _23112201
+    [Migration("20231124080851_23112401")]
+    partial class _23112401
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -131,6 +131,37 @@ namespace PowerLmsData.Migrations
                     b.HasComment("账号所属组织机构多对多表");
                 });
 
+            modelBuilder.Entity("PowerLms.Data.BusinessTypeDataDic", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnOrder(0);
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)")
+                        .HasComment("编码，对本系统有一定意义的编码");
+
+                    b.Property<string>("DisplayName")
+                        .HasColumnType("nvarchar(max)")
+                        .HasComment("显示的名称");
+
+                    b.Property<string>("ShortName")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)")
+                        .HasComment("缩写名");
+
+                    b.Property<string>("ShortcutName")
+                        .HasMaxLength(8)
+                        .HasColumnType("char(8)")
+                        .HasComment("快捷输入名");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("BusinessTypeDataDics");
+                });
+
             modelBuilder.Entity("PowerLms.Data.DataDicCatalog", b =>
                 {
                     b.Property<Guid>("Id")
@@ -156,9 +187,9 @@ namespace PowerLmsData.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Code")
+                    b.HasIndex("OrgId", "Code")
                         .IsUnique()
-                        .HasFilter("[Code] IS NOT NULL");
+                        .HasFilter("[OrgId] IS NOT NULL AND [Code] IS NOT NULL");
 
                     b.ToTable("DataDicCatalogs");
 
@@ -237,7 +268,8 @@ namespace PowerLmsData.Migrations
                         .HasComment("组织机构描述");
 
                     b.Property<Guid?>("MerchantId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("商户Id。仅总公司(ParentId 是null)需要此字段指向所属商户，其它情况忽略此字段。");
 
                     b.Property<int>("Otc")
                         .HasColumnType("int")

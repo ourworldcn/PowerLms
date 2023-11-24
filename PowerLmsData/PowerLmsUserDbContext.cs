@@ -100,18 +100,22 @@ namespace PowerLmsServer.EfData
         /// <summary>
         /// 系统资源表。包含数据字典目录。
         /// </summary>
-        public DbSet<SystemResource> SystemResources { get; set; }
+        public DbSet<SystemResource> DD_SystemResources { get; set; }
 
         /// <summary>
         /// 数据字典目录。
         /// </summary>
-        public DbSet<DataDicCatalog> DataDicCatalogs { get; set; }
+        public DbSet<DataDicCatalog> DD_DataDicCatalogs { get; set; }
 
         /// <summary>
         /// 简单数据字典表。
         /// </summary>
-        public DbSet<SimpleDataDic> SimpleDataDics { get; set; }
+        public DbSet<SimpleDataDic> DD_SimpleDataDics { get; set; }
 
+        /// <summary>
+        /// 业务大类字典表。
+        /// </summary>
+        public DbSet<BusinessTypeDataDic> DD_BusinessTypeDataDics { get; set; }
         #endregion 系统资源相关
 
         #region 多语言相关
@@ -159,62 +163,5 @@ namespace PowerLmsServer.EfData
     /// </summary>
     public static class OwDbContextExtensions
     {
-        /// <summary>
-        /// 插入或更新一个实体。
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="context"></param>
-        /// <param name="entity"></param>
-        /// 
-        public static void InsertOrUpdate<T>(this DbContext context, T entity) where T : class
-        {
-            var keyPi = typeof(T).GetProperties().OfType<PropertyInfo>().First(c => c.GetCustomAttribute<KeyAttribute>() is not null);
-            var set = context.Set<T>();
-            var existingBlog = context.Set<T>().Find(keyPi.GetValue(entity));
-            if (existingBlog == null)
-            {
-                set.Add(entity);
-            }
-            else
-            {
-                context.Entry(entity).CurrentValues.SetValues(entity);
-            }
-        }
-
-        /// <summary>
-        /// 插入或更新一组实体。
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="context"></param>
-        /// <param name="entities"></param>
-        public static void InsertOrUpdate<T>(this DbContext context, IEnumerable<T> entities) where T : class
-        {
-            var set = context.Set<T>();
-            var keyPi = typeof(T).GetProperties().OfType<PropertyInfo>().First(c => c.GetCustomAttribute<KeyAttribute>() is not null);
-            foreach (var entity in entities)
-            {
-                var id = keyPi.GetValue(entity);
-                var existingBlog = set.Find(id);
-                if (existingBlog is null)
-                {
-                    set.Add(entity);
-                }
-                else
-                {
-                    context.Entry(entity).CurrentValues.SetValues(entity);
-                }
-            }
-        }
-
-        /// <summary>
-        /// 截断表。
-        /// </summary>
-        /// <param name="context"></param>
-        /// <param name="tableName"></param>
-        public static void TruncateTable(this DbContext context, string tableName)
-        {
-            var sql = $"Truncate Table {tableName}";
-            context.Database.ExecuteSqlRaw(sql, tableName);
-        }
     }
 }

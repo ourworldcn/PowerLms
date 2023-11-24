@@ -19,6 +19,7 @@ using System.Linq.Expressions;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using OW.Data;
 
 namespace PowerLmsServer.Managers
 {
@@ -222,7 +223,7 @@ namespace PowerLmsServer.Managers
         {
             var str = GetJson(sheet);
             var list = JsonSerializer.Deserialize<List<T>>(str);
-            context.InsertOrUpdate(list as IEnumerable<T>);
+            context.AddOrUpdate(list as IEnumerable<T>);
         }
 
         /// <summary>

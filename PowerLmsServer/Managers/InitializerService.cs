@@ -1,15 +1,10 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using NPOI.SS.UserModel;
+using OwDbBase;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace PowerLmsServer.Managers
 {
@@ -32,7 +27,6 @@ namespace PowerLmsServer.Managers
         }
 
         ILogger<InitializerService> _Logger;
-        PowerLmsUserDbContext _DbContext;
         IServiceScopeFactory _ServiceScopeFactory;
         NpoiManager _NpoiManager;
 
@@ -46,21 +40,23 @@ namespace PowerLmsServer.Managers
             CreateDb();
             return Task.Run(() =>
             {
-                CreateSystemResource();
-                CreateAdmin();
-                Test();
+                using var scope = _ServiceScopeFactory.CreateScope();
+                var svc = scope.ServiceProvider;
+                CreateSystemResource(svc);
+                InitializeDataDic(svc);
+                CreateAdmin(svc);
+                Test(svc);
             });
         }
 
         /// <summary>
         /// 创建必要的系统资源。
         /// </summary>
+        /// <param name="svc"></param>
         /// <exception cref="NotImplementedException"></exception>
-        private void CreateSystemResource()
+        private void CreateSystemResource(IServiceProvider svc)
         {
-            using var scope = _ServiceScopeFactory.CreateScope();
-            var svc = scope.ServiceProvider;
-            _DbContext = svc.GetRequiredService<PowerLmsUserDbContext>();
+            var db = svc.GetRequiredService<PowerLmsUserDbContext>();
 
             var filePath = Path.Combine(AppContext.BaseDirectory, "系统资源", "系统资源.xlsx");
             using var file = File.OpenRead(filePath);
@@ -68,22 +64,43 @@ namespace PowerLmsServer.Managers
             using var workbook = _NpoiManager.GetWorkbookFromStream(file);
             var sheet = workbook.GetSheetAt(0);
 
-            _NpoiManager.WriteToDb(sheet, _DbContext, _DbContext.SystemResources);
+            _NpoiManager.WriteToDb(sheet, db, db.DD_SystemResources);
 
 
-            _DbContext.SaveChanges();
+            db.SaveChanges();
+        }
+
+        /// <summary>
+        /// 初始化数据字典。
+        /// </summary>
+        /// <param name="svc">范围性服务容器</param>
+        private void InitializeDataDic(IServiceProvider svc)
+        {
+            var db = svc.GetRequiredService<PowerLmsUserDbContext>();
+            var filePath = Path.Combine(AppContext.BaseDirectory, "系统资源", "预初始化数据字典.xlsx");
+            using var file = File.OpenRead(filePath);
+            using var workbook = _NpoiManager.GetWorkbookFromStream(file);
+
+            var sheet = workbook.GetSheet(nameof(db.DD_DataDicCatalogs));
+            _NpoiManager.WriteToDb(sheet, db, db.DD_DataDicCatalogs);
+
+            sheet = workbook.GetSheet(nameof(db.DD_SimpleDataDics));
+            _NpoiManager.WriteToDb(sheet, db, db.DD_SimpleDataDics);
+
+            sheet = workbook.GetSheet(nameof(db.DD_BusinessTypeDataDics));
+            _NpoiManager.WriteToDb(sheet, db, db.DD_BusinessTypeDataDics);
+            db.SaveChanges();
         }
 
         /// <summary>
         /// 创建管理员。
         /// </summary>
+        /// <param name="svc"></param>
         /// <exception cref="NotImplementedException"></exception>
-        private void CreateAdmin()
+        private void CreateAdmin(IServiceProvider svc)
         {
-            using var scope = _ServiceScopeFactory.CreateScope();
-            var svc = scope.ServiceProvider;
-            _DbContext = svc.GetRequiredService<PowerLmsUserDbContext>();
-            var admin = _DbContext.Accounts.FirstOrDefault(c => c.LoginName == "868d61ae-3a86-42a8-8a8c-1ed6cfa90817");
+            var db = svc.GetRequiredService<PowerLmsUserDbContext>();
+            var admin = db.Accounts.FirstOrDefault(c => c.LoginName == "868d61ae-3a86-42a8-8a8c-1ed6cfa90817");
             if (admin == null)  //若没有创建超管
             {
                 admin = new Account
@@ -93,19 +110,17 @@ namespace PowerLmsServer.Managers
                     LastModifyDateTimeUtc = OwHelper.WorldNow,
                 };
                 //admin.SetPwd("1D381427-86BB-4D88-8CB0-5D92F8E1BADF");
-                _DbContext.Accounts.Add(admin);
+                db.Accounts.Add(admin);
                 //_DbContext.SaveChanges();
             }
             admin.SetPwd("1D381427-86BB-4D88-8CB0-5D92F8E1BADF");
-            _DbContext.SaveChanges();
+            db.SaveChanges();
         }
 
-        private void Test()
+        private void Test(IServiceProvider svc)
         {
-            using var scope = _ServiceScopeFactory.CreateScope();
-            var svc = scope.ServiceProvider;
-            _DbContext = svc.GetRequiredService<PowerLmsUserDbContext>();
-            var org = _DbContext.PlOrganizations.Find(new Guid("329BE0F5-BD13-4484-A8B7-6DD9AB392D53"));
+            var db = svc.GetRequiredService<PowerLmsUserDbContext>();
+            var org = db.PlOrganizations.Find(new Guid("329BE0F5-BD13-4484-A8B7-6DD9AB392D53"));
             //_DbContext.SaveChanges();
 
 
@@ -117,9 +132,9 @@ namespace PowerLmsServer.Managers
             var svc = scope.ServiceProvider;
             try
             {
-                _DbContext = svc.GetRequiredService<PowerLmsUserDbContext>();
-                MigrateDbInitializer.Initialize(_DbContext);
-                _DbContext.SaveChanges();
+                var db = svc.GetRequiredService<PowerLmsUserDbContext>();
+                MigrateDbInitializer.Initialize(db);
+                db.SaveChanges();
                 _Logger.LogTrace("用户数据库已正常升级。");
                 //var loggingDb = services.GetService<GameLoggingDbContext>();
                 //if (loggingDb != null)

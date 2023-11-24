@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using OW.Data;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -42,6 +43,7 @@ namespace PowerLms.Data
         /// 显示的名称。
         /// </summary>
         [Comment("显示的名称")]
+        [MaxLength(64)]
         public virtual string DisplayName { get; set; }
 
         /// <summary>

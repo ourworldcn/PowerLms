@@ -9,6 +9,8 @@ using PowerLmsWebApi.Dto;
 using System.Collections.Specialized;
 using System.ComponentModel.DataAnnotations;
 using System.Net;
+using OW.Data;
+using NuGet.Packaging;
 
 namespace PowerLmsWebApi.Controllers
 {
@@ -55,7 +57,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllDataDicCatalogReturnDto();
-            var coll = _DbContext.DataDicCatalogs.AsNoTracking().OrderBy(c => c.Id).Skip(startIndex);
+            var coll = _DbContext.DD_DataDicCatalogs.AsNoTracking().OrderBy(c => c.Id).Skip(startIndex);
             StringDictionary stringDictionary = new StringDictionary();
 
             foreach (var item in conditional)
@@ -74,7 +76,7 @@ namespace PowerLmsWebApi.Controllers
                 }
             if (count > -1)
                 coll = coll.Take(count);
-            result.Total = _DbContext.DataDicCatalogs.Count();
+            result.Total = _DbContext.DD_DataDicCatalogs.Count();
             result.Result.AddRange(coll);
             return result;
 
@@ -92,7 +94,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<AddDataDicCatalogReturnDto> AddDataDicCatalog(AddDataDicCatalogParamsDto model)
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            var ss = from tmp in _DbContext.DataDicCatalogs
+            var ss = from tmp in _DbContext.DD_DataDicCatalogs
                      where tmp.OrgId == model.Item.OrgId && tmp.Code == model.Item.Code
                      select tmp;
             if (ss.FirstOrDefault(c => c.OrgId == model.Item.OrgId && c.Code == model.Item.Code) is not null)
@@ -101,7 +103,7 @@ namespace PowerLmsWebApi.Controllers
             }
             var result = new AddDataDicCatalogReturnDto();
             model.Item.GenerateNewId();
-            _DbContext.DataDicCatalogs.Add(model.Item);
+            _DbContext.DD_DataDicCatalogs.Add(model.Item);
             _DbContext.SaveChanges();
             result.Id = model.Item.Id;
             return result;
@@ -120,7 +122,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyDataDicCatalogReturnDto();
-            var dbSet = _DbContext.DataDicCatalogs;
+            var dbSet = _DbContext.DD_DataDicCatalogs;
             foreach (var item in model.Items)
             {
                 var tmp = dbSet.Find(item.Id);
@@ -145,12 +147,12 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveDataDicCatalogReturnDto();
             var id = model.Id;
-            var item = _DbContext.DataDicCatalogs.Find(id);
+            var item = _DbContext.DD_DataDicCatalogs.Find(id);
             if (item is null) return BadRequest();
-            _DbContext.DataDicCatalogs.Remove(item);
+            _DbContext.DD_DataDicCatalogs.Remove(item);
             _DbContext.SaveChanges();
             if (item.DataDicType == 1) //若是简单字典
-                _DbContext.Database.ExecuteSqlRaw($"delete from {nameof(_DbContext.SimpleDataDics)} where {nameof(SimpleDataDic.DataDicId)}='{id}'");
+                _DbContext.Database.ExecuteSqlRaw($"delete from {nameof(_DbContext.DD_SimpleDataDics)} where {nameof(SimpleDataDic.DataDicId)}='{id}'");
             else //其他字典待定
             {
 
@@ -168,7 +170,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetSystemResourceReturnDto> GetSystemResource()
         {
             var result = new GetSystemResourceReturnDto();
-            result.Resources.AddRange(_DbContext.SystemResources.AsNoTracking());
+            result.Resources.AddRange(_DbContext.DD_SystemResources.AsNoTracking());
             return result;
         }
 
@@ -188,7 +190,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized(OwHelper.GetLastErrorMessage());
             var result = new ImportDataDicReturnDto();
-            var srTask = _DbContext.SystemResources.FindAsync(rId).AsTask();
+            var srTask = _DbContext.DD_SystemResources.FindAsync(rId).AsTask();
             var workbook = _NpoiManager.GetWorkbookFromStream(formFile.OpenReadStream());
             var sheet = workbook.GetSheetAt(0);
             var sr = srTask.Result;
@@ -221,7 +223,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult ExportDataDic(Guid token, Guid rId)
         {
             if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized(OwHelper.GetLastErrorMessage());
-            var srTask = _DbContext.SystemResources.FindAsync(rId).AsTask();
+            var srTask = _DbContext.DD_SystemResources.FindAsync(rId).AsTask();
             var sr = srTask.Result;
             using var workbook = new HSSFWorkbook();
             var sheet = workbook.CreateSheet("Sheet0");//创建一个名称为Sheet0的表  
@@ -259,7 +261,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult ExportDataDicTemplate(Guid token, Guid rId)
         {
             if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized(OwHelper.GetLastErrorMessage());
-            var srTask = _DbContext.SystemResources.FindAsync(rId).AsTask();
+            var srTask = _DbContext.DD_SystemResources.FindAsync(rId).AsTask();
             var sr = srTask.Result;
             using var workbook = new HSSFWorkbook();
             var sheet = workbook.CreateSheet("Sheet0");//创建一个名称为Sheet0的表  
@@ -302,7 +304,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllDataDicReturnDto();
-            var collBase = _DbContext.SimpleDataDics.AsNoTracking().Where(c => c.DataDicId == catalogId);
+            var collBase = _DbContext.DD_SimpleDataDics.AsNoTracking().Where(c => c.DataDicId == catalogId);
             var coll = collBase.OrderBy(c => c.Id).Skip(startIndex);
             foreach (var item in conditional)
                 if (string.Equals(item.Key, "id", StringComparison.OrdinalIgnoreCase))
@@ -338,21 +340,21 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddSimpleDataDicReturnDto();
-            if (_DbContext.SimpleDataDics.Any(c => c.DataDicId == model.Item.DataDicId && c.Code == model.Item.Code))   //若重复
+            if (_DbContext.DD_SimpleDataDics.Any(c => c.DataDicId == model.Item.DataDicId && c.Code == model.Item.Code))   //若重复
                 return BadRequest();
             model.Item.GenerateNewId();
             var id = model.Item.Id;
-            _DbContext.SimpleDataDics.Add(model.Item);
+            _DbContext.DD_SimpleDataDics.Add(model.Item);
             if (model.CopyToChildren)    //若需要向下传播
             {
-                if (_DbContext.DataDicCatalogs.FirstOrDefault(c => c.Id == model.Item.DataDicId) is DataDicCatalog catalog)  //若有字典
+                if (_DbContext.DD_DataDicCatalogs.FirstOrDefault(c => c.Id == model.Item.DataDicId) is DataDicCatalog catalog)  //若有字典
                 {
-                    var allCatalog = _DbContext.DataDicCatalogs.Where(c => c.Code == catalog.Code);
+                    var allCatalog = _DbContext.DD_DataDicCatalogs.Where(c => c.Code == catalog.Code);
                     foreach (var item in allCatalog)
                     {
                         var sdd = (SimpleDataDic)model.Item.Clone();
                         sdd.DataDicId = item.Id;
-                        _DbContext.SimpleDataDics.Add(sdd);
+                        _DbContext.DD_SimpleDataDics.Add(sdd);
                     }
                 }
             }
@@ -374,7 +376,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifySimpleDataDicReturnDto();
-            var dbSet = _DbContext.SimpleDataDics;
+            var dbSet = _DbContext.DD_SimpleDataDics;
             foreach (var item in model.Items)
             {
                 var tmp = dbSet.Find(item.Id);
@@ -399,7 +401,7 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveSimpleDataDicReturnDto();
             var id = model.Id;
-            DbSet<SimpleDataDic> dbSet = _DbContext.SimpleDataDics;
+            DbSet<SimpleDataDic> dbSet = _DbContext.DD_SimpleDataDics;
             var item = dbSet.Find(id);
             if (item is null) return BadRequest();
             var catalogId = item.DataDicId;
@@ -416,6 +418,33 @@ namespace PowerLmsWebApi.Controllers
         }
 
         #endregion 简单字典的CRUD
+
+        /// <summary>
+        /// 获取所有业务大类的数据。此接口返回的是缓存数据,客户端通常会2分钟才实际刷新一次.
+        /// </summary>
+        /// <param name="token">登录令牌。</param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        [ResponseCache(Duration = 120, Location = ResponseCacheLocation.Any)]
+        public ActionResult<GetAllBusinessTypeReturnDto> GetAllBusinessType(Guid token)
+        {
+            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetAllBusinessTypeReturnDto();
+            var collBase = _DbContext.DD_BusinessTypeDataDics.AsNoTracking();
+            result.Result.AddRange(collBase);
+            result.Total = collBase.Count();
+            return result;
+        }
+
+    }
+
+    /// <summary>
+    /// 获取所有业务大类的数据的功能返回值封装类.
+    /// </summary>
+    public class GetAllBusinessTypeReturnDto : PagingReturnDtoBase<BusinessTypeDataDic>
+    {
     }
 
     /// <summary>

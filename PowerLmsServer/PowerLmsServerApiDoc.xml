@@ -89,16 +89,24 @@
             <param name="stoppingToken"></param>
             <returns></returns>
         </member>
-        <member name="M:PowerLmsServer.Managers.InitializerService.CreateSystemResource">
+        <member name="M:PowerLmsServer.Managers.InitializerService.CreateSystemResource(System.IServiceProvider)">
             <summary>
             创建必要的系统资源。
             </summary>
+            <param name="svc"></param>
             <exception cref="T:System.NotImplementedException"></exception>
         </member>
-        <member name="M:PowerLmsServer.Managers.InitializerService.CreateAdmin">
+        <member name="M:PowerLmsServer.Managers.InitializerService.InitializeDataDic(System.IServiceProvider)">
+            <summary>
+            初始化数据字典。
+            </summary>
+            <param name="svc">范围性服务容器</param>
+        </member>
+        <member name="M:PowerLmsServer.Managers.InitializerService.CreateAdmin(System.IServiceProvider)">
             <summary>
             创建管理员。
             </summary>
+            <param name="svc"></param>
             <exception cref="T:System.NotImplementedException"></exception>
         </member>
         <member name="T:PowerLmsServer.Managers.MultilingualManager">

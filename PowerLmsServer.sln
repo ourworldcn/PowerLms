@@ -18,6 +18,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PowerLmsData", "PowerLmsDat
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OwBaseCore", "..\..\repos\Bak\OwBaseCore\OwBaseCore.csproj", "{53CABA37-1D8F-454B-B5FB-9FF6BE94D3BF}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OwDbBase", "..\..\repos\Bak\OwDbBase\OwDbBase.csproj", "{B28E6557-4D6E-4846-B8CD-9FCBA33F3164}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -40,6 +42,10 @@ Global
 		{53CABA37-1D8F-454B-B5FB-9FF6BE94D3BF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{53CABA37-1D8F-454B-B5FB-9FF6BE94D3BF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{53CABA37-1D8F-454B-B5FB-9FF6BE94D3BF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B28E6557-4D6E-4846-B8CD-9FCBA33F3164}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B28E6557-4D6E-4846-B8CD-9FCBA33F3164}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B28E6557-4D6E-4846-B8CD-9FCBA33F3164}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B28E6557-4D6E-4846-B8CD-9FCBA33F3164}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

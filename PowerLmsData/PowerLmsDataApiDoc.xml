@@ -4,61 +4,101 @@
         <name>PowerLmsData</name>
     </assembly>
     <members>
-        <member name="T:PowerLms.Data.IEntityWithSingleKey`1">
+        <member name="T:PowerLmsServer.EfData.MigrateDbInitializer">
             <summary>
-            支持单键值的数据库类的基础接口。
-            </summary>
-            <typeparam name="T"></typeparam>
-        </member>
-        <member name="P:PowerLms.Data.IEntityWithSingleKey`1.Id">
-            <summary>
-            数据库Id。
+            
             </summary>
         </member>
-        <member name="T:PowerLms.Data.GuidKeyObjectBase">
+        <member name="M:PowerLmsServer.EfData.MigrateDbInitializer.Initialize(PowerLmsServer.EfData.PowerLmsUserDbContext)">
             <summary>
-            以<see cref="T:System.Guid"/>为键类型的实体类的基类。
+            
+            </summary>
+            <param name="context"></param>
+        </member>
+        <member name="T:PowerLmsServer.EfData.PowerLmsUserDbContext">
+            <summary>
+            
             </summary>
         </member>
-        <member name="M:PowerLms.Data.GuidKeyObjectBase.#ctor">
+        <member name="M:PowerLmsServer.EfData.PowerLmsUserDbContext.#ctor">
             <summary>
-            构造函数。
-            会自动用<see cref="M:System.Guid.NewGuid"/>生成<see cref="P:PowerLms.Data.GuidKeyObjectBase.Id"/>属性值。
+            
             </summary>
         </member>
-        <member name="M:PowerLms.Data.GuidKeyObjectBase.#ctor(System.Guid)">
+        <member name="M:PowerLmsServer.EfData.PowerLmsUserDbContext.#ctor(Microsoft.EntityFrameworkCore.DbContextOptions)">
             <summary>
-            构造函数。
+            
             </summary>
-            <param name="id">指定该实体对象的<see cref="P:PowerLms.Data.GuidKeyObjectBase.Id"/>属性。</param>
+            <param name="options"></param>
         </member>
-        <member name="P:PowerLms.Data.GuidKeyObjectBase.Id">
+        <member name="M:PowerLmsServer.EfData.PowerLmsUserDbContext.OnConfiguring(Microsoft.EntityFrameworkCore.DbContextOptionsBuilder)">
             <summary>
-            主键。
+            <inheritdoc/>
+            </summary>
+            <param name="optionsBuilder"></param>
+        </member>
+        <member name="M:PowerLmsServer.EfData.PowerLmsUserDbContext.OnModelCreating(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <summary>
+            <inheritdoc/>
+            </summary>
+            <param name="modelBuilder"></param>
+        </member>
+        <member name="M:PowerLmsServer.EfData.PowerLmsUserDbContext.Delete(System.Collections.Generic.List{System.Guid},System.String)">
+            <summary>
+            删除一组指定Id的对象。立即生效。
+            </summary>
+            <param name="deleteIds"></param>
+            <param name="tableName"></param>
+            <returns></returns>
+        </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.DD_SystemResources">
+            <summary>
+            系统资源表。包含数据字典目录。
             </summary>
         </member>
-        <member name="M:PowerLms.Data.GuidKeyObjectBase.GenerateIdIfEmpty">
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.DD_DataDicCatalogs">
             <summary>
-            如果Id是Guid.Empty则生成新Id,否则立即返回false。
-            </summary>
-            <returns>true生成了新Id，false已经有了非空Id。</returns>
-        </member>
-        <member name="M:PowerLms.Data.GuidKeyObjectBase.GenerateNewId">
-            <summary>
-            强制生成一个新Id。
-            通常这是一个危险的操作。仅在克隆副本以后有可能需要调用。
+            数据字典目录。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.GuidKeyObjectBase.IdString">
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.DD_SimpleDataDics">
             <summary>
-            获取或设置Id的字符串表现形式。Id的字符串形式"00000000-0000-0000-0000-000000000000"从 a 到 f 的十六进制数字是小写的。
-            该属性第一次读取时才初始化。有利于id的池化处理。
+            简单数据字典表。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.GuidKeyObjectBase.Base64IdString">
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.DD_BusinessTypeDataDics">
             <summary>
-            获取或设置Id的Base64字符串表现形式。
-            该属性第一次读取时才初始化。并有利于id的池化处理。
+            业务大类字典表。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.Multilinguals">
+            <summary>
+            多语言资源表。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.Accounts">
+            <summary>
+            账号表。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.AccountPlOrganizations">
+            <summary>
+            用户所属组织机构表。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.Merchants">
+            <summary>
+            商户。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.PlOrganizations">
+            <summary>
+            组织机构表。
+            </summary>
+        </member>
+        <member name="T:PowerLmsServer.EfData.OwDbContextExtensions">
+            <summary>
+            数据库上下文的扩展方法。
             </summary>
         </member>
         <member name="T:PowerLms.Data.IDataDic">
@@ -94,6 +134,11 @@
         <member name="P:PowerLms.Data.DataDicBase.ShortcutName">
             <summary>
             快捷输入名。如"as6"则在键盘输入按as6能选择到此项，8个ASCII字符不足的尾部填充空格。服务器并不使用该字段。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.BusinessTypeDataDic">
+            <summary>
+            业务大类。
             </summary>
         </member>
         <member name="T:PowerLms.Data.DataDicCatalog">
@@ -211,6 +256,11 @@
             创建时间。
             </summary>
         </member>
+        <member name="P:PowerLms.Data.SimpleDataDic.Remark">
+            <summary>
+            备注.
+            </summary>
+        </member>
         <member name="P:PowerLms.Data.SimpleDataDic.IsDelete">
             <summary>
             是否已标记为删除。false(默认)未标记为删除，true标记为删除。
@@ -220,7 +270,7 @@
             <summary>
             <inheritdoc/>
             </summary>
-            <returns>返回除<see cref="P:PowerLms.Data.GuidKeyObjectBase.Id"/>属性外，其余属性完全相同的对象。</returns>
+            <returns>返回除<see cref="P:OW.Data.GuidKeyObjectBase.Id"/>属性外，其余属性完全相同的对象。</returns>
         </member>
         <member name="T:PowerLms.Data.Multilingual">
             <summary>
@@ -513,122 +563,6 @@
             <summary>
             所属组织机构Id。
             </summary>
-        </member>
-        <member name="T:PowerLmsServer.EfData.MigrateDbInitializer">
-            <summary>
-            
-            </summary>
-        </member>
-        <member name="M:PowerLmsServer.EfData.MigrateDbInitializer.Initialize(PowerLmsServer.EfData.PowerLmsUserDbContext)">
-            <summary>
-            
-            </summary>
-            <param name="context"></param>
-        </member>
-        <member name="T:PowerLmsServer.EfData.PowerLmsUserDbContext">
-            <summary>
-            
-            </summary>
-        </member>
-        <member name="M:PowerLmsServer.EfData.PowerLmsUserDbContext.#ctor">
-            <summary>
-            
-            </summary>
-        </member>
-        <member name="M:PowerLmsServer.EfData.PowerLmsUserDbContext.#ctor(Microsoft.EntityFrameworkCore.DbContextOptions)">
-            <summary>
-            
-            </summary>
-            <param name="options"></param>
-        </member>
-        <member name="M:PowerLmsServer.EfData.PowerLmsUserDbContext.OnConfiguring(Microsoft.EntityFrameworkCore.DbContextOptionsBuilder)">
-            <summary>
-            <inheritdoc/>
-            </summary>
-            <param name="optionsBuilder"></param>
-        </member>
-        <member name="M:PowerLmsServer.EfData.PowerLmsUserDbContext.OnModelCreating(Microsoft.EntityFrameworkCore.ModelBuilder)">
-            <summary>
-            <inheritdoc/>
-            </summary>
-            <param name="modelBuilder"></param>
-        </member>
-        <member name="M:PowerLmsServer.EfData.PowerLmsUserDbContext.Delete(System.Collections.Generic.List{System.Guid},System.String)">
-            <summary>
-            删除一组指定Id的对象。立即生效。
-            </summary>
-            <param name="deleteIds"></param>
-            <param name="tableName"></param>
-            <returns></returns>
-        </member>
-        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.SystemResources">
-            <summary>
-            系统资源表。包含数据字典目录。
-            </summary>
-        </member>
-        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.DataDicCatalogs">
-            <summary>
-            数据字典目录。
-            </summary>
-        </member>
-        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.SimpleDataDics">
-            <summary>
-            简单数据字典表。
-            </summary>
-        </member>
-        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.Multilinguals">
-            <summary>
-            多语言资源表。
-            </summary>
-        </member>
-        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.Accounts">
-            <summary>
-            账号表。
-            </summary>
-        </member>
-        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.AccountPlOrganizations">
-            <summary>
-            用户所属组织机构表。
-            </summary>
-        </member>
-        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.Merchants">
-            <summary>
-            商户。
-            </summary>
-        </member>
-        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.PlOrganizations">
-            <summary>
-            组织机构表。
-            </summary>
-        </member>
-        <member name="T:PowerLmsServer.EfData.OwDbContextExtensions">
-            <summary>
-            数据库上下文的扩展方法。
-            </summary>
-        </member>
-        <member name="M:PowerLmsServer.EfData.OwDbContextExtensions.InsertOrUpdate``1(Microsoft.EntityFrameworkCore.DbContext,``0)">
-            <summary>
-            插入或更新一个实体。
-            </summary>
-            <typeparam name="T"></typeparam>
-            <param name="context"></param>
-            <param name="entity"></param>
-            
-        </member>
-        <member name="M:PowerLmsServer.EfData.OwDbContextExtensions.InsertOrUpdate``1(Microsoft.EntityFrameworkCore.DbContext,System.Collections.Generic.IEnumerable{``0})">
-            <summary>
-            插入或更新一组实体。
-            </summary>
-            <typeparam name="T"></typeparam>
-            <param name="context"></param>
-            <param name="entities"></param>
-        </member>
-        <member name="M:PowerLmsServer.EfData.OwDbContextExtensions.TruncateTable(Microsoft.EntityFrameworkCore.DbContext,System.String)">
-            <summary>
-            截断表。
-            </summary>
-            <param name="context"></param>
-            <param name="tableName"></param>
         </member>
     </members>
 </doc>

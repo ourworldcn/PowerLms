@@ -33,6 +33,8 @@ namespace PowerLmsWebApi.Controllers
         AccountManager _AccountManager;
         IServiceProvider _ServiceProvider;
 
+        #region 简单CRUD
+
         /// <summary>
         /// 获取全部商户。
         /// </summary>
@@ -69,21 +71,6 @@ namespace PowerLmsWebApi.Controllers
             result.Total = _DbContext.Merchants.Count();
             result.Result.AddRange(coll);
             return result;
-        }
-
-        /// <summary>
-        /// 获取指定商户的数据。
-        /// </summary>
-        /// <param name="token"></param>
-        /// <param name="id"></param>
-        /// <returns>可能返回空值，表示没有找到。</returns>
-        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
-        /// <response code="401">无效令牌。</response>  
-        [HttpGet]
-        public ActionResult<PlMerchant> Get(Guid token, Guid id)
-        {
-            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            return _DbContext.Merchants.Find(id);
         }
 
         /// <summary>
@@ -143,6 +130,60 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.SaveChanges();
             return Ok();
         }
+        #endregion 简单CRUD
+
+        /// <summary>
+        /// 初始化商户。商户已有信息会被复位为初始化状态。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定Id的商户不存在。</response>  
+        [HttpPost]
+        public ActionResult<InitializeMerchantReturnDto> InitializeMerchant(InitializeMerchantParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new InitializeMerchantReturnDto();
+            var merch = _DbContext.Merchants.Find(model.Id);
+            if (merch == null) return NotFound();
+            //复制简单字典
+            var baseCatalogs = _DbContext.DD_DataDicCatalogs.Where(c => c.OrgId == null).AsNoTracking();  //基本字典
+            foreach (var catalog in baseCatalogs)
+            {
+                var baseDataDic = _DbContext.DD_SimpleDataDics.Where(c => c.DataDicId == catalog.Id).AsNoTracking().ToArray(); //基本字典数据
+                baseDataDic.ForEach(c =>
+                {
+                    c.GenerateNewId();
+                    c.DataDicId = catalog.Id;
+                    c.CreateDateTime = OwHelper.WorldNow;
+                    c.CreateAccountId = context.User.Id;
+                });
+                catalog.GenerateNewId();
+                _DbContext.Add(merch);
+                _DbContext.AddRange(baseDataDic);
+            }
+            _DbContext.SaveChanges();
+            return result;
+        }
+    }
+
+    /// <summary>
+    /// 初始化商户的功能参数封装类。
+    /// </summary>
+    public class InitializeMerchantParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 初始化商户的Id。
+        /// </summary>
+        public Guid Id { get; set; }
+    }
+
+    /// <summary>
+    /// 初始化商户的功能返回值封装类。
+    /// </summary>
+    public class InitializeMerchantReturnDto : ReturnDtoBase
+    {
     }
 
     /// <summary>

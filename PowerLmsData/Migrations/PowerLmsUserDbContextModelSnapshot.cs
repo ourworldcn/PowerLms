@@ -128,6 +128,38 @@ namespace PowerLmsData.Migrations
                     b.HasComment("账号所属组织机构多对多表");
                 });
 
+            modelBuilder.Entity("PowerLms.Data.BusinessTypeDataDic", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnOrder(0);
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)")
+                        .HasComment("编码，对本系统有一定意义的编码");
+
+                    b.Property<string>("DisplayName")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)")
+                        .HasComment("显示的名称");
+
+                    b.Property<string>("ShortName")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)")
+                        .HasComment("缩写名");
+
+                    b.Property<string>("ShortcutName")
+                        .HasMaxLength(8)
+                        .HasColumnType("char(8)")
+                        .HasComment("快捷输入名");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("DD_BusinessTypeDataDics");
+                });
+
             modelBuilder.Entity("PowerLms.Data.DataDicCatalog", b =>
                 {
                     b.Property<Guid>("Id")
@@ -157,7 +189,7 @@ namespace PowerLmsData.Migrations
                         .IsUnique()
                         .HasFilter("[OrgId] IS NOT NULL AND [Code] IS NOT NULL");
 
-                    b.ToTable("DataDicCatalogs");
+                    b.ToTable("DD_DataDicCatalogs");
 
                     b.HasComment("专门针对数据字典的目录。");
                 });
@@ -234,7 +266,8 @@ namespace PowerLmsData.Migrations
                         .HasComment("组织机构描述");
 
                     b.Property<Guid?>("MerchantId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("商户Id。仅总公司(ParentId 是null)需要此字段指向所属商户，其它情况忽略此字段。");
 
                     b.Property<int>("Otc")
                         .HasColumnType("int")
@@ -285,12 +318,17 @@ namespace PowerLmsData.Migrations
                         .HasComment("所属数据字典的的Id");
 
                     b.Property<string>("DisplayName")
-                        .HasColumnType("nvarchar(max)")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)")
                         .HasComment("显示的名称");
 
                     b.Property<bool>("IsDelete")
                         .HasColumnType("bit")
                         .HasComment("是否已标记为删除。false(默认)未标记为删除，true标记为删除。");
+
+                    b.Property<string>("Remark")
+                        .HasColumnType("nvarchar(max)")
+                        .HasComment("备注");
 
                     b.Property<string>("ShortName")
                         .HasMaxLength(32)
@@ -306,7 +344,7 @@ namespace PowerLmsData.Migrations
 
                     b.HasIndex("DataDicId");
 
-                    b.ToTable("SimpleDataDics");
+                    b.ToTable("DD_SimpleDataDics");
                 });
 
             modelBuilder.Entity("PowerLms.Data.SystemResource", b =>
@@ -338,7 +376,7 @@ namespace PowerLmsData.Migrations
                         .IsUnique()
                         .HasFilter("[Name] IS NOT NULL");
 
-                    b.ToTable("SystemResources");
+                    b.ToTable("DD_SystemResources");
                 });
 
             modelBuilder.Entity("PowerLms.Data.PlMerchant", b =>

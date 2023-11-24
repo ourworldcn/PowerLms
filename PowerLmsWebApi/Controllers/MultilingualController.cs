@@ -66,7 +66,7 @@ namespace PowerLmsWebApi.Controllers
             //检验Token
 
             _Db.Delete(model.DeleteIds, nameof(_Db.Multilinguals));
-            _Db.InsertOrUpdate(model.AddOrUpdateDatas as IEnumerable<Multilingual>);
+            _Db.AddOrUpdate(model.AddOrUpdateDatas as IEnumerable<Multilingual>);
             _Db.SaveChanges();
             return result;
         }
