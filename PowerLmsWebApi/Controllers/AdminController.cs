@@ -349,7 +349,7 @@ namespace PowerLmsWebApi.Controllers
             {
                 if (_DbContext.DD_DataDicCatalogs.FirstOrDefault(c => c.Id == model.Item.DataDicId) is DataDicCatalog catalog)  //若有字典
                 {
-                    var allCatalog = _DbContext.DD_DataDicCatalogs.Where(c => c.Code == catalog.Code);
+                    var allCatalog = _DbContext.DD_DataDicCatalogs.Where(c => c.Code == catalog.Code && c.Id != model.Item.DataDicId);  //排除自身后的字典
                     foreach (var item in allCatalog)
                     {
                         var sdd = (SimpleDataDic)model.Item.Clone();
@@ -438,6 +438,357 @@ namespace PowerLmsWebApi.Controllers
             return result;
         }
 
+        #region 港口相关
+
+        /// <summary>
+        /// 获取港口。
+        /// </summary>
+        /// <param name="token">登录令牌。</param>
+        /// <param name="catalogId">数据字典类别的Id。</param>
+        /// <param name="startIndex">起始位置，从0开始。</param>
+        /// <param name="count">最大返回数量。-1表示全返回。</param>
+        /// <param name="conditional">查询的条件。</param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定类别Id无效。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        public ActionResult<GetAllPortReturnDto> GetAllPlPort(Guid token, Guid catalogId,
+            [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [FromQuery][Range(-1, int.MaxValue)] int count = -1,
+            [FromQuery] Dictionary<string, string> conditional = null)
+        {
+            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetAllPortReturnDto();
+            var collBase = _DbContext.DD_PlPorts.AsNoTracking().Where(c => c.DataDicId == catalogId);
+            var coll = collBase.OrderBy(c => c.Id).Skip(startIndex);
+            foreach (var item in conditional)
+                if (string.Equals(item.Key, "id", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (OwConvert.TryToGuid(item.Value, out var id))
+                        coll = coll.Where(c => c.Id == id);
+                }
+                else if (string.Equals(item.Key, "code", StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.Code == item.Value);
+                }
+                else if (string.Equals(item.Key, "displayname", StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.DisplayName.Contains(item.Value));
+                }
+            if (count > -1)
+                coll = coll.Take(count);
+            result.Total = collBase.Count();
+            result.Result.AddRange(coll);
+            return result;
+        }
+
+        /// <summary>
+        /// 增加一个港口数据字典。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">在同一类别同一组织机构下指定了重复的Code。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPost]
+        public ActionResult<AddPlPortReturnDto> AddPlPort(AddPlPortParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new AddPlPortReturnDto();
+            if (_DbContext.DD_SimpleDataDics.Any(c => c.DataDicId == model.Item.DataDicId && c.Code == model.Item.Code))   //若重复
+                return BadRequest();
+            model.Item.GenerateNewId();
+            var id = model.Item.Id;
+            _DbContext.DD_PlPorts.Add(model.Item);
+            _DbContext.SaveChanges();
+            result.Id = id;
+            return result;
+        }
+
+        /// <summary>
+        /// 修改港口数据字典项。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPut]
+        public ActionResult<ModifyPlPortReturnDto> ModifyPlPort(ModifyPlPortParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new ModifyPlPortReturnDto();
+            var dbSet = _DbContext.DD_PlPorts;
+            foreach (var item in model.Items)
+            {
+                var tmp = dbSet.Find(item.Id);
+                if (tmp is null) { return BadRequest($"找不到{item.Id}"); }
+                _DbContext.Entry(tmp).CurrentValues.SetValues(item);
+            }
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        /// <summary>
+        /// 删除港口字典中的一项。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpDelete]
+        public ActionResult<RemovePlPortReturnDto> RemovePlPort(RemovePlPortParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new RemovePlPortReturnDto();
+            var id = model.Id;
+            var dbSet = _DbContext.DD_PlPorts;
+            var item = dbSet.Find(id);
+            if (item is null) return BadRequest();
+            var catalogId = item.DataDicId;
+            //_DbContext.SimpleDataDics.Remove(item);
+            item.IsDelete = true;
+            _DbContext.SaveChanges();
+            //if (item.DataDicType == 1) //若是简单字典
+            //    _DbContext.Database.ExecuteSqlRaw($"delete from {nameof(_DbContext.SimpleDataDics)} where {nameof(SimpleDataDic.DataDicId)}='{id.ToString()}'");
+            //else //其他字典待定
+            //{
+
+            //}
+            return result;
+        }
+
+        #endregion 港口相关
+
+        #region 航线相关
+
+        /// <summary>
+        /// 获取航线。
+        /// </summary>
+        /// <param name="token">登录令牌。</param>
+        /// <param name="catalogId">数据字典类别的Id。</param>
+        /// <param name="startIndex">起始位置，从0开始。</param>
+        /// <param name="count">最大返回数量。-1表示全返回。</param>
+        /// <param name="conditional">查询的条件。</param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定类别Id无效。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        public ActionResult<GetAllPlCargoRouteReturnDto> GetAllPlCargoRoute(Guid token, Guid catalogId,
+            [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [FromQuery][Range(-1, int.MaxValue)] int count = -1,
+            [FromQuery] Dictionary<string, string> conditional = null)
+        {
+            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetAllPlCargoRouteReturnDto();
+            var collBase = _DbContext.DD_PlCargoRoutes.AsNoTracking().Where(c => c.DataDicId == catalogId);
+            var coll = collBase.OrderBy(c => c.Id).Skip(startIndex);
+            foreach (var item in conditional)
+                if (string.Equals(item.Key, "id", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (OwConvert.TryToGuid(item.Value, out var id))
+                        coll = coll.Where(c => c.Id == id);
+                }
+                else if (string.Equals(item.Key, "code", StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.Code == item.Value);
+                }
+                else if (string.Equals(item.Key, "displayname", StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.DisplayName.Contains(item.Value));
+                }
+            if (count > -1)
+                coll = coll.Take(count);
+            result.Total = collBase.Count();
+            result.Result.AddRange(coll);
+            return result;
+        }
+
+        /// <summary>
+        /// 增加一个航线数据字典。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">在同一类别同一组织机构下指定了重复的Code。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPost]
+        public ActionResult<AddlPlCargoRouteReturnDto> AddlPlCargoRoute(AddlPlCargoRouteParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new AddlPlCargoRouteReturnDto();
+            if (_DbContext.DD_PlCargoRoutes.Any(c => c.DataDicId == model.Item.DataDicId && c.Code == model.Item.Code))   //若重复
+                return BadRequest();
+            model.Item.GenerateNewId();
+            var id = model.Item.Id;
+            _DbContext.DD_PlCargoRoutes.Add(model.Item);
+            _DbContext.SaveChanges();
+            result.Id = id;
+            return result;
+        }
+
+        /// <summary>
+        /// 修改航线数据字典项。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPut]
+        public ActionResult<ModifyPlCargoRouteReturnDto> ModifyPlCargoRoute(ModifyPlCargoRouteParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new ModifyPlCargoRouteReturnDto();
+            var dbSet = _DbContext.DD_PlCargoRoutes;
+            foreach (var item in model.Items)
+            {
+                var tmp = dbSet.Find(item.Id);
+                if (tmp is null) { return BadRequest($"找不到{item.Id}"); }
+                _DbContext.Entry(tmp).CurrentValues.SetValues(item);
+            }
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        /// <summary>
+        /// 删除航线字典中的一项。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpDelete]
+        public ActionResult<RemovePlCargoRouteReturnDto> RemovePlCargoRoute(RemoveCargoPlRouteParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new RemovePlCargoRouteReturnDto();
+            var id = model.Id;
+            var dbSet = _DbContext.DD_PlCargoRoutes;
+            var item = dbSet.Find(id);
+            if (item is null) return BadRequest();
+            var catalogId = item.DataDicId;
+            //_DbContext.SimpleDataDics.Remove(item);
+            item.IsDelete = true;
+            _DbContext.SaveChanges();
+            //if (item.DataDicType == 1) //若是简单字典
+            //    _DbContext.Database.ExecuteSqlRaw($"delete from {nameof(_DbContext.SimpleDataDics)} where {nameof(SimpleDataDic.DataDicId)}='{id.ToString()}'");
+            //else //其他字典待定
+            //{
+
+            //}
+            return result;
+        }
+
+        #endregion 航线相关
+
+    }
+
+    /// <summary>
+    /// 删除航线字典中的一项的功能参数封装类。
+    /// </summary>
+    public class RemoveCargoPlRouteParamsDto : RemoveParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 删除航线字典中的一项的功能返回值封装类。
+    /// </summary>
+    public class RemovePlCargoRouteReturnDto : RemoveReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 修改航线数据字典项的功能参数封装类。
+    /// </summary>
+    public class ModifyPlCargoRouteParamsDto : ModifyParamsDtoBase<PlCargoRoute>
+    {
+    }
+
+    /// <summary>
+    /// 修改航线数据字典项的功能返回值封装类。
+    /// </summary>
+    public class ModifyPlCargoRouteReturnDto : ModifyReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 增加一个航线数据字典的功能参数封装类。
+    /// </summary>
+    public class AddlPlCargoRouteParamsDto : AddParamsDtoBase<PlCargoRoute>
+    {
+    }
+
+    /// <summary>
+    /// 增加一个航线数据字典的功能返回值封装类。
+    /// </summary>
+    public class AddlPlCargoRouteReturnDto : AddReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 获取航线功能的返回值封装类。
+    /// </summary>
+    public class GetAllPlCargoRouteReturnDto : PagingReturnDtoBase<PlCargoRoute>
+    {
+        /// <summary>
+        /// 构造函数。
+        /// </summary>
+        public GetAllPlCargoRouteReturnDto()
+        {
+
+        }
+    }
+
+    /// <summary>
+    /// 删除港口字典中的一项的功能参数封装类。
+    /// </summary>
+    public class RemovePlPortParamsDto : RemoveParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 删除港口字典中的一项的功能返回值封装类。
+    /// </summary>
+    public class RemovePlPortReturnDto : RemoveReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 修改港口数据字典项的功能参数封装类。
+    /// </summary>
+    public class ModifyPlPortParamsDto : ModifyParamsDtoBase<PlPort>
+    {
+    }
+
+    /// <summary>
+    /// 修改港口数据字典项的功能返回值封装类。
+    /// </summary>
+    public class ModifyPlPortReturnDto : ModifyReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 增加港口功能的参数封装类。
+    /// </summary>
+    public class AddPlPortParamsDto : AddParamsDtoBase<PlPort>
+    {
+    }
+
+    /// <summary>
+    /// 增加港口功能的返回值封装类。
+    /// </summary>
+    public class AddPlPortReturnDto : AddReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 获取港口功能的返回值封装类。
+    /// </summary>
+    public class GetAllPortReturnDto : PagingReturnDtoBase<PlPort>
+    {
     }
 
     /// <summary>

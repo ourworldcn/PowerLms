@@ -87,7 +87,7 @@ namespace PowerLmsServer.EfData
         /// <param name="deleteIds"></param>
         /// <param name="tableName"></param>
         /// <returns></returns>
-        public int Delete(List<Guid> deleteIds,string tableName)
+        public int Delete(List<Guid> deleteIds, string tableName)
         {
             var ids = string.Join(',', deleteIds.Select(c => c.ToString()));
             var sql = $"Delete From {tableName} Where [Id] In ({ids})";
@@ -116,6 +116,16 @@ namespace PowerLmsServer.EfData
         /// 业务大类字典表。
         /// </summary>
         public DbSet<BusinessTypeDataDic> DD_BusinessTypeDataDics { get; set; }
+
+        /// <summary>
+        /// 港口数据字典表。
+        /// </summary>
+        public DbSet<PlPort> DD_PlPorts { get; set; }
+
+        /// <summary>
+        /// 航线表。
+        /// </summary>
+        public DbSet<PlCargoRoute> DD_PlCargoRoutes { get; set; }
         #endregion 系统资源相关
 
         #region 多语言相关

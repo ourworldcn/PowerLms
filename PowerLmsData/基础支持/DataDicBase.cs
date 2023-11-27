@@ -43,7 +43,7 @@ namespace PowerLms.Data
         /// 显示的名称。
         /// </summary>
         [Comment("显示的名称")]
-        [MaxLength(64)]
+        [MaxLength(128)]
         public virtual string DisplayName { get; set; }
 
         /// <summary>
@@ -59,6 +59,24 @@ namespace PowerLms.Data
         [Comment("快捷输入名")]
         [Column(TypeName = "char"), MaxLength(8)]   //8个ASCII字符不足的尾部填充空格
         public virtual string ShortcutName { get; set; }
+
+        /// <summary>
+        /// 所属数据字典目录的Id。
+        /// </summary>
+        [Comment("所属数据字典目录的Id")]
+        public virtual Guid? DataDicId { get; set; }
+
+        /// <summary>
+        /// 备注.
+        /// </summary>
+        [Comment("备注")]
+        public string Remark { get; set; }
+
+        /// <summary>
+        /// 是否已标记为删除。false(默认)未标记为删除，true标记为删除。
+        /// </summary>
+        [Comment("是否已标记为删除。false(默认)未标记为删除，true标记为删除。")]
+        public bool IsDelete { get; set; }
 
     }
 }

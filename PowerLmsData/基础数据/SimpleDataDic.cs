@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -16,7 +17,7 @@ namespace PowerLms.Data
     /// <summary>
     /// 简单数据字典条目类。
     /// </summary>
-    [Index(nameof(DataDicId))]   //大量情况是在特定机构下的
+    [Index(nameof(DataDicId), nameof(Code))]
     public class SimpleDataDic : DataDicBase, ICloneable
     {
         /// <summary>
@@ -34,12 +35,6 @@ namespace PowerLms.Data
         public string CustomsCode { get; set; }
 
         /// <summary>
-        /// 所属数据字典的的Id。
-        /// </summary>
-        [Comment("所属数据字典的的Id")]
-        public virtual Guid? DataDicId { get; set; }
-
-        /// <summary>
         /// 创建人账号Id。
         /// </summary>
         [Comment("创建人账号Id")]
@@ -50,18 +45,6 @@ namespace PowerLms.Data
         /// </summary>
         [Comment("创建时间")]
         public DateTime? CreateDateTime { get; set; }
-
-        /// <summary>
-        /// 备注.
-        /// </summary>
-        [Comment("备注")]
-        public string Remark { get; set; }
-
-        /// <summary>
-        /// 是否已标记为删除。false(默认)未标记为删除，true标记为删除。
-        /// </summary>
-        [Comment("是否已标记为删除。false(默认)未标记为删除，true标记为删除。")]
-        public bool IsDelete { get; set; }
 
         /// <summary>
         /// <inheritdoc/>

@@ -89,6 +89,12 @@ namespace PowerLmsServer.Managers
 
             sheet = workbook.GetSheet(nameof(db.DD_BusinessTypeDataDics));
             _NpoiManager.WriteToDb(sheet, db, db.DD_BusinessTypeDataDics);
+
+            sheet = workbook.GetSheet(nameof(db.DD_PlPorts));
+            _NpoiManager.WriteToDb(sheet, db, db.DD_PlPorts);
+
+            sheet = workbook.GetSheet(nameof(db.DD_PlCargoRoutes));
+            _NpoiManager.WriteToDb(sheet, db, db.DD_PlCargoRoutes);
             db.SaveChanges();
         }
 

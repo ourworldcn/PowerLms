@@ -71,6 +71,16 @@
             业务大类字典表。
             </summary>
         </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.DD_PlPorts">
+            <summary>
+            港口数据字典表。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.DD_PlCargoRoutes">
+            <summary>
+            航线表。
+            </summary>
+        </member>
         <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.Multilinguals">
             <summary>
             多语言资源表。
@@ -134,6 +144,21 @@
         <member name="P:PowerLms.Data.DataDicBase.ShortcutName">
             <summary>
             快捷输入名。如"as6"则在键盘输入按as6能选择到此项，8个ASCII字符不足的尾部填充空格。服务器并不使用该字段。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DataDicBase.DataDicId">
+            <summary>
+            所属数据字典目录的Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DataDicBase.Remark">
+            <summary>
+            备注.
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DataDicBase.IsDelete">
+            <summary>
+            是否已标记为删除。false(默认)未标记为删除，true标记为删除。
             </summary>
         </member>
         <member name="T:PowerLms.Data.BusinessTypeDataDic">
@@ -226,6 +251,46 @@
             显示名，有时它是昵称或简称(系统内)的意思。
             </summary>
         </member>
+        <member name="T:PowerLms.Data.PlPort">
+            <summary>
+            港口类。CustomId 对应原系统三字码（海关码）。DisplayName 对应原有 中英文名称（看看就好）。Code 复制自原有三字码。Id 取代原有 ZDBH。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlPort.CustomsCode">
+            <summary>
+            海关码。项目类型决定有大量与海关的EDI行为，交换使用的码。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlPort.Country">
+            <summary>
+            国家。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlPort.Province">
+            <summary>
+            省。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlPort.NumCode">
+            <summary>
+            数字码.可空。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlPort.PlCargoRouteId">
+            <summary>
+            所属航线Id。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.PlCargoRoute">
+            <summary>
+            航线类。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCargoRoute.CAFRate">
+            <summary>
+            CAF比率，取%值。
+            </summary>
+        </member>
         <member name="T:PowerLms.Data.SimpleDataDic">
             <summary>
             简单数据字典条目类。
@@ -241,11 +306,6 @@
             海关码。项目类型决定有大量与海关的EDI行为，交换使用的码。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.SimpleDataDic.DataDicId">
-            <summary>
-            所属数据字典的的Id。
-            </summary>
-        </member>
         <member name="P:PowerLms.Data.SimpleDataDic.CreateAccountId">
             <summary>
             创建人账号Id。
@@ -254,16 +314,6 @@
         <member name="P:PowerLms.Data.SimpleDataDic.CreateDateTime">
             <summary>
             创建时间。
-            </summary>
-        </member>
-        <member name="P:PowerLms.Data.SimpleDataDic.Remark">
-            <summary>
-            备注.
-            </summary>
-        </member>
-        <member name="P:PowerLms.Data.SimpleDataDic.IsDelete">
-            <summary>
-            是否已标记为删除。false(默认)未标记为删除，true标记为删除。
             </summary>
         </member>
         <member name="M:PowerLms.Data.SimpleDataDic.Clone">
