@@ -131,4 +131,23 @@ namespace PowerLmsWebApi.Dto
     {
 
     }
+
+    /// <summary>
+    /// 恢复被软删除实体功能的参数封装类的基类。
+    /// </summary>
+    public class RestoreParamsDtoBase : TokenDtoBase
+    {
+        /// <summary>
+        /// 要恢复的实体唯一Id。
+        /// </summary>
+        public Guid Id { get; set; }
+    }
+
+    /// <summary>
+    /// 恢复被软删除实体功能的返回值封装类的基类。
+    /// </summary>
+    public class RestoreReturnDtoBase : ReturnDtoBase
+    {
+
+    }
 }

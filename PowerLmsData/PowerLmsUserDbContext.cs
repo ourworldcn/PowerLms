@@ -126,6 +126,11 @@ namespace PowerLmsServer.EfData
         /// 航线表。
         /// </summary>
         public DbSet<PlCargoRoute> DD_PlCargoRoutes { get; set; }
+
+        /// <summary>
+        /// 汇率表。
+        /// </summary>
+        public DbSet<PlExchangeRate> DD_PlExchangeRates { get; set; }
         #endregion 系统资源相关
 
         #region 多语言相关

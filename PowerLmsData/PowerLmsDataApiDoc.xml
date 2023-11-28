@@ -81,6 +81,11 @@
             航线表。
             </summary>
         </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.DD_PlExchangeRates">
+            <summary>
+            汇率表。
+            </summary>
+        </member>
         <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.Multilinguals">
             <summary>
             多语言资源表。
@@ -114,6 +119,16 @@
         <member name="T:PowerLms.Data.IDataDic">
             <summary>
             数据字典的标识接口。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.IMarkDelete">
+            <summary>
+            可标记删除实体接口。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.IMarkDelete.IsDelete">
+            <summary>
+            是否已标记为删除。false(默认)未标记为删除，true标记为删除。
             </summary>
         </member>
         <member name="T:PowerLms.Data.DataDicBase">
@@ -249,6 +264,46 @@
         <member name="P:PowerLms.Data.PlOwnedName.DisplayName">
             <summary>
             显示名，有时它是昵称或简称(系统内)的意思。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.PlExchangeRate">
+            <summary>
+            汇率。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlExchangeRate.OrgId">
+            <summary>
+            所属组织机构Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlExchangeRate.SCurrencyId">
+            <summary>
+            源币种。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlExchangeRate.DCurrencyId">
+            <summary>
+            宿币种。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlExchangeRate.Radix">
+            <summary>
+            基准，此处默认为100。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlExchangeRate.Exchange">
+            <summary>
+            兑换率。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlExchangeRate.BeginDate">
+            <summary>
+            生效时点。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlExchangeRate.EndData">
+            <summary>
+            失效时点。
             </summary>
         </member>
         <member name="T:PowerLms.Data.PlPort">

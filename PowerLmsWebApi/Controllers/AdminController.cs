@@ -26,18 +26,21 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="npoiManager"></param>
         /// <param name="accountManager"></param>
         /// <param name="scope"></param>
-        public AdminController(PowerLmsUserDbContext context, NpoiManager npoiManager, AccountManager accountManager, IServiceProvider scope)
+        /// <param name="entityManager"></param>
+        public AdminController(PowerLmsUserDbContext context, NpoiManager npoiManager, AccountManager accountManager, IServiceProvider scope, EntityManager entityManager)
         {
             _DbContext = context;
             _NpoiManager = npoiManager;
             _AccountManager = accountManager;
             _ServiceProvider = scope;
+            _EntityManager = entityManager;
         }
 
         PowerLmsUserDbContext _DbContext;
         NpoiManager _NpoiManager;
         AccountManager _AccountManager;
         IServiceProvider _ServiceProvider;
+        EntityManager _EntityManager;
 
         #region 字典目录
 
@@ -122,12 +125,10 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyDataDicCatalogReturnDto();
-            var dbSet = _DbContext.DD_DataDicCatalogs;
-            foreach (var item in model.Items)
+            if (!_EntityManager.ModifyEntities(model.Items))
             {
-                var tmp = dbSet.Find(item.Id);
-                if (tmp is null) { return BadRequest($"找不到{item.Id}"); }
-                _DbContext.Entry(tmp).CurrentValues.SetValues(item);
+                var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
+                return errResult;
             }
             _DbContext.SaveChanges();
             return result;
@@ -376,12 +377,10 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifySimpleDataDicReturnDto();
-            var dbSet = _DbContext.DD_SimpleDataDics;
-            foreach (var item in model.Items)
+            if (!_EntityManager.Modify(model.Items))
             {
-                var tmp = dbSet.Find(item.Id);
-                if (tmp is null) { return BadRequest($"找不到{item.Id}"); }
-                _DbContext.Entry(tmp).CurrentValues.SetValues(item);
+                var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
+                return errResult;
             }
             _DbContext.SaveChanges();
             return result;
@@ -414,6 +413,28 @@ namespace PowerLmsWebApi.Controllers
             //{
 
             //}
+            return result;
+        }
+
+        /// <summary>
+        /// 恢复指定的简单数据字典。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPost]
+        public ActionResult<RestoreSimpleDataDicReturnDto> RestoreSimpleDataDic(RestoreSimpleDataDicParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new RestoreSimpleDataDicReturnDto();
+            if (!_EntityManager.Restore<SimpleDataDic>(model.Id))
+            {
+                var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
+                return errResult;
+            }
+            _DbContext.SaveChanges();
             return result;
         }
 
@@ -518,12 +539,10 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyPlPortReturnDto();
-            var dbSet = _DbContext.DD_PlPorts;
-            foreach (var item in model.Items)
+            if (!_EntityManager.Modify(model.Items))
             {
-                var tmp = dbSet.Find(item.Id);
-                if (tmp is null) { return BadRequest($"找不到{item.Id}"); }
-                _DbContext.Entry(tmp).CurrentValues.SetValues(item);
+                var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
+                return errResult;
             }
             _DbContext.SaveChanges();
             return result;
@@ -559,6 +578,27 @@ namespace PowerLmsWebApi.Controllers
             return result;
         }
 
+        /// <summary>
+        /// 恢复指定的被删除港口字典。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPost]
+        public ActionResult<RestorePlPortReturnDto> RestorePlPort(RestorePlPortParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new RestorePlPortReturnDto();
+            if (!_EntityManager.Restore<PlPort>(model.Id))
+            {
+                var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
+                return errResult;
+            }
+            _DbContext.SaveChanges();
+            return result;
+        }
         #endregion 港口相关
 
         #region 航线相关
@@ -641,12 +681,10 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyPlCargoRouteReturnDto();
-            var dbSet = _DbContext.DD_PlCargoRoutes;
-            foreach (var item in model.Items)
+            if (!_EntityManager.Modify(model.Items))
             {
-                var tmp = dbSet.Find(item.Id);
-                if (tmp is null) { return BadRequest($"找不到{item.Id}"); }
-                _DbContext.Entry(tmp).CurrentValues.SetValues(item);
+                var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
+                return errResult;
             }
             _DbContext.SaveChanges();
             return result;
@@ -682,8 +720,122 @@ namespace PowerLmsWebApi.Controllers
             return result;
         }
 
+        /// <summary>
+        /// 恢复指定的被删除航线字典。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPost]
+        public ActionResult<RestorePlCargoRouteReturnDto> RestorePlCargoRoute(RestorePlCargoRouteParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new RestorePlCargoRouteReturnDto();
+            if (!_EntityManager.Restore<PlCargoRoute>(model.Id))
+            {
+                var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
+                return errResult;
+            }
+            _DbContext.SaveChanges();
+            return result;
+        }
         #endregion 航线相关
 
+        #region 汇率相关
+        /// <summary>
+        /// 获取汇率。
+        /// </summary>
+        /// <param name="token">登录令牌。</param>
+        /// <param name="orgId">组织机构的Id。</param>
+        /// <param name="startIndex">起始位置，从0开始。</param>
+        /// <param name="count">最大返回数量。-1表示全返回。</param>
+        /// <param name="conditional">查询的条件。支持Id，BeginDate，EndData三个字段</param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定类别Id无效。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        public ActionResult<GetAllPlExchangeRateReturnDto> GetAllPlExchangeRate(Guid token, Guid orgId,
+            [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [FromQuery][Range(-1, int.MaxValue)] int count = -1,
+            [FromQuery] Dictionary<string, string> conditional = null)
+        {
+            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetAllPlExchangeRateReturnDto();
+            var collBase = _DbContext.DD_PlExchangeRates.AsNoTracking().Where(c => c.OrgId == orgId);
+            var coll = collBase.OrderBy(c => c.Id).Skip(startIndex);
+            foreach (var item in conditional)
+                if (string.Equals(item.Key, "id", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (OwConvert.TryToGuid(item.Value, out var id))
+                        coll = coll.Where(c => c.Id == id);
+                }
+                else if (string.Equals(item.Key, nameof(PlExchangeRate.BeginDate), StringComparison.OrdinalIgnoreCase) && OwConvert.TryGetDateTime(item.Value, out var bdt))
+                {
+                    coll = coll.Where(c => c.BeginDate >= bdt);
+                }
+                else if (string.Equals(item.Key, nameof(PlExchangeRate.EndData), StringComparison.OrdinalIgnoreCase) && OwConvert.TryGetDateTime(item.Value, out var edt))
+                {
+                    coll = coll.Where(c => c.EndData <= edt);
+                }
+            if (count > -1)
+                coll = coll.Take(count);
+            result.Total = collBase.Count();
+            result.Result.AddRange(coll);
+            return result;
+        }
+
+        #endregion 汇率相关
+    }
+
+    /// <summary>
+    /// 恢复指定的简单数据字典的功能参数封装类。
+    /// </summary>
+    public class RestoreSimpleDataDicParamsDto : RestoreParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 恢复指定的简单数据字典的功能返回值封装类。
+    /// </summary>
+    public class RestoreSimpleDataDicReturnDto : RestoreReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 恢复指定的被删除港口字典的功能参数封装类。
+    /// </summary>
+    public class RestorePlPortParamsDto : RestoreParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 恢复指定的被删除港口字典的功能返回值封装类。
+    /// </summary>
+    public class RestorePlPortReturnDto : RestoreReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 恢复航线对象功能的参数封装类。
+    /// </summary>
+    public class RestorePlCargoRouteParamsDto : RestoreParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 恢复航线对象功能的返回值封装类。
+    /// </summary>
+    public class RestorePlCargoRouteReturnDto : RestoreReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 获取汇率功能的返回值封装类。
+    /// </summary>
+    public class GetAllPlExchangeRateReturnDto : PagingReturnDtoBase<PlExchangeRate>
+    {
     }
 
     /// <summary>

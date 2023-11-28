@@ -20,9 +20,20 @@ namespace PowerLms.Data
     }
 
     /// <summary>
+    /// 可标记删除实体接口。
+    /// </summary>
+    public interface IMarkDelete
+    {
+        /// <summary>
+        /// 是否已标记为删除。false(默认)未标记为删除，true标记为删除。
+        /// </summary>
+        public bool IsDelete { get; set; }
+    }
+
+    /// <summary>
     /// 数据字典条目的基础类。
     /// </summary>
-    public abstract class DataDicBase : GuidKeyObjectBase, IDataDic
+    public abstract class DataDicBase : GuidKeyObjectBase, IDataDic, IMarkDelete
     {
         /// <summary>
         /// 构造函数。
@@ -57,7 +68,7 @@ namespace PowerLms.Data
         /// 快捷输入名。如"as6"则在键盘输入按as6能选择到此项，8个ASCII字符不足的尾部填充空格。服务器并不使用该字段。
         /// </summary>
         [Comment("快捷输入名")]
-        [Column(TypeName = "char"), MaxLength(8)]   //8个ASCII字符不足的尾部填充空格
+        [Column(TypeName = "varchar"), MaxLength(8)]
         public virtual string ShortcutName { get; set; }
 
         /// <summary>

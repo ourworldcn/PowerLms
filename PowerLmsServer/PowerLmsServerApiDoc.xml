@@ -69,6 +69,41 @@
             </summary>
             <returns></returns>
         </member>
+        <member name="T:PowerLmsServer.Managers.EntityManager">
+            <summary>
+            实体常用操作的封装类。
+            </summary>
+        </member>
+        <member name="M:PowerLmsServer.Managers.EntityManager.#ctor(PowerLmsServer.EfData.PowerLmsUserDbContext)">
+            <summary>
+            构造函数。
+            </summary>
+            <param name="dbContext"></param>
+        </member>
+        <member name="M:PowerLmsServer.Managers.EntityManager.Modify``1(System.Collections.Generic.IEnumerable{``0})">
+            <summary>
+            修改可软删除的对象集合。
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="newValues"></param>
+            <returns>true成功修改，调用着需要最终保存数据，false出现错误，调用应放弃保存。</returns>
+        </member>
+        <member name="M:PowerLmsServer.Managers.EntityManager.ModifyEntities``1(System.Collections.Generic.IEnumerable{``0})">
+            <summary>
+            修改的对象集合。
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="newValues"></param>
+            <returns>true成功修改，调用着需要最终保存数据，false出现错误，调用应放弃保存。</returns>
+        </member>
+        <member name="M:PowerLmsServer.Managers.EntityManager.Restore``1(System.Guid)">
+            <summary>
+            恢复已经被软删除的实体。
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="id"></param>
+            <returns></returns>
+        </member>
         <member name="T:PowerLmsServer.Managers.InitializerService">
             <summary>
             初始化服务。
