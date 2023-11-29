@@ -20,6 +20,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OwBaseCore", "..\..\repos\B
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OwDbBase", "..\..\repos\Bak\OwDbBase\OwDbBase.csproj", "{B28E6557-4D6E-4846-B8CD-9FCBA33F3164}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "基础支持", "基础支持", "{7B7A10B0-656B-4E84-80C4-4AE68642DE06}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -49,6 +51,10 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{53CABA37-1D8F-454B-B5FB-9FF6BE94D3BF} = {7B7A10B0-656B-4E84-80C4-4AE68642DE06}
+		{B28E6557-4D6E-4846-B8CD-9FCBA33F3164} = {7B7A10B0-656B-4E84-80C4-4AE68642DE06}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {5C76520A-489A-4E63-A407-9AD37BF5AD6C}
