@@ -4,6 +4,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
 using System.Threading;
 
@@ -204,4 +205,39 @@ namespace System
 
     }
 
+    public static class Win32Methods
+    {
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="mi"></param>
+        /// <returns></returns>
+        [DllImport("kernel32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool GlobalMemoryStatusEx(ref MEMORYINFO mi);
+
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct MEMORYINFO
+    {
+        /// <summary>
+        /// 初始化该结构。
+        /// </summary>
+        /// <returns></returns>
+        public void Initialize()
+        {
+            dwLength = (uint)Marshal.SizeOf(typeof(MEMORYINFO));
+        }
+
+        public uint dwLength; //Current structure size
+        public uint dwMemoryLoad; //Current memory utilization
+        public ulong ullTotalPhys; //Total physical memory size
+        public ulong ullAvailPhys; //Available physical memory size
+        public ulong ullTotalPageFile; //Total Exchange File Size
+        public ulong ullAvailPageFile; //Total Exchange File Size
+        public ulong ullTotalVirtual; //Total virtual memory size
+        public ulong ullAvailVirtual; //Available virtual memory size
+        public ulong ullAvailExtendedVirtual; //Keep this value always zero
+    }
 }
