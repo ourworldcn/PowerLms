@@ -15,8 +15,15 @@ namespace PowerLms.Data
     public class PlExchangeRate : GuidKeyObjectBase
     {
         /// <summary>
+        /// 业务类型Id。
+        /// </summary>
+        [Comment("业务类型Id")]
+        public Guid BusinessTypeId { get; set; }
+
+        /// <summary>
         /// 所属组织机构Id。
         /// </summary>
+        [Comment("所属组织机构Id")]
         public Guid? OrgId { get; set; }
 
         /// <summary>

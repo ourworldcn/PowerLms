@@ -4,6 +4,46 @@
         <name>PowerLmsData</name>
     </assembly>
     <members>
+        <member name="T:PowerLmsData.基础数据.FeesType">
+            <summary>
+            费用种类。Code 是费用代码，DisplayName是费用名称，ShortName是英文名称,Remark是附加说明。
+            </summary>
+        </member>
+        <member name="P:PowerLmsData.基础数据.FeesType.CurrencyTypeId">
+            <summary>
+            币种Id。
+            </summary>
+        </member>
+        <member name="P:PowerLmsData.基础数据.FeesType.Price">
+            <summary>
+            默认单价。
+            </summary>
+        </member>
+        <member name="P:PowerLmsData.基础数据.FeesType.FeeGroupId">
+            <summary>
+            费用组Id。
+            </summary>
+        </member>
+        <member name="P:PowerLmsData.基础数据.FeesType.IsPay">
+            <summary>
+            是否应付。true是应付。
+            </summary>
+        </member>
+        <member name="P:PowerLmsData.基础数据.FeesType.IsGather">
+            <summary>
+            是否应收。true是应收。
+            </summary>
+        </member>
+        <member name="P:PowerLmsData.基础数据.FeesType.IsCommission">
+            <summary>
+            是否佣金,True是佣金。
+            </summary>
+        </member>
+        <member name="P:PowerLmsData.基础数据.FeesType.IsDaiDian">
+            <summary>
+            是否代垫费用,true垫付。
+            </summary>
+        </member>
         <member name="T:PowerLmsServer.EfData.MigrateDbInitializer">
             <summary>
             
@@ -84,6 +124,16 @@
         <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.DD_PlExchangeRates">
             <summary>
             汇率表。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.DD_UnitConversions">
+            <summary>
+            单位换算表。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.DD_FeesTypes">
+            <summary>
+            费用种类表。
             </summary>
         </member>
         <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.Multilinguals">
@@ -271,6 +321,11 @@
             汇率。
             </summary>
         </member>
+        <member name="P:PowerLms.Data.PlExchangeRate.BusinessTypeId">
+            <summary>
+            业务类型Id。
+            </summary>
+        </member>
         <member name="P:PowerLms.Data.PlExchangeRate.OrgId">
             <summary>
             所属组织机构Id。
@@ -376,6 +431,36 @@
             <inheritdoc/>
             </summary>
             <returns>返回除<see cref="P:OW.Data.GuidKeyObjectBase.Id"/>属性外，其余属性完全相同的对象。</returns>
+        </member>
+        <member name="T:PowerLms.Data.UnitConversion">
+            <summary>
+            单位换算。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.UnitConversion.OrgId">
+            <summary>
+            所属组织机构Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.UnitConversion.Basic">
+            <summary>
+            基单位。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.UnitConversion.Rim">
+            <summary>
+            宿单位。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.UnitConversion.Rate">
+            <summary>
+            换算率。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.UnitConversion.IsDelete">
+            <summary>
+            是否已标记为删除。false(默认)未标记为删除，true标记为删除。
+            </summary>
         </member>
         <member name="T:PowerLms.Data.Multilingual">
             <summary>

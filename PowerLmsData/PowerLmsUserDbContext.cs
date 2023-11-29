@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using PowerLms.Data;
+using PowerLmsData.基础数据;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -131,6 +132,16 @@ namespace PowerLmsServer.EfData
         /// 汇率表。
         /// </summary>
         public DbSet<PlExchangeRate> DD_PlExchangeRates { get; set; }
+
+        /// <summary>
+        /// 单位换算表。
+        /// </summary>
+        public DbSet<UnitConversion> DD_UnitConversions { get; set; }
+
+        /// <summary>
+        /// 费用种类表。
+        /// </summary>
+        public DbSet<FeesType> DD_FeesTypes { get; set; }
         #endregion 系统资源相关
 
         #region 多语言相关

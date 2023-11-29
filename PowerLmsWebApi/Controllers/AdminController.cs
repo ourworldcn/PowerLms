@@ -342,7 +342,9 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddSimpleDataDicReturnDto();
             if (_DbContext.DD_SimpleDataDics.Any(c => c.DataDicId == model.Item.DataDicId && c.Code == model.Item.Code))   //若重复
-                return BadRequest();
+                return BadRequest("Id重复");
+            if (model.Item.DataDicId is null)
+                return BadRequest($"{nameof(model.Item.DataDicId)} 不能为空。");
             model.Item.GenerateNewId();
             var id = model.Item.Id;
             _DbContext.DD_SimpleDataDics.Add(model.Item);
@@ -381,6 +383,12 @@ namespace PowerLmsWebApi.Controllers
             {
                 var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
                 return errResult;
+            }
+            foreach (var item in model.Items)
+            {
+                _DbContext.Entry(item).Property(c => c.DataDicId).IsModified = false;
+                _DbContext.Entry(item).Property(c => c.CreateAccountId).IsModified = false;
+                _DbContext.Entry(item).Property(c => c.CreateDateTime).IsModified = false;
             }
             _DbContext.SaveChanges();
             return result;
@@ -544,6 +552,10 @@ namespace PowerLmsWebApi.Controllers
                 var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
                 return errResult;
             }
+            foreach (var item in model.Items)   //避免修改个别属性
+            {
+                _DbContext.Entry(item).Property(c => c.DataDicId).IsModified = false;
+            }
             _DbContext.SaveChanges();
             return result;
         }
@@ -686,6 +698,10 @@ namespace PowerLmsWebApi.Controllers
                 var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
                 return errResult;
             }
+            foreach (var item in model.Items)
+            {
+                _DbContext.Entry(item).Property(c => c.DataDicId).IsModified = false;
+            }
             _DbContext.SaveChanges();
             return result;
         }
@@ -786,7 +802,280 @@ namespace PowerLmsWebApi.Controllers
             return result;
         }
 
+        /// <summary>
+        /// 增加一个汇率记录。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">参数错误。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPost]
+        public ActionResult<AddlPlExchangeRateReturnDto> AddlPlExchangeRate(AddlPlExchangeRateParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new AddlPlExchangeRateReturnDto();
+            model.Item.GenerateNewId();
+            var id = model.Item.Id;
+            _DbContext.DD_PlExchangeRates.Add(model.Item);
+            _DbContext.SaveChanges();
+            result.Id = id;
+            return result;
+        }
+
+        /// <summary>
+        /// 修改汇率项。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPut]
+        public ActionResult<ModifyPlExchangeRateReturnDto> ModifyPlExchangeRate(ModifyPlExchangeRateParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new ModifyPlExchangeRateReturnDto();
+            if (!_EntityManager.ModifyEntities(model.Items))
+            {
+                var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
+                return errResult;
+            }
+            _DbContext.SaveChanges();
+            return result;
+        }
+
         #endregion 汇率相关
+
+        #region 单位换算相关
+        /// <summary>
+        /// 获取单位换算。
+        /// </summary>
+        /// <param name="token">登录令牌。</param>
+        /// <param name="orgId">所属组织机构Id。</param>
+        /// <param name="startIndex">起始位置，从0开始。</param>
+        /// <param name="count">最大返回数量。-1表示全返回。</param>
+        /// <param name="conditional">查询的条件。支持basic 和 rim查询。</param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定类别Id无效。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        public ActionResult<GetAllUnitConversionReturnDto> GetAllUnitConversion(Guid token, Guid orgId,
+            [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [FromQuery][Range(-1, int.MaxValue)] int count = -1,
+            [FromQuery] Dictionary<string, string> conditional = null)
+        {
+            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetAllUnitConversionReturnDto();
+            var collBase = _DbContext.DD_UnitConversions.AsNoTracking().Where(c => c.OrgId == orgId);
+            var coll = collBase.OrderBy(c => c.Id).Skip(startIndex);
+            foreach (var item in conditional)
+                if (string.Equals(item.Key, "id", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (OwConvert.TryToGuid(item.Value, out var id))
+                        coll = coll.Where(c => c.Id == id);
+                }
+                else if (string.Equals(item.Key, "basic", StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.Basic.Contains(item.Value));
+                }
+                else if (string.Equals(item.Key, "rim", StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.Rim.Contains(item.Value));
+                }
+            if (count > -1)
+                coll = coll.Take(count);
+            result.Total = collBase.Count();
+            result.Result.AddRange(coll);
+            return result;
+        }
+
+        /// <summary>
+        /// 增加单位换算记录。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">参数错误。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPost]
+        public ActionResult<AddUnitConversionReturnDto> AddUnitConversion(AddUnitConversionParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new AddUnitConversionReturnDto();
+            model.Item.GenerateNewId();
+            var id = model.Item.Id;
+            _DbContext.DD_UnitConversions.Add(model.Item);
+            _DbContext.SaveChanges();
+            result.Id = id;
+            return result;
+        }
+
+        /// <summary>
+        /// 修改单位换算记录。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPut]
+        public ActionResult<ModifyUnitConversionReturnDto> ModifyUnitConversion(ModifyUnitConversionParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new ModifyUnitConversionReturnDto();
+            if (!_EntityManager.Modify(model.Items))
+            {
+                var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
+                return errResult;
+            }
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        /// <summary>
+        /// 删除单位换算的记录。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpDelete]
+        public ActionResult<RemoveUnitConversionReturnDto> RemoveUnitConversion(RemoveUnitConversionParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new RemoveUnitConversionReturnDto();
+            var id = model.Id;
+            var dbSet = _DbContext.DD_UnitConversions;
+            var item = dbSet.Find(id);
+            if (item is null) return BadRequest();
+            //_DbContext.SimpleDataDics.Remove(item);
+            item.IsDelete = true;
+            _DbContext.SaveChanges();
+            //if (item.DataDicType == 1) //若是简单字典
+            //    _DbContext.Database.ExecuteSqlRaw($"delete from {nameof(_DbContext.SimpleDataDics)} where {nameof(SimpleDataDic.DataDicId)}='{id.ToString()}'");
+            //else //其他字典待定
+            //{
+
+            //}
+            return result;
+        }
+
+        /// <summary>
+        /// 恢复指定的被删除单位换算记录。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPost]
+        public ActionResult<RestoreUnitConversionReturnDto> RestoreUnitConversion(RestoreUnitConversionParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new RestoreUnitConversionReturnDto();
+            if (!_EntityManager.Restore<UnitConversion>(model.Id))
+            {
+                var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
+                return errResult;
+            }
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        #endregion 单位换算相关
+    }
+
+    /// <summary>
+    /// 恢复指定的被删除单位换算记录的功能参数封装类。
+    /// </summary>
+    public class RestoreUnitConversionParamsDto : RestoreParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 恢复指定的被删除单位换算记录的功能返回值封装类。
+    /// </summary>
+    public class RestoreUnitConversionReturnDto : RestoreReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 删除单位换算的记录的功能参数封装类。
+    /// </summary>
+    public class RemoveUnitConversionParamsDto : RemoveParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 删除单位换算的记录的功能返回值封装类。
+    /// </summary>
+    public class RemoveUnitConversionReturnDto : RemoveReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 修改单位换算记录的功能参数封装类。
+    /// </summary>
+    public class ModifyUnitConversionParamsDto : ModifyParamsDtoBase<UnitConversion>
+    {
+    }
+
+    /// <summary>
+    /// 修改单位换算记录的功能返回值封装类。
+    /// </summary>
+    public class ModifyUnitConversionReturnDto : ModifyReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 增加单位换算记录的功能参数封装类。
+    /// </summary>
+    public class AddUnitConversionParamsDto : AddParamsDtoBase<UnitConversion>
+    {
+    }
+
+    /// <summary>
+    /// 增加单位换算记录的功能返回值封装类。
+    /// </summary>
+    public class AddUnitConversionReturnDto : AddReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 获取单位换算的功能返回值封装类。
+    /// </summary>
+    public class GetAllUnitConversionReturnDto : PagingReturnDtoBase<UnitConversion>
+    {
+    }
+
+    /// <summary>
+    /// 修改汇率项的功能参数封装类。
+    /// </summary>
+    public class ModifyPlExchangeRateParamsDto : ModifyParamsDtoBase<PlExchangeRate>
+    {
+    }
+
+    /// <summary>
+    /// 修改汇率项的功能返回值封装类。
+    /// </summary>
+    public class ModifyPlExchangeRateReturnDto : ModifyReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 增加一个汇率记录的功能参数封装类。
+    /// </summary>
+    public class AddlPlExchangeRateParamsDto : AddParamsDtoBase<PlExchangeRate>
+    {
+    }
+
+    /// <summary>
+    /// 增加一个汇率记录的功能返回值封装类。
+    /// </summary>
+    public class AddlPlExchangeRateReturnDto : AddReturnDtoBase
+    {
     }
 
     /// <summary>
