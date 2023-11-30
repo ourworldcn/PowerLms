@@ -13,8 +13,8 @@ using PowerLmsServer.EfData;
 namespace PowerLmsData.Migrations
 {
     [DbContext(typeof(PowerLmsUserDbContext))]
-    [Migration("20231124080851_23112401")]
-    partial class _23112401
+    [Migration("20231130104311_23113001")]
+    partial class _23113001
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -143,9 +143,22 @@ namespace PowerLmsData.Migrations
                         .HasColumnType("varchar(32)")
                         .HasComment("编码，对本系统有一定意义的编码");
 
+                    b.Property<Guid?>("DataDicId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("所属数据字典目录的Id");
+
                     b.Property<string>("DisplayName")
-                        .HasColumnType("nvarchar(max)")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)")
                         .HasComment("显示的名称");
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("bit")
+                        .HasComment("是否已标记为删除。false(默认)未标记为删除，true标记为删除。");
+
+                    b.Property<string>("Remark")
+                        .HasColumnType("nvarchar(max)")
+                        .HasComment("备注");
 
                     b.Property<string>("ShortName")
                         .HasMaxLength(32)
@@ -154,12 +167,12 @@ namespace PowerLmsData.Migrations
 
                     b.Property<string>("ShortcutName")
                         .HasMaxLength(8)
-                        .HasColumnType("char(8)")
+                        .HasColumnType("varchar(8)")
                         .HasComment("快捷输入名");
 
                     b.HasKey("Id");
 
-                    b.ToTable("BusinessTypeDataDics");
+                    b.ToTable("DD_BusinessTypeDataDics");
                 });
 
             modelBuilder.Entity("PowerLms.Data.DataDicCatalog", b =>
@@ -191,9 +204,155 @@ namespace PowerLmsData.Migrations
                         .IsUnique()
                         .HasFilter("[OrgId] IS NOT NULL AND [Code] IS NOT NULL");
 
-                    b.ToTable("DataDicCatalogs");
+                    b.ToTable("DD_DataDicCatalogs");
 
                     b.HasComment("专门针对数据字典的目录。");
+                });
+
+            modelBuilder.Entity("PowerLms.Data.FeesType", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnOrder(0);
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)")
+                        .HasComment("编码，对本系统有一定意义的编码");
+
+                    b.Property<Guid?>("CurrencyTypeId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("币种Id");
+
+                    b.Property<Guid?>("DataDicId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("所属数据字典目录的Id");
+
+                    b.Property<string>("DisplayName")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)")
+                        .HasComment("显示的名称");
+
+                    b.Property<Guid?>("FeeGroupId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("费用组Id");
+
+                    b.Property<bool>("IsCommission")
+                        .HasColumnType("bit")
+                        .HasComment("是否佣金,True是佣金。");
+
+                    b.Property<bool>("IsDaiDian")
+                        .HasColumnType("bit")
+                        .HasComment("是否代垫费用,true垫付。");
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("bit")
+                        .HasComment("是否已标记为删除。false(默认)未标记为删除，true标记为删除。");
+
+                    b.Property<bool>("IsGather")
+                        .HasColumnType("bit")
+                        .HasComment("是否应收。true是应收。");
+
+                    b.Property<bool>("IsPay")
+                        .HasColumnType("bit")
+                        .HasComment("是否应付。true是应付。");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("decimal(18,2)")
+                        .HasComment("默认单价");
+
+                    b.Property<string>("Remark")
+                        .HasColumnType("nvarchar(max)")
+                        .HasComment("备注");
+
+                    b.Property<string>("ShortName")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)")
+                        .HasComment("缩写名");
+
+                    b.Property<string>("ShortcutName")
+                        .HasMaxLength(8)
+                        .HasColumnType("varchar(8)")
+                        .HasComment("快捷输入名");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("DD_FeesTypes");
+
+                    b.HasComment("费用种类");
+                });
+
+            modelBuilder.Entity("PowerLms.Data.JobNumberRule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnOrder(0);
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)")
+                        .HasComment("编码，对本系统有一定意义的编码");
+
+                    b.Property<int>("CurrentNumber")
+                        .HasColumnType("int")
+                        .HasComment("当前编号");
+
+                    b.Property<Guid?>("DataDicId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("所属数据字典目录的Id");
+
+                    b.Property<string>("DisplayName")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)")
+                        .HasComment("显示的名称");
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("bit")
+                        .HasComment("是否已标记为删除。false(默认)未标记为删除，true标记为删除。");
+
+                    b.Property<string>("Prefix")
+                        .HasMaxLength(8)
+                        .HasColumnType("nvarchar(8)")
+                        .HasComment("前缀");
+
+                    b.Property<string>("Remark")
+                        .HasColumnType("nvarchar(max)")
+                        .HasComment("备注");
+
+                    b.Property<DateTime>("RepeatDate")
+                        .HasColumnType("datetime2")
+                        .HasComment("记录最后一次归零的日期");
+
+                    b.Property<short>("RepeatMode")
+                        .HasColumnType("smallint")
+                        .HasComment("归零方式，0不归零，1按年，2按月，3按日");
+
+                    b.Property<string>("RuleString")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)")
+                        .HasComment("规则字符串");
+
+                    b.Property<string>("ShortName")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)")
+                        .HasComment("缩写名");
+
+                    b.Property<string>("ShortcutName")
+                        .HasMaxLength(8)
+                        .HasColumnType("varchar(8)")
+                        .HasComment("快捷输入名");
+
+                    b.Property<int>("StartValue")
+                        .HasColumnType("int")
+                        .HasComment("\"归零\"后的起始值");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("DD_JobNumberRules");
+
+                    b.HasComment("业务编码规则");
                 });
 
             modelBuilder.Entity("PowerLms.Data.Multilingual", b =>
@@ -225,6 +384,101 @@ namespace PowerLmsData.Migrations
                         .HasFilter("[Key] IS NOT NULL");
 
                     b.ToTable("Multilinguals");
+                });
+
+            modelBuilder.Entity("PowerLms.Data.PlCargoRoute", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnOrder(0);
+
+                    b.Property<int?>("CAFRate")
+                        .HasColumnType("int")
+                        .HasComment("CAF比率，取%值。");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)")
+                        .HasComment("编码，对本系统有一定意义的编码");
+
+                    b.Property<Guid?>("DataDicId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("所属数据字典目录的Id");
+
+                    b.Property<string>("DisplayName")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)")
+                        .HasComment("显示的名称");
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("bit")
+                        .HasComment("是否已标记为删除。false(默认)未标记为删除，true标记为删除。");
+
+                    b.Property<string>("Remark")
+                        .HasColumnType("nvarchar(max)")
+                        .HasComment("备注");
+
+                    b.Property<string>("ShortName")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)")
+                        .HasComment("缩写名");
+
+                    b.Property<string>("ShortcutName")
+                        .HasMaxLength(8)
+                        .HasColumnType("varchar(8)")
+                        .HasComment("快捷输入名");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("DD_PlCargoRoutes");
+
+                    b.HasComment("航线");
+                });
+
+            modelBuilder.Entity("PowerLms.Data.PlExchangeRate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnOrder(0);
+
+                    b.Property<DateTime>("BeginDate")
+                        .HasColumnType("datetime2")
+                        .HasComment("生效时点");
+
+                    b.Property<Guid>("BusinessTypeId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("业务类型Id");
+
+                    b.Property<Guid>("DCurrencyId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("宿币种");
+
+                    b.Property<DateTime>("EndData")
+                        .HasColumnType("datetime2")
+                        .HasComment("失效时点");
+
+                    b.Property<float>("Exchange")
+                        .HasColumnType("real")
+                        .HasComment("兑换率");
+
+                    b.Property<Guid?>("OrgId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("所属组织机构Id");
+
+                    b.Property<float>("Radix")
+                        .HasColumnType("real")
+                        .HasComment("基准，此处默认为100");
+
+                    b.Property<Guid>("SCurrencyId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("源币种");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("DD_PlExchangeRates");
+
+                    b.HasComment("汇率");
                 });
 
             modelBuilder.Entity("PowerLms.Data.PlMerchant", b =>
@@ -291,6 +545,72 @@ namespace PowerLmsData.Migrations
                     b.ToTable("PlOrganizations");
                 });
 
+            modelBuilder.Entity("PowerLms.Data.PlPort", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnOrder(0);
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)")
+                        .HasComment("编码，对本系统有一定意义的编码");
+
+                    b.Property<Guid?>("CountryId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("国家Id。");
+
+                    b.Property<string>("CustomsCode")
+                        .HasColumnType("nvarchar(max)")
+                        .HasComment("海关码。项目类型决定有大量与海关的EDI行为，交换使用的码。");
+
+                    b.Property<Guid?>("DataDicId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("所属数据字典目录的Id");
+
+                    b.Property<string>("DisplayName")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)")
+                        .HasComment("显示的名称");
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("bit")
+                        .HasComment("是否已标记为删除。false(默认)未标记为删除，true标记为删除。");
+
+                    b.Property<int?>("NumCode")
+                        .HasColumnType("int")
+                        .HasComment("数字码.可空");
+
+                    b.Property<Guid?>("PlCargoRouteId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("所属航线Id");
+
+                    b.Property<string>("Province")
+                        .HasColumnType("nvarchar(max)")
+                        .HasComment("省");
+
+                    b.Property<string>("Remark")
+                        .HasColumnType("nvarchar(max)")
+                        .HasComment("备注");
+
+                    b.Property<string>("ShortName")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)")
+                        .HasComment("缩写名");
+
+                    b.Property<string>("ShortcutName")
+                        .HasMaxLength(8)
+                        .HasColumnType("varchar(8)")
+                        .HasComment("快捷输入名");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("DD_PlPorts");
+
+                    b.HasComment("港口");
+                });
+
             modelBuilder.Entity("PowerLms.Data.SimpleDataDic", b =>
                 {
                     b.Property<Guid>("Id")
@@ -317,15 +637,20 @@ namespace PowerLmsData.Migrations
 
                     b.Property<Guid?>("DataDicId")
                         .HasColumnType("uniqueidentifier")
-                        .HasComment("所属数据字典的的Id");
+                        .HasComment("所属数据字典目录的Id");
 
                     b.Property<string>("DisplayName")
-                        .HasColumnType("nvarchar(max)")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)")
                         .HasComment("显示的名称");
 
                     b.Property<bool>("IsDelete")
                         .HasColumnType("bit")
                         .HasComment("是否已标记为删除。false(默认)未标记为删除，true标记为删除。");
+
+                    b.Property<string>("Remark")
+                        .HasColumnType("nvarchar(max)")
+                        .HasComment("备注");
 
                     b.Property<string>("ShortName")
                         .HasMaxLength(32)
@@ -334,14 +659,14 @@ namespace PowerLmsData.Migrations
 
                     b.Property<string>("ShortcutName")
                         .HasMaxLength(8)
-                        .HasColumnType("char(8)")
+                        .HasColumnType("varchar(8)")
                         .HasComment("快捷输入名");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("DataDicId");
+                    b.HasIndex("DataDicId", "Code");
 
-                    b.ToTable("SimpleDataDics");
+                    b.ToTable("DD_SimpleDataDics");
                 });
 
             modelBuilder.Entity("PowerLms.Data.SystemResource", b =>
@@ -373,7 +698,40 @@ namespace PowerLmsData.Migrations
                         .IsUnique()
                         .HasFilter("[Name] IS NOT NULL");
 
-                    b.ToTable("SystemResources");
+                    b.ToTable("DD_SystemResources");
+                });
+
+            modelBuilder.Entity("PowerLms.Data.UnitConversion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnOrder(0);
+
+                    b.Property<string>("Basic")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)")
+                        .HasComment("基单位");
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("bit")
+                        .HasComment("是否已标记为删除。false(默认)未标记为删除，true标记为删除。");
+
+                    b.Property<Guid?>("OrgId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("所属组织机构Id");
+
+                    b.Property<float>("Rate")
+                        .HasColumnType("real")
+                        .HasComment("换算率");
+
+                    b.Property<string>("Rim")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)")
+                        .HasComment("宿单位");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("DD_UnitConversions");
                 });
 
             modelBuilder.Entity("PowerLms.Data.PlMerchant", b =>
