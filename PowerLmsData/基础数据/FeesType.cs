@@ -18,7 +18,7 @@ namespace PowerLms.Data
         /// 币种Id。
         /// </summary>
         [Comment("币种Id")]
-        public bool CurrencyTypeId { get; set; }
+        public Guid? CurrencyTypeId { get; set; }
 
         /// <summary>
         /// 默认单价。
