@@ -1329,6 +1329,19 @@
             <param name="dt"></param>
             <returns></returns>
         </member>
+        <member name="M:System.Win32Methods.GlobalMemoryStatusEx(System.MEMORYINFO@)">
+            <summary>
+            
+            </summary>
+            <param name="mi"></param>
+            <returns></returns>
+        </member>
+        <member name="M:System.MEMORYINFO.Initialize">
+            <summary>
+            初始化该结构。
+            </summary>
+            <returns></returns>
+        </member>
         <member name="M:System.IO.MemoryStreamPool.MemoryStreamPoolPolicy.Return(System.IO.MemoryStream)">
             <summary>
             还入对象必须是<see cref="M:System.IO.MemoryStream.#ctor"/>构造函数构造的。
