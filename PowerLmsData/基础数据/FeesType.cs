@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace PowerLmsData.基础数据
+namespace PowerLms.Data
 {
     /// <summary>
     /// 费用种类。Code 是费用代码，DisplayName是费用名称，ShortName是英文名称,Remark是附加说明。

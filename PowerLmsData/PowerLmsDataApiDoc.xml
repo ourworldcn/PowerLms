@@ -4,46 +4,6 @@
         <name>PowerLmsData</name>
     </assembly>
     <members>
-        <member name="T:PowerLmsData.基础数据.FeesType">
-            <summary>
-            费用种类。Code 是费用代码，DisplayName是费用名称，ShortName是英文名称,Remark是附加说明。
-            </summary>
-        </member>
-        <member name="P:PowerLmsData.基础数据.FeesType.CurrencyTypeId">
-            <summary>
-            币种Id。
-            </summary>
-        </member>
-        <member name="P:PowerLmsData.基础数据.FeesType.Price">
-            <summary>
-            默认单价。
-            </summary>
-        </member>
-        <member name="P:PowerLmsData.基础数据.FeesType.FeeGroupId">
-            <summary>
-            费用组Id。
-            </summary>
-        </member>
-        <member name="P:PowerLmsData.基础数据.FeesType.IsPay">
-            <summary>
-            是否应付。true是应付。
-            </summary>
-        </member>
-        <member name="P:PowerLmsData.基础数据.FeesType.IsGather">
-            <summary>
-            是否应收。true是应收。
-            </summary>
-        </member>
-        <member name="P:PowerLmsData.基础数据.FeesType.IsCommission">
-            <summary>
-            是否佣金,True是佣金。
-            </summary>
-        </member>
-        <member name="P:PowerLmsData.基础数据.FeesType.IsDaiDian">
-            <summary>
-            是否代垫费用,true垫付。
-            </summary>
-        </member>
         <member name="T:PowerLmsServer.EfData.MigrateDbInitializer">
             <summary>
             
@@ -134,6 +94,11 @@
         <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.DD_FeesTypes">
             <summary>
             费用种类表。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.DD_JobNumberRules">
+            <summary>
+            业务编码规则表。
             </summary>
         </member>
         <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.Multilinguals">
@@ -256,6 +221,81 @@
             所属组织机构Id。通常这里为null则有不同解释，如通用的模板或超管使用的数据字典。
             </summary>
         </member>
+        <member name="T:PowerLms.Data.FeesType">
+            <summary>
+            费用种类。Code 是费用代码，DisplayName是费用名称，ShortName是英文名称,Remark是附加说明。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.FeesType.CurrencyTypeId">
+            <summary>
+            币种Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.FeesType.Price">
+            <summary>
+            默认单价。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.FeesType.FeeGroupId">
+            <summary>
+            费用组Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.FeesType.IsPay">
+            <summary>
+            是否应付。true是应付。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.FeesType.IsGather">
+            <summary>
+            是否应收。true是应收。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.FeesType.IsCommission">
+            <summary>
+            是否佣金,True是佣金。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.FeesType.IsDaiDian">
+            <summary>
+            是否代垫费用,true垫付。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.JobNumberRule">
+            <summary>
+            编码规则。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.JobNumberRule.Prefix">
+            <summary>
+            前缀。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.JobNumberRule.RuleString">
+            <summary>
+            规则字符串。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.JobNumberRule.CurrentNumber">
+            <summary>
+            当前编号。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.JobNumberRule.RepeatMode">
+            <summary>
+            归零方式，0不归零，1按年，2按月，3按日
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.JobNumberRule.StartValue">
+            <summary>
+            "归零"后的起始值。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.JobNumberRule.RepeatDate">
+            <summary>
+            记录最后一次归零的日期。
+            </summary>
+        </member>
         <member name="T:PowerLms.Data.PlAddress">
             <summary>
             地址类。
@@ -371,9 +411,9 @@
             海关码。项目类型决定有大量与海关的EDI行为，交换使用的码。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.PlPort.Country">
+        <member name="P:PowerLms.Data.PlPort.CountryId">
             <summary>
-            国家。
+            国家Id。
             </summary>
         </member>
         <member name="P:PowerLms.Data.PlPort.Province">

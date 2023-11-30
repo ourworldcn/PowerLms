@@ -1,7 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using PowerLms.Data;
-using PowerLmsData.基础数据;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -142,6 +141,11 @@ namespace PowerLmsServer.EfData
         /// 费用种类表。
         /// </summary>
         public DbSet<FeesType> DD_FeesTypes { get; set; }
+
+        /// <summary>
+        /// 业务编码规则表。
+        /// </summary>
+        public DbSet<JobNumberRule> DD_JobNumberRules { get; set; }
         #endregion 系统资源相关
 
         #region 多语言相关

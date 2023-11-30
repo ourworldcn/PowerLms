@@ -128,8 +128,8 @@ namespace PowerLmsServer.Managers
             var db = svc.GetRequiredService<PowerLmsUserDbContext>();
             var org = db.PlOrganizations.Find(new Guid("329BE0F5-BD13-4484-A8B7-6DD9AB392D53"));
             //_DbContext.SaveChanges();
-
-
+            var now = OwHelper.WorldNow;
+            var str = now.ToString(@"\MMyyyydd");
         }
 
         private void CreateDb()

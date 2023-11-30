@@ -3,17 +3,20 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PowerLmsServer.EfData;
 
 #nullable disable
+#pragma warning disable CS1591 // 缺少对公共可见类型或成员的 XML 注释
 
 namespace PowerLmsData.Migrations
 {
     [DbContext(typeof(PowerLmsUserDbContext))]
-    partial class PowerLmsUserDbContextModelSnapshot : ModelSnapshot
+    [Migration("20231130030535_23113001")]
+    partial class _23113001
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -204,152 +207,6 @@ namespace PowerLmsData.Migrations
                     b.ToTable("DD_DataDicCatalogs");
 
                     b.HasComment("专门针对数据字典的目录。");
-                });
-
-            modelBuilder.Entity("PowerLms.Data.FeesType", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier")
-                        .HasColumnOrder(0);
-
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("varchar(32)")
-                        .HasComment("编码，对本系统有一定意义的编码");
-
-                    b.Property<bool>("CurrencyTypeId")
-                        .HasColumnType("bit")
-                        .HasComment("币种Id");
-
-                    b.Property<Guid?>("DataDicId")
-                        .HasColumnType("uniqueidentifier")
-                        .HasComment("所属数据字典目录的Id");
-
-                    b.Property<string>("DisplayName")
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)")
-                        .HasComment("显示的名称");
-
-                    b.Property<Guid?>("FeeGroupId")
-                        .HasColumnType("uniqueidentifier")
-                        .HasComment("费用组Id");
-
-                    b.Property<bool>("IsCommission")
-                        .HasColumnType("bit")
-                        .HasComment("是否佣金,True是佣金。");
-
-                    b.Property<bool>("IsDaiDian")
-                        .HasColumnType("bit")
-                        .HasComment("是否代垫费用,true垫付。");
-
-                    b.Property<bool>("IsDelete")
-                        .HasColumnType("bit")
-                        .HasComment("是否已标记为删除。false(默认)未标记为删除，true标记为删除。");
-
-                    b.Property<bool>("IsGather")
-                        .HasColumnType("bit")
-                        .HasComment("是否应收。true是应收。");
-
-                    b.Property<bool>("IsPay")
-                        .HasColumnType("bit")
-                        .HasComment("是否应付。true是应付。");
-
-                    b.Property<decimal>("Price")
-                        .HasColumnType("decimal(18,2)")
-                        .HasComment("默认单价");
-
-                    b.Property<string>("Remark")
-                        .HasColumnType("nvarchar(max)")
-                        .HasComment("备注");
-
-                    b.Property<string>("ShortName")
-                        .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)")
-                        .HasComment("缩写名");
-
-                    b.Property<string>("ShortcutName")
-                        .HasMaxLength(8)
-                        .HasColumnType("varchar(8)")
-                        .HasComment("快捷输入名");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("DD_FeesTypes");
-
-                    b.HasComment("费用种类");
-                });
-
-            modelBuilder.Entity("PowerLms.Data.JobNumberRule", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier")
-                        .HasColumnOrder(0);
-
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("varchar(32)")
-                        .HasComment("编码，对本系统有一定意义的编码");
-
-                    b.Property<int>("CurrentNumber")
-                        .HasColumnType("int")
-                        .HasComment("当前编号");
-
-                    b.Property<Guid?>("DataDicId")
-                        .HasColumnType("uniqueidentifier")
-                        .HasComment("所属数据字典目录的Id");
-
-                    b.Property<string>("DisplayName")
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)")
-                        .HasComment("显示的名称");
-
-                    b.Property<bool>("IsDelete")
-                        .HasColumnType("bit")
-                        .HasComment("是否已标记为删除。false(默认)未标记为删除，true标记为删除。");
-
-                    b.Property<string>("Prefix")
-                        .HasMaxLength(8)
-                        .HasColumnType("nvarchar(8)")
-                        .HasComment("前缀");
-
-                    b.Property<string>("Remark")
-                        .HasColumnType("nvarchar(max)")
-                        .HasComment("备注");
-
-                    b.Property<DateTime>("RepeatDate")
-                        .HasColumnType("datetime2")
-                        .HasComment("记录最后一次归零的日期");
-
-                    b.Property<short>("RepeatMode")
-                        .HasColumnType("smallint")
-                        .HasComment("归零方式，0不归零，1按年，2按月，3按日");
-
-                    b.Property<string>("RuleString")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)")
-                        .HasComment("规则字符串");
-
-                    b.Property<string>("ShortName")
-                        .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)")
-                        .HasComment("缩写名");
-
-                    b.Property<string>("ShortcutName")
-                        .HasMaxLength(8)
-                        .HasColumnType("varchar(8)")
-                        .HasComment("快捷输入名");
-
-                    b.Property<int>("StartValue")
-                        .HasColumnType("int")
-                        .HasComment("\"归零\"后的起始值");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("DD_JobNumberRules");
-
-                    b.HasComment("业务编码规则");
                 });
 
             modelBuilder.Entity("PowerLms.Data.Multilingual", b =>
@@ -729,6 +586,80 @@ namespace PowerLmsData.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("DD_UnitConversions");
+                });
+
+            modelBuilder.Entity("PowerLmsData.基础数据.FeesType", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnOrder(0);
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)")
+                        .HasComment("编码，对本系统有一定意义的编码");
+
+                    b.Property<bool>("CurrencyTypeId")
+                        .HasColumnType("bit")
+                        .HasComment("币种Id");
+
+                    b.Property<Guid?>("DataDicId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("所属数据字典目录的Id");
+
+                    b.Property<string>("DisplayName")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)")
+                        .HasComment("显示的名称");
+
+                    b.Property<Guid?>("FeeGroupId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("费用组Id");
+
+                    b.Property<bool>("IsCommission")
+                        .HasColumnType("bit")
+                        .HasComment("是否佣金,True是佣金。");
+
+                    b.Property<bool>("IsDaiDian")
+                        .HasColumnType("bit")
+                        .HasComment("是否代垫费用,true垫付。");
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("bit")
+                        .HasComment("是否已标记为删除。false(默认)未标记为删除，true标记为删除。");
+
+                    b.Property<bool>("IsGather")
+                        .HasColumnType("bit")
+                        .HasComment("是否应收。true是应收。");
+
+                    b.Property<bool>("IsPay")
+                        .HasColumnType("bit")
+                        .HasComment("是否应付。true是应付。");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("decimal(18,2)")
+                        .HasComment("默认单价");
+
+                    b.Property<string>("Remark")
+                        .HasColumnType("nvarchar(max)")
+                        .HasComment("备注");
+
+                    b.Property<string>("ShortName")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)")
+                        .HasComment("缩写名");
+
+                    b.Property<string>("ShortcutName")
+                        .HasMaxLength(8)
+                        .HasColumnType("varchar(8)")
+                        .HasComment("快捷输入名");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("DD_FeesTypes");
+
+                    b.HasComment("费用种类");
                 });
 
             modelBuilder.Entity("PowerLms.Data.PlMerchant", b =>

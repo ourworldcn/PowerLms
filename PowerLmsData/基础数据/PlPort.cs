@@ -22,10 +22,10 @@ namespace PowerLms.Data
         public string CustomsCode { get; set; }
 
         /// <summary>
-        /// 国家。
+        /// 国家Id。
         /// </summary>
-        [Comment("国家")]
-        public string Country { get; set; }
+        [Comment("国家Id。")]
+        public Guid? CountryId { get; set; }
 
         /// <summary>
         /// 省。

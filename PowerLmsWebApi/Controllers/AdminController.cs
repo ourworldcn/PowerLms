@@ -11,6 +11,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Net;
 using OW.Data;
 using NuGet.Packaging;
+using NuGet.Protocol;
 
 namespace PowerLmsWebApi.Controllers
 {
@@ -36,11 +37,11 @@ namespace PowerLmsWebApi.Controllers
             _EntityManager = entityManager;
         }
 
-        PowerLmsUserDbContext _DbContext;
-        NpoiManager _NpoiManager;
-        AccountManager _AccountManager;
-        IServiceProvider _ServiceProvider;
-        EntityManager _EntityManager;
+        readonly PowerLmsUserDbContext _DbContext;
+        private readonly NpoiManager _NpoiManager;
+        readonly AccountManager _AccountManager;
+        readonly IServiceProvider _ServiceProvider;
+        readonly EntityManager _EntityManager;
 
         #region 字典目录
 
@@ -50,7 +51,7 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="token">登录令牌。</param>
         /// <param name="startIndex">起始位置，从0开始。</param>
         /// <param name="count">最大返回数量。</param>
-        /// <param name="conditional"></param>
+        /// <param name="conditional">支持 code displayname DataDicType 关键字。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
@@ -61,7 +62,6 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllDataDicCatalogReturnDto();
             var coll = _DbContext.DD_DataDicCatalogs.AsNoTracking().OrderBy(c => c.Id).Skip(startIndex);
-            StringDictionary stringDictionary = new StringDictionary();
 
             foreach (var item in conditional)
                 if (string.Equals(item.Key, "id", StringComparison.OrdinalIgnoreCase))
@@ -76,6 +76,10 @@ namespace PowerLmsWebApi.Controllers
                 else if (string.Equals(item.Key, "displayname", StringComparison.OrdinalIgnoreCase))
                 {
                     coll = coll.Where(c => c.DisplayName.Contains(item.Value));
+                }
+                else if (string.Equals(item.Key, "DataDicType", StringComparison.OrdinalIgnoreCase) && OwConvert.TryToDecimal(item.Value, out var deci))
+                {
+                    coll = coll.Where(c => c.DataDicType == (int)deci);
                 }
             if (count > -1)
                 coll = coll.Take(count);
@@ -985,6 +989,419 @@ namespace PowerLmsWebApi.Controllers
         }
 
         #endregion 单位换算相关
+
+        #region 费用种类相关
+        /// <summary>
+        /// 获取费用种类。
+        /// </summary>
+        /// <param name="token">登录令牌。</param>
+        /// <param name="dataDicId">所属字典目录Id。</param>
+        /// <param name="startIndex">起始位置，从0开始。</param>
+        /// <param name="count">最大返回数量。-1表示全返回。</param>
+        /// <param name="conditional">查询的条件。支持 DisplayName 和 ShortName 查询。</param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定类别Id无效。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        public ActionResult<GetAllFeesTypeReturnDto> GetAllFeesType(Guid token, Guid dataDicId,
+            [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [FromQuery][Range(-1, int.MaxValue)] int count = -1,
+            [FromQuery] Dictionary<string, string> conditional = null)
+        {
+            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetAllFeesTypeReturnDto();
+            var collBase = _DbContext.DD_FeesTypes.AsNoTracking().Where(c => c.DataDicId == dataDicId);
+            var coll = collBase.OrderBy(c => c.Id).Skip(startIndex);
+            foreach (var item in conditional)
+                if (string.Equals(item.Key, nameof(FeesType.Id), StringComparison.OrdinalIgnoreCase))
+                {
+                    if (OwConvert.TryToGuid(item.Value, out var id))
+                        coll = coll.Where(c => c.Id == id);
+                }
+                else if (string.Equals(item.Key, nameof(FeesType.DisplayName), StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.DisplayName.Contains(item.Value));
+                }
+                else if (string.Equals(item.Key, nameof(FeesType.ShortName), StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
+                }
+            if (count > -1)
+                coll = coll.Take(count);
+            result.Total = collBase.Count();
+            result.Result.AddRange(coll);
+            return result;
+        }
+
+        /// <summary>
+        /// 增加费用种类记录。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">参数错误。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPost]
+        public ActionResult<AddFeesTypeReturnDto> AddFeesType(AddFeesTypeParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new AddFeesTypeReturnDto();
+            model.Item.GenerateNewId();
+            var id = model.Item.Id;
+            _DbContext.DD_FeesTypes.Add(model.Item);
+            _DbContext.SaveChanges();
+            result.Id = id;
+            return result;
+        }
+
+        /// <summary>
+        /// 修改费用种类记录。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPut]
+        public ActionResult<ModifyFeesTypeReturnDto> ModifyFeesType(ModifyFeesTypeParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new ModifyFeesTypeReturnDto();
+            if (!_EntityManager.Modify(model.Items))
+            {
+                var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
+                return errResult;
+            }
+            foreach (var item in model.Items)
+            {
+                _DbContext.Entry(item).Property(c => c.DataDicId).IsModified = false;
+            }
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        /// <summary>
+        /// 删除费用种类的记录。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpDelete]
+        public ActionResult<RemoveFeesTypeReturnDto> RemoveFeesType(RemoveFeesTypeParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new RemoveFeesTypeReturnDto();
+            var id = model.Id;
+            var dbSet = _DbContext.DD_FeesTypes;
+            var item = dbSet.Find(id);
+            if (item is null) return BadRequest();
+            //_DbContext.SimpleDataDics.Remove(item);
+            item.IsDelete = true;
+            _DbContext.SaveChanges();
+            //if (item.DataDicType == 1) //若是简单字典
+            //    _DbContext.Database.ExecuteSqlRaw($"delete from {nameof(_DbContext.SimpleDataDics)} where {nameof(SimpleDataDic.DataDicId)}='{id.ToString()}'");
+            //else //其他字典待定
+            //{
+
+            //}
+            return result;
+        }
+
+        /// <summary>
+        /// 恢复指定的被删除费用种类记录。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPost]
+        public ActionResult<RestoreFeesTypeReturnDto> RestoreFeesType(RestoreFeesTypeParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new RestoreFeesTypeReturnDto();
+            if (!_EntityManager.Restore<FeesType>(model.Id))
+            {
+                var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
+                return errResult;
+            }
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        #endregion 费用种类相关
+
+        #region 业务编码规则相关
+        /// <summary>
+        /// 获取业务编码规则。
+        /// </summary>
+        /// <param name="token">登录令牌。</param>
+        /// <param name="dataDicId">所属字典目录Id。</param>
+        /// <param name="startIndex">起始位置，从0开始。</param>
+        /// <param name="count">最大返回数量。-1表示全返回。</param>
+        /// <param name="conditional">查询的条件。支持 DisplayName 和 ShortName 查询。</param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定类别Id无效。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        public ActionResult<GetAllJobNumberRuleReturnDto> GetAllJobNumberRule(Guid token, Guid dataDicId,
+            [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [FromQuery][Range(-1, int.MaxValue)] int count = -1,
+            [FromQuery] Dictionary<string, string> conditional = null)
+        {
+            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetAllJobNumberRuleReturnDto();
+            var collBase = _DbContext.DD_JobNumberRules.AsNoTracking().Where(c => c.DataDicId == dataDicId);
+            var coll = collBase.OrderBy(c => c.Id).Skip(startIndex);
+            foreach (var item in conditional)
+                if (string.Equals(item.Key, nameof(JobNumberRule.Id), StringComparison.OrdinalIgnoreCase))
+                {
+                    if (OwConvert.TryToGuid(item.Value, out var id))
+                        coll = coll.Where(c => c.Id == id);
+                }
+                else if (string.Equals(item.Key, nameof(JobNumberRule.DisplayName), StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.DisplayName.Contains(item.Value));
+                }
+                else if (string.Equals(item.Key, nameof(JobNumberRule.ShortName), StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
+                }
+            if (count > -1)
+                coll = coll.Take(count);
+            result.Total = collBase.Count();
+            result.Result.AddRange(coll);
+            return result;
+        }
+
+        /// <summary>
+        /// 增加业务编码规则记录。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">参数错误。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPost]
+        public ActionResult<AddJobNumberRuleReturnDto> AddJobNumberRule(AddJobNumberRuleParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new AddJobNumberRuleReturnDto();
+            model.Item.GenerateNewId();
+            var id = model.Item.Id;
+            _DbContext.DD_JobNumberRules.Add(model.Item);
+            _DbContext.SaveChanges();
+            result.Id = id;
+            return result;
+        }
+
+        /// <summary>
+        /// 修改业务编码规则记录。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPut]
+        public ActionResult<ModifyJobNumberRuleReturnDto> ModifyJobNumberRule(ModifyJobNumberRuleParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new ModifyJobNumberRuleReturnDto();
+            if (!_EntityManager.Modify(model.Items))
+            {
+                var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
+                return errResult;
+            }
+            foreach (var item in model.Items)
+            {
+                _DbContext.Entry(item).Property(c => c.DataDicId).IsModified = false;
+            }
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        /// <summary>
+        /// 删除业务编码规则的记录。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpDelete]
+        public ActionResult<RemoveJobNumberRuleReturnDto> RemoveJobNumberRule(RemoveJobNumberRuleParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new RemoveJobNumberRuleReturnDto();
+            var id = model.Id;
+            var dbSet = _DbContext.DD_JobNumberRules;
+            var item = dbSet.Find(id);
+            if (item is null) return BadRequest();
+            //_DbContext.SimpleDataDics.Remove(item);
+            item.IsDelete = true;
+            _DbContext.SaveChanges();
+            //if (item.DataDicType == 1) //若是简单字典
+            //    _DbContext.Database.ExecuteSqlRaw($"delete from {nameof(_DbContext.SimpleDataDics)} where {nameof(SimpleDataDic.DataDicId)}='{id.ToString()}'");
+            //else //其他字典待定
+            //{
+
+            //}
+            return result;
+        }
+
+        /// <summary>
+        /// 恢复指定的被删除业务编码规则记录。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPost]
+        public ActionResult<RestoreJobNumberRuleReturnDto> RestoreJobNumberRule(RestoreJobNumberRuleParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new RestoreJobNumberRuleReturnDto();
+            if (!_EntityManager.Restore<JobNumberRule>(model.Id))
+            {
+                var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
+                return errResult;
+            }
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        #endregion 业务编码规则相关
+
+    }
+
+    /// <summary>
+    /// 恢复指定的被删除业务编码规则记录的功能参数封装类。
+    /// </summary>
+    public class RestoreJobNumberRuleParamsDto : RestoreParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 恢复指定的被删除业务编码规则记录的功能返回值封装类。
+    /// </summary>
+    public class RestoreJobNumberRuleReturnDto : RestoreReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 删除业务编码规则记录的功能参数封装类。
+    /// </summary>
+    public class RemoveJobNumberRuleParamsDto : RemoveParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 删除业务编码规则记录的功能返回值封装类。
+    /// </summary>
+    public class RemoveJobNumberRuleReturnDto : RemoveReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 修改业务编码规则记录的功能参数封装类。
+    /// </summary>
+    public class ModifyJobNumberRuleParamsDto : ModifyParamsDtoBase<JobNumberRule>
+    {
+    }
+
+    /// <summary>
+    /// 修改业务编码规则记录的功能返回值封装类。
+    /// </summary>
+    public class ModifyJobNumberRuleReturnDto : ModifyReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 增加业务编码规则记录的功能参数封装类。
+    /// </summary>
+    public class AddJobNumberRuleParamsDto : AddParamsDtoBase<JobNumberRule>
+    {
+    }
+
+    /// <summary>
+    ///增加业务编码规则记录的功能返回值封装类。
+    /// </summary>
+    public class AddJobNumberRuleReturnDto : AddReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 查询业务编码规则记录的功能返回值封装类。
+    /// </summary>
+    public class GetAllJobNumberRuleReturnDto : PagingReturnDtoBase<JobNumberRule>
+    {
+    }
+
+    /// <summary>
+    /// 恢复费用种类记录的功能参数封装类。
+    /// </summary>
+    public class RestoreFeesTypeParamsDto : RestoreParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 恢复费用种类记录的功能返回值封装类。
+    /// </summary>
+    public class RestoreFeesTypeReturnDto : RestoreReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 删除费用种类记录的功能参数封装类。
+    /// </summary>
+    public class RemoveFeesTypeParamsDto : RemoveParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 删除费用种类记录的功能返回值封装类。
+    /// </summary>
+    public class RemoveFeesTypeReturnDto : RemoveReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 修改费用种类记录的功能参数封装类。
+    /// </summary>
+    public class ModifyFeesTypeParamsDto : ModifyParamsDtoBase<FeesType>
+    {
+    }
+
+    /// <summary>
+    /// 修改费用种类记录的功能返回值封装类。
+    /// </summary>
+    public class ModifyFeesTypeReturnDto : ModifyReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 增加费用种类记录的功能参数封装类。
+    /// </summary>
+    public class AddFeesTypeParamsDto : AddParamsDtoBase<FeesType>
+    {
+    }
+
+    /// <summary>
+    /// 增加费用种类记录的功能返回值封装类。
+    /// </summary>
+    public class AddFeesTypeReturnDto : AddReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 获取费用种类的功能返回值封装类。
+    /// </summary>
+    public class GetAllFeesTypeReturnDto : PagingReturnDtoBase<FeesType>
+    {
     }
 
     /// <summary>
