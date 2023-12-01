@@ -12,6 +12,8 @@ using System.Net;
 using OW.Data;
 using NuGet.Packaging;
 using NuGet.Protocol;
+using AutoMapper;
+using NPOI.SS.Formula.Functions;
 
 namespace PowerLmsWebApi.Controllers
 {
@@ -28,13 +30,15 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="accountManager"></param>
         /// <param name="scope"></param>
         /// <param name="entityManager"></param>
-        public AdminController(PowerLmsUserDbContext context, NpoiManager npoiManager, AccountManager accountManager, IServiceProvider scope, EntityManager entityManager)
+        /// <param name="mapper"></param>
+        public AdminController(PowerLmsUserDbContext context, NpoiManager npoiManager, AccountManager accountManager, IServiceProvider scope, EntityManager entityManager, IMapper mapper)
         {
             _DbContext = context;
             _NpoiManager = npoiManager;
             _AccountManager = accountManager;
             _ServiceProvider = scope;
             _EntityManager = entityManager;
+            _Mapper = mapper;
         }
 
         readonly PowerLmsUserDbContext _DbContext;
@@ -42,6 +46,7 @@ namespace PowerLmsWebApi.Controllers
         readonly AccountManager _AccountManager;
         readonly IServiceProvider _ServiceProvider;
         readonly EntityManager _EntityManager;
+        readonly IMapper _Mapper;
 
         #region 字典目录
 
@@ -61,7 +66,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllDataDicCatalogReturnDto();
-            var coll = _DbContext.DD_DataDicCatalogs.AsNoTracking().OrderBy(c => c.Id).Skip(startIndex);
+            var coll = _DbContext.DD_DataDicCatalogs.AsNoTracking();
 
             foreach (var item in conditional)
                 if (string.Equals(item.Key, "id", StringComparison.OrdinalIgnoreCase))
@@ -71,7 +76,7 @@ namespace PowerLmsWebApi.Controllers
                 }
                 else if (string.Equals(item.Key, "code", StringComparison.OrdinalIgnoreCase))
                 {
-                    coll = coll.Where(c => c.Code == item.Value);
+                    coll = coll.Where(c => c.Code.Contains(item.Value));
                 }
                 else if (string.Equals(item.Key, "displayname", StringComparison.OrdinalIgnoreCase))
                 {
@@ -81,10 +86,8 @@ namespace PowerLmsWebApi.Controllers
                 {
                     coll = coll.Where(c => c.DataDicType == (int)deci);
                 }
-            if (count > -1)
-                coll = coll.Take(count);
-            result.Total = _DbContext.DD_DataDicCatalogs.Count();
-            result.Result.AddRange(coll);
+            var prb = _EntityManager.GetAll(coll, startIndex, count);
+            _Mapper.Map(prb, result);
             return result;
 
         }
@@ -309,8 +312,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllDataDicReturnDto();
-            var collBase = _DbContext.DD_SimpleDataDics.AsNoTracking().Where(c => c.DataDicId == catalogId);
-            var coll = collBase.OrderBy(c => c.Id).Skip(startIndex);
+            var coll = _DbContext.DD_SimpleDataDics.Where(c => c.DataDicId == catalogId).AsNoTracking();
             foreach (var item in conditional)
                 if (string.Equals(item.Key, "id", StringComparison.OrdinalIgnoreCase))
                 {
@@ -325,10 +327,8 @@ namespace PowerLmsWebApi.Controllers
                 {
                     coll = coll.Where(c => c.DisplayName.Contains(item.Value));
                 }
-            if (count > -1)
-                coll = coll.Take(count);
-            result.Total = collBase.Count();
-            result.Result.AddRange(coll);
+            var prb = _EntityManager.GetAll(coll, 0, -1);
+            _Mapper.Map(prb, result);
             return result;
         }
 
@@ -466,8 +466,8 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllBusinessTypeReturnDto();
             var collBase = _DbContext.DD_BusinessTypeDataDics.AsNoTracking();
-            result.Result.AddRange(collBase);
-            result.Total = collBase.Count();
+            var prb = _EntityManager.GetAll(collBase, 0, -1);
+            _Mapper.Map(prb, result);
             return result;
         }
 
@@ -492,8 +492,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPortReturnDto();
-            var collBase = _DbContext.DD_PlPorts.AsNoTracking().Where(c => c.DataDicId == catalogId);
-            var coll = collBase.OrderBy(c => c.Id).Skip(startIndex);
+            var coll= _DbContext.DD_PlPorts.AsNoTracking().Where(c => c.DataDicId == catalogId);
             foreach (var item in conditional)
                 if (string.Equals(item.Key, "id", StringComparison.OrdinalIgnoreCase))
                 {
@@ -508,10 +507,8 @@ namespace PowerLmsWebApi.Controllers
                 {
                     coll = coll.Where(c => c.DisplayName.Contains(item.Value));
                 }
-            if (count > -1)
-                coll = coll.Take(count);
-            result.Total = collBase.Count();
-            result.Result.AddRange(coll);
+            var prb = _EntityManager.GetAll(coll, startIndex, count);
+            _Mapper.Map(prb, result);
             return result;
         }
 
@@ -638,8 +635,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlCargoRouteReturnDto();
-            var collBase = _DbContext.DD_PlCargoRoutes.AsNoTracking().Where(c => c.DataDicId == catalogId);
-            var coll = collBase.OrderBy(c => c.Id).Skip(startIndex);
+            var coll = _DbContext.DD_PlCargoRoutes.AsNoTracking().Where(c => c.DataDicId == catalogId);
             foreach (var item in conditional)
                 if (string.Equals(item.Key, "id", StringComparison.OrdinalIgnoreCase))
                 {
@@ -654,10 +650,8 @@ namespace PowerLmsWebApi.Controllers
                 {
                     coll = coll.Where(c => c.DisplayName.Contains(item.Value));
                 }
-            if (count > -1)
-                coll = coll.Take(count);
-            result.Total = collBase.Count();
-            result.Result.AddRange(coll);
+            var prb = _EntityManager.GetAll(coll, startIndex, count);
+            _Mapper.Map(prb, result);
             return result;
         }
 
@@ -783,8 +777,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlExchangeRateReturnDto();
-            var collBase = _DbContext.DD_PlExchangeRates.AsNoTracking().Where(c => c.OrgId == orgId);
-            var coll = collBase.OrderBy(c => c.Id).Skip(startIndex);
+            var coll = _DbContext.DD_PlExchangeRates.AsNoTracking().Where(c => c.OrgId == orgId);
             foreach (var item in conditional)
                 if (string.Equals(item.Key, "id", StringComparison.OrdinalIgnoreCase))
                 {
@@ -799,10 +792,8 @@ namespace PowerLmsWebApi.Controllers
                 {
                     coll = coll.Where(c => c.EndData <= edt);
                 }
-            if (count > -1)
-                coll = coll.Take(count);
-            result.Total = collBase.Count();
-            result.Result.AddRange(coll);
+            var prb = _EntityManager.GetAll(coll, startIndex, count);
+            _Mapper.Map(prb, result);
             return result;
         }
 
@@ -871,8 +862,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllUnitConversionReturnDto();
-            var collBase = _DbContext.DD_UnitConversions.AsNoTracking().Where(c => c.OrgId == orgId);
-            var coll = collBase.OrderBy(c => c.Id).Skip(startIndex);
+            var coll= _DbContext.DD_UnitConversions.AsNoTracking().Where(c => c.OrgId == orgId);
             foreach (var item in conditional)
                 if (string.Equals(item.Key, "id", StringComparison.OrdinalIgnoreCase))
                 {
@@ -887,10 +877,8 @@ namespace PowerLmsWebApi.Controllers
                 {
                     coll = coll.Where(c => c.Rim.Contains(item.Value));
                 }
-            if (count > -1)
-                coll = coll.Take(count);
-            result.Total = collBase.Count();
-            result.Result.AddRange(coll);
+            var prb = _EntityManager.GetAll(coll, startIndex, count);
+            _Mapper.Map(prb, result);
             return result;
         }
 
@@ -1026,10 +1014,8 @@ namespace PowerLmsWebApi.Controllers
                 {
                     coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
                 }
-            if (count > -1)
-                coll = coll.Take(count);
-            result.Total = collBase.Count();
-            result.Result.AddRange(coll);
+            var prb = _EntityManager.GetAll(coll, startIndex, count);
+            _Mapper.Map(prb, result);
             return result;
         }
 
@@ -1153,8 +1139,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllJobNumberRuleReturnDto();
-            var collBase = _DbContext.DD_JobNumberRules.AsNoTracking().Where(c => c.DataDicId == dataDicId);
-            var coll = collBase.OrderBy(c => c.Id).Skip(startIndex);
+            var coll = _DbContext.DD_JobNumberRules.AsNoTracking().Where(c => c.DataDicId == dataDicId);
             foreach (var item in conditional)
                 if (string.Equals(item.Key, nameof(JobNumberRule.Id), StringComparison.OrdinalIgnoreCase))
                 {
@@ -1169,10 +1154,8 @@ namespace PowerLmsWebApi.Controllers
                 {
                     coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
                 }
-            if (count > -1)
-                coll = coll.Take(count);
-            result.Total = collBase.Count();
-            result.Result.AddRange(coll);
+            var prb = _EntityManager.GetAll(coll, startIndex, count);
+            _Mapper.Map(prb, result);
             return result;
         }
 

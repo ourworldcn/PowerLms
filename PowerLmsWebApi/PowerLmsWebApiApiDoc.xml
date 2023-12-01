@@ -150,7 +150,7 @@
             管理员功能控制器。
             </summary>
         </member>
-        <member name="M:PowerLmsWebApi.Controllers.AdminController.#ctor(PowerLmsServer.EfData.PowerLmsUserDbContext,PowerLmsServer.Managers.NpoiManager,PowerLmsServer.Managers.AccountManager,System.IServiceProvider,PowerLmsServer.Managers.EntityManager)">
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.#ctor(PowerLmsServer.EfData.PowerLmsUserDbContext,PowerLmsServer.Managers.NpoiManager,PowerLmsServer.Managers.AccountManager,System.IServiceProvider,PowerLmsServer.Managers.EntityManager,AutoMapper.IMapper)">
             <summary>
             
             </summary>
@@ -159,6 +159,7 @@
             <param name="accountManager"></param>
             <param name="scope"></param>
             <param name="entityManager"></param>
+            <param name="mapper"></param>
         </member>
         <member name="M:PowerLmsWebApi.Controllers.AdminController.GetAllDataDicCatalog(System.Guid,System.Int32,System.Int32,System.Collections.Generic.Dictionary{System.String,System.String})">
             <summary>
@@ -1213,6 +1214,11 @@
         <member name="P:PowerLmsWebApi.Dto.LoginParamsDto.LanguageTag">
             <summary>
             使用的首选语言标准缩写。如:zh-CN。如果省略或为空则使用上次成功登录的首选语言，如果没有指定默认为zh-CN。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Dto.LoginParamsDto.EvidenceType">
+            <summary>
+            LoginName的类型。1=登陆账号名，2=邮箱地址，4=手机号。
             </summary>
         </member>
         <member name="T:PowerLmsWebApi.Dto.LoginReturnDto">

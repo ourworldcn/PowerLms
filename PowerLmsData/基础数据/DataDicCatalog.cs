@@ -31,9 +31,9 @@ namespace PowerLms.Data
         public string DisplayName { get; set; }
 
         /// <summary>
-        /// 数据字典的类型。1=简单字典，其它值随后逐步定义。
+        /// 数据字典的类型。1=简单字典；2=复杂字典；3=这是简单字典，但UI需要作为复杂字典处理（实际是掩码D0+D1）；其它值随后逐步定义。
         /// </summary>
-        [Comment("数据字典的类型。1=简单字典，其它值随后逐步定义。")]
+        [Comment("数据字典的类型。1=简单字典；2=复杂字典；3=这是简单字典，但UI需要作为复杂字典处理（实际是掩码D0+D1）；其它值随后逐步定义。")]
         public int DataDicType { get; set; }
 
         /// <summary>

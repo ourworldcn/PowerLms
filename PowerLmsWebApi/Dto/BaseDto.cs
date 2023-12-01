@@ -1,4 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using AutoMapper;
+using PowerLmsServer.Managers;
+using System.ComponentModel.DataAnnotations;
 
 namespace PowerLmsWebApi.Dto
 {
@@ -49,6 +51,7 @@ namespace PowerLmsWebApi.Dto
     /// 返回分页数据的封装类的基类
     /// </summary>
     /// <typeparam name="T">集合元素的类型。</typeparam>
+    [AutoMap(typeof(PagingReturnBase<>))]
     public abstract class PagingReturnDtoBase<T> : ReturnDtoBase
     {
         /// <summary>

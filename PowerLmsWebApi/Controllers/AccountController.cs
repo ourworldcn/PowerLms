@@ -50,7 +50,21 @@ namespace PowerLmsWebApi.Controllers
         {
             var result = new LoginReturnDto();
             var pwdHash = Account.GetPwdHash(model.Pwd);
-            var user = _DbContext.Accounts.FirstOrDefault(c => (c.LoginName == model.LoginName || c.Mobile == model.LoginName || c.EMail == model.LoginName) && c.PwdHash==pwdHash);
+            Account user;
+            switch (model.EvidenceType)
+            {
+                case 1:
+                    user = _DbContext.Accounts.FirstOrDefault(c => (c.LoginName == model.LoginName) && c.PwdHash == pwdHash);
+                    break;
+                case 2:
+                    user = _DbContext.Accounts.FirstOrDefault(c => (c.EMail == model.LoginName) && c.PwdHash == pwdHash);
+                    break;
+                case 4:
+                    user = _DbContext.Accounts.FirstOrDefault(c => (c.Mobile == model.LoginName) && c.PwdHash == pwdHash);
+                    break;
+                default:
+                    return BadRequest($"不认识的EvidenceType类型:{model.EvidenceType}");
+            }
             if (user is null) return BadRequest();
             if (!user.IsPwd(model.Pwd)) return BadRequest();
             result.Token = Guid.NewGuid();
@@ -61,7 +75,7 @@ namespace PowerLmsWebApi.Controllers
             //设置直属组织机构信息。
             var orgIds = _DbContext.AccountPlOrganizations.Where(c => c.UserId == user.Id).Select(c => c.OrgId);
             result.Orgs.AddRange(_DbContext.PlOrganizations.Where(c => orgIds.Contains(c.Id)));
-            result.User=user;
+            result.User = user;
             return result;
         }
 

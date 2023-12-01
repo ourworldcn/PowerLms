@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.VisualBasic;
 using OW.Data;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
@@ -96,5 +97,81 @@ namespace PowerLmsServer.Managers
             entity.IsDelete = false;
             return true;
         }
+
+        /// <summary>
+        /// 获取一个集合的分页结果。
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="values"></param>
+        /// <param name="startIndex"></param>
+        /// <param name="count">-1则获取所有。</param>
+        /// <returns></returns>
+        public PagingReturnBase<T> GetAll<T>(IQueryable<T> values, int startIndex, int count = -1)
+        {
+            var result = new PagingReturnBase<T>();
+            var coll = values.Skip(startIndex);
+            if (count > -1) coll = coll.Take(count);
+            result.Result.AddRange(coll);
+            result.Total = count == -1 ? result.Result.Count : values.Count();
+            return result;
+        }
+
     }
+
+    /// <summary>
+    /// 返回分页数据的封装类的基类
+    /// </summary>
+    /// <typeparam name="T">集合元素的类型。</typeparam>
+    public class PagingReturnBase<T> : ReturnBase
+    {
+        /// <summary>
+        /// 构造函数。
+        /// </summary>
+        public PagingReturnBase()
+        {
+
+        }
+
+        /// <summary>
+        /// 集合元素的最大总数量。
+        /// </summary>
+        public int Total { get; set; }
+
+        /// <summary>
+        /// 返回的集合。
+        /// </summary>
+        public List<T> Result { get; set; } = new List<T>();
+    }
+
+    /// <summary>
+    /// 返回对象的基类。
+    /// </summary>
+    public class ReturnBase
+    {
+        /// <summary>
+        /// 
+        /// </summary>
+        public ReturnBase()
+        {
+
+        }
+
+        /// <summary>
+        /// 是否有错误。不设置则使用<see cref="ErrorCode"/>来判定。
+        /// </summary>
+        /// <value>0没有错误，其它数值含义由应用定义。</value>
+        public bool HasError { get; set; }
+
+        /// <summary>
+        /// 错误码，参见 ErrorCodes。
+        /// </summary>
+        public int ErrorCode { get; set; }
+
+        /// <summary>
+        /// 调试信息，如果发生错误，这里给出简要说明。
+        /// </summary>
+        public string DebugMessage { get; set; }
+
+    }
+
 }

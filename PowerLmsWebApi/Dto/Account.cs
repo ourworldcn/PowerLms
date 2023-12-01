@@ -24,6 +24,12 @@ namespace PowerLmsWebApi.Dto
         /// 使用的首选语言标准缩写。如:zh-CN。如果省略或为空则使用上次成功登录的首选语言，如果没有指定默认为zh-CN。
         /// </summary>
         public string LanguageTag { get; set; }
+
+        /// <summary>
+        /// LoginName的类型。1=登陆账号名，2=邮箱地址，4=手机号。
+        /// </summary>
+        [Range(1, 7)]
+        public int EvidenceType { get; set; }
     }
 
     /// <summary>

@@ -104,6 +104,63 @@
             <param name="id"></param>
             <returns></returns>
         </member>
+        <member name="M:PowerLmsServer.Managers.EntityManager.GetAll``1(System.Linq.IQueryable{``0},System.Int32,System.Int32)">
+            <summary>
+            获取一个集合的分页结果。
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="values"></param>
+            <param name="startIndex"></param>
+            <param name="count">-1则获取所有。</param>
+            <returns></returns>
+        </member>
+        <member name="T:PowerLmsServer.Managers.PagingReturnBase`1">
+            <summary>
+            返回分页数据的封装类的基类
+            </summary>
+            <typeparam name="T">集合元素的类型。</typeparam>
+        </member>
+        <member name="M:PowerLmsServer.Managers.PagingReturnBase`1.#ctor">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.Managers.PagingReturnBase`1.Total">
+            <summary>
+            集合元素的最大总数量。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.Managers.PagingReturnBase`1.Result">
+            <summary>
+            返回的集合。
+            </summary>
+        </member>
+        <member name="T:PowerLmsServer.Managers.ReturnBase">
+            <summary>
+            返回对象的基类。
+            </summary>
+        </member>
+        <member name="M:PowerLmsServer.Managers.ReturnBase.#ctor">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.Managers.ReturnBase.HasError">
+            <summary>
+            是否有错误。不设置则使用<see cref="P:PowerLmsServer.Managers.ReturnBase.ErrorCode"/>来判定。
+            </summary>
+            <value>0没有错误，其它数值含义由应用定义。</value>
+        </member>
+        <member name="P:PowerLmsServer.Managers.ReturnBase.ErrorCode">
+            <summary>
+            错误码，参见 ErrorCodes。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.Managers.ReturnBase.DebugMessage">
+            <summary>
+            调试信息，如果发生错误，这里给出简要说明。
+            </summary>
+        </member>
         <member name="T:PowerLmsServer.Managers.InitializerService">
             <summary>
             初始化服务。
