@@ -12,7 +12,7 @@ namespace PowerLms.Data
     /// 费用种类。Code 是费用代码，DisplayName是费用名称，ShortName是英文名称,Remark是附加说明。
     /// </summary>
     [Comment("费用种类")]
-    public class FeesType : DataDicBase, IMarkDelete
+    public class FeesType : NamedSpecialDataDicBase, IMarkDelete
     {
         /// <summary>
         /// 币种Id。

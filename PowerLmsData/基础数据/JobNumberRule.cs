@@ -26,7 +26,7 @@ namespace PowerLms.Data
     /// 编码规则。
     /// </summary>
     [Comment("业务编码规则")]
-    public class JobNumberRule : DataDicBase
+    public class JobNumberRule : NamedSpecialDataDicBase
     {
         /// <summary>
         /// 前缀。

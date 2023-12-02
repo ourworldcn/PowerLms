@@ -12,19 +12,13 @@ namespace PowerLms.Data
     /// 汇率。
     /// </summary>
     [Comment("汇率")]
-    public class PlExchangeRate : GuidKeyObjectBase
+    public class PlExchangeRate : SpecialDataDicBase
     {
         /// <summary>
         /// 业务类型Id。
         /// </summary>
         [Comment("业务类型Id")]
         public Guid BusinessTypeId { get; set; }
-
-        /// <summary>
-        /// 所属组织机构Id。
-        /// </summary>
-        [Comment("所属组织机构Id")]
-        public Guid? OrgId { get; set; }
 
         /// <summary>
         /// 源币种。

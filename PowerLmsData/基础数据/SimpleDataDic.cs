@@ -47,6 +47,12 @@ namespace PowerLms.Data
         public DateTime? CreateDateTime { get; set; }
 
         /// <summary>
+        /// 所属数据字典目录的Id。
+        /// </summary>
+        [Comment("所属数据字典目录的Id")]
+        public virtual Guid? DataDicId { get; set; }
+
+        /// <summary>
         /// <inheritdoc/>
         /// </summary>
         /// <returns>返回除<see cref="GuidKeyObjectBase.Id"/>属性外，其余属性完全相同的对象。</returns>

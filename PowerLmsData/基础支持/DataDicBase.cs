@@ -16,6 +16,12 @@ namespace PowerLms.Data
     /// </summary>
     public interface IDataDic
     {
+        /// <summary>
+        /// 编码。对本系统有一定意义的编码。
+        /// </summary>
+        [Comment("编码，对本系统有一定意义的编码")]
+        [Column(TypeName = "varchar"), MaxLength(32), Required(AllowEmptyStrings = false)]   //最多32个ASCII字符
+        public abstract string Code { get; set; }
 
     }
 
@@ -72,12 +78,6 @@ namespace PowerLms.Data
         public virtual string ShortcutName { get; set; }
 
         /// <summary>
-        /// 所属数据字典目录的Id。
-        /// </summary>
-        [Comment("所属数据字典目录的Id")]
-        public virtual Guid? DataDicId { get; set; }
-
-        /// <summary>
         /// 备注.
         /// </summary>
         [Comment("备注")]
@@ -89,5 +89,64 @@ namespace PowerLms.Data
         [Comment("是否已标记为删除。false(默认)未标记为删除，true标记为删除。")]
         public bool IsDelete { get; set; }
 
+    }
+
+    /// <summary>
+    /// 特殊字典的基类。
+    /// </summary>
+    public abstract class SpecialDataDicBase : GuidKeyObjectBase, IMarkDelete
+    {
+        /// <summary>
+        /// 所属组织机构Id。
+        /// </summary>
+        [Comment("所属组织机构Id")]
+        public Guid? OrgId { get; set; }
+
+        /// <summary>
+        /// 快捷输入名。如"as6"则在键盘输入按as6能选择到此项。服务器并不使用该字段。
+        /// </summary>
+        [Comment("快捷输入名")]
+        [Column(TypeName = "varchar"), MaxLength(8)]
+        public virtual string ShortcutName { get; set; }
+
+        /// <summary>
+        /// 是否已标记为删除。false(默认)未标记为删除，true标记为删除。
+        /// </summary>
+        [Comment("是否已标记为删除。false(默认)未标记为删除，true标记为删除。")]
+        public bool IsDelete { get; set; }
+
+    }
+
+    /// <summary>
+    /// 带多个命名的特殊字典的基类。
+    /// </summary>
+    public abstract class NamedSpecialDataDicBase : SpecialDataDicBase, IMarkDelete
+    {
+        /// <summary>
+        /// 编码。对本系统有一定意义的编码。
+        /// </summary>
+        [Comment("编码，对本系统有一定意义的编码")]
+        [Column(TypeName = "varchar"), MaxLength(32), Required(AllowEmptyStrings = false)]   //最多32个ASCII字符
+        public virtual string Code { get; set; }
+
+        /// <summary>
+        /// 显示的名称。
+        /// </summary>
+        [Comment("显示的名称")]
+        [MaxLength(128)]
+        public virtual string DisplayName { get; set; }
+
+        /// <summary>
+        /// 缩写名。
+        /// </summary>
+        [Comment("缩写名")]
+        [MaxLength(32)]
+        public string ShortName { get; set; }
+
+        /// <summary>
+        /// 备注.
+        /// </summary>
+        [Comment("备注")]
+        public string Remark { get; set; }
     }
 }

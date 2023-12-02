@@ -4,6 +4,16 @@
         <name>PowerLmsData</name>
     </assembly>
     <members>
+        <member name="T:PowerLmsData.基础数据.PlCountry">
+            <summary>
+            国家。
+            </summary>
+        </member>
+        <member name="T:PowerLmsData.基础数据.PlCurrency">
+            <summary>
+            币种。
+            </summary>
+        </member>
         <member name="T:PowerLmsServer.EfData.MigrateDbInitializer">
             <summary>
             
@@ -101,6 +111,16 @@
             业务编码规则表。
             </summary>
         </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.DD_PlCountrys">
+            <summary>
+            国家表。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.DD_PlCurrencys">
+            <summary>
+            币种表。
+            </summary>
+        </member>
         <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.Multilinguals">
             <summary>
             多语言资源表。
@@ -134,6 +154,11 @@
         <member name="T:PowerLms.Data.IDataDic">
             <summary>
             数据字典的标识接口。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.IDataDic.Code">
+            <summary>
+            编码。对本系统有一定意义的编码。
             </summary>
         </member>
         <member name="T:PowerLms.Data.IMarkDelete">
@@ -176,11 +201,6 @@
             快捷输入名。如"as6"则在键盘输入按as6能选择到此项，8个ASCII字符不足的尾部填充空格。服务器并不使用该字段。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.DataDicBase.DataDicId">
-            <summary>
-            所属数据字典目录的Id。
-            </summary>
-        </member>
         <member name="P:PowerLms.Data.DataDicBase.Remark">
             <summary>
             备注.
@@ -189,6 +209,111 @@
         <member name="P:PowerLms.Data.DataDicBase.IsDelete">
             <summary>
             是否已标记为删除。false(默认)未标记为删除，true标记为删除。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.SpecialDataDicBase">
+            <summary>
+            特殊字典的基类。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.SpecialDataDicBase.OrgId">
+            <summary>
+            所属组织机构Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.SpecialDataDicBase.ShortcutName">
+            <summary>
+            快捷输入名。如"as6"则在键盘输入按as6能选择到此项。服务器并不使用该字段。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.SpecialDataDicBase.IsDelete">
+            <summary>
+            是否已标记为删除。false(默认)未标记为删除，true标记为删除。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.NamedSpecialDataDicBase">
+            <summary>
+            带多个命名的特殊字典的基类。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.NamedSpecialDataDicBase.Code">
+            <summary>
+            编码。对本系统有一定意义的编码。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.NamedSpecialDataDicBase.DisplayName">
+            <summary>
+            显示的名称。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.NamedSpecialDataDicBase.ShortName">
+            <summary>
+            缩写名。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.NamedSpecialDataDicBase.Remark">
+            <summary>
+            备注.
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.PlAddress">
+            <summary>
+            地址类。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlAddress.Tel">
+            <summary>
+            电话。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlAddress.Fax">
+            <summary>
+            传真。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlAddress.FullAddress">
+            <summary>
+            详细地址。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.PlSimpleOwnedAddress">
+            <summary>
+            嵌套在其他类中的地址类。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlSimpleOwnedAddress.Tel">
+            <summary>
+            电话。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlSimpleOwnedAddress.Fax">
+            <summary>
+            传真。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlSimpleOwnedAddress.FullAddress">
+            <summary>
+            详细地址。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.PlOwnedName">
+            <summary>
+            对实体名称描述的自含复杂类。此类嵌入在不同实体中有不同的解释。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlOwnedName.Name">
+            <summary>
+            正式名称，拥有相对稳定性。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlOwnedName.ShortName">
+            <summary>
+            正式简称。对正式的组织机构通常简称也是规定的。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlOwnedName.DisplayName">
+            <summary>
+            显示名，有时它是昵称或简称(系统内)的意思。
             </summary>
         </member>
         <member name="T:PowerLms.Data.BusinessTypeDataDic">
@@ -209,11 +334,6 @@
         <member name="P:PowerLms.Data.DataDicCatalog.DisplayName">
             <summary>
             显示名称。
-            </summary>
-        </member>
-        <member name="P:PowerLms.Data.DataDicCatalog.DataDicType">
-            <summary>
-            数据字典的类型。1=简单字典；2=复杂字典；3=这是简单字典，但UI需要作为复杂字典处理（实际是掩码D0+D1）；其它值随后逐步定义。
             </summary>
         </member>
         <member name="P:PowerLms.Data.DataDicCatalog.OrgId">
@@ -296,66 +416,6 @@
             记录最后一次归零的日期。
             </summary>
         </member>
-        <member name="T:PowerLms.Data.PlAddress">
-            <summary>
-            地址类。
-            </summary>
-        </member>
-        <member name="P:PowerLms.Data.PlAddress.Tel">
-            <summary>
-            电话。
-            </summary>
-        </member>
-        <member name="P:PowerLms.Data.PlAddress.Fax">
-            <summary>
-            传真。
-            </summary>
-        </member>
-        <member name="P:PowerLms.Data.PlAddress.FullAddress">
-            <summary>
-            详细地址。
-            </summary>
-        </member>
-        <member name="T:PowerLms.Data.PlSimpleOwnedAddress">
-            <summary>
-            嵌套在其他类中的地址类。
-            </summary>
-        </member>
-        <member name="P:PowerLms.Data.PlSimpleOwnedAddress.Tel">
-            <summary>
-            电话。
-            </summary>
-        </member>
-        <member name="P:PowerLms.Data.PlSimpleOwnedAddress.Fax">
-            <summary>
-            传真。
-            </summary>
-        </member>
-        <member name="P:PowerLms.Data.PlSimpleOwnedAddress.FullAddress">
-            <summary>
-            详细地址。
-            </summary>
-        </member>
-        <member name="T:PowerLms.Data.PlOwnedName">
-            <summary>
-            对实体名称描述的自含复杂类。此类嵌入在不同实体中有不同的解释。
-            </summary>
-        </member>
-        <member name="P:PowerLms.Data.PlOwnedName.Name">
-            <summary>
-            正式名称，拥有相对稳定性。
-            </summary>
-        </member>
-        <member name="P:PowerLms.Data.PlOwnedName.ShortName">
-            <summary>
-            正式简称。对正式的组织机构通常简称也是规定的。
-            </summary>
-        </member>
-        <member name="P:PowerLms.Data.PlOwnedName.DisplayName">
-            <summary>
-            显示名，有时它是昵称或简称(系统内)的意思。
-            </summary>
-        </member>
         <member name="T:PowerLms.Data.PlExchangeRate">
             <summary>
             汇率。
@@ -364,11 +424,6 @@
         <member name="P:PowerLms.Data.PlExchangeRate.BusinessTypeId">
             <summary>
             业务类型Id。
-            </summary>
-        </member>
-        <member name="P:PowerLms.Data.PlExchangeRate.OrgId">
-            <summary>
-            所属组织机构Id。
             </summary>
         </member>
         <member name="P:PowerLms.Data.PlExchangeRate.SCurrencyId">
@@ -466,6 +521,11 @@
             创建时间。
             </summary>
         </member>
+        <member name="P:PowerLms.Data.SimpleDataDic.DataDicId">
+            <summary>
+            所属数据字典目录的Id。
+            </summary>
+        </member>
         <member name="M:PowerLms.Data.SimpleDataDic.Clone">
             <summary>
             <inheritdoc/>
@@ -475,11 +535,6 @@
         <member name="T:PowerLms.Data.UnitConversion">
             <summary>
             单位换算。
-            </summary>
-        </member>
-        <member name="P:PowerLms.Data.UnitConversion.OrgId">
-            <summary>
-            所属组织机构Id。
             </summary>
         </member>
         <member name="P:PowerLms.Data.UnitConversion.Basic">
@@ -495,11 +550,6 @@
         <member name="P:PowerLms.Data.UnitConversion.Rate">
             <summary>
             换算率。
-            </summary>
-        </member>
-        <member name="P:PowerLms.Data.UnitConversion.IsDelete">
-            <summary>
-            是否已标记为删除。false(默认)未标记为删除，true标记为删除。
             </summary>
         </member>
         <member name="T:PowerLms.Data.Multilingual">

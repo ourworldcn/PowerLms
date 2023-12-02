@@ -1,0 +1,93 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Class Name="PowerLms.Data.BusinessTypeDataDic" Collapsed="true">
+    <Position X="13.5" Y="0.75" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>基础数据\BusinessTypeDataDic.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="PowerLms.Data.DataDicCatalog" Collapsed="true">
+    <Position X="16" Y="0.75" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAAAEAAAAAAAAAAAAAAgAAAAAAAEAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>基础数据\DataDicCatalog.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="PowerLms.Data.FeesType" Collapsed="true" BaseTypeListCollapsed="true">
+    <Position X="5" Y="3.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAQBCAAABAAAAAAIAAAAAAQAAAAAABAAAAAA=</HashCode>
+      <FileName>基础数据\FeesType.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" Collapsed="true" />
+  </Class>
+  <Class Name="PowerLms.Data.JobNumberRule" Collapsed="true">
+    <Position X="7.25" Y="3.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAACAAAAAAAACAAEAACAACBAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>基础数据\JobNumberRule.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="PowerLms.Data.PlExchangeRate" Collapsed="true">
+    <Position X="9.5" Y="2.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAIAAAQAQAAiAAAAAAAAAAAQAAAEAAA=</HashCode>
+      <FileName>基础数据\PlExchangeRate.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="PowerLms.Data.PlPort" Collapsed="true">
+    <Position X="0.5" Y="3.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAEAAAAAAAAAAAAAAEAQAAAAAAAAAgAAABA=</HashCode>
+      <FileName>基础数据\PlPort.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="PowerLms.Data.PlCargoRoute" Collapsed="true">
+    <Position X="2.75" Y="3.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA=</HashCode>
+      <FileName>基础数据\PlPort.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="PowerLms.Data.SimpleDataDic" Collapsed="true" BaseTypeListCollapsed="true">
+    <Position X="17.75" Y="1.75" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAQEAAAAAAAACBAAAAABA=</HashCode>
+      <FileName>基础数据\SimpleDataDic.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" Collapsed="true" />
+  </Class>
+  <Class Name="PowerLms.Data.UnitConversion" Collapsed="true" BaseTypeListCollapsed="true">
+    <Position X="11.75" Y="2.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>QAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAACAAAA=</HashCode>
+      <FileName>基础数据\UnitConversion.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" Collapsed="true" />
+  </Class>
+  <Class Name="PowerLms.Data.NamedSpecialDataDicBase" Collapsed="true">
+    <Position X="3.75" Y="2.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAEAAAAAAAAAAAAAAgAAAAAAAAAIAAAAAAAAAAAQA=</HashCode>
+      <FileName>基础支持\DataDicBase.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="PowerLms.Data.SpecialDataDicBase" Collapsed="true">
+    <Position X="6" Y="0.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAEAAEAAAAAAQAAAAA=</HashCode>
+      <FileName>基础支持\DataDicBase.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="PowerLmsData.基础数据.PlCountry" Collapsed="true">
+    <Position X="11" Y="3.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>基础数据\PlCountry.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Font Name="Microsoft YaHei UI" Size="9" />
+</ClassDiagram>

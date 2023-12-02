@@ -81,20 +81,20 @@ namespace PowerLmsServer.Managers
             using var file = File.OpenRead(filePath);
             using var workbook = _NpoiManager.GetWorkbookFromStream(file);
 
-            var sheet = workbook.GetSheet(nameof(db.DD_DataDicCatalogs));
-            _NpoiManager.WriteToDb(sheet, db, db.DD_DataDicCatalogs);
+            //var sheet = workbook.GetSheet(nameof(db.DD_DataDicCatalogs));
+            //_NpoiManager.WriteToDb(sheet, db, db.DD_DataDicCatalogs);
 
-            sheet = workbook.GetSheet(nameof(db.DD_SimpleDataDics));
-            _NpoiManager.WriteToDb(sheet, db, db.DD_SimpleDataDics);
+            //sheet = workbook.GetSheet(nameof(db.DD_SimpleDataDics));
+            //_NpoiManager.WriteToDb(sheet, db, db.DD_SimpleDataDics);
 
-            sheet = workbook.GetSheet(nameof(db.DD_BusinessTypeDataDics));
-            _NpoiManager.WriteToDb(sheet, db, db.DD_BusinessTypeDataDics);
+            //sheet = workbook.GetSheet(nameof(db.DD_BusinessTypeDataDics));
+            //_NpoiManager.WriteToDb(sheet, db, db.DD_BusinessTypeDataDics);
 
-            sheet = workbook.GetSheet(nameof(db.DD_PlPorts));
-            _NpoiManager.WriteToDb(sheet, db, db.DD_PlPorts);
+            //sheet = workbook.GetSheet(nameof(db.DD_PlPorts));
+            //_NpoiManager.WriteToDb(sheet, db, db.DD_PlPorts);
 
-            sheet = workbook.GetSheet(nameof(db.DD_PlCargoRoutes));
-            _NpoiManager.WriteToDb(sheet, db, db.DD_PlCargoRoutes);
+            //sheet = workbook.GetSheet(nameof(db.DD_PlCargoRoutes));
+            //_NpoiManager.WriteToDb(sheet, db, db.DD_PlCargoRoutes);
             db.SaveChanges();
         }
 

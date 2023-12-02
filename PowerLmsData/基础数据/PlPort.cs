@@ -13,7 +13,7 @@ namespace PowerLms.Data
     /// 港口类。CustomId 对应原系统三字码（海关码）。DisplayName 对应原有 中英文名称（看看就好）。Code 复制自原有三字码。Id 取代原有 ZDBH。
     /// </summary>
     [Comment("港口")]
-    public class PlPort : DataDicBase
+    public class PlPort : NamedSpecialDataDicBase
     {
         /// <summary>
         /// 海关码。项目类型决定有大量与海关的EDI行为，交换使用的码。
@@ -50,7 +50,7 @@ namespace PowerLms.Data
     /// 航线类。
     /// </summary>
     [Comment("航线")]
-    public class PlCargoRoute : DataDicBase
+    public class PlCargoRoute : NamedSpecialDataDicBase
     {
         /// <summary>
         /// CAF比率，取%值。
