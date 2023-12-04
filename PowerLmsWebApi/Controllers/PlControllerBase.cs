@@ -9,7 +9,14 @@ namespace PowerLmsWebApi.Controllers
     /// </summary>
     [Route("api/[controller]/[action]")]
     [ApiController]
-    public class OwControllerBase : ControllerBase
+    public class PlControllerBase : ControllerBase
     {
+        /// <summary>
+        /// 构造函数。
+        /// </summary>
+        public PlControllerBase()
+        {
+            
+        }
     }
 }

@@ -5,6 +5,7 @@ using NPOI.SS.UserModel;
 using OwDbBase;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
+using System.Text.RegularExpressions;
 
 namespace PowerLmsServer.Managers
 {
@@ -81,20 +82,29 @@ namespace PowerLmsServer.Managers
             using var file = File.OpenRead(filePath);
             using var workbook = _NpoiManager.GetWorkbookFromStream(file);
 
-            //var sheet = workbook.GetSheet(nameof(db.DD_DataDicCatalogs));
-            //_NpoiManager.WriteToDb(sheet, db, db.DD_DataDicCatalogs);
+            var sheet = workbook.GetSheet(nameof(db.DD_DataDicCatalogs));
+            _NpoiManager.WriteToDb(sheet, db, db.DD_DataDicCatalogs);
 
-            //sheet = workbook.GetSheet(nameof(db.DD_SimpleDataDics));
-            //_NpoiManager.WriteToDb(sheet, db, db.DD_SimpleDataDics);
+            sheet = workbook.GetSheet(nameof(db.DD_SimpleDataDics));
+            _NpoiManager.WriteToDb(sheet, db, db.DD_SimpleDataDics);
 
-            //sheet = workbook.GetSheet(nameof(db.DD_BusinessTypeDataDics));
-            //_NpoiManager.WriteToDb(sheet, db, db.DD_BusinessTypeDataDics);
+            sheet = workbook.GetSheet(nameof(db.DD_BusinessTypeDataDics));
+            _NpoiManager.WriteToDb(sheet, db, db.DD_BusinessTypeDataDics);
 
-            //sheet = workbook.GetSheet(nameof(db.DD_PlPorts));
-            //_NpoiManager.WriteToDb(sheet, db, db.DD_PlPorts);
+            sheet = workbook.GetSheet(nameof(db.DD_PlPorts));
+            _NpoiManager.WriteToDb(sheet, db, db.DD_PlPorts);
 
-            //sheet = workbook.GetSheet(nameof(db.DD_PlCargoRoutes));
-            //_NpoiManager.WriteToDb(sheet, db, db.DD_PlCargoRoutes);
+            sheet = workbook.GetSheet(nameof(db.DD_PlCargoRoutes));
+            _NpoiManager.WriteToDb(sheet, db, db.DD_PlCargoRoutes);
+
+            sheet = workbook.GetSheet(nameof(db.DD_PlCountrys));
+            _NpoiManager.WriteToDb(sheet, db, db.DD_PlCountrys);
+
+            sheet = workbook.GetSheet(nameof(db.DD_PlCurrencys));
+            _NpoiManager.WriteToDb(sheet, db, db.DD_PlCurrencys);
+
+            sheet = workbook.GetSheet(nameof(db.DD_JobNumberRules));
+            _NpoiManager.WriteToDb(sheet, db, db.DD_JobNumberRules);
             db.SaveChanges();
         }
 
@@ -129,7 +139,10 @@ namespace PowerLmsServer.Managers
             var org = db.PlOrganizations.Find(new Guid("329BE0F5-BD13-4484-A8B7-6DD9AB392D53"));
             //_DbContext.SaveChanges();
             var now = OwHelper.WorldNow;
-            var str = now.ToString(@"\MMyyyydd");
+            var patt = @"(\<.+?\>(?=\<))+";
+            var math = Regex.Match("<d><dj>", patt);
+            var str = DateTime.Now.ToString("yyMM<#>dd{MM:1}");
+            var b = math.Success;
         }
 
         private void CreateDb()

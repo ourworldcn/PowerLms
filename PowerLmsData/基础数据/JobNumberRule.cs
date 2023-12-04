@@ -29,21 +29,21 @@ namespace PowerLms.Data
     public class JobNumberRule : NamedSpecialDataDicBase
     {
         /// <summary>
-        /// 前缀。
+        /// 前缀。这个属性不是Code。
         /// </summary>
         [Comment("前缀")]
         [MaxLength(8)]
         public string Prefix { get; set; }
 
         /// <summary>
-        /// 规则字符串。
+        /// 规则字符串。不包含前缀。
         /// </summary>
         [Comment("规则字符串")]
         [MaxLength(64)]
         public string RuleString { get; set; }
 
         /// <summary>
-        /// 当前编号。
+        /// 当前已用的最大编号。
         /// </summary>
         [Comment("当前编号")]
         public int CurrentNumber { get; set; }
@@ -65,7 +65,30 @@ namespace PowerLms.Data
         /// </summary>
         [Comment("记录最后一次归零的日期")]
         public DateTime RepeatDate { get; set; }
+    }
 
+    /// <summary>
+    /// 可重用的序列号。
+    /// </summary>
+    [Comment("可重用的序列号")]
+    public class JobNumberReusable : GuidKeyObjectBase
+    {
+        /// <summary>
+        /// 规则Id。
+        /// </summary>
+        [Comment("规则Id")]
+        public Guid RuleId { get; set; }
 
+        /// <summary>
+        /// 回收的时间。
+        /// </summary>
+        [Comment("回收的时间")]
+        public DateTime CreateDateTime { get; set; }
+
+        /// <summary>
+        /// 可重用的序列号。
+        /// </summary>
+        [Comment("可重用的序列号")]
+        public int Seq { get; set; }
     }
 }

@@ -14,13 +14,15 @@ using NuGet.Packaging;
 using NuGet.Protocol;
 using AutoMapper;
 using NPOI.SS.Formula.Functions;
+using System.Text;
+using Microsoft.Extensions.ObjectPool;
 
 namespace PowerLmsWebApi.Controllers
 {
     /// <summary>
     /// 管理员功能控制器。
     /// </summary>
-    public class AdminController : OwControllerBase
+    public class AdminController : PlControllerBase
     {
         /// <summary>
         /// 
@@ -467,6 +469,7 @@ namespace PowerLmsWebApi.Controllers
         /// 获取港口。
         /// </summary>
         /// <param name="token">登录令牌。</param>
+        /// <param name="orgId">所属组织机构Id。null表示顶层系统。</param>
         /// <param name="startIndex">起始位置，从0开始。</param>
         /// <param name="count">最大返回数量。-1表示全返回。</param>
         /// <param name="conditional">查询的条件。</param>
@@ -475,12 +478,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="400">指定类别Id无效。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetAllPortReturnDto> GetAllPlPort(Guid token, [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex,
+        public ActionResult<GetAllPortReturnDto> GetAllPlPort(Guid token, Guid? orgId, [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex,
             [FromQuery][Range(-1, int.MaxValue)] int count = -1, [FromQuery] Dictionary<string, string> conditional = null)
         {
             if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPortReturnDto();
-            var coll = _DbContext.DD_PlPorts.AsNoTracking().Where(c => c.OrgId == context.User.OrgId);
+            var coll = _DbContext.DD_PlPorts.AsNoTracking().Where(c => c.OrgId == orgId);
             foreach (var item in conditional)
                 if (string.Equals(item.Key, "id", StringComparison.OrdinalIgnoreCase))
                 {
@@ -602,6 +605,7 @@ namespace PowerLmsWebApi.Controllers
         /// 获取航线。
         /// </summary>
         /// <param name="token">登录令牌。</param>
+        /// <param name="orgId">所属组织机构Id。null表示顶层系统。</param>
         /// <param name="startIndex">起始位置，从0开始。</param>
         /// <param name="count">最大返回数量。-1表示全返回。</param>
         /// <param name="conditional">查询的条件。</param>
@@ -610,12 +614,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="400">指定类别Id无效。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetAllPlCargoRouteReturnDto> GetAllPlCargoRoute(Guid token, [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex,
+        public ActionResult<GetAllPlCargoRouteReturnDto> GetAllPlCargoRoute(Guid token, Guid? orgId, [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex,
             [FromQuery][Range(-1, int.MaxValue)] int count = -1, [FromQuery] Dictionary<string, string> conditional = null)
         {
             if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlCargoRouteReturnDto();
-            var coll = _DbContext.DD_PlCargoRoutes.AsNoTracking().Where(c => c.OrgId == context.User.OrgId);
+            var coll = _DbContext.DD_PlCargoRoutes.AsNoTracking().Where(c => c.OrgId == orgId);
             foreach (var item in conditional)
                 if (string.Equals(item.Key, "id", StringComparison.OrdinalIgnoreCase))
                 {
@@ -820,7 +824,7 @@ namespace PowerLmsWebApi.Controllers
         /// 获取单位换算。
         /// </summary>
         /// <param name="token">登录令牌。</param>
-        /// <param name="orgId">所属组织机构Id。</param>
+        /// <param name="orgId">所属组织机构Id。null表示顶层系统。</param>
         /// <param name="startIndex">起始位置，从0开始。</param>
         /// <param name="count">最大返回数量。-1表示全返回。</param>
         /// <param name="conditional">查询的条件。支持basic 和 rim查询。</param>
@@ -829,7 +833,7 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="400">指定类别Id无效。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetAllUnitConversionReturnDto> GetAllUnitConversion(Guid token, Guid orgId,
+        public ActionResult<GetAllUnitConversionReturnDto> GetAllUnitConversion(Guid token, Guid? orgId,
             [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [FromQuery][Range(-1, int.MaxValue)] int count = -1,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
@@ -956,6 +960,7 @@ namespace PowerLmsWebApi.Controllers
         /// 获取费用种类。
         /// </summary>
         /// <param name="token">登录令牌。</param>
+        /// <param name="orgId">所属组织机构Id。null表示顶层系统。</param>
         /// <param name="startIndex">起始位置，从0开始。</param>
         /// <param name="count">最大返回数量。-1表示全返回。</param>
         /// <param name="conditional">查询的条件。支持 DisplayName 和 ShortName 查询。</param>
@@ -965,12 +970,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="400">指定类别Id无效。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetAllFeesTypeReturnDto> GetAllFeesType(Guid token, [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex,
+        public ActionResult<GetAllFeesTypeReturnDto> GetAllFeesType(Guid token, Guid? orgId, [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex,
             [FromQuery][Range(-1, int.MaxValue)] int count = -1, [FromQuery] Dictionary<string, string> conditional = null)
         {
             if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllFeesTypeReturnDto();
-            var collBase = _DbContext.DD_FeesTypes.AsNoTracking().Where(c => c.OrgId == context.User.OrgId);
+            var collBase = _DbContext.DD_FeesTypes.AsNoTracking().Where(c => c.OrgId == orgId);
             var coll = collBase;
             foreach (var item in conditional)
                 if (string.Equals(item.Key, nameof(FeesType.Id), StringComparison.OrdinalIgnoreCase))
@@ -1096,6 +1101,7 @@ namespace PowerLmsWebApi.Controllers
         /// 获取业务编码规则。
         /// </summary>
         /// <param name="token">登录令牌。</param>
+        /// <param name="orgId">所属组织机构Id。null表示顶层系统。</param>
         /// <param name="startIndex">起始位置，从0开始。</param>
         /// <param name="count">最大返回数量。-1表示全返回。</param>
         /// <param name="conditional">查询的条件。支持 DisplayName 和 ShortName 查询。</param>
@@ -1104,12 +1110,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="400">指定类别Id无效。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetAllJobNumberRuleReturnDto> GetAllJobNumberRule(Guid token, [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex,
+        public ActionResult<GetAllJobNumberRuleReturnDto> GetAllJobNumberRule(Guid token, Guid? orgId, [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex,
             [FromQuery][Range(-1, int.MaxValue)] int count = -1, [FromQuery] Dictionary<string, string> conditional = null)
         {
             if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllJobNumberRuleReturnDto();
-            var coll = _DbContext.DD_JobNumberRules.AsNoTracking().Where(c => c.OrgId == context.User.OrgId);
+            var coll = _DbContext.DD_JobNumberRules.AsNoTracking().Where(c => c.OrgId == orgId);
             foreach (var item in conditional)
                 if (string.Equals(item.Key, nameof(JobNumberRule.Id), StringComparison.OrdinalIgnoreCase))
                 {
@@ -1227,8 +1233,519 @@ namespace PowerLmsWebApi.Controllers
             return result;
         }
 
+        /// <summary>
+        /// 工作编码的译码表，不含序号。
+        /// </summary>
+        static Dictionary<string, string> _JobNumberDecodingTable = new Dictionary<string, string> {
+            { "<yy>","yy"},
+            { "<yyyy>","yyyy"},
+            { "<M>","M"},
+            { "<MM>","MM"},
+            { "<d>","d"},
+            { "<dd>","dd"},
+            { "<H>","H"},
+            { "<HH>","HH"},
+        };
+        /// <summary>
+        /// 用指定的编码规则生成一个新的编码。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定的规则不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="423">锁定超时，通常是服务器极为繁忙导致。</response>  
+        [HttpPost]
+        public ActionResult<GetNewJobNumberReturnDto> GetNewJobNumber(GetNewJobNumberParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetNewJobNumberReturnDto();
+            if (_DbContext.DD_JobNumberRules.Find(model.RuleId) is not JobNumberRule jnr) return BadRequest($"指定的规则不存在，Id={model.RuleId}");
+            using var dw = DisposeHelper.Create((key, timeout) => SingletonLocker.TryEnter(key, timeout), key => SingletonLocker.Exit(key), model.RuleId.ToString(), TimeSpan.FromSeconds(2)); //锁定该规则
+            if (dw.IsEmpty) return base.StatusCode((int)HttpStatusCode.Locked);
+            #region 具体生成
+            var sb = AutoClearPool<StringBuilder>.Shared.Get(); DisposeHelper.Create(c => AutoClearPool<StringBuilder>.Shared.Return(c), sb);
+            sb.Append(jnr.RuleString);
+            foreach (var kvp in _JobNumberDecodingTable)
+            {
+                sb.Replace(kvp.Key, kvp.Value);
+            }
+            var now = OwHelper.WorldNow;
+            int currentNumber;
+            // 归零方式，0不归零，1按年，2按月，3按日
+            switch (jnr.RepeatMode)
+            {
+                case 0:
+                    currentNumber = ++jnr.CurrentNumber;
+                    break;
+                case 1:
+                    if (jnr.RepeatDate.Year == now.Year)    //若无需归零
+                        currentNumber = ++jnr.CurrentNumber;
+                    else //若须归零
+                    {
+                        jnr.CurrentNumber = currentNumber = jnr.StartValue;
+                        jnr.RepeatDate = now;
+                    }
+                    break;
+                case 2:
+                    if (jnr.RepeatDate.Year == now.Year && jnr.RepeatDate.Month == now.Month)    //若无需归零
+                        currentNumber = ++jnr.CurrentNumber;
+                    else //若须归零
+                    {
+                        jnr.CurrentNumber = currentNumber = jnr.StartValue;
+                        jnr.RepeatDate = now;
+                    }
+                    break;
+                case 3:
+                    if (jnr.RepeatDate.Year == now.Year && jnr.RepeatDate.DayOfYear == now.DayOfYear)    //若无需归零
+                        currentNumber = ++jnr.CurrentNumber;
+                    else //若须归零
+                    {
+                        jnr.CurrentNumber = currentNumber = jnr.StartValue;
+                        jnr.RepeatDate = now;
+                    }
+                    break;
+                default:
+                    return BadRequest();
+            }
+            sb.Replace("<", string.Empty).Replace(">", string.Empty);
+            var tmp = sb.ToString();
+            tmp = currentNumber.ToString(tmp);
+            var r = now.ToString(tmp);
+            #endregion 具体生成
+            result.Result = jnr.Prefix + r;
+            context.Nop();
+            _DbContext.SaveChanges();
+            return result;
+        }
+
         #endregion 业务编码规则相关
 
+        #region 国家相关
+        /// <summary>
+        /// 获取国家。
+        /// </summary>
+        /// <param name="token">登录令牌。</param>
+        /// <param name="orgId">所属组织机构Id。null表示顶层系统。</param>
+        /// <param name="startIndex">起始位置，从0开始。</param>
+        /// <param name="count">最大返回数量。-1表示全返回。</param>
+        /// <param name="conditional">查询的条件。支持 DisplayName 和 ShortName 查询。</param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定类别Id无效。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        public ActionResult<GetAllPlCountryReturnDto> GetAllPlCountry(Guid token, Guid? orgId, [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex,
+            [FromQuery][Range(-1, int.MaxValue)] int count = -1, [FromQuery] Dictionary<string, string> conditional = null)
+        {
+            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetAllPlCountryReturnDto();
+            var coll = _DbContext.DD_PlCountrys.AsNoTracking().Where(c => c.OrgId == orgId);
+            foreach (var item in conditional)
+                if (string.Equals(item.Key, nameof(PlCountry.Id), StringComparison.OrdinalIgnoreCase))
+                {
+                    if (OwConvert.TryToGuid(item.Value, out var id))
+                        coll = coll.Where(c => c.Id == id);
+                }
+                else if (string.Equals(item.Key, nameof(PlCountry.DisplayName), StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.DisplayName.Contains(item.Value));
+                }
+                else if (string.Equals(item.Key, nameof(PlCountry.ShortName), StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
+                }
+            var prb = _EntityManager.GetAll(coll, startIndex, count);
+            _Mapper.Map(prb, result);
+            return result;
+        }
+
+        /// <summary>
+        /// 增加国家记录。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">参数错误。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPost]
+        public ActionResult<AddPlCountryReturnDto> AddPlCountry(AddPlCountryParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new AddPlCountryReturnDto();
+            model.Item.GenerateNewId();
+            var id = model.Item.Id;
+            _DbContext.DD_PlCountrys.Add(model.Item);
+            _DbContext.SaveChanges();
+            result.Id = id;
+            return result;
+        }
+
+        /// <summary>
+        /// 修改国家记录。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPut]
+        public ActionResult<ModifyPlCountryReturnDto> ModifyPlCountry(ModifyPlCountryParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new ModifyPlCountryReturnDto();
+            if (!_EntityManager.Modify(model.Items))
+            {
+                var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
+                return errResult;
+            }
+            foreach (var item in model.Items)
+            {
+                _DbContext.Entry(item).Property(c => c.IsDelete).IsModified = false;
+            }
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        /// <summary>
+        /// 删除国家的记录。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpDelete]
+        public ActionResult<RemovePlCountryReturnDto> RemovePlCountry(RemovePlCountryParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new RemovePlCountryReturnDto();
+            var id = model.Id;
+            var dbSet = _DbContext.DD_PlCountrys;
+            var item = dbSet.Find(id);
+            if (item is null) return BadRequest();
+            //_DbContext.SimpleDataDics.Remove(item);
+            item.IsDelete = true;
+            _DbContext.SaveChanges();
+            //if (item.DataDicType == 1) //若是简单字典
+            //    _DbContext.Database.ExecuteSqlRaw($"delete from {nameof(_DbContext.SimpleDataDics)} where {nameof(SimpleDataDic.DataDicId)}='{id.ToString()}'");
+            //else //其他字典待定
+            //{
+
+            //}
+            return result;
+        }
+
+        /// <summary>
+        /// 恢复指定的被删除国家记录。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPost]
+        public ActionResult<RestorePlCountryReturnDto> RestorePlCountry(RestorePlCountryParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new RestorePlCountryReturnDto();
+            if (!_EntityManager.Restore<PlCountry>(model.Id))
+            {
+                var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
+                return errResult;
+            }
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        #endregion 国家相关
+
+        #region 币种相关
+        /// <summary>
+        /// 获取币种。
+        /// </summary>
+        /// <param name="token">登录令牌。</param>
+        /// <param name="orgId">所属组织机构Id。null表示顶层系统。</param>
+        /// <param name="startIndex">起始位置，从0开始。</param>
+        /// <param name="count">最大返回数量。-1表示全返回。</param>
+        /// <param name="conditional">查询的条件。支持 DisplayName 和 ShortName 查询。</param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定类别Id无效。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        public ActionResult<GetAllPlCurrencyReturnDto> GetAllPlCurrency(Guid token, Guid? orgId, [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex,
+            [FromQuery][Range(-1, int.MaxValue)] int count = -1, [FromQuery] Dictionary<string, string> conditional = null)
+        {
+            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetAllPlCurrencyReturnDto();
+            var coll = _DbContext.DD_PlCurrencys.AsNoTracking().Where(c => c.OrgId == orgId);
+            foreach (var item in conditional)
+                if (string.Equals(item.Key, nameof(PlCurrency.Id), StringComparison.OrdinalIgnoreCase))
+                {
+                    if (OwConvert.TryToGuid(item.Value, out var id))
+                        coll = coll.Where(c => c.Id == id);
+                }
+                else if (string.Equals(item.Key, nameof(PlCurrency.DisplayName), StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.DisplayName.Contains(item.Value));
+                }
+                else if (string.Equals(item.Key, nameof(PlCurrency.ShortName), StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
+                }
+            var prb = _EntityManager.GetAll(coll, startIndex, count);
+            _Mapper.Map(prb, result);
+            return result;
+        }
+
+        /// <summary>
+        /// 增加币种记录。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">参数错误。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPost]
+        public ActionResult<AddPlCurrencyReturnDto> AddPlCurrency(AddPlCurrencyParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new AddPlCurrencyReturnDto();
+            model.Item.GenerateNewId();
+            var id = model.Item.Id;
+            _DbContext.DD_PlCurrencys.Add(model.Item);
+            _DbContext.SaveChanges();
+            result.Id = id;
+            return result;
+        }
+
+        /// <summary>
+        /// 修改币种记录。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPut]
+        public ActionResult<ModifyPlCurrencyReturnDto> ModifyPlCurrency(ModifyPlCurrencyParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new ModifyPlCurrencyReturnDto();
+            if (!_EntityManager.Modify(model.Items))
+            {
+                var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
+                return errResult;
+            }
+            foreach (var item in model.Items)
+            {
+                _DbContext.Entry(item).Property(c => c.IsDelete).IsModified = false;
+            }
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        /// <summary>
+        /// 删除币种的记录。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpDelete]
+        public ActionResult<RemovePlCurrencyReturnDto> RemovePlCurrency(RemovePlCurrencyParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new RemovePlCurrencyReturnDto();
+            var id = model.Id;
+            var dbSet = _DbContext.DD_PlCurrencys;
+            var item = dbSet.Find(id);
+            if (item is null) return BadRequest();
+            //_DbContext.SimpleDataDics.Remove(item);
+            item.IsDelete = true;
+            _DbContext.SaveChanges();
+            //if (item.DataDicType == 1) //若是简单字典
+            //    _DbContext.Database.ExecuteSqlRaw($"delete from {nameof(_DbContext.SimpleDataDics)} where {nameof(SimpleDataDic.DataDicId)}='{id.ToString()}'");
+            //else //其他字典待定
+            //{
+
+            //}
+            return result;
+        }
+
+        /// <summary>
+        /// 恢复指定的被删除币种记录。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPost]
+        public ActionResult<RestorePlCurrencyReturnDto> RestorePlCurrency(RestorePlCurrencyParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new RestorePlCurrencyReturnDto();
+            if (!_EntityManager.Restore<PlCurrency>(model.Id))
+            {
+                var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
+                return errResult;
+            }
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        #endregion 币种相关
+    }
+
+    /// <summary>
+    /// 用指定的编码规则生成一个新的编码的功能参数封装类。
+    /// </summary>
+    public class GetNewJobNumberParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 规则的Id.
+        /// </summary>
+        public Guid RuleId { get; set; }
+    }
+
+    /// <summary>
+    /// 用指定的编码规则生成一个新的编码的功能返回值封装类。
+    /// </summary>
+    public class GetNewJobNumberReturnDto
+    {
+        /// <summary>
+        /// 返回的业务码。
+        /// </summary>
+        public string Result { get; set; }
+    }
+
+    /// <summary>
+    /// 恢复币种条目参数封装类。
+    /// </summary>
+    public class RestorePlCurrencyParamsDto : RestoreParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 恢复币种条目返回值封装类。
+    /// </summary>
+    public class RestorePlCurrencyReturnDto : RestoreReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 删除币种条目参数封装类。
+    /// </summary>
+    public class RemovePlCurrencyParamsDto : RemoveParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 删除币种条目返回值封装类。
+    /// </summary>
+    public class RemovePlCurrencyReturnDto : RemoveReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 修改币种条目参数封装类。
+    /// </summary>
+    public class ModifyPlCurrencyParamsDto : ModifyParamsDtoBase<PlCurrency>
+    {
+    }
+
+    /// <summary>
+    /// 修改币种条目返回值封装类。
+    /// </summary>
+    public class ModifyPlCurrencyReturnDto : ModifyReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 增加币种条目参数封装类。
+    /// </summary>
+    public class AddPlCurrencyParamsDto : AddParamsDtoBase<PlCurrency>
+    {
+    }
+
+    /// <summary>
+    /// 增加币种条目返回值封装类。
+    /// </summary>
+    public class AddPlCurrencyReturnDto : AddReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 获取币种条目返回值封装类。
+    /// </summary>
+    public class GetAllPlCurrencyReturnDto : PagingReturnDtoBase<PlCurrency>
+    {
+    }
+
+    /// <summary>
+    /// 恢复国家条目参数封装类。
+    /// </summary>
+    public class RestorePlCountryParamsDto : RestoreParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 恢复国家条目返回值封装类。
+    /// </summary>
+    public class RestorePlCountryReturnDto : RestoreReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 删除国家条目参数封装类。
+    /// </summary>
+    public class RemovePlCountryParamsDto : RemoveParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 删除国家条目返回值封装类。
+    /// </summary>
+    public class RemovePlCountryReturnDto : RemoveReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 修改国家条目参数封装类。
+    /// </summary>
+    public class ModifyPlCountryParamsDto : ModifyParamsDtoBase<PlCountry>
+    {
+    }
+
+    /// <summary>
+    /// 修改国家条目返回值封装类。
+    /// </summary>
+    public class ModifyPlCountryReturnDto : ModifyReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 增加国家条目参数封装类。
+    /// </summary>
+    public class AddPlCountryParamsDto : AddParamsDtoBase<PlCountry>
+    {
+    }
+
+    /// <summary>
+    /// 增加国家条目返回值封装类。
+    /// </summary>
+    public class AddPlCountryReturnDto : AddReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 获取国家条目返回值封装类。
+    /// </summary>
+    public class GetAllPlCountryReturnDto : PagingReturnDtoBase<PlCountry>
+    {
     }
 
     /// <summary>

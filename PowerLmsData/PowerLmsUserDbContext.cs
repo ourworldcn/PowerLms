@@ -1,7 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using PowerLms.Data;
-using PowerLmsData.基础数据;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -147,6 +146,11 @@ namespace PowerLmsServer.EfData
         /// 业务编码规则表。
         /// </summary>
         public DbSet<JobNumberRule> DD_JobNumberRules { get; set; }
+
+        /// <summary>
+        /// 可重用的序号表。
+        /// </summary>
+        public DbSet<JobNumberReusable> JobNumberReusables { get; set; }
 
         /// <summary>
         /// 国家表。

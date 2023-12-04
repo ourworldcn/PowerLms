@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace PowerLmsData.基础数据
+namespace PowerLms.Data
 {
     /// <summary>
     /// 国家。

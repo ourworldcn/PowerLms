@@ -14,7 +14,7 @@ namespace PowerLmsWebApi.Controllers
     /// <summary>
     /// 操作商户的控制器。
     /// </summary>
-    public class MerchantController : OwControllerBase
+    public class MerchantController : PlControllerBase
     {
         /// <summary>
         /// 构造函数。
@@ -108,6 +108,11 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.Merchants.Add(model.Merchant);
             _DbContext.SaveChanges();
             result.Id = model.Merchant.Id;
+            var r = InitializeMerchant(new InitializeMerchantParamsDto
+            {
+                Id = result.Id,
+                Token = model.Token,
+            });
             return result;
         }
 

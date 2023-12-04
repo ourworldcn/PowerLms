@@ -4,16 +4,6 @@
         <name>PowerLmsData</name>
     </assembly>
     <members>
-        <member name="T:PowerLmsData.基础数据.PlCountry">
-            <summary>
-            国家。
-            </summary>
-        </member>
-        <member name="T:PowerLmsData.基础数据.PlCurrency">
-            <summary>
-            币种。
-            </summary>
-        </member>
         <member name="T:PowerLmsServer.EfData.MigrateDbInitializer">
             <summary>
             
@@ -109,6 +99,11 @@
         <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.DD_JobNumberRules">
             <summary>
             业务编码规则表。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.JobNumberReusables">
+            <summary>
+            可重用的序号表。
             </summary>
         </member>
         <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.DD_PlCountrys">
@@ -321,6 +316,11 @@
             业务大类。
             </summary>
         </member>
+        <member name="P:PowerLms.Data.BusinessTypeDataDic.OrderNumber">
+            <summary>
+            排序序号。越小的越靠前。
+            </summary>
+        </member>
         <member name="T:PowerLms.Data.DataDicCatalog">
             <summary>
             专门针对数据字典的目录。
@@ -388,17 +388,17 @@
         </member>
         <member name="P:PowerLms.Data.JobNumberRule.Prefix">
             <summary>
-            前缀。
+            前缀。这个属性不是Code。
             </summary>
         </member>
         <member name="P:PowerLms.Data.JobNumberRule.RuleString">
             <summary>
-            规则字符串。
+            规则字符串。不包含前缀。
             </summary>
         </member>
         <member name="P:PowerLms.Data.JobNumberRule.CurrentNumber">
             <summary>
-            当前编号。
+            当前已用的最大编号。
             </summary>
         </member>
         <member name="P:PowerLms.Data.JobNumberRule.RepeatMode">
@@ -414,6 +414,36 @@
         <member name="P:PowerLms.Data.JobNumberRule.RepeatDate">
             <summary>
             记录最后一次归零的日期。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.JobNumberReusable">
+            <summary>
+            可重用的序列号。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.JobNumberReusable.RuleId">
+            <summary>
+            规则Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.JobNumberReusable.CreateDateTime">
+            <summary>
+            回收的时间。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.JobNumberReusable.Seq">
+            <summary>
+            可重用的序列号。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.PlCountry">
+            <summary>
+            国家。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.PlCurrency">
+            <summary>
+            币种。
             </summary>
         </member>
         <member name="T:PowerLms.Data.PlExchangeRate">

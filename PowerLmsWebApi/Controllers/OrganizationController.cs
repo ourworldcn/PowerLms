@@ -11,7 +11,7 @@ namespace PowerLmsWebApi.Controllers
     /// <summary>
     /// 组织机构控制器。
     /// </summary>
-    public class OrganizationController : OwControllerBase
+    public class OrganizationController : PlControllerBase
     {
         /// <summary>
         /// 构造函数。

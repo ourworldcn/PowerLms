@@ -16,7 +16,7 @@ namespace PowerLmsWebApi.Controllers
     /// <summary>
     /// 账号功能控制器。
     /// </summary>
-    public class AccountController : OwControllerBase
+    public class AccountController : PlControllerBase
     {
         /// <summary>
         /// 构造函数。

@@ -301,11 +301,12 @@
             <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
             <response code="401">无效令牌。</response>  
         </member>
-        <member name="M:PowerLmsWebApi.Controllers.AdminController.GetAllPlPort(System.Guid,System.Int32,System.Int32,System.Collections.Generic.Dictionary{System.String,System.String})">
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.GetAllPlPort(System.Guid,System.Nullable{System.Guid},System.Int32,System.Int32,System.Collections.Generic.Dictionary{System.String,System.String})">
             <summary>
             获取港口。
             </summary>
             <param name="token">登录令牌。</param>
+            <param name="orgId">所属组织机构Id。null表示顶层系统。</param>
             <param name="startIndex">起始位置，从0开始。</param>
             <param name="count">最大返回数量。-1表示全返回。</param>
             <param name="conditional">查询的条件。</param>
@@ -354,11 +355,12 @@
             <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
             <response code="401">无效令牌。</response>  
         </member>
-        <member name="M:PowerLmsWebApi.Controllers.AdminController.GetAllPlCargoRoute(System.Guid,System.Int32,System.Int32,System.Collections.Generic.Dictionary{System.String,System.String})">
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.GetAllPlCargoRoute(System.Guid,System.Nullable{System.Guid},System.Int32,System.Int32,System.Collections.Generic.Dictionary{System.String,System.String})">
             <summary>
             获取航线。
             </summary>
             <param name="token">登录令牌。</param>
+            <param name="orgId">所属组织机构Id。null表示顶层系统。</param>
             <param name="startIndex">起始位置，从0开始。</param>
             <param name="count">最大返回数量。-1表示全返回。</param>
             <param name="conditional">查询的条件。</param>
@@ -441,12 +443,12 @@
             <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
             <response code="401">无效令牌。</response>  
         </member>
-        <member name="M:PowerLmsWebApi.Controllers.AdminController.GetAllUnitConversion(System.Guid,System.Guid,System.Int32,System.Int32,System.Collections.Generic.Dictionary{System.String,System.String})">
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.GetAllUnitConversion(System.Guid,System.Nullable{System.Guid},System.Int32,System.Int32,System.Collections.Generic.Dictionary{System.String,System.String})">
             <summary>
             获取单位换算。
             </summary>
             <param name="token">登录令牌。</param>
-            <param name="orgId">所属组织机构Id。</param>
+            <param name="orgId">所属组织机构Id。null表示顶层系统。</param>
             <param name="startIndex">起始位置，从0开始。</param>
             <param name="count">最大返回数量。-1表示全返回。</param>
             <param name="conditional">查询的条件。支持basic 和 rim查询。</param>
@@ -495,11 +497,12 @@
             <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
             <response code="401">无效令牌。</response>  
         </member>
-        <member name="M:PowerLmsWebApi.Controllers.AdminController.GetAllFeesType(System.Guid,System.Int32,System.Int32,System.Collections.Generic.Dictionary{System.String,System.String})">
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.GetAllFeesType(System.Guid,System.Nullable{System.Guid},System.Int32,System.Int32,System.Collections.Generic.Dictionary{System.String,System.String})">
             <summary>
             获取费用种类。
             </summary>
             <param name="token">登录令牌。</param>
+            <param name="orgId">所属组织机构Id。null表示顶层系统。</param>
             <param name="startIndex">起始位置，从0开始。</param>
             <param name="count">最大返回数量。-1表示全返回。</param>
             <param name="conditional">查询的条件。支持 DisplayName 和 ShortName 查询。</param>
@@ -549,11 +552,12 @@
             <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
             <response code="401">无效令牌。</response>  
         </member>
-        <member name="M:PowerLmsWebApi.Controllers.AdminController.GetAllJobNumberRule(System.Guid,System.Int32,System.Int32,System.Collections.Generic.Dictionary{System.String,System.String})">
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.GetAllJobNumberRule(System.Guid,System.Nullable{System.Guid},System.Int32,System.Int32,System.Collections.Generic.Dictionary{System.String,System.String})">
             <summary>
             获取业务编码规则。
             </summary>
             <param name="token">登录令牌。</param>
+            <param name="orgId">所属组织机构Id。null表示顶层系统。</param>
             <param name="startIndex">起始位置，从0开始。</param>
             <param name="count">最大返回数量。-1表示全返回。</param>
             <param name="conditional">查询的条件。支持 DisplayName 和 ShortName 查询。</param>
@@ -601,6 +605,240 @@
             <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
             <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
             <response code="401">无效令牌。</response>  
+        </member>
+        <member name="F:PowerLmsWebApi.Controllers.AdminController._JobNumberDecodingTable">
+            <summary>
+            工作编码的译码表，不含序号。
+            </summary>
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.GetNewJobNumber(PowerLmsWebApi.Controllers.GetNewJobNumberParamsDto)">
+            <summary>
+            用指定的编码规则生成一个新的编码。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="400">指定的规则不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+            <response code="401">无效令牌。</response>  
+            <response code="423">锁定超时，通常是服务器极为繁忙导致。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.GetAllPlCountry(System.Guid,System.Nullable{System.Guid},System.Int32,System.Int32,System.Collections.Generic.Dictionary{System.String,System.String})">
+            <summary>
+            获取国家。
+            </summary>
+            <param name="token">登录令牌。</param>
+            <param name="orgId">所属组织机构Id。null表示顶层系统。</param>
+            <param name="startIndex">起始位置，从0开始。</param>
+            <param name="count">最大返回数量。-1表示全返回。</param>
+            <param name="conditional">查询的条件。支持 DisplayName 和 ShortName 查询。</param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="400">指定类别Id无效。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.AddPlCountry(PowerLmsWebApi.Controllers.AddPlCountryParamsDto)">
+            <summary>
+            增加国家记录。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="400">参数错误。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.ModifyPlCountry(PowerLmsWebApi.Controllers.ModifyPlCountryParamsDto)">
+            <summary>
+            修改国家记录。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.RemovePlCountry(PowerLmsWebApi.Controllers.RemovePlCountryParamsDto)">
+            <summary>
+            删除国家的记录。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.RestorePlCountry(PowerLmsWebApi.Controllers.RestorePlCountryParamsDto)">
+            <summary>
+            恢复指定的被删除国家记录。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.GetAllPlCurrency(System.Guid,System.Nullable{System.Guid},System.Int32,System.Int32,System.Collections.Generic.Dictionary{System.String,System.String})">
+            <summary>
+            获取币种。
+            </summary>
+            <param name="token">登录令牌。</param>
+            <param name="orgId">所属组织机构Id。null表示顶层系统。</param>
+            <param name="startIndex">起始位置，从0开始。</param>
+            <param name="count">最大返回数量。-1表示全返回。</param>
+            <param name="conditional">查询的条件。支持 DisplayName 和 ShortName 查询。</param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="400">指定类别Id无效。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.AddPlCurrency(PowerLmsWebApi.Controllers.AddPlCurrencyParamsDto)">
+            <summary>
+            增加币种记录。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="400">参数错误。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.ModifyPlCurrency(PowerLmsWebApi.Controllers.ModifyPlCurrencyParamsDto)">
+            <summary>
+            修改币种记录。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.RemovePlCurrency(PowerLmsWebApi.Controllers.RemovePlCurrencyParamsDto)">
+            <summary>
+            删除币种的记录。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.RestorePlCurrency(PowerLmsWebApi.Controllers.RestorePlCurrencyParamsDto)">
+            <summary>
+            恢复指定的被删除币种记录。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetNewJobNumberParamsDto">
+            <summary>
+            用指定的编码规则生成一个新的编码的功能参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.GetNewJobNumberParamsDto.RuleId">
+            <summary>
+            规则的Id.
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetNewJobNumberReturnDto">
+            <summary>
+            用指定的编码规则生成一个新的编码的功能返回值封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.GetNewJobNumberReturnDto.Result">
+            <summary>
+            返回的业务码。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RestorePlCurrencyParamsDto">
+            <summary>
+            恢复币种条目参数封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RestorePlCurrencyReturnDto">
+            <summary>
+            恢复币种条目返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RemovePlCurrencyParamsDto">
+            <summary>
+            删除币种条目参数封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RemovePlCurrencyReturnDto">
+            <summary>
+            删除币种条目返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.ModifyPlCurrencyParamsDto">
+            <summary>
+            修改币种条目参数封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.ModifyPlCurrencyReturnDto">
+            <summary>
+            修改币种条目返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddPlCurrencyParamsDto">
+            <summary>
+            增加币种条目参数封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddPlCurrencyReturnDto">
+            <summary>
+            增加币种条目返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetAllPlCurrencyReturnDto">
+            <summary>
+            获取币种条目返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RestorePlCountryParamsDto">
+            <summary>
+            恢复国家条目参数封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RestorePlCountryReturnDto">
+            <summary>
+            恢复国家条目返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RemovePlCountryParamsDto">
+            <summary>
+            删除国家条目参数封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RemovePlCountryReturnDto">
+            <summary>
+            删除国家条目返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.ModifyPlCountryParamsDto">
+            <summary>
+            修改国家条目参数封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.ModifyPlCountryReturnDto">
+            <summary>
+            修改国家条目返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddPlCountryParamsDto">
+            <summary>
+            增加国家条目参数封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddPlCountryReturnDto">
+            <summary>
+            增加国家条目返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetAllPlCountryReturnDto">
+            <summary>
+            获取国家条目返回值封装类。
+            </summary>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.RestoreJobNumberRuleParamsDto">
             <summary>
@@ -1170,9 +1408,14 @@
             修改组织机构功能的返回值封装类。
             </summary>
         </member>
-        <member name="T:PowerLmsWebApi.Controllers.OwControllerBase">
+        <member name="T:PowerLmsWebApi.Controllers.PlControllerBase">
             <summary>
             控制器基类。
+            </summary>
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.PlControllerBase.#ctor">
+            <summary>
+            构造函数。
             </summary>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.WeatherForecastController">
