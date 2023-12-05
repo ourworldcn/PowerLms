@@ -14,5 +14,11 @@ namespace PowerLms.Data
     [Comment("币种")]
     public class PlCurrency : NamedSpecialDataDicBase
     {
+        /// <summary>
+        /// 海关码。项目类型决定有大量与海关的EDI行为，交换使用的码。
+        /// </summary>
+        [Comment("海关码。项目类型决定有大量与海关的EDI行为，交换使用的码。")]
+        public string CustomsCode { get; set; }
+
     }
 }

@@ -15,7 +15,7 @@ namespace PowerLms.Data
     /// </summary>
     [Comment("专门针对数据字典的目录。")]
     [Index(nameof(OrgId), nameof(Code), IsUnique = true)]
-    public class DataDicCatalog : GuidKeyObjectBase
+    public class DataDicCatalog : GuidKeyObjectBase,ICloneable
     {
         /// <summary>
         /// 数据字典的代码。
@@ -36,6 +36,20 @@ namespace PowerLms.Data
         [Comment("所属组织机构Id。通常这里为null则有不同解释，如通用的模板或超管使用的数据字典。")]
         public Guid? OrgId { get; set; }
 
-
+        /// <summary>
+        /// 为指定对象生成一个深表副本。
+        /// </summary>
+        /// <returns></returns>
+        public object Clone()
+        {
+            var result = new DataDicCatalog
+            {
+                Id = Id,
+                Code = Code,
+                DisplayName = DisplayName,  
+                OrgId = OrgId,
+            };
+            return result;
+        }
     }
 }

@@ -1190,7 +1190,7 @@
             操作商户的控制器。
             </summary>
         </member>
-        <member name="M:PowerLmsWebApi.Controllers.MerchantController.#ctor(PowerLmsServer.EfData.PowerLmsUserDbContext,PowerLmsServer.Managers.AccountManager,System.IServiceProvider)">
+        <member name="M:PowerLmsWebApi.Controllers.MerchantController.#ctor(PowerLmsServer.EfData.PowerLmsUserDbContext,PowerLmsServer.Managers.AccountManager,System.IServiceProvider,PowerLmsServer.Managers.DataDicManager)">
             <summary>
             构造函数。
             </summary>

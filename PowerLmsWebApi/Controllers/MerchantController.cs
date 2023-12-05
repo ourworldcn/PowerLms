@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using NPOI.Util;
 using NuGet.Common;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
@@ -22,16 +23,18 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="dbContext"></param>
         /// <param name="accountManager"></param>
         /// <param name="serviceProvider"></param>
-        public MerchantController(PowerLmsUserDbContext dbContext, AccountManager accountManager, IServiceProvider serviceProvider)
+        public MerchantController(PowerLmsUserDbContext dbContext, AccountManager accountManager, IServiceProvider serviceProvider, DataDicManager dataManager)
         {
             _DbContext = dbContext;
             _AccountManager = accountManager;
             _ServiceProvider = serviceProvider;
+            _DataManager = dataManager;
         }
 
         PowerLmsUserDbContext _DbContext;
         AccountManager _AccountManager;
         IServiceProvider _ServiceProvider;
+        DataDicManager _DataManager;
 
         #region 简单CRUD
 
@@ -152,22 +155,15 @@ namespace PowerLmsWebApi.Controllers
             var result = new InitializeMerchantReturnDto();
             var merch = _DbContext.Merchants.Find(model.Id);
             if (merch == null) return NotFound();
-            //复制简单字典
-            var baseCatalogs = _DbContext.DD_DataDicCatalogs.Where(c => c.OrgId == null).AsNoTracking();  //基本字典
+            #region 复制简单字典
+            var baseCatalogs = _DbContext.DD_DataDicCatalogs.Where(c => c.OrgId == null).AsNoTracking();  //基本字典目录集合
             foreach (var catalog in baseCatalogs)
             {
-                var baseDataDic = _DbContext.DD_SimpleDataDics.Where(c => c.DataDicId == catalog.Id).AsNoTracking().ToArray(); //基本字典数据
-                baseDataDic.ForEach(c =>
-                {
-                    c.GenerateNewId();
-                    c.DataDicId = catalog.Id;
-                    c.CreateDateTime = OwHelper.WorldNow;
-                    c.CreateAccountId = context.User.Id;
-                });
-                catalog.GenerateNewId();
-                _DbContext.Add(merch);
-                _DbContext.AddRange(baseDataDic);
+                _DataManager.CopyTo(catalog, model.Id);
             }
+            _DataManager.CopyAllSpecialDataDicBase(model.Id);
+            #endregion 复制简单字典
+
             _DbContext.SaveChanges();
             return result;
         }

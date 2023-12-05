@@ -103,6 +103,11 @@ namespace PowerLmsServer.Managers
         public Account User { get; set; }
 
         /// <summary>
+        /// 这次工作上下文的创建时间。
+        /// </summary>
+        public DateTime CreateDateTime { get; set; } = OwHelper.WorldNow;
+
+        /// <summary>
         /// 当前使用的范围服务容器。
         /// </summary>
         public IServiceProvider ServiceProvider { get; set; }

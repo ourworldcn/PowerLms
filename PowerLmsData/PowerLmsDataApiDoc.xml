@@ -341,6 +341,12 @@
             所属组织机构Id。通常这里为null则有不同解释，如通用的模板或超管使用的数据字典。
             </summary>
         </member>
+        <member name="M:PowerLms.Data.DataDicCatalog.Clone">
+            <summary>
+            为指定对象生成一个深表副本。
+            </summary>
+            <returns></returns>
+        </member>
         <member name="T:PowerLms.Data.FeesType">
             <summary>
             费用种类。Code 是费用代码，DisplayName是费用名称，ShortName是英文名称,Remark是附加说明。
@@ -441,9 +447,19 @@
             国家。
             </summary>
         </member>
+        <member name="P:PowerLms.Data.PlCountry.CustomsCode">
+            <summary>
+            海关码。项目类型决定有大量与海关的EDI行为，交换使用的码。
+            </summary>
+        </member>
         <member name="T:PowerLms.Data.PlCurrency">
             <summary>
             币种。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCurrency.CustomsCode">
+            <summary>
+            海关码。项目类型决定有大量与海关的EDI行为，交换使用的码。
             </summary>
         </member>
         <member name="T:PowerLms.Data.PlExchangeRate">

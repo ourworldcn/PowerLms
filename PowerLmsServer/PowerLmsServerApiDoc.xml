@@ -53,6 +53,11 @@
             账号对象。
             </summary>
         </member>
+        <member name="P:PowerLmsServer.Managers.OwContext.CreateDateTime">
+            <summary>
+            这次工作上下文的创建时间。
+            </summary>
+        </member>
         <member name="P:PowerLmsServer.Managers.OwContext.ServiceProvider">
             <summary>
             当前使用的范围服务容器。
@@ -68,6 +73,55 @@
             保存变化。
             </summary>
             <returns></returns>
+        </member>
+        <member name="T:PowerLmsServer.Managers.DataDicManager">
+            <summary>
+            数据字典的服务。
+            </summary>
+        </member>
+        <member name="M:PowerLmsServer.Managers.DataDicManager.#ctor(PowerLmsServer.EfData.PowerLmsUserDbContext,PowerLmsServer.Managers.OwContext,AutoMapper.IMapper)">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.Managers.DataDicManager.DbContext">
+            <summary>
+            获取该管理器的数据库上下文。
+            </summary>
+        </member>
+        <member name="M:PowerLmsServer.Managers.DataDicManager.CopyTo(PowerLms.Data.DataDicCatalog,System.Guid)">
+            <summary>
+            复制数据字典。调用者需要自己保存更改。
+            </summary>
+            <param name="catalog"></param>
+            <param name="orgId">新组织机构Id。</param>
+        </member>
+        <member name="M:PowerLmsServer.Managers.DataDicManager.CopyTo``1(System.Collections.Generic.IEnumerable{``0},System.Guid)">
+            <summary>
+            复制特殊字典到指定的组织机构中。
+            </summary>
+            <typeparam name="T">字典元素的类型。</typeparam>
+            <param name="dataDics"></param>
+            <param name="orgId"></param>
+        </member>
+        <member name="M:PowerLmsServer.Managers.DataDicManager.AddTo``1(System.Collections.Generic.IEnumerable{``0},System.Guid)">
+            <summary>
+            将一组特殊字典，追加到指定的组织机构中。
+            </summary>
+            <param name="dataDics">每个对象被更改属性后追加到指定的指定组织机构中。</param>
+            <param name="orgId"></param>
+        </member>
+        <member name="T:PowerLmsServer.Managers.DataDicManagerExtensions">
+            <summary>
+            <see cref="T:PowerLmsServer.Managers.DataDicManager"/>类扩展方法封装类。
+            </summary>
+        </member>
+        <member name="M:PowerLmsServer.Managers.DataDicManagerExtensions.CopyAllSpecialDataDicBase(PowerLmsServer.Managers.DataDicManager,System.Guid)">
+            <summary>
+            复制所有特殊字典到一个新组织机构。
+            </summary>
+            <param name="mng"></param>
+            <param name="orgId"></param>
         </member>
         <member name="T:PowerLmsServer.Managers.EntityManager">
             <summary>
