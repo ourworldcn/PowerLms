@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
+using OW.Data;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,6 +19,11 @@ namespace OwDbBase
         public static string GetCompressionSql(ITable table)
         {
             return $"ALTER TABLE {table.Name} REBUILD PARTITION = ALL WITH (DATA_COMPRESSION = PAGE)";
+        }
+
+        public static void Test<T, TProperty>(T obj, Func<T, TProperty> func)
+        {
+            DbContext db = new DbContext(null);
         }
     }
 }
