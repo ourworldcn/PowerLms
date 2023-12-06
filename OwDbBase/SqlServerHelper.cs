@@ -23,7 +23,7 @@ namespace OwDbBase
 
         public static void Test<T, TProperty>(T obj, Func<T, TProperty> func)
         {
-            DbContext db = new DbContext(null);
+            using var _11 = new DbContext(null);
         }
     }
 }
