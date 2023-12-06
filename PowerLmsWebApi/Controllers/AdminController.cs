@@ -319,7 +319,7 @@ namespace PowerLmsWebApi.Controllers
                 {
                     coll = coll.Where(c => c.DisplayName.Contains(item.Value));
                 }
-            var prb = _EntityManager.GetAll(coll, 0, -1);
+            var prb = _EntityManager.GetAll(coll, startIndex, count);
             _Mapper.Map(prb, result);
             return result;
         }
@@ -407,16 +407,8 @@ namespace PowerLmsWebApi.Controllers
             DbSet<SimpleDataDic> dbSet = _DbContext.DD_SimpleDataDics;
             var item = dbSet.Find(id);
             if (item is null) return BadRequest();
-            var catalogId = item.DataDicId;
-            //_DbContext.SimpleDataDics.Remove(item);
             item.IsDelete = true;
             _DbContext.SaveChanges();
-            //if (item.DataDicType == 1) //若是简单字典
-            //    _DbContext.Database.ExecuteSqlRaw($"delete from {nameof(_DbContext.SimpleDataDics)} where {nameof(SimpleDataDic.DataDicId)}='{id.ToString()}'");
-            //else //其他字典待定
-            //{
-
-            //}
             return result;
         }
 
@@ -648,10 +640,10 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="400">在同一类别同一组织机构下指定了重复的Code。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpPost]
-        public ActionResult<AddlPlCargoRouteReturnDto> AddlPlCargoRoute(AddlPlCargoRouteParamsDto model)
+        public ActionResult<AddPlCargoRouteReturnDto> AddPlCargoRoute(AddPlCargoRouteParamsDto model)
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            var result = new AddlPlCargoRouteReturnDto();
+            var result = new AddPlCargoRouteReturnDto();
             var dbSet = _DbContext.DD_PlCargoRoutes;
             if (dbSet.Any(c => c.OrgId == model.Item.OrgId && c.Code == model.Item.Code))   //若重复
                 return BadRequest();
@@ -748,7 +740,7 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="400">指定类别Id无效。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetAllPlExchangeRateReturnDto> GetAllPlExchangeRate(Guid token, Guid orgId,
+        public ActionResult<GetAllPlExchangeRateReturnDto> GetAllPlExchangeRate(Guid token, Guid? orgId,
             [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [FromQuery][Range(-1, int.MaxValue)] int count = -1,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
@@ -783,10 +775,10 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="400">参数错误。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpPost]
-        public ActionResult<AddlPlExchangeRateReturnDto> AddlPlExchangeRate(AddlPlExchangeRateParamsDto model)
+        public ActionResult<AddPlExchangeRateReturnDto> AddPlExchangeRate(AddPlExchangeRateParamsDto model)
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            var result = new AddlPlExchangeRateReturnDto();
+            var result = new AddPlExchangeRateReturnDto();
             model.Item.GenerateNewId();
             var id = model.Item.Id;
             _DbContext.DD_PlExchangeRates.Add(model.Item);
@@ -1236,7 +1228,8 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 工作编码的译码表，不含序号。
         /// </summary>
-        static Dictionary<string, string> _JobNumberDecodingTable = new Dictionary<string, string> {
+        static readonly Dictionary<string, string> _JobNumberDecodingTable = new()
+        {
             { "<yy>","yy"},
             { "<yyyy>","yyyy"},
             { "<M>","M"},
@@ -1954,14 +1947,14 @@ namespace PowerLmsWebApi.Controllers
     /// <summary>
     /// 增加一个汇率记录的功能参数封装类。
     /// </summary>
-    public class AddlPlExchangeRateParamsDto : AddParamsDtoBase<PlExchangeRate>
+    public class AddPlExchangeRateParamsDto : AddParamsDtoBase<PlExchangeRate>
     {
     }
 
     /// <summary>
     /// 增加一个汇率记录的功能返回值封装类。
     /// </summary>
-    public class AddlPlExchangeRateReturnDto : AddReturnDtoBase
+    public class AddPlExchangeRateReturnDto : AddReturnDtoBase
     {
     }
 
@@ -2045,14 +2038,14 @@ namespace PowerLmsWebApi.Controllers
     /// <summary>
     /// 增加一个航线数据字典的功能参数封装类。
     /// </summary>
-    public class AddlPlCargoRouteParamsDto : AddParamsDtoBase<PlCargoRoute>
+    public class AddPlCargoRouteParamsDto : AddParamsDtoBase<PlCargoRoute>
     {
     }
 
     /// <summary>
     /// 增加一个航线数据字典的功能返回值封装类。
     /// </summary>
-    public class AddlPlCargoRouteReturnDto : AddReturnDtoBase
+    public class AddPlCargoRouteReturnDto : AddReturnDtoBase
     {
     }
 

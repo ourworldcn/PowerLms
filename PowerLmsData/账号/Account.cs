@@ -93,9 +93,9 @@ namespace PowerLms.Data
         public Guid? Token { get; set; }
 
         /// <summary>
-        /// 用户状态。0是正常使用用户，1是锁定用户。
+        /// 用户状态掩码。D0=1是锁定用户，D1=1用户应尽快更改密码，创建账号时可据需要设置此位，这不是强制要求，但前端在登录后见到此位为1应引导用户去更改密码。
         /// </summary>
-        [Comment("用户状态。0是正常使用用户，1是锁定用户。")]
+        [Comment("用户状态掩码。D0=1是锁定用户，D1=1用户应尽快更改密码。")]
         public byte State { get; set; }
 
         #region 瞬时属性

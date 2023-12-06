@@ -19,7 +19,7 @@
             账号功能控制器。
             </summary>
         </member>
-        <member name="M:PowerLmsWebApi.Controllers.AccountController.#ctor(PowerLmsServer.EfData.PowerLmsUserDbContext,PowerLmsServer.Managers.AccountManager,System.IServiceProvider,AutoMapper.IMapper)">
+        <member name="M:PowerLmsWebApi.Controllers.AccountController.#ctor(PowerLmsServer.EfData.PowerLmsUserDbContext,PowerLmsServer.Managers.AccountManager,System.IServiceProvider,AutoMapper.IMapper,PowerLmsServer.Managers.EntityManager)">
             <summary>
             构造函数。
             </summary>
@@ -27,6 +27,20 @@
             <param name="accountManager"></param>
             <param name="serviceProvider"></param>
             <param name="mapper"></param>
+            <param name="entityManager"></param>
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AccountController.GetAll(System.Guid,System.Int32,System.Int32,System.Collections.Generic.Dictionary{System.String,System.String})">
+            <summary>
+            获取账户。
+            </summary>
+            <param name="token">登录令牌。</param>
+            <param name="startIndex">起始位置，从0开始。</param>
+            <param name="count">最大返回数量。-1表示全返回。</param>
+            <param name="conditional">查询的条件。支持 LoginName Mobile eMail DisplayName</param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="400">指定类别Id无效。</response>  
+            <response code="401">无效令牌。</response>  
         </member>
         <member name="M:PowerLmsWebApi.Controllers.AccountController.Login(PowerLmsWebApi.Dto.LoginParamsDto)">
             <summary>
@@ -99,6 +113,11 @@
             </summary>
             <param name="model"></param>
             <returns></returns>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetAllAccountReturnDto">
+            <summary>
+            获取所有账户信息功能的返回值封装类。
+            </summary>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.ResetPwdParamsDto">
             <summary>
@@ -369,7 +388,7 @@
             <response code="400">指定类别Id无效。</response>  
             <response code="401">无效令牌。</response>  
         </member>
-        <member name="M:PowerLmsWebApi.Controllers.AdminController.AddlPlCargoRoute(PowerLmsWebApi.Controllers.AddlPlCargoRouteParamsDto)">
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.AddPlCargoRoute(PowerLmsWebApi.Controllers.AddPlCargoRouteParamsDto)">
             <summary>
             增加一个航线数据字典。
             </summary>
@@ -409,7 +428,7 @@
             <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
             <response code="401">无效令牌。</response>  
         </member>
-        <member name="M:PowerLmsWebApi.Controllers.AdminController.GetAllPlExchangeRate(System.Guid,System.Guid,System.Int32,System.Int32,System.Collections.Generic.Dictionary{System.String,System.String})">
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.GetAllPlExchangeRate(System.Guid,System.Nullable{System.Guid},System.Int32,System.Int32,System.Collections.Generic.Dictionary{System.String,System.String})">
             <summary>
             获取汇率。
             </summary>
@@ -423,7 +442,7 @@
             <response code="400">指定类别Id无效。</response>  
             <response code="401">无效令牌。</response>  
         </member>
-        <member name="M:PowerLmsWebApi.Controllers.AdminController.AddlPlExchangeRate(PowerLmsWebApi.Controllers.AddlPlExchangeRateParamsDto)">
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.AddPlExchangeRate(PowerLmsWebApi.Controllers.AddPlExchangeRateParamsDto)">
             <summary>
             增加一个汇率记录。
             </summary>
@@ -985,12 +1004,12 @@
             修改汇率项的功能返回值封装类。
             </summary>
         </member>
-        <member name="T:PowerLmsWebApi.Controllers.AddlPlExchangeRateParamsDto">
+        <member name="T:PowerLmsWebApi.Controllers.AddPlExchangeRateParamsDto">
             <summary>
             增加一个汇率记录的功能参数封装类。
             </summary>
         </member>
-        <member name="T:PowerLmsWebApi.Controllers.AddlPlExchangeRateReturnDto">
+        <member name="T:PowerLmsWebApi.Controllers.AddPlExchangeRateReturnDto">
             <summary>
             增加一个汇率记录的功能返回值封装类。
             </summary>
@@ -1050,12 +1069,12 @@
             修改航线数据字典项的功能返回值封装类。
             </summary>
         </member>
-        <member name="T:PowerLmsWebApi.Controllers.AddlPlCargoRouteParamsDto">
+        <member name="T:PowerLmsWebApi.Controllers.AddPlCargoRouteParamsDto">
             <summary>
             增加一个航线数据字典的功能参数封装类。
             </summary>
         </member>
-        <member name="T:PowerLmsWebApi.Controllers.AddlPlCargoRouteReturnDto">
+        <member name="T:PowerLmsWebApi.Controllers.AddPlCargoRouteReturnDto">
             <summary>
             增加一个航线数据字典的功能返回值封装类。
             </summary>
@@ -1197,6 +1216,7 @@
             <param name="dbContext"></param>
             <param name="accountManager"></param>
             <param name="serviceProvider"></param>
+            <param name="dataManager"></param>
         </member>
         <member name="M:PowerLmsWebApi.Controllers.MerchantController.GetAll(System.Guid,System.Int32,System.Int32,System.Collections.Generic.Dictionary{System.String,System.String})">
             <summary>
@@ -1229,12 +1249,11 @@
             <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
             <response code="401">无效令牌。</response>  
         </member>
-        <member name="M:PowerLmsWebApi.Controllers.MerchantController.Remove(System.Guid,System.Guid)">
+        <member name="M:PowerLmsWebApi.Controllers.MerchantController.RemoveMerchant(PowerLmsWebApi.Controllers.RemoveMerchantParamsDto)">
             <summary>
             删除指定Id的商户。慎用！
             </summary>
-            <param name="token">令牌。</param>
-            <param name="id">商户Id。</param>
+            <param name="model"></param>
             <returns></returns>
             <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
             <response code="401">无效令牌。</response>  
@@ -1249,6 +1268,16 @@
             <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
             <response code="401">无效令牌。</response>  
             <response code="404">指定Id的商户不存在。</response>  
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RemoveMerchantParamsDto">
+            <summary>
+            标记删除商户功能的参数封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RemoveMerchantReturnDto">
+            <summary>
+            标记删除商户功能的返回值封装类。
+            </summary>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.InitializeMerchantParamsDto">
             <summary>

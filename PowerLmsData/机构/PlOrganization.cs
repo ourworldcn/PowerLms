@@ -38,7 +38,7 @@ namespace PowerLms.Data
         /// 快捷输入码。服务器不使用。8个ASCII字符不足的尾部填充空格（写入时可不填充，但读回后会自动加入）。
         /// </summary>
         [Column(TypeName = "char"), MaxLength(8)]
-        [Comment("快捷输入码。服务器不使用。8个ASCII字符不足的尾部填充空格（写入时可不填充，但读回后会自动加入）。")]
+        [Comment("快捷输入码。服务器不使用。")]
         public string ShortcutCode { get; set; }
 
         /// <summary>

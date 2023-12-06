@@ -4,11 +4,15 @@
 using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using NPOI.OpenXmlFormats.Dml.Diagram;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
+using SixLabors.ImageSharp.Processing;
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using System.Net;
 
 namespace PowerLmsWebApi.Controllers
@@ -25,18 +29,60 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="accountManager"></param>
         /// <param name="serviceProvider"></param>
         /// <param name="mapper"></param>
-        public AccountController(PowerLmsUserDbContext dbContext, AccountManager accountManager, IServiceProvider serviceProvider, IMapper mapper)
+        /// <param name="entityManager"></param>
+        public AccountController(PowerLmsUserDbContext dbContext, AccountManager accountManager, IServiceProvider serviceProvider, IMapper mapper, EntityManager entityManager)
         {
             _DbContext = dbContext;
             _AccountManager = accountManager;
             _ServiceProvider = serviceProvider;
             _Mapper = mapper;
+            _EntityManager = entityManager;
         }
 
-        IServiceProvider _ServiceProvider { get; }
-        PowerLmsUserDbContext _DbContext;
-        AccountManager _AccountManager;
-        IMapper _Mapper;
+        readonly IServiceProvider _ServiceProvider;
+        readonly PowerLmsUserDbContext _DbContext;
+        readonly AccountManager _AccountManager;
+        readonly IMapper _Mapper;
+        readonly EntityManager _EntityManager;
+        /// <summary>
+        /// 获取账户。
+        /// </summary>
+        /// <param name="token">登录令牌。</param>
+        /// <param name="startIndex">起始位置，从0开始。</param>
+        /// <param name="count">最大返回数量。-1表示全返回。</param>
+        /// <param name="conditional">查询的条件。支持 LoginName Mobile eMail DisplayName</param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定类别Id无效。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        public ActionResult<GetAllAccountReturnDto> GetAll(Guid token, [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex,
+            [FromQuery][Range(-1, int.MaxValue)] int count = -1, [FromQuery] Dictionary<string, string> conditional = null)
+        {
+            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetAllAccountReturnDto();
+            var coll = _DbContext.Accounts.AsNoTracking();
+            foreach (var item in conditional)
+                if (string.Equals(item.Key, "eMail", StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.EMail.Contains(item.Value));
+                }
+                else if (string.Equals(item.Key, "LoginName", StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.LoginName.Contains(item.Value));
+                }
+                else if (string.Equals(item.Key, "Mobile", StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.Mobile.Contains(item.Value));
+                }
+                else if (string.Equals(item.Key, "DisplayName", StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.DisplayName.Contains(item.Value));
+                }
+            var prb = _EntityManager.GetAll(coll, startIndex, count);
+            _Mapper.Map(prb, result);
+            return result;
+        }
 
         /// <summary>
         /// 登录。随后应调用Account/SetUserInfo。通过Account/GetAccountInfo可以获取自身信息。
@@ -117,8 +163,10 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<GetAccountInfoReturnDto> GetAccountInfo(GetAccountInfoParamsDto model)
         {
-            var result = new GetAccountInfoReturnDto();
-            result.Account = _DbContext.Accounts.Find(model.UserId);
+            var result = new GetAccountInfoReturnDto
+            {
+                Account = _DbContext.Accounts.Find(model.UserId)
+            };
             if (result.Account is null)
             {
                 return NotFound();
@@ -198,6 +246,7 @@ namespace PowerLmsWebApi.Controllers
             var result = new ModifyPwdReturnDto();
             if (!context.User.IsPwd(model.OldPwd)) return BadRequest();
             context.User.SetPwd(model.NewPwd);
+            context.User.State &= 0b_1111_1101;
             context.SaveChanges();
             return result;
         }
@@ -210,14 +259,22 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<ResetPwdReturnDto> ResetPwd(ResetPwdParamsDto model)
         {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             return Ok();
         }
     }
 
     /// <summary>
+    /// 获取所有账户信息功能的返回值封装类。
+    /// </summary>
+    public class GetAllAccountReturnDto : PagingReturnBase<Account>
+    {
+    }
+
+    /// <summary>
     /// 重置密码功能的参数封装类。
     /// </summary>
-    public class ResetPwdParamsDto
+    public class ResetPwdParamsDto : TokenDtoBase
     {
     }
 

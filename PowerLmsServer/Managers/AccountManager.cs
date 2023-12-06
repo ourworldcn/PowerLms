@@ -26,7 +26,7 @@ namespace PowerLmsServer.Managers
             _PasswordGenerator = passwordGenerator;
         }
 
-        PasswordGenerator _PasswordGenerator;
+        readonly PasswordGenerator _PasswordGenerator;
 
         /// <summary>
         /// 创建一个新账号。

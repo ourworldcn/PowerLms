@@ -28,7 +28,7 @@ namespace PowerLmsServer.Managers
             _DbContext = dbContext;
         }
 
-        PowerLmsUserDbContext _DbContext;
+        readonly PowerLmsUserDbContext _DbContext;
 
         /// <summary>
         /// 修改可软删除的对象集合。

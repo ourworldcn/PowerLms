@@ -23,6 +23,7 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="dbContext"></param>
         /// <param name="accountManager"></param>
         /// <param name="serviceProvider"></param>
+        /// <param name="dataManager"></param>
         public MerchantController(PowerLmsUserDbContext dbContext, AccountManager accountManager, IServiceProvider serviceProvider, DataDicManager dataManager)
         {
             _DbContext = dbContext;
@@ -31,10 +32,10 @@ namespace PowerLmsWebApi.Controllers
             _DataManager = dataManager;
         }
 
-        PowerLmsUserDbContext _DbContext;
-        AccountManager _AccountManager;
-        IServiceProvider _ServiceProvider;
-        DataDicManager _DataManager;
+        readonly PowerLmsUserDbContext _DbContext;
+        readonly AccountManager _AccountManager;
+        readonly IServiceProvider _ServiceProvider;
+        readonly DataDicManager _DataManager;
 
         #region 简单CRUD
 
@@ -122,21 +123,29 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 删除指定Id的商户。慎用！
         /// </summary>
-        /// <param name="token">令牌。</param>
-        /// <param name="id">商户Id。</param>
+        /// <param name="model"></param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">指定Id的商户不存在。</response>  
         [HttpDelete]
-        public ActionResult Remove(Guid token, Guid id)
+        public ActionResult<RemoveMerchantReturnDto> RemoveMerchant(RemoveMerchantParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (_DbContext.Merchants.Find(id) is not PlMerchant mcht) return NotFound();
-            _DbContext.Remove(mcht);
-            //TODO 连锁删除所有信息，待最后实施
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new RemoveMerchantReturnDto();
+            var id = model.Id;
+            var dbSet = _DbContext.Merchants;
+            var item = dbSet.Find(id);
+            if (item is null) return BadRequest();
+            item.IsDelete = true;
             _DbContext.SaveChanges();
-            return Ok();
+            //if (item.DataDicType == 1) //若是简单字典
+            //    _DbContext.Database.ExecuteSqlRaw($"delete from {nameof(_DbContext.SimpleDataDics)} where {nameof(SimpleDataDic.DataDicId)}='{id.ToString()}'");
+            //else //其他字典待定
+            //{
+
+            //}
+            return result;
         }
         #endregion 简单CRUD
 
@@ -167,6 +176,20 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.SaveChanges();
             return result;
         }
+    }
+
+    /// <summary>
+    /// 标记删除商户功能的参数封装类。
+    /// </summary>
+    public class RemoveMerchantParamsDto : RemoveParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 标记删除商户功能的返回值封装类。
+    /// </summary>
+    public class RemoveMerchantReturnDto : RemoveReturnDtoBase
+    {
     }
 
     /// <summary>

@@ -679,6 +679,11 @@
             状态码。0=正常，1=停用。
             </summary>
         </member>
+        <member name="P:PowerLms.Data.PlMerchant.IsDelete">
+            <summary>
+            是否已标记为删除。false(默认)未标记为删除，true标记为删除。
+            </summary>
+        </member>
         <member name="T:PowerLms.Data.PlOrganization">
             <summary>
             组织机构。
@@ -817,7 +822,7 @@
         </member>
         <member name="P:PowerLms.Data.Account.State">
             <summary>
-            用户状态。0是正常使用用户，1是锁定用户。
+            用户状态掩码。D0=1是锁定用户，D1=1用户应尽快更改密码，创建账号时可据需要设置此位，这不是强制要求，但前端在登录后见到此位为1应引导用户去更改密码。
             </summary>
         </member>
         <member name="P:PowerLms.Data.Account.OrgId">

@@ -1,10 +1,13 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NPOI.SS.UserModel;
 using OwDbBase;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
+using System;
+using System.Diagnostics;
 using System.Text.RegularExpressions;
 
 namespace PowerLmsServer.Managers
@@ -27,9 +30,9 @@ namespace PowerLmsServer.Managers
             _NpoiManager = npoiManager;
         }
 
-        ILogger<InitializerService> _Logger;
-        IServiceScopeFactory _ServiceScopeFactory;
-        NpoiManager _NpoiManager;
+        readonly ILogger<InitializerService> _Logger;
+        readonly IServiceScopeFactory _ServiceScopeFactory;
+        readonly NpoiManager _NpoiManager;
 
         /// <summary>
         /// <inheritdoc/>
@@ -47,7 +50,7 @@ namespace PowerLmsServer.Managers
                 InitializeDataDic(svc);
                 CreateAdmin(svc);
                 Test(svc);
-            });
+            }, CancellationToken.None);
         }
 
         /// <summary>
@@ -133,16 +136,13 @@ namespace PowerLmsServer.Managers
             db.SaveChanges();
         }
 
+        [Conditional("DEBUG")]
         private void Test(IServiceProvider svc)
         {
             var db = svc.GetRequiredService<PowerLmsUserDbContext>();
-            var org = db.PlOrganizations.Find(new Guid("329BE0F5-BD13-4484-A8B7-6DD9AB392D53"));
-            //_DbContext.SaveChanges();
-            var now = OwHelper.WorldNow;
-            var patt = @"(\<.+?\>(?=\<))+";
-            var math = Regex.Match("<d><dj>", patt);
-            var str = DateTime.Now.ToString("yyMM<#>dd{MM:1}");
-            var b = math.Success;
+            var org = db.PlOrganizations.Find(new Guid("329BE0F5-BD13-4484-A8B7-6DD9AB392D53"))??new PlOrganization { };
+            var str = db.Entry(org).Property(c=>c.Id).Metadata.GetColumnBaseName();
+
         }
 
         private void CreateDb()
