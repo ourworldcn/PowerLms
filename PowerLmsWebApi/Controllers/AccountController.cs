@@ -267,7 +267,7 @@ namespace PowerLmsWebApi.Controllers
     /// <summary>
     /// 获取所有账户信息功能的返回值封装类。
     /// </summary>
-    public class GetAllAccountReturnDto : PagingReturnBase<Account>
+    public class GetAllAccountReturnDto : PagingReturnDtoBase<Account>
     {
     }
 
