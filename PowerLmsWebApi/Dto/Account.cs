@@ -84,14 +84,14 @@ namespace PowerLmsWebApi.Dto
     public class CreateAccountParamsDto : TokenDtoBase
     {
         /// <summary>
-        /// 账号的登录名。
-        /// </summary>
-        public string LoginName { get; set; }
-
-        /// <summary>
-        /// 指定的秘密，如果为null或空则自动生成一个秘密。
+        /// 指定的密码，如果为null或空则自动生成一个秘密。
         /// </summary>
         public string Pwd { get; set; }
+
+        /// <summary>
+        /// 这里指定除密码等敏感信息以外的信息。不可指定的会自动忽略。
+        /// </summary>
+        public Account Item { get; set; }
     }
 
     /// <summary>
@@ -100,31 +100,31 @@ namespace PowerLmsWebApi.Dto
     public class CreateAccountReturnDto : ReturnDtoBase
     {
         /// <summary>
-        /// 如果创建成功这里返回用户Id。用于有权限的用户随后设置该账号的具体信息。
-        /// </summary>
-        public Guid Id { get; set; }
-
-        /// <summary>
         /// 密码的明文。这是唯一能获取密码的地方，请用户记得。
         /// </summary>
         public string Pwd { get; set; }
+
+        /// <summary>
+        /// 返回用户信息。
+        /// </summary>
+        public Account Result { get; set; }
     }
 
     /// <summary>
     /// 设置/修改账号信息功能参数封装类。
     /// </summary>
-    public class SetAccountInfoParamsDto : TokenDtoBase
+    public class ModifyAccountParamsDto : TokenDtoBase
     {
         /// <summary>
         /// 账号的信息，可从Account/GetAccountInfo 获取，修改后调用设置/修改账号信息功能。
         /// </summary>
-        public Account Account { get; set; }
+        public Account Item { get; set; }
     }
 
     /// <summary>
     /// 设置/修改账号信息功能返回值封装类。
     /// </summary>
-    public class SetAccountInfoReturnDto : ReturnDtoBase
+    public class ModifyAccountReturnDto : ReturnDtoBase
     {
     }
 
