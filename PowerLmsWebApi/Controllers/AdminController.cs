@@ -449,7 +449,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllBusinessTypeReturnDto();
-            var collBase = _DbContext.DD_BusinessTypeDataDics.AsNoTracking();
+            var collBase = _DbContext.DD_BusinessTypeDataDics.OrderBy(c => c.OrderNumber).AsNoTracking();
             var prb = _EntityManager.GetAll(collBase, 0, -1);
             _Mapper.Map(prb, result);
             return result;

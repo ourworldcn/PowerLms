@@ -44,8 +44,11 @@ namespace PowerLmsWebApi.Controllers
         readonly AccountManager _AccountManager;
         readonly IMapper _Mapper;
         readonly EntityManager _EntityManager;
+
+        #region 用户相关
+
         /// <summary>
-        /// 获取账户。
+        /// 获取账户信息。
         /// </summary>
         /// <param name="token">登录令牌。</param>
         /// <param name="startIndex">起始位置，从0开始。</param>
@@ -132,18 +135,17 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。</response>  
         /// <response code="400">登录名重复。</response>  
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType(typeof(BadRequestObjectResult), (int)HttpStatusCode.BadRequest)]
         [HttpPost]
         public ActionResult<CreateAccountReturnDto> CreateAccount(CreateAccountParamsDto model)
         {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new CreateAccountReturnDto();
             var pwd = model.Pwd;
-            var b = _AccountManager.CreateNew(model.LoginName, ref pwd, out Guid id, _ServiceProvider);
+            var b = _AccountManager.CreateNew(model.Item.LoginName, ref pwd, out Guid id, _ServiceProvider);
             if (b)
             {
                 result.Pwd = pwd;
-                result.Id = id;
+                result.Result = _DbContext.Accounts.Find(id);
             }
             else
             {
@@ -163,6 +165,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<GetAccountInfoReturnDto> GetAccountInfo(GetAccountInfoParamsDto model)
         {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAccountInfoReturnDto
             {
                 Account = _DbContext.Accounts.Find(model.UserId)
@@ -175,20 +178,21 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// 设置/修改账号信息。
+        /// 设置/修改账号信息。不能用此接口修改敏感信息如密码。
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。</response>  
         /// <response code="401">Token无效或无权限获取指定账号信息。</response>  
         /// <response code="404">指定的账号Id不存在。</response>  
-        [HttpPost]
-        public ActionResult<SetAccountInfoReturnDto> SetAccountInfo(SetAccountInfoParamsDto model)
+        [HttpPut]
+        public ActionResult<ModifyAccountReturnDto> ModifyAccount(ModifyAccountParamsDto model)
         {
-            var result = new SetAccountInfoReturnDto();
-            var acount = _DbContext.Accounts.Find(model.Account.Id);
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new ModifyAccountReturnDto();
+            var acount = _DbContext.Accounts.Find(model.Item.Id);
             if (acount is null) return NotFound();
-            _DbContext.Entry(model.Account).CurrentValues.SetValues(model.Account);
+            _DbContext.Entry(model.Item).CurrentValues.SetValues(model.Item);
             _DbContext.SaveChanges();
             return result;
         }
@@ -199,11 +203,11 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="model"></param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。</response>  
-        [HttpPost]
+        [HttpPut]
         public ActionResult<SetUserInfoReturnDto> SetUserInfo(SetUserInfoParams model)
         {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new SetUserInfoReturnDto();
-            var context = _AccountManager.GetAccountFromToken(model.Token, _ServiceProvider);
             if (!_DbContext.AccountPlOrganizations.Any(c => c.UserId == context.User.Id && c.OrgId == model.CurrentOrgId)) return BadRequest("错误的当前组织机构Id。");
             context.User.OrgId = model.CurrentOrgId;
             context.User.CurrentLanguageTag = model.LanguageTag;
@@ -239,7 +243,7 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。</response>  
         /// <response code="401">无效令牌。</response>  
         /// <response code="400">旧密码不正确。</response>  
-        [HttpPost]
+        [HttpPut]
         public ActionResult<ModifyPwdReturnDto> ModifyPwd(ModifyPwdParamsDto model)
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
@@ -262,10 +266,128 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             return Ok();
         }
+
+        #endregion 用户相关
+
+        #region 用户和商户/组织机构的所属关系的CRUD
+
+        /// <summary>
+        /// 获取用户和商户/组织机构的所属关系。
+        /// </summary>
+        /// <param name="token">登录令牌。</param>
+        /// <param name="accountId">账号Id。null表示不限定。和<paramref name="orgId"/>限定为与的关系。</param>
+        /// <param name="orgId">商户及组织机构类别的Id,null表示不限定。和<paramref name="accountId"/>限定为与的关系。</param>
+        /// <param name="startIndex">起始位置，从0开始。</param>
+        /// <param name="count">最大返回数量。-1表示全返回。</param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定类别Id无效。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        public ActionResult<GetAllAccountPlOrganizationReturnDto> GetAllAccountPlOrganization(Guid token, Guid? accountId, Guid? orgId,
+            [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [FromQuery][Range(-1, int.MaxValue)] int count = -1)
+        {
+            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetAllAccountPlOrganizationReturnDto();
+            var coll = _DbContext.AccountPlOrganizations.AsNoTracking();
+            if (accountId is not null)
+                coll = coll.Where(c => c.UserId == accountId);
+            if (orgId is not null)
+                coll = coll.Where(c => c.OrgId == orgId);
+            var prb = _EntityManager.GetAll(coll, startIndex, count);
+            _Mapper.Map(prb, result);
+            return result;
+        }
+
+        /// <summary>
+        /// 增加用户和商户/组织机构的所属关系。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">在同一类别同一组织机构下指定了重复的Code。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPost]
+        public ActionResult<AddAccountPlOrganizationReturnDto> AddAccountPlOrganization(AddAccountPlOrganizationParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new AddAccountPlOrganizationReturnDto();
+            _DbContext.AccountPlOrganizations.Add(model.Item);
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        /// <summary>
+        /// 删除用户和商户/组织机构的所属关系。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpDelete]
+        public ActionResult<RemoveAccountPlOrganizationReturnDto> RemoveAccountPlOrganization(RemoveAccountPlOrganizationParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new RemoveAccountPlOrganizationReturnDto();
+            DbSet<AccountPlOrganization> dbSet = _DbContext.AccountPlOrganizations;
+            var item = dbSet.Find(model.UserId, model.OrgId);
+            if (item is null) return BadRequest();
+            _DbContext.Remove(item);
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        #endregion 用户和商户/组织机构的所属关系的CRUD
+
     }
 
     /// <summary>
-    /// 获取所有账户信息功能的返回值封装类。
+    /// 获取用户和商户/组织机构的所属关系返回值封装类。
+    /// </summary>
+    public class GetAllAccountPlOrganizationReturnDto : PagingReturnDtoBase<AccountPlOrganization>
+    {
+    }
+
+    /// <summary>
+    /// 删除用户和商户/组织机构的所属关系的功能参数封装类。
+    /// </summary>
+    public class RemoveAccountPlOrganizationParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 用户的Id。
+        /// </summary>
+        public Guid UserId { get; set; }
+
+        /// <summary>
+        /// 商户/组织机构的Id。
+        /// </summary>
+        public Guid OrgId { get; set; }
+    }
+
+    /// <summary>
+    /// 删除用户和商户/组织机构的所属关系的功能返回值封装类。
+    /// </summary>
+    public class RemoveAccountPlOrganizationReturnDto : RemoveReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 增加用户和商户/组织机构的所属关系的功能参数封装类，
+    /// </summary>
+    public class AddAccountPlOrganizationParamsDto : AddParamsDtoBase<AccountPlOrganization>
+    {
+    }
+
+    /// <summary>
+    /// 增加用户和商户/组织机构的所属关系的功能返回值封装类。
+    /// </summary>
+    public class AddAccountPlOrganizationReturnDto : ReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 获取用户和商户/组织机构的所属关系功能的返回值封装类。
     /// </summary>
     public class GetAllAccountReturnDto : PagingReturnDtoBase<Account>
     {

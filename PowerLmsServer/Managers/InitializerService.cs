@@ -144,9 +144,6 @@ namespace PowerLmsServer.Managers
             var org = db.PlOrganizations.Find(new Guid("329BE0F5-BD13-4484-A8B7-6DD9AB392D53")) ?? new PlOrganization { };
             var str = db.Entry(org).Property(c => c.Id).Metadata.GetColumnBaseName();
             SmtpClient smtp = new SmtpClient(".");
-            smtp.Send(new MailMessage("s@msn.com","ourworld_cn@msn.com")
-            {
-            });
         }
 
         private void CreateDb()

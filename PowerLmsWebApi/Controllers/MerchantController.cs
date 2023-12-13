@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NPOI.Util;
 using NuGet.Common;
@@ -24,18 +25,24 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="accountManager"></param>
         /// <param name="serviceProvider"></param>
         /// <param name="dataManager"></param>
-        public MerchantController(PowerLmsUserDbContext dbContext, AccountManager accountManager, IServiceProvider serviceProvider, DataDicManager dataManager)
+        /// <param name="entityManager"></param>
+        /// <param name="mapper"></param>
+        public MerchantController(PowerLmsUserDbContext dbContext, AccountManager accountManager, IServiceProvider serviceProvider, DataDicManager dataManager, EntityManager entityManager, IMapper mapper)
         {
             _DbContext = dbContext;
             _AccountManager = accountManager;
             _ServiceProvider = serviceProvider;
             _DataManager = dataManager;
+            _EntityManager = entityManager;
+            _Mapper = mapper;
         }
 
         readonly PowerLmsUserDbContext _DbContext;
         readonly AccountManager _AccountManager;
         readonly IServiceProvider _ServiceProvider;
         readonly DataDicManager _DataManager;
+        readonly EntityManager _EntityManager;
+        private readonly IMapper _Mapper;
 
         #region 简单CRUD
 
@@ -45,35 +52,36 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="token">登录令牌。</param>
         /// <param name="startIndex">起始位置，从0开始。</param>
         /// <param name="count">最大返回数量。</param>
-        /// <param name="conditional">查询的条件。</param>
+        /// <param name="conditional">查询的条件。支持 name，ShortName，displayname，ShortcutCode</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetMerchantReturnDto> GetAll(Guid token, [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [Range(-1, int.MaxValue)] int count = -1,
+        public ActionResult<GetAllMerchantReturnDto> GetAllMerchant(Guid token, [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [Range(-1, int.MaxValue)] int count = -1,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
             if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            var result = new GetMerchantReturnDto();
+            var result = new GetAllMerchantReturnDto();
             var coll = _DbContext.Merchants.AsNoTracking().OrderBy(c => c.Id).Skip(startIndex);
             foreach (var item in conditional)
-                if (string.Equals(item.Key, "id", StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(item.Key, "name", StringComparison.OrdinalIgnoreCase))
                 {
-                    if (OwConvert.TryToGuid(item.Value, out var id))
-                        coll = coll.Where(c => c.Id == id);
+                    coll = coll.Where(c => c.Name.Name.Contains(item.Value));
                 }
-                else if (string.Equals(item.Key, "code", StringComparison.OrdinalIgnoreCase))
+                else if (string.Equals(item.Key, "ShortName", StringComparison.OrdinalIgnoreCase))
                 {
-                    coll = coll.Where(c => c.Name.Name == item.Value);
+                    coll = coll.Where(c => c.Name.ShortName.Contains(item.Value));
                 }
                 else if (string.Equals(item.Key, "displayname", StringComparison.OrdinalIgnoreCase))
                 {
                     coll = coll.Where(c => c.Name.DisplayName.Contains(item.Value));
                 }
-            if (count > -1)
-                coll = coll.Take(count);
-            result.Total = _DbContext.Merchants.Count();
-            result.Result.AddRange(coll);
+                else if (string.Equals(item.Key, "ShortcutCode", StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.ShortcutCode.Contains(item.Value));
+                }
+            var prb = _EntityManager.GetAll(coll, startIndex, count);
+            _Mapper.Map(prb, result);
             return result;
         }
 
@@ -213,7 +221,7 @@ namespace PowerLmsWebApi.Controllers
     /// <summary>
     /// 获取所有商户功能的返回值封装类。
     /// </summary>
-    public class GetMerchantReturnDto : PagingReturnDtoBase<PlMerchant>
+    public class GetAllMerchantReturnDto : PagingReturnDtoBase<PlMerchant>
     {
     }
 
