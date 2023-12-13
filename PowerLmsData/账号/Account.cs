@@ -94,10 +94,12 @@ namespace PowerLms.Data
 
         /// <summary>
         /// 用户状态掩码。D0=1是锁定用户，D1=1用户应尽快更改密码，创建账号时可据需要设置此位，这不是强制要求，但前端在登录后见到此位为1应引导用户去更改密码。
+        /// D2=1标识该用户是全系统超管，D3=1标识该用户是某个商户超管。
         /// </summary>
-        [Comment("用户状态掩码。D0=1是锁定用户，D1=1用户应尽快更改密码。")]
+        [Comment("用户状态掩码。D0=1是锁定用户，D1=1用户应尽快更改密码。D2=1标识该用户是全系统超管，D3=1标识该用户是某个商户超管")]
         public byte State { get; set; }
 
+        public int MyProperty { get; set; }
         #region 瞬时属性
 
         #endregion 瞬时属性
