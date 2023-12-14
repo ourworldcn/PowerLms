@@ -694,22 +694,6 @@
             <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
             <response code="401">无效令牌。</response>  
         </member>
-        <member name="F:PowerLmsWebApi.Controllers.AdminController._JobNumberDecodingTable">
-            <summary>
-            工作编码的译码表，不含序号。
-            </summary>
-        </member>
-        <member name="M:PowerLmsWebApi.Controllers.AdminController.GetNewJobNumber(PowerLmsWebApi.Controllers.GetNewJobNumberParamsDto)">
-            <summary>
-            用指定的编码规则生成一个新的编码。
-            </summary>
-            <param name="model"></param>
-            <returns></returns>
-            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
-            <response code="400">指定的规则不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
-            <response code="401">无效令牌。</response>  
-            <response code="423">锁定超时，通常是服务器极为繁忙导致。</response>  
-        </member>
         <member name="M:PowerLmsWebApi.Controllers.AdminController.GetAllPlCountry(System.Guid,System.Nullable{System.Guid},System.Int32,System.Int32,System.Collections.Generic.Dictionary{System.String,System.String})">
             <summary>
             获取国家。
@@ -817,26 +801,6 @@
             <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
             <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
             <response code="401">无效令牌。</response>  
-        </member>
-        <member name="T:PowerLmsWebApi.Controllers.GetNewJobNumberParamsDto">
-            <summary>
-            用指定的编码规则生成一个新的编码的功能参数封装类。
-            </summary>
-        </member>
-        <member name="P:PowerLmsWebApi.Controllers.GetNewJobNumberParamsDto.RuleId">
-            <summary>
-            规则的Id.
-            </summary>
-        </member>
-        <member name="T:PowerLmsWebApi.Controllers.GetNewJobNumberReturnDto">
-            <summary>
-            用指定的编码规则生成一个新的编码的功能返回值封装类。
-            </summary>
-        </member>
-        <member name="P:PowerLmsWebApi.Controllers.GetNewJobNumberReturnDto.Result">
-            <summary>
-            返回的业务码。
-            </summary>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.RestorePlCurrencyParamsDto">
             <summary>
@@ -1273,6 +1237,43 @@
             返回数据字典目录功能的返回值封装类。
             </summary>
         </member>
+        <member name="T:PowerLmsWebApi.Controllers.JobNumberController">
+            <summary>
+            生成序号控制器。
+            </summary>
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.JobNumberController.#ctor(Microsoft.Extensions.DependencyInjection.ServiceProvider,PowerLmsServer.Managers.AccountManager,PowerLmsServer.EfData.PowerLmsUserDbContext,PowerLmsServer.Managers.JobNumberManager)">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.JobNumberController.GeneratedJobNumber(PowerLmsWebApi.Controllers.GeneratedJobNumberParamsDto)">
+            <summary>
+            用指定的编码规则生成一个新的编码。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GeneratedJobNumberReturnDto">
+            <summary>
+            用指定的编码规则生成一个新的编码的功能返回值封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.GeneratedJobNumberReturnDto.Result">
+            <summary>
+            返回的业务码。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GeneratedJobNumberParamsDto">
+            <summary>
+            用指定的编码规则生成一个新的编码的功能参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.GeneratedJobNumberParamsDto.RuleId">
+            <summary>
+            规则的Id.
+            </summary>
+        </member>
         <member name="T:PowerLmsWebApi.Controllers.MerchantController">
             <summary>
             操作商户的控制器。
@@ -1296,7 +1297,7 @@
             <param name="token">登录令牌。</param>
             <param name="startIndex">起始位置，从0开始。</param>
             <param name="count">最大返回数量。</param>
-            <param name="conditional">查询的条件。支持 name，ShortName，displayname，ShortcutCode</param>
+            <param name="conditional">查询的条件。支持 name，ShortName，displayname，ShortcutCode，Id。不区分大小写。</param>
             <returns></returns>
             <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
             <response code="401">无效令牌。</response>  

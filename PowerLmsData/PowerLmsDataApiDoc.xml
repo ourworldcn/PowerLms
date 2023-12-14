@@ -392,19 +392,25 @@
             编码规则。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.JobNumberRule.Prefix">
-            <summary>
-            前缀。这个属性不是Code。
-            </summary>
-        </member>
         <member name="P:PowerLms.Data.JobNumberRule.RuleString">
             <summary>
-            规则字符串。不包含前缀。
+            规则字符串。包含前缀，后缀。
+            以下控制代码区分大小写。
+            &lt;yy&gt;	年份（00 到 99）
+            &lt;yyyy&gt;	由四位数字表示的年份。
+            &lt;M&gt;	月份（1 到 12）。
+            &lt;MM&gt;	月份（01 到 12）。
+            &lt;d&gt;	一个月中的某一天（1 到 31）。
+            &lt;dd&gt;	一个月中的某一天（01 到 31）。
+            &lt;hh&gt;	采用 24 小时制的小时（从 00 到 23）
+            &lt;0&gt;	序号 用对应的数字（如果存在）替换零；否则，将在结果字符串中显示零。如123(&lt;0000&gt;) -&gt; 0123。
+            &lt;#&gt;	序号	用对应的数字（如果存在）替换&lt;#&gt;符号；否则，不会在结果字符串中显示任何数字。请注意，如果输入字符串中的相应数字是无意义的 0，则在结果字符串中不会出现任何数字。 例如，0003 (&lt;####&gt;) -&gt; 3。
+            &lt;XXX&gt;   员工编号 此编号取几位就加入几个X。
             </summary>
         </member>
         <member name="P:PowerLms.Data.JobNumberRule.CurrentNumber">
             <summary>
-            当前已用的最大编号。
+            当前未用的最小编号。
             </summary>
         </member>
         <member name="P:PowerLms.Data.JobNumberRule.RepeatMode">
@@ -824,6 +830,11 @@
             <summary>
             用户状态掩码。D0=1是锁定用户，D1=1用户应尽快更改密码，创建账号时可据需要设置此位，这不是强制要求，但前端在登录后见到此位为1应引导用户去更改密码。
             D2=1标识该用户是全系统超管，D3=1标识该用户是某个商户超管。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.Account.JobNumber">
+            <summary>
+            工号。做业务的人员必须有。
             </summary>
         </member>
         <member name="P:PowerLms.Data.Account.OrgId">

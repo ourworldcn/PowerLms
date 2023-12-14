@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.ObjectPool;
 using NPOI.SS.UserModel;
 using OwDbBase;
 using PowerLms.Data;
@@ -9,6 +10,7 @@ using PowerLmsServer.EfData;
 using System;
 using System.Diagnostics;
 using System.Net.Mail;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace PowerLmsServer.Managers
@@ -48,7 +50,7 @@ namespace PowerLmsServer.Managers
                 using var scope = _ServiceScopeFactory.CreateScope();
                 var svc = scope.ServiceProvider;
                 CreateSystemResource(svc);
-                InitializeDataDic(svc);
+                //InitializeDataDic(svc);
                 CreateAdmin(svc);
                 Test(svc);
             }, CancellationToken.None);
@@ -141,9 +143,9 @@ namespace PowerLmsServer.Managers
         private void Test(IServiceProvider svc)
         {
             var db = svc.GetRequiredService<PowerLmsUserDbContext>();
-            var org = db.PlOrganizations.Find(new Guid("329BE0F5-BD13-4484-A8B7-6DD9AB392D53")) ?? new PlOrganization { };
-            var str = db.Entry(org).Property(c => c.Id).Metadata.GetColumnBaseName();
-            SmtpClient smtp = new SmtpClient(".");
+            var jn = svc.GetRequiredService<JobNumberManager>();
+            var demoStr = "gy<yyyy><MM><XXX><0000>eer";
+            var str = jn.Generated(new JobNumberRule { RuleString = demoStr }, null, OwHelper.WorldNow);
         }
 
         private void CreateDb()

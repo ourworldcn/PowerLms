@@ -70,6 +70,11 @@ namespace PowerLmsWebApi.Controllers
                 {
                     coll = coll.Where(c => c.EMail.Contains(item.Value));
                 }
+                else if (string.Equals(item.Key, "Id", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (Guid.TryParse(item.Value, out var id))
+                        coll = coll.Where(c => c.Id == id);
+                }
                 else if (string.Equals(item.Key, "LoginName", StringComparison.OrdinalIgnoreCase))
                 {
                     coll = coll.Where(c => c.LoginName.Contains(item.Value));

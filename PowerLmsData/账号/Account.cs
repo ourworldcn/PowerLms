@@ -18,7 +18,9 @@ namespace PowerLms.Data
     /// 账号相关信息数据库类。
     /// </summary>
     [Index(nameof(Token), IsUnique = false)]
-    [Index(nameof(LoginName), IsUnique = false)]
+    [Index(nameof(LoginName), IsUnique = true)]
+    [Index(nameof(EMail), IsUnique = false)]
+    [Index(nameof(Mobile), IsUnique = false)]
     public class Account : GuidKeyObjectBase
     {
         /// <summary>
@@ -99,7 +101,12 @@ namespace PowerLms.Data
         [Comment("用户状态掩码。D0=1是锁定用户，D1=1用户应尽快更改密码。D2=1标识该用户是全系统超管，D3=1标识该用户是某个商户超管")]
         public byte State { get; set; }
 
-        public int MyProperty { get; set; }
+        /// <summary>
+        /// 工号。做业务的人员必须有。
+        /// </summary>
+        [Comment("工号。做业务的人员必须有。")]
+        public int? JobNumber { get; set; }
+
         #region 瞬时属性
 
         #endregion 瞬时属性

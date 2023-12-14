@@ -16,6 +16,8 @@ using AutoMapper;
 using NPOI.SS.Formula.Functions;
 using System.Text;
 using Microsoft.Extensions.ObjectPool;
+using System.Text.RegularExpressions;
+using AutoMapper.Internal.Mappers;
 
 namespace PowerLmsWebApi.Controllers
 {
@@ -319,6 +321,10 @@ namespace PowerLmsWebApi.Controllers
                 {
                     coll = coll.Where(c => c.DisplayName.Contains(item.Value));
                 }
+                else if (string.Equals(item.Key, "ShortcutName", StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
+                }
             var prb = _EntityManager.GetAll(coll, startIndex, count);
             _Mapper.Map(prb, result);
             return result;
@@ -490,6 +496,10 @@ namespace PowerLmsWebApi.Controllers
                 {
                     coll = coll.Where(c => c.DisplayName.Contains(item.Value));
                 }
+                else if (string.Equals(item.Key, "ShortcutName", StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
+                }
             var prb = _EntityManager.GetAll(coll, startIndex, count);
             _Mapper.Map(prb, result);
             return result;
@@ -618,6 +628,11 @@ namespace PowerLmsWebApi.Controllers
                     if (OwConvert.TryToGuid(item.Value, out var id))
                         coll = coll.Where(c => c.Id == id);
                 }
+                else if (string.Equals(item.Key, "Id", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (Guid.TryParse(item.Value, out var id))
+                        coll = coll.Where(c => c.Id == id);
+                }
                 else if (string.Equals(item.Key, "code", StringComparison.OrdinalIgnoreCase))
                 {
                     coll = coll.Where(c => c.Code == item.Value);
@@ -625,6 +640,10 @@ namespace PowerLmsWebApi.Controllers
                 else if (string.Equals(item.Key, "displayname", StringComparison.OrdinalIgnoreCase))
                 {
                     coll = coll.Where(c => c.DisplayName.Contains(item.Value));
+                }
+                else if (string.Equals(item.Key, "ShortcutName", StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
                 }
             var prb = _EntityManager.GetAll(coll, startIndex, count);
             _Mapper.Map(prb, result);
@@ -761,6 +780,10 @@ namespace PowerLmsWebApi.Controllers
                 {
                     coll = coll.Where(c => c.EndData <= edt);
                 }
+                else if (string.Equals(item.Key, "ShortcutName", StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
+                }
             var prb = _EntityManager.GetAll(coll, startIndex, count);
             _Mapper.Map(prb, result);
             return result;
@@ -845,6 +868,10 @@ namespace PowerLmsWebApi.Controllers
                 else if (string.Equals(item.Key, "rim", StringComparison.OrdinalIgnoreCase))
                 {
                     coll = coll.Where(c => c.Rim.Contains(item.Value));
+                }
+                else if (string.Equals(item.Key, "ShortcutName", StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
                 }
             var prb = _EntityManager.GetAll(coll, startIndex, count);
             _Mapper.Map(prb, result);
@@ -980,6 +1007,10 @@ namespace PowerLmsWebApi.Controllers
                     coll = coll.Where(c => c.DisplayName.Contains(item.Value));
                 }
                 else if (string.Equals(item.Key, nameof(FeesType.ShortName), StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
+                }
+                else if (string.Equals(item.Key, "ShortcutName", StringComparison.OrdinalIgnoreCase))
                 {
                     coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
                 }
@@ -1122,6 +1153,10 @@ namespace PowerLmsWebApi.Controllers
                 {
                     coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
                 }
+                else if (string.Equals(item.Key, "ShortcutName", StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
+                }
             var prb = _EntityManager.GetAll(coll, startIndex, count);
             _Mapper.Map(prb, result);
             return result;
@@ -1225,93 +1260,6 @@ namespace PowerLmsWebApi.Controllers
             return result;
         }
 
-        /// <summary>
-        /// 工作编码的译码表，不含序号。
-        /// </summary>
-        static readonly Dictionary<string, string> _JobNumberDecodingTable = new()
-        {
-            { "<yy>","yy"},
-            { "<yyyy>","yyyy"},
-            { "<M>","M"},
-            { "<MM>","MM"},
-            { "<d>","d"},
-            { "<dd>","dd"},
-            { "<H>","H"},
-            { "<HH>","HH"},
-        };
-        /// <summary>
-        /// 用指定的编码规则生成一个新的编码。
-        /// </summary>
-        /// <param name="model"></param>
-        /// <returns></returns>
-        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
-        /// <response code="400">指定的规则不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
-        /// <response code="401">无效令牌。</response>  
-        /// <response code="423">锁定超时，通常是服务器极为繁忙导致。</response>  
-        [HttpPost]
-        public ActionResult<GetNewJobNumberReturnDto> GetNewJobNumber(GetNewJobNumberParamsDto model)
-        {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            var result = new GetNewJobNumberReturnDto();
-            if (_DbContext.DD_JobNumberRules.Find(model.RuleId) is not JobNumberRule jnr) return BadRequest($"指定的规则不存在，Id={model.RuleId}");
-            using var dw = DisposeHelper.Create((key, timeout) => SingletonLocker.TryEnter(key, timeout), key => SingletonLocker.Exit(key), model.RuleId.ToString(), TimeSpan.FromSeconds(2)); //锁定该规则
-            if (dw.IsEmpty) return base.StatusCode((int)HttpStatusCode.Locked);
-            #region 具体生成
-            var sb = AutoClearPool<StringBuilder>.Shared.Get(); DisposeHelper.Create(c => AutoClearPool<StringBuilder>.Shared.Return(c), sb);
-            sb.Append(jnr.RuleString);
-            foreach (var kvp in _JobNumberDecodingTable)
-            {
-                sb.Replace(kvp.Key, kvp.Value);
-            }
-            var now = OwHelper.WorldNow;
-            int currentNumber;
-            // 归零方式，0不归零，1按年，2按月，3按日
-            switch (jnr.RepeatMode)
-            {
-                case 0:
-                    currentNumber = ++jnr.CurrentNumber;
-                    break;
-                case 1:
-                    if (jnr.RepeatDate.Year == now.Year)    //若无需归零
-                        currentNumber = ++jnr.CurrentNumber;
-                    else //若须归零
-                    {
-                        jnr.CurrentNumber = currentNumber = jnr.StartValue;
-                        jnr.RepeatDate = now;
-                    }
-                    break;
-                case 2:
-                    if (jnr.RepeatDate.Year == now.Year && jnr.RepeatDate.Month == now.Month)    //若无需归零
-                        currentNumber = ++jnr.CurrentNumber;
-                    else //若须归零
-                    {
-                        jnr.CurrentNumber = currentNumber = jnr.StartValue;
-                        jnr.RepeatDate = now;
-                    }
-                    break;
-                case 3:
-                    if (jnr.RepeatDate.Year == now.Year && jnr.RepeatDate.DayOfYear == now.DayOfYear)    //若无需归零
-                        currentNumber = ++jnr.CurrentNumber;
-                    else //若须归零
-                    {
-                        jnr.CurrentNumber = currentNumber = jnr.StartValue;
-                        jnr.RepeatDate = now;
-                    }
-                    break;
-                default:
-                    return BadRequest();
-            }
-            sb.Replace("<", string.Empty).Replace(">", string.Empty);
-            var tmp = sb.ToString();
-            tmp = currentNumber.ToString(tmp);
-            var r = now.ToString(tmp);
-            #endregion 具体生成
-            result.Result = jnr.Prefix + r;
-            context.Nop();
-            _DbContext.SaveChanges();
-            return result;
-        }
-
         #endregion 业务编码规则相关
 
         #region 国家相关
@@ -1345,6 +1293,10 @@ namespace PowerLmsWebApi.Controllers
                     coll = coll.Where(c => c.DisplayName.Contains(item.Value));
                 }
                 else if (string.Equals(item.Key, nameof(PlCountry.ShortName), StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
+                }
+                else if (string.Equals(item.Key, "ShortcutName", StringComparison.OrdinalIgnoreCase))
                 {
                     coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
                 }
@@ -1487,6 +1439,10 @@ namespace PowerLmsWebApi.Controllers
                 {
                     coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
                 }
+                else if (string.Equals(item.Key, "ShortcutName", StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
+                }
             var prb = _EntityManager.GetAll(coll, startIndex, count);
             _Mapper.Map(prb, result);
             return result;
@@ -1591,28 +1547,6 @@ namespace PowerLmsWebApi.Controllers
         }
 
         #endregion 币种相关
-    }
-
-    /// <summary>
-    /// 用指定的编码规则生成一个新的编码的功能参数封装类。
-    /// </summary>
-    public class GetNewJobNumberParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 规则的Id.
-        /// </summary>
-        public Guid RuleId { get; set; }
-    }
-
-    /// <summary>
-    /// 用指定的编码规则生成一个新的编码的功能返回值封装类。
-    /// </summary>
-    public class GetNewJobNumberReturnDto
-    {
-        /// <summary>
-        /// 返回的业务码。
-        /// </summary>
-        public string Result { get; set; }
     }
 
     /// <summary>
