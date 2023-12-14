@@ -655,6 +655,11 @@
             语言名。
             </summary>
         </member>
+        <member name="T:PowerLms.Data.PlCustomer">
+            <summary>
+            客户资料。
+            </summary>
+        </member>
         <member name="T:PowerLms.Data.PlMerchant">
             <summary>
             商户。

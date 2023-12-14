@@ -130,6 +130,7 @@ namespace PowerLmsServer.Managers
                     LoginName = "868d61ae-3a86-42a8-8a8c-1ed6cfa90817",
                     CurrentLanguageTag = "zh-CN",
                     LastModifyDateTimeUtc = OwHelper.WorldNow,
+                    State = 4,
                 };
                 //admin.SetPwd("1D381427-86BB-4D88-8CB0-5D92F8E1BADF");
                 db.Accounts.Add(admin);
