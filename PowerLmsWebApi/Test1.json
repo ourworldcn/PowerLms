@@ -1,0 +1,23 @@
+{
+  "SequenceOut": {
+    "Conditions": [
+      {
+        "ParentTId": null,
+        "Genus": [],
+        "TId": "07664462-df05-4ba7-886d-b431bb88aa1c",
+        "MinCount": 0,
+        "GeneralConditional": [],
+        "GroupMask": 1
+      }
+    ],
+    "GetIndexExpression": {
+      "op": "GetBuyedCount",
+      "args": [ "62e227a8-c5d5-410e-96c5-d5ca931bafe2" ]
+    },
+    "Outs": {
+      "TIds": [ "1de88b53-e5bf-4a60-9dfb-90284b94bdab", "c9575f24-a33d-49ba-b130-29b6ff4d62c7" ],
+      "Counts": [ 1, 100, 100, 300 ],
+      "ParentTIds": [ "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d", "9c559895-9a2c-43a7-b793-e879a600487c" ]
+    }
+  }
+}

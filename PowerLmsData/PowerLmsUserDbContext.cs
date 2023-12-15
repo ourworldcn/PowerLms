@@ -78,6 +78,8 @@ namespace PowerLmsServer.EfData
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<AccountPlOrganization>().HasKey(nameof(AccountPlOrganization.UserId), nameof(AccountPlOrganization.OrgId));
+
+            modelBuilder.Entity<PlBusinessHeader>().HasKey(nameof(PlBusinessHeader.CustomerId), nameof(PlBusinessHeader.AccountId), nameof(PlBusinessHeader.OrderTypeId));
             base.OnModelCreating(modelBuilder);
         }
 
@@ -201,6 +203,44 @@ namespace PowerLmsServer.EfData
         /// </summary>
         public DbSet<PlOrganization> PlOrganizations { get; set; }
         #endregion 组织机构相关
+
+        #region 客户资料相关
+
+        /// <summary>
+        /// 客户资料表。
+        /// </summary>
+        public DbSet<PlCustomer> PlCustomers { get; set; }
+
+        /// <summary>
+        /// 客户资料的联系人。
+        /// </summary>
+        public DbSet<PlCustomerContact> PlCustomerContacts { get; set; }
+
+        /// <summary>
+        /// 客户资料的开票信息。
+        /// </summary>
+        public DbSet<PlTaxInfo> PlCustomerTaxInfos { get; set; }
+
+        /// <summary>
+        /// 客户提单内容表。
+        /// </summary>
+        public DbSet<PlTidan> PlCustomerTidans { get; set; }
+
+        /// <summary>
+        /// 业务负责人表。
+        /// </summary>
+        public DbSet<PlBusinessHeader> PlCustomerBusinessHeaders { get; set; }
+
+        /// <summary>
+        /// 黑名单客户跟踪表。
+        /// </summary>
+        public DbSet<CustomerBlacklist> CustomerBlacklists { get; set; }
+
+        /// <summary>
+        /// 装货地址表。
+        /// </summary>
+        public DbSet<PlLoadingAddr> PlCustomerLoadingAddrs { get; set; }
+        #endregion  客户资料相关
     }
 
     /// <summary>

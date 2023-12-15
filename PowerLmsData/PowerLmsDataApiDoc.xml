@@ -141,6 +141,41 @@
             组织机构表。
             </summary>
         </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.PlCustomers">
+            <summary>
+            客户资料表。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.PlCustomerContacts">
+            <summary>
+            客户资料的联系人。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.PlCustomerTaxInfos">
+            <summary>
+            客户资料的开票信息。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.PlCustomerTidans">
+            <summary>
+            客户提单内容表。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.PlCustomerBusinessHeaders">
+            <summary>
+            业务负责人表。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.CustomerBlacklists">
+            <summary>
+            黑名单客户跟踪表。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.PlCustomerLoadingAddrs">
+            <summary>
+            装货地址表。
+            </summary>
+        </member>
         <member name="T:PowerLmsServer.EfData.OwDbContextExtensions">
             <summary>
             数据库上下文的扩展方法。
@@ -291,6 +326,56 @@
             详细地址。
             </summary>
         </member>
+        <member name="T:PowerLms.Data.PlOwnedAddress">
+            <summary>
+            嵌套在其他类中的完整的地址类。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlOwnedAddress.CountryId">
+            <summary>
+            国家编码Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlOwnedAddress.Province">
+            <summary>
+            省。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlOwnedAddress.City">
+            <summary>
+            地市。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlOwnedAddress.Address">
+            <summary>
+            详细地址。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlOwnedAddress.ZipCode">
+            <summary>
+            邮政编码。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.PlOwnedContact">
+            <summary>
+            嵌套在其他类中的联系方式类。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlOwnedContact.Tel">
+            <summary>
+            电话。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlOwnedContact.Fax">
+            <summary>
+            传真。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlOwnedContact.EMail">
+            <summary>
+            电子邮件。
+            </summary>
+        </member>
         <member name="T:PowerLms.Data.PlOwnedName">
             <summary>
             对实体名称描述的自含复杂类。此类嵌入在不同实体中有不同的解释。
@@ -309,6 +394,56 @@
         <member name="P:PowerLms.Data.PlOwnedName.DisplayName">
             <summary>
             显示名，有时它是昵称或简称(系统内)的意思。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.PlBillingInfo">
+            <summary>
+            结算方式封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlBillingInfo.IsExesGather">
+            <summary>
+            是否应收结算单位
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlBillingInfo.IsExesPayer">
+            <summary>
+            是否应付结算单位
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlBillingInfo.Dayslimited">
+            <summary>
+            信用期限天数
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlBillingInfo.CurrtypeId">
+            <summary>
+            拖欠限额币种Id
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlBillingInfo.AmountLimited">
+            <summary>
+            拖欠金额。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlBillingInfo.AmountTypeId">
+            <summary>
+            付费方式Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlBillingInfo.IsCEBlack">
+            <summary>
+            是否超额黑名单
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlBillingInfo.IsBlack">
+            <summary>
+            是否超期黑名单
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlBillingInfo.IsNeedTrace">
+            <summary>
+            是否特别注意
             </summary>
         </member>
         <member name="T:PowerLms.Data.BusinessTypeDataDic">
@@ -658,6 +793,371 @@
         <member name="T:PowerLms.Data.PlCustomer">
             <summary>
             客户资料。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomer.CustomCode">
+            <summary>
+            海关编码。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomer.Code">
+            <summary>
+            客户编码。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomer.Name">
+            <summary>
+            正式名。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomer.CrideCode">
+            <summary>
+            纳税人识别号。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomer.DisplayName">
+            <summary>
+            显示名。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomer.ShortName">
+            <summary>
+            简称。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomer.Number">
+            <summary>
+            编号。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomer.Contact">
+            <summary>
+            联系方式的封装。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomer.Address">
+            <summary>
+            地址的封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomer.InternetAddress">
+            <summary>
+            网址。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomer.Keyword">
+            <summary>
+            搜索用的关键字。逗号分隔多个关键字。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomer.BillingInfo">
+            <summary>
+            结算单位信息封装。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomer.ShipperPropertyId">
+            <summary>
+            货主性质Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomer.CustomerLevelId">
+            <summary>
+            客户级别Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomer.IsValid">
+            <summary>
+            是否有效。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomer.IsShipper">
+            <summary>
+            是否委托单位。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomer.IsBalance">
+            <summary>
+            是否结算单位。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomer.IsConsignor">
+            <summary>
+            是否发货人。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomer.IsConsignee">
+            <summary>
+            是否收货人。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomer.IsNotify">
+            <summary>
+            是否通知人。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomer.IsAirway">
+            <summary>
+            是否航空公司。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomer.IsShipOwner">
+            <summary>
+            是否船公司
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomer.IsBookingAgent">
+            <summary>
+            是否订舱代理
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomer.IsDestAgent">
+            <summary>
+            是否目的港代理
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomer.IsLocal">
+            <summary>
+            是否卡车公司
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomer.IsCustom">
+            <summary>
+            是否报关行
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomer.IsInsure">
+            <summary>
+            是否保险公司
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomer.IsProvide">
+            <summary>
+            是否供货商
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomer.IsStock">
+            <summary>
+            是否仓储公司
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomer.IsOthers">
+            <summary>
+            是否其他
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.PlCustomerContact">
+            <summary>
+            客户资料的联系人。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomerContact.CustomerId">
+            <summary>
+            所属客户的Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomerContact.DisplayName">
+            <summary>
+            姓名。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomerContact.SexId">
+            <summary>
+            性别Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomerContact.Title">
+            <summary>
+            职务/行政级别。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomerContact.Contact">
+            <summary>
+            联系方式的封装。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomerContact.Mobile">
+            <summary>
+            移动电话。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomerContact.Bank">
+            <summary>
+            开户行。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomerContact.Account">
+            <summary>
+            银行账号。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomerContact.Keyword">
+            <summary>
+            搜索用的关键字。逗号分隔多个关键字。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomerContact.Remark">
+            <summary>
+            备注。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.PlBusinessHeader">
+            <summary>
+            业务负责人表。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlBusinessHeader.CustomerId">
+            <summary>
+            所属客户Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlBusinessHeader.AccountId">
+            <summary>
+            用户Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlBusinessHeader.OrderTypeId">
+            <summary>
+            负责的业务Id。连接业务种类字典。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.PlTaxInfo">
+            <summary>
+            客户税务信息/开票信息。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlTaxInfo.CustomerId">
+            <summary>
+            所属客户Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlTaxInfo.Type">
+            <summary>
+            纳税人种类Id。简单字典AddedTaxType。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlTaxInfo.Number">
+            <summary>
+            纳税人识别号。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlTaxInfo.BankStdCoin">
+            <summary>
+            人民币账号。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlTaxInfo.BankNoRMB">
+            <summary>
+            开户行。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlTaxInfo.BankUSD">
+            <summary>
+            美金账户。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlTaxInfo.BankNoUSD">
+            <summary>
+            美金开户行。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlTaxInfo.Addr">
+            <summary>
+            地址。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlTaxInfo.Tel">
+            <summary>
+            电话。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlTaxInfo.TaxRate">
+            <summary>
+            税率。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlTaxInfo.InvoiceSignAddr">
+            <summary>
+            发票邮寄地址。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.PlTidan">
+            <summary>
+            客户提单内容表。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlTidan.CustomerId">
+            <summary>
+            所属客户Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlTidan.Title">
+            <summary>
+            提单内容。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlTidan.CreateDateTime">
+            <summary>
+            创建时间。默认值为创建对象的时间。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.CustomerBlacklist">
+            <summary>
+            黑名单客户跟踪表。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.CustomerBlacklist.CustomerId">
+            <summary>
+            所属客户Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.CustomerBlacklist.Kind">
+            <summary>
+            类型，1=加入超额，2=加入超期，3=移除超额，4=移除超期
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.CustomerBlacklist.IsSystem">
+            <summary>
+            来源，1=系统，0=人工。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.CustomerBlacklist.OpertorId">
+            <summary>
+            操作员Id。空则表示系统操作。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.CustomerBlacklist.Datetime">
+            <summary>
+            执行时间
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.CustomerBlacklist.Remark">
+            <summary>
+            备注。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.PlLoadingAddr">
+            <summary>
+            装货地址。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlLoadingAddr.CustomerId">
+            <summary>
+            所属客户Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlLoadingAddr.Contact">
+            <summary>
+            联系人。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlLoadingAddr.Tel">
+            <summary>
+            联系电话。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlLoadingAddr.Addr">
+            <summary>
+            详细地址。
             </summary>
         </member>
         <member name="T:PowerLms.Data.PlMerchant">
