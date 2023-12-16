@@ -119,6 +119,18 @@ namespace PowerLmsWebApi.Dto
         /// 账号的信息，可从Account/GetAccountInfo 获取，修改后调用设置/修改账号信息功能。
         /// </summary>
         public Account Item { get; set; }
+
+        /// <summary>
+        /// 有权限的用户可以使用此标志设置用户是否为超管。
+        /// true设置为超管，false取消超管，省略或为null则不设置。
+        /// </summary>
+        public bool? IsAdmin { get; set; }
+
+        /// <summary>
+        /// 有权限的用户可以使用此标志设置用户是否为商管。
+        /// true设置为商管，false取消商管，省略或为null则不设置。
+        /// </summary>
+        public bool? IsMerchantAdmin { get; set; }
     }
 
     /// <summary>

@@ -53,7 +53,8 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="token">登录令牌。</param>
         /// <param name="startIndex">起始位置，从0开始。</param>
         /// <param name="count">最大返回数量。-1表示全返回。</param>
-        /// <param name="conditional">查询的条件。支持 LoginName Mobile eMail DisplayName</param>
+        /// <param name="conditional">查询的条件。支持 LoginName Mobile eMail DisplayName，
+        /// IsAdmin("true"=限定超管,"false"=限定非超管) IsMerchantAdmin（"true"=限定商户管,"false"=限定非商户管）</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定类别Id无效。</response>  
@@ -86,6 +87,22 @@ namespace PowerLmsWebApi.Controllers
                 else if (string.Equals(item.Key, "DisplayName", StringComparison.OrdinalIgnoreCase))
                 {
                     coll = coll.Where(c => c.DisplayName.Contains(item.Value));
+                }
+                else if (string.Equals(item.Key, "IsAdmin", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (bool.TryParse(item.Value, out var boolValue))
+                        if (boolValue)
+                            coll = coll.Where(c => (c.State & 4) != 0);
+                        else
+                            coll = coll.Where(c => (c.State & 4) == 0);
+                }
+                else if (string.Equals(item.Key, "IsMerchantAdmin", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (bool.TryParse(item.Value, out var boolValue))
+                        if (boolValue)
+                            coll = coll.Where(c => (c.State & 8) != 0);
+                        else
+                            coll = coll.Where(c => (c.State & 8) == 0);
                 }
             var prb = _EntityManager.GetAll(coll, startIndex, count);
             _Mapper.Map(prb, result);
@@ -190,6 +207,7 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。</response>  
         /// <response code="401">Token无效或无权限获取指定账号信息。</response>  
         /// <response code="404">指定的账号Id不存在。</response>  
+        /// <response code="451">权限不足。</response>  
         [HttpPut]
         public ActionResult<ModifyAccountReturnDto> ModifyAccount(ModifyAccountParamsDto model)
         {
@@ -197,7 +215,28 @@ namespace PowerLmsWebApi.Controllers
             var result = new ModifyAccountReturnDto();
             var acount = _DbContext.Accounts.Find(model.Item.Id);
             if (acount is null) return NotFound();
-            _DbContext.Entry(model.Item).CurrentValues.SetValues(model.Item);
+            var entity = _DbContext.Entry(model.Item);
+            entity.CurrentValues.SetValues(model.Item);
+            //设置管理员
+            var account = entity.Entity;
+            if (model.IsAdmin.HasValue)
+            {
+                if ((context.User.State & (255 - 4)) == 0)
+                    return base.StatusCode((int)HttpStatusCode.UnavailableForLegalReasons);
+                if (model.IsAdmin.Value)
+                    account.State |= 4;
+                else
+                    account.State &= 255 - 4;
+            }
+            if (model.IsMerchantAdmin.HasValue)
+            {
+                if ((context.User.State & (255 - 4)) == 0 && (context.User.State & (255 - 8)) == 0)
+                    return base.StatusCode((int)HttpStatusCode.UnavailableForLegalReasons);
+                if (model.IsMerchantAdmin.Value)
+                    account.State |= 8;
+                else
+                    account.State &= 255 - 8;
+            }
             _DbContext.SaveChanges();
             return result;
         }
