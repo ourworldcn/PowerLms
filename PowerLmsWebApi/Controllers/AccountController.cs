@@ -54,7 +54,8 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="startIndex">起始位置，从0开始。</param>
         /// <param name="count">最大返回数量。-1表示全返回。</param>
         /// <param name="conditional">查询的条件。支持 LoginName Mobile eMail DisplayName，
-        /// IsAdmin("true"=限定超管,"false"=限定非超管) IsMerchantAdmin（"true"=限定商户管,"false"=限定非商户管）</param>
+        /// IsAdmin("true"=限定超管,"false"=限定非超管) IsMerchantAdmin（"true"=限定商户管,"false"=限定非商户管）；
+        /// OrgId 指定其所属的组织机构Id(需要时明确直属的组织机构Id)。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定类别Id无效。</response>  
@@ -103,6 +104,13 @@ namespace PowerLmsWebApi.Controllers
                             coll = coll.Where(c => (c.State & 8) != 0);
                         else
                             coll = coll.Where(c => (c.State & 8) == 0);
+                }
+                else if (string.Equals(item.Key, "OrgId", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (Guid.TryParse(item.Value, out var id))
+                    {
+                        coll = coll.Where(c => _DbContext.AccountPlOrganizations.Any(d => c.Id == d.UserId && d.OrgId == id));
+                    }
                 }
             var prb = _EntityManager.GetAll(coll, startIndex, count);
             _Mapper.Map(prb, result);
