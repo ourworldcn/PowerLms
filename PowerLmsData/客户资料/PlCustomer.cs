@@ -29,29 +29,15 @@ namespace PowerLms.Data
         public string Code { get; set; }
 
         /// <summary>
-        /// 正式名。
+        /// 名称的封装类。
         /// </summary>
-        [Comment("正式名")]
-        public string Name { get; set; }
+        public PlOwnedName Name { get; set; }
 
         /// <summary>
         /// 纳税人识别号。
         /// </summary>
         [Comment("纳税人识别号")]
         public string CrideCode { get; set; }
-
-        /// <summary>
-        /// 显示名。
-        /// </summary>
-        [Comment("显示名")]
-        public string DisplayName { get; set; }
-
-        /// <summary>
-        /// 简称。
-        /// </summary>
-        [Comment("简称")]
-        [MaxLength(32)]
-        public string ShortName { get; set; }
 
         /// <summary>
         /// 编号。

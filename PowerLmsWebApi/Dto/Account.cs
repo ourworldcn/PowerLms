@@ -48,6 +48,11 @@ namespace PowerLmsWebApi.Dto
         public List<PlOrganization> Orgs { get; set; } = new List<PlOrganization>();
 
         /// <summary>
+        /// 账户所属商户Id。如果不属于任何商户则返回null。
+        /// </summary>
+        public Guid? MerchantId { get; set; }
+
+        /// <summary>
         /// 返回登录账号的信息。
         /// </summary>
         public Account User { get; set; }

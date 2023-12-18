@@ -74,6 +74,16 @@
             </summary>
             <returns></returns>
         </member>
+        <member name="T:PowerLmsServer.Managers.CustomerManager">
+            <summary>
+            客户资料及相关管理器。
+            </summary>
+        </member>
+        <member name="M:PowerLmsServer.Managers.CustomerManager.#ctor">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
         <member name="T:PowerLmsServer.Managers.DataDicManager">
             <summary>
             数据字典的服务。
@@ -366,6 +376,27 @@
             <summary>
             组织机构管理器。
             </summary>
+        </member>
+        <member name="M:PowerLmsServer.Managers.OrganizationManager.#ctor(PowerLmsServer.EfData.PowerLmsUserDbContext)">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
+        <member name="M:PowerLmsServer.Managers.OrganizationManager.GetMerchantId(System.Guid,System.Nullable{System.Guid}@)">
+            <summary>
+            获取指定账户所属的商户Id。
+            </summary>
+            <param name="accountId"></param>
+            <param name="MerchantId"></param>
+            <returns>true指定账户所属商户Id,如果不属于任何商户则返回null。false 没有找到指定的用户Id。</returns>
+        </member>
+        <member name="M:PowerLmsServer.Managers.OrganizationManager.GetMerchantIdFromOrgId(System.Guid,System.Nullable{System.Guid}@)">
+            <summary>
+            取指定组织机构Id所属的商户Id。
+            </summary>
+            <param name="orgId">机构Id。</param>
+            <param name="MerchantId"></param>
+            <returns></returns>
         </member>
         <member name="T:PowerLmsServer.Managers.SystemResourceManager">
             <summary>

@@ -30,13 +30,16 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="serviceProvider"></param>
         /// <param name="mapper"></param>
         /// <param name="entityManager"></param>
-        public AccountController(PowerLmsUserDbContext dbContext, AccountManager accountManager, IServiceProvider serviceProvider, IMapper mapper, EntityManager entityManager)
+        /// <param name="organizationManager"></param>
+        public AccountController(PowerLmsUserDbContext dbContext, AccountManager accountManager, IServiceProvider serviceProvider, IMapper mapper, EntityManager entityManager,
+            OrganizationManager organizationManager)
         {
             _DbContext = dbContext;
             _AccountManager = accountManager;
             _ServiceProvider = serviceProvider;
             _Mapper = mapper;
             _EntityManager = entityManager;
+            _OrganizationManager = organizationManager;
         }
 
         readonly IServiceProvider _ServiceProvider;
@@ -44,6 +47,7 @@ namespace PowerLmsWebApi.Controllers
         readonly AccountManager _AccountManager;
         readonly IMapper _Mapper;
         readonly EntityManager _EntityManager;
+        OrganizationManager _OrganizationManager;
 
         #region 用户相关
 
@@ -155,6 +159,9 @@ namespace PowerLmsWebApi.Controllers
             var orgIds = _DbContext.AccountPlOrganizations.Where(c => c.UserId == user.Id).Select(c => c.OrgId);
             result.Orgs.AddRange(_DbContext.PlOrganizations.Where(c => orgIds.Contains(c.Id)));
             result.User = user;
+            if (result.Orgs.Count > 0) //若有所属组织机构
+                if (_OrganizationManager.GetMerchantIdFromOrgId(result.Orgs[0].Id, out var merchId)) //若找到商户Id
+                    result.MerchantId = merchId;
             return result;
         }
 

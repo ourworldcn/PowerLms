@@ -147,6 +147,7 @@ namespace PowerLms.Data
         /// 正式名称，拥有相对稳定性。
         /// </summary>
         [Comment("正式名称，拥有相对稳定性")]
+        [MaxLength(64)]
         public string Name { get; set; }
 
         /// <summary>

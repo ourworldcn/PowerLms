@@ -807,22 +807,12 @@
         </member>
         <member name="P:PowerLms.Data.PlCustomer.Name">
             <summary>
-            正式名。
+            名称的封装类。
             </summary>
         </member>
         <member name="P:PowerLms.Data.PlCustomer.CrideCode">
             <summary>
             纳税人识别号。
-            </summary>
-        </member>
-        <member name="P:PowerLms.Data.PlCustomer.DisplayName">
-            <summary>
-            显示名。
-            </summary>
-        </member>
-        <member name="P:PowerLms.Data.PlCustomer.ShortName">
-            <summary>
-            简称。
             </summary>
         </member>
         <member name="P:PowerLms.Data.PlCustomer.Number">
