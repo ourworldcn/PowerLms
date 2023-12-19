@@ -32,19 +32,21 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 获取组织机构。暂不考虑分页。
         /// </summary>
-        /// <param name="model"></param>
+        /// <param name="token"></param>
+        /// <param name="rootId">根组织机构的Id。或商户的Id。</param>
+        /// <param name="includeChildren">是否包含子机构。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
-        [HttpPost]
-        public ActionResult<GetOrgReturnDto> GetOrg(GetOrgParamsDto model)
+        [HttpGet]
+        public ActionResult<GetOrgReturnDto> GetOrg(Guid token, Guid? rootId, bool includeChildren)
         {
             var result = new GetOrgReturnDto();
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized(OwHelper.GetLastErrorMessage());
-            var root = _DbContext.PlOrganizations.FirstOrDefault(c => c.Id == model.RootId);
+            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized(OwHelper.GetLastErrorMessage());
+            var root = _DbContext.PlOrganizations.FirstOrDefault(c => c.Id == rootId);
             if (root == null)
-                root = _DbContext.PlOrganizations.FirstOrDefault(c => c.MerchantId == model.RootId);
-            if (!model.IncludeChildren)
+                root = _DbContext.PlOrganizations.FirstOrDefault(c => c.MerchantId == rootId);
+            if (!includeChildren)
             {
                 _DbContext.Entry(root).State = EntityState.Detached;
                 root.Children.Clear();

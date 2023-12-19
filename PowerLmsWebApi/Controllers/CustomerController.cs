@@ -230,7 +230,300 @@ namespace PowerLmsWebApi.Controllers
             return result;
         }
         #endregion 客户上的联系人操作
+
+        #region 业务负责人的所属关系的CRUD
+
+        /// <summary>
+        /// 获取业务负责人的所属关系。
+        /// </summary>
+        /// <param name="token">登录令牌。</param>
+        /// <param name="startIndex">起始位置，从0开始。</param>
+        /// <param name="count">最大返回数量。-1表示全返回。</param>
+        /// <param name="conditional">查询的条件。支持 CustomerId,AccountId,OrderTypeId</param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定类别Id无效。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        public ActionResult<GetAllPlBusinessHeaderReturnDto> GetAllPlBusinessHeader(Guid token,
+            [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [FromQuery][Range(-1, int.MaxValue)] int count = -1,
+            [FromQuery] Dictionary<string, string> conditional = null)
+        {
+            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetAllPlBusinessHeaderReturnDto();
+            var coll = _DbContext.PlCustomerBusinessHeaders.AsNoTracking();
+            foreach (var item in conditional)
+                if (string.Equals(item.Key, "CustomerId", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (Guid.TryParse(item.Value, out var customerId))
+                        coll = coll.Where(c => c.CustomerId == customerId);
+                }
+                else if (string.Equals(item.Key, "accountId", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (Guid.TryParse(item.Value, out var accountId))
+                        coll = coll.Where(c => c.AccountId == accountId);
+                }
+                else if (string.Equals(item.Key, "OrderTypeId", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (Guid.TryParse(item.Value, out var orderTypeId))
+                        coll = coll.Where(c => c.OrderTypeId == orderTypeId);
+                }
+            var prb = _EntityManager.GetAll(coll, startIndex, count);
+            _Mapper.Map(prb, result);
+            return result;
+        }
+
+        /// <summary>
+        /// 增加业务负责人的所属关系。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">在同一类别同一组织机构下指定了重复的Code。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPost]
+        public ActionResult<AddPlBusinessHeaderReturnDto> AddPlBusinessHeader(AddPlBusinessHeaderParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new AddPlBusinessHeaderReturnDto();
+            _DbContext.PlCustomerBusinessHeaders.Add(model.Item);
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        /// <summary>
+        /// 删除业务负责人的所属关系。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpDelete]
+        public ActionResult<RemovePlBusinessHeaderReturnDto> RemovePlBusinessHeader(RemovePlBusinessHeaderParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new RemovePlBusinessHeaderReturnDto();
+            DbSet<PlBusinessHeader> dbSet = _DbContext.PlCustomerBusinessHeaders;
+            var item = dbSet.Find(model.UserId, model.OrgId);
+            if (item is null) return BadRequest();
+            _DbContext.Remove(item);
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        #endregion 业务负责人的所属关系的CRUD
+
+        #region 客户上的开票信息操作
+
+        /// <summary>
+        /// 获取全部客户开票信息。
+        /// </summary>
+        /// <param name="token">登录令牌。</param>
+        /// <param name="startIndex">起始位置，从0开始。</param>
+        /// <param name="count">最大返回数量。</param>
+        /// <param name="conditional">查询的条件。支持 CustomerId，Id,Number。不区分大小写。</param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        public ActionResult<GetAllPlTaxInfoReturnDto> GetAllPlTaxInfo(Guid token, [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [Range(-1, int.MaxValue)] int count = -1,
+            [FromQuery] Dictionary<string, string> conditional = null)
+        {
+            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetAllPlTaxInfoReturnDto();
+            var coll = _DbContext.PlCustomerTaxInfos.AsNoTracking().OrderBy(c => c.Id).Skip(startIndex);
+            foreach (var item in conditional)
+                if (string.Equals(item.Key, "Id", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (Guid.TryParse(item.Value, out var id))
+                        coll = coll.Where(c => c.Id == id);
+                }
+                else if (string.Equals(item.Key, "CustomerId", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (Guid.TryParse(item.Value, out var id))
+                        coll = coll.Where(c => c.CustomerId == id);
+                }
+                else if (string.Equals(item.Key, "Number", StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.Number.Contains(item.Value));
+                }
+            var prb = _EntityManager.GetAll(coll, startIndex, count);
+            _Mapper.Map(prb, result);
+            return result;
+        }
+
+        /// <summary>
+        /// 增加新客户开票信息。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPost]
+        public ActionResult<AddPlTaxInfoReturnDto> AddPlTaxInfo(AddPlTaxInfoParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new AddPlTaxInfoReturnDto();
+            model.PlTaxInfo.GenerateNewId();
+            _DbContext.PlCustomerTaxInfos.Add(model.PlTaxInfo);
+            _DbContext.SaveChanges();
+            result.Id = model.PlTaxInfo.Id;
+            return result;
+        }
+
+        /// <summary>
+        /// 修改客户开票信息信息。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定Id的客户开票信息不存在。</response>  
+        [HttpPut]
+        public ActionResult<ModifyPlTaxInfoReturnDto> ModifyPlTaxInfo(ModifyPlTaxInfoParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new ModifyPlTaxInfoReturnDto();
+            if (_DbContext.PlCustomerTaxInfos.Find(model.PlTaxInfo.Id) is not PlTaxInfo mcht) return NotFound();
+            _DbContext.Entry(mcht).CurrentValues.SetValues(model.PlTaxInfo);
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        /// <summary>
+        /// 删除指定Id的客户开票信息。慎用！
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定Id的客户开票信息不存在。</response>  
+        [HttpDelete]
+        public ActionResult<RemovePlTaxInfoReturnDto> RemovePlTaxInfo(RemovePlTaxInfoParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new RemovePlTaxInfoReturnDto();
+            var id = model.Id;
+            var dbSet = _DbContext.PlCustomerTaxInfos;
+            var item = dbSet.Find(id);
+            if (item is null) return BadRequest();
+            _DbContext.SaveChanges();
+            return result;
+        }
+        #endregion 客户上的开票信息操作
+
     }
+
+    #region 开票信息
+    /// <summary>
+    /// 标记删除开票信息功能的参数封装类。
+    /// </summary>
+    public class RemovePlTaxInfoParamsDto : RemoveParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 标记删除开票信息功能的返回值封装类。
+    /// </summary>
+    public class RemovePlTaxInfoReturnDto : RemoveReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 获取所有开票信息功能的返回值封装类。
+    /// </summary>
+    public class GetAllPlTaxInfoReturnDto : PagingReturnDtoBase<PlTaxInfo>
+    {
+    }
+
+    /// <summary>
+    /// 增加新开票信息功能参数封装类。
+    /// </summary>
+    public class AddPlTaxInfoParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 新开票信息信息。其中Id可以是任何值，返回时会指定新值。
+        /// </summary>
+        public PlTaxInfo PlTaxInfo { get; set; }
+    }
+
+    /// <summary>
+    /// 增加新开票信息功能返回值封装类。
+    /// </summary>
+    public class AddPlTaxInfoReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 如果成功添加，这里返回新开票信息的Id。
+        /// </summary>
+        public Guid Id { get; set; }
+    }
+
+    /// <summary>
+    /// 修改开票信息信息功能参数封装类。
+    /// </summary>
+    public class ModifyPlTaxInfoParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 开票信息数据。
+        /// </summary>
+        public PlTaxInfo PlTaxInfo { get; set; }
+    }
+
+    /// <summary>
+    /// 修改开票信息信息功能返回值封装类。
+    /// </summary>
+    public class ModifyPlTaxInfoReturnDto : ReturnDtoBase
+    {
+    }
+    #endregion 开票信息
+
+    #region 业务负责人的所属关系的CRUD
+    /// <summary>
+    /// 获取业务负责人的所属关系返回值封装类。
+    /// </summary>
+    public class GetAllPlBusinessHeaderReturnDto : PagingReturnDtoBase<PlBusinessHeader>
+    {
+    }
+
+    /// <summary>
+    /// 删除业务负责人的所属关系的功能参数封装类。
+    /// </summary>
+    public class RemovePlBusinessHeaderParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 用户的Id。
+        /// </summary>
+        public Guid UserId { get; set; }
+
+        /// <summary>
+        /// 商户/组织机构的Id。
+        /// </summary>
+        public Guid OrgId { get; set; }
+    }
+
+    /// <summary>
+    /// 删除业务负责人的所属关系的功能返回值封装类。
+    /// </summary>
+    public class RemovePlBusinessHeaderReturnDto : RemoveReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 增加业务负责人的所属关系的功能参数封装类，
+    /// </summary>
+    public class AddPlBusinessHeaderParamsDto : AddParamsDtoBase<PlBusinessHeader>
+    {
+    }
+
+    /// <summary>
+    /// 增加业务负责人的所属关系的功能返回值封装类。
+    /// </summary>
+    public class AddPlBusinessHeaderReturnDto : ReturnDtoBase
+    {
+    }
+
+    #endregion 业务负责人的所属关系的CRUD
 
     #region 客户本体
     /// <summary>

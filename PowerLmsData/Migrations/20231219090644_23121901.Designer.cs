@@ -8,13 +8,12 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PowerLmsServer.EfData;
 
 #nullable disable
-#pragma warning disable CS1591 // 缺少对公共可见类型或成员的 XML 注释
 
 namespace PowerLmsData.Migrations
 {
     [DbContext(typeof(PowerLmsUserDbContext))]
-    [Migration("20231218110927_23121801")]
-    partial class _23121801
+    [Migration("20231219090644_23121901")]
+    partial class _23121901
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {

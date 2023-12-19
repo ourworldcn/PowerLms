@@ -61,7 +61,7 @@
             <param name="model"></param>
             <returns></returns>
             <response code="200">未发生系统级错误。</response>  
-            <response code="400">登录名重复。</response>  
+            <response code="400">登录名重复。或其它参数错误。</response>  
         </member>
         <member name="M:PowerLmsWebApi.Controllers.AccountController.GetAccountInfo(PowerLmsWebApi.Dto.GetAccountInfoParamsDto)">
             <summary>
@@ -1333,6 +1333,165 @@
             <response code="401">无效令牌。</response>  
             <response code="404">指定Id的客户联系人不存在。</response>  
         </member>
+        <member name="M:PowerLmsWebApi.Controllers.CustomerController.GetAllPlBusinessHeader(System.Guid,System.Int32,System.Int32,System.Collections.Generic.Dictionary{System.String,System.String})">
+            <summary>
+            获取业务负责人的所属关系。
+            </summary>
+            <param name="token">登录令牌。</param>
+            <param name="startIndex">起始位置，从0开始。</param>
+            <param name="count">最大返回数量。-1表示全返回。</param>
+            <param name="conditional">查询的条件。支持 CustomerId,AccountId,OrderTypeId</param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="400">指定类别Id无效。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.CustomerController.AddPlBusinessHeader(PowerLmsWebApi.Controllers.AddPlBusinessHeaderParamsDto)">
+            <summary>
+            增加业务负责人的所属关系。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="400">在同一类别同一组织机构下指定了重复的Code。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.CustomerController.RemovePlBusinessHeader(PowerLmsWebApi.Controllers.RemovePlBusinessHeaderParamsDto)">
+            <summary>
+            删除业务负责人的所属关系。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.CustomerController.GetAllPlTaxInfo(System.Guid,System.Int32,System.Int32,System.Collections.Generic.Dictionary{System.String,System.String})">
+            <summary>
+            获取全部客户开票信息。
+            </summary>
+            <param name="token">登录令牌。</param>
+            <param name="startIndex">起始位置，从0开始。</param>
+            <param name="count">最大返回数量。</param>
+            <param name="conditional">查询的条件。支持 CustomerId，Id,Number。不区分大小写。</param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.CustomerController.AddPlTaxInfo(PowerLmsWebApi.Controllers.AddPlTaxInfoParamsDto)">
+            <summary>
+            增加新客户开票信息。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.CustomerController.ModifyPlTaxInfo(PowerLmsWebApi.Controllers.ModifyPlTaxInfoParamsDto)">
+            <summary>
+            修改客户开票信息信息。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+            <response code="404">指定Id的客户开票信息不存在。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.CustomerController.RemovePlTaxInfo(PowerLmsWebApi.Controllers.RemovePlTaxInfoParamsDto)">
+            <summary>
+            删除指定Id的客户开票信息。慎用！
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+            <response code="404">指定Id的客户开票信息不存在。</response>  
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RemovePlTaxInfoParamsDto">
+            <summary>
+            标记删除开票信息功能的参数封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RemovePlTaxInfoReturnDto">
+            <summary>
+            标记删除开票信息功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetAllPlTaxInfoReturnDto">
+            <summary>
+            获取所有开票信息功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddPlTaxInfoParamsDto">
+            <summary>
+            增加新开票信息功能参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.AddPlTaxInfoParamsDto.PlTaxInfo">
+            <summary>
+            新开票信息信息。其中Id可以是任何值，返回时会指定新值。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddPlTaxInfoReturnDto">
+            <summary>
+            增加新开票信息功能返回值封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.AddPlTaxInfoReturnDto.Id">
+            <summary>
+            如果成功添加，这里返回新开票信息的Id。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.ModifyPlTaxInfoParamsDto">
+            <summary>
+            修改开票信息信息功能参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.ModifyPlTaxInfoParamsDto.PlTaxInfo">
+            <summary>
+            开票信息数据。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.ModifyPlTaxInfoReturnDto">
+            <summary>
+            修改开票信息信息功能返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetAllPlBusinessHeaderReturnDto">
+            <summary>
+            获取业务负责人的所属关系返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RemovePlBusinessHeaderParamsDto">
+            <summary>
+            删除业务负责人的所属关系的功能参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.RemovePlBusinessHeaderParamsDto.UserId">
+            <summary>
+            用户的Id。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.RemovePlBusinessHeaderParamsDto.OrgId">
+            <summary>
+            商户/组织机构的Id。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RemovePlBusinessHeaderReturnDto">
+            <summary>
+            删除业务负责人的所属关系的功能返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddPlBusinessHeaderParamsDto">
+            <summary>
+            增加业务负责人的所属关系的功能参数封装类，
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddPlBusinessHeaderReturnDto">
+            <summary>
+            增加业务负责人的所属关系的功能返回值封装类。
+            </summary>
+        </member>
         <member name="T:PowerLmsWebApi.Controllers.RemoveCustomerParamsDto">
             <summary>
             标记删除客户功能的参数封装类。
@@ -1638,11 +1797,13 @@
             构造函数。
             </summary>
         </member>
-        <member name="M:PowerLmsWebApi.Controllers.OrganizationController.GetOrg(PowerLmsWebApi.Dto.GetOrgParamsDto)">
+        <member name="M:PowerLmsWebApi.Controllers.OrganizationController.GetOrg(System.Guid,System.Nullable{System.Guid},System.Boolean)">
             <summary>
             获取组织机构。暂不考虑分页。
             </summary>
-            <param name="model"></param>
+            <param name="token"></param>
+            <param name="rootId">根组织机构的Id。或商户的Id。</param>
+            <param name="includeChildren">是否包含子机构。</param>
             <returns></returns>
             <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
             <response code="401">无效令牌。</response>  
@@ -1837,6 +1998,11 @@
         <member name="P:PowerLmsWebApi.Dto.CreateAccountParamsDto.Item">
             <summary>
             这里指定除密码等敏感信息以外的信息。不可指定的会自动忽略。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Dto.CreateAccountParamsDto.OrgIds">
+            <summary>
+            用户直属的商户或机构Id集合。所有Id须同属一个商户，且必须存在对应实体。
             </summary>
         </member>
         <member name="T:PowerLmsWebApi.Dto.CreateAccountReturnDto">

@@ -97,6 +97,11 @@ namespace PowerLmsWebApi.Dto
         /// 这里指定除密码等敏感信息以外的信息。不可指定的会自动忽略。
         /// </summary>
         public Account Item { get; set; }
+
+        /// <summary>
+        /// 用户直属的商户或机构Id集合。所有Id须同属一个商户，且必须存在对应实体。
+        /// </summary>
+        public List<Guid> OrgIds { get; set; } = new List<Guid>();
     }
 
     /// <summary>

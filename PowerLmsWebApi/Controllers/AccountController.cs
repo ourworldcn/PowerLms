@@ -159,9 +159,8 @@ namespace PowerLmsWebApi.Controllers
             var orgIds = _DbContext.AccountPlOrganizations.Where(c => c.UserId == user.Id).Select(c => c.OrgId);
             result.Orgs.AddRange(_DbContext.PlOrganizations.Where(c => orgIds.Contains(c.Id)));
             result.User = user;
-            if (result.Orgs.Count > 0) //若有所属组织机构
-                if (_OrganizationManager.GetMerchantIdFromOrgId(result.Orgs[0].Id, out var merchId)) //若找到商户Id
-                    result.MerchantId = merchId;
+            if (_OrganizationManager.GetMerchantId(user.Id, out var merchId)) //若找到商户Id
+                result.MerchantId = merchId;
             return result;
         }
 
@@ -171,23 +170,45 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="model"></param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。</response>  
-        /// <response code="400">登录名重复。</response>  
+        /// <response code="400">登录名重复。或其它参数错误。</response>  
         [HttpPost]
         public ActionResult<CreateAccountReturnDto> CreateAccount(CreateAccountParamsDto model)
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new CreateAccountReturnDto();
+            //检验机构/商户Id合规性
+            var orgIds = model.OrgIds.Distinct().ToArray();
+            if (orgIds.Length != model.OrgIds.Count) return BadRequest($"{nameof(model.OrgIds)} 存在重复键值。");
+            if (orgIds.Length > 0)
+            {
+                var merches = _DbContext.Merchants.Where(c => orgIds.Contains(c.Id)).ToArray();
+                var orgs = _DbContext.PlOrganizations.Where(c => orgIds.Contains(c.Id)).ToArray();
+                if (merches.Length + orgs.Length != orgIds.Length) return BadRequest($"{nameof(model.OrgIds)} 至少一个键值的实体不存在。");
+                if ((context.User.State & 4) == 0)  //若非超管
+                    if ((context.User.State & 8) == 0)  //若非商管管
+                        return BadRequest("仅超管和商管才可创建用户。");
+                    else //商管
+                    {
+                        if (!_OrganizationManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("商管数据结构损坏——无法找到其所属商户");
+                        if (!orgIds.All(c => _OrganizationManager.GetMerchantIdFromOrgId(c, out var mId) && mId == merchId)) return BadRequest("商户管理员尽可以设置商户和其下属的机构id。");
+                    }
+            }
+
             var pwd = model.Pwd;
             var b = _AccountManager.CreateNew(model.Item.LoginName, ref pwd, out Guid id, _ServiceProvider);
             if (b)
             {
                 result.Pwd = pwd;
                 result.Result = _DbContext.Accounts.Find(id);
+                var b1 = _DbContext.PlOrganizations.Select(c => c.Id).Concat(_DbContext.Merchants.Select(c => c.Id)).All(c => model.OrgIds.Contains(c));
+                var rela = orgIds.Select(c => new AccountPlOrganization { UserId = result.Result.Id, OrgId = c });
+                _DbContext.AccountPlOrganizations.AddRange(rela);
             }
             else
             {
                 return BadRequest("登录名重复。");
             }
+            _DbContext.SaveChanges();
             return result;
         }
 
@@ -401,6 +422,7 @@ namespace PowerLmsWebApi.Controllers
 
     }
 
+    #region 用户和商户/组织机构的所属关系的CRUD
     /// <summary>
     /// 获取用户和商户/组织机构的所属关系返回值封装类。
     /// </summary>
@@ -451,6 +473,8 @@ namespace PowerLmsWebApi.Controllers
     public class GetAllAccountReturnDto : PagingReturnDtoBase<Account>
     {
     }
+
+    #endregion 用户和商户/组织机构的所属关系的CRUD
 
     /// <summary>
     /// 重置密码功能的参数封装类。
