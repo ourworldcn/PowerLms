@@ -1407,6 +1407,234 @@
             <response code="401">无效令牌。</response>  
             <response code="404">指定Id的客户开票信息不存在。</response>  
         </member>
+        <member name="M:PowerLmsWebApi.Controllers.CustomerController.GetAllPlTidan(System.Guid,System.Int32,System.Int32,System.Collections.Generic.Dictionary{System.String,System.String})">
+            <summary>
+            获取全部客户提单。
+            </summary>
+            <param name="token">登录令牌。</param>
+            <param name="startIndex">起始位置，从0开始。</param>
+            <param name="count">最大返回数量。</param>
+            <param name="conditional">查询的条件。支持 CustomerId，Id,Number。不区分大小写。</param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.CustomerController.AddPlTidan(PowerLmsWebApi.Controllers.AddPlTidanParamsDto)">
+            <summary>
+            增加新客户提单。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.CustomerController.ModifyPlTidan(PowerLmsWebApi.Controllers.ModifyPlTidanParamsDto)">
+            <summary>
+            修改客户提单信息。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+            <response code="404">指定Id的客户提单不存在。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.CustomerController.RemovePlTidan(PowerLmsWebApi.Controllers.RemovePlTidanParamsDto)">
+            <summary>
+            删除指定Id的客户提单。慎用！
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+            <response code="404">指定Id的客户提单不存在。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.CustomerController.GetAllCustomerBlacklist(System.Guid,System.Int32,System.Int32,System.Collections.Generic.Dictionary{System.String,System.String})">
+            <summary>
+            获取全部客户黑名单。
+            </summary>
+            <param name="token">登录令牌。</param>
+            <param name="startIndex">起始位置，从0开始。</param>
+            <param name="count">最大返回数量。</param>
+            <param name="conditional">查询的条件。支持 CustomerId，Id,Number。不区分大小写。</param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.CustomerController.AddCustomerBlacklist(PowerLmsWebApi.Controllers.AddCustomerBlacklistParamsDto)">
+            <summary>
+            增加新客户黑名单。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.CustomerController.GetAllPlLoadingAddr(System.Guid,System.Int32,System.Int32,System.Collections.Generic.Dictionary{System.String,System.String})">
+            <summary>
+            获取全部客户装货地址。
+            </summary>
+            <param name="token">登录令牌。</param>
+            <param name="startIndex">起始位置，从0开始。</param>
+            <param name="count">最大返回数量。</param>
+            <param name="conditional">查询的条件。支持 CustomerId，Id,Number。不区分大小写。</param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.CustomerController.AddPlLoadingAddr(PowerLmsWebApi.Controllers.AddPlLoadingAddrParamsDto)">
+            <summary>
+            增加新客户装货地址。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.CustomerController.ModifyPlLoadingAddr(PowerLmsWebApi.Controllers.ModifyPlLoadingAddrParamsDto)">
+            <summary>
+            修改客户装货地址信息。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+            <response code="404">指定Id的客户装货地址不存在。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.CustomerController.RemovePlLoadingAddr(PowerLmsWebApi.Controllers.RemovePlLoadingAddrParamsDto)">
+            <summary>
+            删除指定Id的客户装货地址。慎用！
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+            <response code="404">指定Id的客户装货地址不存在。</response>  
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RemovePlLoadingAddrParamsDto">
+            <summary>
+            标记删除装货地址功能的参数封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RemovePlLoadingAddrReturnDto">
+            <summary>
+            标记删除装货地址功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetAllPlLoadingAddrReturnDto">
+            <summary>
+            获取所有装货地址功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddPlLoadingAddrParamsDto">
+            <summary>
+            增加新装货地址功能参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.AddPlLoadingAddrParamsDto.PlLoadingAddr">
+            <summary>
+            新装货地址信息。其中Id可以是任何值，返回时会指定新值。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddPlLoadingAddrReturnDto">
+            <summary>
+            增加新装货地址功能返回值封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.AddPlLoadingAddrReturnDto.Id">
+            <summary>
+            如果成功添加，这里返回新装货地址的Id。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.ModifyPlLoadingAddrParamsDto">
+            <summary>
+            修改装货地址信息功能参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.ModifyPlLoadingAddrParamsDto.PlLoadingAddr">
+            <summary>
+            装货地址数据。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.ModifyPlLoadingAddrReturnDto">
+            <summary>
+            修改装货地址信息功能返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetAllCustomerBlacklistReturnDto">
+            <summary>
+            获取所有黑名单功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddCustomerBlacklistParamsDto">
+            <summary>
+            增加新黑名单功能参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.AddCustomerBlacklistParamsDto.CustomerBlacklist">
+            <summary>
+            新黑名单信息。其中Id可以是任何值，返回时会指定新值。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddCustomerBlacklistReturnDto">
+            <summary>
+            增加新黑名单功能返回值封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.AddCustomerBlacklistReturnDto.Id">
+            <summary>
+            如果成功添加，这里返回新黑名单的Id。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RemovePlTidanParamsDto">
+            <summary>
+            标记删除提单功能的参数封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RemovePlTidanReturnDto">
+            <summary>
+            标记删除提单功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetAllPlTidanReturnDto">
+            <summary>
+            获取所有提单功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddPlTidanParamsDto">
+            <summary>
+            增加新提单功能参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.AddPlTidanParamsDto.PlTidan">
+            <summary>
+            新提单信息。其中Id可以是任何值，返回时会指定新值。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddPlTidanReturnDto">
+            <summary>
+            增加新提单功能返回值封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.AddPlTidanReturnDto.Id">
+            <summary>
+            如果成功添加，这里返回新提单的Id。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.ModifyPlTidanParamsDto">
+            <summary>
+            修改提单信息功能参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.ModifyPlTidanParamsDto.PlTidan">
+            <summary>
+            提单数据。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.ModifyPlTidanReturnDto">
+            <summary>
+            修改提单信息功能返回值封装类。
+            </summary>
+        </member>
         <member name="T:PowerLmsWebApi.Controllers.RemovePlTaxInfoParamsDto">
             <summary>
             标记删除开票信息功能的参数封装类。
@@ -1590,6 +1818,86 @@
         <member name="T:PowerLmsWebApi.Controllers.ModifyCustomerContactReturnDto">
             <summary>
             修改联系人信息功能返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.FileController">
+            <summary>
+            文件相关操作的控制器。
+            在项目基目录下有Files文件夹，其下按业务分为不同文件夹存储文件。
+            </summary>
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.FileController.#ctor(PowerLmsServer.EfData.PowerLmsUserDbContext,PowerLmsServer.Managers.AccountManager,Microsoft.Extensions.DependencyInjection.ServiceProvider,PowerLmsServer.Managers.EntityManager,AutoMapper.IMapper)">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.FileController.GetAllCustomerFileList(System.Guid,System.Int32,System.Int32,System.Collections.Generic.Dictionary{System.String,System.String})">
+            <summary>
+            获取业务负责人的所属关系。
+            </summary>
+            <param name="token">登录令牌。</param>
+            <param name="startIndex">起始位置，从0开始。</param>
+            <param name="count">最大返回数量。-1表示全返回。</param>
+            <param name="conditional">查询的条件。支持 Id,DisplayName,FileName 。</param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="400">指定类别Id无效。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.FileController.DownloadCustomerFile(System.Guid,System.Guid)">
+            <summary>
+            
+            </summary>
+            <param name="token">登录令牌</param>
+            <param name="fileId">文件的Id。</param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+            <response code="404">没有找到指定文件。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.FileController.UploadCustomerFile(Microsoft.AspNetCore.Http.IFormFile,PowerLmsWebApi.Controllers.UploadCustomerFileParamsDto)">
+            <summary>
+            
+            </summary>
+            <param name="file"></param>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetAllCustomerFileListReturnDto">
+            <summary>
+            获取文件列表功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.UploadCustomerFileParamsDto">
+            <summary>
+            上传文件的功能参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.UploadCustomerFileParamsDto.DisplayName">
+            <summary>
+            文件的显示名。这是个友好名称。任意设置。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.UploadCustomerFileParamsDto.FileTypeId">
+            <summary>
+            类型字典Id。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.UploadCustomerFileParamsDto.ParentId">
+            <summary>
+            所属实体的Id。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.UploadCustomerFileReturnDto">
+            <summary>
+            上传文件的功能返回值封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.UploadCustomerFileReturnDto.Result">
+            <summary>
+            文件的唯一Id。
             </summary>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.JobNumberController">

@@ -15,6 +15,12 @@ namespace PowerLms.Data
     public class PlCustomer : GuidKeyObjectBase
     {
         /// <summary>
+        /// 所属组织机构的Id。
+        /// </summary>
+        [Comment("所属组织机构的Id。")]
+        public Guid? OrgId { get; set; }
+
+        /// <summary>
         /// 海关编码。
         /// </summary>
         [Comment("海关编码。")]

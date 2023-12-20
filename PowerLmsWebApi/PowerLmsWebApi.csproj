@@ -42,4 +42,8 @@
     <Using Include="OW.Data" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Files\" />
+  </ItemGroup>
+
 </Project>

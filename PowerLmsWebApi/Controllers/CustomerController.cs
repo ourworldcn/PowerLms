@@ -413,7 +413,423 @@ namespace PowerLmsWebApi.Controllers
         }
         #endregion 客户上的开票信息操作
 
+        #region 客户上的提单操作
+
+        /// <summary>
+        /// 获取全部客户提单。
+        /// </summary>
+        /// <param name="token">登录令牌。</param>
+        /// <param name="startIndex">起始位置，从0开始。</param>
+        /// <param name="count">最大返回数量。</param>
+        /// <param name="conditional">查询的条件。支持 CustomerId，Id,Number。不区分大小写。</param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        public ActionResult<GetAllPlTidanReturnDto> GetAllPlTidan(Guid token, [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [Range(-1, int.MaxValue)] int count = -1,
+            [FromQuery] Dictionary<string, string> conditional = null)
+        {
+            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetAllPlTidanReturnDto();
+            var coll = _DbContext.PlCustomerTaxInfos.AsNoTracking().OrderBy(c => c.Id).Skip(startIndex);
+            foreach (var item in conditional)
+                if (string.Equals(item.Key, "Id", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (Guid.TryParse(item.Value, out var id))
+                        coll = coll.Where(c => c.Id == id);
+                }
+                else if (string.Equals(item.Key, "CustomerId", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (Guid.TryParse(item.Value, out var id))
+                        coll = coll.Where(c => c.CustomerId == id);
+                }
+                else if (string.Equals(item.Key, "Number", StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.Number.Contains(item.Value));
+                }
+            var prb = _EntityManager.GetAll(coll, startIndex, count);
+            _Mapper.Map(prb, result);
+            return result;
+        }
+
+        /// <summary>
+        /// 增加新客户提单。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPost]
+        public ActionResult<AddPlTidanReturnDto> AddPlTidan(AddPlTidanParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new AddPlTidanReturnDto();
+            model.PlTidan.GenerateNewId();
+            _DbContext.PlCustomerTidans.Add(model.PlTidan);
+            _DbContext.SaveChanges();
+            result.Id = model.PlTidan.Id;
+            return result;
+        }
+
+        /// <summary>
+        /// 修改客户提单信息。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定Id的客户提单不存在。</response>  
+        [HttpPut]
+        public ActionResult<ModifyPlTidanReturnDto> ModifyPlTidan(ModifyPlTidanParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new ModifyPlTidanReturnDto();
+            if (_DbContext.PlCustomerTidans.Find(model.PlTidan.Id) is not PlTidan mcht) return NotFound();
+            _DbContext.Entry(mcht).CurrentValues.SetValues(model.PlTidan);
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        /// <summary>
+        /// 删除指定Id的客户提单。慎用！
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定Id的客户提单不存在。</response>  
+        [HttpDelete]
+        public ActionResult<RemovePlTidanReturnDto> RemovePlTidan(RemovePlTidanParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new RemovePlTidanReturnDto();
+            var id = model.Id;
+            var dbSet = _DbContext.PlCustomerTaxInfos;
+            var item = dbSet.Find(id);
+            if (item is null) return BadRequest();
+            _DbContext.SaveChanges();
+            return result;
+        }
+        #endregion 客户上的提单操作
+
+        #region 客户上的黑名单操作
+
+        /// <summary>
+        /// 获取全部客户黑名单。
+        /// </summary>
+        /// <param name="token">登录令牌。</param>
+        /// <param name="startIndex">起始位置，从0开始。</param>
+        /// <param name="count">最大返回数量。</param>
+        /// <param name="conditional">查询的条件。支持 CustomerId，Id,Number。不区分大小写。</param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        public ActionResult<GetAllCustomerBlacklistReturnDto> GetAllCustomerBlacklist(Guid token, [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [Range(-1, int.MaxValue)] int count = -1,
+            [FromQuery] Dictionary<string, string> conditional = null)
+        {
+            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetAllCustomerBlacklistReturnDto();
+            var coll = _DbContext.PlCustomerTaxInfos.AsNoTracking().OrderBy(c => c.Id).Skip(startIndex);
+            foreach (var item in conditional)
+                if (string.Equals(item.Key, "Id", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (Guid.TryParse(item.Value, out var id))
+                        coll = coll.Where(c => c.Id == id);
+                }
+                else if (string.Equals(item.Key, "CustomerId", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (Guid.TryParse(item.Value, out var id))
+                        coll = coll.Where(c => c.CustomerId == id);
+                }
+                else if (string.Equals(item.Key, "Number", StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.Number.Contains(item.Value));
+                }
+            var prb = _EntityManager.GetAll(coll, startIndex, count);
+            _Mapper.Map(prb, result);
+            return result;
+        }
+
+        /// <summary>
+        /// 增加新客户黑名单。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPost]
+        public ActionResult<AddCustomerBlacklistReturnDto> AddCustomerBlacklist(AddCustomerBlacklistParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new AddCustomerBlacklistReturnDto();
+            model.CustomerBlacklist.GenerateNewId();
+            _DbContext.CustomerBlacklists.Add(model.CustomerBlacklist);
+            _DbContext.SaveChanges();
+            result.Id = model.CustomerBlacklist.Id;
+            return result;
+        }
+
+        #endregion 客户上的黑名单操作
+
+        #region 客户上的装货地址操作
+
+        /// <summary>
+        /// 获取全部客户装货地址。
+        /// </summary>
+        /// <param name="token">登录令牌。</param>
+        /// <param name="startIndex">起始位置，从0开始。</param>
+        /// <param name="count">最大返回数量。</param>
+        /// <param name="conditional">查询的条件。支持 CustomerId，Id,Number。不区分大小写。</param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        public ActionResult<GetAllPlLoadingAddrReturnDto> GetAllPlLoadingAddr(Guid token, [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [Range(-1, int.MaxValue)] int count = -1,
+            [FromQuery] Dictionary<string, string> conditional = null)
+        {
+            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetAllPlLoadingAddrReturnDto();
+            var coll = _DbContext.PlCustomerTaxInfos.AsNoTracking().OrderBy(c => c.Id).Skip(startIndex);
+            foreach (var item in conditional)
+                if (string.Equals(item.Key, "Id", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (Guid.TryParse(item.Value, out var id))
+                        coll = coll.Where(c => c.Id == id);
+                }
+                else if (string.Equals(item.Key, "CustomerId", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (Guid.TryParse(item.Value, out var id))
+                        coll = coll.Where(c => c.CustomerId == id);
+                }
+                else if (string.Equals(item.Key, "Number", StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.Number.Contains(item.Value));
+                }
+            var prb = _EntityManager.GetAll(coll, startIndex, count);
+            _Mapper.Map(prb, result);
+            return result;
+        }
+
+        /// <summary>
+        /// 增加新客户装货地址。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPost]
+        public ActionResult<AddPlLoadingAddrReturnDto> AddPlLoadingAddr(AddPlLoadingAddrParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new AddPlLoadingAddrReturnDto();
+            model.PlLoadingAddr.GenerateNewId();
+            _DbContext.PlCustomerLoadingAddrs.Add(model.PlLoadingAddr);
+            _DbContext.SaveChanges();
+            result.Id = model.PlLoadingAddr.Id;
+            return result;
+        }
+
+        /// <summary>
+        /// 修改客户装货地址信息。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定Id的客户装货地址不存在。</response>  
+        [HttpPut]
+        public ActionResult<ModifyPlLoadingAddrReturnDto> ModifyPlLoadingAddr(ModifyPlLoadingAddrParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new ModifyPlLoadingAddrReturnDto();
+            if (_DbContext.PlCustomerLoadingAddrs.Find(model.PlLoadingAddr.Id) is not PlLoadingAddr mcht) return NotFound();
+            _DbContext.Entry(mcht).CurrentValues.SetValues(model.PlLoadingAddr);
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        /// <summary>
+        /// 删除指定Id的客户装货地址。慎用！
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定Id的客户装货地址不存在。</response>  
+        [HttpDelete]
+        public ActionResult<RemovePlLoadingAddrReturnDto> RemovePlLoadingAddr(RemovePlLoadingAddrParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new RemovePlLoadingAddrReturnDto();
+            var id = model.Id;
+            var dbSet = _DbContext.PlCustomerTaxInfos;
+            var item = dbSet.Find(id);
+            if (item is null) return BadRequest();
+            _DbContext.SaveChanges();
+            return result;
+        }
+        #endregion 客户上的装货地址操作
+
     }
+
+    #region 装货地址
+    /// <summary>
+    /// 标记删除装货地址功能的参数封装类。
+    /// </summary>
+    public class RemovePlLoadingAddrParamsDto : RemoveParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 标记删除装货地址功能的返回值封装类。
+    /// </summary>
+    public class RemovePlLoadingAddrReturnDto : RemoveReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 获取所有装货地址功能的返回值封装类。
+    /// </summary>
+    public class GetAllPlLoadingAddrReturnDto : PagingReturnDtoBase<PlLoadingAddr>
+    {
+    }
+
+    /// <summary>
+    /// 增加新装货地址功能参数封装类。
+    /// </summary>
+    public class AddPlLoadingAddrParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 新装货地址信息。其中Id可以是任何值，返回时会指定新值。
+        /// </summary>
+        public PlLoadingAddr PlLoadingAddr { get; set; }
+    }
+
+    /// <summary>
+    /// 增加新装货地址功能返回值封装类。
+    /// </summary>
+    public class AddPlLoadingAddrReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 如果成功添加，这里返回新装货地址的Id。
+        /// </summary>
+        public Guid Id { get; set; }
+    }
+
+    /// <summary>
+    /// 修改装货地址信息功能参数封装类。
+    /// </summary>
+    public class ModifyPlLoadingAddrParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 装货地址数据。
+        /// </summary>
+        public PlLoadingAddr PlLoadingAddr { get; set; }
+    }
+
+    /// <summary>
+    /// 修改装货地址信息功能返回值封装类。
+    /// </summary>
+    public class ModifyPlLoadingAddrReturnDto : ReturnDtoBase
+    {
+    }
+    #endregion 装货地址
+
+    #region 黑名单
+    /// <summary>
+    /// 获取所有黑名单功能的返回值封装类。
+    /// </summary>
+    public class GetAllCustomerBlacklistReturnDto : PagingReturnDtoBase<CustomerBlacklist>
+    {
+    }
+
+    /// <summary>
+    /// 增加新黑名单功能参数封装类。
+    /// </summary>
+    public class AddCustomerBlacklistParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 新黑名单信息。其中Id可以是任何值，返回时会指定新值。
+        /// </summary>
+        public CustomerBlacklist CustomerBlacklist { get; set; }
+    }
+
+    /// <summary>
+    /// 增加新黑名单功能返回值封装类。
+    /// </summary>
+    public class AddCustomerBlacklistReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 如果成功添加，这里返回新黑名单的Id。
+        /// </summary>
+        public Guid Id { get; set; }
+    }
+
+    #endregion 黑名单
+
+    #region 提单
+    /// <summary>
+    /// 标记删除提单功能的参数封装类。
+    /// </summary>
+    public class RemovePlTidanParamsDto : RemoveParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 标记删除提单功能的返回值封装类。
+    /// </summary>
+    public class RemovePlTidanReturnDto : RemoveReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 获取所有提单功能的返回值封装类。
+    /// </summary>
+    public class GetAllPlTidanReturnDto : PagingReturnDtoBase<PlTidan>
+    {
+    }
+
+    /// <summary>
+    /// 增加新提单功能参数封装类。
+    /// </summary>
+    public class AddPlTidanParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 新提单信息。其中Id可以是任何值，返回时会指定新值。
+        /// </summary>
+        public PlTidan PlTidan { get; set; }
+    }
+
+    /// <summary>
+    /// 增加新提单功能返回值封装类。
+    /// </summary>
+    public class AddPlTidanReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 如果成功添加，这里返回新提单的Id。
+        /// </summary>
+        public Guid Id { get; set; }
+    }
+
+    /// <summary>
+    /// 修改提单信息功能参数封装类。
+    /// </summary>
+    public class ModifyPlTidanParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 提单数据。
+        /// </summary>
+        public PlTidan PlTidan { get; set; }
+    }
+
+    /// <summary>
+    /// 修改提单信息功能返回值封装类。
+    /// </summary>
+    public class ModifyPlTidanReturnDto : ReturnDtoBase
+    {
+    }
+    #endregion 提单
 
     #region 开票信息
     /// <summary>

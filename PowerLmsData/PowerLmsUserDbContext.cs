@@ -241,6 +241,11 @@ namespace PowerLmsServer.EfData
         /// </summary>
         public DbSet<PlLoadingAddr> PlCustomerLoadingAddrs { get; set; }
         #endregion  客户资料相关
+
+        /// <summary>
+        /// 文件信息表。
+        /// </summary>
+        public DbSet<PlFileInfo> PlFileInfos { get; set; }
     }
 
     /// <summary>
