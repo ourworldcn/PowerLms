@@ -1,6 +1,8 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.Internal;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
@@ -16,18 +18,20 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 构造函数。
         /// </summary>
-        public OrganizationController(AccountManager accountManager, IServiceProvider serviceProvider, PowerLmsUserDbContext dbContext, OrganizationManager organizationManager)
+        public OrganizationController(AccountManager accountManager, IServiceProvider serviceProvider, PowerLmsUserDbContext dbContext, OrganizationManager organizationManager, IMapper mapper)
         {
             _AccountManager = accountManager;
             _ServiceProvider = serviceProvider;
             _DbContext = dbContext;
             _OrganizationManager = organizationManager;
+            _Mapper = mapper;
         }
 
-        AccountManager _AccountManager;
-        IServiceProvider _ServiceProvider;
-        PowerLmsUserDbContext _DbContext;
-        OrganizationManager _OrganizationManager;
+        readonly AccountManager _AccountManager;
+        readonly IServiceProvider _ServiceProvider;
+        readonly PowerLmsUserDbContext _DbContext;
+        readonly OrganizationManager _OrganizationManager;
+        readonly IMapper _Mapper;
 
         /// <summary>
         /// 获取组织机构。暂不考虑分页。
@@ -89,8 +93,13 @@ namespace PowerLmsWebApi.Controllers
             var result = new ModifyOrgReturnDto();
             foreach (var item in model.Items)
             {
-                //_DbContext.UpdateRange(item);
-                _DbContext.Entry(item).CurrentValues.SetValues(item);
+                var tmp = _DbContext.PlOrganizations.Find(item.Id);
+                if (tmp is null) return NotFound(item.Id);
+                var entity = _DbContext.Entry(tmp);
+                entity.CurrentValues.SetValues(item);
+                entity.Reference(nameof(tmp.Address)).CurrentValue = item.Address;
+                entity.Reference(nameof(tmp.Name)).CurrentValue = item.Name;
+                entity.Collection(c => c.Children).IsModified = false;
             }
             _DbContext.SaveChanges();
             return result;

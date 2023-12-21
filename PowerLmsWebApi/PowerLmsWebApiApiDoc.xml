@@ -2100,7 +2100,7 @@
             组织机构控制器。
             </summary>
         </member>
-        <member name="M:PowerLmsWebApi.Controllers.OrganizationController.#ctor(PowerLmsServer.Managers.AccountManager,System.IServiceProvider,PowerLmsServer.EfData.PowerLmsUserDbContext,PowerLmsServer.Managers.OrganizationManager)">
+        <member name="M:PowerLmsWebApi.Controllers.OrganizationController.#ctor(PowerLmsServer.Managers.AccountManager,System.IServiceProvider,PowerLmsServer.EfData.PowerLmsUserDbContext,PowerLmsServer.Managers.OrganizationManager,AutoMapper.IMapper)">
             <summary>
             构造函数。
             </summary>
