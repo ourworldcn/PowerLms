@@ -43,7 +43,7 @@ namespace OW
                     }
                 }
 
-                return new string(pwd.Slice(0, length));
+                return new string(pwd[..length]);
 
             }
             finally
