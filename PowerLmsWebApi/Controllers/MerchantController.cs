@@ -103,8 +103,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyMerchantReturnDto();
-            if (_DbContext.Merchants.Find(model.Merchant.Id) is not PlMerchant mcht) return NotFound();
-            _DbContext.Entry(mcht).CurrentValues.SetValues(model.Merchant);
+            if (!_EntityManager.Modify(new[] { model.Merchant })) return NotFound();
             _DbContext.SaveChanges();
             return result;
         }

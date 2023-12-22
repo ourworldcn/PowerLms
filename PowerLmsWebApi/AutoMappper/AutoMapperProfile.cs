@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using PowerLms.Data;
 
 namespace PowerLmsWebApi.AutoMappper
 {
@@ -12,7 +13,18 @@ namespace PowerLmsWebApi.AutoMappper
         /// </summary>
         public AutoMapperProfile()
         {
+            CreateMap<PlOwnedAddress, PlOwnedAddress>().IncludeAllDerived();
+            CreateMap<PlSimpleOwnedAddress, PlSimpleOwnedAddress>().IncludeAllDerived();
+            CreateMap<PlOwnedName, PlOwnedName>().IncludeAllDerived();
 
+            CreateMap<OwnedAirlines, OwnedAirlines>().IncludeAllDerived();
+            CreateMap<PlOwnedContact, PlOwnedContact>().IncludeAllDerived();
+            CreateMap<PlBillingInfo, PlBillingInfo>().IncludeAllDerived();
+
+            CreateMap<PlOrganization, PlOrganization>().IncludeAllDerived();
+            CreateMap<PlMerchant, PlMerchant>().IncludeAllDerived();
+            CreateMap<PlCustomer, PlCustomer>().IncludeAllDerived();
+            CreateMap<PlFileInfo, PlFileInfo>().IncludeAllDerived();
         }
     }
 }

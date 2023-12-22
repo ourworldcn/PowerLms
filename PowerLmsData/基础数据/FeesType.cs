@@ -23,7 +23,7 @@ namespace PowerLms.Data
         /// <summary>
         /// 默认单价。
         /// </summary>
-        [Comment("默认单价")]
+        [Comment("默认单价"), Precision(18,4)]
         public decimal Price { get; set; }
 
         /// <summary>

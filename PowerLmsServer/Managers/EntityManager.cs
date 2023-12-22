@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualBasic;
 using OW.Data;
@@ -6,6 +7,7 @@ using PowerLms.Data;
 using PowerLmsServer.EfData;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -23,12 +25,15 @@ namespace PowerLmsServer.Managers
         /// 构造函数。
         /// </summary>
         /// <param name="dbContext"></param>
-        public EntityManager(PowerLmsUserDbContext dbContext)
+        /// <param name="mapper"></param>
+        public EntityManager(PowerLmsUserDbContext dbContext, IMapper mapper)
         {
             _DbContext = dbContext;
+            _Mapper = mapper;
         }
 
         readonly PowerLmsUserDbContext _DbContext;
+        readonly IMapper _Mapper;
 
         /// <summary>
         /// 修改可软删除的对象集合。
@@ -36,20 +41,11 @@ namespace PowerLmsServer.Managers
         /// <typeparam name="T"></typeparam>
         /// <param name="newValues"></param>
         /// <returns>true成功修改，调用着需要最终保存数据，false出现错误，调用应放弃保存。</returns>
-        public bool Modify<T>(IEnumerable<T> newValues) where T : GuidKeyObjectBase, IMarkDelete
+        public bool ModifyWithMarkDelete<T>(IEnumerable<T> newValues) where T : class, IEntityWithSingleKey<Guid>, IMarkDelete
         {
-            if (!ModifyEntities(newValues)) return false;
-            var dbSet = _DbContext.Set<T>();
-            foreach (var item in newValues)
-            {
-                var tmp = dbSet.Find(item.Id);
-                if (tmp is null)
-                {
-                    OwHelper.SetLastErrorAndMessage((int)HttpStatusCode.BadRequest, $"找不到指定Id——{item.Id}");
-                    return false;
-                }
-                _DbContext.Entry(tmp).Property(c => c.IsDelete).IsModified = false;
-            }
+            var entities = new List<T>();
+            if (!Modify(newValues, entities)) return false;
+            entities.ForEach(c => _DbContext.Entry(c).Property(c => c.IsDelete).IsModified = false);
             return true;
         }
 
@@ -58,21 +54,25 @@ namespace PowerLmsServer.Managers
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="newValues"></param>
+        /// <param name="result">在返回true时，这里记录更改的实体类的集合，省略或为null则不记录。返回false时，这里有随机内容。</param>
         /// <returns>true成功修改，调用着需要最终保存数据，false出现错误，调用应放弃保存。</returns>
-        public bool ModifyEntities<T>(IEnumerable<T> newValues) where T : GuidKeyObjectBase
+        public bool Modify<T>(IEnumerable<T> newValues, ICollection<T> result = null) where T : class, IEntityWithSingleKey<Guid>
         {
             var dbSet = _DbContext.Set<T>();
             var ids = newValues.Select(c => c.Id).ToArray();
-            var accColl = dbSet.Where(c => ids.Contains(c.Id)); //单次一起加载
+            var accColl = dbSet.Where(c => ids.Contains(c.Id)).ToArray(); //单次一起加载
+            if (ids.Length > accColl.Length)
+            {
+                OwHelper.SetLastErrorAndMessage((int)HttpStatusCode.BadRequest, $"至少有一个Id不存在。");
+                return false;
+            }
             foreach (var item in newValues)
             {
                 var tmp = dbSet.Find(item.Id);
-                if (tmp is null)
-                {
-                    OwHelper.SetLastErrorAndMessage((int)HttpStatusCode.BadRequest, $"找不到指定Id——{item.Id}");
-                    return false;
-                }
+                Debug.Assert(tmp is not null);
                 _DbContext.Entry(tmp).CurrentValues.SetValues(item);
+                _Mapper.Map(item, tmp);
+                result?.Add(tmp);
             }
             return true;
         }

@@ -18,13 +18,14 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 构造函数。
         /// </summary>
-        public OrganizationController(AccountManager accountManager, IServiceProvider serviceProvider, PowerLmsUserDbContext dbContext, OrganizationManager organizationManager, IMapper mapper)
+        public OrganizationController(AccountManager accountManager, IServiceProvider serviceProvider, PowerLmsUserDbContext dbContext, OrganizationManager organizationManager, IMapper mapper, EntityManager entityManager)
         {
             _AccountManager = accountManager;
             _ServiceProvider = serviceProvider;
             _DbContext = dbContext;
             _OrganizationManager = organizationManager;
             _Mapper = mapper;
+            _EntityManager = entityManager;
         }
 
         readonly AccountManager _AccountManager;
@@ -32,6 +33,7 @@ namespace PowerLmsWebApi.Controllers
         readonly PowerLmsUserDbContext _DbContext;
         readonly OrganizationManager _OrganizationManager;
         readonly IMapper _Mapper;
+        readonly EntityManager _EntityManager;
 
         /// <summary>
         /// 获取组织机构。暂不考虑分页。
@@ -91,16 +93,14 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized(OwHelper.GetLastErrorMessage());
             var result = new ModifyOrgReturnDto();
-            foreach (var item in model.Items)
+            var list = new List<PlOrganization>();
+            if (!_EntityManager.Modify(model.Items, list)) return NotFound();
+
+            list.ForEach(tmp =>
             {
-                var tmp = _DbContext.PlOrganizations.Find(item.Id);
-                if (tmp is null) return NotFound(item.Id);
                 var entity = _DbContext.Entry(tmp);
-                entity.CurrentValues.SetValues(item);
-                entity.Reference(nameof(tmp.Address)).CurrentValue = item.Address;
-                entity.Reference(nameof(tmp.Name)).CurrentValue = item.Name;
                 entity.Collection(c => c.Children).IsModified = false;
-            }
+            });
             _DbContext.SaveChanges();
             return result;
         }

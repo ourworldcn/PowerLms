@@ -249,12 +249,11 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyAccountReturnDto();
-            var acount = _DbContext.Accounts.Find(model.Item.Id);
-            if (acount is null) return NotFound();
-            var entity = _DbContext.Entry(model.Item);
-            entity.CurrentValues.SetValues(model.Item);
+            var list=new List<Account>();
+            if (!_EntityManager.Modify(new[] { model.Item }, list)) return NotFound();
+
             //设置管理员
-            var account = entity.Entity;
+            var account = list[0];
             if (model.IsAdmin.HasValue)
             {
                 if ((context.User.State & (255 - 4)) == 0)

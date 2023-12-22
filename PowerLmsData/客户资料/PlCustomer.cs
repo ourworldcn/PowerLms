@@ -3,7 +3,9 @@ using OW.Data;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -12,7 +14,7 @@ namespace PowerLms.Data
     /// <summary>
     /// 客户资料。
     /// </summary>
-    public class PlCustomer : GuidKeyObjectBase
+    public class PlCustomer : GuidKeyObjectBase, ICreatorInfo
     {
         /// <summary>
         /// 所属组织机构的Id。
@@ -99,6 +101,22 @@ namespace PowerLms.Data
         [Comment("是否有效")]
         public bool IsValid { get; set; }
 
+        /// <summary>
+        /// 备注。
+        /// </summary>
+        [Comment("备注")]
+        public string Remark { get; set; }
+
+        /// <summary>
+        /// 航空公司的封装类。
+        /// </summary>
+        public OwnedAirlines Airlines { get; set; }
+
+        /// <summary>
+        /// 是否海关检疫。
+        /// </summary>
+        [Comment("是否海关检疫")]
+        public bool IsCustomsQuarantine { get; set; }
         #region 客户性质
 
         /// <summary>
@@ -191,7 +209,75 @@ namespace PowerLms.Data
         [Comment("是否其他")]
         public bool IsOthers { get; set; }
 
+        /// <summary>
+        /// 创建者的唯一标识。
+        /// </summary>
+        [Comment("创建者的唯一标识")]
+        public Guid? CreateBy { get; set; }
+
+        /// <summary>
+        /// 创建的时间。
+        /// </summary>
+        [Comment("创建的时间")]
+        public DateTime CreateDateTime { get; set; } = OwHelper.WorldNow;
+
         #endregion 客户性质
+    }
+
+    /// <summary>
+    /// 航空公司内嵌类。
+    /// </summary>
+    [ComplexType]
+    [Owned]
+    public class OwnedAirlines
+    {
+        /*
+         * AirlineCode	航空公司2位代码（如国航为CA）
+         * Airline number code	3位，如国航999
+         * paymode	付款方式，关联简单字典BillPaymentMode
+         * paymentplace	付款地点
+         * DocumentsPlace	交单地，简单字典DocumentsPlace
+         * SettlementModes	结算方式，cass/非Cass/空
+         */
+
+        /// <summary>
+        /// 航空公司2位代码（如国航为CA）。此项空则表示整个航空公司不生效。
+        /// </summary>
+        [MaxLength(2)]
+        [Comment("航空公司2位代码（如国航为CA）")]
+        public string AirlineCode { get; set; }
+
+        /// <summary>
+        /// 3位，如国航999。
+        /// </summary>
+        [MaxLength(3)]
+        [Comment("3位，如国航999")]
+        public string NumberCode { get; set; }
+
+        /// <summary>
+        /// 付款方式，关联简单字典BillPaymentMode。
+        /// </summary>
+        [Comment("付款方式Id，关联简单字典BillPaymentMode")]
+        public Guid? PayModeId { get; set; }
+
+        /// <summary>
+        /// 付款地点。
+        /// </summary>
+        [MaxLength(64)]
+        [Comment("付款地点")]
+        public string PaymentPlace { get; set; }
+
+        /// <summary>
+        /// 交单地，简单字典DocumentsPlace。
+        /// </summary>
+        [Comment("交单地，简单字典DocumentsPlace")]
+        public Guid? DocumentsPlaceId { get; set; }
+
+        /// <summary>
+        /// 结算方式，cass=true/非Cass=false/空=null。
+        /// </summary>
+        [Comment("结算方式，cass=true/非Cass=false/空=null")]
+        public bool? SettlementModes { get; set; }
     }
 
     /// <summary>

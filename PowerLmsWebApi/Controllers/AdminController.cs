@@ -132,7 +132,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyDataDicCatalogReturnDto();
-            if (!_EntityManager.ModifyEntities(model.Items))
+            if (!_EntityManager.Modify(model.Items))
             {
                 var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
                 return errResult;
@@ -381,7 +381,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifySimpleDataDicReturnDto();
-            if (!_EntityManager.Modify(model.Items))
+            if (!_EntityManager.ModifyWithMarkDelete(model.Items))
             {
                 var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
                 return errResult;
@@ -543,7 +543,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyPlPortReturnDto();
-            if (!_EntityManager.Modify(model.Items))
+            if (!_EntityManager.ModifyWithMarkDelete(model.Items))
             {
                 var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
                 return errResult;
@@ -687,7 +687,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyPlCargoRouteReturnDto();
-            if (!_EntityManager.Modify(model.Items))
+            if (!_EntityManager.ModifyWithMarkDelete(model.Items))
             {
                 var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
                 return errResult;
@@ -823,7 +823,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyPlExchangeRateReturnDto();
-            if (!_EntityManager.ModifyEntities(model.Items))
+            if (!_EntityManager.Modify(model.Items))
             {
                 var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
                 return errResult;
@@ -912,7 +912,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyUnitConversionReturnDto();
-            if (!_EntityManager.Modify(model.Items))
+            if (!_EntityManager.ModifyWithMarkDelete(model.Items))
             {
                 var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
                 return errResult;
@@ -1053,7 +1053,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyFeesTypeReturnDto();
-            if (!_EntityManager.Modify(model.Items))
+            if (!_EntityManager.ModifyWithMarkDelete(model.Items))
             {
                 var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
                 return errResult;
@@ -1196,7 +1196,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyJobNumberRuleReturnDto();
-            if (!_EntityManager.Modify(model.Items))
+            if (!_EntityManager.ModifyWithMarkDelete(model.Items))
             {
                 var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
                 return errResult;
@@ -1339,7 +1339,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyPlCountryReturnDto();
-            if (!_EntityManager.Modify(model.Items))
+            if (!_EntityManager.ModifyWithMarkDelete(model.Items))
             {
                 var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
                 return errResult;
@@ -1482,7 +1482,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyPlCurrencyReturnDto();
-            if (!_EntityManager.Modify(model.Items))
+            if (!_EntityManager.ModifyWithMarkDelete(model.Items))
             {
                 var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
                 return errResult;

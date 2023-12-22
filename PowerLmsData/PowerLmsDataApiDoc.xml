@@ -291,6 +291,36 @@
             备注.
             </summary>
         </member>
+        <member name="T:PowerLms.Data.ICreatorInfo">
+            <summary>
+            创建者信息接口。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.ICreatorInfo.CreateBy">
+            <summary>
+            创建者的唯一标识。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.ICreatorInfo.CreateDateTime">
+            <summary>
+            创建的时间。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.CreatorInfoBase">
+            <summary>
+            创建者信息信息的基类。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.CreatorInfoBase.CreateBy">
+            <summary>
+            <inheritdoc/>
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.CreatorInfoBase.CreateDateTime">
+            <summary>
+            <inheritdoc/>
+            </summary>
+        </member>
         <member name="T:PowerLms.Data.PlAddress">
             <summary>
             地址类。
@@ -870,6 +900,21 @@
             是否有效。
             </summary>
         </member>
+        <member name="P:PowerLms.Data.PlCustomer.Remark">
+            <summary>
+            备注。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomer.Airlines">
+            <summary>
+            航空公司的封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomer.IsCustomsQuarantine">
+            <summary>
+            是否海关检疫。
+            </summary>
+        </member>
         <member name="P:PowerLms.Data.PlCustomer.IsShipper">
             <summary>
             是否委托单位。
@@ -943,6 +988,51 @@
         <member name="P:PowerLms.Data.PlCustomer.IsOthers">
             <summary>
             是否其他
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomer.CreateBy">
+            <summary>
+            创建者的唯一标识。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlCustomer.CreateDateTime">
+            <summary>
+            创建的时间。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.OwnedAirlines">
+            <summary>
+            航空公司内嵌类。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwnedAirlines.AirlineCode">
+            <summary>
+            航空公司2位代码（如国航为CA）。此项空则表示整个航空公司不生效。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwnedAirlines.NumberCode">
+            <summary>
+            3位，如国航999。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwnedAirlines.PayModeId">
+            <summary>
+            付款方式，关联简单字典BillPaymentMode。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwnedAirlines.PaymentPlace">
+            <summary>
+            付款地点。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwnedAirlines.DocumentsPlaceId">
+            <summary>
+            交单地，简单字典DocumentsPlace。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwnedAirlines.SettlementModes">
+            <summary>
+            结算方式，cass=true/非Cass=false/空=null。
             </summary>
         </member>
         <member name="T:PowerLms.Data.PlCustomerContact">
@@ -1225,6 +1315,16 @@
             是否已标记为删除。false(默认)未标记为删除，true标记为删除。
             </summary>
         </member>
+        <member name="P:PowerLms.Data.PlMerchant.CreateBy">
+            <summary>
+            创建者的唯一标识。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlMerchant.CreateDateTime">
+            <summary>
+            创建的时间。
+            </summary>
+        </member>
         <member name="T:PowerLms.Data.PlOrganization">
             <summary>
             组织机构。
@@ -1265,6 +1365,16 @@
             联系人名字。
             </summary>
         </member>
+        <member name="P:PowerLms.Data.PlOrganization.CreateBy">
+            <summary>
+            创建者的唯一标识。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlOrganization.CreateDateTime">
+            <summary>
+            创建的时间。
+            </summary>
+        </member>
         <member name="P:PowerLms.Data.PlOrganization.Parent">
             <summary>
             所属组织机构的导航属性。没有父的组织机构是顶层节点即"商户"。
@@ -1272,7 +1382,7 @@
         </member>
         <member name="P:PowerLms.Data.PlOrganization.ParentId">
             <summary>
-            所属组织机构Id。
+            所属组织机构Id。没有父组织机构是顶层节点总公司，它的父是商户(MerchantId)
             </summary>
         </member>
         <member name="P:PowerLms.Data.PlOrganization.Children">

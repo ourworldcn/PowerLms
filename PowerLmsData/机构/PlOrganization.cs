@@ -14,7 +14,7 @@ namespace PowerLms.Data
     /// <summary>
     /// 组织机构。
     /// </summary>
-    public class PlOrganization : GuidKeyObjectBase
+    public class PlOrganization : GuidKeyObjectBase,ICreatorInfo
     {
         /// <summary>
         /// 商户Id。仅总公司(ParentId 是null)需要此字段指向所属商户，其它情况忽略此字段。
@@ -58,6 +58,18 @@ namespace PowerLms.Data
         [Comment("联系人名字")]
         public string ContractName { get; set; }
 
+        /// <summary>
+        /// 创建者的唯一标识。
+        /// </summary>
+        [Comment("创建者的唯一标识")]
+        public Guid? CreateBy { get; set; }
+
+        /// <summary>
+        /// 创建的时间。
+        /// </summary>
+        [Comment("创建的时间")]
+        public DateTime CreateDateTime { get; set; } = OwHelper.WorldNow;
+
         #region 导航属性
 
         private PlOrganization _Parent;
@@ -68,10 +80,10 @@ namespace PowerLms.Data
         public virtual PlOrganization Parent { get => _Parent; set => _Parent = value; }
 
         /// <summary>
-        /// 所属组织机构Id。
+        /// 所属组织机构Id。没有父组织机构是顶层节点总公司，它的父是商户(MerchantId)
         /// </summary>
         [ForeignKey(nameof(Parent))]
-        [Comment("所属组织机构Id。没有父的组织机构是顶层节点即\"商户\"。")]
+        [Comment("所属组织机构Id。没有父组织机构是顶层节点总公司，它的父是商户(MerchantId)")]
         public virtual Guid? ParentId { get; set; }
 
         List<PlOrganization> _Children;

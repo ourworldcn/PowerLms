@@ -1,23 +1,44 @@
 {
-  "SequenceOut": {
-    "Conditions": [
+  "Genus": [ "gs_saijivip" ],
+  "ShoppingItem": {
+    "Period": {
+      "Start": "2023-05-30T00:00:00.000Z",
+      "End": null,
+      "PeriodString": "1m",
+      "ValidPeriodString": "1m"
+    },
+    "GroupNumber": 0,
+    "MaxCount": null,
+    "Ins": [
       {
-        "ParentTId": null,
-        "Genus": [],
-        "TId": "07664462-df05-4ba7-886d-b431bb88aa1c",
-        "MinCount": 0,
-        "GeneralConditional": [],
-        "GroupMask": 1
+        "Conditional": [
+          {
+            "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
+            "Genus": [],
+            "TId": "d577e084-4aa4-44d9-9510-20ccea041375",
+            "MinCount": 1,
+            "GeneralConditional": [],
+            "GroupMask": 1
+          }
+        ],
+        "Count": 1,
+        "Genus": []
       }
     ],
-    "GetIndexExpression": {
-      "op": "GetBuyedCount",
-      "args": [ "62e227a8-c5d5-410e-96c5-d5ca931bafe2" ]
-    },
-    "Outs": {
-      "TIds": [ "1de88b53-e5bf-4a60-9dfb-90284b94bdab", "c9575f24-a33d-49ba-b130-29b6ff4d62c7" ],
-      "Counts": [ 1, 100, 100, 300 ],
-      "ParentTIds": [ "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d", "9c559895-9a2c-43a7-b793-e879a600487c" ]
-    }
-  }
+    "Outs": [
+      {
+        "Id": null,
+        "ParentTId": null,
+        "TId": "c9615e53-ff8c-4080-ab20-ec8c5d170a3b",
+        "Count": 1
+      }
+    ]
+  },
+  "productStoreId": "com.duangphl.16",
+  "productAmount": 159,
+  "currencyCode": "PHP",
+  "currencyMark": "₱",
+  "productName": "钻石购买",
+  "productType": "钻石",
+  "productDesc": "少量钻石"
 }

@@ -109,8 +109,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyCustomerReturnDto();
-            if (_DbContext.PlCustomers.Find(model.Customer.Id) is not PlCustomer mcht) return NotFound();
-            _DbContext.Entry(mcht).CurrentValues.SetValues(model.Customer);
+            if (!_EntityManager.Modify(new[] { model.Customer })) return NotFound();
             _DbContext.SaveChanges();
             return result;
         }
@@ -203,8 +202,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyCustomerContactReturnDto();
-            if (_DbContext.PlCustomerContacts.Find(model.CustomerContact.Id) is not PlCustomerContact mcht) return NotFound();
-            _DbContext.Entry(mcht).CurrentValues.SetValues(model.CustomerContact);
+            if (!_EntityManager.Modify(new[] { model.CustomerContact })) return NotFound();
             _DbContext.SaveChanges();
             return result;
         }
@@ -385,8 +383,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyPlTaxInfoReturnDto();
-            if (_DbContext.PlCustomerTaxInfos.Find(model.PlTaxInfo.Id) is not PlTaxInfo mcht) return NotFound();
-            _DbContext.Entry(mcht).CurrentValues.SetValues(model.PlTaxInfo);
+            if (!_EntityManager.Modify(new[] { model.PlTaxInfo })) return NotFound();
             _DbContext.SaveChanges();
             return result;
         }
@@ -484,8 +481,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyPlTidanReturnDto();
-            if (_DbContext.PlCustomerTidans.Find(model.PlTidan.Id) is not PlTidan mcht) return NotFound();
-            _DbContext.Entry(mcht).CurrentValues.SetValues(model.PlTidan);
+            if (!_EntityManager.Modify(new[] { model.PlTidan })) return NotFound();
             _DbContext.SaveChanges();
             return result;
         }
@@ -643,8 +639,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyPlLoadingAddrReturnDto();
-            if (_DbContext.PlCustomerLoadingAddrs.Find(model.PlLoadingAddr.Id) is not PlLoadingAddr mcht) return NotFound();
-            _DbContext.Entry(mcht).CurrentValues.SetValues(model.PlLoadingAddr);
+            if (!_EntityManager.Modify(new[] { model.PlLoadingAddr })) return NotFound();
             _DbContext.SaveChanges();
             return result;
         }

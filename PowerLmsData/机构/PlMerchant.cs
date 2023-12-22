@@ -15,7 +15,7 @@ namespace PowerLms.Data
     /// 商户。
     /// </summary>
     [Comment("商户")]
-    public class PlMerchant : GuidKeyObjectBase,IMarkDelete
+    public class PlMerchant : GuidKeyObjectBase,IMarkDelete,ICreatorInfo
     {
         /// <summary>
         /// 名称类。
@@ -52,5 +52,18 @@ namespace PowerLms.Data
         /// </summary>
         [Comment("是否已标记为删除。false(默认)未标记为删除，true标记为删除。")]
         public bool IsDelete { get; set; }
+
+        /// <summary>
+        /// 创建者的唯一标识。
+        /// </summary>
+        [Comment("创建者的唯一标识")]
+        public Guid? CreateBy { get; set; }
+
+        /// <summary>
+        /// 创建的时间。
+        /// </summary>
+        [Comment("创建的时间")]
+        public DateTime CreateDateTime { get; set; } = OwHelper.WorldNow;
+
     }
 }
