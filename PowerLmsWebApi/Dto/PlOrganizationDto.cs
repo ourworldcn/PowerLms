@@ -25,9 +25,9 @@ namespace PowerLmsWebApi.Dto
     public class GetOrgReturnDto : ReturnDtoBase
     {
         /// <summary>
-        /// 返回的组机构。
+        /// 返回的组机构。嵌套关系在对象内部体现。多个顶层公司则返回多个元素。
         /// </summary>
-        public PlOrganization Result { get; set; }
+        public List<PlOrganization> Result { get; set; } = new List<PlOrganization>();
     }
 
 }

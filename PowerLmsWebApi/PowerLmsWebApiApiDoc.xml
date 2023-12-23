@@ -2110,11 +2110,12 @@
             获取组织机构。暂不考虑分页。
             </summary>
             <param name="token"></param>
-            <param name="rootId">根组织机构的Id。或商户的Id。</param>
+            <param name="rootId">根组织机构的Id。或商户的Id。省略或为null时，对商管将返回该商户下多个组织机构。</param>
             <param name="includeChildren">是否包含子机构。</param>
             <returns></returns>
             <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
             <response code="401">无效令牌。</response>  
+            <response code="400">用户身份错误。通常是非管理员试图获取所有组织机构信息，未来权限定义可能更改这个要求。</response>  
         </member>
         <member name="M:PowerLmsWebApi.Controllers.OrganizationController.AddOrg(PowerLmsWebApi.Controllers.AddOrgParamsDto)">
             <summary>
@@ -2592,7 +2593,7 @@
         </member>
         <member name="P:PowerLmsWebApi.Dto.GetOrgReturnDto.Result">
             <summary>
-            返回的组机构。
+            返回的组机构。嵌套关系在对象内部体现。多个顶层公司则返回多个元素。
             </summary>
         </member>
         <member name="T:PowerLmsWebApi.WeatherForecast">

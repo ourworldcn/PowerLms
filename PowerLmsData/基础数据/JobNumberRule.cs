@@ -57,6 +57,12 @@ namespace PowerLms.Data
         /// </summary>
         [Comment("记录最后一次归零的日期")]
         public DateTime RepeatDate { get; set; }
+
+        /// <summary>
+        /// 业务类型Id。链接到业务大类表。
+        /// </summary>
+        [Comment("业务类型Id，链接到业务大类表")]
+        public Guid? BusinessTypeld { get; set; }
     }
 
     /// <summary>

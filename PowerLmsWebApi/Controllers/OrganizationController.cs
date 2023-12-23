@@ -39,25 +39,44 @@ namespace PowerLmsWebApi.Controllers
         /// 获取组织机构。暂不考虑分页。
         /// </summary>
         /// <param name="token"></param>
-        /// <param name="rootId">根组织机构的Id。或商户的Id。</param>
+        /// <param name="rootId">根组织机构的Id。或商户的Id。省略或为null时，对商管将返回该商户下多个组织机构。</param>
         /// <param name="includeChildren">是否包含子机构。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="400">用户身份错误。通常是非管理员试图获取所有组织机构信息，未来权限定义可能更改这个要求。</response>  
         [HttpGet]
         public ActionResult<GetOrgReturnDto> GetOrg(Guid token, Guid? rootId, bool includeChildren)
         {
             var result = new GetOrgReturnDto();
-            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized(OwHelper.GetLastErrorMessage());
-            var root = _DbContext.PlOrganizations.FirstOrDefault(c => c.Id == rootId);
-            if (root == null)
-                root = _DbContext.PlOrganizations.FirstOrDefault(c => c.MerchantId == rootId);
-            if (!includeChildren)
+            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_DbContext.Merchants.Find(rootId) is PlMerchant merch)   //若指定的是商户
             {
-                _DbContext.Entry(root).State = EntityState.Detached;
-                root.Children.Clear();
+                if ((context.User.State & 8) == 0 && (context.User.State & 4) == 0) return BadRequest();
+                _OrganizationManager.GetMerchantId(context.User.Id, out var merchId);
+
+                var orgs = _DbContext.PlOrganizations.Where(c => c.MerchantId == merchId).ToList();
+
+                if (!includeChildren)
+                {
+                    orgs.ForEach(c =>
+                    {
+                        _DbContext.Entry(c).State = EntityState.Detached;
+                        c.Children.Clear();
+                    });
+                }
+                result.Result.AddRange(orgs);
             }
-            result.Result = root;
+            else //指定了机构
+            {
+                var root = _DbContext.PlOrganizations.Find(rootId);  //获取商户
+                if (!includeChildren)
+                {
+                    _DbContext.Entry(root).State = EntityState.Detached;
+                    root.Children.Clear();
+                }
+                result.Result.Add(root);
+            }
             return result;
         }
 

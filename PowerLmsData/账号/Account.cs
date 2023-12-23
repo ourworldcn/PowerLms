@@ -201,6 +201,7 @@ namespace PowerLms.Data
     /// 账号所属组织机构多对多表。
     /// </summary>
     [Comment("账号所属组织机构多对多表")]
+    [Index(nameof(OrgId), nameof(UserId), IsUnique = true)]
     public class AccountPlOrganization
     {
         /// <summary>
@@ -210,9 +211,9 @@ namespace PowerLms.Data
         public Guid UserId { get; set; }
 
         /// <summary>
-        /// 所属组织机构Id。
+        /// 直属组织机构Id或商户Id。
         /// </summary>
-        [Comment("直属组织机构Id")]
+        [Comment("直属组织机构Id或商户Id")]
         public Guid OrgId { get; set; }
     }
 }
