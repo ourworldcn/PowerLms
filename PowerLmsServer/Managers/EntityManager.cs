@@ -70,7 +70,8 @@ namespace PowerLmsServer.Managers
             {
                 var tmp = dbSet.Find(item.Id);
                 Debug.Assert(tmp is not null);
-                _DbContext.Entry(tmp).CurrentValues.SetValues(item);
+                var entity = _DbContext.Entry(tmp);
+                entity.CurrentValues.SetValues(item);
                 try
                 {
                     _Mapper.Map(item, tmp, typeof(T), typeof(T));
@@ -79,6 +80,11 @@ namespace PowerLmsServer.Managers
                 {
                 }
                 result?.Add(tmp);
+                if (tmp is ICreatorInfo ci) //若实现创建信息接口
+                {
+                    entity.Property(nameof(ci.CreateBy)).IsModified = false;
+                    entity.Property(nameof(ci.CreateDateTime)).IsModified = false;
+                }
             }
             return true;
         }
