@@ -141,6 +141,31 @@ namespace PowerLmsData.Migrations
                     b.HasComment("账号所属组织机构多对多表");
                 });
 
+            modelBuilder.Entity("PowerLms.Data.AccountRole", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("账号Id。");
+
+                    b.Property<Guid>("RoleId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("角色Id。");
+
+                    b.Property<Guid?>("CreateBy")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("创建者的唯一标识");
+
+                    b.Property<DateTime>("CreateDateTime")
+                        .HasColumnType("datetime2")
+                        .HasComment("创建的时间");
+
+                    b.HasKey("UserId", "RoleId");
+
+                    b.ToTable("PlAccountRoles");
+
+                    b.HasComment("记录账号与角色关系的类。");
+                });
+
             modelBuilder.Entity("PowerLms.Data.BusinessTypeDataDic", b =>
                 {
                     b.Property<Guid>("Id")
@@ -358,7 +383,7 @@ namespace PowerLmsData.Migrations
                         .HasColumnType("uniqueidentifier")
                         .HasColumnOrder(0);
 
-                    b.Property<Guid?>("BusinessTypeld")
+                    b.Property<Guid?>("BusinessTypeId")
                         .HasColumnType("uniqueidentifier")
                         .HasComment("业务类型Id，链接到业务大类表");
 
@@ -1008,6 +1033,19 @@ namespace PowerLmsData.Migrations
                     b.ToTable("PlOrganizations");
                 });
 
+            modelBuilder.Entity("PowerLms.Data.PlPermission", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnOrder(0);
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PlPermissions");
+
+                    b.HasComment("权限类。");
+                });
+
             modelBuilder.Entity("PowerLms.Data.PlPort", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1072,6 +1110,31 @@ namespace PowerLmsData.Migrations
                     b.ToTable("DD_PlPorts");
 
                     b.HasComment("港口");
+                });
+
+            modelBuilder.Entity("PowerLms.Data.PlRole", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnOrder(0);
+
+                    b.Property<Guid?>("CreateBy")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("创建者的唯一标识");
+
+                    b.Property<DateTime>("CreateDateTime")
+                        .HasColumnType("datetime2")
+                        .HasComment("创建的时间");
+
+                    b.Property<Guid?>("OrgId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("所属组织机构Id。");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PlRoles");
+
+                    b.HasComment("角色类。");
                 });
 
             modelBuilder.Entity("PowerLms.Data.PlTaxInfo", b =>
@@ -1157,6 +1220,31 @@ namespace PowerLmsData.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("PlCustomerTidans");
+                });
+
+            modelBuilder.Entity("PowerLms.Data.RolePermission", b =>
+                {
+                    b.Property<Guid>("RoleId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("角色Id。");
+
+                    b.Property<Guid>("PermissionId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("权限Id。");
+
+                    b.Property<Guid?>("CreateBy")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("创建者的唯一标识");
+
+                    b.Property<DateTime>("CreateDateTime")
+                        .HasColumnType("datetime2")
+                        .HasComment("创建的时间");
+
+                    b.HasKey("RoleId", "PermissionId");
+
+                    b.ToTable("PlRolePermissions");
+
+                    b.HasComment("记录角色和权限的关系类。");
                 });
 
             modelBuilder.Entity("PowerLms.Data.SimpleDataDic", b =>
@@ -1640,6 +1728,70 @@ namespace PowerLmsData.Migrations
                     b.Navigation("Name");
 
                     b.Navigation("Parent");
+                });
+
+            modelBuilder.Entity("PowerLms.Data.PlPermission", b =>
+                {
+                    b.OwnsOne("PowerLms.Data.PlOwnedName", "Name", b1 =>
+                        {
+                            b1.Property<Guid>("PlPermissionId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<string>("DisplayName")
+                                .HasColumnType("nvarchar(max)")
+                                .HasComment("显示名，有时它是昵称或简称(系统内)的意思");
+
+                            b1.Property<string>("Name")
+                                .HasMaxLength(64)
+                                .HasColumnType("nvarchar(64)")
+                                .HasComment("正式名称，拥有相对稳定性");
+
+                            b1.Property<string>("ShortName")
+                                .HasMaxLength(32)
+                                .HasColumnType("nvarchar(32)")
+                                .HasComment("正式简称，对正式的组织机构通常简称也是规定的");
+
+                            b1.HasKey("PlPermissionId");
+
+                            b1.ToTable("PlPermissions");
+
+                            b1.WithOwner()
+                                .HasForeignKey("PlPermissionId");
+                        });
+
+                    b.Navigation("Name");
+                });
+
+            modelBuilder.Entity("PowerLms.Data.PlRole", b =>
+                {
+                    b.OwnsOne("PowerLms.Data.PlOwnedName", "Name", b1 =>
+                        {
+                            b1.Property<Guid>("PlRoleId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<string>("DisplayName")
+                                .HasColumnType("nvarchar(max)")
+                                .HasComment("显示名，有时它是昵称或简称(系统内)的意思");
+
+                            b1.Property<string>("Name")
+                                .HasMaxLength(64)
+                                .HasColumnType("nvarchar(64)")
+                                .HasComment("正式名称，拥有相对稳定性");
+
+                            b1.Property<string>("ShortName")
+                                .HasMaxLength(32)
+                                .HasColumnType("nvarchar(32)")
+                                .HasComment("正式简称，对正式的组织机构通常简称也是规定的");
+
+                            b1.HasKey("PlRoleId");
+
+                            b1.ToTable("PlRoles");
+
+                            b1.WithOwner()
+                                .HasForeignKey("PlRoleId");
+                        });
+
+                    b.Navigation("Name");
                 });
 
             modelBuilder.Entity("PowerLms.Data.PlOrganization", b =>

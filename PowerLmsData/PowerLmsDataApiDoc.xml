@@ -181,6 +181,26 @@
             文件信息表。
             </summary>
         </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.PlRoles">
+            <summary>
+            角色表。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.PlAccountRoles">
+            <summary>
+            记录账号与角色关系的表。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.PlRolePermissions">
+            <summary>
+            记录角色和权限的关系表。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.PlPermissions">
+            <summary>
+            权限表。
+            </summary>
+        </member>
         <member name="T:PowerLmsServer.EfData.OwDbContextExtensions">
             <summary>
             数据库上下文的扩展方法。
@@ -598,7 +618,7 @@
             记录最后一次归零的日期。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.JobNumberRule.BusinessTypeld">
+        <member name="P:PowerLms.Data.JobNumberRule.BusinessTypeId">
             <summary>
             业务类型Id。链接到业务大类表。
             </summary>
@@ -1393,6 +1413,101 @@
         <member name="P:PowerLms.Data.PlOrganization.Children">
             <summary>
             拥有的子组织机构。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.PlPermission">
+            <summary>
+            权限类。
+            </summary>
+        </member>
+        <member name="M:PowerLms.Data.PlPermission.#ctor">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlPermission.Name">
+            <summary>
+            封装名称的对象。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.PlRole">
+            <summary>
+            角色类。
+            </summary>
+        </member>
+        <member name="M:PowerLms.Data.PlRole.#ctor">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlRole.OrgId">
+            <summary>
+            所属组织机构Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlRole.Name">
+            <summary>
+            封装名称的对象。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlRole.CreateBy">
+            <summary>
+            创建者的唯一标识。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlRole.CreateDateTime">
+            <summary>
+            创建的时间。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.AccountRole">
+            <summary>
+            记录账号与角色关系的类。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.AccountRole.UserId">
+            <summary>
+            账号Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.AccountRole.RoleId">
+            <summary>
+            角色Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.AccountRole.CreateBy">
+            <summary>
+            创建者的唯一标识。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.AccountRole.CreateDateTime">
+            <summary>
+            创建的时间。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.RolePermission">
+            <summary>
+            记录角色和权限的关系类。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.RolePermission.RoleId">
+            <summary>
+            角色Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.RolePermission.PermissionId">
+            <summary>
+            权限Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.RolePermission.CreateBy">
+            <summary>
+            创建者的唯一标识。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.RolePermission.CreateDateTime">
+            <summary>
+            创建的时间。
             </summary>
         </member>
         <member name="T:PowerLms.Data.SystemResource">

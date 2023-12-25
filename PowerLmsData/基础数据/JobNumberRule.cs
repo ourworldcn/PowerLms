@@ -62,7 +62,7 @@ namespace PowerLms.Data
         /// 业务类型Id。链接到业务大类表。
         /// </summary>
         [Comment("业务类型Id，链接到业务大类表")]
-        public Guid? BusinessTypeld { get; set; }
+        public Guid? BusinessTypeId { get; set; }
     }
 
     /// <summary>

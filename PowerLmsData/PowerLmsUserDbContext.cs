@@ -80,6 +80,13 @@ namespace PowerLmsServer.EfData
             modelBuilder.Entity<AccountPlOrganization>().HasKey(nameof(AccountPlOrganization.UserId), nameof(AccountPlOrganization.OrgId));
 
             modelBuilder.Entity<PlBusinessHeader>().HasKey(nameof(PlBusinessHeader.CustomerId), nameof(PlBusinessHeader.AccountId), nameof(PlBusinessHeader.OrderTypeId));
+
+            #region 权限相关
+            modelBuilder.Entity<AccountRole>().HasKey(nameof(AccountRole.UserId), nameof(AccountRole.RoleId));
+            modelBuilder.Entity<RolePermission>().HasKey(nameof(RolePermission.RoleId), nameof(RolePermission.PermissionId));
+
+            #endregion 权限相关
+
             base.OnModelCreating(modelBuilder);
         }
 
@@ -246,6 +253,33 @@ namespace PowerLmsServer.EfData
         /// 文件信息表。
         /// </summary>
         public DbSet<PlFileInfo> PlFileInfos { get; set; }
+
+        #region 权限相关
+
+        /// <summary>
+        /// 角色表。
+        /// </summary>
+        [Comment("角色表。")]
+        public DbSet<PlRole> PlRoles { get; set; }
+
+        /// <summary>
+        /// 记录账号与角色关系的表。
+        /// </summary>
+        [Comment("记录账号与角色关系的表。")]
+        public DbSet<AccountRole> PlAccountRoles { get; set; }
+
+        /// <summary>
+        /// 记录角色和权限的关系表。
+        /// </summary>
+        [Comment("记录角色和权限的关系表。")]
+        public DbSet<RolePermission> PlRolePermissions { get; set; }
+
+        /// <summary>
+        /// 权限表。
+        /// </summary>
+        [Comment("权限表。")]
+        public DbSet<PlPermission> PlPermissions { get; set; }
+        #endregion 权限相关
     }
 
     /// <summary>

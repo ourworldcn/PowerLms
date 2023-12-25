@@ -71,7 +71,13 @@ namespace PowerLmsServer.Managers
                 var tmp = dbSet.Find(item.Id);
                 Debug.Assert(tmp is not null);
                 _DbContext.Entry(tmp).CurrentValues.SetValues(item);
-                _Mapper.Map(item, tmp);
+                try
+                {
+                    _Mapper.Map(item, tmp, typeof(T), typeof(T));
+                }
+                catch (AutoMapperMappingException)  //忽略不能映射的情况
+                {
+                }
                 result?.Add(tmp);
             }
             return true;

@@ -1241,6 +1241,330 @@
             返回数据字典目录功能的返回值封装类。
             </summary>
         </member>
+        <member name="T:PowerLmsWebApi.Controllers.AuthorizationController">
+            <summary>
+            权限系统相关操作的控制器。
+            </summary>
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AuthorizationController.#ctor(System.IServiceProvider,PowerLmsServer.Managers.AccountManager,PowerLmsServer.EfData.PowerLmsUserDbContext,PowerLmsServer.Managers.EntityManager,AutoMapper.IMapper,PowerLmsServer.Managers.AuthorizationManager)">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AuthorizationController.GetAllPlRole(System.Guid,System.Int32,System.Int32,System.Collections.Generic.Dictionary{System.String,System.String})">
+            <summary>
+            获取全部角色。
+            </summary>
+            <param name="token">登录令牌。</param>
+            <param name="startIndex">起始位置，从0开始。</param>
+            <param name="count">最大返回数量。</param>
+            <param name="conditional">查询的条件。支持 name，ShortName，displayname，Id。不区分大小写。</param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AuthorizationController.AddPlRole(PowerLmsWebApi.Controllers.AddPlRoleParamsDto)">
+            <summary>
+            增加新角色。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AuthorizationController.ModifyPlRole(PowerLmsWebApi.Controllers.ModifyPlRoleParamsDto)">
+            <summary>
+            修改角色信息。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+            <response code="404">指定Id的角色不存在。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AuthorizationController.RemovePlRole(PowerLmsWebApi.Controllers.RemovePlRoleParamsDto)">
+            <summary>
+            删除指定Id的角色。慎用！
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+            <response code="404">指定Id的角色不存在。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AuthorizationController.GetAllPlPermission(System.Guid,System.Int32,System.Int32,System.Collections.Generic.Dictionary{System.String,System.String})">
+            <summary>
+            获取全部权限。
+            </summary>
+            <param name="token">登录令牌。</param>
+            <param name="startIndex">起始位置，从0开始。</param>
+            <param name="count">最大返回数量。</param>
+            <param name="conditional">查询的条件。支持 name，ShortName，displayname，Id。不区分大小写。</param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AuthorizationController.AddPlPermission(PowerLmsWebApi.Controllers.AddPlPermissionParamsDto)">
+            <summary>
+            增加新权限。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AuthorizationController.ModifyPlPermission(PowerLmsWebApi.Controllers.ModifyPlPermissionParamsDto)">
+            <summary>
+            修改权限信息。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+            <response code="404">指定Id的权限不存在。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AuthorizationController.RemovePlPermission(PowerLmsWebApi.Controllers.RemovePlPermissionParamsDto)">
+            <summary>
+            删除指定Id的权限。慎用！
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+            <response code="404">指定Id的权限不存在。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AuthorizationController.GetAllAccountRole(System.Guid,System.Int32,System.Int32,System.Collections.Generic.Dictionary{System.String,System.String})">
+            <summary>
+            获取全部用户-角色关系。
+            </summary>
+            <param name="token">登录令牌。</param>
+            <param name="startIndex">起始位置，从0开始。</param>
+            <param name="count">最大返回数量。</param>
+            <param name="conditional">查询的条件。支持 UserId，RoleId。不区分大小写。</param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AuthorizationController.AddAccountRole(PowerLmsWebApi.Controllers.AddAccountRoleParamsDto)">
+            <summary>
+            增加新用户-角色关系。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AuthorizationController.RemoveAccountRole(PowerLmsWebApi.Controllers.RemoveAccountRoleParamsDto)">
+            <summary>
+            删除指定Id的用户-角色关系。慎用！
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+            <response code="404">指定Id的用户-角色关系不存在。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AuthorizationController.GetAllRolePermission(System.Guid,System.Int32,System.Int32,System.Collections.Generic.Dictionary{System.String,System.String})">
+            <summary>
+            获取全部角色-权限关系。
+            </summary>
+            <param name="token">登录令牌。</param>
+            <param name="startIndex">起始位置，从0开始。</param>
+            <param name="count">最大返回数量。</param>
+            <param name="conditional">查询的条件。支持 PermissionId，RoleId。不区分大小写。</param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AuthorizationController.AddRolePermission(PowerLmsWebApi.Controllers.AddRolePermissionParamsDto)">
+            <summary>
+            增加新角色-权限关系。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AuthorizationController.RemoveRolePermission(PowerLmsWebApi.Controllers.RemoveRolePermissionParamsDto)">
+            <summary>
+            删除指定Id的角色-权限关系。慎用！
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+            <response code="404">指定Id的角色-权限关系不存在。</response>  
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RemoveRolePermissionParamsDto">
+            <summary>
+            标记删除角色-权限关系功能的参数封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RemoveRolePermissionReturnDto">
+            <summary>
+            标记删除角色-权限关系功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetAllRolePermissionReturnDto">
+            <summary>
+            获取所有角色-权限关系功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddRolePermissionParamsDto">
+            <summary>
+            增加新角色-权限关系功能参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.AddRolePermissionParamsDto.RolePermission">
+            <summary>
+            新角色-权限关系信息。其中Id可以是任何值，返回时会指定新值。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddRolePermissionReturnDto">
+            <summary>
+            增加新角色-权限关系功能返回值封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.AddRolePermissionReturnDto.Id">
+            <summary>
+            如果成功添加，这里返回新角色-权限关系的Id。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RemoveAccountRoleParamsDto">
+            <summary>
+            标记删除用户-角色关系功能的参数封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RemoveAccountRoleReturnDto">
+            <summary>
+            标记删除用户-角色关系功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetAllAccountRoleReturnDto">
+            <summary>
+            获取所有用户-角色关系功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddAccountRoleParamsDto">
+            <summary>
+            增加新用户-角色关系功能参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.AddAccountRoleParamsDto.AccountRole">
+            <summary>
+            新用户-角色关系信息。其中Id可以是任何值，返回时会指定新值。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddAccountRoleReturnDto">
+            <summary>
+            增加新用户-角色关系功能返回值封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.AddAccountRoleReturnDto.Id">
+            <summary>
+            如果成功添加，这里返回新用户-角色关系的Id。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RemovePlPermissionParamsDto">
+            <summary>
+            标记删除权限功能的参数封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RemovePlPermissionReturnDto">
+            <summary>
+            标记删除权限功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetAllPlPermissionReturnDto">
+            <summary>
+            获取所有权限功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddPlPermissionParamsDto">
+            <summary>
+            增加新权限功能参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.AddPlPermissionParamsDto.PlPermission">
+            <summary>
+            新权限信息。其中Id可以是任何值，返回时会指定新值。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddPlPermissionReturnDto">
+            <summary>
+            增加新权限功能返回值封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.AddPlPermissionReturnDto.Id">
+            <summary>
+            如果成功添加，这里返回新权限的Id。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.ModifyPlPermissionParamsDto">
+            <summary>
+            修改权限信息功能参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.ModifyPlPermissionParamsDto.PlPermission">
+            <summary>
+            权限数据。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.ModifyPlPermissionReturnDto">
+            <summary>
+            修改权限信息功能返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RemovePlRoleParamsDto">
+            <summary>
+            标记删除角色功能的参数封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RemovePlRoleReturnDto">
+            <summary>
+            标记删除角色功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetAllPlRoleReturnDto">
+            <summary>
+            获取所有角色功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddPlRoleParamsDto">
+            <summary>
+            增加新角色功能参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.AddPlRoleParamsDto.PlRole">
+            <summary>
+            新角色信息。其中Id可以是任何值，返回时会指定新值。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddPlRoleReturnDto">
+            <summary>
+            增加新角色功能返回值封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.AddPlRoleReturnDto.Id">
+            <summary>
+            如果成功添加，这里返回新角色的Id。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.ModifyPlRoleParamsDto">
+            <summary>
+            修改角色信息功能参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.ModifyPlRoleParamsDto.PlRole">
+            <summary>
+            角色数据。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.ModifyPlRoleReturnDto">
+            <summary>
+            修改角色信息功能返回值封装类。
+            </summary>
+        </member>
         <member name="T:PowerLmsWebApi.Controllers.CustomerController">
             <summary>
             客户资料及相关类操作的控制器。

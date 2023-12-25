@@ -74,6 +74,16 @@
             </summary>
             <returns></returns>
         </member>
+        <member name="T:PowerLmsServer.Managers.AuthorizationManager">
+            <summary>
+            权限管理器。
+            </summary>
+        </member>
+        <member name="M:PowerLmsServer.Managers.AuthorizationManager.#ctor">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
         <member name="T:PowerLmsServer.Managers.CustomerManager">
             <summary>
             客户资料及相关管理器。
