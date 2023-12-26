@@ -25,6 +25,12 @@ namespace PowerLmsWebApi.AutoMappper
             CreateMap<PlMerchant, PlMerchant>().IncludeAllDerived();
             CreateMap<PlCustomer, PlCustomer>().IncludeAllDerived();
             CreateMap<PlFileInfo, PlFileInfo>().IncludeAllDerived();
+
+            #region 权限相关
+            CreateMap<PlPermission, PlPermission>().IncludeAllDerived();
+            CreateMap<PlRole, PlRole>().IncludeAllDerived();
+
+            #endregion 权限相关
         }
     }
 }

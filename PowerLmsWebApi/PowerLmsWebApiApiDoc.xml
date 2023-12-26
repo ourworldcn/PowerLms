@@ -129,6 +129,36 @@
             <param name="model"></param>
             <returns></returns>
         </member>
+        <member name="M:PowerLmsWebApi.Controllers.AccountController.SetOrg(PowerLmsWebApi.Controllers.SetOrgParamsDto)">
+            <summary>
+            设置用户的直属机构。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。</response>  
+            <response code="401">无效令牌。</response>  
+            <response code="400">参数错误。</response>  
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.SetOrgParamsDto">
+            <summary>
+            设置用户的直属机构功能的参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.SetOrgParamsDto.UserId">
+            <summary>
+            账号的Id。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.SetOrgParamsDto.OrgIds">
+            <summary>
+            直属组织机构Id的集合。未在此集合指定的与机构的关系均被删除。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.SetOrgReturnDto">
+            <summary>
+            设置用户的直属机构功能的返回值封装类。
+            </summary>
+        </member>
         <member name="T:PowerLmsWebApi.Controllers.RemoveAccountParamsDto">
             <summary>
             删除账户的功能参数封装类。
