@@ -84,6 +84,17 @@
             <response code="404">指定的账号Id不存在。</response>  
             <response code="451">权限不足。</response>  
         </member>
+        <member name="M:PowerLmsWebApi.Controllers.AccountController.RemoveAccount(PowerLmsWebApi.Controllers.RemoveAccountParamsDto)">
+            <summary>
+            删除账户的功能。不能删除超管（需要先降低权限）。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="400">不能删除超管，需要先降低权限。</response>  
+            <response code="401">无效令牌。</response>  
+            <response code="404">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+        </member>
         <member name="M:PowerLmsWebApi.Controllers.AccountController.SetUserInfo(PowerLmsWebApi.Dto.SetUserInfoParams)">
             <summary>
             登陆后设置用的一些必要信息，如当前组织机构等信息，这个接口可能会逐步增加参数中属性。
@@ -118,78 +129,14 @@
             <param name="model"></param>
             <returns></returns>
         </member>
-        <member name="M:PowerLmsWebApi.Controllers.AccountController.GetAllAccountPlOrganization(System.Guid,System.Nullable{System.Guid},System.Nullable{System.Guid},System.Int32,System.Int32)">
+        <member name="T:PowerLmsWebApi.Controllers.RemoveAccountParamsDto">
             <summary>
-            获取用户和商户/组织机构的所属关系。
-            </summary>
-            <param name="token">登录令牌。</param>
-            <param name="accountId">账号Id。null表示不限定。和<paramref name="orgId"/>限定为与的关系。</param>
-            <param name="orgId">商户及组织机构类别的Id,null表示不限定。和<paramref name="accountId"/>限定为与的关系。</param>
-            <param name="startIndex">起始位置，从0开始。</param>
-            <param name="count">最大返回数量。-1表示全返回。</param>
-            <returns></returns>
-            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
-            <response code="400">指定类别Id无效。</response>  
-            <response code="401">无效令牌。</response>  
-        </member>
-        <member name="M:PowerLmsWebApi.Controllers.AccountController.AddAccountPlOrganization(PowerLmsWebApi.Controllers.AddAccountPlOrganizationParamsDto)">
-            <summary>
-            增加用户和商户/组织机构的所属关系。
-            </summary>
-            <param name="model"></param>
-            <returns></returns>
-            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
-            <response code="400">在同一类别同一组织机构下指定了重复的Code。</response>  
-            <response code="401">无效令牌。</response>  
-        </member>
-        <member name="M:PowerLmsWebApi.Controllers.AccountController.RemoveAccountPlOrganization(PowerLmsWebApi.Controllers.RemoveAccountPlOrganizationParamsDto)">
-            <summary>
-            删除用户和商户/组织机构的所属关系。
-            </summary>
-            <param name="model"></param>
-            <returns></returns>
-            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
-            <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
-            <response code="401">无效令牌。</response>  
-        </member>
-        <member name="T:PowerLmsWebApi.Controllers.GetAllAccountPlOrganizationReturnDto">
-            <summary>
-            获取用户和商户/组织机构的所属关系返回值封装类。
+            删除账户的功能参数封装类。
             </summary>
         </member>
-        <member name="T:PowerLmsWebApi.Controllers.RemoveAccountPlOrganizationParamsDto">
+        <member name="T:PowerLmsWebApi.Controllers.RemoveAccountReturnDto">
             <summary>
-            删除用户和商户/组织机构的所属关系的功能参数封装类。
-            </summary>
-        </member>
-        <member name="P:PowerLmsWebApi.Controllers.RemoveAccountPlOrganizationParamsDto.UserId">
-            <summary>
-            用户的Id。
-            </summary>
-        </member>
-        <member name="P:PowerLmsWebApi.Controllers.RemoveAccountPlOrganizationParamsDto.OrgId">
-            <summary>
-            商户/组织机构的Id。
-            </summary>
-        </member>
-        <member name="T:PowerLmsWebApi.Controllers.RemoveAccountPlOrganizationReturnDto">
-            <summary>
-            删除用户和商户/组织机构的所属关系的功能返回值封装类。
-            </summary>
-        </member>
-        <member name="T:PowerLmsWebApi.Controllers.AddAccountPlOrganizationParamsDto">
-            <summary>
-            增加用户和商户/组织机构的所属关系的功能参数封装类，
-            </summary>
-        </member>
-        <member name="T:PowerLmsWebApi.Controllers.AddAccountPlOrganizationReturnDto">
-            <summary>
-            增加用户和商户/组织机构的所属关系的功能返回值封装类。
-            </summary>
-        </member>
-        <member name="T:PowerLmsWebApi.Controllers.GetAllAccountReturnDto">
-            <summary>
-            获取用户和商户/组织机构的所属关系功能的返回值封装类。
+            删除账户的功能返回值封装类。
             </summary>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.ResetPwdParamsDto">
@@ -2479,6 +2426,80 @@
             <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
             <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
             <response code="401">无效令牌。</response>
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.OrganizationController.GetAllAccountPlOrganization(System.Guid,System.Nullable{System.Guid},System.Nullable{System.Guid},System.Int32,System.Int32)">
+            <summary>
+            获取用户和商户/组织机构的所属关系。
+            </summary>
+            <param name="token">登录令牌。</param>
+            <param name="accountId">账号Id。null表示不限定。和<paramref name="orgId"/>限定为与的关系。</param>
+            <param name="orgId">商户及组织机构类别的Id,null表示不限定。和<paramref name="accountId"/>限定为与的关系。</param>
+            <param name="startIndex">起始位置，从0开始。</param>
+            <param name="count">最大返回数量。-1表示全返回。</param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="400">指定类别Id无效。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.OrganizationController.AddAccountPlOrganization(PowerLmsWebApi.Controllers.AddAccountPlOrganizationParamsDto)">
+            <summary>
+            增加用户和商户/组织机构的所属关系。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="400">在同一类别同一组织机构下指定了重复的Code。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.OrganizationController.RemoveAccountPlOrganization(PowerLmsWebApi.Controllers.RemoveAccountPlOrganizationParamsDto)">
+            <summary>
+            删除用户和商户/组织机构的所属关系。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetAllAccountPlOrganizationReturnDto">
+            <summary>
+            获取用户和商户/组织机构的所属关系返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RemoveAccountPlOrganizationParamsDto">
+            <summary>
+            删除用户和商户/组织机构的所属关系的功能参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.RemoveAccountPlOrganizationParamsDto.UserId">
+            <summary>
+            用户的Id。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.RemoveAccountPlOrganizationParamsDto.OrgId">
+            <summary>
+            商户/组织机构的Id。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RemoveAccountPlOrganizationReturnDto">
+            <summary>
+            删除用户和商户/组织机构的所属关系的功能返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddAccountPlOrganizationParamsDto">
+            <summary>
+            增加用户和商户/组织机构的所属关系的功能参数封装类，
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddAccountPlOrganizationReturnDto">
+            <summary>
+            增加用户和商户/组织机构的所属关系的功能返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetAllAccountReturnDto">
+            <summary>
+            获取用户和商户/组织机构的所属关系功能的返回值封装类。
+            </summary>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.GetMerchantIdReturnDto">
             <summary>
