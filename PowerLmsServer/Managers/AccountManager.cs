@@ -81,7 +81,7 @@ namespace PowerLmsServer.Managers
     /// 与Token生存期对应的上下文。
     /// </summary>
     [OwAutoInjection(ServiceLifetime.Scoped)]
-    public class OwContext
+    public class OwContext : OwDisposableBase
     {
         /// <summary>
         /// 构造函数。
@@ -128,6 +128,15 @@ namespace PowerLmsServer.Managers
         {
             int result = ServiceProvider.GetRequiredService<PowerLmsUserDbContext>().SaveChanges();
             return result;
+        }
+
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        /// <param name="disposing"></param>
+        protected override void Dispose(bool disposing)
+        {
+            base.Dispose(disposing);
         }
     }
 }

@@ -387,7 +387,7 @@ namespace PowerLmsWebApi.Controllers
             var result = new SetOrgReturnDto();
             var ids = new HashSet<Guid>(model.OrgIds);
             if (ids.Count != model.OrgIds.Count) return BadRequest($"{nameof(model.OrgIds)}中有重复键值。");
-
+            
             var count = _DbContext.PlOrganizations.Count(c => ids.Contains(c.Id));
             if (count != ids.Count) return BadRequest($"{nameof(model.OrgIds)}中至少有一个组织机构不存在。");
 
