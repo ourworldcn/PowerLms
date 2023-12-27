@@ -54,6 +54,7 @@ namespace PowerLms.Data
     /// 记录账号与角色关系的类。
     /// </summary>
     [Comment("记录账号与角色关系的类。")]
+    [Index(nameof(RoleId), nameof(UserId), IsUnique = true)]
     public class AccountRole : ICreatorInfo
     {
         /// <summary>

@@ -129,7 +129,7 @@
             <param name="model"></param>
             <returns></returns>
         </member>
-        <member name="M:PowerLmsWebApi.Controllers.AccountController.SetOrg(PowerLmsWebApi.Controllers.SetOrgParamsDto)">
+        <member name="M:PowerLmsWebApi.Controllers.AccountController.SetOrgs(PowerLmsWebApi.Controllers.SetOrgsParamsDto)">
             <summary>
             设置用户的直属机构。
             </summary>
@@ -139,22 +139,52 @@
             <response code="401">无效令牌。</response>  
             <response code="400">参数错误。</response>  
         </member>
-        <member name="T:PowerLmsWebApi.Controllers.SetOrgParamsDto">
+        <member name="M:PowerLmsWebApi.Controllers.AccountController.SetRoles(PowerLmsWebApi.Controllers.SetRolesParamsDto)">
             <summary>
-            设置用户的直属机构功能的参数封装类。
+            设置用户的直属角色。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。</response>  
+            <response code="401">无效令牌。</response>  
+            <response code="400">参数错误。</response>  
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.SetRolesParamsDto">
+            <summary>
+            设置用户的直属角色功能的参数封装类。
             </summary>
         </member>
-        <member name="P:PowerLmsWebApi.Controllers.SetOrgParamsDto.UserId">
+        <member name="P:PowerLmsWebApi.Controllers.SetRolesParamsDto.UserId">
             <summary>
             账号的Id。
             </summary>
         </member>
-        <member name="P:PowerLmsWebApi.Controllers.SetOrgParamsDto.OrgIds">
+        <member name="P:PowerLmsWebApi.Controllers.SetRolesParamsDto.RoleIds">
+            <summary>
+            直属组织角色Id的集合。未在此集合指定的与角色的关系均被删除。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.SetRolesReturnDto">
+            <summary>
+            设置用户的直属角色功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.SetOrgsParamsDto">
+            <summary>
+            设置用户的直属机构功能的参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.SetOrgsParamsDto.UserId">
+            <summary>
+            账号的Id。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.SetOrgsParamsDto.OrgIds">
             <summary>
             直属组织机构Id的集合。未在此集合指定的与机构的关系均被删除。
             </summary>
         </member>
-        <member name="T:PowerLmsWebApi.Controllers.SetOrgReturnDto">
+        <member name="T:PowerLmsWebApi.Controllers.SetOrgsReturnDto">
             <summary>
             设置用户的直属机构功能的返回值封装类。
             </summary>
@@ -1371,6 +1401,66 @@
             <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
             <response code="401">无效令牌。</response>  
             <response code="404">指定Id的角色-权限关系不存在。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AuthorizationController.SetUsers(PowerLmsWebApi.Controllers.SetUsersParamsDto)">
+            <summary>
+            设置角色的所属用户。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。</response>  
+            <response code="401">无效令牌。</response>  
+            <response code="400">参数错误。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AuthorizationController.SetPermissions(PowerLmsWebApi.Controllers.SetPermissionsParamsDto)">
+            <summary>
+            设置角色的许可权限。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。</response>  
+            <response code="401">无效令牌。</response>  
+            <response code="400">参数错误。</response>  
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.SetPermissionsParamsDto">
+            <summary>
+            设置角色的许可权限功能的参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.SetPermissionsParamsDto.RoleId">
+            <summary>
+            角色的Id。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.SetPermissionsParamsDto.PermissionIds">
+            <summary>
+            所属许可的Id的集合。未在此集合指定的与角色的关系均被删除。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.SetPermissionsReturnDto">
+            <summary>
+            设置角色的许可权限功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.SetUsersParamsDto">
+            <summary>
+            设置角色的所属用户功能的参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.SetUsersParamsDto.RoleId">
+            <summary>
+            角色的Id。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.SetUsersParamsDto.UserIds">
+            <summary>
+            所属用户的Id的集合。未在此集合指定的与用户的关系均被删除。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.SetUsersReturnDto">
+            <summary>
+            设置角色的所属用户功能的返回值封装类。
+            </summary>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.RemoveRolePermissionParamsDto">
             <summary>

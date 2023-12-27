@@ -381,13 +381,13 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="401">无效令牌。</response>  
         /// <response code="400">参数错误。</response>  
         [HttpPut]
-        public ActionResult<SetOrgReturnDto> SetOrg(SetOrgParamsDto model)
+        public ActionResult<SetOrgsReturnDto> SetOrgs(SetOrgsParamsDto model)
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            var result = new SetOrgReturnDto();
+            var result = new SetOrgsReturnDto();
             var ids = new HashSet<Guid>(model.OrgIds);
             if (ids.Count != model.OrgIds.Count) return BadRequest($"{nameof(model.OrgIds)}中有重复键值。");
-            
+
             var count = _DbContext.PlOrganizations.Count(c => ids.Contains(c.Id));
             if (count != ids.Count) return BadRequest($"{nameof(model.OrgIds)}中至少有一个组织机构不存在。");
 
@@ -399,14 +399,66 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.SaveChanges();
             return result;
         }
+
         #endregion 用户相关
 
+        /// <summary>
+        /// 设置用户的直属角色。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="400">参数错误。</response>  
+        [HttpPut]
+        public ActionResult<SetRolesReturnDto> SetRoles(SetRolesParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new SetRolesReturnDto();
+            var ids = new HashSet<Guid>(model.RoleIds);
+            if (ids.Count != model.RoleIds.Count) return BadRequest($"{nameof(model.RoleIds)}中有重复键值。");
+
+            var count = _DbContext.PlRoles.Count(c => ids.Contains(c.Id));
+            if (count != ids.Count) return BadRequest($"{nameof(model.RoleIds)}中至少有一个组织角色不存在。");
+
+            var removes = _DbContext.PlAccountRoles.Where(c => c.UserId == model.UserId && !ids.Contains(c.RoleId));
+            _DbContext.PlAccountRoles.RemoveRange(removes);
+
+            var adds = ids.Except(_DbContext.PlAccountRoles.Where(c => c.UserId == model.UserId).Select(c => c.RoleId).AsEnumerable()).ToArray();
+            _DbContext.PlAccountRoles.AddRange(adds.Select(c => new AccountRole { RoleId = c, UserId = model.UserId }));
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+    }
+
+    /// <summary>
+    /// 设置用户的直属角色功能的参数封装类。
+    /// </summary>
+    public class SetRolesParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 账号的Id。
+        /// </summary>
+        public Guid UserId { get; set; }
+
+        /// <summary>
+        /// 直属组织角色Id的集合。未在此集合指定的与角色的关系均被删除。
+        /// </summary>
+        public List<Guid> RoleIds { get; set; } = new List<Guid>();
+    }
+
+    /// <summary>
+    /// 设置用户的直属角色功能的返回值封装类。
+    /// </summary>
+    public class SetRolesReturnDto : ReturnDtoBase
+    {
     }
 
     /// <summary>
     /// 设置用户的直属机构功能的参数封装类。
     /// </summary>
-    public class SetOrgParamsDto : TokenDtoBase
+    public class SetOrgsParamsDto : TokenDtoBase
     {
         /// <summary>
         /// 账号的Id。
@@ -422,7 +474,7 @@ namespace PowerLmsWebApi.Controllers
     /// <summary>
     /// 设置用户的直属机构功能的返回值封装类。
     /// </summary>
-    public class SetOrgReturnDto : ReturnDtoBase
+    public class SetOrgsReturnDto : ReturnDtoBase
     {
     }
 

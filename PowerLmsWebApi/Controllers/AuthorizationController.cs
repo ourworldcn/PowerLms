@@ -263,7 +263,7 @@ namespace PowerLmsWebApi.Controllers
                 if (string.Equals(item.Key, "UserId", StringComparison.OrdinalIgnoreCase))
                 {
                     if (Guid.TryParse(item.Value, out var id))
-                        coll = coll.Where(c => c.UserId==id);
+                        coll = coll.Where(c => c.UserId == id);
                 }
                 else if (string.Equals(item.Key, "RoleId", StringComparison.OrdinalIgnoreCase))
                 {
@@ -339,7 +339,7 @@ namespace PowerLmsWebApi.Controllers
                 if (string.Equals(item.Key, "PermissionId", StringComparison.OrdinalIgnoreCase))
                 {
                     if (Guid.TryParse(item.Value, out var id))
-                        coll = coll.Where(c => c.PermissionId==id);
+                        coll = coll.Where(c => c.PermissionId == id);
                 }
                 else if (string.Equals(item.Key, "RoleId", StringComparison.OrdinalIgnoreCase))
                 {
@@ -392,6 +392,110 @@ namespace PowerLmsWebApi.Controllers
         }
         #endregion 角色-权限关系的CRUD
 
+        /// <summary>
+        /// 设置角色的所属用户。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="400">参数错误。</response>  
+        [HttpPut]
+        public ActionResult<SetUsersReturnDto> SetUsers(SetUsersParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new SetUsersReturnDto();
+            var ids = new HashSet<Guid>(model.UserIds);
+            if (ids.Count != model.UserIds.Count) return BadRequest($"{nameof(model.UserIds)}中有重复键值。");
+
+            var count = _DbContext.PlRoles.Count(c => ids.Contains(c.Id));
+            if (count != ids.Count) return BadRequest($"{nameof(model.UserIds)}中至少有一个用户Id不存在。");
+
+            var removes = _DbContext.PlAccountRoles.Where(c => c.RoleId == model.RoleId && !ids.Contains(c.UserId));
+            _DbContext.PlAccountRoles.RemoveRange(removes);
+
+            var adds = ids.Except(_DbContext.PlAccountRoles.Where(c => c.RoleId == model.RoleId).Select(c => c.UserId).AsEnumerable()).ToArray();
+            _DbContext.PlAccountRoles.AddRange(adds.Select(c => new AccountRole { RoleId = model.RoleId, UserId = c }));
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        /// <summary>
+        /// 设置角色的许可权限。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="400">参数错误。</response>  
+        [HttpPut]
+        public ActionResult<SetPermissionsReturnDto> SetPermissions(SetPermissionsParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new SetPermissionsReturnDto();
+
+            var ids = new HashSet<Guid>(model.PermissionIds);
+            if (ids.Count != model.PermissionIds.Count) return BadRequest($"{nameof(model.PermissionIds)}中有重复键值。");
+
+            var count = _DbContext.PlPermissions.Count(c => ids.Contains(c.Id));
+            if (count != ids.Count) return BadRequest($"{nameof(model.PermissionIds)}中至少有一个许可的Id不存在。");
+
+            var setRela = _DbContext.PlRolePermissions;
+            var removes = setRela.Where(c => c.RoleId == model.RoleId && !ids.Contains(c.PermissionId));
+            setRela.RemoveRange(removes);
+
+            var adds = ids.Except(setRela.Where(c => c.RoleId == model.RoleId).Select(c => c.PermissionId).AsEnumerable()).ToArray();
+            setRela.AddRange(adds.Select(c => new RolePermission { RoleId = model.RoleId, PermissionId = c, CreateBy = context.User.Id }));
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+    }
+
+    /// <summary>
+    /// 设置角色的许可权限功能的参数封装类。
+    /// </summary>
+    public class SetPermissionsParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 角色的Id。
+        /// </summary>
+        public Guid RoleId { get; set; }
+
+        /// <summary>
+        /// 所属许可的Id的集合。未在此集合指定的与角色的关系均被删除。
+        /// </summary>
+        public List<Guid> PermissionIds { get; set; } = new List<Guid>();
+    }
+
+    /// <summary>
+    /// 设置角色的许可权限功能的返回值封装类。
+    /// </summary>
+    public class SetPermissionsReturnDto : ReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 设置角色的所属用户功能的参数封装类。
+    /// </summary>
+    public class SetUsersParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 角色的Id。
+        /// </summary>
+        public Guid RoleId { get; set; }
+
+        /// <summary>
+        /// 所属用户的Id的集合。未在此集合指定的与用户的关系均被删除。
+        /// </summary>
+        public List<Guid> UserIds { get; set; } = new List<Guid>();
+    }
+
+    /// <summary>
+    /// 设置角色的所属用户功能的返回值封装类。
+    /// </summary>
+    public class SetUsersReturnDto : ReturnDtoBase
+    {
     }
 
     #region 角色-权限关系
