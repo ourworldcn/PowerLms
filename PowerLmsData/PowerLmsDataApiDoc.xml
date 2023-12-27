@@ -237,6 +237,16 @@
             是否已标记为删除。false(默认)未标记为删除，true标记为删除。
             </summary>
         </member>
+        <member name="T:PowerLms.Data.ISpecificOrg">
+            <summary>
+            指定对象特定于组织机构。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.ISpecificOrg.OrgId">
+            <summary>
+            组织机构的Id。没有则标识是超管的全局管理范围。
+            </summary>
+        </member>
         <member name="T:PowerLms.Data.DataDicBase">
             <summary>
             数据字典条目的基础类。

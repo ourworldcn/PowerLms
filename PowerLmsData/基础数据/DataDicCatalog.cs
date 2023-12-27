@@ -15,7 +15,7 @@ namespace PowerLms.Data
     /// </summary>
     [Comment("专门针对数据字典的目录。")]
     [Index(nameof(OrgId), nameof(Code), IsUnique = true)]
-    public class DataDicCatalog : GuidKeyObjectBase,ICloneable
+    public class DataDicCatalog : GuidKeyObjectBase, ICloneable, ISpecificOrg
     {
         /// <summary>
         /// 数据字典的代码。
@@ -46,7 +46,7 @@ namespace PowerLms.Data
             {
                 Id = Id,
                 Code = Code,
-                DisplayName = DisplayName,  
+                DisplayName = DisplayName,
                 OrgId = OrgId,
             };
             return result;

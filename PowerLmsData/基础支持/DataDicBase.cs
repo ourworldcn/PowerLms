@@ -37,6 +37,17 @@ namespace PowerLms.Data
     }
 
     /// <summary>
+    /// 指定对象特定于组织机构。
+    /// </summary>
+    public interface ISpecificOrg
+    {
+        /// <summary>
+        /// 组织机构的Id。没有则标识是超管的全局管理范围。
+        /// </summary>
+        public Guid? OrgId { get; set; }
+    }
+
+    /// <summary>
     /// 数据字典条目的基础类。
     /// </summary>
     public abstract class DataDicBase : GuidKeyObjectBase, IDataDic, IMarkDelete
@@ -94,7 +105,7 @@ namespace PowerLms.Data
     /// <summary>
     /// 特殊字典的基类。
     /// </summary>
-    public abstract class SpecialDataDicBase : GuidKeyObjectBase, IMarkDelete
+    public abstract class SpecialDataDicBase : GuidKeyObjectBase, IMarkDelete, ISpecificOrg
     {
         /// <summary>
         /// 所属组织机构Id。
