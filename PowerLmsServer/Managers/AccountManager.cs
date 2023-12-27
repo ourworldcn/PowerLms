@@ -75,6 +75,26 @@ namespace PowerLmsServer.Managers
             OwHelper.SetLastError(315);
             return null;
         }
+
+        /// <summary>
+        /// 是否是超管。
+        /// </summary>
+        /// <param name="user"></param>
+        /// <returns></returns>
+        public bool IsAdmin(Account user)
+        {
+            return (user.State & 4) != 0;
+        }
+
+        /// <summary>
+        /// 是否是商管。
+        /// </summary>
+        /// <param name="user"></param>
+        /// <returns></returns>
+        public bool IsMerchantAdmin(Account user)
+        {
+            return (user.State & 8) != 0;
+        }
     }
 
     /// <summary>

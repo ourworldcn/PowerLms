@@ -51,6 +51,17 @@
             <param name="tableName"></param>
             <returns></returns>
         </member>
+        <member name="M:PowerLmsServer.EfData.PowerLmsUserDbContext.Dispose">
+            <summary>
+            <inheritdoc/>
+            </summary>
+        </member>
+        <member name="M:PowerLmsServer.EfData.PowerLmsUserDbContext.DisposeAsync">
+            <summary>
+            <inheritdoc/>
+            </summary>
+            <returns></returns>
+        </member>
         <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.DD_SystemResources">
             <summary>
             系统资源表。包含数据字典目录。

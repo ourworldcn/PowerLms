@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -148,13 +149,11 @@ namespace PowerLmsServer.Managers
             var jn = svc.GetRequiredService<JobNumberManager>();
             var demoStr = "gy<yyyy><MM><XXX><0000>eer";
             var str = jn.Generated(new JobNumberRule { RuleString = demoStr }, null, OwHelper.WorldNow);
-            PlCustomer customer1 = new PlCustomer() {Code="ds", Name = new PlOwnedName { DisplayName = "hello" },Airlines=new OwnedAirlines { AirlineCode="CN"} };
+            PlCustomer customer1 = new PlCustomer() { Code = "ds", Name = new PlOwnedName { DisplayName = "hello" }, Airlines = new OwnedAirlines { AirlineCode = "CN" } };
             PlCustomer customer2 = new PlCustomer();
 
-            var mapper = svc.GetRequiredService<IMapper>();
-            var c3= mapper.Map(customer1, customer2);
-            db.Entry(customer2).CurrentValues.SetValues(customer1);
-            db.Add(customer2);
+            var mapper = svc.GetRequiredService<IMemoryCache>();
+
         }
 
         private void CreateDb()

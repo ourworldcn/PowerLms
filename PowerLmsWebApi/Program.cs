@@ -71,6 +71,7 @@ internal class Program
     {
         var builder = WebApplication.CreateBuilder(args);
         var services = builder.Services;
+        services.AddMemoryCache();
 
         //ÆôÓÃ¿çÓò
         services.AddCors(cors =>

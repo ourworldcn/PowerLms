@@ -103,6 +103,22 @@ namespace PowerLmsServer.EfData
             return Database.ExecuteSqlRaw(sql);
         }
 
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        public override void Dispose()
+        {
+            base.Dispose();
+        }
+
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        /// <returns></returns>
+        public override ValueTask DisposeAsync()
+        {
+            return base.DisposeAsync();
+        }
         #endregion 方法
 
         #region 系统资源相关

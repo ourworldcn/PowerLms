@@ -1,8 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -19,12 +21,14 @@ namespace PowerLmsServer.Managers
         /// <summary>
         /// 构造函数。
         /// </summary>
-        public OrganizationManager(PowerLmsUserDbContext dbContext)
+        public OrganizationManager(PowerLmsUserDbContext dbContext, IMemoryCache cache)
         {
             _DbContext = dbContext;
+            _Cache = cache;
         }
 
         PowerLmsUserDbContext _DbContext;
+        IMemoryCache _Cache;
 
         /// <summary>
         /// 获取指定账户所属的商户Id。
@@ -79,6 +83,50 @@ namespace PowerLmsServer.Managers
             }
             MerchantId = null;
             return false;
+        }
+
+        const string MerchantCacheKey = "MerchantCacheKey.256a2f95-bd83-480b-97ae-d3c978ffbe0b";
+        const string OrgCacheKey = "OrgCacheKey.fa85fb74-d809-403a-902f-8da913cf8f4a";
+        const string DbCacheKey = "DbCacheKey.fde207c2-99bc-4401-aab6-f5f0465ee368";
+
+        //PowerLmsUserDbContext GetDb()
+        //{
+        //    var result = _Cache.GetOrCreate(DbCacheKey, c =>
+        //    {
+                
+        //    });
+        //    return result;
+        //    //IDbContextFactory<PowerLmsUserDbContext>
+        //}
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public IDictionary<Guid, PlMerchant> Id2Merchants
+        {
+            get
+            {
+                return _Cache.GetOrCreate(MerchantCacheKey, c =>
+                {
+                    var result = new ConcurrentDictionary<Guid, PlMerchant>(_DbContext.Merchants.ToDictionary(c => c.Id, c => c));
+                    return result;
+                });
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public IDictionary<Guid, PlOrganization> Id2Orgs
+        {
+            get
+            {
+                return _Cache.GetOrCreate(OrgCacheKey, c =>
+                {
+                    var result = new ConcurrentDictionary<Guid, PlOrganization>(_DbContext.PlOrganizations.ToDictionary(c => c.Id, c => c));
+                    return result;
+                });
+            }
         }
     }
 }

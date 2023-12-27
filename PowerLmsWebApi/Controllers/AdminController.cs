@@ -35,7 +35,9 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="scope"></param>
         /// <param name="entityManager"></param>
         /// <param name="mapper"></param>
-        public AdminController(PowerLmsUserDbContext context, NpoiManager npoiManager, AccountManager accountManager, IServiceProvider scope, EntityManager entityManager, IMapper mapper)
+        /// <param name="organizationManager"></param>
+        public AdminController(PowerLmsUserDbContext context, NpoiManager npoiManager, AccountManager accountManager, IServiceProvider scope, EntityManager entityManager,
+            IMapper mapper, OrganizationManager organizationManager)
         {
             _DbContext = context;
             _NpoiManager = npoiManager;
@@ -43,6 +45,7 @@ namespace PowerLmsWebApi.Controllers
             _ServiceProvider = scope;
             _EntityManager = entityManager;
             _Mapper = mapper;
+            _OrganizationManager = organizationManager;
         }
 
         readonly PowerLmsUserDbContext _DbContext;
@@ -51,6 +54,7 @@ namespace PowerLmsWebApi.Controllers
         readonly IServiceProvider _ServiceProvider;
         readonly EntityManager _EntityManager;
         readonly IMapper _Mapper;
+        OrganizationManager _OrganizationManager;
 
         #region 字典目录
 
@@ -71,7 +75,20 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllDataDicCatalogReturnDto();
             var coll = _DbContext.DD_DataDicCatalogs.AsNoTracking();
-
+            if (_AccountManager.IsAdmin(context.User))  //若是超管
+                coll = coll.Where(c => c.OrgId == null);
+            else
+            {
+                if (!_OrganizationManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
+                if (context.User.OrgId is null) //若没有指定机构
+                {
+                    coll = coll.Where(c => c.OrgId == merchId);
+                }
+                else
+                {
+                    coll = coll.Where(c => c.OrgId == context.User.OrgId);
+                }
+            }
             foreach (var item in conditional)
                 if (string.Equals(item.Key, "id", StringComparison.OrdinalIgnoreCase))
                 {
@@ -482,6 +499,20 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPortReturnDto();
             var coll = _DbContext.DD_PlPorts.AsNoTracking().Where(c => c.OrgId == orgId);
+            if (_AccountManager.IsAdmin(context.User))  //若是超管
+                coll = coll.Where(c => c.OrgId == null);
+            else
+            {
+                if (!_OrganizationManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
+                if (context.User.OrgId is null) //若没有指定机构
+                {
+                    coll = coll.Where(c => c.OrgId == merchId);
+                }
+                else
+                {
+                    coll = coll.Where(c => c.OrgId == context.User.OrgId);
+                }
+            }
             foreach (var item in conditional)
                 if (string.Equals(item.Key, "id", StringComparison.OrdinalIgnoreCase))
                 {
@@ -622,6 +653,20 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlCargoRouteReturnDto();
             var coll = _DbContext.DD_PlCargoRoutes.AsNoTracking().Where(c => c.OrgId == orgId);
+            if (_AccountManager.IsAdmin(context.User))  //若是超管
+                coll = coll.Where(c => c.OrgId == null);
+            else
+            {
+                if (!_OrganizationManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
+                if (context.User.OrgId is null) //若没有指定机构
+                {
+                    coll = coll.Where(c => c.OrgId == merchId);
+                }
+                else
+                {
+                    coll = coll.Where(c => c.OrgId == context.User.OrgId);
+                }
+            }
             foreach (var item in conditional)
                 if (string.Equals(item.Key, "id", StringComparison.OrdinalIgnoreCase))
                 {
@@ -766,6 +811,20 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlExchangeRateReturnDto();
             var coll = _DbContext.DD_PlExchangeRates.AsNoTracking().Where(c => c.OrgId == orgId);
+            if (_AccountManager.IsAdmin(context.User))  //若是超管
+                coll = coll.Where(c => c.OrgId == null);
+            else
+            {
+                if (!_OrganizationManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
+                if (context.User.OrgId is null) //若没有指定机构
+                {
+                    coll = coll.Where(c => c.OrgId == merchId);
+                }
+                else
+                {
+                    coll = coll.Where(c => c.OrgId == context.User.OrgId);
+                }
+            }
             foreach (var item in conditional)
                 if (string.Equals(item.Key, "id", StringComparison.OrdinalIgnoreCase))
                 {
@@ -855,6 +914,20 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllUnitConversionReturnDto();
             var coll = _DbContext.DD_UnitConversions.AsNoTracking().Where(c => c.OrgId == orgId);
+            if (_AccountManager.IsAdmin(context.User))  //若是超管
+                coll = coll.Where(c => c.OrgId == null);
+            else
+            {
+                if (!_OrganizationManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
+                if (context.User.OrgId is null) //若没有指定机构
+                {
+                    coll = coll.Where(c => c.OrgId == merchId);
+                }
+                else
+                {
+                    coll = coll.Where(c => c.OrgId == context.User.OrgId);
+                }
+            }
             foreach (var item in conditional)
                 if (string.Equals(item.Key, "id", StringComparison.OrdinalIgnoreCase))
                 {
@@ -996,6 +1069,20 @@ namespace PowerLmsWebApi.Controllers
             var result = new GetAllFeesTypeReturnDto();
             var collBase = _DbContext.DD_FeesTypes.AsNoTracking().Where(c => c.OrgId == orgId);
             var coll = collBase;
+            if (_AccountManager.IsAdmin(context.User))  //若是超管
+                coll = coll.Where(c => c.OrgId == null);
+            else
+            {
+                if (!_OrganizationManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
+                if (context.User.OrgId is null) //若没有指定机构
+                {
+                    coll = coll.Where(c => c.OrgId == merchId);
+                }
+                else
+                {
+                    coll = coll.Where(c => c.OrgId == context.User.OrgId);
+                }
+            }
             foreach (var item in conditional)
                 if (string.Equals(item.Key, nameof(FeesType.Id), StringComparison.OrdinalIgnoreCase))
                 {
@@ -1139,6 +1226,20 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllJobNumberRuleReturnDto();
             var coll = _DbContext.DD_JobNumberRules.AsNoTracking().Where(c => c.OrgId == orgId);
+            if (_AccountManager.IsAdmin(context.User))  //若是超管
+                coll = coll.Where(c => c.OrgId == null);
+            else
+            {
+                if (!_OrganizationManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
+                if (context.User.OrgId is null) //若没有指定机构
+                {
+                    coll = coll.Where(c => c.OrgId == merchId);
+                }
+                else
+                {
+                    coll = coll.Where(c => c.OrgId == context.User.OrgId);
+                }
+            }
             foreach (var item in conditional)
                 if (string.Equals(item.Key, nameof(JobNumberRule.Id), StringComparison.OrdinalIgnoreCase))
                 {
@@ -1282,6 +1383,20 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlCountryReturnDto();
             var coll = _DbContext.DD_PlCountrys.AsNoTracking().Where(c => c.OrgId == orgId);
+            if (_AccountManager.IsAdmin(context.User))  //若是超管
+                coll = coll.Where(c => c.OrgId == null);
+            else
+            {
+                if (!_OrganizationManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
+                if (context.User.OrgId is null) //若没有指定机构
+                {
+                    coll = coll.Where(c => c.OrgId == merchId);
+                }
+                else
+                {
+                    coll = coll.Where(c => c.OrgId == context.User.OrgId);
+                }
+            }
             foreach (var item in conditional)
                 if (string.Equals(item.Key, nameof(PlCountry.Id), StringComparison.OrdinalIgnoreCase))
                 {
@@ -1425,6 +1540,20 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlCurrencyReturnDto();
             var coll = _DbContext.DD_PlCurrencys.AsNoTracking().Where(c => c.OrgId == orgId);
+            if (_AccountManager.IsAdmin(context.User))  //若是超管
+                coll = coll.Where(c => c.OrgId == null);
+            else
+            {
+                if (!_OrganizationManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
+                if (context.User.OrgId is null) //若没有指定机构
+                {
+                    coll = coll.Where(c => c.OrgId == merchId);
+                }
+                else
+                {
+                    coll = coll.Where(c => c.OrgId == context.User.OrgId);
+                }
+            }
             foreach (var item in conditional)
                 if (string.Equals(item.Key, nameof(PlCurrency.Id), StringComparison.OrdinalIgnoreCase))
                 {

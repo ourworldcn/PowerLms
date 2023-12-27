@@ -249,7 +249,7 @@
             管理员功能控制器。
             </summary>
         </member>
-        <member name="M:PowerLmsWebApi.Controllers.AdminController.#ctor(PowerLmsServer.EfData.PowerLmsUserDbContext,PowerLmsServer.Managers.NpoiManager,PowerLmsServer.Managers.AccountManager,System.IServiceProvider,PowerLmsServer.Managers.EntityManager,AutoMapper.IMapper)">
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.#ctor(PowerLmsServer.EfData.PowerLmsUserDbContext,PowerLmsServer.Managers.NpoiManager,PowerLmsServer.Managers.AccountManager,System.IServiceProvider,PowerLmsServer.Managers.EntityManager,AutoMapper.IMapper,PowerLmsServer.Managers.OrganizationManager)">
             <summary>
             
             </summary>
@@ -259,6 +259,7 @@
             <param name="scope"></param>
             <param name="entityManager"></param>
             <param name="mapper"></param>
+            <param name="organizationManager"></param>
         </member>
         <member name="M:PowerLmsWebApi.Controllers.AdminController.GetAllDataDicCatalog(System.Guid,System.Int32,System.Int32,System.Collections.Generic.Dictionary{System.String,System.String})">
             <summary>
