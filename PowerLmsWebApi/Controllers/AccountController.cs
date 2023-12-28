@@ -236,7 +236,7 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// 设置/修改账号信息。不能用此接口修改敏感信息如密码。
+        /// 设置/修改账号信息。不能用此接口修改敏感信息如密码。修改密码请使用ModifyPwd。
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
@@ -272,6 +272,7 @@ namespace PowerLmsWebApi.Controllers
                 else
                     account.State &= 255 - 8;
             }
+            _DbContext.Entry(account).Property(c => c.PwdHash).IsModified = false;
             _DbContext.SaveChanges();
             return result;
         }
@@ -361,15 +362,18 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// 重置密码。
+        /// 重置密码。暂未实现。
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
+        /// <response code="200">未发生系统级错误。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">暂未实现。</response>  
         [HttpPost]
         public ActionResult<ResetPwdReturnDto> ResetPwd(ResetPwdParamsDto model)
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            return Ok();
+            return base.NotFound();
         }
 
         /// <summary>

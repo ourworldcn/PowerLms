@@ -3,17 +3,20 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PowerLmsServer.EfData;
 
 #nullable disable
+#pragma warning disable CS1591 // 缺少对公共可见类型或成员的 XML 注释
 
 namespace PowerLmsData.Migrations
 {
     [DbContext(typeof(PowerLmsUserDbContext))]
-    partial class PowerLmsUserDbContextModelSnapshot : ModelSnapshot
+    [Migration("20231228070546_23122801")]
+    partial class _23122801
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1250,13 +1253,9 @@ namespace PowerLmsData.Migrations
             modelBuilder.Entity("PowerLms.Data.RolePermission", b =>
                 {
                     b.Property<Guid>("RoleId")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier")
                         .HasComment("角色Id。");
-
-                    b.Property<string>("PermissionId")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)")
-                        .HasComment("权限Id。");
 
                     b.Property<Guid?>("CreateBy")
                         .HasColumnType("uniqueidentifier")
@@ -1266,7 +1265,11 @@ namespace PowerLmsData.Migrations
                         .HasColumnType("datetime2")
                         .HasComment("创建的时间");
 
-                    b.HasKey("RoleId", "PermissionId");
+                    b.Property<string>("PermissionId")
+                        .HasColumnType("nvarchar(max)")
+                        .HasComment("权限Id。");
+
+                    b.HasKey("RoleId");
 
                     b.ToTable("PlRolePermissions");
 

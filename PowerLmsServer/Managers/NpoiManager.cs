@@ -106,6 +106,7 @@ namespace PowerLmsServer.Managers
                         CellType.Numeric => cell.NumericCellValue,
                         CellType.Boolean => cell.BooleanCellValue,
                         null => null,
+                        CellType.Blank => default,
                         _ => cell.StringCellValue,
                     };
                 }

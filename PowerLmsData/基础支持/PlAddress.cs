@@ -137,11 +137,32 @@ namespace PowerLms.Data
     }
 
     /// <summary>
+    /// 实体的标准命名接口。
+    /// </summary>
+    public interface INamed
+    {
+        /// <summary>
+        /// 显示名，有时它是昵称或简称(系统内)的意思。
+        /// </summary>
+        string DisplayName { get; set; }
+
+        /// <summary>
+        /// 正式名称，拥有相对稳定性。
+        /// </summary>
+        string Name { get; set; }
+
+        /// <summary>
+        /// 正式简称。对正式的组织机构通常简称也是规定的。
+        /// </summary>
+        string ShortName { get; set; }
+    }
+
+    /// <summary>
     /// 对实体名称描述的自含复杂类。此类嵌入在不同实体中有不同的解释。
     /// </summary>
     [ComplexType]
     [Owned]
-    public class PlOwnedName
+    public class PlOwnedName : INamed
     {
         /// <summary>
         /// 正式名称，拥有相对稳定性。

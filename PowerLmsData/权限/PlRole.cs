@@ -2,6 +2,7 @@
 using OW.Data;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -102,7 +103,8 @@ namespace PowerLms.Data
         /// 权限Id。
         /// </summary>
         [Comment("权限Id。")]
-        public Guid PermissionId { get; set; }
+        [MaxLength(64)]
+        public string PermissionId { get; set; }
 
         #region ICreatorInfo接口相关
 

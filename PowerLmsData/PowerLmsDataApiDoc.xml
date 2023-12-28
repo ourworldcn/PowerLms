@@ -452,6 +452,26 @@
             电子邮件。
             </summary>
         </member>
+        <member name="T:PowerLms.Data.INamed">
+            <summary>
+            实体的标准命名接口。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.INamed.DisplayName">
+            <summary>
+            显示名，有时它是昵称或简称(系统内)的意思。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.INamed.Name">
+            <summary>
+            正式名称，拥有相对稳定性。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.INamed.ShortName">
+            <summary>
+            正式简称。对正式的组织机构通常简称也是规定的。
+            </summary>
+        </member>
         <member name="T:PowerLms.Data.PlOwnedName">
             <summary>
             对实体名称描述的自含复杂类。此类嵌入在不同实体中有不同的解释。
@@ -1446,9 +1466,34 @@
             构造函数。
             </summary>
         </member>
+        <member name="P:PowerLms.Data.PlPermission.DisplayName">
+            <summary>
+            显示名称。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlPermission.ShortName">
+            <summary>
+            简称。
+            </summary>
+        </member>
         <member name="P:PowerLms.Data.PlPermission.Name">
             <summary>
-            封装名称的对象。
+            正式名称，唯一Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlPermission.Parent">
+            <summary>
+            父节点。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlPermission.ParentId">
+            <summary>
+            父节点Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlPermission.Children">
+            <summary>
+            拥有的子权限对象。
             </summary>
         </member>
         <member name="T:PowerLms.Data.PlRole">

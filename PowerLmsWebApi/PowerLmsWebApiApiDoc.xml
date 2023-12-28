@@ -75,7 +75,7 @@
         </member>
         <member name="M:PowerLmsWebApi.Controllers.AccountController.ModifyAccount(PowerLmsWebApi.Dto.ModifyAccountParamsDto)">
             <summary>
-            设置/修改账号信息。不能用此接口修改敏感信息如密码。
+            设置/修改账号信息。不能用此接口修改敏感信息如密码。修改密码请使用ModifyPwd。
             </summary>
             <param name="model"></param>
             <returns></returns>
@@ -124,10 +124,13 @@
         </member>
         <member name="M:PowerLmsWebApi.Controllers.AccountController.ResetPwd(PowerLmsWebApi.Controllers.ResetPwdParamsDto)">
             <summary>
-            重置密码。
+            重置密码。暂未实现。
             </summary>
             <param name="model"></param>
             <returns></returns>
+            <response code="200">未发生系统级错误。</response>  
+            <response code="401">无效令牌。</response>  
+            <response code="404">暂未实现。</response>  
         </member>
         <member name="M:PowerLmsWebApi.Controllers.AccountController.SetOrgs(PowerLmsWebApi.Controllers.SetOrgsParamsDto)">
             <summary>
@@ -1307,7 +1310,7 @@
             <param name="token">登录令牌。</param>
             <param name="startIndex">起始位置，从0开始。</param>
             <param name="count">最大返回数量。</param>
-            <param name="conditional">查询的条件。支持 name，ShortName，displayname，Id。不区分大小写。</param>
+            <param name="conditional">查询的条件。支持 name，ShortName，displayname。不区分大小写。</param>
             <returns></returns>
             <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
             <response code="401">无效令牌。</response>  
@@ -1573,7 +1576,7 @@
             修改权限信息功能参数封装类。
             </summary>
         </member>
-        <member name="P:PowerLmsWebApi.Controllers.ModifyPlPermissionParamsDto.PlPermission">
+        <member name="P:PowerLmsWebApi.Controllers.ModifyPlPermissionParamsDto.Item">
             <summary>
             权限数据。
             </summary>

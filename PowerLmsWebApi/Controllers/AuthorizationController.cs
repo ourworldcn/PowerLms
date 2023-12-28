@@ -2,11 +2,13 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using NPOI.SS.Formula.Functions;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
 
 namespace PowerLmsWebApi.Controllers
 {
@@ -28,15 +30,12 @@ namespace PowerLmsWebApi.Controllers
             _AuthorizationManager = authorizationManager;
         }
 
-        IServiceProvider _ServiceProvider;
-        AccountManager _AccountManager;
-
+        readonly IServiceProvider _ServiceProvider;
+        readonly AccountManager _AccountManager;
         readonly PowerLmsUserDbContext _DbContext;
-
-        EntityManager _EntityManager;
-        IMapper _Mapper;
-
-        AuthorizationManager _AuthorizationManager;
+        readonly EntityManager _EntityManager;
+        readonly IMapper _Mapper;
+        readonly AuthorizationManager _AuthorizationManager;
 
         #region 角色的CRUD
 
@@ -147,7 +146,7 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="token">登录令牌。</param>
         /// <param name="startIndex">起始位置，从0开始。</param>
         /// <param name="count">最大返回数量。</param>
-        /// <param name="conditional">查询的条件。支持 name，ShortName，displayname，Id。不区分大小写。</param>
+        /// <param name="conditional">查询的条件。支持 name，ShortName，displayname。不区分大小写。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
@@ -157,24 +156,19 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlPermissionReturnDto();
-            var coll = _DbContext.PlPermissions.AsNoTracking().OrderBy(c => c.Id).Skip(startIndex);
+            var coll = _DbContext.PlPermissions.AsNoTracking().OrderBy(c => c.Name).Skip(startIndex);
             foreach (var item in conditional)
                 if (string.Equals(item.Key, "name", StringComparison.OrdinalIgnoreCase))
                 {
-                    coll = coll.Where(c => c.Name.Name.Contains(item.Value));
-                }
-                else if (string.Equals(item.Key, "Id", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (Guid.TryParse(item.Value, out var id))
-                        coll = coll.Where(c => c.Id == id);
+                    coll = coll.Where(c => c.Name.Contains(item.Value));
                 }
                 else if (string.Equals(item.Key, "ShortName", StringComparison.OrdinalIgnoreCase))
                 {
-                    coll = coll.Where(c => c.Name.ShortName.Contains(item.Value));
+                    coll = coll.Where(c => c.ShortName.Contains(item.Value));
                 }
                 else if (string.Equals(item.Key, "displayname", StringComparison.OrdinalIgnoreCase))
                 {
-                    coll = coll.Where(c => c.Name.DisplayName.Contains(item.Value));
+                    coll = coll.Where(c => c.DisplayName.Contains(item.Value));
                 }
             var prb = _EntityManager.GetAll(coll, startIndex, count);
             _Mapper.Map(prb, result);
@@ -193,10 +187,10 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddPlPermissionReturnDto();
-            model.PlPermission.GenerateNewId();
+            //model.PlPermission.GenerateNewId();
             _DbContext.PlPermissions.Add(model.PlPermission);
             _DbContext.SaveChanges();
-            result.Id = model.PlPermission.Id;
+            result.Id = model.PlPermission.Name;
             return result;
         }
 
@@ -213,7 +207,25 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyPlPermissionReturnDto();
-            if (!_EntityManager.Modify(new[] { model.PlPermission })) return NotFound();
+            var dbSet = _DbContext.PlPermissions;
+            var tmp = dbSet.Find(model.Item.Name);
+            Debug.Assert(tmp is not null);
+            var entity = _DbContext.Entry(tmp);
+            entity.CurrentValues.SetValues(model.Item);
+            try
+            {
+                _Mapper.Map(model.Item, tmp);
+            }
+            catch (AutoMapperMappingException)  //忽略不能映射的情况
+            {
+            }
+            
+            if (tmp is ICreatorInfo ci) //若实现创建信息接口
+            {
+                entity.Property(nameof(ci.CreateBy)).IsModified = false;
+                entity.Property(nameof(ci.CreateDateTime)).IsModified = false;
+            }
+
             _DbContext.SaveChanges();
             return result;
         }
@@ -338,8 +350,7 @@ namespace PowerLmsWebApi.Controllers
             foreach (var item in conditional)
                 if (string.Equals(item.Key, "PermissionId", StringComparison.OrdinalIgnoreCase))
                 {
-                    if (Guid.TryParse(item.Value, out var id))
-                        coll = coll.Where(c => c.PermissionId == id);
+                    coll = coll.Where(c => c.PermissionId == item.Value);
                 }
                 else if (string.Equals(item.Key, "RoleId", StringComparison.OrdinalIgnoreCase))
                 {
@@ -434,10 +445,10 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new SetPermissionsReturnDto();
 
-            var ids = new HashSet<Guid>(model.PermissionIds);
+            var ids = new HashSet<string>(model.PermissionIds);
             if (ids.Count != model.PermissionIds.Count) return BadRequest($"{nameof(model.PermissionIds)}中有重复键值。");
 
-            var count = _DbContext.PlPermissions.Count(c => ids.Contains(c.Id));
+            var count = _DbContext.PlPermissions.Count(c => ids.Contains(c.Name));
             if (count != ids.Count) return BadRequest($"{nameof(model.PermissionIds)}中至少有一个许可的Id不存在。");
 
             var setRela = _DbContext.PlRolePermissions;
@@ -465,7 +476,7 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 所属许可的Id的集合。未在此集合指定的与角色的关系均被删除。
         /// </summary>
-        public List<Guid> PermissionIds { get; set; } = new List<Guid>();
+        public List<string> PermissionIds { get; set; } = new List<string>();
     }
 
     /// <summary>
@@ -631,7 +642,7 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 如果成功添加，这里返回新权限的Id。
         /// </summary>
-        public Guid Id { get; set; }
+        public string Id { get; set; }
     }
 
     /// <summary>
@@ -642,7 +653,7 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 权限数据。
         /// </summary>
-        public PlPermission PlPermission { get; set; }
+        public PlPermission Item { get; set; }
     }
 
     /// <summary>

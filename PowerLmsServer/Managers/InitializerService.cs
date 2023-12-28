@@ -52,7 +52,7 @@ namespace PowerLmsServer.Managers
                 using var scope = _ServiceScopeFactory.CreateScope();
                 var svc = scope.ServiceProvider;
                 CreateSystemResource(svc);
-                //InitializeDataDic(svc);
+                InitializeDataDic(svc);
                 CreateAdmin(svc);
                 Test(svc);
             }, CancellationToken.None);
@@ -90,29 +90,32 @@ namespace PowerLmsServer.Managers
             using var file = File.OpenRead(filePath);
             using var workbook = _NpoiManager.GetWorkbookFromStream(file);
 
-            var sheet = workbook.GetSheet(nameof(db.DD_DataDicCatalogs));
-            _NpoiManager.WriteToDb(sheet, db, db.DD_DataDicCatalogs);
+            var sheet = workbook.GetSheet(nameof(db.PlPermissions));
+            _NpoiManager.WriteToDb(sheet, db, db.PlPermissions);
 
-            sheet = workbook.GetSheet(nameof(db.DD_SimpleDataDics));
-            _NpoiManager.WriteToDb(sheet, db, db.DD_SimpleDataDics);
+            //var sheet = workbook.GetSheet(nameof(db.DD_DataDicCatalogs));
+            //_NpoiManager.WriteToDb(sheet, db, db.DD_DataDicCatalogs);
 
-            sheet = workbook.GetSheet(nameof(db.DD_BusinessTypeDataDics));
-            _NpoiManager.WriteToDb(sheet, db, db.DD_BusinessTypeDataDics);
+            //sheet = workbook.GetSheet(nameof(db.DD_SimpleDataDics));
+            //_NpoiManager.WriteToDb(sheet, db, db.DD_SimpleDataDics);
 
-            sheet = workbook.GetSheet(nameof(db.DD_PlPorts));
-            _NpoiManager.WriteToDb(sheet, db, db.DD_PlPorts);
+            //sheet = workbook.GetSheet(nameof(db.DD_BusinessTypeDataDics));
+            //_NpoiManager.WriteToDb(sheet, db, db.DD_BusinessTypeDataDics);
 
-            sheet = workbook.GetSheet(nameof(db.DD_PlCargoRoutes));
-            _NpoiManager.WriteToDb(sheet, db, db.DD_PlCargoRoutes);
+            //sheet = workbook.GetSheet(nameof(db.DD_PlPorts));
+            //_NpoiManager.WriteToDb(sheet, db, db.DD_PlPorts);
 
-            sheet = workbook.GetSheet(nameof(db.DD_PlCountrys));
-            _NpoiManager.WriteToDb(sheet, db, db.DD_PlCountrys);
+            //sheet = workbook.GetSheet(nameof(db.DD_PlCargoRoutes));
+            //_NpoiManager.WriteToDb(sheet, db, db.DD_PlCargoRoutes);
 
-            sheet = workbook.GetSheet(nameof(db.DD_PlCurrencys));
-            _NpoiManager.WriteToDb(sheet, db, db.DD_PlCurrencys);
+            //sheet = workbook.GetSheet(nameof(db.DD_PlCountrys));
+            //_NpoiManager.WriteToDb(sheet, db, db.DD_PlCountrys);
 
-            sheet = workbook.GetSheet(nameof(db.DD_JobNumberRules));
-            _NpoiManager.WriteToDb(sheet, db, db.DD_JobNumberRules);
+            //sheet = workbook.GetSheet(nameof(db.DD_PlCurrencys));
+            //_NpoiManager.WriteToDb(sheet, db, db.DD_PlCurrencys);
+
+            //sheet = workbook.GetSheet(nameof(db.DD_JobNumberRules));
+            //_NpoiManager.WriteToDb(sheet, db, db.DD_JobNumberRules);
             db.SaveChanges();
         }
 
