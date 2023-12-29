@@ -185,12 +185,12 @@ namespace PowerLmsWebApi.Controllers
                 var orgs = _DbContext.PlOrganizations.Where(c => orgIds.Contains(c.Id)).ToArray();
                 if (merches.Length + orgs.Length != orgIds.Length) return BadRequest($"{nameof(model.OrgIds)} 至少一个键值的实体不存在。");
                 if ((context.User.State & 4) == 0)  //若非超管
-                    if ((context.User.State & 8) == 0)  //若非商管管
+                    if ((context.User.State & 8) == 0)  //若非商管
                         return BadRequest("仅超管和商管才可创建用户。");
                     else //商管
                     {
                         if (!_OrganizationManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("商管数据结构损坏——无法找到其所属商户");
-                        if (!orgIds.All(c => _OrganizationManager.GetMerchantIdFromOrgId(c, out var mId) && mId == merchId)) return BadRequest("商户管理员尽可以设置商户和其下属的机构id。");
+                        if (!orgIds.All(c => _OrganizationManager.GetMerchantIdFromOrgId(c, out var mId) && mId == merchId)) return BadRequest("商户管理员仅可以设置商户和其下属的机构id。");
                     }
             }
 

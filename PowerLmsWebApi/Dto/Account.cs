@@ -99,7 +99,7 @@ namespace PowerLmsWebApi.Dto
         public Account Item { get; set; }
 
         /// <summary>
-        /// 用户直属的商户或机构Id集合。所有Id须同属一个商户，且必须存在对应实体。
+        /// 用户直属商户或机构Id集合。所有Id须同属一个商户，且必须存在对应实体。
         /// </summary>
         public List<Guid> OrgIds { get; set; } = new List<Guid>();
     }

@@ -64,7 +64,7 @@ namespace PowerLmsServer.Managers
         /// </summary>
         /// <param name="orgId">机构Id。</param>
         /// <param name="MerchantId"></param>
-        /// <returns></returns>
+        /// <returns>true则找到了商户Id，false没有找到。</returns>
         public bool GetMerchantIdFromOrgId(Guid orgId, out Guid? MerchantId)
         {
             var org = _DbContext.PlOrganizations.Find(orgId);   //找到组织机构对象

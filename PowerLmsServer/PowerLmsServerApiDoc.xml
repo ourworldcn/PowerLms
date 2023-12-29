@@ -428,7 +428,7 @@
             </summary>
             <param name="orgId">机构Id。</param>
             <param name="MerchantId"></param>
-            <returns></returns>
+            <returns>true则找到了商户Id，false没有找到。</returns>
         </member>
         <member name="P:PowerLmsServer.Managers.OrganizationManager.Id2Merchants">
             <summary>
