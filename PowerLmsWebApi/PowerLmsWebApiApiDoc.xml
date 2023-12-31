@@ -2495,7 +2495,7 @@
             组织机构控制器。
             </summary>
         </member>
-        <member name="M:PowerLmsWebApi.Controllers.OrganizationController.#ctor(PowerLmsServer.Managers.AccountManager,System.IServiceProvider,PowerLmsServer.EfData.PowerLmsUserDbContext,PowerLmsServer.Managers.OrganizationManager,AutoMapper.IMapper,PowerLmsServer.Managers.EntityManager)">
+        <member name="M:PowerLmsWebApi.Controllers.OrganizationController.#ctor(PowerLmsServer.Managers.AccountManager,System.IServiceProvider,PowerLmsServer.EfData.PowerLmsUserDbContext,PowerLmsServer.Managers.OrganizationManager,AutoMapper.IMapper,PowerLmsServer.Managers.EntityManager,PowerLmsServer.Managers.DataDicManager)">
             <summary>
             构造函数。
             </summary>
@@ -2585,6 +2585,31 @@
             <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
             <response code="401">无效令牌。</response>  
         </member>
+        <member name="M:PowerLmsWebApi.Controllers.OrganizationController.CopyDataDic(PowerLmsWebApi.Controllers.CopyDataDicParamsDto)">
+            <summary>
+            为指定机构复制一份所有数据字典的副本。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+            <response code="404">指定Id的机构不存在。</response>  
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.CopyDataDicParamsDto">
+            <summary>
+            初始化机构的功能参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.CopyDataDicParamsDto.Id">
+            <summary>
+            初始化机构的Id。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.CopyDataDicReturnDto">
+            <summary>
+            初始化机构的功能返回值封装类。
+            </summary>
+        </member>
         <member name="T:PowerLmsWebApi.Controllers.GetAllAccountPlOrganizationReturnDto">
             <summary>
             获取用户和商户/组织机构的所属关系返回值封装类。
@@ -2648,6 +2673,11 @@
         <member name="T:PowerLmsWebApi.Controllers.AddOrgParamsDto">
             <summary>
             增加一个组织机构的功能参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.AddOrgParamsDto.IsCopyDataDic">
+            <summary>
+            是否给新加入的机构复制一份完整的数据字典。
             </summary>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.AddOrgReturnDto">

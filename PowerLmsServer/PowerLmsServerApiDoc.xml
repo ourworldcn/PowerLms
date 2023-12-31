@@ -4,6 +4,16 @@
         <name>PowerLmsServer</name>
     </assembly>
     <members>
+        <member name="T:PowerLmsServer.AutoMappper.AutoMapperProfile">
+            <summary>
+            配置本项目AutoMapper的特殊类。
+            </summary>
+        </member>
+        <member name="M:PowerLmsServer.AutoMappper.AutoMapperProfile.#ctor">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
         <member name="T:PowerLmsServer.Managers.AccountManager">
             <summary>
             账号管理器。
@@ -409,7 +419,7 @@
             组织机构管理器。
             </summary>
         </member>
-        <member name="M:PowerLmsServer.Managers.OrganizationManager.#ctor(PowerLmsServer.EfData.PowerLmsUserDbContext,Microsoft.Extensions.Caching.Memory.IMemoryCache)">
+        <member name="M:PowerLmsServer.Managers.OrganizationManager.#ctor(PowerLmsServer.EfData.PowerLmsUserDbContext,Microsoft.Extensions.Caching.Memory.IMemoryCache,Microsoft.EntityFrameworkCore.IDbContextFactory{PowerLmsServer.EfData.PowerLmsUserDbContext})">
             <summary>
             构造函数。
             </summary>
@@ -429,6 +439,12 @@
             <param name="orgId">机构Id。</param>
             <param name="MerchantId"></param>
             <returns>true则找到了商户Id，false没有找到。</returns>
+        </member>
+        <member name="M:PowerLmsServer.Managers.OrganizationManager.GetDb">
+            <summary>
+            获取一个读写用的数据库上下文。
+            </summary>
+            <returns></returns>
         </member>
         <member name="P:PowerLmsServer.Managers.OrganizationManager.Id2Merchants">
             <summary>
