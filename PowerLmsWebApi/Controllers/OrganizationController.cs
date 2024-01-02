@@ -98,11 +98,18 @@ namespace PowerLmsWebApi.Controllers
             model.Item.GenerateNewId();
             var id = model.Item.Id;
             _DbContext.PlOrganizations.Add(model.Item);
-            _DbContext.SaveChanges();
-            result.Id = id;
-            if (model.IsCopyDataDic) //若需要复制字典
+            try
             {
-                var r = CopyDataDic(new CopyDataDicParamsDto { Token = model.Token, Id = id });
+                _DbContext.SaveChanges();
+                result.Id = id;
+                if (model.IsCopyDataDic) //若需要复制字典
+                {
+                    var r = CopyDataDic(new CopyDataDicParamsDto { Token = model.Token, Id = id });
+                }
+            }
+            catch (Exception err)
+            {
+                return BadRequest(err.Message);
             }
             return result;
         }
