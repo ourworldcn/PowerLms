@@ -13,23 +13,7 @@ namespace PowerLmsWebApi.AutoMappper
         /// </summary>
         public AutoMapperProfile()
         {
-            CreateMap<PlOwnedAddress, PlOwnedAddress>().IncludeAllDerived();
-            CreateMap<PlSimpleOwnedAddress, PlSimpleOwnedAddress>().IncludeAllDerived();
-            CreateMap<PlOwnedName, PlOwnedName>().IncludeAllDerived();
-
-            CreateMap<OwnedAirlines, OwnedAirlines>().IncludeAllDerived();
-            CreateMap<PlOwnedContact, PlOwnedContact>().IncludeAllDerived();
-            CreateMap<PlBillingInfo, PlBillingInfo>().IncludeAllDerived();
-
-            CreateMap<PlOrganization, PlOrganization>().IncludeAllDerived();
-            CreateMap<PlMerchant, PlMerchant>().IncludeAllDerived();
-            CreateMap<PlCustomer, PlCustomer>().IncludeAllDerived();
-            CreateMap<PlFileInfo, PlFileInfo>().IncludeAllDerived();
-
             #region 权限相关
-            CreateMap<PlPermission, PlPermission>().IncludeAllDerived();
-            CreateMap<PlRole, PlRole>().IncludeAllDerived();
-
             #endregion 权限相关
         }
     }

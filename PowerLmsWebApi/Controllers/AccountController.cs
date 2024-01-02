@@ -71,6 +71,10 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllAccountReturnDto();
             var coll = _DbContext.Accounts.AsNoTracking();
+            if (_OrganizationManager.GetMerchantId(context.User.Id, out var merchantId))
+            {
+
+            }
             foreach (var item in conditional)
                 if (string.Equals(item.Key, "eMail", StringComparison.OrdinalIgnoreCase))
                 {

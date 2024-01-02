@@ -7,6 +7,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -15,20 +16,29 @@ namespace PowerLmsServer.Managers
     /// <summary>
     /// 组织机构管理器。
     /// </summary>
-    [OwAutoInjection(ServiceLifetime.Scoped)]
+    [OwAutoInjection(ServiceLifetime.Scoped, AutoCreateFirst = true)]
     public class OrganizationManager
     {
         /// <summary>
         /// 构造函数。
         /// </summary>
-        public OrganizationManager(PowerLmsUserDbContext dbContext, IMemoryCache cache)
+        public OrganizationManager(PowerLmsUserDbContext dbContext, IMemoryCache cache, IDbContextFactory<PowerLmsUserDbContext> dbContextFactory)
         {
             _DbContext = dbContext;
             _Cache = cache;
+            _DbContextFactory = dbContextFactory;
+            Initialize();
+        }
+
+        private void Initialize()
+        {
+            var dic1 = Id2Merchants;
+            var dic2 = Id2Orgs;
         }
 
         PowerLmsUserDbContext _DbContext;
         IMemoryCache _Cache;
+        readonly IDbContextFactory<PowerLmsUserDbContext> _DbContextFactory;
 
         /// <summary>
         /// 获取指定账户所属的商户Id。
@@ -89,26 +99,30 @@ namespace PowerLmsServer.Managers
         const string OrgCacheKey = "OrgCacheKey.fa85fb74-d809-403a-902f-8da913cf8f4a";
         const string DbCacheKey = "DbCacheKey.fde207c2-99bc-4401-aab6-f5f0465ee368";
 
-        //PowerLmsUserDbContext GetDb()
-        //{
-        //    var result = _Cache.GetOrCreate(DbCacheKey, c =>
-        //    {
-                
-        //    });
-        //    return result;
-        //    //IDbContextFactory<PowerLmsUserDbContext>
-        //}
+        /// <summary>
+        /// 获取一个读写用的数据库上下文。
+        /// </summary>
+        /// <returns></returns>
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        PowerLmsUserDbContext GetDb()
+        {
+            var result = _Cache.GetOrCreate(DbCacheKey, c =>
+            {
+                return _DbContextFactory.CreateDbContext();
+            });
+            return result;
+        }
 
         /// <summary>
         /// 
         /// </summary>
-        public IDictionary<Guid, PlMerchant> Id2Merchants
+        public ConcurrentDictionary<Guid, PlMerchant> Id2Merchants
         {
             get
             {
                 return _Cache.GetOrCreate(MerchantCacheKey, c =>
                 {
-                    var result = new ConcurrentDictionary<Guid, PlMerchant>(_DbContext.Merchants.ToDictionary(c => c.Id, c => c));
+                    var result = new ConcurrentDictionary<Guid, PlMerchant>(GetDb().Merchants.ToDictionary(c => c.Id, c => c));
                     return result;
                 });
             }
@@ -117,13 +131,13 @@ namespace PowerLmsServer.Managers
         /// <summary>
         /// 
         /// </summary>
-        public IDictionary<Guid, PlOrganization> Id2Orgs
+        public ConcurrentDictionary<Guid, PlOrganization> Id2Orgs
         {
             get
             {
                 return _Cache.GetOrCreate(OrgCacheKey, c =>
                 {
-                    var result = new ConcurrentDictionary<Guid, PlOrganization>(_DbContext.PlOrganizations.ToDictionary(c => c.Id, c => c));
+                    var result = new ConcurrentDictionary<Guid, PlOrganization>(GetDb().PlOrganizations.ToDictionary(c => c.Id, c => c));
                     return result;
                 });
             }
