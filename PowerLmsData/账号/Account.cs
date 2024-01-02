@@ -107,6 +107,20 @@ namespace PowerLms.Data
         [Comment("工号。做业务的人员必须有。")]
         public int? JobNumber { get; set; }
 
+        /// <summary>
+        /// 报表权限。1=个人，2=组织，4=公司，8=商户。
+        /// </summary>
+        [Comment("报表权限。1=个人，2=组织，4=公司，8=商户。")]
+        [Range(1,8)]
+        public byte ReportPermission { get; set; }
+
+        /// <summary>
+        /// 报表权限。1=个人，2=组织，4=公司，8=商户。
+        /// </summary>
+        [Comment("报表权限。1=个人，2=组织，4=公司。")]
+        [Range(1,4)]
+        public byte JobPermission { get; set; }
+
         #region 瞬时属性
 
         #endregion 瞬时属性

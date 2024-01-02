@@ -976,6 +976,11 @@
             航空公司的封装类。
             </summary>
         </member>
+        <member name="P:PowerLms.Data.PlCustomer.TacCountNo">
+            <summary>
+            财务编码。
+            </summary>
+        </member>
         <member name="P:PowerLms.Data.PlCustomer.IsCustomsQuarantine">
             <summary>
             是否海关检疫。
@@ -1666,6 +1671,16 @@
         <member name="P:PowerLms.Data.Account.JobNumber">
             <summary>
             工号。做业务的人员必须有。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.Account.ReportPermission">
+            <summary>
+            报表权限。1=个人，2=组织，4=公司，8=商户。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.Account.JobPermission">
+            <summary>
+            报表权限。1=个人，2=组织，4=公司，8=商户。
             </summary>
         </member>
         <member name="P:PowerLms.Data.Account.OrgId">

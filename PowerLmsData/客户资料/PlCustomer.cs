@@ -113,6 +113,13 @@ namespace PowerLms.Data
         public OwnedAirlines Airlines { get; set; }
 
         /// <summary>
+        /// 财务编码。
+        /// </summary>
+        [MaxLength(32)]
+        [Comment("财务编码")]
+        public string TacCountNo { get; set; }
+
+        /// <summary>
         /// 是否海关检疫。
         /// </summary>
         [Comment("是否海关检疫")]
