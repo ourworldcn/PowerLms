@@ -1171,7 +1171,7 @@
             所属客户Id。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.PlBusinessHeader.AccountId">
+        <member name="P:PowerLms.Data.PlBusinessHeader.UserId">
             <summary>
             用户Id。
             </summary>

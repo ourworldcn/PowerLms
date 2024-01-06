@@ -259,7 +259,7 @@ namespace PowerLmsWebApi.Controllers
                 else if (string.Equals(item.Key, "accountId", StringComparison.OrdinalIgnoreCase))
                 {
                     if (Guid.TryParse(item.Value, out var accountId))
-                        coll = coll.Where(c => c.AccountId == accountId);
+                        coll = coll.Where(c => c.UserId == accountId);
                 }
                 else if (string.Equals(item.Key, "OrderTypeId", StringComparison.OrdinalIgnoreCase))
                 {
@@ -303,7 +303,7 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemovePlBusinessHeaderReturnDto();
             DbSet<PlBusinessHeader> dbSet = _DbContext.PlCustomerBusinessHeaders;
-            var item = dbSet.Find(model.UserId, model.OrgId);
+            var item = dbSet.Find(model.CustomerId, model.UserId, model.OrderTypeId);
             if (item is null) return BadRequest();
             _DbContext.Remove(item);
             _DbContext.SaveChanges();
@@ -910,7 +910,13 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 商户/组织机构的Id。
         /// </summary>
-        public Guid OrgId { get; set; }
+        public Guid CustomerId { get; set; }
+
+        /// <summary>
+        /// 负责的业务Id。连接业务种类字典。
+        /// </summary>
+        public Guid OrderTypeId { get; set; }
+
     }
 
     /// <summary>

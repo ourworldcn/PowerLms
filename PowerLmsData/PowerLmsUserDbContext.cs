@@ -79,7 +79,7 @@ namespace PowerLmsServer.EfData
         {
             modelBuilder.Entity<AccountPlOrganization>().HasKey(nameof(AccountPlOrganization.UserId), nameof(AccountPlOrganization.OrgId));
 
-            modelBuilder.Entity<PlBusinessHeader>().HasKey(nameof(PlBusinessHeader.CustomerId), nameof(PlBusinessHeader.AccountId), nameof(PlBusinessHeader.OrderTypeId));
+            modelBuilder.Entity<PlBusinessHeader>().HasKey(nameof(PlBusinessHeader.CustomerId), nameof(PlBusinessHeader.UserId), nameof(PlBusinessHeader.OrderTypeId));
 
             #region 权限相关
             modelBuilder.Entity<AccountRole>().HasKey(nameof(AccountRole.UserId), nameof(AccountRole.RoleId));

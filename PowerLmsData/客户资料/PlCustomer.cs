@@ -374,7 +374,7 @@ namespace PowerLms.Data
         /// 用户Id。
         /// </summary>
         [Comment("用户Id")]
-        public Guid AccountId { get; set; }
+        public Guid UserId { get; set; }
 
         /// <summary>
         /// 负责的业务Id。连接业务种类字典。

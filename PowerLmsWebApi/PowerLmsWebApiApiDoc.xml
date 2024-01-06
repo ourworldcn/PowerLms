@@ -2095,9 +2095,14 @@
             用户的Id。
             </summary>
         </member>
-        <member name="P:PowerLmsWebApi.Controllers.RemovePlBusinessHeaderParamsDto.OrgId">
+        <member name="P:PowerLmsWebApi.Controllers.RemovePlBusinessHeaderParamsDto.CustomerId">
             <summary>
             商户/组织机构的Id。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.RemovePlBusinessHeaderParamsDto.OrderTypeId">
+            <summary>
+            负责的业务Id。连接业务种类字典。
             </summary>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.RemovePlBusinessHeaderReturnDto">
