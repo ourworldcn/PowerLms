@@ -2226,7 +2226,7 @@
             在项目基目录下有Files文件夹，其下按业务分为不同文件夹存储文件。
             </summary>
         </member>
-        <member name="M:PowerLmsWebApi.Controllers.FileController.#ctor(PowerLmsServer.EfData.PowerLmsUserDbContext,PowerLmsServer.Managers.AccountManager,Microsoft.Extensions.DependencyInjection.ServiceProvider,PowerLmsServer.Managers.EntityManager,AutoMapper.IMapper)">
+        <member name="M:PowerLmsWebApi.Controllers.FileController.#ctor(System.IServiceProvider,AutoMapper.IMapper,PowerLmsServer.Managers.AccountManager,PowerLmsServer.EfData.PowerLmsUserDbContext,PowerLmsServer.Managers.EntityManager)">
             <summary>
             构造函数。
             </summary>

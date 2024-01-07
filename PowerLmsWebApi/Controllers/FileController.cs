@@ -26,18 +26,18 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 构造函数。
         /// </summary>
-        public FileController(PowerLmsUserDbContext dbContext, AccountManager accountManager, ServiceProvider serviceProvider, EntityManager entityManager, IMapper mapper)
+        public FileController(IServiceProvider serviceProvider, IMapper mapper, AccountManager accountManager, PowerLmsUserDbContext dbContext, EntityManager entityManager)
         {
-            _DbContext = dbContext;
+            _Mapper = mapper;
             _AccountManager = accountManager;
+            _DbContext = dbContext;
             _ServiceProvider = serviceProvider;
             _EntityManager = entityManager;
-            _Mapper = mapper;
         }
 
         readonly PowerLmsUserDbContext _DbContext;
         private readonly AccountManager _AccountManager;
-        readonly ServiceProvider _ServiceProvider;
+        readonly IServiceProvider _ServiceProvider;
         EntityManager _EntityManager;
         IMapper _Mapper;
 
