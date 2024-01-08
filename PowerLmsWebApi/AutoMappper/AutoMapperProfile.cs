@@ -1,5 +1,8 @@
 ﻿using AutoMapper;
 using PowerLms.Data;
+using PowerLmsServer.Managers;
+using PowerLmsWebApi.Controllers;
+using PowerLmsWebApi.Dto;
 
 namespace PowerLmsWebApi.AutoMappper
 {
@@ -13,6 +16,9 @@ namespace PowerLmsWebApi.AutoMappper
         /// </summary>
         public AutoMapperProfile()
         {
+            //PagingReturnBase
+            CreateMap(typeof(PagingReturnBase<>),typeof(PagingReturnDtoBase<>)).IncludeAllDerived();
+
             #region 权限相关
             #endregion 权限相关
         }

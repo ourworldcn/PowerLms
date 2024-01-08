@@ -24,8 +24,10 @@ namespace PowerLmsServer.AutoMappper
 
             CreateMap<PlOrganization, PlOrganization>().IncludeAllDerived();
             CreateMap<PlMerchant, PlMerchant>().IncludeAllDerived();
-            CreateMap<PlCustomer, PlCustomer>().IncludeAllDerived();
             CreateMap<PlFileInfo, PlFileInfo>().IncludeAllDerived();
+
+            CreateMap<PlCustomer, PlCustomer>().IncludeAllDerived();
+            CreateMap<PlTaxInfo, PlTaxInfo>().IncludeAllDerived();
 
             #region 权限相关
             CreateMap<PlPermission, PlPermission>().IncludeAllDerived();
