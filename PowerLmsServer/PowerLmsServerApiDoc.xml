@@ -440,6 +440,20 @@
             <param name="MerchantId"></param>
             <returns>true则找到了商户Id，false没有找到。</returns>
         </member>
+        <member name="M:PowerLmsServer.Managers.OrganizationManager.GetAllOrgIdInRoot(System.Guid)">
+            <summary>
+            获取指定根Id(商户或机构)下所有组织机构。不包含指定id的实体。
+            </summary>
+            <param name="rootId"></param>
+            <returns></returns>
+        </member>
+        <member name="M:PowerLmsServer.Managers.OrganizationManager.GetChidren(PowerLms.Data.PlOrganization)">
+            <summary>
+            获取指定机构的所有子机构，不包含自身。
+            </summary>
+            <param name="org"></param>
+            <returns></returns>
+        </member>
         <member name="M:PowerLmsServer.Managers.OrganizationManager.GetDb">
             <summary>
             获取一个读写用的数据库上下文。

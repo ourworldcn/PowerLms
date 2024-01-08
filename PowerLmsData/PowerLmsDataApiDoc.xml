@@ -1348,7 +1348,7 @@
         </member>
         <member name="P:PowerLms.Data.PlFileInfo.ParentId">
             <summary>
-            所属实体的Id。
+            所属实体的Id。如属于客户资料的文件，就设置为客户Id。
             </summary>
         </member>
         <member name="T:PowerLms.Data.PlMerchant">
@@ -1688,6 +1688,17 @@
             当前使用的组织机构Id。在登陆后要首先设置。
             </summary>
         </member>
+        <member name="P:PowerLms.Data.Account.IsSuperAdmin">
+            <summary>
+            是否是超管。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.Account.IsMerchantAdmin">
+            <summary>
+            是否是商管。
+            </summary>
+            <returns></returns>
+        </member>
         <member name="P:PowerLms.Data.Account.WorkingStatusCode">
             <summary>
             工作状态编码。
@@ -1736,6 +1747,12 @@
             获取指定密码的Hash值。
             </summary>
             <param name="pwd"></param>
+            <returns></returns>
+        </member>
+        <member name="M:PowerLms.Data.Account.IsAdmin">
+            <summary>
+            是否是商管或超管至少其中之一的身份。
+            </summary>
             <returns></returns>
         </member>
         <member name="T:PowerLms.Data.AccountPlOrganization">

@@ -110,33 +110,6 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// 增加一个数据字典(目录)。
-        /// </summary>
-        /// <param name="model"></param>
-        /// <returns></returns>
-        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
-        /// <response code="400">指定的Code已经存在。</response>  
-        /// <response code="401">无效令牌。</response>  
-        [HttpPost]
-        public ActionResult<AddDataDicCatalogReturnDto> AddDataDicCatalog(AddDataDicCatalogParamsDto model)
-        {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            var ss = from tmp in _DbContext.DD_DataDicCatalogs
-                     where tmp.OrgId == model.Item.OrgId && tmp.Code == model.Item.Code
-                     select tmp;
-            if (ss.FirstOrDefault(c => c.OrgId == model.Item.OrgId && c.Code == model.Item.Code) is not null)
-            {
-                return BadRequest();
-            }
-            var result = new AddDataDicCatalogReturnDto();
-            model.Item.GenerateNewId();
-            _DbContext.DD_DataDicCatalogs.Add(model.Item);
-            _DbContext.SaveChanges();
-            result.Id = model.Item.Id;
-            return result;
-        }
-
-        /// <summary>
         /// 修改数据字典目录。
         /// </summary>
         /// <param name="model"></param>
@@ -344,6 +317,54 @@ namespace PowerLmsWebApi.Controllers
                 }
             var prb = _EntityManager.GetAll(coll, startIndex, count);
             _Mapper.Map(prb, result);
+            return result;
+        }
+
+        /// <summary>
+        /// 增加一个数据字典(目录)。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定的Code已经存在。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="403">非超管商管。</response>  
+        [HttpPost]
+        public ActionResult<AddDataDicCatalogReturnDto> AddDataDicCatalog(AddDataDicCatalogParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!context.User.IsAdmin())   //若非超管也非商管
+            {
+                return base.Forbid("需要管理员权限。");
+            }
+            var ss = from tmp in _DbContext.DD_DataDicCatalogs
+                     where tmp.OrgId == model.Item.OrgId && tmp.Code == model.Item.Code
+                     select tmp;
+            if (ss.FirstOrDefault(c => c.OrgId == model.Item.OrgId && c.Code == model.Item.Code) is not null)
+            {
+                return BadRequest();
+            }
+            var result = new AddDataDicCatalogReturnDto();
+            model.Item.GenerateNewId();
+            _DbContext.DD_DataDicCatalogs.Add(model.Item);
+
+            if (model.CopyToChildren)   //若须下下复制。
+            {
+                IEnumerable<Guid> catalogIds;
+                if (model.CopyToChildren)    //若须向下传播
+                {
+                    if (context.User.IsSuperAdmin)    //若是超管
+                    {
+                        catalogIds = _DbContext.DD_DataDicCatalogs.Where(c => c.Code == model.Item.Code && c.Id != model.Item.Id).Select(c => c.Id).ToArray();
+                    }
+                    else if (context.User.IsMerchantAdmin)   //若是商管
+                    {
+
+                    }
+                }
+            }
+            _DbContext.SaveChanges();
+            result.Id = model.Item.Id;
             return result;
         }
 
@@ -2268,6 +2289,10 @@ namespace PowerLmsWebApi.Controllers
     /// </summary>
     public class AddDataDicCatalogParamsDto : AddParamsDtoBase<DataDicCatalog>
     {
+        /// <summary>
+        /// 是否同步到子公司/组织机构。对于超管复制到所有字典中，对于商户管理员复制到商户所有字典中。
+        /// </summary>
+        public bool CopyToChildren { get; set; }
     }
 
     /// <summary>

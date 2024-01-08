@@ -1,6 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Primitives;
+using NPOI.SS.Formula.Atp;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using System;
@@ -93,6 +95,46 @@ namespace PowerLmsServer.Managers
             }
             MerchantId = null;
             return false;
+        }
+
+        /// <summary>
+        /// 获取指定根Id(商户或机构)下所有组织机构。不包含指定id的实体。
+        /// </summary>
+        /// <param name="rootId"></param>
+        /// <returns></returns>
+        public List<PlOrganization> GetAllOrgIdInRoot(Guid rootId)
+        {
+            var result = new List<PlOrganization>();
+            if (_DbContext.Merchants.Find(rootId) is PlMerchant rootMerchant)  //若是商户Id
+            {
+                foreach (var org in _DbContext.PlOrganizations.Where(c => c.MerchantId == rootId))
+                {
+                    result.AddRange(GetChidren(org));
+                    result.Add(org);
+                }
+            }
+            else //若非商户Id
+            {
+                var root = _DbContext.PlOrganizations.Find(rootId);
+                if (root is null) return result;
+                result.AddRange(GetChidren(root));
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// 获取指定机构的所有子机构，不包含自身。
+        /// </summary>
+        /// <param name="org"></param>
+        /// <returns></returns>
+        public IEnumerable<PlOrganization> GetChidren(PlOrganization org)
+        {
+            foreach (var child in org.Children)
+            {
+                foreach (var item in GetChidren(child))
+                    yield return item;
+                yield return child;
+            }
         }
 
         const string MerchantCacheKey = "MerchantCacheKey.256a2f95-bd83-480b-97ae-d3c978ffbe0b";

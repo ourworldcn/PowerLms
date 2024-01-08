@@ -4,3 +4,5 @@ Admin/AddDataDic增加字典条目时可选向下传播。
 
 20240104
 RemoveXXX未删除实体，须连锁删除所属实体。
+
+Admin/AddDataDic 和 Admin/AddDataDicCatalog 接口增加实体时可选向下传播。

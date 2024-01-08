@@ -2,11 +2,14 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.ObjectPool;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
+using System.Text;
 
 namespace PowerLmsWebApi.Controllers
 {
@@ -115,6 +118,11 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
+        /// 客户表子表的名字。
+        /// </summary>
+        static string[] CustomerChildTableNames = new string[] { "PlCustomerContact", "PlBusinessHeader", "PlTaxInfo", "PlTidan", "CustomerBlacklist", "PlLoadingAddr" };
+
+        /// <summary>
         /// 删除指定Id的客户。慎用！
         /// </summary>
         /// <param name="model"></param>
@@ -131,6 +139,18 @@ namespace PowerLmsWebApi.Controllers
             var dbSet = _DbContext.PlCustomers;
             var item = dbSet.Find(id);
             if (item is null) return BadRequest();
+
+            //删除子表
+            var sb = AutoClearPool<StringBuilder>.Shared.Get(); Trace.Assert(sb is not null);
+            using var dwSb = DisposeHelper.Create(c => AutoClearPool<StringBuilder>.Shared.Return(c), sb);
+            var idString = id.ToString();
+            foreach (var name in CustomerChildTableNames)
+            {
+                sb.AppendLine($"delete from [{name}] where [CustomerId]='{idString}';");
+            }
+            _DbContext.Database.ExecuteSqlRaw(sb.ToString());
+            //删除主表
+            _DbContext.Remove(item);
             _DbContext.SaveChanges();
             return result;
         }
@@ -224,6 +244,7 @@ namespace PowerLmsWebApi.Controllers
             var dbSet = _DbContext.PlCustomerContacts;
             var item = dbSet.Find(id);
             if (item is null) return BadRequest();
+            _DbContext.Remove(item);
             _DbContext.SaveChanges();
             return result;
         }
@@ -405,6 +426,7 @@ namespace PowerLmsWebApi.Controllers
             var dbSet = _DbContext.PlCustomerTaxInfos;
             var item = dbSet.Find(id);
             if (item is null) return BadRequest();
+            _DbContext.Remove(item);
             _DbContext.SaveChanges();
             return result;
         }
@@ -503,6 +525,7 @@ namespace PowerLmsWebApi.Controllers
             var dbSet = _DbContext.PlCustomerTaxInfos;
             var item = dbSet.Find(id);
             if (item is null) return BadRequest();
+            _DbContext.Remove(item);
             _DbContext.SaveChanges();
             return result;
         }
@@ -581,7 +604,8 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetAllPlLoadingAddrReturnDto> GetAllPlLoadingAddr(Guid token, [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [Range(-1, int.MaxValue)] int count = -1,
+        public ActionResult<GetAllPlLoadingAddrReturnDto> GetAllPlLoadingAddr(Guid token,
+            [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [Range(-1, int.MaxValue)] int count = -1,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
             if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
@@ -661,6 +685,7 @@ namespace PowerLmsWebApi.Controllers
             var dbSet = _DbContext.PlCustomerTaxInfos;
             var item = dbSet.Find(id);
             if (item is null) return BadRequest();
+            _DbContext.Remove(item);
             _DbContext.SaveChanges();
             return result;
         }

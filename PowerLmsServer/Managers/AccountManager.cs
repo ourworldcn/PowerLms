@@ -132,6 +132,8 @@ namespace PowerLmsServer.Managers
         /// </summary>
         public IServiceProvider ServiceProvider { get; set; }
 
+        #region 方法
+
         /// <summary>
         /// 标记当前进行了一次有效操作，这将导致延迟清理时间。
         /// </summary>
@@ -158,5 +160,6 @@ namespace PowerLmsServer.Managers
         {
             base.Dispose(disposing);
         }
+        #endregion 方法
     }
 }

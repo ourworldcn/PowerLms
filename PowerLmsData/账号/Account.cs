@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using OW.Data;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -111,14 +112,14 @@ namespace PowerLms.Data
         /// 报表权限。1=个人，2=组织，4=公司，8=商户。
         /// </summary>
         [Comment("报表权限。1=个人，2=组织，4=公司，8=商户。")]
-        [Range(1,8)]
+        [Range(1, 8)]
         public byte ReportPermission { get; set; }
 
         /// <summary>
         /// 报表权限。1=个人，2=组织，4=公司，8=商户。
         /// </summary>
         [Comment("报表权限。1=个人，2=组织，4=公司。")]
-        [Range(1,4)]
+        [Range(1, 4)]
         public byte JobPermission { get; set; }
 
         #region 瞬时属性
@@ -132,6 +133,36 @@ namespace PowerLms.Data
         /// </summary>
         [Comment("当前使用的组织机构Id。在登陆后要首先设置")]
         public Guid? OrgId { get; set; }
+
+        /// <summary>
+        /// 是否是超管。
+        /// </summary>
+        [NotMapped]
+        [JsonIgnore]
+        public bool IsSuperAdmin
+        {
+            get { return (State & 4) != 0; }
+            set
+            {
+                if (value)
+                    State |= 4;
+                else
+                    State &= 4;
+            }
+        }
+
+        /// <summary>
+        /// 是否是商管。
+        /// </summary>
+        /// <returns></returns>
+        [NotMapped]
+        [JsonIgnore]
+        public bool IsMerchantAdmin
+        {
+            get => (State & 8) != 0;
+            set => _ = value ? State |= 8 : State &= 8;
+        }
+
 
         #region 数据字典属性
 
@@ -208,6 +239,13 @@ namespace PowerLms.Data
         {
             return SHA256.HashData(Encoding.UTF8.GetBytes(pwd ?? string.Empty));
         }
+
+        /// <summary>
+        /// 是否是商管或超管至少其中之一的身份。
+        /// </summary>
+        /// <returns></returns>
+        public bool IsAdmin() => (State & (8 + 4)) != 0;
+
         #endregion 方法
     }
 

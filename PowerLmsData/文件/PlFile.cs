@@ -39,7 +39,7 @@ namespace PowerLms.Data
         public string FileName { get; set; }
 
         /// <summary>
-        /// 所属实体的Id。
+        /// 所属实体的Id。如属于客户资料的文件，就设置为客户Id。
         /// </summary>
         [Comment("所属实体的Id")]
         public Guid? ParentId { get; set; }
