@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.ObjectPool;
+using NPOI.SS.Formula.Functions;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
@@ -599,7 +600,7 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="token">登录令牌。</param>
         /// <param name="startIndex">起始位置，从0开始。</param>
         /// <param name="count">最大返回数量。</param>
-        /// <param name="conditional">查询的条件。支持 CustomerId，Id,Number。不区分大小写。</param>
+        /// <param name="conditional">查询的条件。支持 CustomerId，Id，Tel。不区分大小写。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
@@ -610,7 +611,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlLoadingAddrReturnDto();
-            var coll = _DbContext.PlCustomerTaxInfos.AsNoTracking().OrderBy(c => c.Id).Skip(startIndex);
+            var coll = _DbContext.PlCustomerLoadingAddrs.AsNoTracking().OrderBy(c => c.Id).Skip(startIndex);
             foreach (var item in conditional)
                 if (string.Equals(item.Key, "Id", StringComparison.OrdinalIgnoreCase))
                 {
@@ -624,7 +625,7 @@ namespace PowerLmsWebApi.Controllers
                 }
                 else if (string.Equals(item.Key, "Number", StringComparison.OrdinalIgnoreCase))
                 {
-                    coll = coll.Where(c => c.Number.Contains(item.Value));
+                    coll = coll.Where(c => c.Tel.Contains(item.Value));
                 }
             var prb = _EntityManager.GetAll(coll, startIndex, count);
             _Mapper.Map(prb, result);

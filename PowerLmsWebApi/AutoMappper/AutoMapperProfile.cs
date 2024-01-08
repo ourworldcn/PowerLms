@@ -17,7 +17,7 @@ namespace PowerLmsWebApi.AutoMappper
         public AutoMapperProfile()
         {
             //PagingReturnBase
-            CreateMap(typeof(PagingReturnBase<>),typeof(PagingReturnDtoBase<>)).IncludeAllDerived();
+            CreateMap<ReturnBase, ReturnDtoBase>().IncludeAllDerived();
 
             #region 权限相关
             #endregion 权限相关
