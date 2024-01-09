@@ -21,6 +21,8 @@ namespace OW.Data
         public static IOrderedQueryable<T> OrderBy<T>(this IQueryable<T> query, string fieldName, bool isDesc = false)
         {
             if (string.IsNullOrWhiteSpace(fieldName)) throw new ArgumentNullException(nameof(fieldName));
+            var names = fieldName.Split('.');
+
             ParameterExpression p = Expression.Parameter(typeof(T));
             Expression key = Expression.Property(p, fieldName);
             var propInfo = GetPropertyInfo(typeof(T), fieldName, true);
