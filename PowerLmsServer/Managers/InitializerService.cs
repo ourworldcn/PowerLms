@@ -14,6 +14,7 @@ using System.Diagnostics;
 using System.Net.Mail;
 using System.Text;
 using System.Text.RegularExpressions;
+using OW.Data;
 
 namespace PowerLmsServer.Managers
 {
@@ -149,13 +150,10 @@ namespace PowerLmsServer.Managers
         private void Test(IServiceProvider svc)
         {
             var db = svc.GetRequiredService<PowerLmsUserDbContext>();
-            var jn = svc.GetRequiredService<JobNumberManager>();
-            var demoStr = "gy<yyyy><MM><XXX><0000>eer";
-            var str = jn.Generated(new JobNumberRule { RuleString = demoStr }, null, OwHelper.WorldNow);
-            PlCustomer customer1 = new PlCustomer() { Code = "ds", Name = new PlOwnedName { DisplayName = "hello" }, Airlines = new OwnedAirlines { AirlineCode = "CN" } };
-            PlCustomer customer2 = new PlCustomer();
+            var ent = svc.GetRequiredService<EntityManager>();
+            var q = db.DD_PlCargoRoutes.OrderBy("orgid", true);
 
-            var mapper = svc.GetRequiredService<IMemoryCache>();
+            var ary = q.ToArray();
 
         }
 

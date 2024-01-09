@@ -220,6 +220,32 @@
             <param name="count">-1则获取所有。</param>
             <returns></returns>
         </member>
+        <member name="T:PowerLmsServer.Managers.PagingParamsBase">
+            <summary>
+            分页/排序要求的基类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.Managers.PagingParamsBase.StartIndex">
+            <summary>
+            起始位置，从0开始。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.Managers.PagingParamsBase.Count">
+            <summary>
+            最大返回数量。
+            默认值-1，不限定返回数量。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.Managers.PagingParamsBase.OrderFieldName">
+            <summary>
+            排序的字段名。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.Managers.PagingParamsBase.IsDesc">
+            <summary>
+            是否降序排序：true降序排序，false升序排序（省略或默认）。
+            </summary>
+        </member>
         <member name="T:PowerLmsServer.Managers.PagingReturnBase`1">
             <summary>
             返回分页数据的封装类的基类

@@ -9,6 +9,7 @@ using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
+using System.Linq.Expressions;
 
 namespace PowerLmsWebApi.Controllers
 {
@@ -20,7 +21,7 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 构造函数。
         /// </summary>
-        public AuthorizationController(IServiceProvider serviceProvider, AccountManager accountManager, PowerLmsUserDbContext dbContext, EntityManager entityManager, IMapper mapper, AuthorizationManager authorizationManager)
+        public AuthorizationController(IServiceProvider serviceProvider, AccountManager accountManager, PowerLmsUserDbContext dbContext, EntityManager entityManager, IMapper mapper, AuthorizationManager authorizationManager, OrganizationManager organizationManager)
         {
             _ServiceProvider = serviceProvider;
             _AccountManager = accountManager;
@@ -28,6 +29,7 @@ namespace PowerLmsWebApi.Controllers
             _EntityManager = entityManager;
             _Mapper = mapper;
             _AuthorizationManager = authorizationManager;
+            _OrganizationManager = organizationManager;
         }
 
         readonly IServiceProvider _ServiceProvider;
@@ -36,26 +38,38 @@ namespace PowerLmsWebApi.Controllers
         readonly EntityManager _EntityManager;
         readonly IMapper _Mapper;
         readonly AuthorizationManager _AuthorizationManager;
+        readonly OrganizationManager _OrganizationManager;
 
         #region 角色的CRUD
 
         /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="conditional"></param>
+        /// <returns></returns>
+        [HttpGet]
+        public ActionResult<bool> IsAuthorized1([FromQuery] PagingParamsBase model, [FromQuery] Dictionary<string, string> conditional = null)
+        {
+            return true;
+        }
+
+        /// <summary>
         /// 获取全部角色。
         /// </summary>
-        /// <param name="token">登录令牌。</param>
-        /// <param name="startIndex">起始位置，从0开始。</param>
-        /// <param name="count">最大返回数量。</param>
+        /// <param name="model"></param>
         /// <param name="conditional">查询的条件。支持 name，ShortName，displayname，Id。不区分大小写。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetAllPlRoleReturnDto> GetAllPlRole(Guid token, [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [Range(-1, int.MaxValue)] int count = -1,
+        public ActionResult<GetAllPlRoleReturnDto> GetAllPlRole([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlRoleReturnDto();
-            var coll = _DbContext.PlRoles.AsNoTracking().OrderBy(c => c.Id).Skip(startIndex);
+            var dbSet = _DbContext.PlRoles;
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             foreach (var item in conditional)
                 if (string.Equals(item.Key, "name", StringComparison.OrdinalIgnoreCase))
                 {
@@ -74,7 +88,7 @@ namespace PowerLmsWebApi.Controllers
                 {
                     coll = coll.Where(c => c.Name.DisplayName.Contains(item.Value));
                 }
-            var prb = _EntityManager.GetAll(coll, startIndex, count);
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }
@@ -92,6 +106,11 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddPlRoleReturnDto();
             model.PlRole.GenerateNewId();
+            if (!model.PlRole.OrgId.HasValue)
+            {
+                if (_OrganizationManager.GetMerchantId(context.User.Id, out var mId))
+                    model.PlRole.OrgId = mId;
+            }
             _DbContext.PlRoles.Add(model.PlRole);
             _DbContext.SaveChanges();
             result.Id = model.PlRole.Id;
@@ -143,20 +162,19 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 获取全部权限。
         /// </summary>
-        /// <param name="token">登录令牌。</param>
-        /// <param name="startIndex">起始位置，从0开始。</param>
-        /// <param name="count">最大返回数量。</param>
+        /// <param name="model"></param>
         /// <param name="conditional">查询的条件。支持 name，ShortName，displayname。不区分大小写。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetAllPlPermissionReturnDto> GetAllPlPermission(Guid token, [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [Range(-1, int.MaxValue)] int count = -1,
+        public ActionResult<GetAllPlPermissionReturnDto> GetAllPlPermission([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlPermissionReturnDto();
-            var coll = _DbContext.PlPermissions.AsNoTracking().OrderBy(c => c.Name).Skip(startIndex);
+            var dbSet = _DbContext.PlPermissions;
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             foreach (var item in conditional)
                 if (string.Equals(item.Key, "name", StringComparison.OrdinalIgnoreCase))
                 {
@@ -170,7 +188,7 @@ namespace PowerLmsWebApi.Controllers
                 {
                     coll = coll.Where(c => c.DisplayName.Contains(item.Value));
                 }
-            var prb = _EntityManager.GetAll(coll, startIndex, count);
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }
@@ -219,7 +237,7 @@ namespace PowerLmsWebApi.Controllers
             catch (AutoMapperMappingException)  //忽略不能映射的情况
             {
             }
-            
+
             if (tmp is ICreatorInfo ci) //若实现创建信息接口
             {
                 entity.Property(nameof(ci.CreateBy)).IsModified = false;
@@ -257,20 +275,19 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 获取全部用户-角色关系。
         /// </summary>
-        /// <param name="token">登录令牌。</param>
-        /// <param name="startIndex">起始位置，从0开始。</param>
-        /// <param name="count">最大返回数量。</param>
+        /// <param name="model"></param>
         /// <param name="conditional">查询的条件。支持 UserId，RoleId。不区分大小写。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetAllAccountRoleReturnDto> GetAllAccountRole(Guid token, [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [Range(-1, int.MaxValue)] int count = -1,
+        public ActionResult<GetAllAccountRoleReturnDto> GetAllAccountRole([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllAccountRoleReturnDto();
-            var coll = _DbContext.PlAccountRoles.AsNoTracking().OrderBy(c => c.UserId).Skip(startIndex);
+            var dbSet = _DbContext.PlAccountRoles;
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             foreach (var item in conditional)
                 if (string.Equals(item.Key, "UserId", StringComparison.OrdinalIgnoreCase))
                 {
@@ -282,7 +299,7 @@ namespace PowerLmsWebApi.Controllers
                     if (Guid.TryParse(item.Value, out var id))
                         coll = coll.Where(c => c.RoleId == id);
                 }
-            var prb = _EntityManager.GetAll(coll, startIndex, count);
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }
@@ -333,20 +350,19 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 获取全部角色-权限关系。
         /// </summary>
-        /// <param name="token">登录令牌。</param>
-        /// <param name="startIndex">起始位置，从0开始。</param>
-        /// <param name="count">最大返回数量。</param>
+        /// <param name="model"></param>
         /// <param name="conditional">查询的条件。支持 PermissionId，RoleId。不区分大小写。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetAllRolePermissionReturnDto> GetAllRolePermission(Guid token, [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [Range(-1, int.MaxValue)] int count = -1,
+        public ActionResult<GetAllRolePermissionReturnDto> GetAllRolePermission([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllRolePermissionReturnDto();
-            var coll = _DbContext.PlRolePermissions.AsNoTracking().OrderBy(c => c.RoleId).Skip(startIndex);
+            var dbSet = _DbContext.PlRolePermissions;
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             foreach (var item in conditional)
                 if (string.Equals(item.Key, "PermissionId", StringComparison.OrdinalIgnoreCase))
                 {
@@ -357,7 +373,7 @@ namespace PowerLmsWebApi.Controllers
                     if (Guid.TryParse(item.Value, out var id))
                         coll = coll.Where(c => c.RoleId == id);
                 }
-            var prb = _EntityManager.GetAll(coll, startIndex, count);
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }
@@ -693,6 +709,7 @@ namespace PowerLmsWebApi.Controllers
     {
         /// <summary>
         /// 新角色信息。其中Id可以是任何值，返回时会指定新值。
+        /// 省略其中的 OrgId 则自动填写为 ，调用操作用户所属商户。
         /// </summary>
         public PlRole PlRole { get; set; }
     }

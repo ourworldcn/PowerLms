@@ -8,6 +8,7 @@ using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -49,20 +50,19 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 获取全部商户。
         /// </summary>
-        /// <param name="token">登录令牌。</param>
-        /// <param name="startIndex">起始位置，从0开始。</param>
-        /// <param name="count">最大返回数量。</param>
+        /// <param name="model"></param>
         /// <param name="conditional">查询的条件。支持 name，ShortName，displayname，ShortcutCode，Id。不区分大小写。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetAllMerchantReturnDto> GetAllMerchant(Guid token, [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [Range(-1, int.MaxValue)] int count = -1,
+        public ActionResult<GetAllMerchantReturnDto> GetAllMerchant([FromQuery]PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllMerchantReturnDto();
-            var coll = _DbContext.Merchants.AsNoTracking().OrderBy(c => c.Id).Skip(startIndex);
+            var dbSet = _DbContext.Merchants;
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             foreach (var item in conditional)
                 if (string.Equals(item.Key, "name", StringComparison.OrdinalIgnoreCase))
                 {
@@ -85,7 +85,7 @@ namespace PowerLmsWebApi.Controllers
                 {
                     coll = coll.Where(c => c.ShortcutCode.Contains(item.Value));
                 }
-            var prb = _EntityManager.GetAll(coll, startIndex, count);
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }

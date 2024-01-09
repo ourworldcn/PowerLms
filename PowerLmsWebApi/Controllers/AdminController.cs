@@ -61,20 +61,19 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 获取所有数据字典的目录列表。
         /// </summary>
-        /// <param name="token">登录令牌。</param>
-        /// <param name="startIndex">起始位置，从0开始。</param>
-        /// <param name="count">最大返回数量。</param>
+        /// <param name="model"></param>
         /// <param name="conditional">支持id, code,displayname 关键字。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetAllDataDicCatalogReturnDto> GetAllDataDicCatalog(Guid token, [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex,
-            [Range(-1, int.MaxValue)] int count = -1, [FromQuery] Dictionary<string, string> conditional = null)
+        public ActionResult<GetAllDataDicCatalogReturnDto> GetAllDataDicCatalog([FromQuery] PagingParamsDtoBase model, [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllDataDicCatalogReturnDto();
-            var coll = _DbContext.DD_DataDicCatalogs.AsNoTracking();
+
+            var dbSet = _DbContext.DD_DataDicCatalogs;
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             if (_AccountManager.IsAdmin(context.User))  //若是超管
                 coll = coll.Where(c => c.OrgId == null);
             else
@@ -103,7 +102,7 @@ namespace PowerLmsWebApi.Controllers
                 {
                     coll = coll.Where(c => c.DisplayName.Contains(item.Value));
                 }
-            var prb = _EntityManager.GetAll(coll, startIndex, count);
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
 
@@ -280,28 +279,31 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 获取指定类别数据字典的全部内容。
         /// </summary>
-        /// <param name="token">登录令牌。</param>
-        /// <param name="catalogId">数据字典类别的Id。</param>
-        /// <param name="startIndex">起始位置，从0开始。</param>
-        /// <param name="count">最大返回数量。-1表示全返回。</param>
-        /// <param name="conditional">查询的条件。</param>
+        /// <param name="model"></param>
+        /// <param name="conditional">查询的条件。catalogId </param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定类别Id无效。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetAllDataDicReturnDto> GetAllDataDic(Guid token, Guid catalogId,
-            [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [FromQuery][Range(-1, int.MaxValue)] int count = -1,
+        public ActionResult<GetAllDataDicReturnDto> GetAllDataDic([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllDataDicReturnDto();
-            var coll = _DbContext.DD_SimpleDataDics.Where(c => c.DataDicId == catalogId).AsNoTracking();
+            var dbSet = _DbContext.DD_SimpleDataDics;
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
+
             foreach (var item in conditional)
                 if (string.Equals(item.Key, "id", StringComparison.OrdinalIgnoreCase))
                 {
                     if (OwConvert.TryToGuid(item.Value, out var id))
                         coll = coll.Where(c => c.Id == id);
+                }
+                else if (string.Equals(item.Key, "catalogId", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (OwConvert.TryToGuid(item.Value, out var id))
+                        coll = coll.Where(c => c.DataDicId == id);
                 }
                 else if (string.Equals(item.Key, "code", StringComparison.OrdinalIgnoreCase))
                 {
@@ -315,7 +317,7 @@ namespace PowerLmsWebApi.Controllers
                 {
                     coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
                 }
-            var prb = _EntityManager.GetAll(coll, startIndex, count);
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }
@@ -504,22 +506,19 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 获取港口。
         /// </summary>
-        /// <param name="token">登录令牌。</param>
-        /// <param name="orgId">所属组织机构Id。null表示顶层系统。</param>
-        /// <param name="startIndex">起始位置，从0开始。</param>
-        /// <param name="count">最大返回数量。-1表示全返回。</param>
+        /// <param name="model"></param>
         /// <param name="conditional">查询的条件。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定类别Id无效。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetAllPortReturnDto> GetAllPlPort(Guid token, Guid? orgId, [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex,
-            [FromQuery][Range(-1, int.MaxValue)] int count = -1, [FromQuery] Dictionary<string, string> conditional = null)
+        public ActionResult<GetAllPortReturnDto> GetAllPlPort([FromQuery] PagingParamsDtoBase model, [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPortReturnDto();
-            var coll = _DbContext.DD_PlPorts.AsNoTracking().Where(c => c.OrgId == orgId);
+            var dbSet = _DbContext.DD_PlPorts;
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             if (_AccountManager.IsAdmin(context.User))  //若是超管
                 coll = coll.Where(c => c.OrgId == null);
             else
@@ -552,7 +551,7 @@ namespace PowerLmsWebApi.Controllers
                 {
                     coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
                 }
-            var prb = _EntityManager.GetAll(coll, startIndex, count);
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }
@@ -658,22 +657,20 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 获取航线。
         /// </summary>
-        /// <param name="token">登录令牌。</param>
-        /// <param name="orgId">所属组织机构Id。null表示顶层系统。</param>
-        /// <param name="startIndex">起始位置，从0开始。</param>
-        /// <param name="count">最大返回数量。-1表示全返回。</param>
+        /// <param name="model"></param>
         /// <param name="conditional">查询的条件。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定类别Id无效。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetAllPlCargoRouteReturnDto> GetAllPlCargoRoute(Guid token, Guid? orgId, [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex,
-            [FromQuery][Range(-1, int.MaxValue)] int count = -1, [FromQuery] Dictionary<string, string> conditional = null)
+        public ActionResult<GetAllPlCargoRouteReturnDto> GetAllPlCargoRoute([FromQuery] PagingParamsDtoBase model, [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlCargoRouteReturnDto();
-            var coll = _DbContext.DD_PlCargoRoutes.AsNoTracking().Where(c => c.OrgId == orgId);
+
+            var dbSet = _DbContext.DD_PlCargoRoutes;
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             if (_AccountManager.IsAdmin(context.User))  //若是超管
                 coll = coll.Where(c => c.OrgId == null);
             else
@@ -711,7 +708,7 @@ namespace PowerLmsWebApi.Controllers
                 {
                     coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
                 }
-            var prb = _EntityManager.GetAll(coll, startIndex, count);
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }
@@ -815,23 +812,19 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 获取汇率。
         /// </summary>
-        /// <param name="token">登录令牌。</param>
-        /// <param name="orgId">组织机构的Id。</param>
-        /// <param name="startIndex">起始位置，从0开始。</param>
-        /// <param name="count">最大返回数量。-1表示全返回。</param>
+        /// <param name="model"></param>
         /// <param name="conditional">查询的条件。支持Id，BeginDate，EndData三个字段</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定类别Id无效。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetAllPlExchangeRateReturnDto> GetAllPlExchangeRate(Guid token, Guid? orgId,
-            [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [FromQuery][Range(-1, int.MaxValue)] int count = -1,
-            [FromQuery] Dictionary<string, string> conditional = null)
+        public ActionResult<GetAllPlExchangeRateReturnDto> GetAllPlExchangeRate([FromQuery] PagingParamsDtoBase model, [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlExchangeRateReturnDto();
-            var coll = _DbContext.DD_PlExchangeRates.AsNoTracking().Where(c => c.OrgId == orgId);
+            var dbSet = _DbContext.DD_PlExchangeRates;
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             if (_AccountManager.IsAdmin(context.User))  //若是超管
                 coll = coll.Where(c => c.OrgId == null);
             else
@@ -864,7 +857,7 @@ namespace PowerLmsWebApi.Controllers
                 {
                     coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
                 }
-            var prb = _EntityManager.GetAll(coll, startIndex, count);
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }
@@ -918,23 +911,20 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 获取单位换算。
         /// </summary>
-        /// <param name="token">登录令牌。</param>
-        /// <param name="orgId">所属组织机构Id。null表示顶层系统。</param>
-        /// <param name="startIndex">起始位置，从0开始。</param>
-        /// <param name="count">最大返回数量。-1表示全返回。</param>
+        /// <param name="model"></param>
         /// <param name="conditional">查询的条件。支持basic 和 rim查询。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定类别Id无效。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetAllUnitConversionReturnDto> GetAllUnitConversion(Guid token, Guid? orgId,
-            [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [FromQuery][Range(-1, int.MaxValue)] int count = -1,
+        public ActionResult<GetAllUnitConversionReturnDto> GetAllUnitConversion([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllUnitConversionReturnDto();
-            var coll = _DbContext.DD_UnitConversions.AsNoTracking().Where(c => c.OrgId == orgId);
+            var dbSet = _DbContext.DD_UnitConversions;
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             if (_AccountManager.IsAdmin(context.User))  //若是超管
                 coll = coll.Where(c => c.OrgId == null);
             else
@@ -967,7 +957,7 @@ namespace PowerLmsWebApi.Controllers
                 {
                     coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
                 }
-            var prb = _EntityManager.GetAll(coll, startIndex, count);
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }
@@ -1072,24 +1062,20 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 获取费用种类。
         /// </summary>
-        /// <param name="token">登录令牌。</param>
-        /// <param name="orgId">所属组织机构Id。null表示顶层系统。</param>
-        /// <param name="startIndex">起始位置，从0开始。</param>
-        /// <param name="count">最大返回数量。-1表示全返回。</param>
-        /// <param name="conditional">查询的条件。支持 DisplayName 和 ShortName 查询。</param>
+        /// <param name="model"></param>
+        /// <param name="conditional">查询的条件。支持 DisplayName 和 ShortName ,orgId查询。</param>
         /// 
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定类别Id无效。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetAllFeesTypeReturnDto> GetAllFeesType(Guid token, Guid? orgId, [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex,
-            [FromQuery][Range(-1, int.MaxValue)] int count = -1, [FromQuery] Dictionary<string, string> conditional = null)
+        public ActionResult<GetAllFeesTypeReturnDto> GetAllFeesType([FromQuery] PagingParamsDtoBase model, [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllFeesTypeReturnDto();
-            var collBase = _DbContext.DD_FeesTypes.AsNoTracking().Where(c => c.OrgId == orgId);
-            var coll = collBase;
+            var dbSet = _DbContext.DD_FeesTypes;
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             if (_AccountManager.IsAdmin(context.User))  //若是超管
                 coll = coll.Where(c => c.OrgId == null);
             else
@@ -1110,19 +1096,24 @@ namespace PowerLmsWebApi.Controllers
                     if (OwConvert.TryToGuid(item.Value, out var id))
                         coll = coll.Where(c => c.Id == id);
                 }
+                else if (string.Equals(item.Key, nameof(FeesType.OrgId), StringComparison.OrdinalIgnoreCase))
+                {
+                    if (OwConvert.TryToGuid(item.Value, out var id))
+                        coll = coll.Where(c => c.OrgId == id);
+                }
                 else if (string.Equals(item.Key, nameof(FeesType.DisplayName), StringComparison.OrdinalIgnoreCase))
                 {
                     coll = coll.Where(c => c.DisplayName.Contains(item.Value));
                 }
                 else if (string.Equals(item.Key, nameof(FeesType.ShortName), StringComparison.OrdinalIgnoreCase))
                 {
-                    coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
+                    coll = coll.Where(c => c.ShortName.Contains(item.Value));
                 }
                 else if (string.Equals(item.Key, "ShortcutName", StringComparison.OrdinalIgnoreCase))
                 {
                     coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
                 }
-            var prb = _EntityManager.GetAll(coll, startIndex, count);
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }
@@ -1231,22 +1222,19 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 获取业务编码规则。
         /// </summary>
-        /// <param name="token">登录令牌。</param>
-        /// <param name="orgId">所属组织机构Id。null表示顶层系统。</param>
-        /// <param name="startIndex">起始位置，从0开始。</param>
-        /// <param name="count">最大返回数量。-1表示全返回。</param>
-        /// <param name="conditional">查询的条件。支持 DisplayName 和 ShortName 查询。</param>
+        /// <param name="model"></param>
+        /// <param name="conditional">查询的条件。支持 DisplayName 和 ShortName ,OrgId查询。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定类别Id无效。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetAllJobNumberRuleReturnDto> GetAllJobNumberRule(Guid token, Guid? orgId, [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex,
-            [FromQuery][Range(-1, int.MaxValue)] int count = -1, [FromQuery] Dictionary<string, string> conditional = null)
+        public ActionResult<GetAllJobNumberRuleReturnDto> GetAllJobNumberRule([FromQuery] PagingParamsDtoBase model, [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllJobNumberRuleReturnDto();
-            var coll = _DbContext.DD_JobNumberRules.AsNoTracking().Where(c => c.OrgId == orgId);
+            var dbSet = _DbContext.DD_JobNumberRules;
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             if (_AccountManager.IsAdmin(context.User))  //若是超管
                 coll = coll.Where(c => c.OrgId == null);
             else
@@ -1279,7 +1267,7 @@ namespace PowerLmsWebApi.Controllers
                 {
                     coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
                 }
-            var prb = _EntityManager.GetAll(coll, startIndex, count);
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }
@@ -1388,22 +1376,19 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 获取国家。
         /// </summary>
-        /// <param name="token">登录令牌。</param>
-        /// <param name="orgId">所属组织机构Id。null表示顶层系统。</param>
-        /// <param name="startIndex">起始位置，从0开始。</param>
-        /// <param name="count">最大返回数量。-1表示全返回。</param>
+        /// <param name="model"></param>
         /// <param name="conditional">查询的条件。支持 DisplayName 和 ShortName 查询。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定类别Id无效。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetAllPlCountryReturnDto> GetAllPlCountry(Guid token, Guid? orgId, [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex,
-            [FromQuery][Range(-1, int.MaxValue)] int count = -1, [FromQuery] Dictionary<string, string> conditional = null)
+        public ActionResult<GetAllPlCountryReturnDto> GetAllPlCountry([FromQuery] PagingParamsDtoBase model, [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlCountryReturnDto();
-            var coll = _DbContext.DD_PlCountrys.AsNoTracking().Where(c => c.OrgId == orgId);
+            var dbSet = _DbContext.DD_PlCountrys;
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             if (_AccountManager.IsAdmin(context.User))  //若是超管
                 coll = coll.Where(c => c.OrgId == null);
             else
@@ -1436,7 +1421,7 @@ namespace PowerLmsWebApi.Controllers
                 {
                     coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
                 }
-            var prb = _EntityManager.GetAll(coll, startIndex, count);
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }
@@ -1545,22 +1530,19 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 获取币种。
         /// </summary>
-        /// <param name="token">登录令牌。</param>
-        /// <param name="orgId">所属组织机构Id。null表示顶层系统。</param>
-        /// <param name="startIndex">起始位置，从0开始。</param>
-        /// <param name="count">最大返回数量。-1表示全返回。</param>
+        /// <param name="model"></param>
         /// <param name="conditional">查询的条件。支持 DisplayName 和 ShortName 查询。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定类别Id无效。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetAllPlCurrencyReturnDto> GetAllPlCurrency(Guid token, Guid? orgId, [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex,
-            [FromQuery][Range(-1, int.MaxValue)] int count = -1, [FromQuery] Dictionary<string, string> conditional = null)
+        public ActionResult<GetAllPlCurrencyReturnDto> GetAllPlCurrency([FromQuery] PagingParamsDtoBase model, [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlCurrencyReturnDto();
-            var coll = _DbContext.DD_PlCurrencys.AsNoTracking().Where(c => c.OrgId == orgId);
+            var dbSet = _DbContext.DD_PlCurrencys;
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             if (_AccountManager.IsAdmin(context.User))  //若是超管
                 coll = coll.Where(c => c.OrgId == null);
             else
@@ -1593,7 +1575,7 @@ namespace PowerLmsWebApi.Controllers
                 {
                     coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
                 }
-            var prb = _EntityManager.GetAll(coll, startIndex, count);
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }

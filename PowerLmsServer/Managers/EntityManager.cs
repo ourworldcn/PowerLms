@@ -7,9 +7,12 @@ using PowerLms.Data;
 using PowerLmsServer.EfData;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Net;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -131,6 +134,36 @@ namespace PowerLmsServer.Managers
     }
 
     /// <summary>
+    /// 分页/排序要求的基类。
+    /// </summary>
+    public class PagingParamsBase
+    {
+        /// <summary>
+        /// 起始位置，从0开始。
+        /// </summary>
+        [Required, Range(0, int.MaxValue)]
+        public int StartIndex { get; set; }
+
+        /// <summary>
+        /// 最大返回数量。
+        /// 默认值-1，不限定返回数量。
+        /// </summary>
+        [Range(-1, int.MaxValue)]
+        public int Count { get; set; } = -1;
+
+        /// <summary>
+        /// 排序的字段名。
+        /// </summary>
+        [Required]
+        public string OrderFieldName { get; set; }
+
+        /// <summary>
+        /// 是否降序排序：true降序排序，false升序排序（省略或默认）。
+        /// </summary>
+        public bool IsDesc { get; set; }
+    }
+
+    /// <summary>
     /// 返回分页数据的封装类的基类
     /// </summary>
     /// <typeparam name="T">集合元素的类型。</typeparam>
@@ -153,6 +186,7 @@ namespace PowerLmsServer.Managers
         /// 返回的集合。
         /// </summary>
         public List<T> Result { get; set; } = new List<T>();
+
     }
 
     /// <summary>

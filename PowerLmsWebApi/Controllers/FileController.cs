@@ -44,22 +44,21 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 获取业务负责人的所属关系。
         /// </summary>
-        /// <param name="token">登录令牌。</param>
-        /// <param name="startIndex">起始位置，从0开始。</param>
-        /// <param name="count">最大返回数量。-1表示全返回。</param>
+        /// <param name="model"></param>
         /// <param name="conditional">查询的条件。支持 Id,DisplayName,FileName 。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定类别Id无效。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetAllCustomerFileListReturnDto> GetAllCustomerFileList(Guid token,
-            [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [FromQuery][Range(-1, int.MaxValue)] int count = -1,
+        public ActionResult<GetAllCustomerFileListReturnDto> GetAllCustomerFileList([FromQuery]PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllCustomerFileListReturnDto();
-            var coll = _DbContext.PlFileInfos.AsNoTracking();
+            
+            var dbSet = _DbContext.PlFileInfos;
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             foreach (var item in conditional)
                 if (string.Equals(item.Key, "Id", StringComparison.OrdinalIgnoreCase))
                 {
@@ -74,7 +73,7 @@ namespace PowerLmsWebApi.Controllers
                 {
                     coll = coll.Where(c => c.FileName.Contains(item.Value));
                 }
-            var prb = _EntityManager.GetAll(coll, startIndex, count);
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }

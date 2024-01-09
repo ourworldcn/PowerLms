@@ -44,20 +44,19 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 获取全部客户。
         /// </summary>
-        /// <param name="token">登录令牌。</param>
-        /// <param name="startIndex">起始位置，从0开始。</param>
-        /// <param name="count">最大返回数量。</param>
+        /// <param name="model"></param>
         /// <param name="conditional">查询的条件。支持 name，ShortName，displayname，Id。不区分大小写。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetAllCustomerReturnDto> GetAllCustomer(Guid token, [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [Range(-1, int.MaxValue)] int count = -1,
+        public ActionResult<GetAllCustomerReturnDto> GetAllCustomer([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllCustomerReturnDto();
-            var coll = _DbContext.PlCustomers.AsNoTracking().OrderBy(c => c.Id).Skip(startIndex);
+            var dbSet = _DbContext.PlCustomers;
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             foreach (var item in conditional)
                 if (string.Equals(item.Key, "name", StringComparison.OrdinalIgnoreCase))
                 {
@@ -76,7 +75,7 @@ namespace PowerLmsWebApi.Controllers
                 {
                     coll = coll.Where(c => c.Name.DisplayName.Contains(item.Value));
                 }
-            var prb = _EntityManager.GetAll(coll, startIndex, count);
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }
@@ -164,21 +163,19 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 获取全部客户联系人。
         /// </summary>
-        /// <param name="token">登录令牌。</param>
-        /// <param name="startIndex">起始位置，从0开始。</param>
-        /// <param name="count">最大返回数量。</param>
+        /// <param name="model"></param>
         /// <param name="conditional">查询的条件。支持 displayname，Id,CustomerId。不区分大小写。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetAllCustomerContactReturnDto> GetAllCustomerContact(Guid token,
-            [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [Range(-1, int.MaxValue)] int count = -1,
+        public ActionResult<GetAllCustomerContactReturnDto> GetAllCustomerContact([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllCustomerContactReturnDto();
-            var coll = _DbContext.PlCustomerContacts.AsNoTracking().OrderBy(c => c.Id).Skip(startIndex);
+            var dbSet = _DbContext.PlCustomerContacts;
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             foreach (var item in conditional)
                 if (string.Equals(item.Key, "Id", StringComparison.OrdinalIgnoreCase))
                 {
@@ -194,7 +191,7 @@ namespace PowerLmsWebApi.Controllers
                     if (Guid.TryParse(item.Value, out var id))
                         coll = coll.Where(c => c.CustomerId == id);
                 }
-            var prb = _EntityManager.GetAll(coll, startIndex, count);
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }
@@ -264,22 +261,21 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 获取业务负责人的所属关系。
         /// </summary>
-        /// <param name="token">登录令牌。</param>
-        /// <param name="startIndex">起始位置，从0开始。</param>
-        /// <param name="count">最大返回数量。-1表示全返回。</param>
+        /// <param name="model"></param>
         /// <param name="conditional">查询的条件。支持 CustomerId,AccountId,OrderTypeId</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定类别Id无效。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetAllPlBusinessHeaderReturnDto> GetAllPlBusinessHeader(Guid token,
-            [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [FromQuery][Range(-1, int.MaxValue)] int count = -1,
+        public ActionResult<GetAllPlBusinessHeaderReturnDto> GetAllPlBusinessHeader([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlBusinessHeaderReturnDto();
-            var coll = _DbContext.PlCustomerBusinessHeaders.AsNoTracking();
+
+            var dbSet = _DbContext.PlCustomerBusinessHeaders;
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             foreach (var item in conditional)
                 if (string.Equals(item.Key, "CustomerId", StringComparison.OrdinalIgnoreCase))
                 {
@@ -296,7 +292,7 @@ namespace PowerLmsWebApi.Controllers
                     if (Guid.TryParse(item.Value, out var orderTypeId))
                         coll = coll.Where(c => c.OrderTypeId == orderTypeId);
                 }
-            var prb = _EntityManager.GetAll(coll, startIndex, count);
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }
@@ -347,21 +343,20 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 获取全部客户开票信息。
         /// </summary>
-        /// <param name="token">登录令牌。</param>
-        /// <param name="startIndex">起始位置，从0开始。</param>
-        /// <param name="count">最大返回数量。</param>
+        /// <param name="model"></param>
         /// <param name="conditional">查询的条件。支持 CustomerId，Id,Number。不区分大小写。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetAllPlTaxInfoReturnDto> GetAllPlTaxInfo(Guid token,
-            [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [Range(-1, int.MaxValue)] int count = -1,
+        public ActionResult<GetAllPlTaxInfoReturnDto> GetAllPlTaxInfo([FromQuery]PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlTaxInfoReturnDto();
-            var coll = _DbContext.PlCustomerTaxInfos.AsNoTracking().OrderBy(c => c.Id).Skip(startIndex);
+            
+            var dbSet = _DbContext.PlCustomerTaxInfos;
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             foreach (var item in conditional)
                 if (string.Equals(item.Key, "Id", StringComparison.OrdinalIgnoreCase))
                 {
@@ -377,7 +372,7 @@ namespace PowerLmsWebApi.Controllers
                 {
                     coll = coll.Where(c => c.Number.Contains(item.Value));
                 }
-            var prb = _EntityManager.GetAll(coll, startIndex, count);
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }
@@ -447,21 +442,20 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 获取全部客户提单。
         /// </summary>
-        /// <param name="token">登录令牌。</param>
-        /// <param name="startIndex">起始位置，从0开始。</param>
-        /// <param name="count">最大返回数量。</param>
+        /// <param name="model"></param>
         /// <param name="conditional">查询的条件。支持 CustomerId，Id。不区分大小写。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetAllPlTidanReturnDto> GetAllPlTidan(Guid token,
-            [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [Range(-1, int.MaxValue)] int count = -1,
+        public ActionResult<GetAllPlTidanReturnDto> GetAllPlTidan([FromQuery]PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlTidanReturnDto();
-            var coll = _DbContext.PlCustomerTidans.AsNoTracking().OrderBy(c => c.Id).Skip(startIndex);
+            
+            var dbSet = _DbContext.PlCustomerTidans;
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             foreach (var item in conditional)
                 if (string.Equals(item.Key, "Id", StringComparison.OrdinalIgnoreCase))
                 {
@@ -473,7 +467,7 @@ namespace PowerLmsWebApi.Controllers
                     if (Guid.TryParse(item.Value, out var id))
                         coll = coll.Where(c => c.CustomerId == id);
                 }
-            var prb = _EntityManager.GetAll(coll, startIndex, count);
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }
@@ -543,20 +537,19 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 获取全部客户黑名单。
         /// </summary>
-        /// <param name="token">登录令牌。</param>
-        /// <param name="startIndex">起始位置，从0开始。</param>
-        /// <param name="count">最大返回数量。</param>
+        /// <param name="model"></param>
         /// <param name="conditional">查询的条件。支持 CustomerId，Id,Kind,IsSystem("true" "false" 字符串)。不区分大小写。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetAllCustomerBlacklistReturnDto> GetAllCustomerBlacklist(Guid token, [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [Range(-1, int.MaxValue)] int count = -1,
+        public ActionResult<GetAllCustomerBlacklistReturnDto> GetAllCustomerBlacklist([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllCustomerBlacklistReturnDto();
-            var coll = _DbContext.CustomerBlacklists.AsNoTracking().OrderBy(c => c.Id).Skip(startIndex);
+            var dbSet = _DbContext.CustomerBlacklists;
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             foreach (var item in conditional)
                 if (string.Equals(item.Key, "Id", StringComparison.OrdinalIgnoreCase))
                 {
@@ -576,7 +569,7 @@ namespace PowerLmsWebApi.Controllers
                 {
                     coll = coll.Where(c => c.IsSystem == bool.Parse(item.Value));
                 }
-            var prb = _EntityManager.GetAll(coll, startIndex, count);
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }
@@ -647,21 +640,20 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 获取全部客户装货地址。
         /// </summary>
-        /// <param name="token">登录令牌。</param>
-        /// <param name="startIndex">起始位置，从0开始。</param>
-        /// <param name="count">最大返回数量。</param>
+        /// <param name="model"></param>
         /// <param name="conditional">查询的条件。支持 CustomerId，Id，Tel。不区分大小写。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetAllPlLoadingAddrReturnDto> GetAllPlLoadingAddr(Guid token,
-            [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [Range(-1, int.MaxValue)] int count = -1,
+        public ActionResult<GetAllPlLoadingAddrReturnDto> GetAllPlLoadingAddr([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlLoadingAddrReturnDto();
-            var coll = _DbContext.PlCustomerLoadingAddrs.AsNoTracking().OrderBy(c => c.Id).Skip(startIndex);
+
+            var dbSet = _DbContext.PlCustomerLoadingAddrs;
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             foreach (var item in conditional)
                 if (string.Equals(item.Key, "Id", StringComparison.OrdinalIgnoreCase))
                 {
@@ -677,7 +669,7 @@ namespace PowerLmsWebApi.Controllers
                 {
                     coll = coll.Where(c => c.Tel.Contains(item.Value));
                 }
-            var prb = _EntityManager.GetAll(coll, startIndex, count);
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }

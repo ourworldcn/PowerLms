@@ -185,27 +185,35 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 获取用户和商户/组织机构的所属关系。
         /// </summary>
-        /// <param name="token">登录令牌。</param>
+        /// <param name="model"></param>
+        /// <param name="conditional"></param>
         /// <param name="accountId">账号Id。null表示不限定。和<paramref name="orgId"/>限定为与的关系。</param>
         /// <param name="orgId">商户及组织机构类别的Id,null表示不限定。和<paramref name="accountId"/>限定为与的关系。</param>
-        /// <param name="startIndex">起始位置，从0开始。</param>
-        /// <param name="count">最大返回数量。-1表示全返回。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定类别Id无效。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetAllAccountPlOrganizationReturnDto> GetAllAccountPlOrganization(Guid token, Guid? accountId, Guid? orgId,
-            [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [FromQuery][Range(-1, int.MaxValue)] int count = -1)
+        public ActionResult<GetAllAccountPlOrganizationReturnDto> GetAllAccountPlOrganization([FromQuery] PagingParamsDtoBase model,
+            [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllAccountPlOrganizationReturnDto();
-            var coll = _DbContext.AccountPlOrganizations.AsNoTracking();
-            if (accountId is not null)
-                coll = coll.Where(c => c.UserId == accountId);
-            if (orgId is not null)
-                coll = coll.Where(c => c.OrgId == orgId);
-            var prb = _EntityManager.GetAll(coll, startIndex, count);
+
+            var dbSet = _DbContext.AccountPlOrganizations;
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
+            foreach (var item in conditional)
+                if (string.Equals(item.Key, "accountId", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (Guid.TryParse(item.Value, out var id))
+                        coll = coll.Where(c => c.UserId == id);
+                }
+                else if (string.Equals(item.Key, "orgId", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (Guid.TryParse(item.Value, out var id))
+                        coll = coll.Where(c => c.OrgId == id);
+                }
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }

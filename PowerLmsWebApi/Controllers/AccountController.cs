@@ -54,9 +54,7 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 获取账户信息。
         /// </summary>
-        /// <param name="token">登录令牌。</param>
-        /// <param name="startIndex">起始位置，从0开始。</param>
-        /// <param name="count">最大返回数量。-1表示全返回。</param>
+        /// <param name="model"></param>
         /// <param name="conditional">查询的条件。支持 LoginName Mobile eMail DisplayName，
         /// IsAdmin("true"=限定超管,"false"=限定非超管) IsMerchantAdmin（"true"=限定商户管,"false"=限定非商户管）；
         /// OrgId 指定其所属的组织机构Id(需要时明确直属的组织机构Id)。</param>
@@ -65,12 +63,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="400">指定类别Id无效。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetAllAccountReturnDto> GetAll(Guid token, [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex,
-            [FromQuery][Range(-1, int.MaxValue)] int count = -1, [FromQuery] Dictionary<string, string> conditional = null)
+        public ActionResult<GetAllAccountReturnDto> GetAll([FromQuery] PagingParamsDtoBase model, [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllAccountReturnDto();
-            var coll = _DbContext.Accounts.AsNoTracking();
+            var dbSet = _DbContext.Accounts;
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             if (_OrganizationManager.GetMerchantId(context.User.Id, out var merchantId))
             {
 
@@ -120,7 +118,7 @@ namespace PowerLmsWebApi.Controllers
                         coll = coll.Where(c => _DbContext.AccountPlOrganizations.Any(d => c.Id == d.UserId && d.OrgId == id));
                     }
                 }
-            var prb = _EntityManager.GetAll(coll, startIndex, count);
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }

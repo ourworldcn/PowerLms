@@ -48,6 +48,36 @@ namespace PowerLmsWebApi.Dto
     }
 
     /// <summary>
+    /// 分页/排序要求的基类。
+    /// </summary>
+    [AutoMap(typeof(PagingParamsBase))]
+    public class PagingParamsDtoBase : TokenDtoBase
+    {
+        /// <summary>
+        /// 起始位置，从0开始。
+        /// </summary>
+        [Required, Range(0, int.MaxValue)]
+        public int StartIndex { get; set; }
+
+        /// <summary>
+        /// 最大返回数量。
+        /// 默认值-1，不限定返回数量。
+        /// </summary>
+        [Range(-1, int.MaxValue)]
+        public int Count { get; set; } = -1;
+
+        /// <summary>
+        /// 排序的字段名。默认值:"Id"。
+        /// </summary>
+        public string OrderFieldName { get; set; } = nameof(GuidKeyObjectBase.Id);
+
+        /// <summary>
+        /// 是否降序排序：true降序排序，false升序排序（省略或默认）。
+        /// </summary>
+        public bool IsDesc { get; set; }
+    }
+
+    /// <summary>
     /// 返回分页数据的封装类的基类
     /// </summary>
     /// <typeparam name="T">集合元素的类型。</typeparam>
