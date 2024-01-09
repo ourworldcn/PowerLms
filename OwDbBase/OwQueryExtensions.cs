@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Reflection.Metadata;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -23,8 +24,8 @@ namespace OW.Data
             if (string.IsNullOrWhiteSpace(fieldName)) throw new ArgumentNullException(nameof(fieldName));
             var names = fieldName.Split('.');
 
-            ParameterExpression p = Expression.Parameter(typeof(T));
-            Expression key = Expression.Property(p, fieldName);
+            //ParameterExpression p = Expression.Parameter(typeof(T));
+            //Expression key = Expression.Property(p, fieldName);
             var propInfo = GetPropertyInfo(typeof(T), fieldName, true);
             var expr = GetOrderExpression(typeof(T), propInfo);
             if (isDesc)
@@ -71,6 +72,23 @@ namespace OW.Data
             var propAccess = Expression.PropertyOrField(paramExpr, pi.Name);
             var expr = Expression.Lambda(propAccess, paramExpr);
             return expr;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="objType"></param>
+        /// <param name="propertyOrFieldName"></param>
+        /// <returns></returns>
+        public static LambdaExpression GetExpression(Expression expression, string propertyOrFieldName)
+        {
+            var ary = propertyOrFieldName.Split('.');
+            foreach (var item in ary)
+            {
+                var propAccess = Expression.PropertyOrField(paramExpr, pi.Name);
+
+            }
+            return default;
         }
     }
 }
