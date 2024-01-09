@@ -94,7 +94,9 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddCustomerReturnDto();
             model.Customer.GenerateNewId();
-            _DbContext.PlCustomers.Add(model.Customer);
+            var entity = _DbContext.PlCustomers.Add(model.Customer);
+            entity.Entity.OrgId = context.User.OrgId;   //根据登录用户首选组织机构确定客户资料绑定的机构id。20240109。
+
             _DbContext.SaveChanges();
             result.Id = model.Customer.Id;
             return result;
@@ -165,12 +167,13 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="token">登录令牌。</param>
         /// <param name="startIndex">起始位置，从0开始。</param>
         /// <param name="count">最大返回数量。</param>
-        /// <param name="conditional">查询的条件。支持 displayname，Id。不区分大小写。</param>
+        /// <param name="conditional">查询的条件。支持 displayname，Id,CustomerId。不区分大小写。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetAllCustomerContactReturnDto> GetAllCustomerContact(Guid token, [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [Range(-1, int.MaxValue)] int count = -1,
+        public ActionResult<GetAllCustomerContactReturnDto> GetAllCustomerContact(Guid token,
+            [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [Range(-1, int.MaxValue)] int count = -1,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
             if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
@@ -185,6 +188,11 @@ namespace PowerLmsWebApi.Controllers
                 else if (string.Equals(item.Key, "displayname", StringComparison.OrdinalIgnoreCase))
                 {
                     coll = coll.Where(c => c.DisplayName.Contains(item.Value));
+                }
+                else if (string.Equals(item.Key, "CustomerId", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (Guid.TryParse(item.Value, out var id))
+                        coll = coll.Where(c => c.CustomerId == id);
                 }
             var prb = _EntityManager.GetAll(coll, startIndex, count);
             _Mapper.Map(prb, result);
@@ -347,7 +355,8 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetAllPlTaxInfoReturnDto> GetAllPlTaxInfo(Guid token, [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [Range(-1, int.MaxValue)] int count = -1,
+        public ActionResult<GetAllPlTaxInfoReturnDto> GetAllPlTaxInfo(Guid token,
+            [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [Range(-1, int.MaxValue)] int count = -1,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
             if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
@@ -441,17 +450,18 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="token">登录令牌。</param>
         /// <param name="startIndex">起始位置，从0开始。</param>
         /// <param name="count">最大返回数量。</param>
-        /// <param name="conditional">查询的条件。支持 CustomerId，Id,Number。不区分大小写。</param>
+        /// <param name="conditional">查询的条件。支持 CustomerId，Id。不区分大小写。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetAllPlTidanReturnDto> GetAllPlTidan(Guid token, [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [Range(-1, int.MaxValue)] int count = -1,
+        public ActionResult<GetAllPlTidanReturnDto> GetAllPlTidan(Guid token,
+            [Range(0, int.MaxValue, ErrorMessage = "必须大于或等于0.")] int startIndex, [Range(-1, int.MaxValue)] int count = -1,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
             if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlTidanReturnDto();
-            var coll = _DbContext.PlCustomerTaxInfos.AsNoTracking().OrderBy(c => c.Id).Skip(startIndex);
+            var coll = _DbContext.PlCustomerTidans.AsNoTracking().OrderBy(c => c.Id).Skip(startIndex);
             foreach (var item in conditional)
                 if (string.Equals(item.Key, "Id", StringComparison.OrdinalIgnoreCase))
                 {
@@ -462,10 +472,6 @@ namespace PowerLmsWebApi.Controllers
                 {
                     if (Guid.TryParse(item.Value, out var id))
                         coll = coll.Where(c => c.CustomerId == id);
-                }
-                else if (string.Equals(item.Key, "Number", StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.Number.Contains(item.Value));
                 }
             var prb = _EntityManager.GetAll(coll, startIndex, count);
             _Mapper.Map(prb, result);
@@ -540,7 +546,7 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="token">登录令牌。</param>
         /// <param name="startIndex">起始位置，从0开始。</param>
         /// <param name="count">最大返回数量。</param>
-        /// <param name="conditional">查询的条件。支持 CustomerId，Id,Number。不区分大小写。</param>
+        /// <param name="conditional">查询的条件。支持 CustomerId，Id,Kind,IsSystem("true" "false" 字符串)。不区分大小写。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
@@ -550,7 +556,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllCustomerBlacklistReturnDto();
-            var coll = _DbContext.PlCustomerTaxInfos.AsNoTracking().OrderBy(c => c.Id).Skip(startIndex);
+            var coll = _DbContext.CustomerBlacklists.AsNoTracking().OrderBy(c => c.Id).Skip(startIndex);
             foreach (var item in conditional)
                 if (string.Equals(item.Key, "Id", StringComparison.OrdinalIgnoreCase))
                 {
@@ -562,9 +568,13 @@ namespace PowerLmsWebApi.Controllers
                     if (Guid.TryParse(item.Value, out var id))
                         coll = coll.Where(c => c.CustomerId == id);
                 }
-                else if (string.Equals(item.Key, "Number", StringComparison.OrdinalIgnoreCase))
+                else if (string.Equals(item.Key, "Kind", StringComparison.OrdinalIgnoreCase))
                 {
-                    coll = coll.Where(c => c.Number.Contains(item.Value));
+                    coll = coll.Where(c => c.Kind == int.Parse(item.Value));
+                }
+                else if (string.Equals(item.Key, "IsSystem", StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.IsSystem == bool.Parse(item.Value));
                 }
             var prb = _EntityManager.GetAll(coll, startIndex, count);
             _Mapper.Map(prb, result);
@@ -577,6 +587,7 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="model"></param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">Kind必须是1或2。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpPost]
         public ActionResult<AddCustomerBlacklistReturnDto> AddCustomerBlacklist(AddCustomerBlacklistParamsDto model)
@@ -584,9 +595,48 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddCustomerBlacklistReturnDto();
             model.CustomerBlacklist.GenerateNewId();
-            _DbContext.CustomerBlacklists.Add(model.CustomerBlacklist);
+            var entity = _DbContext.CustomerBlacklists.Add(model.CustomerBlacklist);
+            if (entity.Entity.Kind != 1 && entity.Entity.Kind != 2) return BadRequest(entity);
             _DbContext.SaveChanges();
             result.Id = model.CustomerBlacklist.Id;
+            return result;
+        }
+
+        /// <summary>
+        /// 删除指定Id的客户黑名单。
+        /// 特别地，不是删除指定Id的实体，而是建立一个新的实体，用于"冲红"指定实体的操作。指定Id的实体必须是添加黑名单的操作。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">不能手工删除系统添加的黑名单。- 或 - 不能对非添加项\"冲红\" - 或 - 已经不在黑名单中.</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定的客户Id不存在。</response>  
+        /// <response code="500">其他错误，并发导致数据变化不能完成操作。</response>
+        [HttpDelete]
+        public ActionResult<RemoveCustomerBlacklistReturnDto> RemoveCustomerBlacklist(RemoveCustomerBlacklistParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new RemoveCustomerBlacklistReturnDto();
+            var id = model.CustomerId;
+            var customer = _DbContext.PlCustomers.Find(model.CustomerId);
+            if (customer is null) return NotFound(model.CustomerId);
+            var dbSet = _DbContext.CustomerBlacklists;
+            var item = dbSet.Where(c => c.CustomerId == model.CustomerId && (c.Kind == model.Kind - 2 || c.Kind == model.Kind)).OrderByDescending(c => c.Datetime).FirstOrDefault();
+            if (item is null) return BadRequest("指定客户不在黑名单中。");
+            if (item.Kind == model.Kind) return BadRequest("指定客户不在黑名单中。");
+
+            if (item.Kind != 1 && item.Kind != 2) return BadRequest("不能对非添加项\"冲红\"");
+            var newItem = new CustomerBlacklist
+            {
+                CustomerId = item.CustomerId,
+                IsSystem = false,
+                Kind = model.Kind,
+                OpertorId = context.User.Id,
+                Remark = model.Remark,
+            };
+            result.Result = dbSet.Add(newItem).Entity;
+            _DbContext.SaveChanges();
             return result;
         }
 
@@ -785,6 +835,40 @@ namespace PowerLmsWebApi.Controllers
         /// 如果成功添加，这里返回新黑名单的Id。
         /// </summary>
         public Guid Id { get; set; }
+    }
+
+    /// <summary>
+    /// 删除黑名单功能参数封装类。
+    /// </summary>
+    public class RemoveCustomerBlacklistParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 指定的是客户Id(CustomerId)。
+        /// </summary>
+        public Guid CustomerId { get; set; }
+
+        /// <summary>
+        /// 删除的类型。3=移除超额，4=移除超期。
+        /// </summary>
+        [Range(3, 4)]
+        public byte Kind { get; set; }
+
+        /// <summary>
+        /// 删除实体的注释。
+        /// </summary>
+        public string Remark { get; set; }
+
+    }
+
+    /// <summary>
+    /// 删除新黑名单功能返回值封装类。
+    /// </summary>
+    public class RemoveCustomerBlacklistReturnDto
+    {
+        /// <summary>
+        /// 新增的"冲红"实体。
+        /// </summary>
+        public CustomerBlacklist Result { get; set; }
     }
 
     #endregion 黑名单

@@ -116,7 +116,6 @@ namespace PowerLmsWebApi.Controllers
             {
                 throw new ArgumentNullException(nameof(file));
             }
-            var ext = Path.GetExtension(file.FileName);
             var info = new PlFileInfo
             {
                 DisplayName = model.DisplayName,
@@ -136,6 +135,44 @@ namespace PowerLmsWebApi.Controllers
             result.Result = info.Id;
             return result;
         }
+
+        /// <summary>
+        /// 删除存储的文件。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定的实体不存在。</response>  
+        /// <response code="500">其他错误，并发导致数据变化不能完成操作。</response>
+        [HttpDelete]
+        public ActionResult<RemoveFileReturnDto> RemoveFile(RemoveFileParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new RemoveFileReturnDto();
+            var item = _DbContext.PlFileInfos.Find(model.Id);
+            if (item is null) return NotFound(model.Id);
+            var path = Path.Combine(AppContext.BaseDirectory, "Files", item.FilePath);
+            if (!System.IO.File.Exists(path)) return NotFound(path);
+            Task.Run(() => System.IO.File.Delete(path));
+            _DbContext.Remove(item);
+            _DbContext.SaveChanges();
+            return result;
+        }
+    }
+
+    /// <summary>
+    /// 删除存储的文件功能参数封装类。
+    /// </summary>
+    public class RemoveFileParamsDto : RemoveParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 删除存储的文件功能返回值封装类。
+    /// </summary>
+    public class RemoveFileReturnDto : RemoveReturnDtoBase
+    {
     }
 
     /// <summary>

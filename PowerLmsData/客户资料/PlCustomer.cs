@@ -290,6 +290,7 @@ namespace PowerLms.Data
     /// <summary>
     /// 客户资料的联系人。
     /// </summary>
+    [Index(nameof(CustomerId), IsUnique = false)]
     public class PlCustomerContact : GuidKeyObjectBase
     {
         /// <summary>
@@ -362,6 +363,7 @@ namespace PowerLms.Data
     /// <summary>
     /// 业务负责人表。
     /// </summary>
+    [Index(nameof(CustomerId), IsUnique = false)]
     public class PlBusinessHeader
     {
         /// <summary>
@@ -386,6 +388,7 @@ namespace PowerLms.Data
     /// <summary>
     /// 客户税务信息/开票信息。
     /// </summary>
+    [Index(nameof(CustomerId), IsUnique = false)]
     public class PlTaxInfo : GuidKeyObjectBase
     {
         /// <summary>
@@ -466,6 +469,7 @@ namespace PowerLms.Data
     /// <summary>
     /// 客户提单内容表。
     /// </summary>
+    [Index(nameof(CustomerId), IsUnique = false)]
     public class PlTidan : GuidKeyObjectBase
     {
         /// <summary>
@@ -490,6 +494,7 @@ namespace PowerLms.Data
     /// <summary>
     /// 黑名单客户跟踪表。
     /// </summary>
+    [Index(nameof(CustomerId), nameof(Datetime), IsUnique = false)]
     public class CustomerBlacklist : GuidKeyObjectBase
     {
         /// <summary>
@@ -521,7 +526,7 @@ namespace PowerLms.Data
         /// 执行时间
         /// </summary>
         [Comment("执行时间")]
-        public DateTime Datetime { get; set; }
+        public DateTime Datetime { get; set; } = OwHelper.WorldNow;
 
         /// <summary>
         /// 备注。
@@ -533,6 +538,7 @@ namespace PowerLms.Data
     /// <summary>
     /// 装货地址。
     /// </summary>
+    [Index(nameof(CustomerId), IsUnique = false)]
     public class PlLoadingAddr : GuidKeyObjectBase
     {
         /// <summary>
