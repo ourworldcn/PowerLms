@@ -16,7 +16,7 @@ namespace OW.Data
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="query"></param>
-        /// <param name="fieldName">字段名。</param>
+        /// <param name="fieldName">字段名。支持xxx.xxx语法，如:name.displayname</param>
         /// <param name="isDesc">是否降序排序：true降序排序，false升序排序（省略或默认）。</param>
         /// <returns></returns>
         public static IOrderedQueryable<T> OrderBy<T>(this IQueryable<T> query, string fieldName, bool isDesc = false)
@@ -24,21 +24,22 @@ namespace OW.Data
             if (string.IsNullOrWhiteSpace(fieldName)) throw new ArgumentNullException(nameof(fieldName));
             var names = fieldName.Split('.');
 
-            //ParameterExpression p = Expression.Parameter(typeof(T));
+            ParameterExpression p = Expression.Parameter(typeof(T));
             //Expression key = Expression.Property(p, fieldName);
-            var propInfo = GetPropertyInfo(typeof(T), fieldName, true);
-            var expr = GetOrderExpression(typeof(T), propInfo);
+            var exprBody = PropertyOrField(p, fieldName, out var resultType, true);
+            //var propInfo = GetPropertyInfo(typeof(T), fieldName, true);
+            //var expr = GetOrderExpression(typeof(T), propInfo);
             if (isDesc)
             {
                 var method = typeof(Queryable).GetMethods().FirstOrDefault(m => m.Name == "OrderByDescending" && m.GetParameters().Length == 2);
-                var genericMethod = method.MakeGenericMethod(typeof(T), propInfo.PropertyType);
-                return (IOrderedQueryable<T>)genericMethod.Invoke(null, new object[] { query, expr });
+                var genericMethod = method.MakeGenericMethod(typeof(T), resultType);
+                return (IOrderedQueryable<T>)genericMethod.Invoke(null, new object[] { query, Expression.Lambda(exprBody, p) });
             }
             else
             {
                 var method = typeof(Queryable).GetMethods().FirstOrDefault(m => m.Name == "OrderBy" && m.GetParameters().Length == 2);
-                var genericMethod = method.MakeGenericMethod(typeof(T), propInfo.PropertyType);
-                return (IOrderedQueryable<T>)genericMethod.Invoke(null, new object[] { query, expr });
+                var genericMethod = method.MakeGenericMethod(typeof(T), resultType);
+                return (IOrderedQueryable<T>)genericMethod.Invoke(null, new object[] { query, Expression.Lambda(exprBody, p) });
             }
         }
 
@@ -77,18 +78,25 @@ namespace OW.Data
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="objType"></param>
-        /// <param name="propertyOrFieldName"></param>
+        /// <param name="expression"></param>
+        /// <param name="propertyOrFieldName">支持 name.displayname语法。</param>
+        /// <param name="resultType"></param>
+        /// <param name="ignoreCase">是否忽略大小写。true忽略，false(默认值)不忽略。</param>
         /// <returns></returns>
-        public static LambdaExpression GetExpression(Expression expression, string propertyOrFieldName)
+        public static Expression PropertyOrField(Expression expression, string propertyOrFieldName, out Type resultType, bool ignoreCase = false)
         {
             var ary = propertyOrFieldName.Split('.');
+            Expression exprTmp = expression;
+            resultType = default;
+            var binding = BindingFlags.Public | BindingFlags.Instance | BindingFlags.FlattenHierarchy;
+            if (ignoreCase) binding |= BindingFlags.IgnoreCase;
             foreach (var item in ary)
             {
-                var propAccess = Expression.PropertyOrField(paramExpr, pi.Name);
-
+                var pi = exprTmp.Type.GetProperty(item, binding);
+                exprTmp = Expression.PropertyOrField(exprTmp, pi.Name);
+                resultType = exprTmp.Type;
             }
-            return default;
+            return exprTmp;
         }
     }
 }
