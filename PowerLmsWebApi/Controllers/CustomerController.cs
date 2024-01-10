@@ -273,6 +273,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlBusinessHeaderReturnDto();
+            if (model.OrderFieldName == "Id") model.OrderFieldName = "CustomerId";
 
             var dbSet = _DbContext.PlCustomerBusinessHeaders;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
@@ -349,12 +350,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetAllPlTaxInfoReturnDto> GetAllPlTaxInfo([FromQuery]PagingParamsDtoBase model,
+        public ActionResult<GetAllPlTaxInfoReturnDto> GetAllPlTaxInfo([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlTaxInfoReturnDto();
-            
+
             var dbSet = _DbContext.PlCustomerTaxInfos;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             foreach (var item in conditional)
@@ -448,12 +449,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetAllPlTidanReturnDto> GetAllPlTidan([FromQuery]PagingParamsDtoBase model,
+        public ActionResult<GetAllPlTidanReturnDto> GetAllPlTidan([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlTidanReturnDto();
-            
+
             var dbSet = _DbContext.PlCustomerTidans;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             foreach (var item in conditional)
@@ -588,8 +589,15 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddCustomerBlacklistReturnDto();
             model.CustomerBlacklist.GenerateNewId();
+            if (_DbContext.PlCustomers.Find(model.CustomerBlacklist.CustomerId) is not PlCustomer customer)
+                return BadRequest($"指定的客户Id不存在。{model.CustomerBlacklist.CustomerId}");
+
             var entity = _DbContext.CustomerBlacklists.Add(model.CustomerBlacklist);
-            if (entity.Entity.Kind != 1 && entity.Entity.Kind != 2) return BadRequest(entity);
+            if (entity.Entity.Kind != 1 && entity.Entity.Kind != 2) return BadRequest("Kind 应该是 1或2");
+            if (entity.Entity.Kind == 1)
+                customer.BillingInfo.IsCEBlack = true;
+            else if (entity.Entity.Kind == 2)
+                customer.BillingInfo.IsBlack = true;
             _DbContext.SaveChanges();
             result.Id = model.CustomerBlacklist.Id;
             return result;
@@ -629,6 +637,10 @@ namespace PowerLmsWebApi.Controllers
                 Remark = model.Remark,
             };
             result.Result = dbSet.Add(newItem).Entity;
+            if (item.Kind == 3)
+                customer.BillingInfo.IsCEBlack = false;
+            else if (item.Kind == 4)
+                customer.BillingInfo.IsBlack = false;
             _DbContext.SaveChanges();
             return result;
         }

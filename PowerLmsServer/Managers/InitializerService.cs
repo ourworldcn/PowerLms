@@ -15,6 +15,8 @@ using System.Net.Mail;
 using System.Text;
 using System.Text.RegularExpressions;
 using OW.Data;
+using System.Data;
+using System.Linq.Expressions;
 
 namespace PowerLmsServer.Managers
 {
@@ -151,9 +153,14 @@ namespace PowerLmsServer.Managers
         {
             var db = svc.GetRequiredService<PowerLmsUserDbContext>();
             var ent = svc.GetRequiredService<EntityManager>();
-            var q = db.DD_PlCargoRoutes.OrderBy("orgid", true);
-
-            var ary = q.ToArray();
+            var q = db.PlCustomers.OrderBy("name.name", false);
+            var ary = q.ToArray().Select(c=>c.Name.Name);
+            //var entity = db.PlCustomers.First();
+            //var p = Expression.Parameter(typeof(PlCustomer));
+            //var expr = OwQueryExtensions.PropertyOrField(p, "name.name", out var type, true);
+            //var e = Expression.Lambda(expr, p);
+            //var str = e.Compile().DynamicInvoke(entity);
+            //var ary = q.ToArray();
 
         }
 

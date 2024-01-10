@@ -187,8 +187,6 @@ namespace PowerLmsWebApi.Controllers
         /// </summary>
         /// <param name="model"></param>
         /// <param name="conditional"></param>
-        /// <param name="accountId">账号Id。null表示不限定。和<paramref name="orgId"/>限定为与的关系。</param>
-        /// <param name="orgId">商户及组织机构类别的Id,null表示不限定。和<paramref name="accountId"/>限定为与的关系。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定类别Id无效。</response>  
