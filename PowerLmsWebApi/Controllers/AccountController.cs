@@ -156,13 +156,17 @@ namespace PowerLmsWebApi.Controllers
             user.LastModifyDateTimeUtc = OwHelper.WorldNow;
             user.Token = result.Token;
             user.CurrentLanguageTag = model.LanguageTag;
-            _DbContext.SaveChanges();
             //设置直属组织机构信息。
             var orgIds = _DbContext.AccountPlOrganizations.Where(c => c.UserId == user.Id).Select(c => c.OrgId);
             result.Orgs.AddRange(_DbContext.PlOrganizations.Where(c => orgIds.Contains(c.Id)));
             result.User = user;
             if (_OrganizationManager.GetMerchantId(user.Id, out var merchId)) //若找到商户Id
+            {
                 result.MerchantId = merchId;
+                if (result.User.IsMerchantAdmin)
+                    result.User.OrgId ??= merchId;
+            }
+            _DbContext.SaveChanges();
             return result;
         }
 

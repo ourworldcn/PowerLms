@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.ObjectPool;
+using NPOI.OpenXmlFormats.Dml.Diagram;
 using NPOI.SS.Formula.Functions;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
@@ -22,19 +23,21 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 构造函数。
         /// </summary>
-        public CustomerController(IServiceProvider serviceProvider, AccountManager accountManager, PowerLmsUserDbContext dbContext, EntityManager entityManager, IMapper mapper)
+        public CustomerController(IServiceProvider serviceProvider, AccountManager accountManager, PowerLmsUserDbContext dbContext, EntityManager entityManager, IMapper mapper, OrganizationManager organizationManager)
         {
             _ServiceProvider = serviceProvider;
             _AccountManager = accountManager;
             _DbContext = dbContext;
             _EntityManager = entityManager;
             _Mapper = mapper;
+            _OrganizationManager = organizationManager;
         }
 
         IServiceProvider _ServiceProvider;
         AccountManager _AccountManager;
 
         readonly PowerLmsUserDbContext _DbContext;
+        OrganizationManager _OrganizationManager;
 
         EntityManager _EntityManager;
         IMapper _Mapper;
@@ -45,7 +48,7 @@ namespace PowerLmsWebApi.Controllers
         /// 获取全部客户。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">查询的条件。支持 name，ShortName，displayname，Id。不区分大小写。</param>
+        /// <param name="conditional">查询的条件。支持 name，ShortName，displayname，Id，Keyword。不区分大小写。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
@@ -55,7 +58,12 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllCustomerReturnDto();
-            var dbSet = _DbContext.PlCustomers;
+            Guid[] allOrg = Array.Empty<Guid>();
+            if (_OrganizationManager.GetMerchantId(context.User.Id, out var merId))
+            {
+                allOrg = _OrganizationManager.GetAllOrgInRoot(merId.Value).Select(c => c.Id).ToArray();
+            }
+            var dbSet = _DbContext.PlCustomers.Where(c => c.OrgId.HasValue && allOrg.Contains(c.OrgId.Value));
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             foreach (var item in conditional)
                 if (string.Equals(item.Key, "name", StringComparison.OrdinalIgnoreCase))
@@ -75,6 +83,10 @@ namespace PowerLmsWebApi.Controllers
                 {
                     coll = coll.Where(c => c.Name.DisplayName.Contains(item.Value));
                 }
+                else if (string.Equals(item.Key, "Keyword", StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.Keyword.Contains(item.Value));
+                }
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
@@ -93,8 +105,10 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddCustomerReturnDto();
             model.Customer.GenerateNewId();
+
             var entity = _DbContext.PlCustomers.Add(model.Customer);
             entity.Entity.OrgId = context.User.OrgId;   //根据登录用户首选组织机构确定客户资料绑定的机构id。20240109。
+            entity.Entity.CreateBy = context.User.Id;
 
             _DbContext.SaveChanges();
             result.Id = model.Customer.Id;

@@ -466,7 +466,7 @@
             <param name="MerchantId"></param>
             <returns>true则找到了商户Id，false没有找到。</returns>
         </member>
-        <member name="M:PowerLmsServer.Managers.OrganizationManager.GetAllOrgIdInRoot(System.Guid)">
+        <member name="M:PowerLmsServer.Managers.OrganizationManager.GetAllOrgInRoot(System.Guid)">
             <summary>
             获取指定根Id(商户或机构)下所有组织机构。不包含指定id的实体。
             </summary>
@@ -495,6 +495,19 @@
             <summary>
             
             </summary>
+        </member>
+        <member name="T:PowerLmsServer.Managers.OrganizationManagerExtensions">
+            <summary>
+            扩展方法类。
+            </summary>
+        </member>
+        <member name="M:PowerLmsServer.Managers.OrganizationManagerExtensions.GetAllOrg(PowerLmsServer.Managers.OrganizationManager,PowerLms.Data.Account)">
+            <summary>
+            获取用户商户内所有机构。
+            </summary>
+            <param name="mng"></param>
+            <param name="user"></param>
+            <returns></returns>
         </member>
         <member name="T:PowerLmsServer.Managers.SystemResourceManager">
             <summary>

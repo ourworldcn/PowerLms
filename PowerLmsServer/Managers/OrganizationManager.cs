@@ -102,7 +102,7 @@ namespace PowerLmsServer.Managers
         /// </summary>
         /// <param name="rootId"></param>
         /// <returns></returns>
-        public List<PlOrganization> GetAllOrgIdInRoot(Guid rootId)
+        public List<PlOrganization> GetAllOrgInRoot(Guid rootId)
         {
             var result = new List<PlOrganization>();
             if (_DbContext.Merchants.Find(rootId) is PlMerchant rootMerchant)  //若是商户Id
@@ -183,6 +183,29 @@ namespace PowerLmsServer.Managers
                     return result;
                 });
             }
+        }
+    }
+
+    /// <summary>
+    /// 扩展方法类。
+    /// </summary>
+    public static class OrganizationManagerExtensions
+    {
+        /// <summary>
+        /// 获取用户商户内所有机构。
+        /// </summary>
+        /// <param name="mng"></param>
+        /// <param name="user"></param>
+        /// <returns></returns>
+        static public List<PlOrganization> GetAllOrg(this OrganizationManager mng, Account user)
+        {
+            var result = new List<PlOrganization>();
+            if (mng.GetMerchantId(user.Id, out var merId))
+            {
+                if (merId.HasValue)
+                    result = mng.GetAllOrgInRoot(merId.Value);
+            }
+            return result;
         }
     }
 }
