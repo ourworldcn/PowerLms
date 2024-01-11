@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("OW")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3d4ebb98ae42134ebf48367e17e6534678e354fa")]
 [assembly: System.Reflection.AssemblyProductAttribute("OwBaseCore")]
 [assembly: System.Reflection.AssemblyTitleAttribute("OwBaseCore")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -1349,6 +1349,16 @@
             <param name="obj"></param>
             <returns></returns>
         </member>
+        <member name="M:System.Linq.Expressions.OwExpression.PropertyOrField(System.Linq.Expressions.Expression,System.String,System.Boolean)">
+            <summary>
+            获取属性/字段值的表达式。 
+            </summary>
+            <param name="expression"></param>
+            <param name="propertyName">支持 name.displayname语法。只查找公有的实例成员（包含继承成员）。</param>
+            <param name="ignoreCase">是否忽略大小写。true忽略，false(默认值)不忽略。</param>
+            <returns></returns>
+            <exception cref="T:System.ArgumentException">找不到属性。</exception>
+        </member>
         <member name="T:System.Text.Json.Serialization.GuidJsonConverter">
             <summary>
             用于将Guid类型Base64编码的Json转换器。
