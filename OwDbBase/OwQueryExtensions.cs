@@ -26,19 +26,19 @@ namespace OW.Data
 
             ParameterExpression p = Expression.Parameter(typeof(T));
             //Expression key = Expression.Property(p, fieldName);
-            var exprBody = PropertyOrField(p, fieldName, out var resultType, true);
+            var exprBody = OwExpression.PropertyOrField(p, fieldName, true);
             //var propInfo = GetPropertyInfo(typeof(T), fieldName, true);
             //var expr = GetOrderExpression(typeof(T), propInfo);
             if (isDesc)
             {
                 var method = typeof(Queryable).GetMethods().FirstOrDefault(m => m.Name == "OrderByDescending" && m.GetParameters().Length == 2);
-                var genericMethod = method.MakeGenericMethod(typeof(T), resultType);
+                var genericMethod = method.MakeGenericMethod(typeof(T), exprBody.Type);
                 return (IOrderedQueryable<T>)genericMethod.Invoke(null, new object[] { query, Expression.Lambda(exprBody, p) });
             }
             else
             {
                 var method = typeof(Queryable).GetMethods().FirstOrDefault(m => m.Name == "OrderBy" && m.GetParameters().Length == 2);
-                var genericMethod = method.MakeGenericMethod(typeof(T), resultType);
+                var genericMethod = method.MakeGenericMethod(typeof(T), exprBody.Type);
                 return (IOrderedQueryable<T>)genericMethod.Invoke(null, new object[] { query, Expression.Lambda(exprBody, p) });
             }
         }
@@ -54,10 +54,7 @@ namespace OW.Data
         {
             var properties = objType.GetProperties();
             var tmp = ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-            var matchedProperty = properties.FirstOrDefault(p => p.Name.Equals(name, tmp));
-            if (matchedProperty == null)
-                throw new ArgumentException("对象不包含指定属性名");
-
+            var matchedProperty = properties.FirstOrDefault(p => p.Name.Equals(name, tmp)) ?? throw new ArgumentException("对象不包含指定属性名");
             return matchedProperty;
         }
 
@@ -73,30 +70,6 @@ namespace OW.Data
             var propAccess = Expression.PropertyOrField(paramExpr, pi.Name);
             var expr = Expression.Lambda(propAccess, paramExpr);
             return expr;
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="expression"></param>
-        /// <param name="propertyOrFieldName">支持 name.displayname语法。</param>
-        /// <param name="resultType"></param>
-        /// <param name="ignoreCase">是否忽略大小写。true忽略，false(默认值)不忽略。</param>
-        /// <returns></returns>
-        public static Expression PropertyOrField(Expression expression, string propertyOrFieldName, out Type resultType, bool ignoreCase = false)
-        {
-            var ary = propertyOrFieldName.Split('.');
-            Expression exprTmp = expression;
-            resultType = default;
-            var binding = BindingFlags.Public | BindingFlags.Instance | BindingFlags.FlattenHierarchy;
-            if (ignoreCase) binding |= BindingFlags.IgnoreCase;
-            foreach (var item in ary)
-            {
-                var pi = exprTmp.Type.GetProperty(item, binding);
-                exprTmp = Expression.PropertyOrField(exprTmp, pi.Name);
-                resultType = exprTmp.Type;
-            }
-            return exprTmp;
         }
     }
 }
