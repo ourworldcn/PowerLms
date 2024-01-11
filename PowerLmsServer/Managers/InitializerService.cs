@@ -153,7 +153,7 @@ namespace PowerLmsServer.Managers
         {
             var db = svc.GetRequiredService<PowerLmsUserDbContext>();
             var ent = svc.GetRequiredService<EntityManager>();
-            var q = db.PlCustomers.OrderBy("name.name", false);
+            var q = db.PlCustomers.OrderBy("name.name", true);
             var ary = q.ToArray().Select(c=>c.Name.Name);
             //var entity = db.PlCustomers.First();
             //var p = Expression.Parameter(typeof(PlCustomer));
