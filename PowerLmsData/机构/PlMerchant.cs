@@ -15,7 +15,7 @@ namespace PowerLms.Data
     /// 商户。
     /// </summary>
     [Comment("商户")]
-    public class PlMerchant : GuidKeyObjectBase,IMarkDelete,ICreatorInfo
+    public class PlMerchant : GuidKeyObjectBase, IMarkDelete, ICreatorInfo
     {
         /// <summary>
         /// 名称类。

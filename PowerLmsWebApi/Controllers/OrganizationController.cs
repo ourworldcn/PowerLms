@@ -155,7 +155,7 @@ namespace PowerLmsWebApi.Controllers
             var dbSet = _DbContext.PlOrganizations;
             var item = dbSet.Find(id);
             if (item is null) return BadRequest();
-            dbSet.Remove(item);
+            _EntityManager.Remove(item);
             _DbContext.SaveChanges();
             return result;
         }
@@ -250,7 +250,7 @@ namespace PowerLmsWebApi.Controllers
             DbSet<AccountPlOrganization> dbSet = _DbContext.AccountPlOrganizations;
             var item = dbSet.Find(model.UserId, model.OrgId);
             if (item is null) return BadRequest();
-            _DbContext.Remove(item);
+            _EntityManager.Remove(item);
             _DbContext.SaveChanges();
             return result;
         }

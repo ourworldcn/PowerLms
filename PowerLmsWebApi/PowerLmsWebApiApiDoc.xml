@@ -1578,23 +1578,12 @@
         </member>
         <member name="T:PowerLmsWebApi.Controllers.AddPlRoleParamsDto">
             <summary>
-            增加新角色功能参数封装类。
-            </summary>
-        </member>
-        <member name="P:PowerLmsWebApi.Controllers.AddPlRoleParamsDto.PlRole">
-            <summary>
-            新角色信息。其中Id可以是任何值，返回时会指定新值。
-            省略其中的 OrgId 则自动填写为 ，调用操作用户所属商户。
+            增加新角色功能参数封装类。省略PlRole.OrgId自动填充为调用者所在商户Id。
             </summary>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.AddPlRoleReturnDto">
             <summary>
             增加新角色功能返回值封装类。
-            </summary>
-        </member>
-        <member name="P:PowerLmsWebApi.Controllers.AddPlRoleReturnDto.Id">
-            <summary>
-            如果成功添加，这里返回新角色的Id。
             </summary>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.ModifyPlRoleParamsDto">
@@ -3150,6 +3139,25 @@
             <summary>
             返回的组机构。嵌套关系在对象内部体现。多个顶层公司则返回多个元素。
             </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Middleware.PlExceptionMiddleware">
+            <summary>
+            自定义中间件。
+            </summary>
+        </member>
+        <member name="M:PowerLmsWebApi.Middleware.PlExceptionMiddleware.#ctor(Microsoft.AspNetCore.Http.RequestDelegate,Microsoft.Extensions.Logging.ILogger{PowerLmsWebApi.Middleware.PlExceptionMiddleware})">
+            <summary>
+            构造函数。
+            </summary>
+            <param name="next"></param>
+            <param name="logger"></param>
+        </member>
+        <member name="M:PowerLmsWebApi.Middleware.PlExceptionMiddleware.InvokeAsync(Microsoft.AspNetCore.Http.HttpContext)">
+            <summary>
+            
+            </summary>
+            <param name="httpContext"></param>
+            <returns></returns>
         </member>
         <member name="T:PowerLmsWebApi.WeatherForecast">
             <summary>

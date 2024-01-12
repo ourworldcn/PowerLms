@@ -154,7 +154,7 @@ namespace PowerLmsWebApi.Controllers
             var path = Path.Combine(AppContext.BaseDirectory, "Files", item.FilePath);
             if (!System.IO.File.Exists(path)) return NotFound(path);
             Task.Run(() => System.IO.File.Delete(path));
-            _DbContext.Remove(item);
+            _EntityManager.Remove(item);
             _DbContext.SaveChanges();
             return result;
         }

@@ -7,6 +7,7 @@ using OW;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
+using PowerLmsWebApi.Middleware;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using static Org.BouncyCastle.Math.EC.ECCurve;
@@ -64,6 +65,7 @@ internal class Program
         app.UseAuthorization();
         app.MapControllers();
         app.UseDeveloperExceptionPage();
+        app.UseMiddleware<PlExceptionMiddleware>();
         app.Run();
     }
 

@@ -166,7 +166,7 @@ namespace PowerLmsWebApi.Controllers
             }
             _DbContext.Database.ExecuteSqlRaw(sb.ToString());
             //删除主表
-            _DbContext.Remove(item);
+            _EntityManager.Remove(item);
             _DbContext.SaveChanges();
             return result;
         }
@@ -264,7 +264,7 @@ namespace PowerLmsWebApi.Controllers
             var dbSet = _DbContext.PlCustomerContacts;
             var item = dbSet.Find(id);
             if (item is null) return BadRequest();
-            _DbContext.Remove(item);
+            _EntityManager.Remove(item);
             _DbContext.SaveChanges();
             return result;
         }
@@ -346,7 +346,7 @@ namespace PowerLmsWebApi.Controllers
             DbSet<PlBusinessHeader> dbSet = _DbContext.PlCustomerBusinessHeaders;
             var item = dbSet.Find(model.CustomerId, model.UserId, model.OrderTypeId);
             if (item is null) return BadRequest();
-            _DbContext.Remove(item);
+            _EntityManager.Remove(item);
             _DbContext.SaveChanges();
             return result;
         }
@@ -446,7 +446,7 @@ namespace PowerLmsWebApi.Controllers
             var dbSet = _DbContext.PlCustomerTaxInfos;
             var item = dbSet.Find(id);
             if (item is null) return BadRequest();
-            _DbContext.Remove(item);
+            _EntityManager.Remove(item);
             _DbContext.SaveChanges();
             return result;
         }
@@ -541,7 +541,7 @@ namespace PowerLmsWebApi.Controllers
             var dbSet = _DbContext.PlCustomerTaxInfos;
             var item = dbSet.Find(id);
             if (item is null) return BadRequest();
-            _DbContext.Remove(item);
+            _EntityManager.Remove(item);
             _DbContext.SaveChanges();
             return result;
         }
@@ -754,7 +754,7 @@ namespace PowerLmsWebApi.Controllers
             var dbSet = _DbContext.PlCustomerTaxInfos;
             var item = dbSet.Find(id);
             if (item is null) return BadRequest();
-            _DbContext.Remove(item);
+            _EntityManager.Remove(item);
             _DbContext.SaveChanges();
             return result;
         }

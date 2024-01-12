@@ -91,6 +91,7 @@ namespace PowerLms.Data
     /// 记录角色和权限的关系类。
     /// </summary>
     [Comment("记录角色和权限的关系类。")]
+    [Index(nameof(PermissionId), nameof(RoleId), IsUnique = true)]
     public class RolePermission : ICreatorInfo
     {
         /// <summary>

@@ -149,7 +149,7 @@ namespace PowerLmsWebApi.Controllers
             var dbSet = _DbContext.Merchants;
             var item = dbSet.Find(id);
             if (item is null) return BadRequest();
-            item.IsDelete = true;
+            _EntityManager.Remove(item);
             _DbContext.SaveChanges();
             //if (item.DataDicType == 1) //若是简单字典
             //    _DbContext.Database.ExecuteSqlRaw($"delete from {nameof(_DbContext.SimpleDataDics)} where {nameof(SimpleDataDic.DataDicId)}='{id.ToString()}'");

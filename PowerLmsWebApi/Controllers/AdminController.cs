@@ -146,7 +146,7 @@ namespace PowerLmsWebApi.Controllers
             var id = model.Id;
             var item = _DbContext.DD_DataDicCatalogs.Find(id);
             if (item is null) return BadRequest();
-            _DbContext.DD_DataDicCatalogs.Remove(item);
+            _EntityManager.Remove(item);
             _DbContext.SaveChanges();
             return result;
         }
@@ -453,7 +453,7 @@ namespace PowerLmsWebApi.Controllers
             DbSet<SimpleDataDic> dbSet = _DbContext.DD_SimpleDataDics;
             var item = dbSet.Find(id);
             if (item is null) return BadRequest();
-            item.IsDelete = true;
+            _EntityManager.Remove(item);
             _DbContext.SaveChanges();
             return result;
         }
@@ -624,7 +624,7 @@ namespace PowerLmsWebApi.Controllers
             var dbSet = _DbContext.DD_PlPorts;
             var item = dbSet.Find(id);
             if (item is null) return BadRequest();
-            item.IsDelete = true;
+            _EntityManager.Remove(item);
             _DbContext.SaveChanges();
             return result;
         }
@@ -780,7 +780,7 @@ namespace PowerLmsWebApi.Controllers
             var dbSet = _DbContext.DD_PlCargoRoutes;
             var item = dbSet.Find(id);
             if (item is null) return BadRequest();
-            item.IsDelete = true;
+            _EntityManager.Remove(item);
             _DbContext.SaveChanges();
             return result;
         }
@@ -1022,8 +1022,7 @@ namespace PowerLmsWebApi.Controllers
             var dbSet = _DbContext.DD_UnitConversions;
             var item = dbSet.Find(id);
             if (item is null) return BadRequest();
-            //_DbContext.SimpleDataDics.Remove(item);
-            item.IsDelete = true;
+            _EntityManager.Remove(item);
             _DbContext.SaveChanges();
             //if (item.DataDicType == 1) //若是简单字典
             //    _DbContext.Database.ExecuteSqlRaw($"delete from {nameof(_DbContext.SimpleDataDics)} where {nameof(SimpleDataDic.DataDicId)}='{id.ToString()}'");
@@ -1182,8 +1181,7 @@ namespace PowerLmsWebApi.Controllers
             var dbSet = _DbContext.DD_FeesTypes;
             var item = dbSet.Find(id);
             if (item is null) return BadRequest();
-            //_DbContext.SimpleDataDics.Remove(item);
-            item.IsDelete = true;
+            _EntityManager.Remove(item);
             _DbContext.SaveChanges();
             //if (item.DataDicType == 1) //若是简单字典
             //    _DbContext.Database.ExecuteSqlRaw($"delete from {nameof(_DbContext.SimpleDataDics)} where {nameof(SimpleDataDic.DataDicId)}='{id.ToString()}'");
@@ -1336,8 +1334,7 @@ namespace PowerLmsWebApi.Controllers
             var dbSet = _DbContext.DD_JobNumberRules;
             var item = dbSet.Find(id);
             if (item is null) return BadRequest();
-            //_DbContext.SimpleDataDics.Remove(item);
-            item.IsDelete = true;
+            _EntityManager.Remove(item);
             _DbContext.SaveChanges();
             //if (item.DataDicType == 1) //若是简单字典
             //    _DbContext.Database.ExecuteSqlRaw($"delete from {nameof(_DbContext.SimpleDataDics)} where {nameof(SimpleDataDic.DataDicId)}='{id.ToString()}'");
@@ -1490,8 +1487,7 @@ namespace PowerLmsWebApi.Controllers
             var dbSet = _DbContext.DD_PlCountrys;
             var item = dbSet.Find(id);
             if (item is null) return BadRequest();
-            //_DbContext.SimpleDataDics.Remove(item);
-            item.IsDelete = true;
+            _EntityManager.Remove(item);
             _DbContext.SaveChanges();
             //if (item.DataDicType == 1) //若是简单字典
             //    _DbContext.Database.ExecuteSqlRaw($"delete from {nameof(_DbContext.SimpleDataDics)} where {nameof(SimpleDataDic.DataDicId)}='{id.ToString()}'");
@@ -1644,8 +1640,7 @@ namespace PowerLmsWebApi.Controllers
             var dbSet = _DbContext.DD_PlCurrencys;
             var item = dbSet.Find(id);
             if (item is null) return BadRequest();
-            //_DbContext.SimpleDataDics.Remove(item);
-            item.IsDelete = true;
+            _EntityManager.Remove(item);
             _DbContext.SaveChanges();
             //if (item.DataDicType == 1) //若是简单字典
             //    _DbContext.Database.ExecuteSqlRaw($"delete from {nameof(_DbContext.SimpleDataDics)} where {nameof(SimpleDataDic.DataDicId)}='{id.ToString()}'");

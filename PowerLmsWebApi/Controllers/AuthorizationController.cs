@@ -8,8 +8,10 @@ using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
 using System.ComponentModel.DataAnnotations;
+using System.Data;
 using System.Diagnostics;
 using System.Linq.Expressions;
+using System.Net;
 
 namespace PowerLmsWebApi.Controllers
 {
@@ -105,15 +107,17 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddPlRoleReturnDto();
-            model.PlRole.GenerateNewId();
-            if (!model.PlRole.OrgId.HasValue)
+            model.Item.GenerateNewId();
+            if (!model.Item.OrgId.HasValue)
             {
                 if (_OrganizationManager.GetMerchantId(context.User.Id, out var mId))
-                    model.PlRole.OrgId = mId;
+                    model.Item.OrgId = mId;
             }
-            _DbContext.PlRoles.Add(model.PlRole);
+            model.Item.CreateBy ??= context.User.Id;
+            model.Item.CreateDateTime = OwHelper.WorldNow;
+            _DbContext.PlRoles.Add(model.Item);
             _DbContext.SaveChanges();
-            result.Id = model.PlRole.Id;
+            result.Id = model.Item.Id;
             return result;
         }
 
@@ -152,6 +156,7 @@ namespace PowerLmsWebApi.Controllers
             var dbSet = _DbContext.PlRoles;
             var item = dbSet.Find(id);
             if (item is null) return BadRequest();
+            _EntityManager.Remove(item);
             _DbContext.SaveChanges();
             return result;
         }
@@ -265,6 +270,7 @@ namespace PowerLmsWebApi.Controllers
             var dbSet = _DbContext.PlPermissions;
             var item = dbSet.Find(id);
             if (item is null) return BadRequest();
+            _EntityManager.Remove(item);
             _DbContext.SaveChanges();
             return result;
         }
@@ -340,6 +346,7 @@ namespace PowerLmsWebApi.Controllers
             var dbSet = _DbContext.PlAccountRoles;
             var item = dbSet.Find(id);
             if (item is null) return BadRequest();
+            _EntityManager.Remove(item);
             _DbContext.SaveChanges();
             return result;
         }
@@ -414,6 +421,7 @@ namespace PowerLmsWebApi.Controllers
             var dbSet = _DbContext.PlRolePermissions;
             var item = dbSet.Find(id);
             if (item is null) return BadRequest();
+            _EntityManager.Remove(item);
             _DbContext.SaveChanges();
             return result;
         }
@@ -703,26 +711,17 @@ namespace PowerLmsWebApi.Controllers
     }
 
     /// <summary>
-    /// 增加新角色功能参数封装类。
+    /// 增加新角色功能参数封装类。省略PlRole.OrgId自动填充为调用者所在商户Id。
     /// </summary>
-    public class AddPlRoleParamsDto : TokenDtoBase
+    public class AddPlRoleParamsDto : AddParamsDtoBase<PlRole>
     {
-        /// <summary>
-        /// 新角色信息。其中Id可以是任何值，返回时会指定新值。
-        /// 省略其中的 OrgId 则自动填写为 ，调用操作用户所属商户。
-        /// </summary>
-        public PlRole PlRole { get; set; }
     }
 
     /// <summary>
     /// 增加新角色功能返回值封装类。
     /// </summary>
-    public class AddPlRoleReturnDto : ReturnDtoBase
+    public class AddPlRoleReturnDto : AddReturnDtoBase
     {
-        /// <summary>
-        /// 如果成功添加，这里返回新角色的Id。
-        /// </summary>
-        public Guid Id { get; set; }
     }
 
     /// <summary>

@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualBasic;
 using OW.Data;
@@ -131,6 +132,22 @@ namespace PowerLmsServer.Managers
             return result;
         }
 
+        /// <summary>
+        /// 移除一个实体。
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="item"></param>
+        /// <returns></returns>
+        public EntityEntry<T> Remove<T>(T item) where T : class
+        {
+            if (item is IMarkDelete markDelete)
+            {
+                markDelete.IsDelete = true;
+                return _DbContext.Entry(item);
+            }
+            else
+                return _DbContext.Remove(item);
+        }
     }
 
     /// <summary>
