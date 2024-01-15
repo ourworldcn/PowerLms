@@ -188,6 +188,7 @@ namespace PowerLmsServer.EfData
         public DbSet<PlCurrency> DD_PlCurrencys { get; set; }
         #endregion 系统资源相关
 
+
         #region 多语言相关
 
         /// <summary>
@@ -215,6 +216,11 @@ namespace PowerLmsServer.EfData
         #endregion 账号相关
 
         #region 组织机构相关
+
+        /// <summary>
+        /// 开户行信息表。
+        /// </summary>
+        public DbSet<BankInfo> BankInfos { get; set; }
 
         /// <summary>
         /// 商户。

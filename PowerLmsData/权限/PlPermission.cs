@@ -60,11 +60,11 @@ namespace PowerLms.Data
         [Comment("所属许可对象的Id。")]
         public string ParentId { get; set; }
 
-        List<PlOrganization> _Children;
+        List<PlPermission> _Children;
         /// <summary>
         /// 拥有的子权限对象。
         /// </summary>
-        public virtual List<PlOrganization> Children { get => _Children ??= new List<PlOrganization>(); set => _Children = value; }
+        public virtual List<PlPermission> Children { get => _Children ??= new List<PlPermission>(); set => _Children = value; }
 
         #endregion 导航属性
     }

@@ -1286,7 +1286,7 @@
         </member>
         <member name="M:PowerLmsWebApi.Controllers.AuthorizationController.GetAllPlPermission(PowerLmsWebApi.Dto.PagingParamsDtoBase,System.Collections.Generic.Dictionary{System.String,System.String})">
             <summary>
-            获取全部权限。
+            获取全部权限。Name=root返回总根。由于返回嵌套类，无法支持分页。
             </summary>
             <param name="model"></param>
             <param name="conditional">查询的条件。支持 name，ShortName，displayname。不区分大小写。</param>
@@ -2236,7 +2236,7 @@
             获取业务负责人的所属关系。
             </summary>
             <param name="model"></param>
-            <param name="conditional">查询的条件。支持 Id,DisplayName,FileName 。</param>
+            <param name="conditional">查询的条件。支持 Id,DisplayName,FileName,ParentId。</param>
             <returns></returns>
             <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
             <response code="400">指定类别Id无效。</response>  
@@ -2613,6 +2613,95 @@
             <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
             <response code="401">无效令牌。</response>  
             <response code="404">指定Id的机构不存在。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.OrganizationController.GetAllBankInfo(PowerLmsWebApi.Dto.PagingParamsDtoBase,System.Collections.Generic.Dictionary{System.String,System.String})">
+            <summary>
+            获取全部客户开户行信息。
+            </summary>
+            <param name="model"></param>
+            <param name="conditional">查询的条件。支持 ParentId(机构id)，Id,Number。不区分大小写。</param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.OrganizationController.AddBankInfo(PowerLmsWebApi.Controllers.AddBankInfoParamsDto)">
+            <summary>
+            增加新客户开户行信息。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.OrganizationController.ModifyBankInfo(PowerLmsWebApi.Controllers.ModifyBankInfoParamsDto)">
+            <summary>
+            修改客户开户行信息信息。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+            <response code="404">指定Id的客户开户行信息不存在。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.OrganizationController.RemoveBankInfo(PowerLmsWebApi.Controllers.RemoveBankInfoParamsDto)">
+            <summary>
+            删除指定Id的客户开户行信息。慎用！
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+            <response code="404">指定Id的客户开户行信息不存在。</response>  
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RemoveBankInfoParamsDto">
+            <summary>
+            标记删除开户行信息功能的参数封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RemoveBankInfoReturnDto">
+            <summary>
+            标记删除开户行信息功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetAllBankInfoReturnDto">
+            <summary>
+            获取所有开户行信息功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddBankInfoParamsDto">
+            <summary>
+            增加新开户行信息功能参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.AddBankInfoParamsDto.BankInfo">
+            <summary>
+            新开户行信息信息。其中Id可以是任何值，返回时会指定新值。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddBankInfoReturnDto">
+            <summary>
+            增加新开户行信息功能返回值封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.AddBankInfoReturnDto.Id">
+            <summary>
+            如果成功添加，这里返回新开户行信息的Id。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.ModifyBankInfoParamsDto">
+            <summary>
+            修改开户行信息信息功能参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.ModifyBankInfoParamsDto.BankInfo">
+            <summary>
+            开户行信息数据。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.ModifyBankInfoReturnDto">
+            <summary>
+            修改开户行信息信息功能返回值封装类。
+            </summary>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.CopyDataDicParamsDto">
             <summary>

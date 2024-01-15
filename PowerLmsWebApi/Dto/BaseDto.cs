@@ -81,7 +81,7 @@ namespace PowerLmsWebApi.Dto
     /// 返回分页数据的封装类的基类
     /// </summary>
     /// <typeparam name="T">集合元素的类型。</typeparam>
-    [AutoMap(typeof(PagingReturnBase<>))]
+    [AutoMap(typeof(PagingReturnBase<>), IncludeAllDerived = true)]
     public abstract class PagingReturnDtoBase<T> : ReturnDtoBase
     {
         /// <summary>

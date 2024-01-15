@@ -165,7 +165,7 @@ namespace PowerLmsWebApi.Controllers
         #region 权限的CRUD
 
         /// <summary>
-        /// 获取全部权限。
+        /// 获取全部权限。Name=root返回总根。由于返回嵌套类，无法支持分页。
         /// </summary>
         /// <param name="model"></param>
         /// <param name="conditional">查询的条件。支持 name，ShortName，displayname。不区分大小写。</param>
@@ -179,7 +179,7 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlPermissionReturnDto();
             var dbSet = _DbContext.PlPermissions;
-            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsQueryable();
             foreach (var item in conditional)
                 if (string.Equals(item.Key, "name", StringComparison.OrdinalIgnoreCase))
                 {

@@ -452,6 +452,13 @@ namespace PowerLms.Data
         public string Tel { get; set; }
 
         /// <summary>
+        /// 电子邮件地址。
+        /// </summary>
+        [Comment("电子邮件地址")]
+        [MaxLength(256),EmailAddress]
+        public string EMail { get; set; }
+
+        /// <summary>
         /// 税率。
         /// </summary>
         [Comment("税率")]

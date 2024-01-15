@@ -142,6 +142,11 @@
             用户所属组织机构表。
             </summary>
         </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.BankInfos">
+            <summary>
+            开户行信息表。
+            </summary>
+        </member>
         <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.Merchants">
             <summary>
             商户。
@@ -1231,6 +1236,11 @@
             电话。
             </summary>
         </member>
+        <member name="P:PowerLms.Data.PlTaxInfo.EMail">
+            <summary>
+            电子邮件地址。
+            </summary>
+        </member>
         <member name="P:PowerLms.Data.PlTaxInfo.TaxRate">
             <summary>
             税率。
@@ -1459,6 +1469,36 @@
         <member name="P:PowerLms.Data.PlOrganization.Children">
             <summary>
             拥有的子组织机构。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.BankInfo">
+            <summary>
+            开户行信息。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.BankInfo.ParentId">
+            <summary>
+            所属实体Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.BankInfo.Name">
+            <summary>
+            开户名。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.BankInfo.Bank">
+            <summary>
+            开户行。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.BankInfo.Account">
+            <summary>
+            账号。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.BankInfo.CurrencyId">
+            <summary>
+            币种Id。
             </summary>
         </member>
         <member name="T:PowerLms.Data.PlPermission">

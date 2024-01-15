@@ -14,7 +14,7 @@ namespace PowerLms.Data
     /// <summary>
     /// 组织机构。
     /// </summary>
-    public class PlOrganization : GuidKeyObjectBase,ICreatorInfo
+    public class PlOrganization : GuidKeyObjectBase, ICreatorInfo
     {
         /// <summary>
         /// 商户Id。仅总公司(ParentId 是null)需要此字段指向所属商户，其它情况忽略此字段。
@@ -94,5 +94,44 @@ namespace PowerLms.Data
 
         #endregion 导航属性
 
+    }
+
+    /// <summary>
+    /// 开户行信息。
+    /// </summary>
+    public class BankInfo : GuidKeyObjectBase
+    {
+        /// <summary>
+        /// 所属实体Id。
+        /// </summary>
+        [Comment("所属实体Id。")]
+        public Guid? ParentId { get; set; }
+
+        /// <summary>
+        /// 开户名。
+        /// </summary>
+        [MaxLength(32)]
+        [Comment("开户名。")]
+        public string Name { get; set; }
+
+        /// <summary>
+        /// 开户行。
+        /// </summary>
+        [MaxLength(32)]
+        [Comment("开户行。")]
+        public string Bank { get; set; }
+
+        /// <summary>
+        /// 账号。
+        /// </summary>
+        [MaxLength(32)]
+        [Comment("账号。")]
+        public string Account { get; set; }
+
+        /// <summary>
+        /// 币种Id。
+        /// </summary>
+        [Comment("币种Id。")]
+        public Guid CurrencyId { get; set; }
     }
 }

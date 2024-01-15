@@ -69,9 +69,12 @@ namespace PowerLmsWebApi.Controllers
             var result = new GetAllAccountReturnDto();
             var dbSet = _DbContext.Accounts;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-            if (_OrganizationManager.GetMerchantId(context.User.Id, out var merchantId))
+            if (_AccountManager.IsMerchantAdmin(context.User) && _OrganizationManager.GetMerchantId(context.User.Id, out var merchantId))
             {
-
+                var tmp = _OrganizationManager.GetAllOrg(context.User).Select(c => c.Id);    //所有机构Id
+                if (merchantId.HasValue) tmp = tmp.Append(merchantId.Value).ToArray();
+                var userIds = _DbContext.AccountPlOrganizations.Where(c => tmp.Contains(c.OrgId)).Select(c => c.UserId).Distinct().ToArray();
+                coll = coll.Where(c => userIds.Contains(c.Id));
             }
             foreach (var item in conditional)
                 if (string.Equals(item.Key, "eMail", StringComparison.OrdinalIgnoreCase))
