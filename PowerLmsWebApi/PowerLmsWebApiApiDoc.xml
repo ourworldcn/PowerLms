@@ -1446,6 +1446,16 @@
             标记删除角色-权限关系功能的参数封装类。
             </summary>
         </member>
+        <member name="P:PowerLmsWebApi.Controllers.RemoveRolePermissionParamsDto.RoleId">
+            <summary>
+            角色Id。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.RemoveRolePermissionParamsDto.PermissionId">
+            <summary>
+            权限的Id。
+            </summary>
+        </member>
         <member name="T:PowerLmsWebApi.Controllers.RemoveRolePermissionReturnDto">
             <summary>
             标记删除角色-权限关系功能的返回值封装类。
@@ -2158,11 +2168,6 @@
         <member name="T:PowerLmsWebApi.Controllers.ModifyCustomerParamsDto">
             <summary>
             修改客户信息功能参数封装类。
-            </summary>
-        </member>
-        <member name="P:PowerLmsWebApi.Controllers.ModifyCustomerParamsDto.Customer">
-            <summary>
-            客户数据。
             </summary>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.ModifyCustomerReturnDto">

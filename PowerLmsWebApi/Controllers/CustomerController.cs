@@ -128,7 +128,11 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyCustomerReturnDto();
-            if (!_EntityManager.Modify(new[] { model.Customer })) return NotFound();
+            if (!_EntityManager.Modify( model.Items )) return NotFound();
+            foreach (var item in model.Items)
+            {
+                _DbContext.Entry(item).Property(c => c.OrgId).IsModified = false;
+            }
             _DbContext.SaveChanges();
             return result;
         }
@@ -1117,12 +1121,9 @@ namespace PowerLmsWebApi.Controllers
     /// <summary>
     /// 修改客户信息功能参数封装类。
     /// </summary>
-    public class ModifyCustomerParamsDto : TokenDtoBase
+    public class ModifyCustomerParamsDto : ModifyParamsDtoBase<PlCustomer>
     {
-        /// <summary>
-        /// 客户数据。
-        /// </summary>
-        public PlCustomer Customer { get; set; }
+
     }
 
     /// <summary>

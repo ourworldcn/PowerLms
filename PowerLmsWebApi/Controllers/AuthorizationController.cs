@@ -417,9 +417,9 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveRolePermissionReturnDto();
-            var id = model.Id;
+
             var dbSet = _DbContext.PlRolePermissions;
-            var item = dbSet.Find(id);
+            var item = dbSet.Find(model.RoleId, model.PermissionId);
             if (item is null) return BadRequest();
             _EntityManager.Remove(item);
             _DbContext.SaveChanges();
@@ -537,8 +537,17 @@ namespace PowerLmsWebApi.Controllers
     /// <summary>
     /// 标记删除角色-权限关系功能的参数封装类。
     /// </summary>
-    public class RemoveRolePermissionParamsDto : RemoveParamsDtoBase
+    public class RemoveRolePermissionParamsDto : TokenDtoBase
     {
+        /// <summary>
+        /// 角色Id。
+        /// </summary>
+        public Guid RoleId { get; set; }
+
+        /// <summary>
+        /// 权限的Id。
+        /// </summary>
+        public string PermissionId { get; set; }
     }
 
     /// <summary>
