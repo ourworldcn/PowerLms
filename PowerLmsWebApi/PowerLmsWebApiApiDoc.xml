@@ -1491,6 +1491,16 @@
             标记删除用户-角色关系功能的参数封装类。
             </summary>
         </member>
+        <member name="P:PowerLmsWebApi.Controllers.RemoveAccountRoleParamsDto.UserId">
+            <summary>
+            用户Id。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.RemoveAccountRoleParamsDto.RoleId">
+            <summary>
+            角色Id。
+            </summary>
+        </member>
         <member name="T:PowerLmsWebApi.Controllers.RemoveAccountRoleReturnDto">
             <summary>
             标记删除用户-角色关系功能的返回值封装类。
