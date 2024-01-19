@@ -204,11 +204,12 @@ namespace PowerLmsWebApi.Controllers
             }
 
             var pwd = model.Pwd;
-            var b = _AccountManager.CreateNew(model.Item.LoginName, ref pwd, out Guid id, _ServiceProvider);
+            var b = _AccountManager.CreateNew(model.Item.LoginName, ref pwd, out Guid id, _ServiceProvider, model.Item);
             if (b)
             {
                 result.Pwd = pwd;
                 result.Result = _DbContext.Accounts.Find(id);
+
                 var b1 = _DbContext.PlOrganizations.Select(c => c.Id).Concat(_DbContext.Merchants.Select(c => c.Id)).All(c => model.OrgIds.Contains(c));
                 var rela = orgIds.Select(c => new AccountPlOrganization { UserId = result.Result.Id, OrgId = c });
                 _DbContext.AccountPlOrganizations.AddRange(rela);

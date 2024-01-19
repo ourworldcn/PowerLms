@@ -70,6 +70,42 @@ namespace PowerLms.Data
         [Comment("创建的时间")]
         public DateTime CreateDateTime { get; set; } = OwHelper.WorldNow;
 
+        /// <summary>
+        /// 备注.
+        /// </summary>
+        [Comment("备注")]
+        public string Remark { get; set; }
+
+        #region 补充字段
+
+        /// <summary>
+        /// 法人代表。
+        /// </summary>
+        [Comment("法人代表")]
+        [MaxLength(64)]
+        public string LegalRepresentative { get; set; }
+
+        /// <summary>
+        /// 本位币Id。
+        /// </summary>
+        [Comment("本位币Id")]
+        public Guid? BaseCurrencyId { get; set; }
+
+        /// <summary>
+        /// 海关编码。
+        /// </summary>
+        [Comment("海关编码。")]
+        [MaxLength(32)]
+        public string CustomCode { get; set; }
+
+        /// <summary>
+        /// 工商登记号码（信用证号）。这应该是两个东西，暂定这么写。
+        /// </summary>
+        [Comment("工商登记号码（信用证号）。")]
+        [MaxLength(64)]
+        public string UnknowNumber { get; set; }
+        #endregion 补充字段
+
         #region 导航属性
 
         private PlOrganization _Parent;

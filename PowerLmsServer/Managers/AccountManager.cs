@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using OW;
 using PowerLms.Data;
@@ -21,12 +22,15 @@ namespace PowerLmsServer.Managers
         /// 构造函数。
         /// </summary>
         /// <param name="passwordGenerator"></param>
-        public AccountManager(PasswordGenerator passwordGenerator)
+        /// <param name="mapper"></param>
+        public AccountManager(PasswordGenerator passwordGenerator, IMapper mapper)
         {
             _PasswordGenerator = passwordGenerator;
+            _Mapper = mapper;
         }
 
         readonly PasswordGenerator _PasswordGenerator;
+        IMapper _Mapper;
 
         /// <summary>
         /// 创建一个新账号。
@@ -35,7 +39,8 @@ namespace PowerLmsServer.Managers
         /// <param name="pwd"></param>
         /// <param name="id"></param>
         /// <param name="service">当前范围的服务容器。</param>
-        public bool CreateNew(string loginName, ref string pwd, out Guid id, IServiceProvider service)
+        /// <param name="template"></param>
+        public bool CreateNew(string loginName, ref string pwd, out Guid id, IServiceProvider service, Account template)
         {
             var db = service.GetRequiredService<PowerLmsUserDbContext>();
             if (db.Accounts.Any(c => c.LoginName == loginName))
@@ -45,10 +50,9 @@ namespace PowerLmsServer.Managers
                 return false;
             }
             if (string.IsNullOrEmpty(pwd)) pwd = _PasswordGenerator.Generate(6);    //若需要生成密码
-            var user = new Account()
-            {
-                LoginName = loginName,
-            };
+
+            var user = _Mapper.Map<Account>(template);
+            user.GenerateNewId();
             user.SetPwd(pwd);
             id = user.Id;
             db.Add(user);

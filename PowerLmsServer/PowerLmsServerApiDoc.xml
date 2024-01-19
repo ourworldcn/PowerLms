@@ -19,13 +19,14 @@
             账号管理器。
             </summary>
         </member>
-        <member name="M:PowerLmsServer.Managers.AccountManager.#ctor(OW.PasswordGenerator)">
+        <member name="M:PowerLmsServer.Managers.AccountManager.#ctor(OW.PasswordGenerator,AutoMapper.IMapper)">
             <summary>
             构造函数。
             </summary>
             <param name="passwordGenerator"></param>
+            <param name="mapper"></param>
         </member>
-        <member name="M:PowerLmsServer.Managers.AccountManager.CreateNew(System.String,System.String@,System.Guid@,System.IServiceProvider)">
+        <member name="M:PowerLmsServer.Managers.AccountManager.CreateNew(System.String,System.String@,System.Guid@,System.IServiceProvider,PowerLms.Data.Account)">
             <summary>
             创建一个新账号。
             </summary>
@@ -33,6 +34,7 @@
             <param name="pwd"></param>
             <param name="id"></param>
             <param name="service">当前范围的服务容器。</param>
+            <param name="template"></param>
         </member>
         <member name="M:PowerLmsServer.Managers.AccountManager.GetAccountFromToken(System.Guid,System.IServiceProvider)">
             <summary>

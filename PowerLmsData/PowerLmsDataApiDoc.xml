@@ -1456,6 +1456,31 @@
             创建的时间。
             </summary>
         </member>
+        <member name="P:PowerLms.Data.PlOrganization.Remark">
+            <summary>
+            备注.
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlOrganization.LegalRepresentative">
+            <summary>
+            法人代表。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlOrganization.BaseCurrencyId">
+            <summary>
+            本位币Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlOrganization.CustomCode">
+            <summary>
+            海关编码。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlOrganization.UnknowNumber">
+            <summary>
+            工商登记号码（信用证号）。这应该是两个东西，暂定这么写。
+            </summary>
+        </member>
         <member name="P:PowerLms.Data.PlOrganization.Parent">
             <summary>
             所属组织机构的导航属性。没有父的组织机构是顶层节点即"商户"。
