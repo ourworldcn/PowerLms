@@ -1309,11 +1309,6 @@ namespace PowerLmsWebApi.Controllers
                 var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
                 return errResult;
             }
-            foreach (var item in model.Items)
-            {
-                _DbContext.Entry(item).Property(c => c.IsDelete).IsModified = false;
-                _DbContext.Entry(item).Property(c => c.OrgId).IsModified = false;
-            }
             _DbContext.SaveChanges();
             return result;
         }

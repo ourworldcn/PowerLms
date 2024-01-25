@@ -115,7 +115,7 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// 修改组织机构。
+        /// 修改组织机构。不能修改父子关系。请使用 AddOrgRelation 和 RemoveOrgRelation修改。
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
@@ -127,13 +127,63 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized(OwHelper.GetLastErrorMessage());
             var result = new ModifyOrgReturnDto();
             var list = new List<PlOrganization>();
+            var res = model.Items.Select(c => (_DbContext.PlOrganizations.Find(c.Id), _DbContext.PlOrganizations.Find(c.Id).Children.ToArray())).ToArray();
             if (!_EntityManager.Modify(model.Items, list)) return NotFound();
 
-            list.ForEach(tmp =>
+            //list.ForEach(tmp =>
+            //{
+            //    var entity = _DbContext.Entry(tmp);
+            //    entity.Navigation(nameof(PlOrganization.Children)).IsModified = false;
+            //    entity.Collection(c => c.Children).IsModified = false;
+            //});
+            res.ForEach(c =>
             {
-                var entity = _DbContext.Entry(tmp);
-                entity.Collection(c => c.Children).IsModified = false;
+                c.Item1.Children.Clear();
+                c.Item1.Children.AddRange(c.Item2);
             });
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        /// <summary>
+        /// 增加机构父子关系的功能。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">找不到指定Id的对象。</response>  
+        [HttpPost]
+        public ActionResult<AddOrgRelationReturnDto> AddOrgRelation(AddOrgRelationParamsDto model)
+        {
+            var result = new AddOrgRelationReturnDto();
+            var parent = _DbContext.PlOrganizations.Find(model.ParentId);
+            if (parent is null) return BadRequest($"找不到{model.ParentId}指定的机构对象");
+            var child = _DbContext.PlOrganizations.Find(model.ChildId);
+            if (child is null) return BadRequest($"找不到{model.ChildId}指定的机构对象");
+            parent.Children.Add(child);
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        /// <summary>
+        /// 删除机构父子关系的功能。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">找不到指定Id的对象 -或- 不是父对象的孩子 -或- 子对象还有孩子。</response> 
+        [HttpDelete]
+        public ActionResult<RemoveOrgRelationReturnDto> RemoveOrgRelation(RemoveOrgRelationParamsDto model)
+        {
+            var result = new RemoveOrgRelationReturnDto();
+            var parent = _DbContext.PlOrganizations.Find(model.ParentId);
+            if (parent is null) return BadRequest($"找不到{model.ParentId}指定的机构对象");
+            var child = parent.Children.FirstOrDefault(c => c.Id == model.ChildId);
+            if (child is null || child.Children.Count > 0) return BadRequest($"找不到{model.ChildId}指定的机构对象或不是父对象的孩子。 -或- 子对象还有孩子");
+            parent.Children.Remove(child);
+            _DbContext.Remove(child);
             _DbContext.SaveChanges();
             return result;
         }
@@ -381,6 +431,52 @@ namespace PowerLmsWebApi.Controllers
 
         #endregion 开户行信息
 
+    }
+
+    /// <summary>
+    /// 删除机构父子关系的功能参数封装类。
+    /// </summary>
+    public class RemoveOrgRelationParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 父Id。
+        /// </summary>
+        public Guid ParentId { get; set; }
+
+        /// <summary>
+        /// 子Id。
+        /// </summary>
+        public Guid ChildId { get; set; }
+    }
+
+    /// <summary>
+    /// 删除机构父子关系的功能返回值封装类。
+    /// </summary>
+    public class RemoveOrgRelationReturnDto : ReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 增加机构父子关系的功能参数封装类。
+    /// </summary>
+    public class AddOrgRelationParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 父Id。
+        /// </summary>
+        public Guid ParentId { get; set; }
+
+        /// <summary>
+        /// 子Id。
+        /// </summary>
+        public Guid ChildId { get; set; }
+    }
+
+    /// <summary>
+    /// 增加机构父子关系的功能返回值封装类。
+    /// </summary>
+    public class AddOrgRelationReturnDto : ReturnDtoBase
+    {
     }
 
     #region 开户行信息
