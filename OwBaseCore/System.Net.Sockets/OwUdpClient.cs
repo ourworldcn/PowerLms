@@ -64,6 +64,9 @@ namespace System.Net.Sockets
         public IPEndPoint RemotePoint { get; set; }
     }
 
+    /// <summary>
+    /// 
+    /// </summary>
     public class OwUdpClient : OwDisposableBase
     {
         public OwUdpClient()
@@ -90,6 +93,8 @@ namespace System.Net.Sockets
         UdpClient _UdpClient;
 
         Task _IoWorker;
+        const int Mtu = 548;
+        const int Mts = 548 - 8 - 1;
 
         /// <summary>
         /// 内部的取消标记。
