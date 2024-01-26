@@ -15,6 +15,7 @@ namespace System.Net.Sockets
 {
     internal class OwUdpData
     {
+        
         public OwUdpData(int length)
         {
             Debug.Assert(length > 9);

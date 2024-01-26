@@ -1389,6 +1389,61 @@
             <param name="pool">池对象。</param>
             <returns></returns>
         </member>
+        <member name="P:System.Net.Sockets.UdpDataEntry.Id">
+            <summary>
+            对方的唯一标识。
+            </summary>
+        </member>
+        <member name="P:System.Net.Sockets.UdpDataEntry.FirstSendDateTime">
+            <summary>
+            首次发送的时间。空表示尚未发送。
+            </summary>
+        </member>
+        <member name="P:System.Net.Sockets.UdpDataEntry.LastSendDateTime">
+            <summary>
+            最后一次发送的世界时间。<see cref="P:System.OwHelper.WorldNow"/>。空标识未发送。
+            </summary>
+        </member>
+        <member name="P:System.Net.Sockets.UdpDataEntry.Buffer">
+            <summary>
+            缓冲区。第一个是标志字节，随后是4字节序号。后跟负载数据。
+            </summary>
+        </member>
+        <member name="P:System.Net.Sockets.UdpDataEntry.Count">
+            <summary>
+            小于或等于<see cref="F:System.Net.Sockets.OwUdpServerV2.Mtu"/>。
+            </summary>
+        </member>
+        <member name="F:System.Net.Sockets.OwUdpServerV2._Options">
+            <summary>
+            存储配置信息的字段。
+            </summary>
+        </member>
+        <member name="F:System.Net.Sockets.OwUdpServerV2._Logger">
+            <summary>
+            存储日志接口字段。
+            </summary>
+        </member>
+        <member name="F:System.Net.Sockets.OwUdpServerV2.Mtu">
+            <summary>
+            Internet上的标准MTU值为576字节，所以在进行Internet的UDP编程时，最好将UDP的数据长度控件在548字节(576-8-20)以内。
+            </summary>
+        </member>
+        <member name="F:System.Net.Sockets.OwUdpServerV2.Mts">
+            <summary>
+            本类使用的负载长度，去掉1个标志字节，4位序号。
+            </summary>
+        </member>
+        <member name="M:System.Net.Sockets.OwUdpServerV2.SendCore(System.Byte[],System.Int32,System.Int32,System.String)">
+            <summary>
+            
+            </summary>
+            <param name="buffer">大小必须是<see cref="F:System.Net.Sockets.OwUdpServerV2.Mtu"/>个字节，且前5个字节必须空出。调用此函数后缓冲区不能再进行读写。该缓冲区需要用<see cref="P:System.Buffers.ArrayPool`1.Shared"/>分配。
+            在缓冲区不用后会自动还回池。</param>
+            <param name="offset">必须是5.</param>
+            <param name="count">指出有效字节数量且必须小于或等于<see cref="F:System.Net.Sockets.OwUdpServerV2.Mts"/>。</param>
+            <param name="id">发送到对方的唯一标识符。</param>
+        </member>
         <member name="T:System.Text.Json.Serialization.GuidJsonConverter">
             <summary>
             用于将Guid类型Base64编码的Json转换器。

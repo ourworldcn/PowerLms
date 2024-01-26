@@ -360,7 +360,7 @@ namespace System
             }
             else if (obj is string str && DateTime.TryParse(str, out result))
                 b = true;
-            else if (obj is JsonElement jsonElement && jsonElement.TryGetDateTime(out result))
+            else if (obj is JsonElement jsonElement && DateTime.TryParse(jsonElement.GetString(), out result))
                 b = true;
             else
                 result = default;
