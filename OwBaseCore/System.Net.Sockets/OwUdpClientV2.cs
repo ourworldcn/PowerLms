@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -13,41 +14,75 @@ namespace System.Net.Sockets
     /// 封装的第一个标志字节。
     /// </summary>
     [Flags]
-    public enum OwUdpDataFlags : int
+    public enum OwUdpDataKind : byte
     {
+        None = 0,
+
         /// <summary>
-        /// 这是一个数据包。随后4字节是一个uint类型，用于指出包的序号。
+        /// 起始帧。
+        /// 可能既是起始帧又是终止帧，这说明是一个独立帧。
         /// </summary>
-        Data = 1 << 31,
+        StartDgram = 1,
+
         /// <summary>
-        /// 这是一个命令字，随后发送的是已接受到的最大包号。
+        /// 这位为0说明时一个正常的数据帧。
         /// </summary>
-        Command = 2,
+        CommandDgram = 2,
+
+        /// <summary>
+        /// 终止帧。
+        /// 可能既是起始帧又是终止帧，这说明是一个独立帧。也能是既非起始帧也非终止帧，这说明是一个中间帧，
+        /// </summary>
+        EndDgram = 4,
     }
 
-    internal class UdpDataEntry
+    internal class OwUdpClientEntry
     {
-        private int seq;
+        public OwUdpClientEntry()
+        {
+        }
 
-        public UdpDataEntry()
+        public int Id { get; set; }
+
+        public DateTime LastReciveWorldDateTime { get; set; }
+
+        /// <summary>
+        /// 收到的数据队列。按收到的包号升序排序。
+        /// </summary>
+        public List<OwUdpDataEntry> ReciveData { get; set; } = new List<OwUdpDataEntry>();
+    }
+
+    internal class OwUdpDataEntry
+    {
+
+        /// <summary>
+        /// Internet上的标准MTU值为576字节，所以在进行Internet的UDP编程时，最好将UDP的数据长度控件在548字节(576-8-20)以内。
+        /// </summary>
+        internal const int Mtu = 576 - 8 - 20;
+
+        /// <summary>
+        /// 本类使用的负载长度，去掉1个标志字节,3个字节通讯Id，4位序号。
+        /// </summary>
+        internal const int Mts = Mtu - 4/*标志字节 和 通讯Id*/ - 4/*已接收的连续包的最大序号*/;
+
+        public OwUdpDataEntry()
         {
         }
 
         /// <summary>
         /// 发送到对方的本机唯一标识符。
         /// </summary>
-        public Guid Id
+        public int Id
         {
             get
             {
-                var tmp = new byte[16];
-                Array.Copy(Buffer, 4, tmp, 0, 16);
-                return new Guid(tmp);
+                return IPAddress.NetworkToHostOrder(BitConverter.ToInt32(Buffer, Offset)) & 0x00ff_ffff;
             }
 
             set
             {
-                Array.Copy(value.ToByteArray(), 0, Buffer, 4, 16);
+                var ary = BitConverter.GetBytes(IPAddress.HostToNetworkOrder(value & 0x00ff_ffff));
+                Array.Copy(ary, 1, Buffer, Offset + 1, 4 - 1);
             }
         }
 
@@ -58,13 +93,12 @@ namespace System.Net.Sockets
         {
             get
             {
-                IPAddress.NetworkToHostOrder(BitConverter.ToInt32(Buffer, 0));
-                return seq;
+                return IPAddress.NetworkToHostOrder(BitConverter.ToInt32(Buffer, Offset + 4));
             }
             set
             {
                 var tmp = IPAddress.HostToNetworkOrder(value);
-                BitConverter.GetBytes(tmp).CopyTo(Buffer, 0);
+                BitConverter.GetBytes(tmp).CopyTo(Buffer, Offset + 4);
             }
         }
 
@@ -79,17 +113,21 @@ namespace System.Net.Sockets
         public DateTime? LastSendDateTime { get; set; }
 
         /// <summary>
-        /// 缓冲区。第一个是标志字节，随后是4字节序号。后跟负载数据。
-        /// 大小必须是<see cref="OwUdpClientV2.Mtu"/>个字节。第一个字节有特殊含义（D0-D7标识最低位到最高位。），如下：
-        /// D7=0则这是一个数据包，此字节与随后3字节组成了一个int型代表包的书序号。
-        /// D7=1且D6=0,说明这是一个纯信息报。
+        /// 缓冲区。第一个是标志字节，随后是3字节客户Id,4字节包顺序号。后跟负载数据。
+        /// 大小必须是<see cref="Mtu"/>个字节。第一个字节有特殊含义<seealso cref="OwUdpDataKind"/>。
         /// </summary>
-        public byte[] Buffer { get; set; } = ArrayPool<byte>.Shared.Rent(OwUdpServerV2.Mtu);
+        public byte[] Buffer { get; set; } = ArrayPool<byte>.Shared.Rent(Mtu);
 
         /// <summary>
-        /// 小于或等于<see cref="OwUdpServerV2.Mtu"/>。
+        /// 偏移量。
+        /// </summary>
+        public int Offset { get; set; }
+
+        /// <summary>
+        /// 小于或等于<see cref="Mtu"/>。总计有多少字节数据。
         /// </summary>
         public int Count { get; set; }
+
     }
 
     public class OwUdpClientV2 : IDisposable
@@ -97,14 +135,9 @@ namespace System.Net.Sockets
         UdpClient _Udp;
 
         /// <summary>
-        /// Internet上的标准MTU值为576字节，所以在进行Internet的UDP编程时，最好将UDP的数据长度控件在548字节(576-8-20)以内。
+        /// 通讯Id，仅低24位有用。若为null，标识尚未连接。
         /// </summary>
-        internal const int Mtu = 548;
-
-        /// <summary>
-        /// 本类使用的负载长度，去掉1个标志字节，4位序号。
-        /// </summary>
-        const int Mts = Mtu - 4 - 1;
+        int? _Id;
 
         #region 方法
         /// <summary>
@@ -128,13 +161,24 @@ namespace System.Net.Sockets
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="udp"></param>
-        public static void ResetError(UdpClient udp)
+        /// <param name="socket"></param>
+        public static void ResetError(Socket socket)
         {
             uint IOC_IN = 0x80000000;
             uint IOC_VENDOR = 0x18000000;
             uint IOC_UDP_RESET = IOC_IN | IOC_VENDOR | 12;
-            udp.Client.IOControl((int)IOC_UDP_RESET, new byte[] { Convert.ToByte(false) }, null);
+            socket.IOControl((int)IOC_UDP_RESET, new byte[] { Convert.ToByte(false) }, null);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="i"></param>
+        /// <returns></returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        public static uint IncrementUInt32(ref int i)
+        {
+            return (uint)Interlocked.Increment(ref i);
         }
 
         #endregion 方法

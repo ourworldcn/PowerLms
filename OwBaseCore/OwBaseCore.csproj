@@ -16,6 +16,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="System.Net.Sockets\OwUdpClient.cs" />
+    <Compile Remove="System.Net.Sockets\SocketAsynServerDemo.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -30,6 +31,7 @@
 
   <ItemGroup>
     <None Include="System.Net.Sockets\OwUdpClient.cs" />
+    <None Include="System.Net.Sockets\SocketAsynServerDemo.cs" />
   </ItemGroup>
 
 </Project>

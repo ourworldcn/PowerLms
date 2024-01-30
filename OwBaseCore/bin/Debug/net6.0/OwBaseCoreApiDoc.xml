@@ -1359,62 +1359,82 @@
             <returns></returns>
             <exception cref="T:System.ArgumentException">找不到属性。</exception>
         </member>
-        <member name="T:System.Net.Sockets.OwUdpDataFlags">
+        <member name="T:System.Net.Sockets.OwUdpDataKind">
             <summary>
             封装的第一个标志字节。
             </summary>
         </member>
-        <member name="F:System.Net.Sockets.OwUdpDataFlags.Data">
+        <member name="F:System.Net.Sockets.OwUdpDataKind.StartDgram">
             <summary>
-            这是一个数据包。随后4字节是一个uint类型，用于指出包的序号。
+            起始帧。
+            可能既是起始帧又是终止帧，这说明是一个独立帧。
             </summary>
         </member>
-        <member name="F:System.Net.Sockets.OwUdpDataFlags.Command">
+        <member name="F:System.Net.Sockets.OwUdpDataKind.CommandDgram">
             <summary>
-            这是一个命令字，随后发送的是已接受到的最大包号。
+            这位为0说明时一个正常的数据帧。
             </summary>
         </member>
-        <member name="P:System.Net.Sockets.UdpDataEntry.Id">
+        <member name="F:System.Net.Sockets.OwUdpDataKind.EndDgram">
             <summary>
-            发送到对方的本机唯一标识符。
+            终止帧。
+            可能既是起始帧又是终止帧，这说明是一个独立帧。也能是既非起始帧也非终止帧，这说明是一个中间帧，
             </summary>
         </member>
-        <member name="P:System.Net.Sockets.UdpDataEntry.Seq">
+        <member name="P:System.Net.Sockets.OwUdpClientEntry.ReciveData">
             <summary>
-            包的序号。4字节含标志位，调用者需要自己处理标志位问题。
+            收到的数据队列。按收到的包号升序排序。
             </summary>
         </member>
-        <member name="P:System.Net.Sockets.UdpDataEntry.FirstSendDateTime">
-            <summary>
-            首次发送的时间。空表示尚未发送。
-            </summary>
-        </member>
-        <member name="P:System.Net.Sockets.UdpDataEntry.LastSendDateTime">
-            <summary>
-            最后一次发送的世界时间。<see cref="P:System.OwHelper.WorldNow"/>。空标识未发送。
-            </summary>
-        </member>
-        <member name="P:System.Net.Sockets.UdpDataEntry.Buffer">
-            <summary>
-            缓冲区。第一个是标志字节，随后是4字节序号。后跟负载数据。
-            大小必须是<see cref="F:System.Net.Sockets.OwUdpClientV2.Mtu"/>个字节。第一个字节有特殊含义（D0-D7标识最低位到最高位。），如下：
-            D7=0则这是一个数据包，此字节与随后3字节组成了一个int型代表包的书序号。
-            D7=1且D6=0,说明这是一个纯信息报。
-            </summary>
-        </member>
-        <member name="P:System.Net.Sockets.UdpDataEntry.Count">
-            <summary>
-            小于或等于<see cref="F:System.Net.Sockets.OwUdpServerV2.Mtu"/>。
-            </summary>
-        </member>
-        <member name="F:System.Net.Sockets.OwUdpClientV2.Mtu">
+        <member name="F:System.Net.Sockets.OwUdpDataEntry.Mtu">
             <summary>
             Internet上的标准MTU值为576字节，所以在进行Internet的UDP编程时，最好将UDP的数据长度控件在548字节(576-8-20)以内。
             </summary>
         </member>
-        <member name="F:System.Net.Sockets.OwUdpClientV2.Mts">
+        <member name="F:System.Net.Sockets.OwUdpDataEntry.Mts">
             <summary>
-            本类使用的负载长度，去掉1个标志字节，4位序号。
+            本类使用的负载长度，去掉1个标志字节,3个字节通讯Id，4位序号。
+            </summary>
+        </member>
+        <member name="P:System.Net.Sockets.OwUdpDataEntry.Id">
+            <summary>
+            发送到对方的本机唯一标识符。
+            </summary>
+        </member>
+        <member name="P:System.Net.Sockets.OwUdpDataEntry.Seq">
+            <summary>
+            包的序号。4字节含标志位，调用者需要自己处理标志位问题。
+            </summary>
+        </member>
+        <member name="P:System.Net.Sockets.OwUdpDataEntry.FirstSendDateTime">
+            <summary>
+            首次发送的时间。空表示尚未发送。
+            </summary>
+        </member>
+        <member name="P:System.Net.Sockets.OwUdpDataEntry.LastSendDateTime">
+            <summary>
+            最后一次发送的世界时间。<see cref="P:System.OwHelper.WorldNow"/>。空标识未发送。
+            </summary>
+        </member>
+        <member name="P:System.Net.Sockets.OwUdpDataEntry.Buffer">
+            <summary>
+            缓冲区。第一个是标志字节，随后是3字节客户Id,4字节包顺序号。后跟负载数据。
+            大小必须是<see cref="F:System.Net.Sockets.OwUdpDataEntry.Mtu"/>个字节。第一个字节有特殊含义<seealso cref="T:System.Net.Sockets.OwUdpDataKind"/>。
+            </summary>
+        </member>
+        <member name="P:System.Net.Sockets.OwUdpDataEntry.Offset">
+            <summary>
+            偏移量。
+            </summary>
+        </member>
+        <member name="P:System.Net.Sockets.OwUdpDataEntry.Count">
+            <summary>
+            小于或等于<see cref="F:System.Net.Sockets.OwUdpDataEntry.Mtu"/>。总计有多少字节数据。
+            </summary>
+        </member>
+        <member name="F:System.Net.Sockets.OwUdpClientV2._Id">
+            <summary>
+            通讯Id，仅低24位有用。若为null，标识尚未连接。
             </summary>
         </member>
         <member name="M:System.Net.Sockets.OwUdpClientV2.IncrementInt31(System.Int32@)">
@@ -1424,11 +1444,18 @@
             <param name="i"></param>
             <returns></returns>
         </member>
-        <member name="M:System.Net.Sockets.OwUdpClientV2.ResetError(System.Net.Sockets.UdpClient)">
+        <member name="M:System.Net.Sockets.OwUdpClientV2.ResetError(System.Net.Sockets.Socket)">
             <summary>
             
             </summary>
-            <param name="udp"></param>
+            <param name="socket"></param>
+        </member>
+        <member name="M:System.Net.Sockets.OwUdpClientV2.IncrementUInt32(System.Int32@)">
+            <summary>
+            
+            </summary>
+            <param name="i"></param>
+            <returns></returns>
         </member>
         <member name="P:System.Net.Sockets.OwUdpServerDataEntry.Id">
             <summary>
@@ -1487,14 +1514,19 @@
             允许通知使用者应用程序生存期事件。
             </summary>
         </member>
-        <member name="F:System.Net.Sockets.OwUdpServerV2.Mtu">
+        <member name="F:System.Net.Sockets.OwUdpServerV2._Id2Remote">
             <summary>
-            Internet上的标准MTU值为576字节，所以在进行Internet的UDP编程时，最好将UDP的数据长度控件在548字节(576-8-20)以内。
+            记录标识-远程终结点的对应关系。
             </summary>
         </member>
-        <member name="F:System.Net.Sockets.OwUdpServerV2.Mts">
+        <member name="F:System.Net.Sockets.OwUdpServerV2._Remote2Id">
             <summary>
-            本类使用的负载长度，去掉1个标志字节，4位序号。
+            记录远程终结点-标识的对应关系。
+            </summary>
+        </member>
+        <member name="F:System.Net.Sockets.OwUdpServerV2._Id2ClientEntry">
+            <summary>
+            每个客户端的信息。
             </summary>
         </member>
         <member name="P:System.Net.Sockets.OwUdpServerV2.ListernPort">
@@ -1502,7 +1534,7 @@
             侦听的实际端口号。
             </summary>
         </member>
-        <member name="M:System.Net.Sockets.OwUdpServerV2.SendCore(System.Net.Sockets.UdpDataEntry)">
+        <member name="M:System.Net.Sockets.OwUdpServerV2.SendCore(System.Net.Sockets.OwUdpDataEntry)">
             <summary>
             
             </summary>
@@ -1519,6 +1551,29 @@
             </summary>
             <param name="maxFrameCount">最多处理多少帧。</param>
             <returns>实际处理的帧数。</returns>
+        </member>
+        <member name="F:System.Net.Sockets.OwUdpServerV2._Comp">
+            <summary>
+            按包序号排序的比较器。
+            </summary>
+        </member>
+        <member name="M:System.Net.Sockets.OwUdpServerV2.ProcessReceive(System.Net.Sockets.SocketAsyncEventArgs)">
+            <summary>
+            处理已接受到数据的情况。
+            </summary>
+            <param name="e"></param>
+        </member>
+        <member name="M:System.Net.Sockets.OwUdpServerV2.ProcessSend(System.Net.Sockets.SocketAsyncEventArgs)">
+            <summary>
+            处理已经发送的情况。
+            </summary>
+            <param name="e"></param>
+        </member>
+        <member name="M:System.Net.Sockets.OwUdpServerV2.ProcessError(System.Net.Sockets.SocketAsyncEventArgs)">
+            <summary>
+            处理错误。
+            </summary>
+            <param name="e"></param>
         </member>
         <member name="T:System.Text.Json.Serialization.GuidJsonConverter">
             <summary>
