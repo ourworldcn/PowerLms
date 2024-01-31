@@ -1190,6 +1190,12 @@
             <param name="defaultVal"></param>
             <returns></returns>
         </member>
+        <member name="T:System.Collections.Generic.OwPriorityQueue">
+            <summary>
+            使用循环数组构建的优先级队列。
+            表示具有值和优先级的项的集合。 取消排队时，将删除优先级值最低的项。
+            </summary>
+        </member>
         <member name="M:System.Collections.Generic.OwEnumerableExtensions.ForEach``1(System.Collections.Generic.IEnumerable{``0},System.Action{``0})">
             <summary>
             对 集合 的每个元素执行指定操作。
@@ -1386,6 +1392,16 @@
             收到的数据队列。按收到的包号升序排序。
             </summary>
         </member>
+        <member name="F:System.Net.Sockets.OwUdpClientEntry.MaxSeq">
+            <summary>
+            包序号，记录了已用的最大序号，可能需要回绕。
+            </summary>
+        </member>
+        <member name="F:System.Net.Sockets.OwUdpClientEntry.Remote">
+            <summary>
+            远程终结点。
+            </summary>
+        </member>
         <member name="F:System.Net.Sockets.OwUdpDataEntry.Mtu">
             <summary>
             Internet上的标准MTU值为576字节，所以在进行Internet的UDP编程时，最好将UDP的数据长度控件在548字节(576-8-20)以内。
@@ -1403,7 +1419,7 @@
         </member>
         <member name="P:System.Net.Sockets.OwUdpDataEntry.Seq">
             <summary>
-            包的序号。4字节含标志位，调用者需要自己处理标志位问题。
+            包的序号。
             </summary>
         </member>
         <member name="P:System.Net.Sockets.OwUdpDataEntry.FirstSendDateTime">
@@ -1514,11 +1530,6 @@
             允许通知使用者应用程序生存期事件。
             </summary>
         </member>
-        <member name="F:System.Net.Sockets.OwUdpServerV2._Id2Remote">
-            <summary>
-            记录标识-远程终结点的对应关系。
-            </summary>
-        </member>
         <member name="F:System.Net.Sockets.OwUdpServerV2._Remote2Id">
             <summary>
             记录远程终结点-标识的对应关系。
@@ -1540,17 +1551,10 @@
             </summary>
             <param name="entry"></param>
         </member>
-        <member name="M:System.Net.Sockets.OwUdpServerV2.IoWorker">
+        <member name="M:System.Net.Sockets.OwUdpServerV2.SendWorker">
             <summary>
-            IO工作函数。
+            发送数据的工作函数。
             </summary>
-        </member>
-        <member name="M:System.Net.Sockets.OwUdpServerV2.Receive(System.Int32)">
-            <summary>
-            
-            </summary>
-            <param name="maxFrameCount">最多处理多少帧。</param>
-            <returns>实际处理的帧数。</returns>
         </member>
         <member name="F:System.Net.Sockets.OwUdpServerV2._Comp">
             <summary>
@@ -1562,6 +1566,12 @@
             处理已接受到数据的情况。
             </summary>
             <param name="e"></param>
+        </member>
+        <member name="M:System.Net.Sockets.OwUdpServerV2.ProcessDgram(System.Net.Sockets.OwUdpClientEntry)">
+            <summary>
+            处理到达的数据。
+            </summary>
+            <param name="entry">对特定的客户端到达的数据进行扫描并处理。</param>
         </member>
         <member name="M:System.Net.Sockets.OwUdpServerV2.ProcessSend(System.Net.Sockets.SocketAsyncEventArgs)">
             <summary>

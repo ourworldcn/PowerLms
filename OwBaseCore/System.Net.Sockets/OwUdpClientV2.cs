@@ -50,6 +50,16 @@ namespace System.Net.Sockets
         /// 收到的数据队列。按收到的包号升序排序。
         /// </summary>
         public List<OwUdpDataEntry> ReciveData { get; set; } = new List<OwUdpDataEntry>();
+
+        /// <summary>
+        /// 包序号，记录了已用的最大序号，可能需要回绕。
+        /// </summary>
+        public int MaxSeq;
+
+        /// <summary>
+        /// 远程终结点。
+        /// </summary>
+        public volatile IPEndPoint Remote;
     }
 
     internal class OwUdpDataEntry
@@ -87,7 +97,7 @@ namespace System.Net.Sockets
         }
 
         /// <summary>
-        /// 包的序号。4字节含标志位，调用者需要自己处理标志位问题。
+        /// 包的序号。
         /// </summary>
         public int Seq
         {
@@ -243,3 +253,4 @@ namespace Microsoft.Extensions.Options
     }
 }
 #endif
+

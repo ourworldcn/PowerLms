@@ -52,7 +52,7 @@ namespace System.Net.Sockets
             _Socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             _Socket.Bind(new IPEndPoint(IPAddress.Parse(_Options.Value.ListernAddress), _Options.Value.ListernPort));
 
-            _IoTask = Task.Factory.StartNew(IoWorker, TaskCreationOptions.LongRunning);
+            _IoTask = Task.Factory.StartNew(SendWorker, TaskCreationOptions.LongRunning);
         }
 
         #region 属性及相关
@@ -76,15 +76,8 @@ namespace System.Net.Sockets
 
         BlockingCollection<OwUdpDataEntry> _WaitSend = new BlockingCollection<OwUdpDataEntry>();
 
-        ConcurrentQueue<OwUdpDataEntry> _Sended = new ConcurrentQueue<OwUdpDataEntry>();
-
         Socket _Socket;
         Task _IoTask;
-
-        /// <summary>
-        /// 记录标识-远程终结点的对应关系。
-        /// </summary>
-        ConcurrentDictionary<Guid, IPEndPoint> _Id2Remote = new ConcurrentDictionary<Guid, IPEndPoint>();
 
         /// <summary>
         /// 记录远程终结点-标识的对应关系。
@@ -110,32 +103,52 @@ namespace System.Net.Sockets
         /// <param name="entry"></param>
         internal virtual void SendCore(OwUdpDataEntry entry)
         {
+            var now = OwHelper.WorldNow;
+            var clientEntry = _Id2ClientEntry.GetOrAdd(entry.Id, c => new OwUdpClientEntry { Id = c, });
+            clientEntry.LastReciveWorldDateTime = now;
+            var list = clientEntry.ReciveData;
+            lock (clientEntry)
+            {
+                entry.Seq = Interlocked.Increment(ref clientEntry.MaxSeq);
+                var index = list.BinarySearch(entry, _Comp);
+                if (index < 0)    //若包不重复
+                {
+                    list.Insert(~index, entry);
+                }
+            }
             _WaitSend.Add(entry);
         }
 
         /// <summary>
-        /// IO工作函数。
+        /// 发送数据的工作函数。
         /// </summary>
-        protected void IoWorker()
+        protected void SendWorker()
         {
-            #region 接收数据
-            #endregion 接收数据
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="maxFrameCount">最多处理多少帧。</param>
-        /// <returns>实际处理的帧数。</returns>
-        int Receive([Range(0, int.MaxValue)] int maxFrameCount = int.MaxValue)
-        {
-            Trace.Assert(maxFrameCount > 0);
-            int frameCount;
-            IPEndPoint remote = new IPEndPoint(IPAddress.Any, 0);
-            byte[] buffer;
-
-
-            return 0;
+            #region 发送数据
+            OwUdpDataEntry item;
+            while (true)
+            {
+                try
+                {
+                    item = _WaitSend.Take(_HostApplicationLifetime.ApplicationStarted);
+                }
+                catch (Exception)
+                {
+                    break;
+                }
+                if (_Id2ClientEntry.TryGetValue(item.Id, out var entry))
+                    try
+                    {
+                        var tranCount = _Socket.SendTo(item.Buffer, item.Offset, item.Count, SocketFlags.None, entry.Remote);
+                        item.LastSendDateTime = OwHelper.WorldNow;
+                    }
+                    catch (Exception)
+                    {
+                        _WaitSend.TryAdd(item);
+                        OwUdpClientV2.ResetError(_Socket);
+                    }
+            }
+            #endregion 发送数据
         }
 
         void IO_Completed(object sender, SocketAsyncEventArgs e)
@@ -173,7 +186,7 @@ namespace System.Net.Sockets
         /// <summary>
         /// 按包序号排序的比较器。
         /// </summary>
-        Comparer<OwUdpDataEntry> _Comp = Comparer<OwUdpDataEntry>.Create((l, r) => Comparer<int>.Default.Compare(l.Seq, r.Seq));
+        Comparer<OwUdpDataEntry> _Comp = Comparer<OwUdpDataEntry>.Create((l, r) => Comparer<uint>.Default.Compare((uint)l.Seq, (uint)r.Seq));
 
         /// <summary>
         /// 处理已接受到数据的情况。
@@ -196,11 +209,17 @@ namespace System.Net.Sockets
                 var clientEntry = _Id2ClientEntry.GetOrAdd(entry.Id, c => new OwUdpClientEntry() { Id = c });
                 lock (clientEntry)
                 {
-                    clientEntry.LastReciveWorldDateTime = OwHelper.WorldNow;
+                    var now = OwHelper.WorldNow;
+                    if (clientEntry.LastReciveWorldDateTime < now)
+                        clientEntry.LastReciveWorldDateTime = OwHelper.WorldNow;
                     var list = clientEntry.ReciveData;
                     var index = list.BinarySearch(entry, _Comp);
-                    if (index < 0)   //若包未到达
+                    if (index < 0)   //若包未到达,忽略重复包
+                    {
                         list.Insert(~index, entry);
+                        var ints = new PriorityQueue<int, int>(1);
+
+                    }
                 }
 
                 e.SetBuffer(ArrayPool<byte>.Shared.Rent(OwUdpDataEntry.Mtu), 0, OwUdpDataEntry.Mtu);
@@ -214,6 +233,23 @@ namespace System.Net.Sockets
             else
             {
                 ProcessError(e);
+            }
+        }
+
+        /// <summary>
+        /// 处理到达的数据。
+        /// </summary>
+        /// <param name="entry">对特定的客户端到达的数据进行扫描并处理。</param>
+        private void ProcessDgram(OwUdpClientEntry entry)
+        {
+            var list = entry.ReciveData;
+            for (int i = 0; i < list.Count; i++)
+            {
+                var dgram = list[i];
+                OwUdpDataKind kind = (OwUdpDataKind)dgram.Buffer[dgram.Offset];
+                if (kind.HasFlag(OwUdpDataKind.StartDgram | OwUdpDataKind.EndDgram))    //若是独立帧
+                {
+                }
             }
         }
 
