@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Data;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -36,13 +37,30 @@ namespace System.Net.Sockets
         EndDgram = 4,
     }
 
-    internal class OwUdpClientEntry
+    internal class OwUdpRemoteEntryBase
     {
-        public OwUdpClientEntry()
+        public int _Id;
+        /// <summary>
+        /// 终结点Id。仅低24位有效。
+        /// </summary>
+        [Range(0, 0x00ff_ffff)]
+        public int Id
         {
+            get => _Id;
+            set
+            {
+                if (value > 0x00ff_ffff || value < 0) throw new ArgumentOutOfRangeException(nameof(value));
+                _Id = value;
+            }
         }
 
-        public int Id { get; set; }
+    }
+
+    internal class OwUdpRemoteEntry : OwUdpRemoteEntryBase
+    {
+        public OwUdpRemoteEntry()
+        {
+        }
 
         public DateTime LastReciveWorldDateTime { get; set; }
 
@@ -115,7 +133,7 @@ namespace System.Net.Sockets
         /// <summary>
         /// 首次发送的时间。空表示尚未发送。
         /// </summary>
-        public DateTime? FirstSendDateTime { get; set; }
+        public DateTime? FirstSendDateTime;
 
         /// <summary>
         /// 最后一次发送的世界时间。<see cref="OwHelper.WorldNow"/>。空标识未发送。
@@ -142,14 +160,15 @@ namespace System.Net.Sockets
 
     public class OwUdpClientV2 : IDisposable
     {
-        UdpClient _Udp;
-
         /// <summary>
         /// 通讯Id，仅低24位有用。若为null，标识尚未连接。
         /// </summary>
         int? _Id;
 
         #region 方法
+
+        #region 静态方法
+
         /// <summary>
         /// 原子递增一个31位整数，当由<see cref="int.MaxValue"/>回绕到<see cref="int.MinValue"/>时自动设置为0。
         /// </summary>
@@ -174,10 +193,10 @@ namespace System.Net.Sockets
         /// <param name="socket"></param>
         public static void ResetError(Socket socket)
         {
-            uint IOC_IN = 0x80000000;
-            uint IOC_VENDOR = 0x18000000;
-            uint IOC_UDP_RESET = IOC_IN | IOC_VENDOR | 12;
-            socket.IOControl((int)IOC_UDP_RESET, new byte[] { Convert.ToByte(false) }, null);
+            const uint IOC_IN = 0x80000000;
+            const uint IOC_VENDOR = 0x18000000;
+            const uint IOC_UDP_RESET = IOC_IN | IOC_VENDOR | 12;
+            socket.IOControl(unchecked((int)IOC_UDP_RESET), new byte[] { Convert.ToByte(false) }, null);
         }
 
         /// <summary>
@@ -190,7 +209,24 @@ namespace System.Net.Sockets
         {
             return (uint)Interlocked.Increment(ref i);
         }
+        #endregion 静态方法
 
+        public void Init([Range(0, OwUdpDataEntry.Mts)] byte[] evidence)
+        {
+            if (evidence.Length > OwUdpDataEntry.Mts)
+                throw new ArgumentException("超长", nameof(evidence));
+            var dataEntry = new OwUdpDataEntry
+            {
+                Id = 0,
+            };
+            dataEntry.Buffer = new byte[OwUdpDataEntry.Mtu];
+            dataEntry.Offset = 0;
+            dataEntry.Count = OwUdpDataEntry.Mtu;
+
+            dataEntry.Buffer[0] = (byte)(OwUdpDataKind.CommandDgram);
+
+            evidence.CopyTo(dataEntry.Buffer, 8);
+        }
         #endregion 方法
 
         #region IDisposable接口相关
@@ -204,7 +240,6 @@ namespace System.Net.Sockets
                 if (disposing)
                 {
                     // 释放托管状态(托管对象)
-                    _Udp?.Dispose();
                 }
 
                 // 释放未托管的资源(未托管的对象)并重写终结器

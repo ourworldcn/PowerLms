@@ -52,7 +52,7 @@ namespace System.Net.Sockets
             _Socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             _Socket.Bind(new IPEndPoint(IPAddress.Parse(_Options.Value.ListernAddress), _Options.Value.ListernPort));
 
-            _IoTask = Task.Factory.StartNew(SendWorker, TaskCreationOptions.LongRunning);
+            _SendTask = Task.Factory.StartNew(SendWorker, TaskCreationOptions.LongRunning);
         }
 
         #region 属性及相关
@@ -73,11 +73,13 @@ namespace System.Net.Sockets
         IHostApplicationLifetime _HostApplicationLifetime;
         ObjectPool<OwUdpDataEntry> _EntryPool = ObjectPool.Create(new DefaultPooledObjectPolicy<OwUdpDataEntry>());
 
-
+        /// <summary>
+        /// 等待发送数据的队列。
+        /// </summary>
         BlockingCollection<OwUdpDataEntry> _WaitSend = new BlockingCollection<OwUdpDataEntry>();
 
         Socket _Socket;
-        Task _IoTask;
+        Task _SendTask;
 
         /// <summary>
         /// 记录远程终结点-标识的对应关系。
@@ -87,7 +89,7 @@ namespace System.Net.Sockets
         /// <summary>
         /// 每个客户端的信息。
         /// </summary>
-        ConcurrentDictionary<int, OwUdpClientEntry> _Id2ClientEntry = new ConcurrentDictionary<int, OwUdpClientEntry>();
+        ConcurrentDictionary<int, OwUdpRemoteEntry> _Id2ClientEntry = new ConcurrentDictionary<int, OwUdpRemoteEntry>();
 
         /// <summary>
         /// 侦听的实际端口号。
@@ -104,11 +106,11 @@ namespace System.Net.Sockets
         internal virtual void SendCore(OwUdpDataEntry entry)
         {
             var now = OwHelper.WorldNow;
-            var clientEntry = _Id2ClientEntry.GetOrAdd(entry.Id, c => new OwUdpClientEntry { Id = c, });
-            clientEntry.LastReciveWorldDateTime = now;
-            var list = clientEntry.ReciveData;
+            var clientEntry = _Id2ClientEntry.GetOrAdd(entry.Id, c => new OwUdpRemoteEntry { Id = c, });
             lock (clientEntry)
             {
+                clientEntry.LastReciveWorldDateTime = now;
+                var list = clientEntry.ReciveData;
                 entry.Seq = Interlocked.Increment(ref clientEntry.MaxSeq);
                 var index = list.BinarySearch(entry, _Comp);
                 if (index < 0)    //若包不重复
@@ -132,15 +134,24 @@ namespace System.Net.Sockets
                 {
                     item = _WaitSend.Take(_HostApplicationLifetime.ApplicationStarted);
                 }
-                catch (Exception)
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                catch (ObjectDisposedException)
                 {
                     break;
                 }
                 if (_Id2ClientEntry.TryGetValue(item.Id, out var entry))
                     try
                     {
-                        var tranCount = _Socket.SendTo(item.Buffer, item.Offset, item.Count, SocketFlags.None, entry.Remote);
-                        item.LastSendDateTime = OwHelper.WorldNow;
+                        lock (entry)
+                        {
+                            var now = OwHelper.WorldNow;
+                            var tranCount = _Socket.SendTo(item.Buffer, item.Offset, item.Count, SocketFlags.None, entry.Remote);
+                            if (item.FirstSendDateTime is null) item.FirstSendDateTime = now;
+                            item.LastSendDateTime = now;
+                        }
                     }
                     catch (Exception)
                     {
@@ -206,12 +217,17 @@ namespace System.Net.Sockets
                 entry.Buffer = e.Buffer;
                 entry.Offset = e.Offset;
                 entry.Count = e.BytesTransferred;
-                var clientEntry = _Id2ClientEntry.GetOrAdd(entry.Id, c => new OwUdpClientEntry() { Id = c });
+                var clientEntry = _Id2ClientEntry.GetOrAdd(entry.Id, c => new OwUdpRemoteEntry() { Id = c });
                 lock (clientEntry)
                 {
                     var now = OwHelper.WorldNow;
                     if (clientEntry.LastReciveWorldDateTime < now)
                         clientEntry.LastReciveWorldDateTime = OwHelper.WorldNow;
+                    var kind = (OwUdpDataKind)entry.Buffer[entry.Offset];
+                    if (kind.HasFlag(OwUdpDataKind.CommandDgram))    //若是命令包
+                    {
+
+                    }
                     var list = clientEntry.ReciveData;
                     var index = list.BinarySearch(entry, _Comp);
                     if (index < 0)   //若包未到达,忽略重复包
@@ -222,6 +238,7 @@ namespace System.Net.Sockets
                     }
                 }
 
+                //重新侦听
                 e.SetBuffer(ArrayPool<byte>.Shared.Rent(OwUdpDataEntry.Mtu), 0, OwUdpDataEntry.Mtu);
                 var socket = (Socket)e.UserToken;
                 bool willRaiseEvent = socket.ReceiveAsync(e);
@@ -240,7 +257,7 @@ namespace System.Net.Sockets
         /// 处理到达的数据。
         /// </summary>
         /// <param name="entry">对特定的客户端到达的数据进行扫描并处理。</param>
-        private void ProcessDgram(OwUdpClientEntry entry)
+        private void ProcessDgram(OwUdpRemoteEntry entry)
         {
             var list = entry.ReciveData;
             for (int i = 0; i < list.Count; i++)

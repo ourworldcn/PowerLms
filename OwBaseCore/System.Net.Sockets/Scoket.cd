@@ -1,0 +1,56 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Class Name="System.Net.Sockets.OwUdpRemoteEntry" Collapsed="true">
+    <Position X="0.5" Y="2" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAABAAAARAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>System.Net.Sockets\OwUdpClientV2.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="System.Net.Sockets.OwUdpDataEntry" Collapsed="true">
+    <Position X="4.75" Y="0.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAACAAAAAAAABAAAAAAAAAQCAAAIAIAAAAAAAAAAwAA=</HashCode>
+      <FileName>System.Net.Sockets\OwUdpClientV2.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="System.Net.Sockets.OwUdpClientV2" Collapsed="true" BaseTypeListCollapsed="true">
+    <Position X="3" Y="0.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAADAAAAAAAAAAAAAAARAAAAAAAAAAAgAEAAQ=</HashCode>
+      <FileName>System.Net.Sockets\OwUdpClientV2.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" Collapsed="true" />
+  </Class>
+  <Class Name="System.Net.Sockets.OwUdpServerV2Options" Collapsed="true" BaseTypeListCollapsed="true">
+    <Position X="4.75" Y="1.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAgAAAAAAA=</HashCode>
+      <FileName>System.Net.Sockets\OwUdpServerV2.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" Collapsed="true" />
+  </Class>
+  <Class Name="System.Net.Sockets.OwUdpServerV2" Collapsed="true" BaseTypeListCollapsed="true">
+    <Position X="3" Y="1.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>RAQAAAAAAmgAAQAAAAEFAAAAAACAAAAABAEBQAQAIDA=</HashCode>
+      <FileName>System.Net.Sockets\OwUdpServerV2.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" Collapsed="true" />
+  </Class>
+  <Class Name="System.Net.Sockets.OwUdpRemoteEntryBase" Collapsed="true">
+    <Position X="0.5" Y="0.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAA=</HashCode>
+      <FileName>System.Net.Sockets\OwUdpClientV2.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Enum Name="System.Net.Sockets.OwUdpDataKind" Collapsed="true">
+    <Position X="3" Y="3" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAIAAAAAACAAAAAAAAAAAAAAAAAAAAAAQAAAEAAAA=</HashCode>
+      <FileName>System.Net.Sockets\OwUdpClientV2.cs</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Font Name="Microsoft YaHei UI" Size="9" />
+</ClassDiagram>

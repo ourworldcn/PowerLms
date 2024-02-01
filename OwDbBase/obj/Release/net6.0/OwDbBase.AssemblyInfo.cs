@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("OwDbBase")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+45caaaf543cd397b399c8b8b33a1d46fb22399a8")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+bc345a793f611e78038c215763103b47436c240c")]
 [assembly: System.Reflection.AssemblyProductAttribute("OwDbBase")]
 [assembly: System.Reflection.AssemblyTitleAttribute("OwDbBase")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

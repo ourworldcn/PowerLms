@@ -1387,17 +1387,22 @@
             可能既是起始帧又是终止帧，这说明是一个独立帧。也能是既非起始帧也非终止帧，这说明是一个中间帧，
             </summary>
         </member>
-        <member name="P:System.Net.Sockets.OwUdpClientEntry.ReciveData">
+        <member name="P:System.Net.Sockets.OwUdpRemoteEntryBase.Id">
+            <summary>
+            终结点Id。仅低24位有效。
+            </summary>
+        </member>
+        <member name="P:System.Net.Sockets.OwUdpRemoteEntry.ReciveData">
             <summary>
             收到的数据队列。按收到的包号升序排序。
             </summary>
         </member>
-        <member name="F:System.Net.Sockets.OwUdpClientEntry.MaxSeq">
+        <member name="F:System.Net.Sockets.OwUdpRemoteEntry.MaxSeq">
             <summary>
             包序号，记录了已用的最大序号，可能需要回绕。
             </summary>
         </member>
-        <member name="F:System.Net.Sockets.OwUdpClientEntry.Remote">
+        <member name="F:System.Net.Sockets.OwUdpRemoteEntry.Remote">
             <summary>
             远程终结点。
             </summary>
@@ -1422,7 +1427,7 @@
             包的序号。
             </summary>
         </member>
-        <member name="P:System.Net.Sockets.OwUdpDataEntry.FirstSendDateTime">
+        <member name="F:System.Net.Sockets.OwUdpDataEntry.FirstSendDateTime">
             <summary>
             首次发送的时间。空表示尚未发送。
             </summary>
@@ -1530,6 +1535,11 @@
             允许通知使用者应用程序生存期事件。
             </summary>
         </member>
+        <member name="F:System.Net.Sockets.OwUdpServerV2._WaitSend">
+            <summary>
+            等待发送数据的队列。
+            </summary>
+        </member>
         <member name="F:System.Net.Sockets.OwUdpServerV2._Remote2Id">
             <summary>
             记录远程终结点-标识的对应关系。
@@ -1567,7 +1577,7 @@
             </summary>
             <param name="e"></param>
         </member>
-        <member name="M:System.Net.Sockets.OwUdpServerV2.ProcessDgram(System.Net.Sockets.OwUdpClientEntry)">
+        <member name="M:System.Net.Sockets.OwUdpServerV2.ProcessDgram(System.Net.Sockets.OwUdpRemoteEntry)">
             <summary>
             处理到达的数据。
             </summary>
