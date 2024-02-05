@@ -8,8 +8,8 @@
     </TypeIdentifier>
     <Lollipop Position="0.2" />
   </Class>
-  <Class Name="OW.Data.JsonDynamicPropertyBase" Collapsed="true">
-    <Position X="2.25" Y="3.25" Width="1.5" />
+  <Class Name="OW.Data.JsonDynamicPropertyBase">
+    <Position X="2.25" Y="3.25" Width="2.25" />
     <TypeIdentifier>
       <HashCode>AAgJAACAACAAACACABAAABABAAABACIBAAAAAAAAAAA=</HashCode>
       <FileName>Data\JsonDynamicPropertyBase.cs</FileName>

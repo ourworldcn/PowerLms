@@ -46,7 +46,12 @@ namespace OW.Data
     {
         #region 静态成员
 
-        static readonly JsonSerializerOptions _SerializerOptions = new JsonSerializerOptions { ReadCommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true, };
+        public static readonly JsonSerializerOptions _SerializerOptions = new JsonSerializerOptions
+        {
+            ReadCommentHandling = JsonCommentHandling.Skip,
+            AllowTrailingCommas = true,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
+        };
 
         #endregion 静态成员
 
@@ -239,7 +244,7 @@ namespace OW.Data
             //if (/*_JsonObject is not INotifyPropertyChanged ||*/ _Seq != _WritedSeq)
             if (_JsonObject is not null)
             {
-                _JsonObjectString = JsonSerializer.Serialize(_JsonObject, JsonObjectType ?? JsonObject.GetType());
+                _JsonObjectString = JsonSerializer.Serialize(_JsonObject, JsonObjectType ?? JsonObject.GetType(),_SerializerOptions);
                 if (_JsonObject is INotifyPropertyChanged)
                     _WritedSeq = _Seq;
             }
