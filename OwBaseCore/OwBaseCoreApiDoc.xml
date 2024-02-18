@@ -1595,12 +1595,12 @@
             </summary>
             <param name="e"></param>
         </member>
-        <member name="T:System.Text.Json.Serialization.GuidJsonConverter">
+        <member name="T:System.Text.Json.Serialization.OwGuidJsonConverter">
             <summary>
-            用于将Guid类型Base64编码的Json转换器。
+            用于将Guid类型Base64编码的Json转换器。读取时可以识别Base64编码 ，也可以识别默认格式。
             </summary>
         </member>
-        <member name="M:System.Text.Json.Serialization.GuidJsonConverter.Read(System.Text.Json.Utf8JsonReader@,System.Type,System.Text.Json.JsonSerializerOptions)">
+        <member name="M:System.Text.Json.Serialization.OwGuidJsonConverter.Read(System.Text.Json.Utf8JsonReader@,System.Type,System.Text.Json.JsonSerializerOptions)">
             <summary>
             <inheritdoc/>
             </summary>
@@ -1609,13 +1609,18 @@
             <param name="options"><inheritdoc/></param>
             <returns><inheritdoc/></returns>
         </member>
-        <member name="M:System.Text.Json.Serialization.GuidJsonConverter.Write(System.Text.Json.Utf8JsonWriter,System.Guid,System.Text.Json.JsonSerializerOptions)">
+        <member name="M:System.Text.Json.Serialization.OwGuidJsonConverter.Write(System.Text.Json.Utf8JsonWriter,System.Guid,System.Text.Json.JsonSerializerOptions)">
             <summary>
             <inheritdoc/>
             </summary>
             <param name="writer"><inheritdoc/></param>
             <param name="value"><inheritdoc/></param>
             <param name="options"><inheritdoc/></param>
+        </member>
+        <member name="T:System.Text.Json.Serialization.OwDateTime_sJsonConverter">
+            <summary>
+            读取时可以识别任意有效日期模式，写入则使用标准s写入(格式类似2009-06-15T13:45:30，精确到秒)。
+            </summary>
         </member>
         <member name="T:System.Threading.SingletonLocker">
             <summary>
