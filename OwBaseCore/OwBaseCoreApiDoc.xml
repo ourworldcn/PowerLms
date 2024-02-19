@@ -1622,6 +1622,11 @@
             读取时可以识别任意有效日期模式，写入则使用标准s写入(格式类似2009-06-15T13:45:30，精确到秒)。
             </summary>
         </member>
+        <member name="T:System.Text.Json.Serialization.OwDateTimeZipJsonConverter">
+            <summary>
+            读取时可以识别任意有效日期模式，写入则使用压缩可比较的自定义格式写入(格式类似20090615T134530，精确到秒)。
+            </summary>
+        </member>
         <member name="T:System.Threading.SingletonLocker">
             <summary>
             依据对象值相等<see cref="T:System.IEquatable`1"/>锁定第一个实例。

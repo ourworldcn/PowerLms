@@ -4,6 +4,7 @@
 
 using System;
 using System.Diagnostics;
+using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -65,6 +66,25 @@ namespace System.Text.Json.Serialization
         {
             writer.WriteStringValue(value.ToString("s"));
         }
+    }
+
+    /// <summary>
+    /// 读取时可以识别任意有效日期模式，写入则使用压缩可比较的自定义格式写入(格式类似20090615T134530，精确到秒)。
+    /// </summary>
+    public class OwDateTimeZipJsonConverter : JsonConverter<DateTime>
+    {
+        public override DateTime Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            var str = reader.GetString();
+            if (DateTime.TryParseExact(str, "yyyyMMddTHHmmss", default, DateTimeStyles.None, out var dt)) return dt;
+            return DateTime.Parse(str);
+        }
+
+        public override void Write(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)
+        {
+            writer.WriteStringValue(value.ToString("yyyyMMddTHHmmss"));
+        }
+
     }
 
     public class TimeSpanJsonConverter : JsonConverter<TimeSpan>
