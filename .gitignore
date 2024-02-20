@@ -74,3 +74,6 @@
 /OwDbBase/obj/Release/net6.0/OwDbBase.GeneratedMSBuildEditorConfig.editorconfig
 /OwBaseCore/obj/Release/net6.0/OwBaseCore.csproj.AssemblyReference.cache
 /OwDbBase/obj/Release/net6.0/OwDbBase.csproj.CoreCompileInputs.cache
+/OwBaseCore/bin/Release/net6.0/OwBaseCoreApiDoc.xml
+/OwBaseCore/obj/Release/net6.0/OwBaseCore.AssemblyInfo.cs
+/OwDbBase/obj/Release/net6.0/OwDbBase.AssemblyInfo.cs
