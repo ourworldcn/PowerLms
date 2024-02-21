@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using OW.Data;
 using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
@@ -255,5 +256,44 @@ namespace OW.Data
         }
 
         #endregion IBeforeSave接口及相关
+    }
+
+    /// <summary>
+    /// 通用的实体对象接口。
+    /// </summary>
+    public interface IGeneralEntity4P
+    {
+        /// <summary>
+        /// 记录一些额外的信息，通常这些信息用于排序，加速查找符合特定要求的对象。
+        /// </summary>
+        [MaxLength(64)]
+        public string ExtraString { get; set; }
+
+        /// <summary>
+        /// 记录一些额外的数值信息，用于排序搜索使用的字段。
+        /// </summary>
+        public decimal? ExtraDecimal { get; set; }
+
+        /// <summary>
+        /// 记录扩展的日期时间属性
+        /// </summary>
+        public DateTime? ExtraDateTime { get; set; }
+
+        /// <summary>
+        ///记录一些额外的信息，通常这些信息用于排序，加速查找符合特定要求的对象。
+        ///常用于记录模板Id或与其它节点的特殊绑定关系，如果没有则是<see cref="Guid.Empty"/>。
+        /// </summary>
+        /// <remarks><see cref="ExtraGuid"/><see cref="ExtraString"/><see cref="ExtraDecimal"/>三个字段按顺序形成多字段索引以加快搜索速度。
+        /// 也创建如下顺序创建索引<see cref="ExtraGuid"/><see cref="ExtraDecimal"/><see cref="ExtraString"/></remarks>
+        public Guid? ExtraGuid { get; set; }
+    }
+
+    /// <summary>
+    /// 通用的实体对象接口。
+    /// </summary>
+    public interface IGeneralEntityBinary
+    {
+        public byte[] ExtraBinary { get; set; }
+
     }
 }
