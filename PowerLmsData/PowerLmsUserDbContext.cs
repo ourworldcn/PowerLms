@@ -302,6 +302,11 @@ namespace PowerLmsServer.EfData
         [Comment("权限表。")]
         public DbSet<PlPermission> PlPermissions { get; set; }
         #endregion 权限相关
+
+        /// <summary>
+        /// 航线管理。
+        /// </summary>
+        public DbSet<ShippingLane> ShippingLanes { get; set; }
     }
 
     /// <summary>

@@ -217,6 +217,11 @@
             权限表。
             </summary>
         </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.ShippingLanes">
+            <summary>
+            航线管理。
+            </summary>
+        </member>
         <member name="T:PowerLmsServer.EfData.OwDbContextExtensions">
             <summary>
             数据库上下文的扩展方法。
@@ -1669,6 +1674,131 @@
         <member name="P:PowerLms.Data.SystemResource.ParentId">
             <summary>
             父资源的Id。可能分类用。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.ShippingLane">
+            <summary>
+            航线运价数据类。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.ShippingLane.IsDelete">
+            <summary>
+            <inheritdoc/>
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.ShippingLane.CreateBy">
+            <summary>
+            创建者Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.ShippingLane.CreateDateTime">
+            <summary>
+            <inheritdoc/>
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.ShippingLane.UpdateBy">
+            <summary>
+            最后更新者的唯一标识。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.ShippingLane.UpdateDateTime">
+            <summary>
+            最后更新的时间。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.ShippingLane.OrgId">
+            <summary>
+            所属机构Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.ShippingLane.StartCode">
+            <summary>
+            启运港编码。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.ShippingLane.EndCode">
+            <summary>
+            目的港编码。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.ShippingLane.Shipper">
+            <summary>
+            航空公司。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.ShippingLane.VesslRate">
+            <summary>
+            航班周期。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.ShippingLane.ArrivalTime">
+            <summary>
+            到达时长。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.ShippingLane.Packing">
+            <summary>
+            包装规范。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.ShippingLane.KgsM">
+            <summary>
+            KGS M.
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.ShippingLane.KgsN">
+            <summary>
+            KGS N.
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.ShippingLane.A45">
+            <summary>
+            KGS45.
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.ShippingLane.A100">
+            <summary>
+            KGS100.
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.ShippingLane.A300">
+            <summary>
+            KGS300.
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.ShippingLane.A500">
+            <summary>
+            KGS500.
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.ShippingLane.A1000">
+            <summary>
+            KGS1000.
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.ShippingLane.A2000">
+            <summary>
+            KGS2000.
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.ShippingLane.StartDateTime">
+            <summary>
+            生效日期。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.ShippingLane.EndDateTime">
+            <summary>
+            终止日期。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.ShippingLane.Remark">
+            <summary>
+            备注。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.ShippingLane.Contact">
+            <summary>
+            联系人。
             </summary>
         </member>
         <member name="T:PowerLms.Data.Account">
