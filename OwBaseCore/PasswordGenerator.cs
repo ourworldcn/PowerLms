@@ -17,7 +17,11 @@ namespace OW
     {
         public PasswordGenerator()
         {
-            _Codes = Enumerable.Range(48, 10).Concat(Enumerable.Range(65, 26)).Concat(Enumerable.Range(97, 26)).Select(c => Convert.ToChar(c)).ToArray();
+            var tmp = Enumerable.Range('0', 10).Concat(Enumerable.Range('a', 26)).Concat(Enumerable.Range('A', 26)).Select(c => Convert.ToChar(c)).ToList();
+            //避开 1 I l O o 0
+            var excludes = new char[] { '1', 'I', 'l', 'O', 'o', '0', };    //要排除的字符
+            tmp.RemoveAll(c => excludes.Contains(c));
+            _Codes = tmp.ToArray();
         }
 
 

@@ -85,7 +85,7 @@ namespace OW.Data
         /// <summary>
         /// 属性字符串。格式数Json字符串。
         /// </summary>
-        [Column(Order = 10)]
+        [Column(Order = 10, TypeName = "varchar(max)"),]
         public string JsonObjectString
         {
             get => _JsonObjectString;
