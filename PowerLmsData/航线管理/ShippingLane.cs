@@ -75,10 +75,10 @@ namespace PowerLms.Data
         public string VesslRate { get; set; }
 
         /// <summary>
-        /// 到达时长。
+        /// 到达时长。单位:天。
         /// </summary>
-        [Comment("到达时长")]
-        public TimeSpan ArrivalTime { get; set; }
+        [Comment("到达时长。单位:天。")]
+        public decimal ArrivalTimeInDay { get; set; }
 
         /// <summary>
         /// 包装规范。

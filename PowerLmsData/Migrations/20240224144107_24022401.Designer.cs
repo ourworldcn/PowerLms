@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PowerLmsServer.EfData;
 
@@ -11,9 +12,10 @@ using PowerLmsServer.EfData;
 namespace PowerLmsData.Migrations
 {
     [DbContext(typeof(PowerLmsUserDbContext))]
-    partial class PowerLmsUserDbContextModelSnapshot : ModelSnapshot
+    [Migration("20240224144107_24022401")]
+    partial class _24022401
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1399,7 +1401,7 @@ namespace PowerLmsData.Migrations
                         .HasColumnType("decimal(18,4)")
                         .HasComment("KGS500");
 
-                    b.Property<decimal>("ArrivalTimeInDay")
+                    b.Property<decimal>("ArrivalTimeId")
                         .HasColumnType("decimal(18,2)")
                         .HasComment("到达时长。单位:天。");
 

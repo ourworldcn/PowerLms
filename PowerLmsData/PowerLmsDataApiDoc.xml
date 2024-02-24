@@ -1731,9 +1731,9 @@
             航班周期。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.ShippingLane.ArrivalTime">
+        <member name="P:PowerLms.Data.ShippingLane.ArrivalTimeInDay">
             <summary>
-            到达时长。
+            到达时长。单位:天。
             </summary>
         </member>
         <member name="P:PowerLms.Data.ShippingLane.Packing">
