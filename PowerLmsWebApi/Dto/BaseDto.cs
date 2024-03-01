@@ -166,6 +166,25 @@ namespace PowerLmsWebApi.Dto
     }
 
     /// <summary>
+    /// 删除实体功能的参数封装类的基类。
+    /// </summary>
+    public class RemoveItemsParamsDtoBase : TokenDtoBase
+    {
+        /// <summary>
+        /// 要删除实体的Id的集合。
+        /// </summary>
+        public List<Guid> Ids { get; set; } = new List<Guid>();
+    }
+
+    /// <summary>
+    /// 删除实体功能的返回值封装类的基类。
+    /// </summary>
+    public class RemoveItemsReturnDtoBase : ReturnDtoBase
+    {
+
+    }
+
+    /// <summary>
     /// 恢复被软删除实体功能的参数封装类的基类。
     /// </summary>
     public class RestoreParamsDtoBase : TokenDtoBase

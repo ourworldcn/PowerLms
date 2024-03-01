@@ -62,7 +62,7 @@ namespace PowerLmsWebApi.Controllers
         /// 获取全部航线费用。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">查询的条件。支持 StartCreateDateTime,EndCreateDateTime，StartCode，EndCode，Id。不区分大小写。</param>
+        /// <param name="conditional">查询的条件。支持 ValidDateTime(有效期)， StartCreateDateTime（开始创建/更新时间）,EndCreateDateTime（结束创建/更新时间），StartCode，EndCode，Id。不区分大小写。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
@@ -84,6 +84,11 @@ namespace PowerLmsWebApi.Controllers
                 {
                     if (DateTime.TryParse(item.Value, out var date))
                         coll = coll.Where(c => c.UpdateDateTime <= date);
+                }
+                else if (string.Equals(item.Key, "ValidDateTime", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (DateTime.TryParse(item.Value, out var date))
+                        coll = coll.Where(c => c.StartDateTime <= date && c.EndDateTime >= date);
                 }
                 else if (string.Equals(item.Key, "Id", StringComparison.OrdinalIgnoreCase))
                 {
@@ -126,6 +131,42 @@ namespace PowerLmsWebApi.Controllers
             return result;
         }
 
+        /// <summary>
+        /// 批量删除航线信息。(物理硬删除)
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定Id中，至少有一个不存在相应实体。</response>  
+        [HttpDelete]
+        public ActionResult<RemoveShippingLaneReturnDto> RemoveShippingLane(RemoveShippingLanePatamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new RemoveShippingLaneReturnDto();
+
+            var dbSet = _DbContext.BankInfos;
+            var items = dbSet.Where(c => model.Ids.Contains(c.Id)).ToArray();
+            if (items.Length != model.Ids.Count) return BadRequest("指定Id中，至少有一个不存在相应实体。");
+            _DbContext.RemoveRange(items);
+            _DbContext.SaveChanges();
+            return result;
+        }
+    }
+
+    /// <summary>
+    /// 批量删除航线信息功能参数封装类。
+    /// </summary>
+    public class RemoveShippingLanePatamsDto : RemoveItemsParamsDtoBase
+    {
+
+    }
+
+    /// <summary>
+    /// 批量删除航线信息功能返回值封装类。
+    /// </summary>
+    public class RemoveShippingLaneReturnDto : RemoveItemsReturnDtoBase
+    {
     }
 
     /// <summary>
