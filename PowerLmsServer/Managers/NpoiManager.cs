@@ -52,10 +52,11 @@ namespace PowerLmsServer.Managers
         /// 获取指定Excel工作表的列名。
         /// </summary>
         /// <param name="sheet"></param>
+        /// <param name="startIndex"></param>
         /// <returns></returns>
-        public List<(string, int)> GetColumnName(ISheet sheet)
+        public List<(string, int)> GetColumnName(ISheet sheet, int? startIndex = null)
         {
-            IRow cells = sheet.GetRow(sheet.FirstRowNum);
+            IRow cells = sheet.GetRow(startIndex ?? sheet.FirstRowNum);
             int cellsCount = cells.PhysicalNumberOfCells;
             int emptyCount = 0;
             int cellIndex = sheet.FirstRowNum;
@@ -88,12 +89,13 @@ namespace PowerLmsServer.Managers
         /// 将表转换为Json。
         /// </summary>
         /// <param name="sheet"></param>
+        /// <param name="startIndex">默认值0，表示从第一行开始读取。</param>
         /// <returns></returns>
-        public string GetJson(ISheet sheet)
+        public string GetJson(ISheet sheet, int startIndex = 0)
         {
-            var cols = GetColumnName(sheet);
+            var cols = GetColumnName(sheet, startIndex);
             List<Dictionary<string, object>> list = new List<Dictionary<string, object>>();
-            for (int rowIndex = 1; rowIndex < sheet.PhysicalNumberOfRows; rowIndex++)
+            for (int rowIndex = startIndex + 1; rowIndex < sheet.PhysicalNumberOfRows; rowIndex++)
             {
                 var row = sheet.GetRow(rowIndex);
                 Dictionary<string, object> dic = new Dictionary<string, object>();

@@ -2893,7 +2893,7 @@
             航线管理控制器。
             </summary>
         </member>
-        <member name="M:PowerLmsWebApi.Controllers.ShippingLaneController.#ctor(System.IServiceProvider,PowerLmsServer.Managers.AccountManager,PowerLmsServer.EfData.PowerLmsUserDbContext,PowerLmsServer.Managers.OrganizationManager,PowerLmsServer.Managers.EntityManager,AutoMapper.IMapper)">
+        <member name="M:PowerLmsWebApi.Controllers.ShippingLaneController.#ctor(System.IServiceProvider,PowerLmsServer.Managers.AccountManager,PowerLmsServer.EfData.PowerLmsUserDbContext,PowerLmsServer.Managers.OrganizationManager,PowerLmsServer.Managers.EntityManager,AutoMapper.IMapper,PowerLmsServer.Managers.NpoiManager)">
             <summary>
             构造函数。
             </summary>
@@ -2936,6 +2936,136 @@
             <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
             <response code="401">无效令牌。</response>  
             <response code="404">指定Id中，至少有一个不存在相应实体。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.ShippingLaneController.ImportShippingLane(Microsoft.AspNetCore.Http.IFormFile,System.Guid)">
+            <summary>
+            导入空运数据。
+            </summary>
+            <param name="file"></param>
+            <param name="token"></param>
+            <returns></returns>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.NullableDecimalConvert">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.NullableDecimalConvert.Read(System.Text.Json.Utf8JsonReader@,System.Type,System.Text.Json.JsonSerializerOptions)">
+            <summary>
+            <inheritdoc/>
+            </summary>
+            <param name="reader"></param>
+            <param name="typeToConvert"></param>
+            <param name="options"></param>
+            <returns></returns>
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.NullableDecimalConvert.Write(System.Text.Json.Utf8JsonWriter,System.Nullable{System.Decimal},System.Text.Json.JsonSerializerOptions)">
+            <summary>
+            <inheritdoc/>
+            </summary>
+            <param name="writer"></param>
+            <param name="value"></param>
+            <param name="options"></param>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.ShippingLaneEto">
+            <summary>
+            航线运价数据类Excel导入时的转换封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.ShippingLaneEto.StartCode">
+            <summary>
+            启运港编码。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.ShippingLaneEto.EndCode">
+            <summary>
+            目的港编码。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.ShippingLaneEto.Shipper">
+            <summary>
+            航空公司。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.ShippingLaneEto.VesslRate">
+            <summary>
+            航班周期。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.ShippingLaneEto.ArrivalTimeInDay">
+            <summary>
+            到达时长。单位:天。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.ShippingLaneEto.Packing">
+            <summary>
+            包装规范。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.ShippingLaneEto.KgsM">
+            <summary>
+            KGS M.
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.ShippingLaneEto.KgsN">
+            <summary>
+            KGS N.
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.ShippingLaneEto.A45">
+            <summary>
+            KGS45.
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.ShippingLaneEto.A100">
+            <summary>
+            KGS100.
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.ShippingLaneEto.A300">
+            <summary>
+            KGS300.
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.ShippingLaneEto.A500">
+            <summary>
+            KGS500.
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.ShippingLaneEto.A1000">
+            <summary>
+            KGS1000.
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.ShippingLaneEto.A2000">
+            <summary>
+            KGS2000.
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.ShippingLaneEto.StartDateTime">
+            <summary>
+            生效日期。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.ShippingLaneEto.EndDateTime">
+            <summary>
+            终止日期。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.ShippingLaneEto.Remark">
+            <summary>
+            备注。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.ShippingLaneEto.Contact">
+            <summary>
+            联系人。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.ImportShippingLaneReturnDto">
+            <summary>
+            导入空运数据的返回值数据封装类。
+            </summary>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.RemoveShippingLanePatamsDto">
             <summary>

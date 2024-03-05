@@ -389,18 +389,20 @@
             <param name="stream"></param>
             <returns></returns>
         </member>
-        <member name="M:PowerLmsServer.Managers.NpoiManager.GetColumnName(NPOI.SS.UserModel.ISheet)">
+        <member name="M:PowerLmsServer.Managers.NpoiManager.GetColumnName(NPOI.SS.UserModel.ISheet,System.Nullable{System.Int32})">
             <summary>
             获取指定Excel工作表的列名。
             </summary>
             <param name="sheet"></param>
+            <param name="startIndex"></param>
             <returns></returns>
         </member>
-        <member name="M:PowerLmsServer.Managers.NpoiManager.GetJson(NPOI.SS.UserModel.ISheet)">
+        <member name="M:PowerLmsServer.Managers.NpoiManager.GetJson(NPOI.SS.UserModel.ISheet,System.Int32)">
             <summary>
             将表转换为Json。
             </summary>
             <param name="sheet"></param>
+            <param name="startIndex">默认值0，表示从第一行开始读取。</param>
             <returns></returns>
         </member>
         <member name="M:PowerLmsServer.Managers.NpoiManager.ReadExcelFunc(NPOI.SS.UserModel.IWorkbook,NPOI.SS.UserModel.ISheet)">
