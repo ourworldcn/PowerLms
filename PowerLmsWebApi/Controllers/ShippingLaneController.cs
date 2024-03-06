@@ -151,7 +151,7 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveShippingLaneReturnDto();
 
-            var dbSet = _DbContext.BankInfos;
+            var dbSet = _DbContext.ShippingLanes;
             var items = dbSet.Where(c => model.Ids.Contains(c.Id)).ToArray();
             if (items.Length != model.Ids.Count) return BadRequest("指定Id中，至少有一个不存在相应实体。");
             _DbContext.RemoveRange(items);
