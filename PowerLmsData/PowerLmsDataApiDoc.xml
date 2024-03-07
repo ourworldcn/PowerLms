@@ -227,6 +227,76 @@
             数据库上下文的扩展方法。
             </summary>
         </member>
+        <member name="T:PowerLms.Data.PlJob">
+            <summary>
+            总业务数据类。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.OrgId">
+            <summary>
+            所属机构Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.JobNo">
+            <summary>
+            工作号.
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.CustomId">
+            <summary>
+            客户Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.LinkMan">
+            <summary>
+            客户联系人。客户联系人可以从客户资料中维护的联系人中选择，也可以临时输入，所以这里不是关联联系人的id，是字符串
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.LinkTel">
+            <summary>
+            联系人电话。客户联系人可以从客户资料中维护的联系人中选择，也可以临时输入，所以这里不是关联联系人的id，是字符串
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.LinkFax">
+            <summary>
+            联系人传真。客户联系人可以从客户资料中维护的联系人中选择，也可以临时输入，所以这里不是关联联系人的id，是字符串
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.Consignor">
+            <summary>
+            发货人。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.Consignee">
+            <summary>
+            收货人。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.Notify">
+            <summary>
+            通知人。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.Agent">
+            <summary>
+            代理人。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.MblId">
+            <summary>
+            主单ID.
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.HblId">
+            <summary>
+            分单ID.
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.HoldtypeId">
+            <summary>
+            揽货类型,简单字典HoldType
+            </summary>
+        </member>
         <member name="T:PowerLms.Data.IDataDic">
             <summary>
             数据字典的标识接口。
