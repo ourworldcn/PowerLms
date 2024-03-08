@@ -2888,6 +2888,106 @@
             构造函数。
             </summary>
         </member>
+        <member name="T:PowerLmsWebApi.Controllers.PlJobController">
+            <summary>
+            业务相关功能控制器。
+            </summary>
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.PlJobController.#ctor(PowerLmsServer.Managers.AccountManager,System.IServiceProvider,PowerLmsServer.EfData.PowerLmsUserDbContext,PowerLmsServer.Managers.OrganizationManager,AutoMapper.IMapper,PowerLmsServer.Managers.EntityManager,PowerLmsServer.Managers.DataDicManager)">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.PlJobController.GetAllPlJob(PowerLmsWebApi.Dto.PagingParamsDtoBase,System.Collections.Generic.Dictionary{System.String,System.String})">
+            <summary>
+            获取全部业务总表。
+            </summary>
+            <param name="model"></param>
+            <param name="conditional">查询的条件。支持 JobNo(业务号)，Id。不区分大小写。</param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.PlJobController.AddPlJob(PowerLmsWebApi.Controllers.AddPlJobParamsDto)">
+            <summary>
+            增加新业务总表。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.PlJobController.ModifyPlJob(PowerLmsWebApi.Controllers.ModifyPlJobParamsDto)">
+            <summary>
+            修改业务总表信息。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+            <response code="404">指定Id的业务总表不存在。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.PlJobController.RemovePlJob(PowerLmsWebApi.Controllers.RemovePlJobParamsDto)">
+            <summary>
+            删除指定Id的业务总表。慎用！
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="400">未找到指定的业务，或该业务不在初始创建状态——无法删除。</response>  
+            <response code="401">无效令牌。</response>  
+            <response code="404">指定Id的业务总表不存在。</response>  
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RemovePlJobParamsDto">
+            <summary>
+            标记删除业务总表功能的参数封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RemovePlJobReturnDto">
+            <summary>
+            标记删除业务总表功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetAllPlJobReturnDto">
+            <summary>
+            获取所有业务总表功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddPlJobParamsDto">
+            <summary>
+            增加新业务总表功能参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.AddPlJobParamsDto.PlJob">
+            <summary>
+            新业务总表信息。其中Id可以是任何值，返回时会指定新值。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddPlJobReturnDto">
+            <summary>
+            增加新业务总表功能返回值封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.AddPlJobReturnDto.Id">
+            <summary>
+            如果成功添加，这里返回新业务总表的Id。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.ModifyPlJobParamsDto">
+            <summary>
+            修改业务总表信息功能参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.ModifyPlJobParamsDto.PlJob">
+            <summary>
+            业务总表数据。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.ModifyPlJobReturnDto">
+            <summary>
+            修改业务总表信息功能返回值封装类。
+            </summary>
+        </member>
         <member name="T:PowerLmsWebApi.Controllers.ShippingLaneController">
             <summary>
             航线管理控制器。

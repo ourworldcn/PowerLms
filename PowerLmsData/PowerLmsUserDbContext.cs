@@ -307,6 +307,15 @@ namespace PowerLmsServer.EfData
         /// 航线管理。
         /// </summary>
         public DbSet<ShippingLane> ShippingLanes { get; set; }
+
+        #region 业务相关
+
+        /// <summary>
+        /// 业务总表。
+        /// </summary>
+        public DbSet<PlJob> PlJobs { get; set; }
+        
+        #endregion
     }
 
     /// <summary>

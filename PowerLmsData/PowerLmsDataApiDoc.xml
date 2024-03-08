@@ -222,6 +222,11 @@
             航线管理。
             </summary>
         </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.PlJobs">
+            <summary>
+            业务总表。
+            </summary>
+        </member>
         <member name="T:PowerLmsServer.EfData.OwDbContextExtensions">
             <summary>
             数据库上下文的扩展方法。
@@ -240,6 +245,11 @@
         <member name="P:PowerLms.Data.PlJob.JobNo">
             <summary>
             工作号.
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.JobTypeId">
+            <summary>
+            业务种类id
             </summary>
         </member>
         <member name="P:PowerLms.Data.PlJob.CustomId">
@@ -282,19 +292,164 @@
             代理人。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.PlJob.MblId">
+        <member name="P:PowerLms.Data.PlJob.MblNo">
             <summary>
-            主单ID.
+            主单号.
             </summary>
         </member>
-        <member name="P:PowerLms.Data.PlJob.HblId">
+        <member name="P:PowerLms.Data.PlJob.HblNoString">
             <summary>
-            分单ID.
+            分单号字符串，/分隔多个分单号.
+            </summary>
+        </member>
+        <member name="F:PowerLms.Data.PlJob.HblSeparator">
+            <summary>
+            分单号分隔符。
             </summary>
         </member>
         <member name="P:PowerLms.Data.PlJob.HoldtypeId">
             <summary>
             揽货类型,简单字典HoldType
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.CreateBy">
+            <summary>
+            操作员，建立时系统默认，可以更改相当于工作号的所有者。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.CreateDateTime">
+            <summary>
+            新建时间,系统默认，不能更改
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.JobState">
+            <summary>
+            工作状态。NewJob初始=0，Operating正操作=2，Operated操作完成=4，Checked已审核=8，Closed已关闭=16.
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.OperateState">
+            <summary>
+            操作状态。NewJob初始=0,Arrived 已到货=2,Declared 已申报=4,Delivered 已配送=8,Submitted 已交单=16,Notified 已通知=32
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.AccountDate">
+            <summary>
+             财务日期。出口默认出港日期，进口默认出库日期。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.Etd">
+            <summary>
+            开航日期。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.ETA">
+            <summary>
+            到港日期。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.DeliveryDate">
+            <summary>
+            提送货日期
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.SalesId">
+            <summary>
+            业务员Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.CustomerServiceId">
+            <summary>
+            客服Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.BusinessManagerId">
+            <summary>
+            业务负责人Id
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.ShippingLineManagerId">
+            <summary>
+            航线负责人Id
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.ContractNo">
+            <summary>
+            合同号。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.VerifyDate">
+            <summary>
+            审核日期。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.CloseDate">
+            <summary>
+            关闭日期。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.SpecialAgent">
+            <summary>
+            订舱代理。选择客户资料是订舱代理的客户
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.OpCompany">
+            <summary>
+            操作公司。选择客户资料是订舱代理的客户
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.LoadingCode">
+            <summary>
+            起始港	港口id	显示三字码即可。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.DestinationCode">
+            <summary>
+            目的港	港口id	显示三字码即可
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.CarrieCode">
+            <summary>
+            承运人，船公司或航空公司或，二字码
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.CarrierNo">
+            <summary>
+            运输工具号，空运显示为航班号，海运显示为船名、陆运显示为卡车号.
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.GoodsName">
+            <summary>
+            货物名称.
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.CargoType">
+            <summary>
+            货物类型.简单字典CARGOTYPE	
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.PackType">
+            <summary>
+            包装方式,简单字典PackType
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.PkgsCount">
+            <summary>
+            包装件数
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.Weight">
+            <summary>
+            毛重,单位Kg,三位小数。委托重量KG数，海运显示为毛重
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.MeasureMent">
+            <summary>
+            体积,三位小数,委托体积立方
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.GoodsSize">
+            <summary>
+            尺寸,字符串表达.
             </summary>
         </member>
         <member name="T:PowerLms.Data.IDataDic">
