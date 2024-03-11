@@ -399,12 +399,12 @@
         </member>
         <member name="P:PowerLms.Data.PlJob.LoadingCode">
             <summary>
-            起始港	港口id	显示三字码即可。
+            起始港 港口代码	显示三字码即可。
             </summary>
         </member>
         <member name="P:PowerLms.Data.PlJob.DestinationCode">
             <summary>
-            目的港	港口id	显示三字码即可
+            目的港 港口代码	显示三字码即可
             </summary>
         </member>
         <member name="P:PowerLms.Data.PlJob.CarrieCode">

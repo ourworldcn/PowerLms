@@ -234,16 +234,16 @@ Carrie	承运人	船公司或航空公司或	二字码
 */
 
         /// <summary>
-        /// 起始港	港口id	显示三字码即可。
+        /// 起始港 港口代码	显示三字码即可。
         /// </summary>
-        [Comment("起始港，港口id，显示三字码即可。")]
+        [Comment("起始港，港口代码，显示三字码即可。")]
         [MaxLength(4), Unicode(false)]
         public string LoadingCode { get; set; }
 
         /// <summary>
-        /// 目的港	港口id	显示三字码即可
+        /// 目的港 港口代码	显示三字码即可
         /// </summary>
-        [Comment("目的港，港口id，显示三字码即可")]
+        [Comment("目的港，港口代码，显示三字码即可")]
         [MaxLength(4), Unicode(false)]
         public string DestinationCode { get; set; }
 
