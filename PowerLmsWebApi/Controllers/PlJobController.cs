@@ -137,7 +137,174 @@ namespace PowerLmsWebApi.Controllers
 
         #endregion 业务总表
 
+        #region 空运出口单
+
+        /// <summary>
+        /// 获取全部空运出口单。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="conditional">查询的条件。支持 JobNo(业务号)，Id，EaDocNo(单号)。不区分大小写。</param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        public ActionResult<GetAllPlEaDocReturnDto> GetAllPlEaDoc([FromQuery] PagingParamsDtoBase model,
+            [FromQuery] Dictionary<string, string> conditional = null)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetAllPlEaDocReturnDto();
+
+            var dbSet = _DbContext.PlEaDocs;
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
+            foreach (var item in conditional)
+                if (string.Equals(item.Key, "Id", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (Guid.TryParse(item.Value, out var id))
+                        coll = coll.Where(c => c.Id == id);
+                }
+                else if (string.Equals(item.Key, "JobNo", StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.JobNo == item.Value);
+                }
+                else if (string.Equals(item.Key, "EaDocNo", StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.DocNo == item.Value);
+                }
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
+            _Mapper.Map(prb, result);
+            return result;
+        }
+
+        /// <summary>
+        /// 增加新空运出口单。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPost]
+        public ActionResult<AddPlEaDocReturnDto> AddPlEaDoc(AddPlEaDocParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new AddPlEaDocReturnDto();
+            var entity = model.PlEaDoc;
+            entity.GenerateNewId();
+            _DbContext.PlEaDocs.Add(model.PlEaDoc);
+            entity.CreateBy = context.User.Id;
+            entity.CreateDateTime = OwHelper.WorldNow;
+            _DbContext.SaveChanges();
+            result.Id = model.PlEaDoc.Id;
+            return result;
+        }
+
+        /// <summary>
+        /// 修改空运出口单信息。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定Id的空运出口单不存在。</response>  
+        [HttpPut]
+        public ActionResult<ModifyPlEaDocReturnDto> ModifyPlEaDoc(ModifyPlEaDocParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new ModifyPlEaDocReturnDto();
+            if (!_EntityManager.Modify(new[] { model.PlEaDoc })) return NotFound();
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        /// <summary>
+        /// 删除指定Id的空运出口单。慎用！
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">未找到指定的业务，或该业务不在初始创建状态——无法删除。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定Id的空运出口单不存在。</response>  
+        [HttpDelete]
+        public ActionResult<RemovePlEaDocReturnDto> RemovePlEaDoc(RemovePlEaDocParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new RemovePlEaDocReturnDto();
+            var id = model.Id;
+            var dbSet = _DbContext.PlEaDocs;
+            var item = dbSet.Find(id);
+            //if (item.JobState > 0) return BadRequest("业务已经开始，无法删除。");
+            if (item is null) return BadRequest();
+            _EntityManager.Remove(item);
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        #endregion 空运出口单
+
     }
+
+    #region 空运出口单
+    /// <summary>
+    /// 标记删除空运出口单功能的参数封装类。
+    /// </summary>
+    public class RemovePlEaDocParamsDto : RemoveParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 标记删除空运出口单功能的返回值封装类。
+    /// </summary>
+    public class RemovePlEaDocReturnDto : RemoveReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 获取所有空运出口单功能的返回值封装类。
+    /// </summary>
+    public class GetAllPlEaDocReturnDto : PagingReturnDtoBase<PlEaDoc>
+    {
+    }
+
+    /// <summary>
+    /// 增加新空运出口单功能参数封装类。
+    /// </summary>
+    public class AddPlEaDocParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 新空运出口单信息。其中Id可以是任何值，返回时会指定新值。
+        /// </summary>
+        public PlEaDoc PlEaDoc { get; set; }
+    }
+
+    /// <summary>
+    /// 增加新空运出口单功能返回值封装类。
+    /// </summary>
+    public class AddPlEaDocReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 如果成功添加，这里返回新空运出口单的Id。
+        /// </summary>
+        public Guid Id { get; set; }
+    }
+
+    /// <summary>
+    /// 修改空运出口单信息功能参数封装类。
+    /// </summary>
+    public class ModifyPlEaDocParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 空运出口单数据。
+        /// </summary>
+        public PlEaDoc PlEaDoc { get; set; }
+    }
+
+    /// <summary>
+    /// 修改空运出口单信息功能返回值封装类。
+    /// </summary>
+    public class ModifyPlEaDocReturnDto : ReturnDtoBase
+    {
+    }
+    #endregion 空运出口单
 
     #region 业务总表
     /// <summary>

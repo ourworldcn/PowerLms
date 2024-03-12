@@ -16,7 +16,7 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 构造函数。
         /// </summary>
-        public JobNumberController(ServiceProvider serviceProvider, AccountManager accountManager, PowerLmsUserDbContext dbContext, JobNumberManager jobNumber)
+        public JobNumberController(IServiceProvider serviceProvider, AccountManager accountManager, PowerLmsUserDbContext dbContext, JobNumberManager jobNumber)
         {
             _ServiceProvider = serviceProvider;
             _AccountManager = accountManager;
@@ -24,7 +24,7 @@ namespace PowerLmsWebApi.Controllers
             _JobNumber = jobNumber;
         }
 
-        ServiceProvider _ServiceProvider;
+        IServiceProvider _ServiceProvider;
         AccountManager _AccountManager;
         PowerLmsUserDbContext _DbContext;
         JobNumberManager _JobNumber;
@@ -41,7 +41,7 @@ namespace PowerLmsWebApi.Controllers
             var result = new GeneratedJobNumberReturnDto();
             if (_DbContext.DD_JobNumberRules.Find(model.RuleId) is not JobNumberRule jnr) return BadRequest($"指定的规则不存在，Id={model.RuleId}");
             using var dw = DisposeHelper.Create((key, timeout) => SingletonLocker.TryEnter(key, timeout), key => SingletonLocker.Exit(key), model.RuleId.ToString(), TimeSpan.FromSeconds(2)); //锁定该规则
-            result.Result = _JobNumber.Generated(jnr, context.User, OwHelper.WorldNow);
+            result.Result = _JobNumber.Generated(jnr, context?.User, OwHelper.WorldNow);
             context.Nop();
             _DbContext.SaveChanges();
             return result;

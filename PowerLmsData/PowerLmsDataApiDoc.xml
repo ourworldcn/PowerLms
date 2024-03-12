@@ -227,9 +227,154 @@
             业务总表。
             </summary>
         </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.PlEaDocs">
+            <summary>
+            空运出口表。
+            </summary>
+        </member>
         <member name="T:PowerLmsServer.EfData.OwDbContextExtensions">
             <summary>
             数据库上下文的扩展方法。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.PlEaDoc">
+            <summary>
+            空运出口单。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEaDoc.JobId">
+            <summary>
+            所属业务Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEaDoc.DocNo">
+            <summary>
+            单号.
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEaDoc.JobNo">
+            <summary>
+            业务编号。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEaDoc.CreateBy">
+            <summary>
+            制单人，建立时系统默认，可以更改相当于工作号的所有者。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEaDoc.CreateDateTime">
+            <summary>
+            制单时间,系统默认，不能更改
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEaDoc.To1Code">
+            <summary>
+            中转港1港口Code,显示三字码即可。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEaDoc.By1">
+            <summary>
+            中转港航班1
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEaDoc.To2Code">
+            <summary>
+            中转港2港口Code,显示三字码即可。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEaDoc.By2">
+            <summary>
+            中转港航班2
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEaDoc.To3Code">
+            <summary>
+            中转港3港口Code,显示三字码即可。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEaDoc.By3">
+            <summary>
+            中转港航班3
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEaDoc.M_PkgsCount">
+            <summary>
+            主件单数。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEaDoc.M_weight">
+            <summary>
+            主单重量，3位小数。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEaDoc.M_Netweigh">
+            <summary>
+            主单计费重量，3位小数。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEaDoc.C_PkgsCount">
+            <summary>
+            包装件单数。结算件数。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEaDoc.C_Weight">
+            <summary>
+            结算重量，3位小数。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEaDoc.C_Netweigh">
+            <summary>
+            结算计费重量，3位小数。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEaDoc.C_MeasureMent">
+            <summary>
+            结算体积，3位小数。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEaDoc.GoodsStationId">
+            <summary>
+            操作地Id,简单字典goodsstation
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEaDoc.PackStateId">
+            <summary>
+            外包装状态,简单字典packState
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.HuochangChuchong">
+            <summary>
+            货场出重子表。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.HuochangChuchong.EaDocId">
+            <summary>
+            运单Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.HuochangChuchong.HblNo">
+            <summary>
+            分单号。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.HuochangChuchong.PkgsCount">
+            <summary>
+            件数。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.HuochangChuchong.Weight">
+            <summary>
+            重量，3位小数。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.HuochangChuchong.MeasureMent">
+            <summary>
+            重量，3位小数。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.HuochangChuchong.CargoSize">
+            <summary>
+            尺寸。
             </summary>
         </member>
         <member name="T:PowerLms.Data.PlJob">
@@ -1566,6 +1711,11 @@
             文件表。
             </summary>
         </member>
+        <member name="P:PowerLms.Data.PlFileInfo.ParentId">
+            <summary>
+            所属实体的Id。如属于客户资料的文件，就设置为客户Id。
+            </summary>
+        </member>
         <member name="P:PowerLms.Data.PlFileInfo.FileTypeId">
             <summary>
             文件类型Id。关联字典FileType。
@@ -1586,9 +1736,9 @@
             上传时的文件名。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.PlFileInfo.ParentId">
+        <member name="P:PowerLms.Data.PlFileInfo.Remark">
             <summary>
-            所属实体的Id。如属于客户资料的文件，就设置为客户Id。
+            备注。
             </summary>
         </member>
         <member name="T:PowerLms.Data.PlMerchant">

@@ -17,6 +17,12 @@ namespace PowerLms.Data
     public class PlFileInfo : GuidKeyObjectBase
     {
         /// <summary>
+        /// 所属实体的Id。如属于客户资料的文件，就设置为客户Id。
+        /// </summary>
+        [Comment("所属实体的Id")]
+        public Guid? ParentId { get; set; }
+
+        /// <summary>
         /// 文件类型Id。关联字典FileType。
         /// </summary>
         [Comment("文件类型Id。关联字典FileType。")]
@@ -44,9 +50,9 @@ namespace PowerLms.Data
         public string FileName { get; set; }
 
         /// <summary>
-        /// 所属实体的Id。如属于客户资料的文件，就设置为客户Id。
+        /// 备注。
         /// </summary>
-        [Comment("所属实体的Id")]
-        public Guid? ParentId { get; set; }
+        [Comment("备注")]
+        public string Remark { get; set; }
     }
 }

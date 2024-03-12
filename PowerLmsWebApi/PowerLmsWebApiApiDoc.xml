@@ -2289,6 +2289,48 @@
             <response code="404">指定的实体不存在。</response>  
             <response code="500">其他错误，并发导致数据变化不能完成操作。</response>
         </member>
+        <member name="M:PowerLmsWebApi.Controllers.FileController.AddFiles(System.Collections.Generic.IEnumerable{PowerLmsWebApi.Controllers.AddFilesItem})">
+            <summary>
+            上传一批通用的文件。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddFilesItem">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.AddFilesItem.File">
+            <summary>
+            文件。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.AddFilesItem.ParentId">
+            <summary>
+            所附属的Id。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.AddFilesItem.DisplayName">
+            <summary>
+            显示名。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddFilesParams">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.AddFilesParams.Items">
+            <summary>
+            上传文件。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddFilesReturn">
+            <summary>
+            
+            </summary>
+        </member>
         <member name="T:PowerLmsWebApi.Controllers.RemoveFileParamsDto">
             <summary>
             删除存储的文件功能参数封装类。
@@ -2339,7 +2381,7 @@
             生成序号控制器。
             </summary>
         </member>
-        <member name="M:PowerLmsWebApi.Controllers.JobNumberController.#ctor(Microsoft.Extensions.DependencyInjection.ServiceProvider,PowerLmsServer.Managers.AccountManager,PowerLmsServer.EfData.PowerLmsUserDbContext,PowerLmsServer.Managers.JobNumberManager)">
+        <member name="M:PowerLmsWebApi.Controllers.JobNumberController.#ctor(System.IServiceProvider,PowerLmsServer.Managers.AccountManager,PowerLmsServer.EfData.PowerLmsUserDbContext,PowerLmsServer.Managers.JobNumberManager)">
             <summary>
             构造函数。
             </summary>
@@ -2937,6 +2979,96 @@
             <response code="400">未找到指定的业务，或该业务不在初始创建状态——无法删除。</response>  
             <response code="401">无效令牌。</response>  
             <response code="404">指定Id的业务总表不存在。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.PlJobController.GetAllPlEaDoc(PowerLmsWebApi.Dto.PagingParamsDtoBase,System.Collections.Generic.Dictionary{System.String,System.String})">
+            <summary>
+            获取全部空运出口单。
+            </summary>
+            <param name="model"></param>
+            <param name="conditional">查询的条件。支持 JobNo(业务号)，Id，EaDocNo(单号)。不区分大小写。</param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.PlJobController.AddPlEaDoc(PowerLmsWebApi.Controllers.AddPlEaDocParamsDto)">
+            <summary>
+            增加新空运出口单。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.PlJobController.ModifyPlEaDoc(PowerLmsWebApi.Controllers.ModifyPlEaDocParamsDto)">
+            <summary>
+            修改空运出口单信息。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+            <response code="404">指定Id的空运出口单不存在。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.PlJobController.RemovePlEaDoc(PowerLmsWebApi.Controllers.RemovePlEaDocParamsDto)">
+            <summary>
+            删除指定Id的空运出口单。慎用！
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="400">未找到指定的业务，或该业务不在初始创建状态——无法删除。</response>  
+            <response code="401">无效令牌。</response>  
+            <response code="404">指定Id的空运出口单不存在。</response>  
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RemovePlEaDocParamsDto">
+            <summary>
+            标记删除空运出口单功能的参数封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RemovePlEaDocReturnDto">
+            <summary>
+            标记删除空运出口单功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetAllPlEaDocReturnDto">
+            <summary>
+            获取所有空运出口单功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddPlEaDocParamsDto">
+            <summary>
+            增加新空运出口单功能参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.AddPlEaDocParamsDto.PlEaDoc">
+            <summary>
+            新空运出口单信息。其中Id可以是任何值，返回时会指定新值。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddPlEaDocReturnDto">
+            <summary>
+            增加新空运出口单功能返回值封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.AddPlEaDocReturnDto.Id">
+            <summary>
+            如果成功添加，这里返回新空运出口单的Id。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.ModifyPlEaDocParamsDto">
+            <summary>
+            修改空运出口单信息功能参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.ModifyPlEaDocParamsDto.PlEaDoc">
+            <summary>
+            空运出口单数据。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.ModifyPlEaDocReturnDto">
+            <summary>
+            修改空运出口单信息功能返回值封装类。
+            </summary>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.RemovePlJobParamsDto">
             <summary>

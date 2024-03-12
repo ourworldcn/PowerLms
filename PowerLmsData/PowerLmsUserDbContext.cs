@@ -315,6 +315,11 @@ namespace PowerLmsServer.EfData
         /// </summary>
         public DbSet<PlJob> PlJobs { get; set; }
         
+        /// <summary>
+        /// 空运出口表。
+        /// </summary>
+        public DbSet<PlEaDoc> PlEaDocs { get; set; }
+
         #endregion
     }
 

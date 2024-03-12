@@ -163,6 +163,70 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.SaveChanges();
             return result;
         }
+
+        #region 通用文件管理接口
+
+        /// <summary>
+        /// 上传一批通用的文件。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        [HttpPost]
+        public ActionResult<AddFilesReturn> AddFiles([FromForm] IEnumerable<AddFilesItem> model)
+        {
+            var result = new AddFilesReturn();
+            Span<byte> buff = stackalloc byte[10];
+            foreach (var item in model)
+            {
+                using var stream = item.File.OpenReadStream();
+                stream.Read(buff);
+            }
+            return result;
+        }
+
+        #endregion 通用文件管理接口
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    public class AddFilesItem
+    {
+        /// <summary>
+        /// 文件。
+        /// </summary>
+        [FromForm]
+        public IFormFile File { get; set; }
+
+        /// <summary>
+        /// 所附属的Id。
+        /// </summary>
+        [FromForm]
+        public Guid ParentId { get; set; }
+
+        /// <summary>
+        /// 显示名。
+        /// </summary>
+        [FromForm]
+        public string DisplayName { get; set; }
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    public class AddFilesParams
+    {
+        /// <summary>
+        /// 上传文件。
+        /// </summary>
+        public List<AddFilesItem> Items { get; set; }
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    public class AddFilesReturn
+    {
     }
 
     /// <summary>

@@ -1285,6 +1285,7 @@ namespace PowerLmsWebApi.Controllers
             var result = new AddJobNumberRuleReturnDto();
             model.Item.GenerateNewId();
             var id = model.Item.Id;
+            model.Item.OrgId = context.User.OrgId;
             _DbContext.DD_JobNumberRules.Add(model.Item);
             _DbContext.SaveChanges();
             result.Id = id;
