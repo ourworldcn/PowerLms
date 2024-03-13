@@ -154,7 +154,8 @@ namespace PowerLmsServer.Managers
             var db = svc.GetRequiredService<PowerLmsUserDbContext>();
             var ent = svc.GetRequiredService<EntityManager>();
             var q = db.PlCustomers.OrderBy("name.name", true);
-            var ary = q.ToArray().Select(c=>c.Name.Name);
+            var ary = q.ToArray().Select(c => c.Name.Name);
+            var path = Path.Combine("Files", "General", $"{Guid.NewGuid()}.bin");
             //var entity = db.PlCustomers.First();
             //var p = Expression.Parameter(typeof(PlCustomer));
             //var expr = OwQueryExtensions.PropertyOrField(p, "name.name", out var type, true);

@@ -1221,7 +1221,7 @@ namespace PowerLmsWebApi.Controllers
         /// 获取业务编码规则。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">查询的条件。支持 DisplayName 和 ShortName ,OrgId查询。</param>
+        /// <param name="conditional">查询的条件。支持 DisplayName , ShortName ,OrgId, BusinessTypeId查询。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定类别Id无效。</response>  
@@ -1264,6 +1264,11 @@ namespace PowerLmsWebApi.Controllers
                 else if (string.Equals(item.Key, "ShortcutName", StringComparison.OrdinalIgnoreCase))
                 {
                     coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
+                }
+                else if (string.Equals(item.Key, nameof(JobNumberRule.BusinessTypeId), StringComparison.OrdinalIgnoreCase))
+                {
+                    if (OwConvert.TryToGuid(item.Value, out var id))
+                        coll = coll.Where(c => c.BusinessTypeId == id);
                 }
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);

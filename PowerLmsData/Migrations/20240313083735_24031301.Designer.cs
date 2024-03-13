@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PowerLmsServer.EfData;
 
@@ -11,9 +12,10 @@ using PowerLmsServer.EfData;
 namespace PowerLmsData.Migrations
 {
     [DbContext(typeof(PowerLmsUserDbContext))]
-    partial class PowerLmsUserDbContextModelSnapshot : ModelSnapshot
+    [Migration("20240313083735_24031301")]
+    partial class _24031301
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -322,89 +324,6 @@ namespace PowerLmsData.Migrations
                     b.ToTable("DD_DataDicCatalogs");
 
                     b.HasComment("专门针对数据字典的目录。");
-                });
-
-            modelBuilder.Entity("PowerLms.Data.DocFee", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier")
-                        .HasColumnOrder(0);
-
-                    b.Property<string>("AccountNo")
-                        .HasColumnType("nvarchar(max)")
-                        .HasComment("账单号，账单表中的id");
-
-                    b.Property<decimal>("Amount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)")
-                        .HasComment("金额,两位小数、可以为负数");
-
-                    b.Property<Guid?>("BalanceId")
-                        .HasColumnType("uniqueidentifier")
-                        .HasComment("结算单位，客户资料中为结算单位的客户id。");
-
-                    b.Property<Guid?>("ChechManId")
-                        .HasColumnType("uniqueidentifier")
-                        .HasComment("审核人Id，为空则未审核");
-
-                    b.Property<DateTime?>("CheckDate")
-                        .HasColumnType("datetime2(2)")
-                        .HasComment("审核日期，为空则未审核");
-
-                    b.Property<Guid?>("ContainerTypeId")
-                        .HasColumnType("uniqueidentifier")
-                        .HasComment("单位,简单字典ContainerType,按票、按重量等");
-
-                    b.Property<Guid?>("CreateBy")
-                        .HasColumnType("uniqueidentifier")
-                        .HasComment("创建人，建立时系统默认，默认不可更改");
-
-                    b.Property<DateTime>("CreateDateTime")
-                        .HasColumnType("datetime2(2)")
-                        .HasComment("新建时间,系统默认，不能更改。");
-
-                    b.Property<Guid?>("DocId")
-                        .HasColumnType("uniqueidentifier")
-                        .HasComment("业务单的Id");
-
-                    b.Property<decimal>("ExchangeRate")
-                        .HasColumnType("decimal(18,2)")
-                        .HasComment("本位币汇率,默认从汇率表调取,机构本位币");
-
-                    b.Property<Guid?>("FeeTypeId")
-                        .HasColumnType("uniqueidentifier")
-                        .HasComment("费用种类字典项Id");
-
-                    b.Property<Guid?>("GainTypeId")
-                        .HasColumnType("uniqueidentifier")
-                        .HasComment("结算方式，简单字典FeePayType");
-
-                    b.Property<bool>("IO")
-                        .HasColumnType("bit")
-                        .HasComment("收入或指出，true支持，false为收入。");
-
-                    b.Property<DateTime>("PreclearDate")
-                        .HasColumnType("datetime2(2)")
-                        .HasComment("预计结算日期，客户资料中信用日期自动计算出");
-
-                    b.Property<string>("Remark")
-                        .HasColumnType("nvarchar(max)")
-                        .HasComment("备注");
-
-                    b.Property<decimal>("UnitCount")
-                        .HasColumnType("decimal(18,2)")
-                        .HasComment("数量");
-
-                    b.Property<decimal>("UnitPrice")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)")
-                        .HasComment("单价，4位小数。");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("DocId");
-
-                    b.ToTable("DocFees");
                 });
 
             modelBuilder.Entity("PowerLms.Data.FeesType", b =>

@@ -241,7 +241,330 @@ namespace PowerLmsWebApi.Controllers
 
         #endregion 空运出口单
 
+        #region 货场出重单
+
+        /// <summary>
+        /// 获取全部货场出重单。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="conditional">查询的条件。支持 Id，EaDocId(EA单Id)。不区分大小写。</param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        public ActionResult<GetAllHuochangChuchongReturnDto> GetAllHuochangChuchong([FromQuery] PagingParamsDtoBase model,
+            [FromQuery] Dictionary<string, string> conditional = null)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetAllHuochangChuchongReturnDto();
+
+            var dbSet = _DbContext.HuochangChuchongs;
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
+            foreach (var item in conditional)
+                if (string.Equals(item.Key, "Id", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (Guid.TryParse(item.Value, out var id))
+                        coll = coll.Where(c => c.Id == id);
+                }
+                else if (string.Equals(item.Key, "EaDocId", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (Guid.TryParse(item.Value, out var id))
+                        coll = coll.Where(c => c.EaDocId == id);
+                }
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
+            _Mapper.Map(prb, result);
+            return result;
+        }
+
+        /// <summary>
+        /// 增加新货场出重单。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPost]
+        public ActionResult<AddHuochangChuchongReturnDto> AddHuochangChuchong(AddHuochangChuchongParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new AddHuochangChuchongReturnDto();
+            var entity = model.HuochangChuchong;
+            entity.GenerateNewId();
+            _DbContext.HuochangChuchongs.Add(model.HuochangChuchong);
+            _DbContext.SaveChanges();
+            result.Id = model.HuochangChuchong.Id;
+            return result;
+        }
+
+        /// <summary>
+        /// 修改货场出重单信息。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定Id的货场出重单不存在。</response>  
+        [HttpPut]
+        public ActionResult<ModifyHuochangChuchongReturnDto> ModifyHuochangChuchong(ModifyHuochangChuchongParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new ModifyHuochangChuchongReturnDto();
+            if (!_EntityManager.Modify(new[] { model.HuochangChuchong })) return NotFound();
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        /// <summary>
+        /// 删除指定Id的货场出重单。慎用！
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">未找到指定的业务，或该业务不在初始创建状态——无法删除。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定Id的货场出重单不存在。</response>  
+        [HttpDelete]
+        public ActionResult<RemoveHuochangChuchongReturnDto> RemoveHuochangChuchong(RemoveHuochangChuchongParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new RemoveHuochangChuchongReturnDto();
+            var id = model.Id;
+            var dbSet = _DbContext.HuochangChuchongs;
+            var item = dbSet.Find(id);
+            //if (item.JobState > 0) return BadRequest("业务已经开始，无法删除。");
+            if (item is null) return BadRequest();
+            _EntityManager.Remove(item);
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        #endregion 货场出重单
+
+        #region 业务单的费用单
+
+        /// <summary>
+        /// 获取全部业务单的费用单。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="conditional">查询的条件。支持 Id，DocId(业务单Id)。不区分大小写。</param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        public ActionResult<GetAllDocFeeReturnDto> GetAllDocFee([FromQuery] PagingParamsDtoBase model,
+            [FromQuery] Dictionary<string, string> conditional = null)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetAllDocFeeReturnDto();
+
+            var dbSet = _DbContext.DocFees;
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
+            foreach (var item in conditional)
+                if (string.Equals(item.Key, "Id", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (Guid.TryParse(item.Value, out var id))
+                        coll = coll.Where(c => c.Id == id);
+                }
+                else if (string.Equals(item.Key, nameof(DocFee.DocId), StringComparison.OrdinalIgnoreCase))
+                {
+                    if (Guid.TryParse(item.Value, out var id))
+                        coll = coll.Where(c => c.DocId == id);
+                }
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
+            _Mapper.Map(prb, result);
+            return result;
+        }
+
+        /// <summary>
+        /// 增加新业务单的费用单。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPost]
+        public ActionResult<AddDocFeeReturnDto> AddDocFee(AddDocFeeParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new AddDocFeeReturnDto();
+            var entity = model.DocFee;
+            entity.GenerateNewId();
+            _DbContext.DocFees.Add(model.DocFee);
+            _DbContext.SaveChanges();
+            result.Id = model.DocFee.Id;
+            return result;
+        }
+
+        /// <summary>
+        /// 修改业务单的费用单信息。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定Id的业务单的费用单不存在。</response>  
+        [HttpPut]
+        public ActionResult<ModifyDocFeeReturnDto> ModifyDocFee(ModifyDocFeeParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new ModifyDocFeeReturnDto();
+            if (!_EntityManager.Modify(new[] { model.DocFee })) return NotFound();
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        /// <summary>
+        /// 删除指定Id的业务单的费用单。慎用！
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">未找到指定的业务，或该业务不在初始创建状态——无法删除。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定Id的业务单的费用单不存在。</response>  
+        [HttpDelete]
+        public ActionResult<RemoveDocFeeReturnDto> RemoveDocFee(RemoveDocFeeParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new RemoveDocFeeReturnDto();
+            var id = model.Id;
+            var dbSet = _DbContext.DocFees;
+            var item = dbSet.Find(id);
+            //if (item.JobState > 0) return BadRequest("业务已经开始，无法删除。");
+            if (item is null) return BadRequest();
+            _EntityManager.Remove(item);
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        #endregion 业务单的费用单
     }
+
+    #region 业务单的费用单
+    /// <summary>
+    /// 标记删除业务单的费用单功能的参数封装类。
+    /// </summary>
+    public class RemoveDocFeeParamsDto : RemoveParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 标记删除业务单的费用单功能的返回值封装类。
+    /// </summary>
+    public class RemoveDocFeeReturnDto : RemoveReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 获取所有业务单的费用单功能的返回值封装类。
+    /// </summary>
+    public class GetAllDocFeeReturnDto : PagingReturnDtoBase<DocFee>
+    {
+    }
+
+    /// <summary>
+    /// 增加新业务单的费用单功能参数封装类。
+    /// </summary>
+    public class AddDocFeeParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 新业务单的费用单信息。其中Id可以是任何值，返回时会指定新值。
+        /// </summary>
+        public DocFee DocFee { get; set; }
+    }
+
+    /// <summary>
+    /// 增加新业务单的费用单功能返回值封装类。
+    /// </summary>
+    public class AddDocFeeReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 如果成功添加，这里返回新业务单的费用单的Id。
+        /// </summary>
+        public Guid Id { get; set; }
+    }
+
+    /// <summary>
+    /// 修改业务单的费用单信息功能参数封装类。
+    /// </summary>
+    public class ModifyDocFeeParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 业务单的费用单数据。
+        /// </summary>
+        public DocFee DocFee { get; set; }
+    }
+
+    /// <summary>
+    /// 修改业务单的费用单信息功能返回值封装类。
+    /// </summary>
+    public class ModifyDocFeeReturnDto : ReturnDtoBase
+    {
+    }
+    #endregion 业务单的费用单
+
+    #region 货场出重单
+    /// <summary>
+    /// 标记删除货场出重单功能的参数封装类。
+    /// </summary>
+    public class RemoveHuochangChuchongParamsDto : RemoveParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 标记删除货场出重单功能的返回值封装类。
+    /// </summary>
+    public class RemoveHuochangChuchongReturnDto : RemoveReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 获取所有货场出重单功能的返回值封装类。
+    /// </summary>
+    public class GetAllHuochangChuchongReturnDto : PagingReturnDtoBase<HuochangChuchong>
+    {
+    }
+
+    /// <summary>
+    /// 增加新货场出重单功能参数封装类。
+    /// </summary>
+    public class AddHuochangChuchongParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 新货场出重单信息。其中Id可以是任何值，返回时会指定新值。
+        /// </summary>
+        public HuochangChuchong HuochangChuchong { get; set; }
+    }
+
+    /// <summary>
+    /// 增加新货场出重单功能返回值封装类。
+    /// </summary>
+    public class AddHuochangChuchongReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 如果成功添加，这里返回新货场出重单的Id。
+        /// </summary>
+        public Guid Id { get; set; }
+    }
+
+    /// <summary>
+    /// 修改货场出重单信息功能参数封装类。
+    /// </summary>
+    public class ModifyHuochangChuchongParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 货场出重单数据。
+        /// </summary>
+        public HuochangChuchong HuochangChuchong { get; set; }
+    }
+
+    /// <summary>
+    /// 修改货场出重单信息功能返回值封装类。
+    /// </summary>
+    public class ModifyHuochangChuchongReturnDto : ReturnDtoBase
+    {
+    }
+    #endregion 货场出重单
 
     #region 空运出口单
     /// <summary>

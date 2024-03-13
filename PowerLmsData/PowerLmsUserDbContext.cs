@@ -320,6 +320,15 @@ namespace PowerLmsServer.EfData
         /// </summary>
         public DbSet<PlEaDoc> PlEaDocs { get; set; }
 
+        /// <summary>
+        /// 现场出重子表。
+        /// </summary>
+        public DbSet<HuochangChuchong> HuochangChuchongs { get; set; }
+
+        /// <summary>
+        /// 业务单的费用表。
+        /// </summary>
+        public DbSet<DocFee> DocFees { get; set; }
         #endregion
     }
 

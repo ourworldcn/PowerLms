@@ -1,9 +1,11 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.VisualStudio.Web.CodeGeneration;
+using NuGet.Common;
 using NuGet.Protocol.Plugins;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
@@ -11,6 +13,8 @@ using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
 using SixLabors.ImageSharp.Metadata;
 using System.ComponentModel.DataAnnotations;
+using System.Drawing.Imaging;
+using System.IO;
 using System.Net.Mime;
 using System.Text;
 using System.Text.Unicode;
@@ -40,6 +44,11 @@ namespace PowerLmsWebApi.Controllers
         readonly IServiceProvider _ServiceProvider;
         EntityManager _EntityManager;
         IMapper _Mapper;
+
+        /// <summary>
+        /// 存储文件的根目录。
+        /// </summary>
+        public static string RootPath = Path.Combine(AppContext.BaseDirectory, "Files");
 
         /// <summary>
         /// 获取业务负责人的所属关系。
@@ -84,7 +93,7 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// 
+        /// 下载客户资料的特定接口。
         /// </summary>
         /// <param name="token">登录令牌</param>
         /// <param name="fileId">文件的Id。</param>
@@ -104,7 +113,7 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// 
+        /// 上传客户资料的特定接口。
         /// </summary>
         /// <param name="file"></param>
         /// <param name="model"></param>
@@ -140,6 +149,8 @@ namespace PowerLmsWebApi.Controllers
             return result;
         }
 
+        #region 通用文件管理接口
+
         /// <summary>
         /// 删除存储的文件。
         /// </summary>
@@ -147,7 +158,7 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
-        /// <response code="404">指定的实体不存在。</response>  
+        /// <response code="404">指定Id的文件不存在。</response>  
         /// <response code="500">其他错误，并发导致数据变化不能完成操作。</response>
         [HttpDelete]
         public ActionResult<RemoveFileReturnDto> RemoveFile(RemoveFileParamsDto model)
@@ -164,68 +175,140 @@ namespace PowerLmsWebApi.Controllers
             return result;
         }
 
-        #region 通用文件管理接口
-
         /// <summary>
-        /// 上传一批通用的文件。
+        /// 上传(追加)通用的文件。
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
         [HttpPost]
-        public ActionResult<AddFilesReturn> AddFiles([FromForm] IEnumerable<AddFilesItem> model)
+        public ActionResult<AddFileReturnDto> AddFile([FromForm] AddFileParamsDto model)
         {
-            var result = new AddFilesReturn();
-            Span<byte> buff = stackalloc byte[10];
-            foreach (var item in model)
+            var result = new AddFileReturnDto();
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            PlFileInfo info = new PlFileInfo
             {
-                using var stream = item.File.OpenReadStream();
-                stream.Read(buff);
-            }
+                DisplayName = model.DisplayName,
+                ParentId = model.ParentId,
+                FileName = model.File.Name,
+                Remark = model.Remark,
+                FilePath = Path.Combine("General", $"{Guid.NewGuid()}.bin"),
+                FileTypeId = null,
+            };
+            result.Id = info.Id;
+            _DbContext.PlFileInfos.Add(info);
+            _DbContext.SaveChanges();
+            var fullPath = Path.Combine(AppContext.BaseDirectory, "Files", info.FilePath);
+            var dir = Path.GetDirectoryName(fullPath);
+            Directory.CreateDirectory(dir);
+            using var file = new FileStream(fullPath, FileMode.CreateNew);
             return result;
         }
 
+        /// <summary>
+        /// 下载文件。一般应先调用GetAllFileInfo接口以获得文件Id。
+        /// </summary>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定Id的文件不存在。</response>  
+        [HttpGet]
+        public ActionResult GetFile([FromQuery] GetFileParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var info = _DbContext.PlFileInfos.Find(model.FileId);
+            if (info == null) return NotFound();
+            var path = Path.Combine(AppContext.BaseDirectory, "Files", info.FilePath);
+            var stream = new FileStream(path, FileMode.Open);
+            return File(stream, "application/octet-stream", info.FileName);
+        }
+
+        /// <summary>
+        /// 获取全部通用文件信息。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="conditional">查询的条件。支持 Id，ParentId(所属实体Id)。不区分大小写。</param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        public ActionResult<GetAllFileInfoReturnDto> GetAllFileInfo([FromQuery] PagingParamsDtoBase model,
+            [FromQuery] Dictionary<string, string> conditional = null)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetAllFileInfoReturnDto();
+
+            var dbSet = _DbContext.PlFileInfos;
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
+            foreach (var item in conditional)
+                if (string.Equals(item.Key, "Id", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (Guid.TryParse(item.Value, out var id))
+                        coll = coll.Where(c => c.Id == id);
+                }
+                else if (string.Equals(item.Key, "ParentId", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (Guid.TryParse(item.Value, out var id))
+                        coll = coll.Where(c => c.ParentId == id);
+                }
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
+            _Mapper.Map(prb, result);
+            return result;
+        }
         #endregion 通用文件管理接口
     }
 
+    #region 通用文件管理
+
     /// <summary>
-    /// 
+    /// 获取全部通用文件信息返回值封装类。
     /// </summary>
-    public class AddFilesItem
+    public class GetAllFileInfoReturnDto : PagingReturnBase<PlFileInfo>
+    {
+    }
+
+    /// <summary>
+    /// 下载文件通用功能参数封装类。
+    /// </summary>
+    public class GetFileParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 文件Id。
+        /// </summary>
+        public Guid FileId { get; set; }
+    }
+
+    /// <summary>
+    /// 上传文件通用接口的参数封装类。
+    /// </summary>
+    public class AddFileParamsDto : TokenDtoBase
     {
         /// <summary>
         /// 文件。
         /// </summary>
-        [FromForm]
         public IFormFile File { get; set; }
 
         /// <summary>
-        /// 所附属的Id。
+        /// 所附属实体的Id，如附属在Ea单上则是Ea单的Id,附属在货场出重条目上的则是那个条目的Id。
         /// </summary>
-        [FromForm]
         public Guid ParentId { get; set; }
 
         /// <summary>
         /// 显示名。
         /// </summary>
-        [FromForm]
         public string DisplayName { get; set; }
-    }
 
-    /// <summary>
-    /// 
-    /// </summary>
-    public class AddFilesParams
-    {
         /// <summary>
-        /// 上传文件。
+        /// 备注。
         /// </summary>
-        public List<AddFilesItem> Items { get; set; }
+        public string Remark { get; set; }
     }
 
     /// <summary>
-    /// 
+    /// 上传文件通用接口的返回值封装类。
     /// </summary>
-    public class AddFilesReturn
+    public class AddFileReturnDto : AddReturnDtoBase
     {
     }
 
@@ -242,6 +325,8 @@ namespace PowerLmsWebApi.Controllers
     public class RemoveFileReturnDto : RemoveReturnDtoBase
     {
     }
+
+    #endregion 通用文件管理
 
     /// <summary>
     /// 获取文件列表功能的返回值封装类。

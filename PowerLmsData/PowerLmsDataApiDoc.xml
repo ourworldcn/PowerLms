@@ -232,9 +232,109 @@
             空运出口表。
             </summary>
         </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.HuochangChuchongs">
+            <summary>
+            现场出重子表。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.DocFees">
+            <summary>
+            业务单的费用表。
+            </summary>
+        </member>
         <member name="T:PowerLmsServer.EfData.OwDbContextExtensions">
             <summary>
             数据库上下文的扩展方法。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.DocFee">
+            <summary>
+            业务单的费用。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocFee.DocId">
+            <summary>
+            业务单的Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocFee.AccountNo">
+            <summary>
+            账单号。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocFee.FeeTypeId">
+            <summary>
+            费用种类字典项Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocFee.BalanceId">
+            <summary>
+            结算单位，客户资料中为结算单位的客户id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocFee.IO">
+            <summary>
+            收入或指出，true支持，false为收入。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocFee.GainTypeId">
+            <summary>
+            结算方式，简单字典FeePayType。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocFee.ContainerTypeId">
+            <summary>
+            单位,简单字典ContainerType,按票、按重量等
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocFee.UnitCount">
+            <summary>
+            数量。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocFee.UnitPrice">
+            <summary>
+            单价，4位小数。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocFee.Amount">
+            <summary>
+            金额,两位小数、可以为负数.
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocFee.ExchangeRate">
+            <summary>
+            本位币汇率,默认从汇率表调取,机构本位币
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocFee.Remark">
+            <summary>
+            备注。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocFee.CreateBy">
+            <summary>
+            创建人，建立时系统默认，默认不可更改。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocFee.CreateDateTime">
+            <summary>
+            创建时间,系统默认，不能更改
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocFee.PreclearDate">
+            <summary>
+            预计结算日期，客户资料中信用日期自动计算出
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocFee.CheckDate">
+            <summary>
+            审核日期，为空则未审核。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocFee.ChechManId">
+            <summary>
+            审核人Id，为空则未审核。
             </summary>
         </member>
         <member name="T:PowerLms.Data.PlEaDoc">
@@ -1718,7 +1818,7 @@
         </member>
         <member name="P:PowerLms.Data.PlFileInfo.FileTypeId">
             <summary>
-            文件类型Id。关联字典FileType。
+            文件类型Id。关联字典FileType。可能是null，表示这是一个通用文件。
             </summary>
         </member>
         <member name="P:PowerLms.Data.PlFileInfo.FilePath">

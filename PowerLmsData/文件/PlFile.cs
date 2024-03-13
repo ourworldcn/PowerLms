@@ -23,9 +23,9 @@ namespace PowerLms.Data
         public Guid? ParentId { get; set; }
 
         /// <summary>
-        /// 文件类型Id。关联字典FileType。
+        /// 文件类型Id。关联字典FileType。可能是null，表示这是一个通用文件。
         /// </summary>
-        [Comment("文件类型Id。关联字典FileType。")]
+        [Comment("文件类型Id。关联字典FileType。可能是null，表示这是一个通用文件。")]
         public Guid? FileTypeId { get; set; }
 
         /// <summary>
