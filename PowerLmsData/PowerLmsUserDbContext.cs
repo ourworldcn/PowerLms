@@ -329,6 +329,11 @@ namespace PowerLmsServer.EfData
         /// 业务单的费用表。
         /// </summary>
         public DbSet<DocFee> DocFees { get; set; }
+
+        /// <summary>
+        /// 业务单的账单。
+        /// </summary>
+        public DbSet<DocBill> DocBills { get; set; }
         #endregion
     }
 

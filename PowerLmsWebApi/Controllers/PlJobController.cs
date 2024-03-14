@@ -438,7 +438,173 @@ namespace PowerLmsWebApi.Controllers
         }
 
         #endregion 业务单的费用单
+
+        #region 业务单的账单
+
+        /// <summary>
+        /// 获取全部业务单的账单。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="conditional">查询的条件。支持 Id，DocNo(业务单Id)。不区分大小写。</param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        public ActionResult<GetAllDocBillReturnDto> GetAllDocBill([FromQuery] PagingParamsDtoBase model,
+            [FromQuery] Dictionary<string, string> conditional = null)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetAllDocBillReturnDto();
+
+            var dbSet = _DbContext.DocBills;
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
+            foreach (var item in conditional)
+                if (string.Equals(item.Key, "Id", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (Guid.TryParse(item.Value, out var id))
+                        coll = coll.Where(c => c.Id == id);
+                }
+                else if (string.Equals(item.Key, nameof(DocBill.DocNo), StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.DocNo == item.Value);
+                }
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
+            _Mapper.Map(prb, result);
+            return result;
+        }
+
+        /// <summary>
+        /// 增加新业务单的账单。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPost]
+        public ActionResult<AddDocBillReturnDto> AddDocBill(AddDocBillParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new AddDocBillReturnDto();
+            var entity = model.DocBill;
+            entity.GenerateNewId();
+            if (entity is ICreatorInfo creatorInfo)
+            {
+                creatorInfo.CreateBy = context.User.Id;
+                creatorInfo.CreateDateTime = OwHelper.WorldNow;
+            }
+            _DbContext.DocBills.Add(model.DocBill);
+            _DbContext.SaveChanges();
+            result.Id = model.DocBill.Id;
+            return result;
+        }
+
+        /// <summary>
+        /// 修改业务单的账单信息。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定Id的业务单的账单不存在。</response>  
+        [HttpPut]
+        public ActionResult<ModifyDocBillReturnDto> ModifyDocBill(ModifyDocBillParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new ModifyDocBillReturnDto();
+            if (!_EntityManager.Modify(new[] { model.DocBill })) return NotFound();
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        /// <summary>
+        /// 删除指定Id的业务单的账单。慎用！
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">未找到指定的业务，或该业务不在初始创建状态——无法删除。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定Id的业务单的账单不存在。</response>  
+        [HttpDelete]
+        public ActionResult<RemoveDocBillReturnDto> RemoveDocBill(RemoveDocBillParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new RemoveDocBillReturnDto();
+            var id = model.Id;
+            var dbSet = _DbContext.DocBills;
+            var item = dbSet.Find(id);
+            //if (item.JobState > 0) return BadRequest("业务已经开始，无法删除。");
+            if (item is null) return BadRequest();
+            _EntityManager.Remove(item);
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        #endregion 业务单的账单
     }
+
+    #region 业务单的账单
+    /// <summary>
+    /// 标记删除业务单的账单功能的参数封装类。
+    /// </summary>
+    public class RemoveDocBillParamsDto : RemoveParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 标记删除业务单的账单功能的返回值封装类。
+    /// </summary>
+    public class RemoveDocBillReturnDto : RemoveReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 获取所有业务单的账单功能的返回值封装类。
+    /// </summary>
+    public class GetAllDocBillReturnDto : PagingReturnDtoBase<DocBill>
+    {
+    }
+
+    /// <summary>
+    /// 增加新业务单的账单功能参数封装类。
+    /// </summary>
+    public class AddDocBillParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 新业务单的账单信息。其中Id可以是任何值，返回时会指定新值。
+        /// </summary>
+        public DocBill DocBill { get; set; }
+    }
+
+    /// <summary>
+    /// 增加新业务单的账单功能返回值封装类。
+    /// </summary>
+    public class AddDocBillReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 如果成功添加，这里返回新业务单的账单的Id。
+        /// </summary>
+        public Guid Id { get; set; }
+    }
+
+    /// <summary>
+    /// 修改业务单的账单信息功能参数封装类。
+    /// </summary>
+    public class ModifyDocBillParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 业务单的账单数据。
+        /// </summary>
+        public DocBill DocBill { get; set; }
+    }
+
+    /// <summary>
+    /// 修改业务单的账单信息功能返回值封装类。
+    /// </summary>
+    public class ModifyDocBillReturnDto : ReturnDtoBase
+    {
+    }
+    #endregion 业务单的账单
 
     #region 业务单的费用单
     /// <summary>

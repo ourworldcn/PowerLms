@@ -242,9 +242,204 @@
             业务单的费用表。
             </summary>
         </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.DocBills">
+            <summary>
+            业务单的账单。
+            </summary>
+        </member>
         <member name="T:PowerLmsServer.EfData.OwDbContextExtensions">
             <summary>
             数据库上下文的扩展方法。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.DocBill">
+            <summary>
+            业务单的账单。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocBill.BillNo">
+            <summary>
+            账单号。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocBill.DocNo">
+            <summary>
+            业务编号,默认为该业务的JobNo，可修改,不绑定业务表的id
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocBill.CreateBy">
+            <summary>
+            创建人，建立时系统默认，默认不可更改。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocBill.CreateDateTime">
+            <summary>
+            创建时间,系统默认，不能更改
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocBill.PayerId">
+            <summary>
+            付款人,选Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocBill.InscribeId">
+            <summary>
+            Inscribe	抬头
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocBill.Amount">
+            <summary>
+            金额。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocBill.CurrTypeId">
+            <summary>
+            币种Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocBill.ClearAmount">
+            <summary>
+            已核销金额
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocBill.CheckDate">
+            <summary>
+            审核日期，为空则未审核。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocBill.ChechManId">
+            <summary>
+            审核人Id，为空则未审核。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocBill.IsEnable">
+            <summary>
+            是否有效。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocBill.Remark">
+            <summary>
+            备注。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocBill.IODate">
+            <summary>
+            进出口日期。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocBill.Vessel">
+            <summary>
+            船名或航班号
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocBill.Voyage">
+            <summary>
+            航次
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocBill.MblNo">
+            <summary>
+            主单号
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocBill.HblNo">
+            <summary>
+            分单号
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocBill.LoadingCode">
+            <summary>
+            起始港编码。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocBill.DischargeCode">
+            <summary>
+            中转港编码。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocBill.DestinationCode">
+            <summary>
+            起始港编码。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocBill.Etd">
+            <summary>
+            开航日期。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocBill.Eta">
+            <summary>
+            到港日期。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocBill.SoNo">
+            <summary>
+            So编号。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocBill.BookingNo">
+            <summary>
+            订舱编号。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocBill.GoodsName">
+            <summary>
+            货物名称。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocBill.PkgsCount">
+            <summary>
+            件数。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocBill.Weight">
+            <summary>
+            重量，3位小数。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocBill.MeasureMent">
+            <summary>
+            重量，3位小数。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocBill.ContainerNum">
+            <summary>
+            箱量。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocBill.Consignor">
+            <summary>
+            发货人
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocBill.Consignee">
+            <summary>
+            收货人
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocBill.Carrier">
+            <summary>
+            承运人
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocBill.LinkMan">
+            <summary>
+            客户联系人。客户联系人可以从客户资料中维护的联系人中选择，也可以临时输入，所以这里不是关联联系人的id，是字符串
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocBill.LinkTel">
+            <summary>
+            联系人电话。客户联系人可以从客户资料中维护的联系人中选择，也可以临时输入，所以这里不是关联联系人的id，是字符串
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocBill.LinkFax">
+            <summary>
+            联系人传真。客户联系人可以从客户资料中维护的联系人中选择，也可以临时输入，所以这里不是关联联系人的id，是字符串
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.DocBill.ContractNo">
+            <summary>
+            合同号。
             </summary>
         </member>
         <member name="T:PowerLms.Data.DocFee">
