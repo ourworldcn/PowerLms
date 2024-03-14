@@ -2036,6 +2036,16 @@
             备注。
             </summary>
         </member>
+        <member name="P:PowerLms.Data.PlFileInfo.CreateBy">
+            <summary>
+            上传人Id,可能是空。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlFileInfo.CreateDateTime">
+            <summary>
+            上传时间,系统默认。
+            </summary>
+        </member>
         <member name="T:PowerLms.Data.PlMerchant">
             <summary>
             商户。

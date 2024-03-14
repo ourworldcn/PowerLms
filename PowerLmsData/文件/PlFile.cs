@@ -14,7 +14,7 @@ namespace PowerLms.Data
     /// </summary>
     [Comment("文件信息表")]
     [Index(nameof(ParentId), IsUnique = false)]
-    public class PlFileInfo : GuidKeyObjectBase
+    public class PlFileInfo : GuidKeyObjectBase,ICreatorInfo
     {
         /// <summary>
         /// 所属实体的Id。如属于客户资料的文件，就设置为客户Id。
@@ -54,5 +54,19 @@ namespace PowerLms.Data
         /// </summary>
         [Comment("备注")]
         public string Remark { get; set; }
+
+        /// <summary>
+        /// 上传人Id,可能是空。
+        /// </summary>
+        [Comment("操作员，可以更改相当于工作号的所有者")]
+        public Guid? CreateBy { get; set; }
+
+        /// <summary>
+        /// 上传时间,系统默认。
+        /// </summary>
+        [Comment("新建时间,系统默认，不能更改。")]
+        public DateTime CreateDateTime { get; set; }
+
+
     }
 }

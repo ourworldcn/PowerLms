@@ -196,6 +196,11 @@ namespace PowerLmsWebApi.Controllers
                 FilePath = Path.Combine("General", $"{Guid.NewGuid()}.bin"),
                 FileTypeId = null,
             };
+            if (info is ICreatorInfo creatorInfo)
+            {
+                creatorInfo.CreateBy = context.User.Id;
+                creatorInfo.CreateDateTime = OwHelper.WorldNow;
+            }
             result.Id = info.Id;
             _DbContext.PlFileInfos.Add(info);
             _DbContext.SaveChanges();
