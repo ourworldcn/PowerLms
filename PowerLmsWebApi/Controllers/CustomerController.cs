@@ -42,7 +42,7 @@ namespace PowerLmsWebApi.Controllers
         EntityManager _EntityManager;
         IMapper _Mapper;
 
-        #region 客户资料本体的CRUD
+        #region 客户资料本体的
 
         /// <summary>
         /// 获取全部客户。
@@ -128,7 +128,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyCustomerReturnDto();
-            if (!_EntityManager.Modify( model.Items )) return NotFound();
+            if (!_EntityManager.Modify(model.Items)) return NotFound();
             foreach (var item in model.Items)
             {
                 _DbContext.Entry(item).Property(c => c.OrgId).IsModified = false;
@@ -174,7 +174,46 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.SaveChanges();
             return result;
         }
-        #endregion 客户资料本体的CRUD
+
+        /// <summary>
+        /// 按指定条件获取客户本体。支持多个bool类型的或关系查询。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="conditional">支持多个bool类型的或查询。使用字段名作为key,true或false为值。</param>
+        /// <returns></returns>
+        [HttpGet]
+        public ActionResult<GetAllCustomer2ReturnDto> GetAllCustomer2([FromQuery] PagingParamsDtoBase model,
+            [FromQuery] Dictionary<string, string> conditional = null)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetAllCustomer2ReturnDto();
+            Guid[] allOrg = Array.Empty<Guid>();
+            if (_OrganizationManager.GetMerchantId(context.User.Id, out var merId))
+            {
+                allOrg = _OrganizationManager.GetAllOrgInRoot(merId.Value).Select(c => c.Id).ToArray();
+            }
+            var dbSet = _DbContext.PlCustomers.Where(c => c.OrgId.HasValue && allOrg.Contains(c.OrgId.Value));
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
+
+            StringBuilder sb = new StringBuilder("select * from PlCustomers where   ");
+            foreach (var item in conditional)
+            {
+                if (!bool.TryParse(item.Value, out var b)) continue;
+                if (b)
+                    sb.Append($"{item.Key}=1 or ");
+                else
+                    sb.Append($"{item.Key}=0 or ");
+            }
+            sb.Remove(sb.Length - 3, 3);    //获得条件
+            var collBase = _DbContext.PlCustomers.FromSqlRaw(sb.ToString()).ToArray();
+            var collR = collBase.Where(c => c.OrgId.HasValue && allOrg.Contains(c.OrgId.Value)).AsQueryable();
+
+            var prb = _EntityManager.GetAll(collR, model.StartIndex, model.Count);
+            _Mapper.Map(prb, result);
+            return result;
+        }
+
+        #endregion 客户资料本体的
 
         #region 客户上的联系人操作
 
@@ -1075,6 +1114,21 @@ namespace PowerLmsWebApi.Controllers
     #endregion 业务负责人的所属关系的CRUD
 
     #region 客户本体
+
+    /// <summary>
+    /// 查询的参数封装类。
+    /// </summary>
+    public class GetAllCustomer2ParamsDto : PagingParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 查询的返回值封装类。
+    /// </summary>
+    public class GetAllCustomer2ReturnDto : PagingReturnDtoBase<PlCustomer>
+    {
+    }
+
     /// <summary>
     /// 标记删除客户功能的参数封装类。
     /// </summary>

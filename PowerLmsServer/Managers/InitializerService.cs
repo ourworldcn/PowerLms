@@ -152,16 +152,21 @@ namespace PowerLmsServer.Managers
         private void Test(IServiceProvider svc)
         {
             var db = svc.GetRequiredService<PowerLmsUserDbContext>();
-            var ent = svc.GetRequiredService<EntityManager>();
-            var q = db.PlCustomers.OrderBy("name.name", true);
-            var ary = q.ToArray().Select(c => c.Name.Name);
-            var path = Path.Combine("Files", "General", $"{Guid.NewGuid()}.bin");
-            //var entity = db.PlCustomers.First();
-            //var p = Expression.Parameter(typeof(PlCustomer));
-            //var expr = OwQueryExtensions.PropertyOrField(p, "name.name", out var type, true);
-            //var e = Expression.Lambda(expr, p);
-            //var str = e.Compile().DynamicInvoke(entity);
-            //var ary = q.ToArray();
+            StringBuilder sb = new StringBuilder("select * from PlCustomers where ");
+            //foreach (var item in conditional)
+            //{
+            //    if (!bool.TryParse(item.Value, out var b)) continue;
+            //    if (b)
+            //        sb.Append($"{item.Key}=1 or ");
+            //    else
+            //        sb.Append($"{item.Key}=0 or ");
+            //}
+
+            var ss = db.PlCustomers.Where(c=>c.IsAirway);
+            var str = ss.ToQueryString();
+
+            sb.Remove(sb.Length - 6, 6);    //获得条件
+            var coll = db.PlCustomers.FromSqlRaw(str).ToArray();
 
         }
 

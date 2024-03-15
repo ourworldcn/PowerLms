@@ -1675,6 +1675,14 @@
             <response code="401">无效令牌。</response>  
             <response code="404">指定Id的客户不存在。</response>  
         </member>
+        <member name="M:PowerLmsWebApi.Controllers.CustomerController.GetAllCustomer2(PowerLmsWebApi.Dto.PagingParamsDtoBase,System.Collections.Generic.Dictionary{System.String,System.String})">
+            <summary>
+            按指定条件获取客户本体。支持多个bool类型的或关系查询。
+            </summary>
+            <param name="model"></param>
+            <param name="conditional">支持多个bool类型的或查询。使用字段名作为key,true或false为值。</param>
+            <returns></returns>
+        </member>
         <member name="M:PowerLmsWebApi.Controllers.CustomerController.GetAllCustomerContact(PowerLmsWebApi.Dto.PagingParamsDtoBase,System.Collections.Generic.Dictionary{System.String,System.String})">
             <summary>
             获取全部客户联系人。
@@ -2138,6 +2146,16 @@
         <member name="T:PowerLmsWebApi.Controllers.AddPlBusinessHeaderReturnDto">
             <summary>
             增加业务负责人的所属关系的功能返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetAllCustomer2ParamsDto">
+            <summary>
+            查询的参数封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetAllCustomer2ReturnDto">
+            <summary>
+            查询的返回值封装类。
             </summary>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.RemoveCustomerParamsDto">
