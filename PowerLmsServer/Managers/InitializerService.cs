@@ -50,7 +50,7 @@ namespace PowerLmsServer.Managers
         protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
             CreateDb();
-            return Task.Run(() =>
+            var task= Task.Run(() =>
             {
                 using var scope = _ServiceScopeFactory.CreateScope();
                 var svc = scope.ServiceProvider;
@@ -59,6 +59,8 @@ namespace PowerLmsServer.Managers
                 CreateAdmin(svc);
                 Test(svc);
             }, CancellationToken.None);
+            _Logger.LogInformation("Pl服务成功上线");
+            return task;
         }
 
         /// <summary>

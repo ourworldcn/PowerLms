@@ -18,7 +18,7 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 构造函数。
         /// </summary>
-        public PlJobController(AccountManager accountManager, IServiceProvider serviceProvider, PowerLmsUserDbContext dbContext, OrganizationManager organizationManager, IMapper mapper, EntityManager entityManager, DataDicManager dataManager)
+        public PlJobController(AccountManager accountManager, IServiceProvider serviceProvider, PowerLmsUserDbContext dbContext, OrganizationManager organizationManager, IMapper mapper, EntityManager entityManager, DataDicManager dataManager, ILogger<PlJobController> logger)
         {
             _AccountManager = accountManager;
             _ServiceProvider = serviceProvider;
@@ -27,6 +27,7 @@ namespace PowerLmsWebApi.Controllers
             _Mapper = mapper;
             _EntityManager = entityManager;
             _DataManager = dataManager;
+            _Logger = logger;
         }
 
         readonly AccountManager _AccountManager;
@@ -36,6 +37,7 @@ namespace PowerLmsWebApi.Controllers
         readonly IMapper _Mapper;
         readonly EntityManager _EntityManager;
         readonly DataDicManager _DataManager;
+        readonly ILogger<PlJobController> _Logger;
 
         #region 业务总表
 
@@ -81,13 +83,19 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<AddPlJobReturnDto> AddPlJob(AddPlJobParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context)
+            {
+                _Logger.LogWarning("无效的令牌{token}", model.Token);
+                return Unauthorized();
+            }
             var result = new AddPlJobReturnDto();
             var entity = model.PlJob;
             entity.GenerateNewId();
             _DbContext.PlJobs.Add(model.PlJob);
             entity.CreateBy = context.User.Id;
             entity.CreateDateTime = OwHelper.WorldNow;
+            entity.JobState = 0;
+            entity.OperateState = 0;
             _DbContext.SaveChanges();
             result.Id = model.PlJob.Id;
             return result;
@@ -107,6 +115,10 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyPlJobReturnDto();
             if (!_EntityManager.Modify(new[] { model.PlJob })) return NotFound();
+            //忽略不可更改字段
+            var entity = _DbContext.Entry(model.PlJob);
+            entity.Property(c => c.OperateState).IsModified = false;
+            entity.Property(c => c.JobState).IsModified = false;
             _DbContext.SaveChanges();
             return result;
         }
@@ -133,6 +145,89 @@ namespace PowerLmsWebApi.Controllers
             _EntityManager.Remove(item);
             _DbContext.SaveChanges();
             return result;
+        }
+
+        /// <summary>
+        /// 切换业务/单据状态功能。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="404">未找到指定的业务对象。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="400">切换业务状态非法。</response>  
+        [HttpPost]
+        public ActionResult<ChangeStateReturnDto> ChangeState(ChangeStateParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context)
+            {
+                _Logger.LogWarning("无效的令牌{token}", model.Token);
+                return Unauthorized();
+            }
+            var result = new ChangeStateReturnDto();
+            var job = _DbContext.PlJobs.Find(model.JobId);
+            if (job is null) return NotFound();
+
+            if (model.OperateState.HasValue)    //若改变操作状态
+            {
+                switch (model.OperateState)
+                {
+                    case 0:
+                        if (job.JobState != 2 || job.OperateState != 2) return BadRequest();
+                        _Logger.LogInformation("用户{uid}改变任务状态，任务Id={Id}.JobState {ov} -> {nv}", context.User.Id, job?.Id, job?.JobState, 0);
+                        job.JobState = 0;
+                        break;
+                    case 2:
+                        if (job.JobState > 2 || job.OperateState != 0) return BadRequest();
+                        _Logger.LogInformation("用户{uid}改变任务状态，任务Id={Id}.JobState {ov} -> {nv}", context.User.Id, job.Id, job.JobState, 2);
+                        job.JobState = 2;
+                        break;
+                    case 4:
+                        if (job.JobState > 2 || job.OperateState != 2) return BadRequest();
+                        break;
+                    case 8:
+                        if (job.JobState > 2 || job.OperateState != 4) return BadRequest();
+                        break;
+                    case 16:
+                        if (job.JobState > 2 || job.OperateState != 8) return BadRequest();
+                        break;
+                    case 32:
+                        if (job.JobState > 2 || job.OperateState != 16) return BadRequest();
+                        _Logger.LogInformation("用户{uid}改变任务状态，任务Id={Id}.JobState {ov} -> {nv}", context.User.Id, job.Id, job.JobState, 4);
+                        job.JobState = 4;
+                        break;
+                    default:
+                        return BadRequest();
+                }
+                _Logger.LogInformation("用户{uid}改变任务状态，任务Id={Id}.OperateState {ov} -> {nv}", context.User.Id, job.Id, job.OperateState, model.OperateState.Value);
+                job.OperateState = (byte)model.OperateState.Value;
+            }
+            else if (model.JobState.HasValue)
+            {
+                switch (model.JobState)
+                {
+                    case 2:
+                        if (job.JobState != 4) return BadRequest();
+                        break;
+                    case 4:
+                        if (job.JobState != 2 && job.JobState != 8) return BadRequest();
+                        break;
+                    case 8:
+                        if (job.JobState != 4 && job.JobState != 16) return BadRequest();
+                        break;
+                    case 16:
+                        if (job.JobState != 8) return BadRequest();
+                        break;
+                    default:
+                        return BadRequest();
+                }
+                _Logger.LogInformation("用户{uid}改变任务状态，任务Id={Id}.JobState {ov} -> {nv}", context.User.Id, job.Id, job.JobState, model.JobState.Value);
+                job.JobState = (byte)model.JobState.Value;
+            }
+            else return BadRequest();
+            _DbContext.SaveChanges();
+            return result;
+
         }
 
         #endregion 业务总表
@@ -796,6 +891,36 @@ namespace PowerLmsWebApi.Controllers
     #endregion 空运出口单
 
     #region 业务总表
+    /// <summary>
+    /// 切换业务状态接口参数封装类。
+    /// </summary>
+    public class ChangeStateParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 要修改业务的唯一Id。
+        /// </summary>
+        public Guid JobId { get; set; }
+
+        /// <summary>
+        /// 新的业务状态。不改变则为空。
+        /// NewJob初始=0，Operating正操作=2，Operated操作完成=4，Checked已审核=8，Closed已关闭=16.
+        /// </summary>
+        public int? JobState { get; set; }
+
+        /// <summary>
+        /// 新的操作状态。不改变则为空。
+        /// NewJob初始=0,Arrived 已到货=2,Declared 已申报=4,Delivered 已配送=8,Submitted 已交单=16,Notified 已通知=32
+        /// </summary>
+        public int? OperateState { get; set; }
+    }
+
+    /// <summary>
+    /// 切换业务状态接口返回值封装类。
+    /// </summary>
+    public class ChangeStateReturnDto : ReturnDtoBase
+    {
+    }
+
     /// <summary>
     /// 标记删除业务总表功能的参数封装类。
     /// </summary>

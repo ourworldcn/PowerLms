@@ -99,7 +99,7 @@ namespace PowerLms.Data
         /// 分单号字符串，/分隔多个分单号.
         /// </summary>
         [Comment("分单号字符串，/分隔多个分单号")]
-        public Guid? HblNoString { get; set; }
+        public string HblNoString { get; set; }
 
         /// <summary>
         /// 分单号分隔符。
