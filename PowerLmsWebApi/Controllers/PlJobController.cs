@@ -94,7 +94,7 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.PlJobs.Add(model.PlJob);
             entity.CreateBy = context.User.Id;
             entity.CreateDateTime = OwHelper.WorldNow;
-            entity.JobState = 0;
+            entity.JobState = 2;
             entity.OperateState = 0;
             _DbContext.SaveChanges();
             result.Id = model.PlJob.Id;
@@ -174,8 +174,8 @@ namespace PowerLmsWebApi.Controllers
                 {
                     case 0:
                         if (job.JobState != 2 || job.OperateState != 2) return BadRequest();
-                        _Logger.LogInformation("用户{uid}改变任务状态，任务Id={Id}.JobState {ov} -> {nv}", context.User.Id, job?.Id, job?.JobState, 0);
-                        job.JobState = 0;
+                        _Logger.LogInformation("用户{uid}改变任务状态，任务Id={Id}.JobState {ov} -> {nv}", context.User.Id, job?.Id, job?.JobState, 2);
+                        job.JobState = 2;
                         break;
                     case 2:
                         if (job.JobState > 2 || job.OperateState != 0) return BadRequest();
@@ -226,6 +226,8 @@ namespace PowerLmsWebApi.Controllers
             }
             else return BadRequest();
             _DbContext.SaveChanges();
+            result.JobState=job.JobState;
+            result.OperateState=job.OperateState;
             return result;
 
         }
@@ -919,6 +921,15 @@ namespace PowerLmsWebApi.Controllers
     /// </summary>
     public class ChangeStateReturnDto : ReturnDtoBase
     {
+        /// <summary>
+        /// 如果成功这里是切换后的业务状态。
+        /// </summary>
+        public int JobState { get; set; }
+
+        /// <summary>
+        /// 如果成功这里是切换后的操作状态。
+        /// </summary>
+        public int OperateState { get; set; }
     }
 
     /// <summary>

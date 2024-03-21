@@ -146,6 +146,8 @@ namespace PowerLmsServer.Managers
                 db.Accounts.Add(admin);
                 //_DbContext.SaveChanges();
             }
+            else
+                admin.State = 4;
             admin.SetPwd("1D381427-86BB-4D88-8CB0-5D92F8E1BADF");
             db.SaveChanges();
         }

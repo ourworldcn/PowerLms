@@ -764,7 +764,7 @@
         </member>
         <member name="P:PowerLms.Data.PlJob.JobState">
             <summary>
-            工作状态。NewJob初始=0，Operating正操作=2，Operated操作完成=4，Checked已审核=8，Closed已关闭=16.
+            工作状态。Operating正操作=2，Operated操作完成=4，Checked已审核=8，Closed已关闭=16.
             </summary>
         </member>
         <member name="P:PowerLms.Data.PlJob.OperateState">

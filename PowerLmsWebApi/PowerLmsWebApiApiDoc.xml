@@ -3432,6 +3432,16 @@
             切换业务状态接口返回值封装类。
             </summary>
         </member>
+        <member name="P:PowerLmsWebApi.Controllers.ChangeStateReturnDto.JobState">
+            <summary>
+            如果成功这里是切换后的业务状态。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.ChangeStateReturnDto.OperateState">
+            <summary>
+            如果成功这里是切换后的操作状态。
+            </summary>
+        </member>
         <member name="T:PowerLmsWebApi.Controllers.RemovePlJobParamsDto">
             <summary>
             标记删除业务总表功能的参数封装类。

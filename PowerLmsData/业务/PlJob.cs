@@ -125,9 +125,9 @@ namespace PowerLms.Data
         public DateTime CreateDateTime { get; set; }
 
         /// <summary>
-        /// 工作状态。NewJob初始=0，Operating正操作=2，Operated操作完成=4，Checked已审核=8，Closed已关闭=16.
+        /// 工作状态。Operating正操作=2，Operated操作完成=4，Checked已审核=8，Closed已关闭=16.
         /// </summary>
-        [Comment("工作状态。NewJob初始=0，Operating正操作=2，Operated操作完成=4，Checked已审核=8，Closed已关闭=16.")]
+        [Comment("工作状态。Operating正操作=2，Operated操作完成=4，Checked已审核=8，Closed已关闭=16.")]
         public byte JobState { get; set; }
 
         /// <summary>
