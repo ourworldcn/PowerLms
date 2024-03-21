@@ -196,7 +196,7 @@ namespace PowerLmsWebApi.Controllers
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
 
             StringBuilder sb = new StringBuilder("select * from PlCustomers where   ");
-            foreach (var item in conditional)
+            foreach (var item in conditional.Where(c=>c.Key!= "IsDesc"))
             {
                 if (!bool.TryParse(item.Value, out var b)) continue;
                 if (b)
