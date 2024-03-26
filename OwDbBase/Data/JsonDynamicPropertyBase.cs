@@ -48,10 +48,14 @@ namespace OW.Data
         #region 静态成员
         static JsonDynamicPropertyBase()
         {
+            //增加转换器，主要为压缩数据量，会降低一些可读性
             _SerializerOptions.Converters.Add(new OwGuidJsonConverter());
         }
 
-        public static readonly JsonSerializerOptions _SerializerOptions = new JsonSerializerOptions
+        /// <summary>
+        /// Json序列化和反序列化的配置对象。
+        /// </summary>
+        public static readonly JsonSerializerOptions _SerializerOptions = new()
         {
             ReadCommentHandling = JsonCommentHandling.Skip,
             AllowTrailingCommas = true,
