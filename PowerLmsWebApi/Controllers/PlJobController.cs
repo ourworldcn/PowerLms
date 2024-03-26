@@ -226,8 +226,8 @@ namespace PowerLmsWebApi.Controllers
             }
             else return BadRequest();
             _DbContext.SaveChanges();
-            result.JobState=job.JobState;
-            result.OperateState=job.OperateState;
+            result.JobState = job.JobState;
+            result.OperateState = job.OperateState;
             return result;
 
         }
@@ -443,7 +443,7 @@ namespace PowerLmsWebApi.Controllers
         /// 获取全部业务单的费用单。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">查询的条件。支持 Id，DocId(业务单Id)。不区分大小写。</param>
+        /// <param name="conditional">查询的条件。支持 Id，DocId(业务单Id),Io。不区分大小写。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
@@ -467,6 +467,11 @@ namespace PowerLmsWebApi.Controllers
                     if (Guid.TryParse(item.Value, out var id))
                         coll = coll.Where(c => c.DocId == id);
                 }
+                else if (string.Equals(item.Key, nameof(DocFee.IO), StringComparison.OrdinalIgnoreCase))
+                {
+                    if (bool.TryParse(item.Value, out var b))
+                        coll = coll.Where(c => c.IO == b);
+                }
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
@@ -487,6 +492,7 @@ namespace PowerLmsWebApi.Controllers
             var entity = model.DocFee;
             entity.GenerateNewId();
             _DbContext.DocFees.Add(model.DocFee);
+            model.DocFee.BillId = null;
             _DbContext.SaveChanges();
             result.Id = model.DocFee.Id;
             return result;
@@ -576,6 +582,7 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="model"></param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">至少一个费用Id不存在。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpPost]
         public ActionResult<AddDocBillReturnDto> AddDocBill(AddDocBillParamsDto model)
@@ -590,6 +597,14 @@ namespace PowerLmsWebApi.Controllers
                 creatorInfo.CreateDateTime = OwHelper.WorldNow;
             }
             _DbContext.DocBills.Add(model.DocBill);
+
+            //处理费用对象
+            var collFees = _DbContext.DocFees.Where(c => model.FeeIds.Contains(c.Id)).ToArray();
+            if (collFees.Count() != model.FeeIds.Count)
+            {
+                return BadRequest("至少一个费用Id不存在。");
+            }
+            collFees.ForEach(c => c.BillId = model.DocBill.Id);
             _DbContext.SaveChanges();
             result.Id = model.DocBill.Id;
             return result;
@@ -601,6 +616,7 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="model"></param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">至少一个费用Id不存在。</response>  
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">指定Id的业务单的账单不存在。</response>  
         [HttpPut]
@@ -609,6 +625,16 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyDocBillReturnDto();
             if (!_EntityManager.Modify(new[] { model.DocBill })) return NotFound();
+            //处理费用对象
+            var collFees = _DbContext.DocFees.Where(c => model.FeeIds.Contains(c.Id)).ToArray();
+            if (collFees.Count() != model.FeeIds.Count)
+            {
+                return BadRequest("至少一个费用Id不存在。");
+            }
+            var oldFee = _DbContext.DocFees.Where(c => c.BillId == model.DocBill.Id).ToArray();    //旧费用对象
+            oldFee.ForEach(c => c.BillId = null);
+
+            collFees.ForEach(c => c.BillId = model.DocBill.Id);
             _DbContext.SaveChanges();
             return result;
         }
@@ -671,6 +697,11 @@ namespace PowerLmsWebApi.Controllers
         /// 新业务单的账单信息。其中Id可以是任何值，返回时会指定新值。
         /// </summary>
         public DocBill DocBill { get; set; }
+
+        /// <summary>
+        /// 绑定的费用Id集合。
+        /// </summary>
+        public List<Guid> FeeIds { get; set; } = new List<Guid>();
     }
 
     /// <summary>
@@ -693,6 +724,11 @@ namespace PowerLmsWebApi.Controllers
         /// 业务单的账单数据。
         /// </summary>
         public DocBill DocBill { get; set; }
+
+        /// <summary>
+        /// 账单绑定的费用Id集合，不在该集合的费用对象将不再绑定到账单上。
+        /// </summary>
+        public List<Guid> FeeIds { get; set; } = new List<Guid>();
     }
 
     /// <summary>

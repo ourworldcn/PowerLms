@@ -24,8 +24,8 @@ namespace PowerLms.Data
         /// <summary>
         /// 账单号。
         /// </summary>
-        [Comment("账单号，账单表中的id")]
-        public string AccountNo { get; set; }
+        [Comment("账单表中的id")]
+        public Guid? BillId { get; set; }
 
         /// <summary>
         /// 费用种类字典项Id。

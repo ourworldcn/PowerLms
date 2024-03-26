@@ -323,6 +323,49 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
+        /// 用数据字典目录码获取所有字典项。超管没有具体商户无法使用，仅针对有具体商户归属的用户才可使用。
+        /// 仅针对简单字典。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">未知的商户Id。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">找不到指定目录Code的字典。</response>  
+        [HttpGet]
+        public ActionResult<GetDataDicByCatalogCodeReturnDto> GetDataDicByCatalogCode([FromQuery] GetDataDicByCatalogCodeParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetDataDicByCatalogCodeReturnDto();
+            var dbSet = _DbContext.DD_DataDicCatalogs;
+            var coll = dbSet.AsNoTracking();
+            if (_AccountManager.IsAdmin(context.User))  //若是超管
+                coll = coll.Where(c => c.OrgId == null);
+            else
+            {
+                if (!_OrganizationManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
+                if (context.User.OrgId is null) //若没有指定机构
+                {
+                    coll = coll.Where(c => c.OrgId == merchId);
+                }
+                else
+                {
+                    coll = coll.Where(c => c.OrgId == context.User.OrgId);
+                }
+            }
+
+            var catalog = coll.FirstOrDefault(c => c.Code == model.SimpleDicCatalogCode);
+            if (catalog is null)
+            {
+                return NotFound("找不到指定目录Code的字典。");
+            }
+            var dataDics = _DbContext.DD_SimpleDataDics.Where(c => c.DataDicId == catalog.Id).AsNoTracking();
+            result.Result.AddRange(dataDics);
+
+            return result;
+        }
+
+        /// <summary>
         /// 增加一个数据字典(目录)。
         /// </summary>
         /// <param name="model"></param>
@@ -2167,6 +2210,25 @@ namespace PowerLmsWebApi.Controllers
     public class AddPlPortReturnDto : AddReturnDtoBase
     {
     }
+
+    /// <summary>
+    /// 用数据字典目录码获取所有字典项功能的参数封装类。
+    /// </summary>
+    public class GetDataDicByCatalogCodeParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 简单字典目录的Code。
+        /// </summary>
+        public string SimpleDicCatalogCode { get; set; }
+    }
+
+    /// <summary>
+    /// 用数据字典目录码获取所有字典项功能的返回值封装类。
+    /// </summary>
+    public class GetDataDicByCatalogCodeReturnDto : PagingReturnDtoBase<SimpleDataDic>
+    {
+    }
+
 
     /// <summary>
     /// 获取港口功能的返回值封装类。

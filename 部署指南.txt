@@ -47,3 +47,5 @@ baiduAdmin//lms789$
 InsufficientStorage	507	
 等效于 HTTP 状态 507。 InsufficientStorage 指示服务器无法存储完成请求所需的表示形式。
 服务器遇到该以下异常DbUpdateConcurrencyException DBConcurrencyException，将返回507以表示并发冲突。客户端须妥善处理。不再每个接口单独注释。
+
+测试服务器 101.200.75.226 Administrator//ZAQ!xsw2

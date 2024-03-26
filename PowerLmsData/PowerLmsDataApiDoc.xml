@@ -452,7 +452,7 @@
             业务单的Id。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.DocFee.AccountNo">
+        <member name="P:PowerLms.Data.DocFee.BillId">
             <summary>
             账单号。
             </summary>
