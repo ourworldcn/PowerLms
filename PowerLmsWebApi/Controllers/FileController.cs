@@ -187,27 +187,28 @@ namespace PowerLmsWebApi.Controllers
         {
             var result = new AddFileReturnDto();
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            PlFileInfo info = new PlFileInfo
+            var fileInfo = new PlFileInfo
             {
                 DisplayName = model.DisplayName,
                 ParentId = model.ParentId,
-                FileName = model.File.Name,
+                FileName = model.File.FileName,
                 Remark = model.Remark,
                 FilePath = Path.Combine("General", $"{Guid.NewGuid()}.bin"),
                 FileTypeId = null,
             };
-            if (info is ICreatorInfo creatorInfo)
+            if (fileInfo is ICreatorInfo creatorInfo)
             {
-                creatorInfo.CreateBy = context.User.Id;
+                creatorInfo.CreateBy = context?.User?.Id;
                 creatorInfo.CreateDateTime = OwHelper.WorldNow;
             }
-            result.Id = info.Id;
-            _DbContext.PlFileInfos.Add(info);
+            result.Id = fileInfo.Id;
+            _DbContext.PlFileInfos.Add(fileInfo);
             _DbContext.SaveChanges();
-            var fullPath = Path.Combine(AppContext.BaseDirectory, "Files", info.FilePath);
+            var fullPath = Path.Combine(AppContext.BaseDirectory, "Files", fileInfo.FilePath);
             var dir = Path.GetDirectoryName(fullPath);
             Directory.CreateDirectory(dir);
             using var file = new FileStream(fullPath, FileMode.CreateNew);
+            model.File.CopyTo(file);
             return result;
         }
 
@@ -269,7 +270,7 @@ namespace PowerLmsWebApi.Controllers
     /// <summary>
     /// 获取全部通用文件信息返回值封装类。
     /// </summary>
-    public class GetAllFileInfoReturnDto : PagingReturnBase<PlFileInfo>
+    public class GetAllFileInfoReturnDto : PagingReturnDtoBase<PlFileInfo>
     {
     }
 
