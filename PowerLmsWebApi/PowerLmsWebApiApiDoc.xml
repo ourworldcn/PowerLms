@@ -697,6 +697,57 @@
             <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
             <response code="401">无效令牌。</response>  
         </member>
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.GetAllOtherNumberRule(PowerLmsWebApi.Dto.PagingParamsDtoBase,System.Collections.Generic.Dictionary{System.String,System.String})">
+            <summary>
+            获取其它编码规则。
+            </summary>
+            <param name="model"></param>
+            <param name="conditional">查询的条件。支持 DisplayName 查询。</param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="400">指定类别Id无效。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.AddOtherNumberRule(PowerLmsWebApi.Controllers.AddOtherNumberRuleParamsDto)">
+            <summary>
+            增加其它编码规则记录。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="400">参数错误。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.ModifyOtherNumberRule(PowerLmsWebApi.Controllers.ModifyOtherNumberRuleParamsDto)">
+            <summary>
+            修改其它编码规则记录。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.RemoveOtherNumberRule(PowerLmsWebApi.Controllers.RemoveOtherNumberRuleParamsDto)">
+            <summary>
+            删除其它编码规则的记录。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.RestoreOtherNumberRule(PowerLmsWebApi.Controllers.RestoreOtherNumberRuleParamsDto)">
+            <summary>
+            恢复指定的被删除其它编码规则记录。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
         <member name="M:PowerLmsWebApi.Controllers.AdminController.GetAllPlCountry(PowerLmsWebApi.Dto.PagingParamsDtoBase,System.Collections.Generic.Dictionary{System.String,System.String})">
             <summary>
             获取国家。
@@ -887,6 +938,51 @@
         <member name="T:PowerLmsWebApi.Controllers.GetAllPlCountryReturnDto">
             <summary>
             获取国家条目返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RestoreOtherNumberRuleParamsDto">
+            <summary>
+            恢复指定的被删除其它编码规则记录的功能参数封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RestoreOtherNumberRuleReturnDto">
+            <summary>
+            恢复指定的被删除其它编码规则记录的功能返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RemoveOtherNumberRuleParamsDto">
+            <summary>
+            删除其它编码规则记录的功能参数封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RemoveOtherNumberRuleReturnDto">
+            <summary>
+            删除其它编码规则记录的功能返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.ModifyOtherNumberRuleParamsDto">
+            <summary>
+            修改其它编码规则记录的功能参数封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.ModifyOtherNumberRuleReturnDto">
+            <summary>
+            修改其它编码规则记录的功能返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddOtherNumberRuleParamsDto">
+            <summary>
+            增加其它编码规则记录的功能参数封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddOtherNumberRuleReturnDto">
+             <summary>
+            增加其它编码规则记录的功能返回值封装类。
+             </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetAllOtherNumberRuleReturnDto">
+            <summary>
+            查询其它编码规则记录的功能返回值封装类。
             </summary>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.RestoreJobNumberRuleParamsDto">
@@ -2474,6 +2570,33 @@
             <param name="model"></param>
             <returns></returns>
         </member>
+        <member name="M:PowerLmsWebApi.Controllers.JobNumberController.GeneratedOtherNumber(PowerLmsWebApi.Controllers.GeneratedOtherNumberParamsDto)">
+            <summary>
+            用指定的其它编码规则生成一个新的编码。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GeneratedOtherNumberParamsDto">
+            <summary>
+            用指定的编码规则生成一个新的其它编码的功能参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.GeneratedOtherNumberParamsDto.RuleId">
+            <summary>
+            规则的Id.
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GeneratedOtherNumberReturnDto">
+            <summary>
+            用指定的编码规则生成一个新的其它编码的功能返回值封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.GeneratedOtherNumberReturnDto.Result">
+            <summary>
+            返回的业务码。
+            </summary>
+        </member>
         <member name="T:PowerLmsWebApi.Controllers.GeneratedJobNumberReturnDto">
             <summary>
             用指定的编码规则生成一个新的编码的功能返回值封装类。
@@ -3152,6 +3275,17 @@
             <response code="401">无效令牌。</response>  
             <response code="404">指定Id的货场出重单不存在。</response>  
         </member>
+        <member name="M:PowerLmsWebApi.Controllers.PlJobController.AuditDocFee(PowerLmsWebApi.Controllers.AuditDocFeeParamsDto)">
+            <summary>
+            审核单笔费用。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="400">费用已被审核。</response>  
+            <response code="401">无效令牌。</response>  
+            <response code="404">找不到指定Id的费用。</response>  
+        </member>
         <member name="M:PowerLmsWebApi.Controllers.PlJobController.GetAllDocFee(PowerLmsWebApi.Dto.PagingParamsDtoBase,System.Collections.Generic.Dictionary{System.String,System.String})">
             <summary>
             获取全部业务单的费用单。
@@ -3233,6 +3367,21 @@
             <response code="400">未找到指定的业务，或该业务不在初始创建状态——无法删除。</response>  
             <response code="401">无效令牌。</response>  
             <response code="404">指定Id的业务单的账单不存在。</response>  
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AuditDocFeeParamsDto">
+            <summary>
+            审核单笔费用功能参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.AuditDocFeeParamsDto.FeeId">
+            <summary>
+            要审核的费用Id。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AuditDocFeeReturnDto">
+            <summary>
+            审核单笔费用功能返回值封装类。
+            </summary>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.RemoveDocBillParamsDto">
             <summary>

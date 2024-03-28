@@ -232,6 +232,7 @@ namespace PowerLmsWebApi.Controllers
 
         }
 
+
         #endregion 业务总表
 
         #region 空运出口单
@@ -438,6 +439,28 @@ namespace PowerLmsWebApi.Controllers
         #endregion 货场出重单
 
         #region 业务单的费用单
+
+        /// <summary>
+        /// 审核单笔费用。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">费用已被审核。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">找不到指定Id的费用。</response>  
+        [HttpPost]
+        public ActionResult<AuditDocFeeReturnDto> AuditDocFee(AuditDocFeeParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new AuditDocFeeReturnDto();
+            if (_DbContext.DocFees.Find(model.FeeId) is not DocFee fee) return NotFound();
+            if (fee.CheckDate is not null || fee.ChechManId is not null) return BadRequest();
+            fee.CheckDate = OwHelper.WorldNow;
+            fee.ChechManId = context.User.Id;
+            _DbContext.SaveChanges();
+            return result;
+        }
 
         /// <summary>
         /// 获取全部业务单的费用单。
@@ -664,6 +687,24 @@ namespace PowerLmsWebApi.Controllers
         }
 
         #endregion 业务单的账单
+    }
+
+    /// <summary>
+    /// 审核单笔费用功能参数封装类。
+    /// </summary>
+    public class AuditDocFeeParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 要审核的费用Id。
+        /// </summary>
+        public Guid FeeId { get; set; }
+    }
+
+    /// <summary>
+    /// 审核单笔费用功能返回值封装类。
+    /// </summary>
+    public class AuditDocFeeReturnDto : ReturnDtoBase
+    {
     }
 
     #region 业务单的账单

@@ -186,8 +186,9 @@ namespace PowerLmsServer.EfData
         /// 币种表。
         /// </summary>
         public DbSet<PlCurrency> DD_PlCurrencys { get; set; }
-        #endregion 系统资源相关
 
+        public DbSet<OtherNumberRule> DD_OtherNumberRules { get; set; }
+        #endregion 系统资源相关
 
         #region 多语言相关
 

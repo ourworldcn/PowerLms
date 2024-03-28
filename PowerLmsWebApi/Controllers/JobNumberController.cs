@@ -46,6 +46,46 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.SaveChanges();
             return result;
         }
+
+        /// <summary>
+        /// 用指定的其它编码规则生成一个新的编码。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        [HttpPost]
+        public ActionResult<GeneratedOtherNumberReturnDto> GeneratedOtherNumber(GeneratedOtherNumberParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GeneratedOtherNumberReturnDto();
+            if (_DbContext.DD_OtherNumberRules.Find(model.RuleId) is not OtherNumberRule jnr) return BadRequest($"指定的规则不存在，Id={model.RuleId}");
+            using var dw = DisposeHelper.Create((key, timeout) => SingletonLocker.TryEnter(key, timeout), key => SingletonLocker.Exit(key), model.RuleId.ToString(), TimeSpan.FromSeconds(2)); //锁定该规则
+            result.Result = _JobNumber.Generated(jnr, context?.User, OwHelper.WorldNow);
+            context.Nop();
+            _DbContext.SaveChanges();
+            return result;
+        }
+    }
+
+    /// <summary>
+    /// 用指定的编码规则生成一个新的其它编码的功能参数封装类。
+    /// </summary>
+    public class GeneratedOtherNumberParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 规则的Id.
+        /// </summary>
+        public Guid RuleId { get; set; }
+    }
+
+    /// <summary>
+    /// 用指定的编码规则生成一个新的其它编码的功能返回值封装类。
+    /// </summary>
+    public class GeneratedOtherNumberReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 返回的业务码。
+        /// </summary>
+        public string Result { get; set; }
     }
 
     /// <summary>

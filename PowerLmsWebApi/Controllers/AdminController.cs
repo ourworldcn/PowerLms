@@ -1414,6 +1414,148 @@ namespace PowerLmsWebApi.Controllers
 
         #endregion 业务编码规则相关
 
+        #region 其它编码规则相关
+        /// <summary>
+        /// 获取其它编码规则。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="conditional">查询的条件。支持 DisplayName 查询。</param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定类别Id无效。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        public ActionResult<GetAllOtherNumberRuleReturnDto> GetAllOtherNumberRule([FromQuery] PagingParamsDtoBase model, [FromQuery] Dictionary<string, string> conditional = null)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetAllOtherNumberRuleReturnDto();
+            var dbSet = _DbContext.DD_OtherNumberRules;
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
+            if (_AccountManager.IsAdmin(context.User))  //若是超管
+                coll = coll.Where(c => c.OrgId == null);
+            else
+            {
+                if (!_OrganizationManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
+                if (context.User.OrgId is null) //若没有指定机构
+                {
+                    coll = coll.Where(c => c.OrgId == merchId);
+                }
+                else
+                {
+                    coll = coll.Where(c => c.OrgId == context.User.OrgId);
+                }
+            }
+            foreach (var item in conditional)
+                if (string.Equals(item.Key, nameof(OtherNumberRule.Id), StringComparison.OrdinalIgnoreCase))
+                {
+                    if (OwConvert.TryToGuid(item.Value, out var id))
+                        coll = coll.Where(c => c.Id == id);
+                }
+                else if (string.Equals(item.Key, nameof(OtherNumberRule.DisplayName), StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.DisplayName.Contains(item.Value));
+                }
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
+            _Mapper.Map(prb, result);
+            return result;
+        }
+
+        /// <summary>
+        /// 增加其它编码规则记录。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">参数错误。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPost]
+        public ActionResult<AddOtherNumberRuleReturnDto> AddOtherNumberRule(AddOtherNumberRuleParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new AddOtherNumberRuleReturnDto();
+            model.Item.GenerateNewId();
+            var id = model.Item.Id;
+            model.Item.OrgId = context.User.OrgId;
+            _DbContext.DD_OtherNumberRules.Add(model.Item);
+            _DbContext.SaveChanges();
+            result.Id = id;
+            return result;
+        }
+
+        /// <summary>
+        /// 修改其它编码规则记录。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPut]
+        public ActionResult<ModifyOtherNumberRuleReturnDto> ModifyOtherNumberRule(ModifyOtherNumberRuleParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new ModifyOtherNumberRuleReturnDto();
+            if (!_EntityManager.ModifyWithMarkDelete(model.Items))
+            {
+                var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
+                return errResult;
+            }
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        /// <summary>
+        /// 删除其它编码规则的记录。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpDelete]
+        public ActionResult<RemoveOtherNumberRuleReturnDto> RemoveOtherNumberRule(RemoveOtherNumberRuleParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new RemoveOtherNumberRuleReturnDto();
+            var id = model.Id;
+            var dbSet = _DbContext.DD_OtherNumberRules;
+            var item = dbSet.Find(id);
+            if (item is null) return BadRequest();
+            _EntityManager.Remove(item);
+            _DbContext.SaveChanges();
+            //if (item.DataDicType == 1) //若是简单字典
+            //    _DbContext.Database.ExecuteSqlRaw($"delete from {nameof(_DbContext.SimpleDataDics)} where {nameof(SimpleDataDic.DataDicId)}='{id.ToString()}'");
+            //else //其他字典待定
+            //{
+
+            //}
+            return result;
+        }
+
+        /// <summary>
+        /// 恢复指定的被删除其它编码规则记录。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPost]
+        public ActionResult<RestoreOtherNumberRuleReturnDto> RestoreOtherNumberRule(RestoreOtherNumberRuleParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new RestoreOtherNumberRuleReturnDto();
+            if (!_EntityManager.Restore<OtherNumberRule>(model.Id))
+            {
+                var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
+                return errResult;
+            }
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        #endregion 其它编码规则相关
+
         #region 国家相关
         /// <summary>
         /// 获取国家。
@@ -1847,6 +1989,74 @@ namespace PowerLmsWebApi.Controllers
     {
     }
 
+    #region 其它编码规则
+
+    /// <summary>
+    /// 恢复指定的被删除其它编码规则记录的功能参数封装类。
+    /// </summary>
+    public class RestoreOtherNumberRuleParamsDto : RestoreParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 恢复指定的被删除其它编码规则记录的功能返回值封装类。
+    /// </summary>
+    public class RestoreOtherNumberRuleReturnDto : RestoreReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 删除其它编码规则记录的功能参数封装类。
+    /// </summary>
+    public class RemoveOtherNumberRuleParamsDto : RemoveParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 删除其它编码规则记录的功能返回值封装类。
+    /// </summary>
+    public class RemoveOtherNumberRuleReturnDto : RemoveReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 修改其它编码规则记录的功能参数封装类。
+    /// </summary>
+    public class ModifyOtherNumberRuleParamsDto : ModifyParamsDtoBase<OtherNumberRule>
+    {
+    }
+
+    /// <summary>
+    /// 修改其它编码规则记录的功能返回值封装类。
+    /// </summary>
+    public class ModifyOtherNumberRuleReturnDto : ModifyReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 增加其它编码规则记录的功能参数封装类。
+    /// </summary>
+    public class AddOtherNumberRuleParamsDto : AddParamsDtoBase<OtherNumberRule>
+    {
+    }
+
+    /// <summary>
+    ///增加其它编码规则记录的功能返回值封装类。
+    /// </summary>
+    public class AddOtherNumberRuleReturnDto : AddReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 查询其它编码规则记录的功能返回值封装类。
+    /// </summary>
+    public class GetAllOtherNumberRuleReturnDto : PagingReturnDtoBase<OtherNumberRule>
+    {
+    }
+    #endregion 其它编码规则
+
+    #region 业务编码规则
+
     /// <summary>
     /// 恢复指定的被删除业务编码规则记录的功能参数封装类。
     /// </summary>
@@ -1909,6 +2119,8 @@ namespace PowerLmsWebApi.Controllers
     public class GetAllJobNumberRuleReturnDto : PagingReturnDtoBase<JobNumberRule>
     {
     }
+
+    #endregion 业务编码规则
 
     /// <summary>
     /// 恢复费用种类记录的功能参数封装类。
