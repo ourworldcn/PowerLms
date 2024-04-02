@@ -7,6 +7,7 @@ using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
 using System.Net;
+using static PowerLmsWebApi.Controllers.GetDocBillsByJobIdReturnDto;
 
 namespace PowerLmsWebApi.Controllers
 {
@@ -168,41 +169,7 @@ namespace PowerLmsWebApi.Controllers
             var job = _DbContext.PlJobs.Find(model.JobId);
             if (job is null) return NotFound();
 
-            if (model.OperateState.HasValue)    //若改变操作状态
-            {
-                switch (model.OperateState)
-                {
-                    case 0:
-                        if (job.JobState != 2 || job.OperateState != 2) return BadRequest();
-                        _Logger.LogInformation("用户{uid}改变任务状态，任务Id={Id}.JobState {ov} -> {nv}", context.User.Id, job?.Id, job?.JobState, 2);
-                        job.JobState = 2;
-                        break;
-                    case 2:
-                        if (job.JobState > 2 || job.OperateState != 0) return BadRequest();
-                        _Logger.LogInformation("用户{uid}改变任务状态，任务Id={Id}.JobState {ov} -> {nv}", context.User.Id, job.Id, job.JobState, 2);
-                        job.JobState = 2;
-                        break;
-                    case 4:
-                        if (job.JobState > 2 || job.OperateState != 2) return BadRequest();
-                        break;
-                    case 8:
-                        if (job.JobState > 2 || job.OperateState != 4) return BadRequest();
-                        break;
-                    case 16:
-                        if (job.JobState > 2 || job.OperateState != 8) return BadRequest();
-                        break;
-                    case 32:
-                        if (job.JobState > 2 || job.OperateState != 16) return BadRequest();
-                        _Logger.LogInformation("用户{uid}改变任务状态，任务Id={Id}.JobState {ov} -> {nv}", context.User.Id, job.Id, job.JobState, 4);
-                        job.JobState = 4;
-                        break;
-                    default:
-                        return BadRequest();
-                }
-                _Logger.LogInformation("用户{uid}改变任务状态，任务Id={Id}.OperateState {ov} -> {nv}", context.User.Id, job.Id, job.OperateState, model.OperateState.Value);
-                job.OperateState = (byte)model.OperateState.Value;
-            }
-            else if (model.JobState.HasValue)
+            if (model.JobState.HasValue)
             {
                 switch (model.JobState)
                 {
@@ -223,6 +190,40 @@ namespace PowerLmsWebApi.Controllers
                 }
                 _Logger.LogInformation("用户{uid}改变任务状态，任务Id={Id}.JobState {ov} -> {nv}", context.User.Id, job.Id, job.JobState, model.JobState.Value);
                 job.JobState = (byte)model.JobState.Value;
+            }
+            if (model.OperateState.HasValue)    //若改变操作状态
+            {
+                switch (model.OperateState)
+                {
+                    case 0:
+                        if (job.JobState != 2 || job.OperateState != 2) return BadRequest();
+                        _Logger.LogInformation("用户{uid}改变任务状态，任务Id={Id}.JobState {ov} -> {nv}", context.User.Id, job?.Id, job?.JobState, 2);
+                        job.JobState = 2;
+                        break;
+                    case 2:
+                        if (job.JobState > 2 || job.OperateState != 0 && job.OperateState != 4) return BadRequest();
+                        _Logger.LogInformation("用户{uid}改变任务状态，任务Id={Id}.JobState {ov} -> {nv}", context.User.Id, job.Id, job.JobState, 2);
+                        job.JobState = 2;
+                        break;
+                    case 4:
+                        if (job.JobState > 2 || job.OperateState != 2 && job.OperateState != 8) return BadRequest();
+                        break;
+                    case 8:
+                        if (job.JobState > 2 || job.OperateState != 4 && job.OperateState != 16) return BadRequest();
+                        break;
+                    case 16:
+                        if (job.JobState > 2 || job.OperateState != 8 && job.OperateState != 32) return BadRequest();
+                        break;
+                    case 32:
+                        if (job.JobState > 2 || job.OperateState != 16) return BadRequest();
+                        _Logger.LogInformation("用户{uid}改变任务状态，任务Id={Id}.JobState {ov} -> {nv}", context.User.Id, job.Id, job.JobState, 4);
+                        job.JobState = 4;
+                        break;
+                    default:
+                        return BadRequest();
+                }
+                _Logger.LogInformation("用户{uid}改变任务状态，任务Id={Id}.OperateState {ov} -> {nv}", context.User.Id, job.Id, job.OperateState, model.OperateState.Value);
+                job.OperateState = (byte)model.OperateState.Value;
             }
             else return BadRequest();
             _DbContext.SaveChanges();
@@ -686,6 +687,44 @@ namespace PowerLmsWebApi.Controllers
             return result;
         }
 
+        /// <summary>
+        /// 根据业务Id，获取相关账单对象。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">至少有一个指定Id的业务不存在。</response>  
+        [HttpGet]
+        public ActionResult<GetDocBillsByJobIdReturnDto> GetDocBillsByJobId([FromQuery] GetDocBillsByJobIdParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetDocBillsByJobIdReturnDto();
+            var collJob = _DbContext.PlJobs.Where(c => model.Ids.Contains(c.Id));
+            if (collJob.Count() != model.Ids.Count) return NotFound();
+
+            var coll = from job in _DbContext.PlJobs
+                       where model.Ids.Contains(job.Id)
+                       join doc in _DbContext.PlEaDocs
+                       on job.Id equals doc.JobId
+
+                       join fee in _DbContext.DocFees
+                       on doc.Id equals fee.DocId
+
+                       join bill in _DbContext.DocBills
+                       on fee.BillId equals bill.Id
+
+                       select new { job.Id, bill };
+            var r = coll.ToArray().GroupBy(c => c.Id, c => c.bill);
+            var collDto = r.Select(c =>
+             {
+                 var r = new GetDocBillsByJobIdItemDto { JobId = c.Key };
+                 r.Bills.AddRange(c);
+                 return r;
+             });
+            result.Items.AddRange(collDto);
+            return result;
+        }
         #endregion 业务单的账单
     }
 
@@ -720,6 +759,44 @@ namespace PowerLmsWebApi.Controllers
     /// </summary>
     public class RemoveDocBillReturnDto : RemoveReturnDtoBase
     {
+    }
+
+    /// <summary>
+    /// 根据业务Id，获取相关账单对象功能的参数封装类。
+    /// </summary>
+    public class GetDocBillsByJobIdParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 业务Id的集合。
+        /// </summary>
+        public List<Guid> Ids { get; set; } = new List<Guid>();
+    }
+
+    /// <summary>
+    /// 根据业务Id，获取相关账单对象功能的返回值封装类。
+    /// </summary>
+    public class GetDocBillsByJobIdReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 根据业务Id，获取相关账单对象功能的返回值内的元素类型。
+        /// </summary>
+        public class GetDocBillsByJobIdItemDto
+        {
+            /// <summary>
+            /// 业务Id。
+            /// </summary>
+            public Guid JobId { get; set; }
+
+            /// <summary>
+            /// 相关的账单。
+            /// </summary>
+            public List<DocBill> Bills { get; set; } = new List<DocBill>();
+        }
+
+        /// <summary>
+        /// 返回的账单。
+        /// </summary>
+        public List<GetDocBillsByJobIdItemDto> Items { get; set; } = new List<GetDocBillsByJobIdItemDto>();
     }
 
     /// <summary>
