@@ -8,6 +8,19 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+/*
+ * 目标框架	符号	其他符号
+（在 .NET 5+ SDK 中可用）	平台符号（仅
+在指定特定于 OS 的 TFM 时可用）
+.NET Framework	NETFRAMEWORK, NET48, NET472, NET471, NET47, NET462, NET461, NET46, NET452, NET451, NET45, NET40, NET35, NET20	NET48_OR_GREATER、NET472_OR_GREATER、NET471_OR_GREATER、NET47_OR_GREATER、NET462_OR_GREATER、NET461_OR_GREATER、NET46_OR_GREATER、NET452_OR_GREATER、NET451_OR_GREATER、NET45_OR_GREATER、NET40_OR_GREATER、NET35_OR_GREATER、NET20_OR_GREATER	
+.NET Standard	NETSTANDARD, NETSTANDARD2_1, NETSTANDARD2_0, NETSTANDARD1_6, NETSTANDARD1_5, NETSTANDARD1_4, NETSTANDARD1_3, NETSTANDARD1_2, NETSTANDARD1_1, NETSTANDARD1_0	NETSTANDARD2_1_OR_GREATER、NETSTANDARD2_0_OR_GREATER、NETSTANDARD1_6_OR_GREATER、NETSTANDARD1_5_OR_GREATER、NETSTANDARD1_4_OR_GREATER、NETSTANDARD1_3_OR_GREATER、NETSTANDARD1_2_OR_GREATER、NETSTANDARD1_1_OR_GREATER、NETSTANDARD1_0_OR_GREATER	
+.NET 5 及更高版本（和 .NET Core）	NET、NET8_0、NET7_0、NET6_0、NET5_0、NETCOREAPP、NETCOREAPP3_1、NETCOREAPP3_0、NETCOREAPP2_2、NETCOREAPP2_1、NETCOREAPP2_0、NETCOREAPP1_1、NETCOREAPP1_0	NET8_0_OR_GREATER, NET7_0_OR_GREATER, NET6_0_OR_GREATER, NET5_0_OR_GREATER, NETCOREAPP3_1_OR_GREATER, NETCOREAPP3_0_OR_GREATER, NETCOREAPP2_2_OR_GREATER, NETCOREAPP2_1_OR_GREATER, NETCOREAPP2_0_OR_GREATER, NETCOREAPP1_1_OR_GREATER, NETCOREAPP1_0_OR_GREATER	ANDROID、BROWSER、IOS、MACCATALYST、MACOS、TVOS、WINDOWS
+[OS][version]（例如，IOS15_1），
+[OS][version]_OR_GREATER（例如，IOS15_1_OR_GREATER）
+ */
+#if !NET47_OR_GREATER && !NETCOREAPP2_1_OR_GREATER
+#error 必须有 .NET Framework 4.7 或 .NET Core 2.1 框架支持
+#endif
 
 namespace System.Net.Sockets
 {
@@ -158,12 +171,25 @@ namespace System.Net.Sockets
 
     }
 
+    /// <summary>
+    /// udp客户端类。为支持Unity使用，仅使用.NET Framework 4.7支持的功能。
+    /// </summary>
     public class OwUdpClientV2 : IDisposable
     {
+        /// <summary>
+        /// 构造函数。
+        /// </summary>
+        public OwUdpClientV2()
+        {
+
+        }
+
         /// <summary>
         /// 通讯Id，仅低24位有用。若为null，标识尚未连接。
         /// </summary>
         int? _Id;
+
+        UdpClient _UdpClient;
 
         #region 方法
 
@@ -227,6 +253,46 @@ namespace System.Net.Sockets
 
             evidence.CopyTo(dataEntry.Buffer, 8);
         }
+
+        /// <summary>
+        /// 连接服务器并"握手"
+        /// </summary>
+        /// <param name="server">服务器IP地址或DNS名。</param>
+        /// <param name="port">端口号。</param>
+        public void Connect(string server, short port)
+        {
+            var ips = Dns.GetHostAddresses(server);
+            var ip = ips.FirstOrDefault(c => c.AddressFamily == AddressFamily.InterNetwork || c.AddressFamily == AddressFamily.InterNetworkV6);
+            Connect(new IPEndPoint(ip, port));
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="endPoint">服务器终结点地址。</param>
+        /// <exception cref="SocketException">访问套接字时出错。</exception>
+        /// <exception cref="ArgumentNullException">endPoint 为 null。</exception>
+        virtual public void Connect(IPEndPoint endPoint)
+        {
+            _UdpClient?.Dispose();  //容错
+            _UdpClient = new UdpClient(0);
+            _UdpClient.Connect(endPoint);
+            //自有初始化内容
+            ConnectCore();
+        }
+
+        /// <summary>
+        /// 自有初始化。
+        /// </summary>
+        virtual protected void ConnectCore()
+        {
+            var buffSend = new byte[] { 1, 2 };
+            _UdpClient.Send(buffSend);
+            var endPoint = (IPEndPoint)_UdpClient.Client.RemoteEndPoint;
+
+            var buffRecv = _UdpClient.Receive(ref endPoint);
+        }
+
         #endregion 方法
 
         #region IDisposable接口相关

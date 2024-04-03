@@ -1453,6 +1453,16 @@
             小于或等于<see cref="F:System.Net.Sockets.OwUdpDataEntry.Mtu"/>。总计有多少字节数据。
             </summary>
         </member>
+        <member name="T:System.Net.Sockets.OwUdpClientV2">
+            <summary>
+            udp客户端类。为支持Unity使用，仅使用.NET Framework 4.7支持的功能。
+            </summary>
+        </member>
+        <member name="M:System.Net.Sockets.OwUdpClientV2.#ctor">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
         <member name="F:System.Net.Sockets.OwUdpClientV2._Id">
             <summary>
             通讯Id，仅低24位有用。若为null，标识尚未连接。
@@ -1477,6 +1487,26 @@
             </summary>
             <param name="i"></param>
             <returns></returns>
+        </member>
+        <member name="M:System.Net.Sockets.OwUdpClientV2.Connect(System.String,System.Int16)">
+            <summary>
+            连接服务器并"握手"
+            </summary>
+            <param name="server">服务器IP地址或DNS名。</param>
+            <param name="port">端口号。</param>
+        </member>
+        <member name="M:System.Net.Sockets.OwUdpClientV2.Connect(System.Net.IPEndPoint)">
+            <summary>
+            
+            </summary>
+            <param name="endPoint">服务器终结点地址。</param>
+            <exception cref="T:System.Net.Sockets.SocketException">访问套接字时出错。</exception>
+            <exception cref="T:System.ArgumentNullException">endPoint 为 null。</exception>
+        </member>
+        <member name="M:System.Net.Sockets.OwUdpClientV2.ConnectCore">
+            <summary>
+            自有初始化。
+            </summary>
         </member>
         <member name="P:System.Net.Sockets.OwUdpServerDataEntry.Id">
             <summary>
