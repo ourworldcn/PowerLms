@@ -93,6 +93,7 @@ namespace PowerLms.Data
         /// 主单号.
         /// </summary>
         [Comment("主单号")]
+        [MaxLength(128)]
         public string MblNo { get; set; }
 
         /// <summary>

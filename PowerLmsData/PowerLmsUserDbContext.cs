@@ -336,6 +336,18 @@ namespace PowerLmsServer.EfData
         /// </summary>
         public DbSet<DocBill> DocBills { get; set; }
         #endregion
+
+        #region 财务相关
+        /// <summary>
+        /// 业务费用收付款申请单.
+        /// </summary>
+        public DbSet<DocFeeRequisition> DocFeeRequisitions { get; set; }
+
+        /// <summary>
+        /// 业务费用收付款申请单明细项。
+        /// </summary>
+        public DbSet<DocFeeRequisitionItem> DocFeeRequisitionItems { get; set; }
+        #endregion
     }
 
     /// <summary>

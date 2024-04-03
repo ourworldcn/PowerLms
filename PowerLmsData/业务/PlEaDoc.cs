@@ -101,6 +101,13 @@ namespace PowerLms.Data
         public decimal M_weight { get; set; }
 
         /// <summary>
+        /// 主单体积，3位小数。
+        /// </summary>
+        [Comment("主单体积，3位小数")]
+        [Precision(18, 3)]
+        public decimal M_MeasureMent { get; set; }
+
+        /// <summary>
         /// 主单计费重量，3位小数。
         /// </summary>
         [Comment("主单计费重量，3位小数")]
