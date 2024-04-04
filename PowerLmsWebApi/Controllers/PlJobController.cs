@@ -696,7 +696,7 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">至少有一个指定Id的业务不存在。</response>  
         [HttpGet]
-        public ActionResult<GetDocBillsByJobIdReturnDto> GetDocBillsByJobId([FromQuery] GetDocBillsByJobIdParamsDto model)
+        public ActionResult<GetDocBillsByJobIdReturnDto> GetDocBillsByJobIds([FromQuery] GetDocBillsByJobIdParamsDto model)
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetDocBillsByJobIdReturnDto();
@@ -722,7 +722,7 @@ namespace PowerLmsWebApi.Controllers
                  r.Bills.AddRange(c);
                  return r;
              });
-            result.Items.AddRange(collDto);
+            result.Result.AddRange(collDto);
             return result;
         }
         #endregion 业务单的账单
@@ -796,7 +796,7 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 返回的账单。
         /// </summary>
-        public List<GetDocBillsByJobIdItemDto> Items { get; set; } = new List<GetDocBillsByJobIdItemDto>();
+        public List<GetDocBillsByJobIdItemDto> Result { get; set; } = new List<GetDocBillsByJobIdItemDto>();
     }
 
     /// <summary>

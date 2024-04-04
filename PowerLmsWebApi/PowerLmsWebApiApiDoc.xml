@@ -3467,7 +3467,7 @@
             <response code="401">无效令牌。</response>  
             <response code="404">指定Id的业务单的账单不存在。</response>  
         </member>
-        <member name="M:PowerLmsWebApi.Controllers.PlJobController.GetDocBillsByJobId(PowerLmsWebApi.Controllers.GetDocBillsByJobIdParamsDto)">
+        <member name="M:PowerLmsWebApi.Controllers.PlJobController.GetDocBillsByJobIds(PowerLmsWebApi.Controllers.GetDocBillsByJobIdParamsDto)">
             <summary>
             根据业务Id，获取相关账单对象。
             </summary>
@@ -3532,7 +3532,7 @@
             相关的账单。
             </summary>
         </member>
-        <member name="P:PowerLmsWebApi.Controllers.GetDocBillsByJobIdReturnDto.Items">
+        <member name="P:PowerLmsWebApi.Controllers.GetDocBillsByJobIdReturnDto.Result">
             <summary>
             返回的账单。
             </summary>
