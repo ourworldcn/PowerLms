@@ -12,14 +12,15 @@ namespace PowerLms.Data
     /// <summary>
     /// 业务单的费用。
     /// </summary>
-    [Index(nameof(DocId))]
+    [Index(nameof(JobId))]
+    [Index(nameof(BillId))]
     public class DocFee : GuidKeyObjectBase
     {
         /// <summary>
-        /// 业务单的Id。
+        /// 业务Id。
         /// </summary>
-        [Comment("业务单的Id")]
-        public Guid? DocId { get; set; }
+        [Comment("业务Id")]
+        public Guid? JobId { get; set; }
 
         /// <summary>
         /// 账单号。

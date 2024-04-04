@@ -486,10 +486,10 @@ namespace PowerLmsWebApi.Controllers
                     if (Guid.TryParse(item.Value, out var id))
                         coll = coll.Where(c => c.Id == id);
                 }
-                else if (string.Equals(item.Key, nameof(DocFee.DocId), StringComparison.OrdinalIgnoreCase))
+                else if (string.Equals(item.Key, nameof(DocFee.JobId), StringComparison.OrdinalIgnoreCase))
                 {
                     if (Guid.TryParse(item.Value, out var id))
-                        coll = coll.Where(c => c.DocId == id);
+                        coll = coll.Where(c => c.JobId == id);
                 }
                 else if (string.Equals(item.Key, nameof(DocFee.IO), StringComparison.OrdinalIgnoreCase))
                 {
@@ -705,11 +705,9 @@ namespace PowerLmsWebApi.Controllers
 
             var coll = from job in _DbContext.PlJobs
                        where model.Ids.Contains(job.Id)
-                       join doc in _DbContext.PlEaDocs
-                       on job.Id equals doc.JobId
 
                        join fee in _DbContext.DocFees
-                       on doc.Id equals fee.DocId
+                       on job.Id equals fee.JobId
 
                        join bill in _DbContext.DocBills
                        on fee.BillId equals bill.Id

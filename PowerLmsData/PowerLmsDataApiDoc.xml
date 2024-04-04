@@ -457,9 +457,9 @@
             业务单的费用。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.DocFee.DocId">
+        <member name="P:PowerLms.Data.DocFee.JobId">
             <summary>
-            业务单的Id。
+            业务Id。
             </summary>
         </member>
         <member name="P:PowerLms.Data.DocFee.BillId">
