@@ -467,7 +467,7 @@ namespace PowerLmsWebApi.Controllers
         /// 获取全部业务单的费用单。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">查询的条件。支持 Id，DocId(业务单Id),Io。不区分大小写。</param>
+        /// <param name="conditional">查询的条件。支持 Id，DocId(业务单Id),Io,BillId(绑定的账单Id,"null"是获取未绑定账单的费用)。不区分大小写。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
@@ -494,6 +494,13 @@ namespace PowerLmsWebApi.Controllers
                 else if (string.Equals(item.Key, nameof(DocFee.IO), StringComparison.OrdinalIgnoreCase))
                 {
                     if (bool.TryParse(item.Value, out var b))
+                        coll = coll.Where(c => c.IO == b);
+                }
+                else if (string.Equals(item.Key, nameof(DocFee.BillId), StringComparison.OrdinalIgnoreCase))
+                {
+                    if (string.Equals(item.Value, "null", StringComparison.OrdinalIgnoreCase))
+                        coll = coll.Where(c => c.BillId == null);
+                    else if (bool.TryParse(item.Value, out var b))
                         coll = coll.Where(c => c.IO == b);
                 }
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
@@ -572,7 +579,7 @@ namespace PowerLmsWebApi.Controllers
         /// 获取全部业务单的账单。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">查询的条件。支持 Id，DocNo(业务单Id)。不区分大小写。</param>
+        /// <param name="conditional">查询的条件。支持 Id，DocNo(业务单Id),JobId(间接属于指定的业务Id)。不区分大小写。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
@@ -594,6 +601,20 @@ namespace PowerLmsWebApi.Controllers
                 else if (string.Equals(item.Key, nameof(DocBill.DocNo), StringComparison.OrdinalIgnoreCase))
                 {
                     coll = coll.Where(c => c.DocNo == item.Value);
+                }
+                else if (string.Equals(item.Key, "JobId", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (Guid.TryParse(item.Value, out var id))
+                    {
+
+                        var collBillId = from job in _DbContext.PlJobs
+                                         where job.Id == id
+                                         join fee in _DbContext.DocFees
+                                         on job.Id equals fee.JobId
+                                         where fee.BillId != null
+                                         select fee.BillId.Value;
+                        coll = coll.Where(c => collBillId.Contains(c.Id));
+                    }
                 }
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
@@ -723,6 +744,7 @@ namespace PowerLmsWebApi.Controllers
             result.Result.AddRange(collDto);
             return result;
         }
+
         #endregion 业务单的账单
     }
 
