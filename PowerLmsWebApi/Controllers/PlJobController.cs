@@ -500,8 +500,8 @@ namespace PowerLmsWebApi.Controllers
                 {
                     if (string.Equals(item.Value, "null", StringComparison.OrdinalIgnoreCase))
                         coll = coll.Where(c => c.BillId == null);
-                    else if (bool.TryParse(item.Value, out var b))
-                        coll = coll.Where(c => c.IO == b);
+                    else if (Guid.TryParse(item.Value, out var b))
+                        coll = coll.Where(c => c.BillId == b);
                 }
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
