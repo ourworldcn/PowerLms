@@ -1417,6 +1417,28 @@
             本类使用的负载长度，去掉1个标志字节,3个字节通讯Id，4位序号。
             </summary>
         </member>
+        <member name="F:System.Net.Sockets.OwUdpDataEntry._Pool">
+            <summary>
+            用于简化池化本对象的情况。
+            </summary>
+        </member>
+        <member name="M:System.Net.Sockets.OwUdpDataEntry.CompareTo(System.Net.Sockets.OwUdpDataEntry)">
+            <summary>
+            <inheritdoc/>
+            </summary>
+            <param name="other"></param>
+            <returns></returns>
+        </member>
+        <member name="M:System.Net.Sockets.OwUdpDataEntry.#ctor">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
+        <member name="P:System.Net.Sockets.OwUdpDataEntry.Kind">
+            <summary>
+            包的类型。
+            </summary>
+        </member>
         <member name="P:System.Net.Sockets.OwUdpDataEntry.Id">
             <summary>
             发送到对方的本机唯一标识符。
@@ -1445,12 +1467,17 @@
         </member>
         <member name="P:System.Net.Sockets.OwUdpDataEntry.Offset">
             <summary>
-            偏移量。
+            偏移量。保留为0.
             </summary>
         </member>
         <member name="P:System.Net.Sockets.OwUdpDataEntry.Count">
             <summary>
-            小于或等于<see cref="F:System.Net.Sockets.OwUdpDataEntry.Mtu"/>。总计有多少字节数据。
+            小于或等于<see cref="F:System.Net.Sockets.OwUdpDataEntry.Mtu"/>。总计有多少字节数据。包含头部8字节。
+            </summary>
+        </member>
+        <member name="P:System.Net.Sockets.OwUdpDataReceivedEventArgs.Datas">
+            <summary>
+            
             </summary>
         </member>
         <member name="T:System.Net.Sockets.OwUdpClientV2">
@@ -1466,6 +1493,16 @@
         <member name="F:System.Net.Sockets.OwUdpClientV2._Id">
             <summary>
             通讯Id，仅低24位有用。若为null，标识尚未连接。
+            </summary>
+        </member>
+        <member name="F:System.Net.Sockets.OwUdpClientV2._Seq">
+            <summary>
+            当前收到的最大连续包号。
+            </summary>
+        </member>
+        <member name="F:System.Net.Sockets.OwUdpClientV2._RecvData">
+            <summary>
+            接受数据的缓存队列。
             </summary>
         </member>
         <member name="M:System.Net.Sockets.OwUdpClientV2.IncrementInt31(System.Int32@)">
@@ -1507,6 +1544,25 @@
             <summary>
             自有初始化。
             </summary>
+        </member>
+        <member name="M:System.Net.Sockets.OwUdpClientV2.Send(System.Net.Sockets.OwUdpDataEntry)">
+            <summary>
+            立即同步发送一个数据条目，并做相应处理。
+            <see cref="P:System.Net.Sockets.OwUdpDataEntry.Kind"/> 和 <see cref="T:System.Net.Sockets.OwUdpDataEntry"/>中的数据要实现设定好。
+            本函数仅设置 <see cref="P:System.Net.Sockets.OwUdpDataEntry.Id"/> 和 <see cref="P:System.Net.Sockets.OwUdpDataEntry.Seq"/> 。
+            </summary>
+            <param name="entry"></param>
+        </member>
+        <member name="M:System.Net.Sockets.OwUdpClientV2.Receive">
+            <summary>
+            立即同步接受一个数据包并做相应处理。
+            </summary>
+        </member>
+        <member name="M:System.Net.Sockets.OwUdpClientV2.GetDram">
+            <summary>
+            获取序号最低的完整包，若没有则返回空集合。
+            </summary>
+            <returns></returns>
         </member>
         <member name="P:System.Net.Sockets.OwUdpServerDataEntry.Id">
             <summary>

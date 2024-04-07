@@ -171,7 +171,7 @@ namespace System.Net.Sockets
             if (disposing)
             {
                 _RequestStop.Cancel();
-                _Stopped.Token.WaitHandle.WaitOne(3000);
+                _Stopped.Token.WaitHandle.WaitOne(5000);
                 _UdpClient?.Dispose();
                 _UdpClient = null;
             }

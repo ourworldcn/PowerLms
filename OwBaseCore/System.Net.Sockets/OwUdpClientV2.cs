@@ -1,8 +1,12 @@
 ﻿using System;
 using System.Buffers;
+using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Data;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -93,7 +97,7 @@ namespace System.Net.Sockets
         public volatile IPEndPoint Remote;
     }
 
-    internal class OwUdpDataEntry
+    internal class OwUdpDataEntry : IComparable<OwUdpDataEntry>
     {
 
         /// <summary>
@@ -104,11 +108,47 @@ namespace System.Net.Sockets
         /// <summary>
         /// 本类使用的负载长度，去掉1个标志字节,3个字节通讯Id，4位序号。
         /// </summary>
-        internal const int Mts = Mtu - 4/*标志字节 和 通讯Id*/ - 4/*已接收的连续包的最大序号*/;
+        internal const int Mts = Mtu - 4/*标志字节 和 通讯Id(防路由端口映射出现变化)*/ - 4/*已接收的连续包的最大序号*/;
 
+        /// <summary>
+        /// 用于简化池化本对象的情况。
+        /// </summary>
+        static ConcurrentStack<OwUdpDataEntry> _Pool = new ConcurrentStack<OwUdpDataEntry>();
+
+        public static OwUdpDataEntry Rent()
+        {
+            if (_Pool.TryPop(out var result)) return result;
+            return new OwUdpDataEntry();
+        }
+
+        public static void Return(OwUdpDataEntry entry)
+        {
+            Array.Fill(entry.Buffer, (byte)0);
+            _Pool.Push(entry);
+        }
+
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        /// <param name="other"></param>
+        /// <returns></returns>
+        public int CompareTo(OwUdpDataEntry other)
+        {
+            return Seq.CompareTo(other.Seq);
+        }
+
+        /// <summary>
+        /// 构造函数。
+        /// </summary>
         public OwUdpDataEntry()
         {
+
         }
+
+        /// <summary>
+        /// 包的类型。
+        /// </summary>
+        public OwUdpDataKind Kind { get => (OwUdpDataKind)Buffer[0]; set => Buffer[0] = (byte)value; }
 
         /// <summary>
         /// 发送到对方的本机唯一标识符。
@@ -122,8 +162,8 @@ namespace System.Net.Sockets
 
             set
             {
-                var ary = BitConverter.GetBytes(IPAddress.HostToNetworkOrder(value & 0x00ff_ffff));
-                Array.Copy(ary, 1, Buffer, Offset + 1, 4 - 1);
+                var ary = BitConverter.GetBytes(IPAddress.HostToNetworkOrder(value & 0x00ff_ffff | ((byte)Kind << 24)));
+                Array.Copy(ary, 0, Buffer, Offset, 4);
             }
         }
 
@@ -157,18 +197,31 @@ namespace System.Net.Sockets
         /// 缓冲区。第一个是标志字节，随后是3字节客户Id,4字节包顺序号。后跟负载数据。
         /// 大小必须是<see cref="Mtu"/>个字节。第一个字节有特殊含义<seealso cref="OwUdpDataKind"/>。
         /// </summary>
-        public byte[] Buffer { get; set; } = ArrayPool<byte>.Shared.Rent(Mtu);
+        public byte[] Buffer { get; set; } = new byte[Mtu];
 
         /// <summary>
-        /// 偏移量。
+        /// 偏移量。保留为0.
         /// </summary>
-        public int Offset { get; set; }
+        public int Offset { get => 0; set => throw new NotImplementedException(); }
 
         /// <summary>
-        /// 小于或等于<see cref="Mtu"/>。总计有多少字节数据。
+        /// 小于或等于<see cref="Mtu"/>。总计有多少字节数据。包含头部8字节。
         /// </summary>
         public int Count { get; set; }
 
+    }
+
+    public class OwUdpDataReceivedEventArgs
+    {
+        public OwUdpDataReceivedEventArgs(ReadOnlySpan<byte> data)
+        {
+            Datas = data.ToArray();
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public byte[] Datas { get; set; }
     }
 
     /// <summary>
@@ -181,7 +234,7 @@ namespace System.Net.Sockets
         /// </summary>
         public OwUdpClientV2()
         {
-
+            //new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
         }
 
         /// <summary>
@@ -189,8 +242,17 @@ namespace System.Net.Sockets
         /// </summary>
         int? _Id;
 
+        /// <summary>
+        /// 当前收到的最大连续包号。
+        /// </summary>
+        uint? _Seq;
+
         UdpClient _UdpClient;
 
+        /// <summary>
+        /// 接受数据的缓存队列。
+        /// </summary>
+        List<OwUdpDataEntry> _RecvData = new List<OwUdpDataEntry>();
         #region 方法
 
         #region 静态方法
@@ -286,13 +348,123 @@ namespace System.Net.Sockets
         /// </summary>
         virtual protected void ConnectCore()
         {
-            var buffSend = new byte[] { 1, 2 };
+            var buffSend = new byte[] { (byte)OwUdpDataKind.CommandDgram, 0, 0, 0,/*客户端标识为空*/0, 0, 0, 0/*长度*/ };
             _UdpClient.Send(buffSend);
             var endPoint = (IPEndPoint)_UdpClient.Client.RemoteEndPoint;
 
             var buffRecv = _UdpClient.Receive(ref endPoint);
         }
 
+        /// <summary>
+        /// 立即同步发送一个数据条目，并做相应处理。
+        /// <see cref="OwUdpDataEntry.Kind"/> 和 <see cref="OwUdpDataEntry"/>中的数据要实现设定好。
+        /// 本函数仅设置 <see cref="OwUdpDataEntry.Id"/> 和 <see cref="OwUdpDataEntry.Seq"/> 。
+        /// </summary>
+        /// <param name="entry"></param>
+        internal virtual void Send(OwUdpDataEntry entry)
+        {
+            entry.Id = _Id.GetValueOrDefault();
+            entry.Seq = (int)_Seq.GetValueOrDefault();
+            _UdpClient.Send(entry.Buffer, entry.Count);
+
+        }
+
+        /// <summary>
+        /// 立即同步接受一个数据包并做相应处理。
+        /// </summary>
+        internal virtual void Receive()
+        {
+            var endPoing = _UdpClient.Client.RemoteEndPoint as IPEndPoint;
+            while (_UdpClient.Available > 0)
+            {
+                var data = _UdpClient.Receive(ref endPoing);
+
+                Debug.Assert(_UdpClient.Client.RemoteEndPoint.Equals(endPoing));
+
+                var entry = new OwUdpDataEntry
+                {
+                    Buffer = data,
+                };
+                lock (_RecvData)
+                {
+                    var index = _RecvData.BinarySearch(entry);
+                    if (index < 0)
+                        _RecvData.Insert(~index, entry);
+                    else //重复到达
+                    {
+                        Debug.WriteLine("检测到重复到达的包，Seq = " + entry.Seq);
+                    }
+                }
+            }
+            //扫描接受队列
+            ScanQueue();
+        }
+
+        internal void ScanQueue()
+        {
+            lock (_RecvData)
+            {
+                while (_RecvData.Count > 0) //当有数据
+                {
+
+                    if (_RecvData[0].Kind.HasFlag(OwUdpDataKind.StartDgram))  //若有起始包标志
+                    {
+                        if (_RecvData[0].Kind.HasFlag(OwUdpDataKind.EndDgram))   //若是单一包
+                        {
+                            _RecvData.RemoveAt(0);
+                        }
+                        else //非单一包
+                        {
+                            var index = _RecvData.FindIndex(c => !c.Kind.HasFlag(OwUdpDataKind.EndDgram));
+                            if (index < 0)  //若没有任何一个完整包
+                                break;
+                            _RecvData.RemoveRange(0, _RecvData.Count);
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 获取序号最低的完整包，若没有则返回空集合。
+        /// </summary>
+        /// <returns></returns>
+        private IEnumerable<OwUdpDataEntry> GetDram()
+        {
+            List<OwUdpDataEntry> result = new List<OwUdpDataEntry>();
+            if (_RecvData[0].Kind.HasFlag(OwUdpDataKind.StartDgram))  //若有起始包标志
+            {
+                if (_RecvData[0].Kind.HasFlag(OwUdpDataKind.EndDgram))   //若是单一包
+                {
+                    result.Add(_RecvData[0]);
+                    _RecvData.RemoveAt(0);
+                }
+                else //非单一包
+                {
+                    int index = -1; //终止包的索引号
+                    int lastSeq = _RecvData[0].Seq;
+                    for (int i = 1; i < _RecvData.Count; i++, lastSeq = _RecvData[i].Seq)
+                    {
+                        var dram = _RecvData[i];
+                        if (dram.Kind.HasFlag(OwUdpDataKind.StartDgram))    //若遇到新的起始包
+                            break;
+                        if (dram.Seq != lastSeq + 1) //若包不连续
+                            break;
+                        if (dram.Kind.HasFlag(OwUdpDataKind.EndDgram))   //若找到终止包
+                        {
+                            index = i;
+                            break;
+                        }
+                    }
+                    if (index > 0)  //若有任何一个完整包
+                    {
+                        result.AddRange(_RecvData.Take(index + 1));
+                        _RecvData.RemoveRange(0, index + 1);
+                    }
+                }
+            }
+            return result;
+        }
         #endregion 方法
 
         #region IDisposable接口相关
