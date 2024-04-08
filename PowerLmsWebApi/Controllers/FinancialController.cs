@@ -135,11 +135,55 @@ namespace PowerLmsWebApi.Controllers
             return result;
         }
 
+        /// <summary>
+        /// 获取指定费用的剩余未申请金额。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定Id的业务费用至少有一个不存在。</response>  
+        [HttpGet]
+        public ActionResult<GetFeeRemainingReturnDto> GetFeeRemaining([FromQuery] GetFeeRemainingParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetFeeRemainingReturnDto();
+            var fees = _DbContext.DocFees.Where(c => model.FeeIds.Contains(c.Id));
+            if (fees.Count() !=model.FeeIds.Count) return NotFound();
+
+            //var coll = _DbContext.DocFeeRequisitionItems.Where(c => c.FeeId == fees.Id);
+            //var happened = coll.Sum(c => c.Amount);   //已申请的金额
+            //result.Remaining = fees.Amount - happened;
+            return result;
+        }
         #endregion 业务费用申请单
 
     }
 
     #region 业务费用申请单
+
+    /// <summary>
+    /// 获取指定费用的剩余未申请金额参数封装类。
+    /// </summary>
+    public class GetFeeRemainingParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 费用的Id集合。
+        /// </summary>
+        public List<Guid> FeeIds { get; set; } = new List<Guid>();
+    }
+
+    /// <summary>
+    /// 获取指定费用的剩余未申请金额功能返回值封装类。
+    /// </summary>
+    public class GetFeeRemainingReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 剩余未申请的费用。
+        /// </summary>
+        public decimal Remaining { get; set; }
+    }
+
     /// <summary>
     /// 标记删除业务费用申请单功能的参数封装类。
     /// </summary>
