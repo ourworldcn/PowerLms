@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.ObjectPool;
+using System;
 using System.Buffers;
 using System.Collections;
 using System.Collections.Concurrent;
@@ -7,6 +8,7 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Data;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -115,26 +117,93 @@ namespace System.Net.Sockets
         /// </summary>
         static ConcurrentStack<OwUdpDataEntry> _Pool = new ConcurrentStack<OwUdpDataEntry>();
 
+        /// <summary>
+        /// 检索的缓冲区。
+        /// 此缓冲区将借给调用方，应使用 Return 方法返回，以便在后续调用 Rent 方法时重复使用。 
+        /// 无法返回租用的缓冲区不是致命错误。 但是，这可能会导致应用程序性能下降，因为池可能需要创建新的缓冲区来替换丢失的缓冲区。
+        /// 此方法返回的数组可能不是零初始化的。
+        /// </summary>
+        /// <returns></returns>
         public static OwUdpDataEntry Rent()
         {
             if (_Pool.TryPop(out var result)) return result;
             return new OwUdpDataEntry();
         }
 
+        /// <summary>
+        /// 将数据全部清0并返回池中。
+        /// 此缓冲区将借给调用方，应使用 Return 方法返回，以便在后续调用 Rent 方法时重复使用。 
+        /// 无法返回租用的缓冲区不是致命错误。 但是，这可能会导致应用程序性能下降，因为池可能需要创建新的缓冲区来替换丢失的缓冲区。
+        /// </summary>
+        /// <param name="entry"></param>
         public static void Return(OwUdpDataEntry entry)
         {
+            if (entry.Buffer.Length < Mtu) return; //若不符合要求
             Array.Fill(entry.Buffer, (byte)0);
             _Pool.Push(entry);
         }
 
         /// <summary>
-        /// <inheritdoc/>
+        /// 将一个大缓冲区的数据拆分为多个小包的数据。
+        /// 只负责复制数据区，正确设置<see cref="Count"/>。
         /// </summary>
-        /// <param name="other"></param>
-        /// <returns></returns>
-        public int CompareTo(OwUdpDataEntry other)
+        /// <param name="buffer">缓冲区</param>
+        /// <param name="startIndex">起始偏移，基于0.</param>
+        /// <param name="count">总有效数据长度。</param>
+        /// <returns>拆分的条目对象列表（维持顺序稳定），如果是空数据则返回集合。</returns>
+        /// <exception cref="ArgumentOutOfRangeException">index 或 count 为负。</exception>
+        /// <exception cref="ArgumentException">缓冲区长度减去 index 小于 count。。</exception>
+        /// <exception cref="ArgumentNullException">buffer 为 null。</exception>
+        public static List<OwUdpDataEntry> Create(byte[] buffer, int startIndex, int count)
         {
-            return Seq.CompareTo(other.Seq);
+            var result = new List<OwUdpDataEntry>();
+#pragma warning disable IDE0063 // 使用简单的 "using" 语句
+            using (var ms = new MemoryStream(buffer, startIndex, count))
+                return Create(ms);
+#pragma warning restore IDE0063 // 使用简单的 "using" 语句
+        }
+
+        /// <summary>
+        /// 将流当前位置到最终的所有数据拆分为多个小包的数据。
+        /// 只负责复制数据区，正确设置<see cref="Count"/>。
+        /// </summary>
+        /// <param name="stream">数据的当前位置到最终的数据将被读取，调用者要负责对象的处置。</param>
+        /// <returns>拆分的条目对象列表（维持顺序稳定），如果是空数据则返回集合。</returns>
+        /// <exception cref="ArgumentNullException">stream 为 null。</exception>
+        public static List<OwUdpDataEntry> Create(Stream stream)
+        {
+            int length;
+            var result = new List<OwUdpDataEntry>();
+            do
+            {
+                var entry = Rent(); Debug.Assert(entry != null && entry.Buffer?.Length >= Mtu);
+                length = stream.Read(entry.Buffer, 8, Mts);
+                if (length == 0)   //若已到达内存流结尾
+                {
+                    Return(entry);
+                    break;
+                }
+                entry.Count = length + 8;
+                result.Add(entry);
+            } while (length == Mts); //若可能未到达内存流结尾（排除了恰巧读了一个完整长度到达末尾的情况）
+            return result;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="entries"></param>
+        /// <returns></returns>
+        public static byte[] ToArray(IList<OwUdpDataEntry> entries)
+        {
+            var count = entries.Sum(c => c.Count - 8);
+            var ary = ArrayPool<byte>.Shared.Rent(count);
+            MemoryStream ms;
+            using (ms = new MemoryStream(ary, true))
+            {
+                entries.ForEach(c => ms.Write(c.Buffer, 8, c.Count - 8));
+            }
+            return ms.ToArray();
         }
 
         /// <summary>
@@ -207,12 +276,32 @@ namespace System.Net.Sockets
         /// <summary>
         /// 小于或等于<see cref="Mtu"/>。总计有多少字节数据。包含头部8字节。
         /// </summary>
-        public int Count { get; set; }
+        public int Count { get; set; } = Mtu;
 
+        #region IComparable<OwUdpDataEntry> 接口及相关
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        /// <param name="other"></param>
+        /// <returns></returns>
+        public int CompareTo(OwUdpDataEntry other)
+        {
+            return Seq.CompareTo(other.Seq);
+        }
+
+        #endregion IComparable<OwUdpDataEntry> 接口及相关
     }
 
     public class OwUdpDataReceivedEventArgs
     {
+        /// <summary>
+        /// 构造函数。
+        /// </summary>
+        public OwUdpDataReceivedEventArgs()
+        {
+
+        }
+
         public OwUdpDataReceivedEventArgs(ReadOnlySpan<byte> data)
         {
             Datas = data.ToArray();
@@ -250,9 +339,33 @@ namespace System.Net.Sockets
         UdpClient _UdpClient;
 
         /// <summary>
-        /// 接受数据的缓存队列。
+        /// 接受数据的缓存队列。键是包序号 ，值数据条目。需要锁定使用。
         /// </summary>
-        List<OwUdpDataEntry> _RecvData = new List<OwUdpDataEntry>();
+        ConcurrentDictionary<uint, OwUdpDataEntry> _RecvData = new ConcurrentDictionary<uint, OwUdpDataEntry>();
+        /// <summary>
+        /// <see cref="_RecvData"/>中最小包号。
+        /// </summary>
+        uint _MinSeq;
+        /// <summary>
+        /// <see cref="_RecvData"/>中最大包号。
+        /// </summary>
+        uint _MaxSeq;
+
+        /// <summary>
+        /// 执行IO任务的对象。
+        /// </summary>
+        Task _IoTask;
+
+        /// <summary>
+        /// 请求结束任务的标记。
+        /// </summary>
+        CancellationTokenSource _Stopping;
+
+        /// <summary>
+        /// 后台线程已经完成操作。
+        /// </summary>
+        CancellationTokenSource _Stopped;
+
         #region 方法
 
         #region 静态方法
@@ -299,6 +412,51 @@ namespace System.Net.Sockets
         }
         #endregion 静态方法
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="server">服务器IP地址或DNS名。</param>
+        /// <param name="port">端口号。</param>
+        public void Start(string server, short port)
+        {
+            _Stopping?.Cancel();
+            _Stopped?.Token.WaitHandle.WaitOne();  //等待结束
+            _Stopping = new CancellationTokenSource();
+            _Stopped = new CancellationTokenSource();
+            Connect(server, port);
+            _IoTask = Task.Run(IoWorker);
+        }
+
+        /// <summary>
+        /// IO线程函数。
+        /// </summary>
+        private void IoWorker()
+        {
+            var ctStopping = _Stopping.Token;
+            DateTime lastSendDgram = OwHelper.WorldNow;
+            do
+            {
+                try
+                {
+                    if (_UdpClient.Available > 0)
+                        Receive();
+                    if (OwHelper.WorldNow - lastSendDgram > TimeSpan.FromSeconds(1))    //若须发送心跳包
+                    {
+                        var entry = OwUdpDataEntry.Rent();
+                        entry.Kind = OwUdpDataKind.CommandDgram | OwUdpDataKind.StartDgram | OwUdpDataKind.EndDgram;
+                        entry.Id = _Id.GetValueOrDefault();
+                        entry.Seq = (int)_Seq.GetValueOrDefault();
+                        entry.Count = 8;
+                        Send(entry);
+                    }
+                }
+                catch (Exception)
+                {
+                }
+            } while (!ctStopping.WaitHandle.WaitOne(100)); //若未请求结束
+            //已请求结束
+        }
+
         public void Init([Range(0, OwUdpDataEntry.Mts)] byte[] evidence)
         {
             if (evidence.Length > OwUdpDataEntry.Mts)
@@ -324,7 +482,7 @@ namespace System.Net.Sockets
         public void Connect(string server, short port)
         {
             var ips = Dns.GetHostAddresses(server);
-            var ip = ips.FirstOrDefault(c => c.AddressFamily == AddressFamily.InterNetwork || c.AddressFamily == AddressFamily.InterNetworkV6);
+            var ip = ips.FirstOrDefault(c => c.AddressFamily == AddressFamily.InterNetwork /*|| c.AddressFamily == AddressFamily.InterNetworkV6*/);
             Connect(new IPEndPoint(ip, port));
         }
 
@@ -346,13 +504,24 @@ namespace System.Net.Sockets
         /// <summary>
         /// 自有初始化。
         /// </summary>
+        /// <remarks>此时 <see cref="_UdpClient"/> 应已经正确初始化。</remarks>
         virtual protected void ConnectCore()
         {
-            var buffSend = new byte[] { (byte)OwUdpDataKind.CommandDgram, 0, 0, 0,/*客户端标识为空*/0, 0, 0, 0/*长度*/ };
-            _UdpClient.Send(buffSend);
-            var endPoint = (IPEndPoint)_UdpClient.Client.RemoteEndPoint;
+            var entry = OwUdpDataEntry.Rent();
+            try
+            {
+                entry.Kind = (OwUdpDataKind.CommandDgram | OwUdpDataKind.StartDgram | OwUdpDataKind.EndDgram);
+                entry.Id = 0;
+                entry.Count = 0;
+                Send(entry);
 
-            var buffRecv = _UdpClient.Receive(ref endPoint);
+                var endPoint = (IPEndPoint)_UdpClient.Client.RemoteEndPoint;
+                var buffRecv = _UdpClient.Receive(ref endPoint);
+            }
+            finally
+            {
+                OwUdpDataEntry.Return(entry);
+            }
         }
 
         /// <summary>
@@ -370,7 +539,7 @@ namespace System.Net.Sockets
         }
 
         /// <summary>
-        /// 立即同步接受一个数据包并做相应处理。
+        /// 立即同步接受所有完整数据包并做相应处理。
         /// </summary>
         internal virtual void Receive()
         {
@@ -385,87 +554,121 @@ namespace System.Net.Sockets
                 {
                     Buffer = data,
                 };
-                lock (_RecvData)
+                if (entry.Kind.HasFlag(OwUdpDataKind.CommandDgram))  //若是一个命令帧
                 {
-                    var index = _RecvData.BinarySearch(entry);
-                    if (index < 0)
-                        _RecvData.Insert(~index, entry);
-                    else //重复到达
-                    {
-                        Debug.WriteLine("检测到重复到达的包，Seq = " + entry.Seq);
-                    }
+                    Debug.Assert(entry.Kind.HasFlag(OwUdpDataKind.StartDgram) && entry.Kind.HasFlag(OwUdpDataKind.EndDgram));   //仅能处理单帧命令
+                    OnCommandPkg(entry);
                 }
+                else
+                    lock (_RecvData)
+                    {
+                        if (entry.Seq <= _Seq || !_RecvData.TryAdd((uint)entry.Seq, entry)) //避免重复到达的包
+                            Debug.WriteLine("检测到重复到达的包，Seq = " + entry.Seq);
+                        else //若增加成功
+                        {
+                            if (_RecvData.Count == 1)   //若仅此一项
+                                _MinSeq = _MaxSeq = (uint)entry.Seq;
+                            else
+                            {
+                                _MinSeq = Math.Min(_MinSeq, (uint)entry.Seq);
+                                _MaxSeq = Math.Max(_MaxSeq, (uint)entry.Seq);
+                            }
+                        }
+                    }
             }
             //扫描接受队列
             ScanQueue();
         }
 
+        /// <summary>
+        /// 扫描接受队列，处理完整包——引发数据到达的事件。
+        /// </summary>
         internal void ScanQueue()
         {
             lock (_RecvData)
             {
-                while (_RecvData.Count > 0) //当有数据
+                for (var list = GetDram(); list.Count > 0; list = GetDram())    //获取完整包
                 {
-
-                    if (_RecvData[0].Kind.HasFlag(OwUdpDataKind.StartDgram))  //若有起始包标志
-                    {
-                        if (_RecvData[0].Kind.HasFlag(OwUdpDataKind.EndDgram))   //若是单一包
-                        {
-                            _RecvData.RemoveAt(0);
-                        }
-                        else //非单一包
-                        {
-                            var index = _RecvData.FindIndex(c => !c.Kind.HasFlag(OwUdpDataKind.EndDgram));
-                            if (index < 0)  //若没有任何一个完整包
-                                break;
-                            _RecvData.RemoveRange(0, _RecvData.Count);
-                        }
-                    }
+                    var totalCount = list.Sum(c => c.Count - 8);  //计算总长度
+                    var buff = OwUdpDataEntry.ToArray(list);
+                    var e = new OwUdpDataReceivedEventArgs { Datas = buff };
+                    OnOwUdpDataReceived(e);
                 }
             }
         }
 
         /// <summary>
         /// 获取序号最低的完整包，若没有则返回空集合。
+        /// 调用者要锁定<see cref="_RecvData"/>对象才能调用此函数。
         /// </summary>
         /// <returns></returns>
-        private IEnumerable<OwUdpDataEntry> GetDram()
+        private List<OwUdpDataEntry> GetDram()
         {
+            Debug.Assert(Monitor.IsEntered(_RecvData));
+
             List<OwUdpDataEntry> result = new List<OwUdpDataEntry>();
-            if (_RecvData[0].Kind.HasFlag(OwUdpDataKind.StartDgram))  //若有起始包标志
+            var firstEntry = _RecvData.GetValueOrDefault(_MinSeq);
+            if (firstEntry.Kind.HasFlag(OwUdpDataKind.StartDgram))  //若有起始包标志
             {
-                if (_RecvData[0].Kind.HasFlag(OwUdpDataKind.EndDgram))   //若是单一包
+                if (firstEntry.Kind.HasFlag(OwUdpDataKind.EndDgram))   //若是单一包
                 {
-                    result.Add(_RecvData[0]);
-                    _RecvData.RemoveAt(0);
+                    result.Add(firstEntry);
+                    if (_RecvData.TryRemove(_MinSeq, out _))    //若移除成功，容错
+                    {
+                        _MaxSeq = _RecvData.Max(c => c.Key);
+                        _MinSeq = _RecvData.Min(c => c.Key);
+                        _Seq = (uint)firstEntry.Seq;
+                    }
                 }
                 else //非单一包
                 {
-                    int index = -1; //终止包的索引号
-                    int lastSeq = _RecvData[0].Seq;
-                    for (int i = 1; i < _RecvData.Count; i++, lastSeq = _RecvData[i].Seq)
+                    uint? lastSeq = null; //终止包的序号号
+                    for (var i = _MinSeq + 1; i <= _MaxSeq; i++)    //TODO 回绕问题
                     {
-                        var dram = _RecvData[i];
-                        if (dram.Kind.HasFlag(OwUdpDataKind.StartDgram))    //若遇到新的起始包
+                        if (!_RecvData.TryGetValue(i, out var dgram))  //若包不连续
                             break;
-                        if (dram.Seq != lastSeq + 1) //若包不连续
+                        if (dgram.Kind.HasFlag(OwUdpDataKind.StartDgram))    //若遇到新的起始包
                             break;
-                        if (dram.Kind.HasFlag(OwUdpDataKind.EndDgram))   //若找到终止包
+                        if (dgram.Kind.HasFlag(OwUdpDataKind.EndDgram))   //若找到终止包
                         {
-                            index = i;
+                            lastSeq = i;
                             break;
                         }
                     }
-                    if (index > 0)  //若有任何一个完整包
+                    if (lastSeq.HasValue)  //若有任何一个完整包
                     {
-                        result.AddRange(_RecvData.Take(index + 1));
-                        _RecvData.RemoveRange(0, index + 1);
+                        for (var i = _MinSeq; i <= lastSeq.Value; i++)
+                        {
+                            _RecvData.TryRemove(i, out var entry);
+                            result.Add(entry);
+                        }
+                        _MaxSeq = _RecvData.Max(c => c.Key);
+                        _MinSeq = _RecvData.Min(c => c.Key);
+                        _Seq = lastSeq;
                     }
                 }
             }
             return result;
         }
+
+        /// <summary>
+        /// 处理命令包。客户端目前仅能处理初始化回置。
+        /// </summary>
+        /// <param name="entry"></param>
+        internal virtual void OnCommandPkg(OwUdpDataEntry entry)
+        {
+            _Id = entry.Id;
+            _Seq = (uint)entry.Seq;
+        }
         #endregion 方法
+
+        #region 事件及相关
+        /// <summary>
+        /// 有数据到达的事件。此事件可能发生在任何线程。
+        /// </summary>
+        public event EventHandler<OwUdpDataReceivedEventArgs> OwUdpDataReceived;
+        protected virtual void OnOwUdpDataReceived(OwUdpDataReceivedEventArgs e) => OwUdpDataReceived?.Invoke(this, e);
+        #endregion 事件及相关
 
         #region IDisposable接口相关
 

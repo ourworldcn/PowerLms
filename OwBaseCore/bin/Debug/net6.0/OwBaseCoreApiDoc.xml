@@ -1422,11 +1422,50 @@
             用于简化池化本对象的情况。
             </summary>
         </member>
-        <member name="M:System.Net.Sockets.OwUdpDataEntry.CompareTo(System.Net.Sockets.OwUdpDataEntry)">
+        <member name="M:System.Net.Sockets.OwUdpDataEntry.Rent">
             <summary>
-            <inheritdoc/>
+            检索的缓冲区。
+            此缓冲区将借给调用方，应使用 Return 方法返回，以便在后续调用 Rent 方法时重复使用。 
+            无法返回租用的缓冲区不是致命错误。 但是，这可能会导致应用程序性能下降，因为池可能需要创建新的缓冲区来替换丢失的缓冲区。
+            此方法返回的数组可能不是零初始化的。
             </summary>
-            <param name="other"></param>
+            <returns></returns>
+        </member>
+        <member name="M:System.Net.Sockets.OwUdpDataEntry.Return(System.Net.Sockets.OwUdpDataEntry)">
+            <summary>
+            将数据全部清0并返回池中。
+            此缓冲区将借给调用方，应使用 Return 方法返回，以便在后续调用 Rent 方法时重复使用。 
+            无法返回租用的缓冲区不是致命错误。 但是，这可能会导致应用程序性能下降，因为池可能需要创建新的缓冲区来替换丢失的缓冲区。
+            </summary>
+            <param name="entry"></param>
+        </member>
+        <member name="M:System.Net.Sockets.OwUdpDataEntry.Create(System.Byte[],System.Int32,System.Int32)">
+            <summary>
+            将一个大缓冲区的数据拆分为多个小包的数据。
+            只负责复制数据区，正确设置<see cref="P:System.Net.Sockets.OwUdpDataEntry.Count"/>。
+            </summary>
+            <param name="buffer">缓冲区</param>
+            <param name="startIndex">起始偏移，基于0.</param>
+            <param name="count">总有效数据长度。</param>
+            <returns>拆分的条目对象列表（维持顺序稳定），如果是空数据则返回集合。</returns>
+            <exception cref="T:System.ArgumentOutOfRangeException">index 或 count 为负。</exception>
+            <exception cref="T:System.ArgumentException">缓冲区长度减去 index 小于 count。。</exception>
+            <exception cref="T:System.ArgumentNullException">buffer 为 null。</exception>
+        </member>
+        <member name="M:System.Net.Sockets.OwUdpDataEntry.Create(System.IO.Stream)">
+            <summary>
+            将流当前位置到最终的所有数据拆分为多个小包的数据。
+            只负责复制数据区，正确设置<see cref="P:System.Net.Sockets.OwUdpDataEntry.Count"/>。
+            </summary>
+            <param name="stream">数据的当前位置到最终的数据将被读取，调用者要负责对象的处置。</param>
+            <returns>拆分的条目对象列表（维持顺序稳定），如果是空数据则返回集合。</returns>
+            <exception cref="T:System.ArgumentNullException">stream 为 null。</exception>
+        </member>
+        <member name="M:System.Net.Sockets.OwUdpDataEntry.ToArray(System.Collections.Generic.IList{System.Net.Sockets.OwUdpDataEntry})">
+            <summary>
+            
+            </summary>
+            <param name="entries"></param>
             <returns></returns>
         </member>
         <member name="M:System.Net.Sockets.OwUdpDataEntry.#ctor">
@@ -1475,6 +1514,18 @@
             小于或等于<see cref="F:System.Net.Sockets.OwUdpDataEntry.Mtu"/>。总计有多少字节数据。包含头部8字节。
             </summary>
         </member>
+        <member name="M:System.Net.Sockets.OwUdpDataEntry.CompareTo(System.Net.Sockets.OwUdpDataEntry)">
+            <summary>
+            <inheritdoc/>
+            </summary>
+            <param name="other"></param>
+            <returns></returns>
+        </member>
+        <member name="M:System.Net.Sockets.OwUdpDataReceivedEventArgs.#ctor">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
         <member name="P:System.Net.Sockets.OwUdpDataReceivedEventArgs.Datas">
             <summary>
             
@@ -1502,7 +1553,32 @@
         </member>
         <member name="F:System.Net.Sockets.OwUdpClientV2._RecvData">
             <summary>
-            接受数据的缓存队列。
+            接受数据的缓存队列。键是包序号 ，值数据条目。需要锁定使用。
+            </summary>
+        </member>
+        <member name="F:System.Net.Sockets.OwUdpClientV2._MinSeq">
+            <summary>
+            <see cref="F:System.Net.Sockets.OwUdpClientV2._RecvData"/>中最小包号。
+            </summary>
+        </member>
+        <member name="F:System.Net.Sockets.OwUdpClientV2._MaxSeq">
+            <summary>
+            <see cref="F:System.Net.Sockets.OwUdpClientV2._RecvData"/>中最大包号。
+            </summary>
+        </member>
+        <member name="F:System.Net.Sockets.OwUdpClientV2._IoTask">
+            <summary>
+            执行IO任务的对象。
+            </summary>
+        </member>
+        <member name="F:System.Net.Sockets.OwUdpClientV2._Stopping">
+            <summary>
+            请求结束任务的标记。
+            </summary>
+        </member>
+        <member name="F:System.Net.Sockets.OwUdpClientV2._Stopped">
+            <summary>
+            后台线程已经完成操作。
             </summary>
         </member>
         <member name="M:System.Net.Sockets.OwUdpClientV2.IncrementInt31(System.Int32@)">
@@ -1525,6 +1601,18 @@
             <param name="i"></param>
             <returns></returns>
         </member>
+        <member name="M:System.Net.Sockets.OwUdpClientV2.Start(System.String,System.Int16)">
+            <summary>
+            
+            </summary>
+            <param name="server">服务器IP地址或DNS名。</param>
+            <param name="port">端口号。</param>
+        </member>
+        <member name="M:System.Net.Sockets.OwUdpClientV2.IoWorker">
+            <summary>
+            IO线程函数。
+            </summary>
+        </member>
         <member name="M:System.Net.Sockets.OwUdpClientV2.Connect(System.String,System.Int16)">
             <summary>
             连接服务器并"握手"
@@ -1544,6 +1632,7 @@
             <summary>
             自有初始化。
             </summary>
+            <remarks>此时 <see cref="F:System.Net.Sockets.OwUdpClientV2._UdpClient"/> 应已经正确初始化。</remarks>
         </member>
         <member name="M:System.Net.Sockets.OwUdpClientV2.Send(System.Net.Sockets.OwUdpDataEntry)">
             <summary>
@@ -1555,14 +1644,31 @@
         </member>
         <member name="M:System.Net.Sockets.OwUdpClientV2.Receive">
             <summary>
-            立即同步接受一个数据包并做相应处理。
+            立即同步接受所有完整数据包并做相应处理。
+            </summary>
+        </member>
+        <member name="M:System.Net.Sockets.OwUdpClientV2.ScanQueue">
+            <summary>
+            扫描接受队列，处理完整包——引发数据到达的事件。
             </summary>
         </member>
         <member name="M:System.Net.Sockets.OwUdpClientV2.GetDram">
             <summary>
             获取序号最低的完整包，若没有则返回空集合。
+            调用者要锁定<see cref="F:System.Net.Sockets.OwUdpClientV2._RecvData"/>对象才能调用此函数。
             </summary>
             <returns></returns>
+        </member>
+        <member name="M:System.Net.Sockets.OwUdpClientV2.OnCommandPkg(System.Net.Sockets.OwUdpDataEntry)">
+            <summary>
+            处理命令包。客户端目前仅能处理初始化回置。
+            </summary>
+            <param name="entry"></param>
+        </member>
+        <member name="E:System.Net.Sockets.OwUdpClientV2.OwUdpDataReceived">
+            <summary>
+            有数据到达的事件。此事件可能发生在任何线程。
+            </summary>
         </member>
         <member name="P:System.Net.Sockets.OwUdpServerDataEntry.Id">
             <summary>
