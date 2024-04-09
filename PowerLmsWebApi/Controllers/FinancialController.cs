@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using NuGet.Packaging;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
@@ -17,7 +18,7 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 构造函数。Debit 和credit。
         /// </summary>
-        public FinancialController(AccountManager accountManager, ServiceProvider serviceProvider, EntityManager entityManager,
+        public FinancialController(AccountManager accountManager, IServiceProvider serviceProvider, EntityManager entityManager,
             PowerLmsUserDbContext dbContext, ILogger<FinancialController> logger, IMapper mapper)
         {
             _AccountManager = accountManager;
@@ -29,7 +30,7 @@ namespace PowerLmsWebApi.Controllers
         }
 
         private AccountManager _AccountManager;
-        private ServiceProvider _ServiceProvider;
+        private IServiceProvider _ServiceProvider;
         private EntityManager _EntityManager;
         private PowerLmsUserDbContext _DbContext;
         readonly ILogger<FinancialController> _Logger;
@@ -149,16 +150,279 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetFeeRemainingReturnDto();
             var fees = _DbContext.DocFees.Where(c => model.FeeIds.Contains(c.Id));
-            if (fees.Count() !=model.FeeIds.Count) return NotFound();
+            if (fees.Count() != model.FeeIds.Count) return NotFound();
 
-            //var coll = _DbContext.DocFeeRequisitionItems.Where(c => c.FeeId == fees.Id);
-            //var happened = coll.Sum(c => c.Amount);   //已申请的金额
-            //result.Remaining = fees.Amount - happened;
+            var coll = from fee in fees
+                       join job in _DbContext.PlJobs
+                       on fee.JobId equals job.Id
+
+                       //join fqi in _DbContext.DocFeeRequisitionItems
+                       //on fee.Id equals fqi.FeeId
+
+                       //join fq in _DbContext.DocFeeRequisitions
+                       //on fqi.ParentId equals fq.Id
+
+                       //group fee by fq.Id into g
+                       select new { fee, job };
+
+            var ary = coll.AsNoTracking().ToArray();
+            var collRem = from fee in fees
+                          join fqi in _DbContext.DocFeeRequisitionItems
+                          on fee.Id equals fqi.FeeId
+                          group fqi by fqi.FeeId into g
+                          select new { FeeId = g.Key, Amount = g.Sum(d => d.Amount) };
+            var dicRem = collRem.AsNoTracking().ToDictionary(c => c.FeeId, c => c.Amount);  //已申请的金额
+
+            result.Result.AddRange(ary.Select(c =>
+            {
+                var r = new GetFeeRemainingItemReturnDto
+                {
+                    Fee = c.fee,
+                    Job = c.job,
+                    Remaining = dicRem.GetValueOrDefault(c.fee.Id),
+                };
+                return r;
+            }));
             return result;
         }
         #endregion 业务费用申请单
 
+        #region 业务费用申请单明细
+
+        /// <summary>
+        /// 获取全部业务费用申请单明细。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="conditional">查询的条件。支持 Id 和 ParentId。不区分大小写。</param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        public ActionResult<GetAllDocFeeRequisitionItemReturnDto> GetAllDocFeeRequisitionItem([FromQuery] PagingParamsDtoBase model,
+            [FromQuery] Dictionary<string, string> conditional = null)
+        {
+
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetAllDocFeeRequisitionItemReturnDto();
+
+            var dbSet = _DbContext.DocFeeRequisitionItems;
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
+            foreach (var item in conditional)
+                if (string.Equals(item.Key, "Id", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (Guid.TryParse(item.Value, out var id))
+                        coll = coll.Where(c => c.Id == id);
+                }
+                else if (string.Equals(item.Key, "ParentId", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (Guid.TryParse(item.Value, out var id))
+                        coll = coll.Where(c => c.ParentId == id);
+                }
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
+            _Mapper.Map(prb, result);
+            return result;
+        }
+
+        /// <summary>
+        /// 增加新业务费用申请单明细。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPost]
+        public ActionResult<AddDocFeeRequisitionItemReturnDto> AddDocFeeRequisitionItem(AddDocFeeRequisitionItemParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context)
+            {
+                _Logger.LogWarning("无效的令牌{token}", model.Token);
+                return Unauthorized();
+            }
+            var result = new AddDocFeeRequisitionItemReturnDto();
+            var entity = model.DocFeeRequisitionItem;
+            entity.GenerateNewId();
+            _DbContext.DocFeeRequisitionItems.Add(model.DocFeeRequisitionItem);
+            _DbContext.SaveChanges();
+            result.Id = model.DocFeeRequisitionItem.Id;
+            return result;
+        }
+
+        /// <summary>
+        /// 修改业务费用申请单明细信息。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定Id的业务费用申请单明细不存在。</response>  
+        [HttpPut]
+        public ActionResult<ModifyDocFeeRequisitionItemReturnDto> ModifyDocFeeRequisitionItem(ModifyDocFeeRequisitionItemParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new ModifyDocFeeRequisitionItemReturnDto();
+            if (!_EntityManager.Modify(new[] { model.DocFeeRequisitionItem })) return NotFound();
+            //忽略不可更改字段
+            var entity = _DbContext.Entry(model.DocFeeRequisitionItem);
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        /// <summary>
+        /// 删除指定Id的业务费用申请单明细。慎用！
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定Id的业务费用申请单明细不存在。</response>  
+        [HttpDelete]
+        public ActionResult<RemoveDocFeeRequisitionItemReturnDto> RemoveDocFeeRequisitionItem(RemoveDocFeeRequisitionItemParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new RemoveDocFeeRequisitionItemReturnDto();
+            var id = model.Id;
+            var dbSet = _DbContext.DocFeeRequisitionItems;
+            var item = dbSet.Find(id);
+            if (item is null) return BadRequest();
+            _EntityManager.Remove(item);
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        /// <summary>
+        /// 设置指定的申请单下所有明细。
+        /// 指定存在id的明细则更新，Id全0或不存在的Id到自动添加，原有未指定的明细将被删除。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定Id的业务费用申请单不存在。</response>  
+        [HttpPut]
+        public ActionResult<SetDocFeeRequisitionItemReturnDto> SetDocFeeRequisitionItem(SetDocFeeRequisitionItemParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new SetDocFeeRequisitionItemReturnDto();
+            var fr = _DbContext.DocFeeRequisitions.Find(model.FrId);
+            if (fr is null) return NotFound();
+            var aryIds = model.Items.Select(c => c.Id).ToArray();   //指定的Id
+            var existsIds = _DbContext.DocFeeRequisitionItems.Where(c => c.ParentId == fr.Id).Select(c => c.Id).ToArray();    //已经存在的Id
+            //更改
+            var modifies = model.Items.Where(c => existsIds.Contains(c.Id));
+            foreach (var item in modifies)
+            {
+                _DbContext.Entry(item).CurrentValues.SetValues(item);
+                _DbContext.Entry(item).State = EntityState.Modified;
+            }
+            //增加
+            var addIds = aryIds.Except(existsIds).ToArray();
+            var adds = model.Items.Where(c => addIds.Contains(c.Id)).ToArray();
+            Array.ForEach(adds, c => c.GenerateNewId());
+            _DbContext.AddRange(adds);
+            //删除
+            var removeIds = existsIds.Except(aryIds).ToArray();
+            _DbContext.RemoveRange(_DbContext.DocFeeRequisitionItems.Where(c => removeIds.Contains(c.Id)));
+
+            _DbContext.SaveChanges();
+            //后处理
+            result.Result.AddRange(model.Items);
+            return result;
+        }
+        #endregion 业务费用申请单明细
+
     }
+
+    #region 业务费用申请单明细
+
+    /// <summary>
+    /// 设置指定的申请单下所有明细功能的参数封装类。
+    /// </summary>
+    public class SetDocFeeRequisitionItemParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 申请单的Id。
+        /// </summary>
+        public Guid FrId { get; set; }
+
+        /// <summary>
+        /// 申请单明细表的集合。
+        /// 指定存在id的明细则更新，Id全0或不存在的Id自动添加，原有未指定的明细将被删除。
+        /// </summary>
+        public List<DocFeeRequisitionItem> Items { get; set; } = new List<DocFeeRequisitionItem>();
+    }
+
+    /// <summary>
+    /// 设置指定的申请单下所有明细功能的返回值封装类。
+    /// </summary>
+    public class SetDocFeeRequisitionItemReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 指定申请单下，所有明细的对象。
+        /// </summary>
+        public List<DocFeeRequisitionItem> Result { get; set; } = new List<DocFeeRequisitionItem>();
+    }
+
+    /// <summary>
+    /// 标记删除业务费用申请单明细功能的参数封装类。
+    /// </summary>
+    public class RemoveDocFeeRequisitionItemParamsDto : RemoveParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 标记删除业务费用申请单明细功能的返回值封装类。
+    /// </summary>
+    public class RemoveDocFeeRequisitionItemReturnDto : RemoveReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 获取所有业务费用申请单明细功能的返回值封装类。
+    /// </summary>
+    public class GetAllDocFeeRequisitionItemReturnDto : PagingReturnDtoBase<DocFeeRequisitionItem>
+    {
+    }
+
+    /// <summary>
+    /// 增加新业务费用申请单明细功能参数封装类。
+    /// </summary>
+    public class AddDocFeeRequisitionItemParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 新业务费用申请单明细信息。其中Id可以是任何值，返回时会指定新值。
+        /// </summary>
+        public DocFeeRequisitionItem DocFeeRequisitionItem { get; set; }
+    }
+
+    /// <summary>
+    /// 增加新业务费用申请单明细功能返回值封装类。
+    /// </summary>
+    public class AddDocFeeRequisitionItemReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 如果成功添加，这里返回新业务费用申请单明细的Id。
+        /// </summary>
+        public Guid Id { get; set; }
+    }
+
+    /// <summary>
+    /// 修改业务费用申请单明细信息功能参数封装类。
+    /// </summary>
+    public class ModifyDocFeeRequisitionItemParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 业务费用申请单明细数据。
+        /// </summary>
+        public DocFeeRequisitionItem DocFeeRequisitionItem { get; set; }
+    }
+
+    /// <summary>
+    /// 修改业务费用申请单明细信息功能返回值封装类。
+    /// </summary>
+    public class ModifyDocFeeRequisitionItemReturnDto : ReturnDtoBase
+    {
+    }
+    #endregion 业务费用申请单明细
 
     #region 业务费用申请单
 
@@ -176,12 +440,34 @@ namespace PowerLmsWebApi.Controllers
     /// <summary>
     /// 获取指定费用的剩余未申请金额功能返回值封装类。
     /// </summary>
-    public class GetFeeRemainingReturnDto : ReturnDtoBase
+    public class GetFeeRemainingItemReturnDto
     {
+        /// <summary>
+        /// 关联的费用的对象。
+        /// </summary>
+        public DocFee Fee { get; set; }
+
         /// <summary>
         /// 剩余未申请的费用。
         /// </summary>
         public decimal Remaining { get; set; }
+
+        /// <summary>
+        /// 费用关联的任务对象。
+        /// </summary>
+        public PlJob Job { get; set; }
+
+    }
+
+    /// <summary>
+    /// 获取指定费用的剩余未申请金额功能返回值封装类。
+    /// </summary>
+    public class GetFeeRemainingReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 费用单据的额外信息。
+        /// </summary>
+        public List<GetFeeRemainingItemReturnDto> Result { get; set; } = new List<GetFeeRemainingItemReturnDto>();
     }
 
     /// <summary>

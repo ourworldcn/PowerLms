@@ -2558,7 +2558,7 @@
             财务相关功能控制器。
             </summary>
         </member>
-        <member name="M:PowerLmsWebApi.Controllers.FinancialController.#ctor(PowerLmsServer.Managers.AccountManager,Microsoft.Extensions.DependencyInjection.ServiceProvider,PowerLmsServer.Managers.EntityManager,PowerLmsServer.EfData.PowerLmsUserDbContext,Microsoft.Extensions.Logging.ILogger{PowerLmsWebApi.Controllers.FinancialController},AutoMapper.IMapper)">
+        <member name="M:PowerLmsWebApi.Controllers.FinancialController.#ctor(PowerLmsServer.Managers.AccountManager,System.IServiceProvider,PowerLmsServer.Managers.EntityManager,PowerLmsServer.EfData.PowerLmsUserDbContext,Microsoft.Extensions.Logging.ILogger{PowerLmsWebApi.Controllers.FinancialController},AutoMapper.IMapper)">
             <summary>
             构造函数。Debit 和credit。
             </summary>
@@ -2612,6 +2612,132 @@
             <response code="401">无效令牌。</response>  
             <response code="404">指定Id的业务费用至少有一个不存在。</response>  
         </member>
+        <member name="M:PowerLmsWebApi.Controllers.FinancialController.GetAllDocFeeRequisitionItem(PowerLmsWebApi.Dto.PagingParamsDtoBase,System.Collections.Generic.Dictionary{System.String,System.String})">
+            <summary>
+            获取全部业务费用申请单明细。
+            </summary>
+            <param name="model"></param>
+            <param name="conditional">查询的条件。支持 Id 和 ParentId。不区分大小写。</param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.FinancialController.AddDocFeeRequisitionItem(PowerLmsWebApi.Controllers.AddDocFeeRequisitionItemParamsDto)">
+            <summary>
+            增加新业务费用申请单明细。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.FinancialController.ModifyDocFeeRequisitionItem(PowerLmsWebApi.Controllers.ModifyDocFeeRequisitionItemParamsDto)">
+            <summary>
+            修改业务费用申请单明细信息。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+            <response code="404">指定Id的业务费用申请单明细不存在。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.FinancialController.RemoveDocFeeRequisitionItem(PowerLmsWebApi.Controllers.RemoveDocFeeRequisitionItemParamsDto)">
+            <summary>
+            删除指定Id的业务费用申请单明细。慎用！
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+            <response code="404">指定Id的业务费用申请单明细不存在。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.FinancialController.SetDocFeeRequisitionItem(PowerLmsWebApi.Controllers.SetDocFeeRequisitionItemParamsDto)">
+            <summary>
+            设置指定的申请单下所有明细。
+            指定存在id的明细则更新，Id全0或不存在的Id到自动添加，原有未指定的明细将被删除。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+            <response code="404">指定Id的业务费用申请单不存在。</response>  
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.SetDocFeeRequisitionItemParamsDto">
+            <summary>
+            设置指定的申请单下所有明细功能的参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.SetDocFeeRequisitionItemParamsDto.FrId">
+            <summary>
+            申请单的Id。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.SetDocFeeRequisitionItemParamsDto.Items">
+            <summary>
+            申请单明细表的集合。
+            指定存在id的明细则更新，Id全0或不存在的Id自动添加，原有未指定的明细将被删除。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.SetDocFeeRequisitionItemReturnDto">
+            <summary>
+            设置指定的申请单下所有明细功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.SetDocFeeRequisitionItemReturnDto.Result">
+            <summary>
+            指定申请单下，所有明细的对象。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RemoveDocFeeRequisitionItemParamsDto">
+            <summary>
+            标记删除业务费用申请单明细功能的参数封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RemoveDocFeeRequisitionItemReturnDto">
+            <summary>
+            标记删除业务费用申请单明细功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetAllDocFeeRequisitionItemReturnDto">
+            <summary>
+            获取所有业务费用申请单明细功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddDocFeeRequisitionItemParamsDto">
+            <summary>
+            增加新业务费用申请单明细功能参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.AddDocFeeRequisitionItemParamsDto.DocFeeRequisitionItem">
+            <summary>
+            新业务费用申请单明细信息。其中Id可以是任何值，返回时会指定新值。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddDocFeeRequisitionItemReturnDto">
+            <summary>
+            增加新业务费用申请单明细功能返回值封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.AddDocFeeRequisitionItemReturnDto.Id">
+            <summary>
+            如果成功添加，这里返回新业务费用申请单明细的Id。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.ModifyDocFeeRequisitionItemParamsDto">
+            <summary>
+            修改业务费用申请单明细信息功能参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.ModifyDocFeeRequisitionItemParamsDto.DocFeeRequisitionItem">
+            <summary>
+            业务费用申请单明细数据。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.ModifyDocFeeRequisitionItemReturnDto">
+            <summary>
+            修改业务费用申请单明细信息功能返回值封装类。
+            </summary>
+        </member>
         <member name="T:PowerLmsWebApi.Controllers.GetFeeRemainingParamsDto">
             <summary>
             获取指定费用的剩余未申请金额参数封装类。
@@ -2622,14 +2748,34 @@
             费用的Id集合。
             </summary>
         </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetFeeRemainingItemReturnDto">
+            <summary>
+            获取指定费用的剩余未申请金额功能返回值封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.GetFeeRemainingItemReturnDto.Fee">
+            <summary>
+            关联的费用的对象。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.GetFeeRemainingItemReturnDto.Remaining">
+            <summary>
+            剩余未申请的费用。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.GetFeeRemainingItemReturnDto.Job">
+            <summary>
+            费用关联的任务对象。
+            </summary>
+        </member>
         <member name="T:PowerLmsWebApi.Controllers.GetFeeRemainingReturnDto">
             <summary>
             获取指定费用的剩余未申请金额功能返回值封装类。
             </summary>
         </member>
-        <member name="P:PowerLmsWebApi.Controllers.GetFeeRemainingReturnDto.Remaining">
+        <member name="P:PowerLmsWebApi.Controllers.GetFeeRemainingReturnDto.Result">
             <summary>
-            剩余未申请的费用。
+            费用单据的额外信息。
             </summary>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.RemoveDocFeeRequisitionParamsDto">
