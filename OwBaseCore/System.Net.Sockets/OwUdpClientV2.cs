@@ -1,19 +1,16 @@
-﻿using Microsoft.Extensions.ObjectPool;
-using System;
-using System.Buffers;
-using System.Collections;
+﻿using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
-using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Options;
+
 /*
  * 目标框架	符号	其他符号
 （在 .NET 5+ SDK 中可用）	平台符号（仅
@@ -139,7 +136,7 @@ namespace System.Net.Sockets
         public static void Return(OwUdpDataEntry entry)
         {
             if (entry.Buffer.Length < Mtu) return; //若不符合要求
-            Array.Fill(entry.Buffer, (byte)0);
+            entry.Buffer.AsSpan().Clear();
             _Pool.Push(entry);
         }
 
@@ -258,7 +255,7 @@ namespace System.Net.Sockets
         public DateTime? FirstSendDateTime;
 
         /// <summary>
-        /// 最后一次发送的世界时间。<see cref="OwHelper.WorldNow"/>。空标识未发送。
+        /// 最后一次发送的世界时间。<see cref="DateTime.UtcNow"/>。空标识未发送。
         /// </summary>
         public DateTime? LastSendDateTime { get; set; }
 
@@ -375,7 +372,7 @@ namespace System.Net.Sockets
         /// </summary>
         /// <param name="i"></param>
         /// <returns></returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int IncrementInt31(ref int i)
         {
             var result = Interlocked.Increment(ref i);
@@ -405,7 +402,7 @@ namespace System.Net.Sockets
         /// </summary>
         /// <param name="i"></param>
         /// <returns></returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static uint IncrementUInt32(ref int i)
         {
             return (uint)Interlocked.Increment(ref i);
@@ -433,14 +430,14 @@ namespace System.Net.Sockets
         private void IoWorker()
         {
             var ctStopping = _Stopping.Token;
-            DateTime lastSendDgram = OwHelper.WorldNow;
+            DateTime lastSendDgram = DateTime.UtcNow;
             do
             {
                 try
                 {
                     if (_UdpClient.Available > 0)
                         Receive();
-                    if (OwHelper.WorldNow - lastSendDgram > TimeSpan.FromSeconds(1))    //若须发送心跳包
+                    if (DateTime.UtcNow - lastSendDgram > TimeSpan.FromSeconds(1))    //若须发送心跳包
                     {
                         var entry = OwUdpDataEntry.Rent();
                         entry.Kind = OwUdpDataKind.CommandDgram | OwUdpDataKind.StartDgram | OwUdpDataKind.EndDgram;
@@ -592,6 +589,7 @@ namespace System.Net.Sockets
                     var totalCount = list.Sum(c => c.Count - 8);  //计算总长度
                     var buff = OwUdpDataEntry.ToArray(list);
                     var e = new OwUdpDataReceivedEventArgs { Datas = buff };
+                    list.ForEach(c => OwUdpDataEntry.Return(c));    //回收对象
                     OnOwUdpDataReceived(e);
                 }
             }
@@ -601,13 +599,17 @@ namespace System.Net.Sockets
         /// 获取序号最低的完整包，若没有则返回空集合。
         /// 调用者要锁定<see cref="_RecvData"/>对象才能调用此函数。
         /// </summary>
-        /// <returns></returns>
+        /// <returns>如果没有完整数据则返回空集合。</returns>
         private List<OwUdpDataEntry> GetDram()
         {
             Debug.Assert(Monitor.IsEntered(_RecvData));
 
             List<OwUdpDataEntry> result = new List<OwUdpDataEntry>();
-            var firstEntry = _RecvData.GetValueOrDefault(_MinSeq);
+            if(_RecvData.IsEmpty) return result;
+
+            if (!_RecvData.TryGetValue(_MinSeq, out var firstEntry))
+                firstEntry = null;
+            
             if (firstEntry.Kind.HasFlag(OwUdpDataKind.StartDgram))  //若有起始包标志
             {
                 if (firstEntry.Kind.HasFlag(OwUdpDataKind.EndDgram))   //若是单一包
@@ -708,25 +710,24 @@ namespace System.Net.Sockets
 
 }
 
-#if !NETCOREAPP //若非NetCore程序
-using Microsoft.Extensions.Options;
+//#if !NETCOREAPP //若非NetCore程序
 
-namespace Microsoft.Extensions.Options
-{
-    //
-    // 摘要:
-    //     Used to retrieve configured TOptions instances.
-    //
-    // 类型参数:
-    //   TOptions:
-    //     The type of options being requested.
-    public interface IOptions</*[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)]*/ out TOptions> where TOptions : class
-    {
-        //
-        // 摘要:
-        //     The default configured TOptions instance
-        TOptions Value { get; }
-    }
-}
-#endif
+//namespace Microsoft.Extensions.Options
+//{
+//    //
+//    // 摘要:
+//    //     Used to retrieve configured TOptions instances.
+//    //
+//    // 类型参数:
+//    //   TOptions:
+//    //     The type of options being requested.
+//    public interface IOptions</*[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)]*/ out TOptions> where TOptions : class
+//    {
+//        //
+//        // 摘要:
+//        //     The default configured TOptions instance
+//        TOptions Value { get; }
+//    }
+//}
+//#endif
 

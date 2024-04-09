@@ -25,7 +25,7 @@ namespace System.Net.Sockets
         /// <summary>
         /// 侦听地址。
         /// </summary>
-        /// <value>默认侦听虚四边形表示法中的 0.0.0.0。</value>
+        /// <value>默认侦听虚四段表示法中的 0.0.0.0。</value>
         public string ListernAddress { get; set; } = "0.0.0.0";
 
         /// <summary>
@@ -33,6 +33,39 @@ namespace System.Net.Sockets
         /// </summary>
         /// <value>默认端口0，即自动选定。</value>
         public short ListernPort { get; set; }
+    }
+
+    /// <summary>
+    /// 服务器端配置项。
+    /// </summary>
+    public class OwUdpServeEntry
+    {
+        /// <summary>
+        /// 构造函数。
+        /// </summary>
+        public OwUdpServeEntry()
+        {
+        }
+
+        /// <summary>
+        /// 远程地址。
+        /// </summary>
+        public IPEndPoint RemoteEndPoint;
+
+        /// <summary>
+        /// 已发送，但未确认的数据项集合。要按包序号升序排序。
+        /// </summary>
+        internal List<OwUdpDataEntry> DataEntry = new List<OwUdpDataEntry>();
+
+        /// <summary>
+        /// 最后一次的发送时间。
+        /// </summary>
+        public DateTime LastSend = OwHelper.WorldNow;
+
+        /// <summary>
+        /// 客户端已确认收到的连续的最大包序号。
+        /// </summary>
+        public uint MaxSeq;
     }
 
     public class OwUdpServerV2 : OwDisposableBase, IDisposable

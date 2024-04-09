@@ -1495,7 +1495,7 @@
         </member>
         <member name="P:System.Net.Sockets.OwUdpDataEntry.LastSendDateTime">
             <summary>
-            最后一次发送的世界时间。<see cref="P:System.OwHelper.WorldNow"/>。空标识未发送。
+            最后一次发送的世界时间。<see cref="P:System.DateTime.UtcNow"/>。空标识未发送。
             </summary>
         </member>
         <member name="P:System.Net.Sockets.OwUdpDataEntry.Buffer">
@@ -1657,7 +1657,7 @@
             获取序号最低的完整包，若没有则返回空集合。
             调用者要锁定<see cref="F:System.Net.Sockets.OwUdpClientV2._RecvData"/>对象才能调用此函数。
             </summary>
-            <returns></returns>
+            <returns>如果没有完整数据则返回空集合。</returns>
         </member>
         <member name="M:System.Net.Sockets.OwUdpClientV2.OnCommandPkg(System.Net.Sockets.OwUdpDataEntry)">
             <summary>
@@ -1704,13 +1704,43 @@
             <summary>
             侦听地址。
             </summary>
-            <value>默认侦听虚四边形表示法中的 0.0.0.0。</value>
+            <value>默认侦听虚四段表示法中的 0.0.0.0。</value>
         </member>
         <member name="P:System.Net.Sockets.OwUdpServerV2Options.ListernPort">
             <summary>
             侦听端口。
             </summary>
             <value>默认端口0，即自动选定。</value>
+        </member>
+        <member name="T:System.Net.Sockets.OwUdpServeEntry">
+            <summary>
+            服务器端配置项。
+            </summary>
+        </member>
+        <member name="M:System.Net.Sockets.OwUdpServeEntry.#ctor">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
+        <member name="F:System.Net.Sockets.OwUdpServeEntry.RemoteEndPoint">
+            <summary>
+            远程地址。
+            </summary>
+        </member>
+        <member name="F:System.Net.Sockets.OwUdpServeEntry.DataEntry">
+            <summary>
+            已发送，但未确认的数据项集合。要按包序号升序排序。
+            </summary>
+        </member>
+        <member name="F:System.Net.Sockets.OwUdpServeEntry.LastSend">
+            <summary>
+            最后一次的发送时间。
+            </summary>
+        </member>
+        <member name="F:System.Net.Sockets.OwUdpServeEntry.MaxSeq">
+            <summary>
+            客户端已确认收到的连续的最大包序号。
+            </summary>
         </member>
         <member name="F:System.Net.Sockets.OwUdpServerV2._Options">
             <summary>
