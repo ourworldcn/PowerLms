@@ -31,7 +31,7 @@ namespace System.Net.Sockets
     /// 封装的第一个标志字节。
     /// </summary>
     [Flags]
-    public enum OwUdpDataKind : byte
+    public enum OwRdmDgramKind : byte
     {
         None = 0,
 
@@ -53,66 +53,23 @@ namespace System.Net.Sockets
         EndDgram = 4,
     }
 
-    internal class OwUdpRemoteEntryBase
-    {
-        public int _Id;
-        /// <summary>
-        /// 终结点Id。仅低24位有效。
-        /// </summary>
-        [Range(0, 0x00ff_ffff)]
-        public int Id
-        {
-            get => _Id;
-            set
-            {
-                if (value > 0x00ff_ffff || value < 0) throw new ArgumentOutOfRangeException(nameof(value));
-                _Id = value;
-            }
-        }
-
-    }
-
-    internal class OwUdpRemoteEntry : OwUdpRemoteEntryBase
-    {
-        public OwUdpRemoteEntry()
-        {
-        }
-
-        public DateTime LastReciveWorldDateTime { get; set; }
-
-        /// <summary>
-        /// 收到的数据队列。按收到的包号升序排序。
-        /// </summary>
-        public List<OwUdpDataEntry> ReciveData { get; set; } = new List<OwUdpDataEntry>();
-
-        /// <summary>
-        /// 包序号，记录了已用的最大序号，可能需要回绕。
-        /// </summary>
-        public int MaxSeq;
-
-        /// <summary>
-        /// 远程终结点。
-        /// </summary>
-        public volatile IPEndPoint Remote;
-    }
-
-    internal class OwUdpDataEntry : IComparable<OwUdpDataEntry>
+    public class OwRdmDgram : IComparable<OwRdmDgram>
     {
 
         /// <summary>
         /// Internet上的标准MTU值为576字节，所以在进行Internet的UDP编程时，最好将UDP的数据长度控件在548字节(576-8-20)以内。
         /// </summary>
-        internal const int Mtu = 576 - 8 - 20;
+        public const int Mtu = 576 - 8 - 20;
 
         /// <summary>
         /// 本类使用的负载长度，去掉1个标志字节,3个字节通讯Id，4位序号。
         /// </summary>
-        internal const int Mts = Mtu - 4/*标志字节 和 通讯Id(防路由端口映射出现变化)*/ - 4/*已接收的连续包的最大序号*/;
+        public const int Mts = Mtu - 4/*标志字节 和 通讯Id(防路由端口映射出现变化)*/ - 4/*已接收的连续包的最大序号*/;
 
         /// <summary>
         /// 用于简化池化本对象的情况。
         /// </summary>
-        static ConcurrentStack<OwUdpDataEntry> _Pool = new ConcurrentStack<OwUdpDataEntry>();
+        static ConcurrentStack<OwRdmDgram> _Pool = new ConcurrentStack<OwRdmDgram>();
 
         /// <summary>
         /// 检索的缓冲区。
@@ -121,10 +78,10 @@ namespace System.Net.Sockets
         /// 此方法返回的数组可能不是零初始化的。
         /// </summary>
         /// <returns></returns>
-        public static OwUdpDataEntry Rent()
+        public static OwRdmDgram Rent()
         {
             if (_Pool.TryPop(out var result)) return result;
-            return new OwUdpDataEntry();
+            return new OwRdmDgram();
         }
 
         /// <summary>
@@ -133,7 +90,7 @@ namespace System.Net.Sockets
         /// 无法返回租用的缓冲区不是致命错误。 但是，这可能会导致应用程序性能下降，因为池可能需要创建新的缓冲区来替换丢失的缓冲区。
         /// </summary>
         /// <param name="entry"></param>
-        public static void Return(OwUdpDataEntry entry)
+        public static void Return(OwRdmDgram entry)
         {
             if (entry.Buffer.Length < Mtu) return; //若不符合要求
             entry.Buffer.AsSpan().Clear();
@@ -142,7 +99,7 @@ namespace System.Net.Sockets
 
         /// <summary>
         /// 将一个大缓冲区的数据拆分为多个小包的数据。
-        /// 只负责复制数据区，正确设置<see cref="Count"/>。
+        /// 只负责复制数据区，正确设置其它属性。
         /// </summary>
         /// <param name="buffer">缓冲区</param>
         /// <param name="startIndex">起始偏移，基于0.</param>
@@ -151,9 +108,9 @@ namespace System.Net.Sockets
         /// <exception cref="ArgumentOutOfRangeException">index 或 count 为负。</exception>
         /// <exception cref="ArgumentException">缓冲区长度减去 index 小于 count。。</exception>
         /// <exception cref="ArgumentNullException">buffer 为 null。</exception>
-        public static List<OwUdpDataEntry> Create(byte[] buffer, int startIndex, int count)
+        public static List<OwRdmDgram> Create(byte[] buffer, int startIndex, int count)
         {
-            var result = new List<OwUdpDataEntry>();
+            var result = new List<OwRdmDgram>();
 #pragma warning disable IDE0063 // 使用简单的 "using" 语句
             using (var ms = new MemoryStream(buffer, startIndex, count))
                 return Create(ms);
@@ -167,10 +124,10 @@ namespace System.Net.Sockets
         /// <param name="stream">数据的当前位置到最终的数据将被读取，调用者要负责对象的处置。</param>
         /// <returns>拆分的条目对象列表（维持顺序稳定），如果是空数据则返回集合。</returns>
         /// <exception cref="ArgumentNullException">stream 为 null。</exception>
-        public static List<OwUdpDataEntry> Create(Stream stream)
+        public static List<OwRdmDgram> Create(Stream stream)
         {
             int length;
-            var result = new List<OwUdpDataEntry>();
+            var result = new List<OwRdmDgram>();
             do
             {
                 var entry = Rent(); Debug.Assert(entry != null && entry.Buffer?.Length >= Mtu);
@@ -191,7 +148,7 @@ namespace System.Net.Sockets
         /// </summary>
         /// <param name="entries"></param>
         /// <returns></returns>
-        public static byte[] ToArray(IList<OwUdpDataEntry> entries)
+        public static byte[] ToArray(IList<OwRdmDgram> entries)
         {
             var count = entries.Sum(c => c.Count - 8);
             var ary = ArrayPool<byte>.Shared.Rent(count);
@@ -206,7 +163,7 @@ namespace System.Net.Sockets
         /// <summary>
         /// 构造函数。
         /// </summary>
-        public OwUdpDataEntry()
+        public OwRdmDgram()
         {
 
         }
@@ -214,7 +171,7 @@ namespace System.Net.Sockets
         /// <summary>
         /// 包的类型。
         /// </summary>
-        public OwUdpDataKind Kind { get => (OwUdpDataKind)Buffer[0]; set => Buffer[0] = (byte)value; }
+        public OwRdmDgramKind Kind { get => (OwRdmDgramKind)Buffer[0]; set => Buffer[0] = (byte)value; }
 
         /// <summary>
         /// 发送到对方的本机唯一标识符。
@@ -261,7 +218,7 @@ namespace System.Net.Sockets
 
         /// <summary>
         /// 缓冲区。第一个是标志字节，随后是3字节客户Id,4字节包顺序号。后跟负载数据。
-        /// 大小必须是<see cref="Mtu"/>个字节。第一个字节有特殊含义<seealso cref="OwUdpDataKind"/>。
+        /// 大小必须是<see cref="Mtu"/>个字节。第一个字节有特殊含义<seealso cref="OwRdmDgramKind"/>。
         /// </summary>
         public byte[] Buffer { get; set; } = new byte[Mtu];
 
@@ -281,7 +238,7 @@ namespace System.Net.Sockets
         /// </summary>
         /// <param name="other"></param>
         /// <returns></returns>
-        public int CompareTo(OwUdpDataEntry other)
+        public int CompareTo(OwRdmDgram other)
         {
             return Seq.CompareTo(other.Seq);
         }
@@ -289,17 +246,17 @@ namespace System.Net.Sockets
         #endregion IComparable<OwUdpDataEntry> 接口及相关
     }
 
-    public class OwUdpDataReceivedEventArgs
+    public class OwRdmDataReceivedEventArgs
     {
         /// <summary>
         /// 构造函数。
         /// </summary>
-        public OwUdpDataReceivedEventArgs()
+        public OwRdmDataReceivedEventArgs()
         {
 
         }
 
-        public OwUdpDataReceivedEventArgs(ReadOnlySpan<byte> data)
+        public OwRdmDataReceivedEventArgs(ReadOnlySpan<byte> data)
         {
             Datas = data.ToArray();
         }
@@ -312,13 +269,14 @@ namespace System.Net.Sockets
 
     /// <summary>
     /// udp客户端类。为支持Unity使用，仅使用.NET Framework 4.7支持的功能。
+    /// 当前版本一个客户端对象仅能和一个Server通讯。
     /// </summary>
-    public class OwUdpClientV2 : IDisposable
+    public class OwRdmClient : IDisposable
     {
         /// <summary>
         /// 构造函数。
         /// </summary>
-        public OwUdpClientV2()
+        public OwRdmClient()
         {
             //new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
         }
@@ -338,7 +296,7 @@ namespace System.Net.Sockets
         /// <summary>
         /// 接受数据的缓存队列。键是包序号 ，值数据条目。需要锁定使用。
         /// </summary>
-        ConcurrentDictionary<uint, OwUdpDataEntry> _RecvData = new ConcurrentDictionary<uint, OwUdpDataEntry>();
+        ConcurrentDictionary<uint, OwRdmDgram> _RecvData = new ConcurrentDictionary<uint, OwRdmDgram>();
         /// <summary>
         /// <see cref="_RecvData"/>中最小包号。
         /// </summary>
@@ -439,8 +397,8 @@ namespace System.Net.Sockets
                         Receive();
                     if (DateTime.UtcNow - lastSendDgram > TimeSpan.FromSeconds(1))    //若须发送心跳包
                     {
-                        var entry = OwUdpDataEntry.Rent();
-                        entry.Kind = OwUdpDataKind.CommandDgram | OwUdpDataKind.StartDgram | OwUdpDataKind.EndDgram;
+                        var entry = OwRdmDgram.Rent();
+                        entry.Kind = OwRdmDgramKind.CommandDgram | OwRdmDgramKind.StartDgram | OwRdmDgramKind.EndDgram;
                         entry.Id = _Id.GetValueOrDefault();
                         entry.Seq = (int)_Seq.GetValueOrDefault();
                         entry.Count = 8;
@@ -454,19 +412,19 @@ namespace System.Net.Sockets
             //已请求结束
         }
 
-        public void Init([Range(0, OwUdpDataEntry.Mts)] byte[] evidence)
+        public void Init([Range(0, OwRdmDgram.Mts)] byte[] evidence)
         {
-            if (evidence.Length > OwUdpDataEntry.Mts)
+            if (evidence.Length > OwRdmDgram.Mts)
                 throw new ArgumentException("超长", nameof(evidence));
-            var dataEntry = new OwUdpDataEntry
+            var dataEntry = new OwRdmDgram
             {
                 Id = 0,
             };
-            dataEntry.Buffer = new byte[OwUdpDataEntry.Mtu];
+            dataEntry.Buffer = new byte[OwRdmDgram.Mtu];
             dataEntry.Offset = 0;
-            dataEntry.Count = OwUdpDataEntry.Mtu;
+            dataEntry.Count = OwRdmDgram.Mtu;
 
-            dataEntry.Buffer[0] = (byte)(OwUdpDataKind.CommandDgram);
+            dataEntry.Buffer[0] = (byte)(OwRdmDgramKind.CommandDgram);
 
             evidence.CopyTo(dataEntry.Buffer, 8);
         }
@@ -504,10 +462,10 @@ namespace System.Net.Sockets
         /// <remarks>此时 <see cref="_UdpClient"/> 应已经正确初始化。</remarks>
         virtual protected void ConnectCore()
         {
-            var entry = OwUdpDataEntry.Rent();
+            var entry = OwRdmDgram.Rent();
             try
             {
-                entry.Kind = (OwUdpDataKind.CommandDgram | OwUdpDataKind.StartDgram | OwUdpDataKind.EndDgram);
+                entry.Kind = (OwRdmDgramKind.CommandDgram | OwRdmDgramKind.StartDgram | OwRdmDgramKind.EndDgram);
                 entry.Id = 0;
                 entry.Count = 0;
                 Send(entry);
@@ -517,17 +475,17 @@ namespace System.Net.Sockets
             }
             finally
             {
-                OwUdpDataEntry.Return(entry);
+                OwRdmDgram.Return(entry);
             }
         }
 
         /// <summary>
         /// 立即同步发送一个数据条目，并做相应处理。
-        /// <see cref="OwUdpDataEntry.Kind"/> 和 <see cref="OwUdpDataEntry"/>中的数据要实现设定好。
-        /// 本函数仅设置 <see cref="OwUdpDataEntry.Id"/> 和 <see cref="OwUdpDataEntry.Seq"/> 。
+        /// <see cref="OwRdmDgram.Kind"/> 和 <see cref="OwRdmDgram"/>中的数据要实现设定好。
+        /// 本函数仅设置 <see cref="OwRdmDgram.Id"/> 和 <see cref="OwRdmDgram.Seq"/> 。
         /// </summary>
         /// <param name="entry"></param>
-        internal virtual void Send(OwUdpDataEntry entry)
+        internal virtual void Send(OwRdmDgram entry)
         {
             entry.Id = _Id.GetValueOrDefault();
             entry.Seq = (int)_Seq.GetValueOrDefault();
@@ -547,13 +505,13 @@ namespace System.Net.Sockets
 
                 Debug.Assert(_UdpClient.Client.RemoteEndPoint.Equals(endPoing));
 
-                var entry = new OwUdpDataEntry
+                var entry = new OwRdmDgram
                 {
                     Buffer = data,
                 };
-                if (entry.Kind.HasFlag(OwUdpDataKind.CommandDgram))  //若是一个命令帧
+                if (entry.Kind.HasFlag(OwRdmDgramKind.CommandDgram))  //若是一个命令帧
                 {
-                    Debug.Assert(entry.Kind.HasFlag(OwUdpDataKind.StartDgram) && entry.Kind.HasFlag(OwUdpDataKind.EndDgram));   //仅能处理单帧命令
+                    Debug.Assert(entry.Kind.HasFlag(OwRdmDgramKind.StartDgram) && entry.Kind.HasFlag(OwRdmDgramKind.EndDgram));   //仅能处理单帧命令
                     OnCommandPkg(entry);
                 }
                 else
@@ -587,9 +545,9 @@ namespace System.Net.Sockets
                 for (var list = GetDram(); list.Count > 0; list = GetDram())    //获取完整包
                 {
                     var totalCount = list.Sum(c => c.Count - 8);  //计算总长度
-                    var buff = OwUdpDataEntry.ToArray(list);
-                    var e = new OwUdpDataReceivedEventArgs { Datas = buff };
-                    list.ForEach(c => OwUdpDataEntry.Return(c));    //回收对象
+                    var buff = OwRdmDgram.ToArray(list);
+                    var e = new OwRdmDataReceivedEventArgs { Datas = buff };
+                    list.ForEach(c => OwRdmDgram.Return(c));    //回收对象
                     OnOwUdpDataReceived(e);
                 }
             }
@@ -600,19 +558,19 @@ namespace System.Net.Sockets
         /// 调用者要锁定<see cref="_RecvData"/>对象才能调用此函数。
         /// </summary>
         /// <returns>如果没有完整数据则返回空集合。</returns>
-        private List<OwUdpDataEntry> GetDram()
+        private List<OwRdmDgram> GetDram()
         {
             Debug.Assert(Monitor.IsEntered(_RecvData));
 
-            List<OwUdpDataEntry> result = new List<OwUdpDataEntry>();
+            List<OwRdmDgram> result = new List<OwRdmDgram>();
             if(_RecvData.IsEmpty) return result;
 
             if (!_RecvData.TryGetValue(_MinSeq, out var firstEntry))
                 firstEntry = null;
             
-            if (firstEntry.Kind.HasFlag(OwUdpDataKind.StartDgram))  //若有起始包标志
+            if (firstEntry.Kind.HasFlag(OwRdmDgramKind.StartDgram))  //若有起始包标志
             {
-                if (firstEntry.Kind.HasFlag(OwUdpDataKind.EndDgram))   //若是单一包
+                if (firstEntry.Kind.HasFlag(OwRdmDgramKind.EndDgram))   //若是单一包
                 {
                     result.Add(firstEntry);
                     if (_RecvData.TryRemove(_MinSeq, out _))    //若移除成功，容错
@@ -629,9 +587,9 @@ namespace System.Net.Sockets
                     {
                         if (!_RecvData.TryGetValue(i, out var dgram))  //若包不连续
                             break;
-                        if (dgram.Kind.HasFlag(OwUdpDataKind.StartDgram))    //若遇到新的起始包
+                        if (dgram.Kind.HasFlag(OwRdmDgramKind.StartDgram))    //若遇到新的起始包
                             break;
-                        if (dgram.Kind.HasFlag(OwUdpDataKind.EndDgram))   //若找到终止包
+                        if (dgram.Kind.HasFlag(OwRdmDgramKind.EndDgram))   //若找到终止包
                         {
                             lastSeq = i;
                             break;
@@ -657,7 +615,7 @@ namespace System.Net.Sockets
         /// 处理命令包。客户端目前仅能处理初始化回置。
         /// </summary>
         /// <param name="entry"></param>
-        internal virtual void OnCommandPkg(OwUdpDataEntry entry)
+        internal virtual void OnCommandPkg(OwRdmDgram entry)
         {
             _Id = entry.Id;
             _Seq = (uint)entry.Seq;
@@ -668,8 +626,8 @@ namespace System.Net.Sockets
         /// <summary>
         /// 有数据到达的事件。此事件可能发生在任何线程。
         /// </summary>
-        public event EventHandler<OwUdpDataReceivedEventArgs> OwUdpDataReceived;
-        protected virtual void OnOwUdpDataReceived(OwUdpDataReceivedEventArgs e) => OwUdpDataReceived?.Invoke(this, e);
+        public event EventHandler<OwRdmDataReceivedEventArgs> OwUdpDataReceived;
+        protected virtual void OnOwUdpDataReceived(OwRdmDataReceivedEventArgs e) => OwUdpDataReceived?.Invoke(this, e);
         #endregion 事件及相关
 
         #region IDisposable接口相关
