@@ -101,15 +101,13 @@ namespace System.Net.Sockets
             _Socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             _Socket.Bind(new IPEndPoint(IPAddress.Parse(_Options.Value.ListernAddress), _Options.Value.ListernPort));
 
-            var dgram = OwRdmDgram.Rent();
-            SocketAsyncEventArgs eventArgs = new SocketAsyncEventArgs
+            for (int i = 0; i < 2; i++) //暂定使用两个侦听，避免漏接
             {
-                UserToken = dgram, //试图回收此数据帧
-                RemoteEndPoint = new IPEndPoint(IPAddress.Any, 0),
-            };
-            eventArgs.SetBuffer(dgram.Buffer, dgram.Offset, dgram.Count);
-            eventArgs.Completed += IO_Completed;
-            _Socket.ReceiveMessageFromAsync(eventArgs);
+                SocketAsyncEventArgs e = new SocketAsyncEventArgs();
+                e.Completed += IO_Completed;
+                ReceiveFromAsync(e);
+            }
+
         }
 
         #region 属性及相关
@@ -128,7 +126,6 @@ namespace System.Net.Sockets
         /// 允许通知使用者应用程序生存期事件。
         /// </summary>
         IHostApplicationLifetime _HostApplicationLifetime;
-        ObjectPool<OwRdmDgram> _EntryPool = ObjectPool.Create(new DefaultPooledObjectPolicy<OwRdmDgram>());
 
         /// <summary>
         /// 每个客户端的信息。
@@ -141,12 +138,19 @@ namespace System.Net.Sockets
         Socket _Socket;
 
         /// <summary>
+        /// 已经使用的最大Id值。
+        /// </summary>
+        int _MaxId;
+
+        /// <summary>
         /// 侦听的端点。
         /// </summary>
         public EndPoint ListernEndPoing { get => _Socket.LocalEndPoint; }
         #endregion 属性及相关
 
         #region 方法
+
+        #region 发送及相关
 
         public void Send(byte[] buffer, int startIndex, int count, int id)
         {
@@ -200,9 +204,33 @@ namespace System.Net.Sockets
                 var willRaiseEvent = _Socket.SendToAsync(e);    //如果 I/O 操作挂起，则为 true。 操作完成时，将引发 e 参数的 Completed 事件。
                 //如果 I/O 操作同步完成，则为 false。
                 //在这种情况下，将不会引发 e 参数的 Completed 事件，并且可能在方法调用返回后立即检查作为参数传递的 e 对象以检索操作的结果。
-                if (!willRaiseEvent) ProcessSendTo(e);
+                if (!willRaiseEvent) Task.Factory.StartNew(() => ProcessSendTo(e), TaskCreationOptions.PreferFairness);
             }
         }
+
+        /// <summary>
+        /// 处理已经发送的情况。
+        /// </summary>
+        /// <param name="e"></param>
+        private void ProcessSendTo(SocketAsyncEventArgs e)
+        {
+            if (e.SocketError == SocketError.Success)
+            {
+                // done echoing data back to the client
+                var dgram = (OwRdmDgram)e.UserToken;
+                // read the next block of data send from the client
+                using var dw = GetOrAddEntry(dgram.Id, out var entry, Timeout.InfiniteTimeSpan);
+                Trace.Assert(!dw.IsEmpty);
+                dgram.FirstSendDateTime = DateTime.UtcNow;
+                AddDgram(dgram, entry.SendedData);  //追加到已发送数据的链表
+            }
+            else
+            {
+                ProcessError(e);
+            }
+        }
+
+        #endregion 发送及相关
 
         /// <summary>
         /// 在指定链表中增加一项数据，并使之按Seq升序排序。
@@ -229,7 +257,7 @@ namespace System.Net.Sockets
         }
 
         /// <summary>
-        /// 获取指定Id的远程端点信息，并锁定返回。
+        /// 获取指定Id的远程端点信息，锁定并返回。
         /// </summary>
         /// <param name="id"></param>
         /// <param name="entry"></param>
@@ -282,9 +310,18 @@ namespace System.Net.Sockets
         }
 
         /// <summary>
-        /// 按包序号排序的比较器。
+        /// 用指定的参数进行异步侦听。
         /// </summary>
-        Comparer<OwRdmDgram> _Comp = Comparer<OwRdmDgram>.Create((l, r) => Comparer<uint>.Default.Compare((uint)l.Seq, (uint)r.Seq));
+        /// <param name="e">需要设置好侦听事件，其它参数会自动设置。</param>
+        private void ReceiveFromAsync(SocketAsyncEventArgs e)
+        {
+            var dgram = OwRdmDgram.Rent();
+            e.UserToken = dgram;
+            e.SetBuffer(dgram.Buffer, dgram.Offset, dgram.Count);
+            e.RemoteEndPoint = new IPEndPoint(IPAddress.Any, 0);
+            bool willRaiseEvent = _Socket.ReceiveFromAsync(e);
+            if (!willRaiseEvent) Task.Factory.StartNew(c => ProcessReceive(c as SocketAsyncEventArgs), e, TaskCreationOptions.PreferFairness);
+        }
 
         /// <summary>
         /// 处理已接受到数据的情况。
@@ -298,66 +335,60 @@ namespace System.Net.Sockets
                 //increment the count of the total bytes receive by the server
                 //Interlocked.Add(ref m_totalBytesRead, e.BytesTransferred);
                 //Console.WriteLine("The server has read a total of {0} bytes", m_totalBytesRead);
-
-                //echo the data received back to the client
-                var entry = _EntryPool.Get();
-                entry.Buffer = e.Buffer;
-                entry.Offset = e.Offset;
-                entry.Count = e.BytesTransferred;
-                var clientEntry = _Id2ClientEntry.GetOrAdd(entry.Id, c => new OwRdmRemoteEntry() { Id = c });
-                lock (clientEntry)
-                {
-                    var now = OwHelper.WorldNow;
-                    //if (clientEntry.LastReciveWorldDateTime < now)
-                    //    clientEntry.LastReciveWorldDateTime = OwHelper.WorldNow;
-                    //var kind = (OwRdmDgramKind)entry.Buffer[entry.Offset];
-                    //if (kind.HasFlag(OwRdmDgramKind.CommandDgram))    //若是命令包
-                    //{
-
-                    //}
-                    //var list = clientEntry.ReciveData;
-                    //var index = list.BinarySearch(entry, _Comp);
-                    //if (index < 0)   //若包未到达,忽略重复包
-                    //{
-                    //    list.Insert(~index, entry);
-                    //    var ints = new PriorityQueue<int, int>(1);
-
-                    //}
-                }
-
+                var dg = (OwRdmDgram)e.UserToken;
+                var remote = e.RemoteEndPoint as IPEndPoint;
+                var count = e.BytesTransferred;
                 //重新侦听
-                e.SetBuffer(ArrayPool<byte>.Shared.Rent(OwRdmDgram.Mtu), 0, OwRdmDgram.Mtu);
-                var socket = (Socket)e.UserToken;
-                bool willRaiseEvent = socket.ReceiveAsync(e);
-                if (!willRaiseEvent)
-                {
-                    ProcessReceive(e);
-                }
-            }
-            else
-            {
-                ProcessError(e);
-            }
-        }
+                ReceiveFromAsync(e);
 
-        /// <summary>
-        /// 处理已经发送的情况。
-        /// </summary>
-        /// <param name="e"></param>
-        private void ProcessSendTo(SocketAsyncEventArgs e)
-        {
-            if (e.SocketError == SocketError.Success)
-            {
-                // done echoing data back to the client
-                var dgram = (OwRdmDgram)e.UserToken;
-                // read the next block of data send from the client
-                using var dw = GetOrAddEntry(dgram.Id, out var entry, Timeout.InfiniteTimeSpan);
-                Trace.Assert(!dw.IsEmpty);
-                AddDgram(dgram, entry.SendedData);
+                if (dg.Kind.HasFlag(OwRdmDgramKind.CommandDgram))    //若是命令帧
+                {
+                    if (dg.Id == 0) //若是试图连接的帧
+                    {
+                        //构造新入口
+                        var id = Interlocked.Increment(ref _MaxId);
+                        var clientEntry = _Id2ClientEntry.GetOrAdd(id, c => new OwRdmRemoteEntry()
+                        {
+                            Id = c,
+                            RemoteEndPoint = remote,
+                            LastReceivedUtc = DateTime.UtcNow,
+                            MaxSeq = 0,
+                            RemoteMaxReceivedSeq = 0,
+                        });
+                        //回应
+                        using var dw = GetOrAddEntry(dg.Id, out clientEntry, Timeout.InfiniteTimeSpan);
+                        Trace.Assert(!dw.IsEmpty);
+                        var dgram = OwRdmDgram.Rent();
+                        _Socket.SendToAsync(new ArraySegment<byte>(dgram.Buffer, dgram.Offset, dgram.Count), SocketFlags.None, clientEntry.RemoteEndPoint);
+                    }
+                    else if (_Id2ClientEntry.ContainsKey(dg.Id)) //若是确认帧
+                    {
+                        using var dw = GetOrAddEntry(dg.Id, out var clientEntry, Timeout.InfiniteTimeSpan);
+                        Trace.Assert(!dw.IsEmpty);
+                        if (clientEntry.RemoteEndPoint is not null && clientEntry.RemoteMaxReceivedSeq < dg.Seq) //若需要处理该确认帧
+                        {
+                            for (var node = clientEntry.SendedData.First; node != null && node.Value.Seq <= dg.Seq; //若需要清理掉的帧
+                                node = node.Next)
+                            {
+                                var tmp = node.Value;
+                                clientEntry.SendedData.Remove(node);
+                                OwRdmDgram.Return(tmp);
+                            }
+                        }
+                    }
+                    OwRdmDgram.Return(dg);
+                }
+                else
+                {
+                    //暂时忽略其它帧
+                }
+
             }
             else
             {
                 ProcessError(e);
+                //重新侦听
+                ReceiveFromAsync(e);
             }
         }
 
@@ -459,6 +490,9 @@ namespace System.Net.Sockets
                 case SocketError.NoRecovery:
 
                 case SocketError.NoData:
+                    _Logger.LogWarning("Rdm传输发生错误——{err}", e.SocketError.ToString());
+                    if (!_HostApplicationLifetime.ApplicationStopping.IsCancellationRequested)
+                        OwRdmClient.ResetError(_Socket);
                     break;
             }
         }
@@ -466,7 +500,22 @@ namespace System.Net.Sockets
 
         protected override void Dispose(bool disposing)
         {
+            if (disposing)
+            {
+                _Socket?.Shutdown(SocketShutdown.Both);
+                _Socket.Dispose();
+            }
+            //将大型字段设置为null以便于释放空间
+            _Socket = null;
             base.Dispose(disposing);
+        }
+    }
+
+    public class TestOwRdm
+    {
+        public void Test()
+        {
+
         }
     }
 }

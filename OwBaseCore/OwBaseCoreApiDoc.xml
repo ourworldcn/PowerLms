@@ -1365,6 +1365,19 @@
             <returns></returns>
             <exception cref="T:System.ArgumentException">找不到属性。</exception>
         </member>
+        <member name="T:System.Net.Sockets.SocketAsyncWrapper">
+            <summary>
+            包装一个socket对象， 提供基于 SocketAsyncEventArgs 收发功能的简化。
+            </summary>
+            <remarks>如果使用面向连接的协议（如 TCP），则用于 ConnectAsync 与侦听主机连接。 使用 SendAsync 或 ReceiveAsync 异步通信数据。 可以使用 AcceptAsync.. 处理传入的连接请求。
+            如果使用无连接协议（如 UDP），则可以用于 SendToAsync 发送数据报和 ReceiveFromAsync接收数据报。</remarks>
+        </member>
+        <member name="M:System.Net.Sockets.SocketAsyncWrapper.ProcessError(System.Net.Sockets.SocketAsyncEventArgs)">
+            <summary>
+            处理错误。
+            </summary>
+            <param name="e"></param>
+        </member>
         <member name="T:System.Net.Sockets.OwRdmDgramKind">
             <summary>
             封装的第一个标志字节。
@@ -1407,7 +1420,7 @@
             检索的缓冲区。
             此缓冲区将借给调用方，应使用 Return 方法返回，以便在后续调用 Rent 方法时重复使用。 
             无法返回租用的缓冲区不是致命错误。 但是，这可能会导致应用程序性能下降，因为池可能需要创建新的缓冲区来替换丢失的缓冲区。
-            此方法返回的数组可能不是零初始化的。
+            此方法返回的数组是用零初始化的。
             </summary>
             <returns></returns>
         </member>
@@ -1508,7 +1521,12 @@
         </member>
         <member name="P:System.Net.Sockets.OwRdmDataReceivedEventArgs.Datas">
             <summary>
-            
+            收到的数据。
+            </summary>
+        </member>
+        <member name="P:System.Net.Sockets.OwRdmDataReceivedEventArgs.RemoteEndPoing">
+            <summary>
+            远程端点网络地址。当前总是 <see cref="T:System.Net.IPEndPoint"/> 类。
             </summary>
         </member>
         <member name="T:System.Net.Sockets.OwRdmClient">
@@ -1530,6 +1548,11 @@
         <member name="F:System.Net.Sockets.OwRdmClient._Seq">
             <summary>
             当前收到的最大连续包号。
+            </summary>
+        </member>
+        <member name="F:System.Net.Sockets.OwRdmClient._RemoteEndPoing">
+            <summary>
+            连接的服务器端地址。
             </summary>
         </member>
         <member name="F:System.Net.Sockets.OwRdmClient._RecvData">
@@ -1562,25 +1585,11 @@
             后台线程已经完成操作。
             </summary>
         </member>
-        <member name="M:System.Net.Sockets.OwRdmClient.IncrementInt31(System.Int32@)">
-            <summary>
-            原子递增一个31位整数，当由<see cref="F:System.Int32.MaxValue"/>回绕到<see cref="F:System.Int32.MinValue"/>时自动设置为0。
-            </summary>
-            <param name="i"></param>
-            <returns></returns>
-        </member>
         <member name="M:System.Net.Sockets.OwRdmClient.ResetError(System.Net.Sockets.Socket)">
             <summary>
             
             </summary>
             <param name="socket"></param>
-        </member>
-        <member name="M:System.Net.Sockets.OwRdmClient.IncrementUInt32(System.Int32@)">
-            <summary>
-            
-            </summary>
-            <param name="i"></param>
-            <returns></returns>
         </member>
         <member name="M:System.Net.Sockets.OwRdmClient.Start(System.String,System.Int16)">
             <summary>
@@ -1731,6 +1740,11 @@
             使用Socket对象。
             </summary>
         </member>
+        <member name="F:System.Net.Sockets.OwRdmServer._MaxId">
+            <summary>
+            已经使用的最大Id值。
+            </summary>
+        </member>
         <member name="P:System.Net.Sockets.OwRdmServer.ListernEndPoing">
             <summary>
             侦听的端点。
@@ -1743,6 +1757,12 @@
             <param name="dgram">必须设置有效属性包括 Id 和 Seq。成功调用本函数后，此对象被接管，调用者不可用。
             应尽可能使用<see cref="M:System.Net.Sockets.OwRdmDgram.Rent"/>获取，本类会在不使用后用 <see cref="M:System.Net.Sockets.OwRdmDgram.Return(System.Net.Sockets.OwRdmDgram)"/> 放入池中。 </param>
         </member>
+        <member name="M:System.Net.Sockets.OwRdmServer.ProcessSendTo(System.Net.Sockets.SocketAsyncEventArgs)">
+            <summary>
+            处理已经发送的情况。
+            </summary>
+            <param name="e"></param>
+        </member>
         <member name="M:System.Net.Sockets.OwRdmServer.AddDgram(System.Net.Sockets.OwRdmDgram,System.Collections.Generic.LinkedList{System.Net.Sockets.OwRdmDgram})">
             <summary>
             在指定链表中增加一项数据，并使之按Seq升序排序。
@@ -1754,27 +1774,22 @@
         </member>
         <member name="M:System.Net.Sockets.OwRdmServer.GetOrAddEntry(System.Int32,System.Net.Sockets.OwRdmRemoteEntry@,System.TimeSpan)">
             <summary>
-            获取指定Id的远程端点信息，并锁定返回。
+            获取指定Id的远程端点信息，锁定并返回。
             </summary>
             <param name="id"></param>
             <param name="entry"></param>
             <param name="timeSpan"></param>
             <returns></returns>
         </member>
-        <member name="F:System.Net.Sockets.OwRdmServer._Comp">
+        <member name="M:System.Net.Sockets.OwRdmServer.ReceiveFromAsync(System.Net.Sockets.SocketAsyncEventArgs)">
             <summary>
-            按包序号排序的比较器。
+            用指定的参数进行异步侦听。
             </summary>
+            <param name="e">需要设置好侦听事件，其它参数会自动设置。</param>
         </member>
         <member name="M:System.Net.Sockets.OwRdmServer.ProcessReceive(System.Net.Sockets.SocketAsyncEventArgs)">
             <summary>
             处理已接受到数据的情况。
-            </summary>
-            <param name="e"></param>
-        </member>
-        <member name="M:System.Net.Sockets.OwRdmServer.ProcessSendTo(System.Net.Sockets.SocketAsyncEventArgs)">
-            <summary>
-            处理已经发送的情况。
             </summary>
             <param name="e"></param>
         </member>

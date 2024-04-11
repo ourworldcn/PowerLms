@@ -9,6 +9,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
 /*
@@ -27,6 +28,200 @@ using Microsoft.Extensions.Options;
 
 namespace System.Net.Sockets
 {
+    /// <summary>
+    /// 包装一个socket对象， 提供基于 SocketAsyncEventArgs 收发功能的简化。
+    /// </summary>
+    /// <remarks>如果使用面向连接的协议（如 TCP），则用于 ConnectAsync 与侦听主机连接。 使用 SendAsync 或 ReceiveAsync 异步通信数据。 可以使用 AcceptAsync.. 处理传入的连接请求。
+    /// 如果使用无连接协议（如 UDP），则可以用于 SendToAsync 发送数据报和 ReceiveFromAsync接收数据报。</remarks>
+    public abstract class SocketAsyncWrapper
+    {
+        ConcurrentStack<SocketAsyncEventArgs> _Pool = new ConcurrentStack<SocketAsyncEventArgs>();
+
+        public SocketAsyncEventArgs Rent()
+        {
+            if (!_Pool.TryPop(out var result))
+            {
+                result = new SocketAsyncEventArgs();
+                result.Completed += IO_Completed;
+            }
+            return result;
+        }
+
+        public void Return(SocketAsyncEventArgs eventArgs)
+        {
+            _Pool.Push(eventArgs); eventArgs.SetBuffer(Memory<byte>.Empty);
+        }
+
+        public SocketAsyncWrapper(Socket socket)
+        {
+            _Socket = socket;
+            _Socket.ReceiveBufferSize = Math.Max(_Socket.ReceiveBufferSize, Environment.ProcessorCount * Environment.SystemPageSize);
+        }
+
+        Socket _Socket;
+
+        void IO_Completed(object sender, SocketAsyncEventArgs e)
+        {
+            // determine which type of operation just completed and call the associated handler
+            if (e.SocketError != SocketError.Success)
+                ProcessError(e);
+            else
+                switch (e.LastOperation)
+                {
+                    case SocketAsyncOperation.None:
+                        break;
+                    case SocketAsyncOperation.Accept:
+                        break;
+                    case SocketAsyncOperation.Connect:
+                        break;
+                    case SocketAsyncOperation.Disconnect:
+                        break;
+                    case SocketAsyncOperation.Receive:
+                        break;
+                    case SocketAsyncOperation.ReceiveFrom:
+                        ProcessReceiveFrom(e);
+                        break;
+                    case SocketAsyncOperation.ReceiveMessageFrom:
+                        break;
+                    case SocketAsyncOperation.Send:
+                        break;
+                    case SocketAsyncOperation.SendPackets:
+                        break;
+                    case SocketAsyncOperation.SendTo:
+                        ProcessSendTo(e);
+                        break;
+                    default:
+                        throw new ArgumentException("The last operation completed on the socket was not a receive or send");
+                }
+        }
+
+        public void SendToAsync(Span<byte> buffer, EndPoint remote)
+        {
+        }
+
+        public void ReceiveFromAsync(EndPoint remote)
+        {
+
+        }
+
+        protected virtual void ProcessSendTo(SocketAsyncEventArgs e)
+        {
+        }
+
+        protected virtual void ProcessReceiveFrom(SocketAsyncEventArgs e)
+        {
+            _Socket.ReceiveFromAsync(e);
+        }
+
+        protected abstract void ProcessReceiveFrom(ArraySegment<byte> buffer, EndPoint remote);
+
+        /// <summary>
+        /// 处理错误。
+        /// </summary>
+        /// <param name="e"></param>
+        protected virtual void ProcessError(SocketAsyncEventArgs e)
+        {
+            switch (e.SocketError)
+            {
+                case SocketError.Success:
+                case SocketError.Shutdown:
+                case SocketError.ConnectionAborted:
+                    break;
+                case SocketError.SocketError:
+                case SocketError.OperationAborted:
+
+                case SocketError.IOPending:
+
+                case SocketError.Interrupted:
+
+                case SocketError.AccessDenied:
+
+                case SocketError.Fault:
+
+                case SocketError.InvalidArgument:
+
+                case SocketError.TooManyOpenSockets:
+
+                case SocketError.WouldBlock:
+
+                case SocketError.InProgress:
+
+                case SocketError.AlreadyInProgress:
+
+                case SocketError.NotSocket:
+
+                case SocketError.DestinationAddressRequired:
+
+                case SocketError.MessageSize:
+
+                case SocketError.ProtocolType:
+
+                case SocketError.ProtocolOption:
+
+                case SocketError.ProtocolNotSupported:
+
+                case SocketError.SocketNotSupported:
+
+                case SocketError.OperationNotSupported:
+
+                case SocketError.ProtocolFamilyNotSupported:
+
+                case SocketError.AddressFamilyNotSupported:
+
+                case SocketError.AddressAlreadyInUse:
+
+                case SocketError.AddressNotAvailable:
+
+                case SocketError.NetworkDown:
+
+                case SocketError.NetworkUnreachable:
+
+                case SocketError.NetworkReset:
+
+                case SocketError.ConnectionReset:
+
+                case SocketError.NoBufferSpaceAvailable:
+
+                case SocketError.IsConnected:
+
+                case SocketError.NotConnected:
+
+                case SocketError.TimedOut:
+
+                case SocketError.ConnectionRefused:
+
+                case SocketError.HostDown:
+
+                case SocketError.HostUnreachable:
+
+                case SocketError.ProcessLimit:
+
+                case SocketError.SystemNotReady:
+
+                case SocketError.VersionNotSupported:
+
+                case SocketError.NotInitialized:
+
+                case SocketError.Disconnecting:
+
+                case SocketError.TypeNotFound:
+
+                case SocketError.HostNotFound:
+
+                case SocketError.TryAgain:
+
+                case SocketError.NoRecovery:
+
+                case SocketError.NoData:
+                    //_Logger.LogWarning("Rdm传输发生错误——{err}", e.SocketError.ToString());
+                    //if (!_HostApplicationLifetime.ApplicationStopping.IsCancellationRequested)
+                    //    OwRdmClient.ResetError(_Socket);
+                    break;
+            }
+        }
+
+    }
+
     /// <summary>
     /// 封装的第一个标志字节。
     /// </summary>
@@ -75,7 +270,7 @@ namespace System.Net.Sockets
         /// 检索的缓冲区。
         /// 此缓冲区将借给调用方，应使用 Return 方法返回，以便在后续调用 Rent 方法时重复使用。 
         /// 无法返回租用的缓冲区不是致命错误。 但是，这可能会导致应用程序性能下降，因为池可能需要创建新的缓冲区来替换丢失的缓冲区。
-        /// 此方法返回的数组可能不是零初始化的。
+        /// 此方法返回的数组是用零初始化的。
         /// </summary>
         /// <returns></returns>
         public static OwRdmDgram Rent()
@@ -262,9 +457,14 @@ namespace System.Net.Sockets
         }
 
         /// <summary>
-        /// 
+        /// 收到的数据。
         /// </summary>
         public byte[] Datas { get; set; }
+
+        /// <summary>
+        /// 远程端点网络地址。当前总是 <see cref="IPEndPoint"/> 类。
+        /// </summary>
+        public EndPoint RemoteEndPoing { get; set; }
     }
 
     /// <summary>
@@ -292,6 +492,11 @@ namespace System.Net.Sockets
         uint? _Seq;
 
         UdpClient _UdpClient;
+
+        /// <summary>
+        /// 连接的服务器端地址。
+        /// </summary>
+        IPEndPoint _RemoteEndPoing;
 
         /// <summary>
         /// 接受数据的缓存队列。键是包序号 ，值数据条目。需要锁定使用。
@@ -326,24 +531,6 @@ namespace System.Net.Sockets
         #region 静态方法
 
         /// <summary>
-        /// 原子递增一个31位整数，当由<see cref="int.MaxValue"/>回绕到<see cref="int.MinValue"/>时自动设置为0。
-        /// </summary>
-        /// <param name="i"></param>
-        /// <returns></returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int IncrementInt31(ref int i)
-        {
-            var result = Interlocked.Increment(ref i);
-            if (result < 0)
-            {
-                var tmp = result & 0x7fff_ffff;
-                Interlocked.CompareExchange(ref i, tmp, result);
-                return tmp;
-            }
-            return result;
-        }
-
-        /// <summary>
         /// 
         /// </summary>
         /// <param name="socket"></param>
@@ -355,16 +542,6 @@ namespace System.Net.Sockets
             socket.IOControl(unchecked((int)IOC_UDP_RESET), new byte[] { Convert.ToByte(false) }, null);
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="i"></param>
-        /// <returns></returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static uint IncrementUInt32(ref int i)
-        {
-            return (uint)Interlocked.Increment(ref i);
-        }
         #endregion 静态方法
 
         /// <summary>
@@ -379,6 +556,7 @@ namespace System.Net.Sockets
             _Stopping = new CancellationTokenSource();
             _Stopped = new CancellationTokenSource();
             Connect(server, port);
+
             _IoTask = Task.Run(IoWorker);
         }
 
@@ -546,7 +724,11 @@ namespace System.Net.Sockets
                 {
                     var totalCount = list.Sum(c => c.Count - 8);  //计算总长度
                     var buff = OwRdmDgram.ToArray(list);
-                    var e = new OwRdmDataReceivedEventArgs { Datas = buff };
+                    var e = new OwRdmDataReceivedEventArgs
+                    {
+                        Datas = buff,
+                        RemoteEndPoing = _RemoteEndPoing,
+                    };
                     list.ForEach(c => OwRdmDgram.Return(c));    //回收对象
                     OnOwUdpDataReceived(e);
                 }
@@ -563,11 +745,11 @@ namespace System.Net.Sockets
             Debug.Assert(Monitor.IsEntered(_RecvData));
 
             List<OwRdmDgram> result = new List<OwRdmDgram>();
-            if(_RecvData.IsEmpty) return result;
+            if (_RecvData.IsEmpty) return result;
 
             if (!_RecvData.TryGetValue(_MinSeq, out var firstEntry))
                 firstEntry = null;
-            
+
             if (firstEntry.Kind.HasFlag(OwRdmDgramKind.StartDgram))  //若有起始包标志
             {
                 if (firstEntry.Kind.HasFlag(OwRdmDgramKind.EndDgram))   //若是单一包

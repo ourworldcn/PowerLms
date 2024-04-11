@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 
 namespace System.Net.Sockets
 {
-
     public class OwUdpClientOptions : IOptions<OwUdpClientOptions>
     {
         public OwUdpClientOptions()
