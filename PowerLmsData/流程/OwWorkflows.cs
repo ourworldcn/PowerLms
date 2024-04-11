@@ -9,20 +9,12 @@ using System.Threading.Tasks;
 
 namespace PowerLms.Data
 {
-    /// <summary>
-    /// 工作流模板主数据类。
-    /// </summary>
-    [Index(nameof(WfType), nameof(DocTypeCode), nameof(CurrentNodeId))]
     public class OwWorkflowTemplate : GuidKeyObjectBase
     {
-        public OwWorkflowTemplate()
-        {
-        }
-
         /// <summary>
-        /// 类型，目前保留为0。预计1=抄送，即会在文档转向下一个节点成功时，会抄送到某些节点，但并不需要这些节点进行动作。
+        /// 机构Id。
         /// </summary>
-        public byte WfType { get; set; }
+        public Guid? OrgId { get; set; }
 
         /// <summary>
         /// 文档类型Id。文档的类型Code,系统多方预先约定好，所有商户公用，最长16个字符，仅支持英文。
@@ -31,16 +23,67 @@ namespace PowerLms.Data
         public string DocTypeCode { get; set; }
 
         /// <summary>
+        /// 此流转的显示名。
+        /// </summary>
+        public string DisplayName { get; set; }
+
+
+    }
+
+    /// <summary>
+    /// 工作流模板主数据类。
+    /// </summary>
+    [Index(nameof(WfNodeType), nameof(CurrentNodeId))]
+    public class OwWorkflowTemplateNode : GuidKeyObjectBase
+    {
+        public OwWorkflowTemplateNode()
+        {
+        }
+
+        /// <summary>
+        /// 流程Id。
+        /// </summary>
+        public Guid ParentId { get; set; }
+
+        /// <summary>
+        /// 类型，目前保留为0。预计1=抄送，即会在文档转向下一个节点成功时，会抄送到某些节点，但并不需要这些节点进行动作。
+        /// </summary>
+        public byte WfNodeType { get; set; }
+
+        /// <summary>
         /// 当前所处节点Id。通常都是职员Id。遇特殊情况，工作流引擎自行解释。
-        /// 这是自父子关系的多方。即多个结点将归属到一个节点。
         /// </summary>
         public Guid CurrentNodeId { get; set; }
 
+
         /// <summary>
         /// 下一个节点的Id。通常都是职员Id。遇特殊情况，工作流引擎自行解释。
-        /// 这是自父子关系的多方。即多个结点将归属到一个节点。
         /// </summary>
+        /// <remarks>如:
+        /// <c>
+        /// a1,a2 => b1(0),x(1)
+        /// x=>c1
+        /// a3,a4=>b2
+        /// b1,b2=>c1
+        /// c1=>vp1
+        /// vp1=>ceo
+        /// </c></remarks>
         public Guid? NextNodeId { get; set; }
+
+        /// <summary>
+        /// 优先度。0最高，1其次，以此类推
+        /// </summary>
+        public int Prioriteit { get; set; }
+
+        /// <summary>
+        /// 拒绝后的操作，1 = 终止,2=回退
+        /// </summary>
+        public byte RejectOpertion { get; set; }
+
+        /// <summary>
+        /// 此流转的显示名。
+        /// </summary>
+        public string DisplayName { get; set; }
 
         #region 前/后置守卫条件
 
@@ -87,10 +130,20 @@ namespace PowerLms.Data
         /// 与 DocId 形成联合主键。
         /// </summary>
         public Guid CurrentNodeId { get; set; }
+
+        /// <summary>
+        /// 审核批示。
+        /// </summary>
+        public string Comment { get; set; }
+
+        /// <summary>
+        /// 是否审核通过。
+        /// </summary>
+        public bool IsSuccess { get; set; }
     }
 
     /// <summary>
-    /// 工作流历史记录，当前未启用。
+    /// 工作流历史记录。
     /// </summary>
     public class OwWorkflowHistory
     {

@@ -2412,14 +2412,9 @@
             创建的时间。
             </summary>
         </member>
-        <member name="T:PowerLms.Data.OwWorkflowTemplate">
+        <member name="P:PowerLms.Data.OwWorkflowTemplate.OrgId">
             <summary>
-            工作流模板主数据类。
-            </summary>
-        </member>
-        <member name="P:PowerLms.Data.OwWorkflowTemplate.WfType">
-            <summary>
-            类型，目前保留为0。预计1=抄送，即会在文档转向下一个节点成功时，会抄送到某些节点，但并不需要这些节点进行动作。
+            机构Id。
             </summary>
         </member>
         <member name="P:PowerLms.Data.OwWorkflowTemplate.DocTypeCode">
@@ -2427,19 +2422,61 @@
             文档类型Id。文档的类型Code,系统多方预先约定好，所有商户公用，最长16个字符，仅支持英文。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.OwWorkflowTemplate.CurrentNodeId">
+        <member name="P:PowerLms.Data.OwWorkflowTemplate.DisplayName">
+            <summary>
+            此流转的显示名。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.OwWorkflowTemplateNode">
+            <summary>
+            工作流模板主数据类。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwWorkflowTemplateNode.ParentId">
+            <summary>
+            流程Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwWorkflowTemplateNode.WfNodeType">
+            <summary>
+            类型，目前保留为0。预计1=抄送，即会在文档转向下一个节点成功时，会抄送到某些节点，但并不需要这些节点进行动作。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwWorkflowTemplateNode.CurrentNodeId">
             <summary>
             当前所处节点Id。通常都是职员Id。遇特殊情况，工作流引擎自行解释。
-            这是自父子关系的多方。即多个结点将归属到一个节点。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.OwWorkflowTemplate.NextNodeId">
+        <member name="P:PowerLms.Data.OwWorkflowTemplateNode.NextNodeId">
             <summary>
             下一个节点的Id。通常都是职员Id。遇特殊情况，工作流引擎自行解释。
-            这是自父子关系的多方。即多个结点将归属到一个节点。
+            </summary>
+            <remarks>如:
+            <c>
+            a1,a2 => b1(0),x(1)
+            x=>c1
+            a3,a4=>b2
+            b1,b2=>c1
+            c1=>vp1
+            vp1=>ceo
+            </c></remarks>
+        </member>
+        <member name="P:PowerLms.Data.OwWorkflowTemplateNode.Prioriteit">
+            <summary>
+            优先度。0最高，1其次，以此类推
             </summary>
         </member>
-        <member name="P:PowerLms.Data.OwWorkflowTemplate.GuardJsonString">
+        <member name="P:PowerLms.Data.OwWorkflowTemplateNode.RejectOpertion">
+            <summary>
+            拒绝后的操作，1 = 终止,2=回退
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwWorkflowTemplateNode.DisplayName">
+            <summary>
+            此流转的显示名。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwWorkflowTemplateNode.GuardJsonString">
             <summary>
             前/后置守卫条件的Json字符串。
             </summary>
@@ -2481,9 +2518,19 @@
             与 DocId 形成联合主键。
             </summary>
         </member>
+        <member name="P:PowerLms.Data.OwWorkflow.Comment">
+            <summary>
+            审核批示。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwWorkflow.IsSuccess">
+            <summary>
+            是否审核通过。
+            </summary>
+        </member>
         <member name="T:PowerLms.Data.OwWorkflowHistory">
             <summary>
-            工作流历史记录，当前未启用。
+            工作流历史记录。
             </summary>
         </member>
         <member name="P:PowerLms.Data.OwWorkflowHistory.DocId">
