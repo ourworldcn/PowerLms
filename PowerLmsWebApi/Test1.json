@@ -1,63 +1,19 @@
-{
-  "Genus": [ "gs_shoucong", "fb_goumai" ],
-  "ShoppingItem": {
-    "Period": {
-      "Start": "2023-05-30T00:00:00.000Z",
-      "End": null,
-      "PeriodString": "1m",
-      "ValidPeriodString": "1m"
+[
+  {
+    "NumberCondition": {
+      "PropertyName": "Count",
+      "MinValue": 0,
+      "MaxValue": null,
+      "Subtrahend": 0,
+      "Modulus": 42,
+      "MinRemainder": 0,
+      "MaxRemainder": 6
     },
-    "GroupNumber": 0,
-    "MaxCount": 1,
-    "Ins": [
-      {
-        "Conditional": [
-          {
-            "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-            "Genus": [],
-            "TId": "d577e084-4aa4-44d9-9510-20ccea041375",
-            "MinCount": 1,
-            "GeneralConditional": [],
-            "GroupMask": 1
-          }
-        ],
-        "Count": 1,
-        "Genus": []
-      }
-    ],
-    "Outs": [
-      {
-        "Id": null,
-        "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-        "TId": "c9575f24-a33d-49ba-b130-29b6ff4d62c7",
-        "Count": 100
-      },
-      {
-        "Id": null,
-        "ParentTId": "9c559895-9a2c-43a7-b793-e879a600487c",
-        "TId": "2e877976-2d3d-4e7e-8851-07163216319a",
-        "Count": 5
-      },
-      {
-        "Id": null,
-        "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-        "TId": "a45b3421-3688-43c5-b8f5-429db7621f69",
-        "Count": 20000
-      },
-      {
-        "Id": null,
-        "ParentTId": "e6edab87-0034-4f45-8040-1f0d565ccf58",
-        "TId": "fa658261-f1b7-4d6e-8633-27873eac7995",
-        "Count": 1
-      }
-    ]
+    "其它条件类型": {
+      //保留将来添加可能
+    }
   },
-  "productStoreId": "com.duangphl.07",
-  "productAmount": 59,
-  "currencyCode": "PHP",
-  "currencyMark": "₱",
-  "productName": "首充礼包",
-  "productType": "礼包",
-  "productDesc": "超值礼包不容错过",
-  "JiaoBiao": [ "ZheKou60", 10985 ]
-}
+  { //多个条件，与关系
+
+  }
+]

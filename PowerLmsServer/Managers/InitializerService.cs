@@ -50,7 +50,7 @@ namespace PowerLmsServer.Managers
         protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
             CreateDb();
-            var task= Task.Run(() =>
+            var task = Task.Run(() =>
             {
                 using var scope = _ServiceScopeFactory.CreateScope();
                 var svc = scope.ServiceProvider;
@@ -165,8 +165,9 @@ namespace PowerLmsServer.Managers
             //    else
             //        sb.Append($"{item.Key}=0 or ");
             //}
-
-            var ss = db.PlCustomers.Where(c=>c.IsAirway);
+            int? i1 = 2;
+            var d1 = Convert.ToDecimal(OwHelper.WorldNow.ToBinary());
+            var ss = db.PlCustomers.Where(c => c.IsAirway);
             var str = ss.ToQueryString();
 
             sb.Remove(sb.Length - 6, 6);    //获得条件

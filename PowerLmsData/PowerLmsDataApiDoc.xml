@@ -2412,6 +2412,95 @@
             创建的时间。
             </summary>
         </member>
+        <member name="T:PowerLms.Data.OwWorkflowTemplate">
+            <summary>
+            工作流模板主数据类。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwWorkflowTemplate.WfType">
+            <summary>
+            类型，目前保留为0。预计1=抄送，即会在文档转向下一个节点成功时，会抄送到某些节点，但并不需要这些节点进行动作。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwWorkflowTemplate.DocTypeCode">
+            <summary>
+            文档类型Id。文档的类型Code,系统多方预先约定好，所有商户公用，最长16个字符，仅支持英文。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwWorkflowTemplate.CurrentNodeId">
+            <summary>
+            当前所处节点Id。通常都是职员Id。遇特殊情况，工作流引擎自行解释。
+            这是自父子关系的多方。即多个结点将归属到一个节点。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwWorkflowTemplate.NextNodeId">
+            <summary>
+            下一个节点的Id。通常都是职员Id。遇特殊情况，工作流引擎自行解释。
+            这是自父子关系的多方。即多个结点将归属到一个节点。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwWorkflowTemplate.GuardJsonString">
+            <summary>
+            前/后置守卫条件的Json字符串。
+            </summary>
+            <remarks>如 <c>
+            [
+            {
+            "NumberCondition": {
+            "PropertyName": "Count",
+            "MinValue": 0,
+            "MaxValue": null,
+            "Subtrahend": 0,
+            "Modulus": 42,
+            "MinRemainder": 0,
+            "MaxRemainder": 6
+            }
+            }
+            ]
+            </c></remarks>
+        </member>
+        <member name="T:PowerLms.Data.OwWorkflow">
+            <summary>
+            记录工作流实例的表
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwWorkflow.WfType">
+            <summary>
+            流转的类型，当前保留为0.
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwWorkflow.DocId">
+            <summary>
+            文档的唯一Id。
+            与 CurrentNodeId 形成联合主键。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwWorkflow.CurrentNodeId">
+            <summary>
+            文档当前所处节点。
+            与 DocId 形成联合主键。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.OwWorkflowHistory">
+            <summary>
+            工作流历史记录，当前未启用。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwWorkflowHistory.DocId">
+            <summary>
+            文档Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwWorkflowHistory.CurrentNodeId">
+            <summary>
+            所处节点Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwWorkflowHistory.WorldDateTime">
+            <summary>
+            到达该节点的时间。
+            </summary>
+        </member>
         <member name="T:PowerLms.Data.SystemResource">
             <summary>
             系统资源。
