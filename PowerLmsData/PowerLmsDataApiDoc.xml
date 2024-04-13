@@ -2496,6 +2496,21 @@
             ]
             </c></remarks>
         </member>
+        <member name="P:PowerLms.Data.OwWorkflowTemplateNodeItem.NodeId">
+            <summary>
+            节点Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwWorkflowTemplateNodeItem.WorkerId">
+            <summary>
+            员工Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwWorkflowTemplateNodeItem.Prioriteit">
+            <summary>
+            优先度。0最高，1其次，以此类推
+            </summary>
+        </member>
         <member name="T:PowerLms.Data.OwWorkflow">
             <summary>
             记录工作流实例的表
@@ -2530,7 +2545,7 @@
         </member>
         <member name="T:PowerLms.Data.OwWorkflowHistory">
             <summary>
-            工作流历史记录。
+            工作流历史记录。冗余记录。员工离职 软删除。
             </summary>
         </member>
         <member name="P:PowerLms.Data.OwWorkflowHistory.DocId">

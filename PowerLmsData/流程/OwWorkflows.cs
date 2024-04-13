@@ -109,6 +109,25 @@ namespace PowerLms.Data
         #endregion 前/后置守卫条件
     }
 
+    public class OwWorkflowTemplateNodeItem : GuidKeyObjectBase
+    {
+        /// <summary>
+        /// 节点Id。
+        /// </summary>
+        public Guid NodeId { get; set; }
+
+        /// <summary>
+        /// 员工Id。
+        /// </summary>
+        public Guid WorkerId { get; set; }
+
+        /// <summary>
+        /// 优先度。0最高，1其次，以此类推
+        /// </summary>
+        public int Prioriteit { get; set; }
+
+    }
+
     /// <summary>
     /// 记录工作流实例的表
     /// </summary>
@@ -143,7 +162,7 @@ namespace PowerLms.Data
     }
 
     /// <summary>
-    /// 工作流历史记录。
+    /// 工作流历史记录。冗余记录。员工离职 软删除。
     /// </summary>
     public class OwWorkflowHistory
     {
