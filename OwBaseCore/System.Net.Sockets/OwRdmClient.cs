@@ -1,4 +1,8 @@
-﻿using System.Buffers;
+﻿/*
+ * 为保证 NETSTANDARD 2.0 可用，有些设计重复了高版本框架中已有功能。
+ */
+using System.Buffers;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -10,6 +14,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 /*
@@ -29,15 +34,47 @@ using Microsoft.Extensions.Options;
 namespace System.Net.Sockets
 {
     /// <summary>
-    /// 包装一个socket对象， 提供基于 SocketAsyncEventArgs 收发功能的简化。
+    /// 包装一个socket对象， 提供基于 SocketAsyncEventArgs 异步收发功能的简化。
     /// </summary>
     /// <remarks>如果使用面向连接的协议（如 TCP），则用于 ConnectAsync 与侦听主机连接。 使用 SendAsync 或 ReceiveAsync 异步通信数据。 可以使用 AcceptAsync.. 处理传入的连接请求。
-    /// 如果使用无连接协议（如 UDP），则可以用于 SendToAsync 发送数据报和 ReceiveFromAsync接收数据报。</remarks>
-    public abstract class SocketAsyncWrapper
+    /// 如果使用无连接协议（如 UDP），则可以用于 SendToAsync 发送数据报和 ReceiveFromAsync接收数据报。
+    /// 当前版本仅支持Udp协议。</remarks>
+    public class SocketAsyncWrapper
     {
-        ConcurrentStack<SocketAsyncEventArgs> _Pool = new ConcurrentStack<SocketAsyncEventArgs>();
+        #region 静态成员
 
-        public SocketAsyncEventArgs Rent()
+        /// <summary>
+        /// 为避免客户端无法使用对象池等netcore特有功能，这里自己管理对象 和 内存池。
+        /// </summary>
+        static ConcurrentStack<SocketAsyncEventArgs> _Pool = new ConcurrentStack<SocketAsyncEventArgs>();
+
+        static ConcurrentStack<byte[]> _Pool1024 = new ConcurrentStack<byte[]>();
+
+        #endregion 静态成员
+
+        #region 构造函数
+
+        /// <summary>
+        /// 构造函数。
+        /// </summary>
+        /// <param name="socket"></param>
+        public SocketAsyncWrapper(Socket socket)
+        {
+            Socket = socket;
+            Socket.ReceiveBufferSize = Math.Max(Socket.ReceiveBufferSize, Environment.ProcessorCount * Environment.SystemPageSize);
+        }
+
+        #endregion 构造函数
+
+        volatile Socket _Socket;
+
+        public Socket Socket { get => _Socket; protected set => _Socket = value; }
+
+        #region 方法
+
+        #region 缓冲区控制
+
+        public SocketAsyncEventArgs RentEventArgs()
         {
             if (!_Pool.TryPop(out var result))
             {
@@ -47,19 +84,81 @@ namespace System.Net.Sockets
             return result;
         }
 
-        public void Return(SocketAsyncEventArgs eventArgs)
+        public void ReturnEventArgs(SocketAsyncEventArgs eventArgs)
         {
-            _Pool.Push(eventArgs); eventArgs.SetBuffer(Memory<byte>.Empty);
+            _Pool.Push(eventArgs);
         }
 
-        public SocketAsyncWrapper(Socket socket)
+
+        /// <summary>
+        /// 获取一个缓冲区。
+        /// </summary>
+        /// <remarks>默认分配程序为给 Unity 使用，其它程序可考虑自定义该函数。</remarks>
+        /// <param name="minimumLength">要在1-1024之间。</param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentException"></exception>
+        public virtual byte[] RentBuffer(int minimumLength)
         {
-            _Socket = socket;
-            _Socket.ReceiveBufferSize = Math.Max(_Socket.ReceiveBufferSize, Environment.ProcessorCount * Environment.SystemPageSize);
+            if (minimumLength <= 0 || minimumLength > 1024) throw new ArgumentException("默认的缓冲区分配程序仅能处理1-1024字节尺寸的请求", nameof(minimumLength));
+            if (!_Pool1024.TryPop(out var result)) result = new byte[1024];
+            return result;
         }
 
-        Socket _Socket;
+        /// <summary>
+        /// 返还缓冲区。
+        /// </summary>
+        /// <remarks>默认回收程序为给 Unity 使用，其它程序可考虑自定义该函数。</remarks>
+        /// <param name="buffer"></param>
+        /// <param name="clearBuffer"></param>
+        public virtual void ReturnBuffer(byte[] buffer, bool clearBuffer = false)
+        {
+            if (buffer.Length == 1024)  //若符合回收条件
+            {
+                if (clearBuffer) for (int i = 0; i < 1024; i++) buffer[i] = 0;  //清理缓冲区
+                _Pool1024.Push(buffer);
+            }
+        }
 
+        #endregion 缓冲区控制
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="buffer">不能发送 1024 以上的长度数据。另，实际情况最好不要使用自动拆包功能，以避免丢包和重复问题。
+        /// 指向的数据在此函数调用后被此函数接管，不可以再使用。
+        /// </param>
+        /// <param name="remote"></param>
+        /// <param name="userToken"></param>
+        public void SendToAsync(ArraySegment<byte> buffer, EndPoint remote, object userToken)
+        {
+            if (buffer.Count > 1024) throw new ArgumentException("缓冲区过长。", nameof(buffer));
+            //准备参数
+            var e = RentEventArgs();
+            e.SetBuffer(buffer.Array, buffer.Offset, buffer.Count);
+            e.RemoteEndPoint = remote;
+            e.UserToken = userToken;
+            //发送
+            var b = Socket.SendToAsync(e);
+            if (!b) ProcessSendTo(e);
+        }
+
+        /// <summary>
+        /// 异步接收指定端点的数据报。
+        /// </summary>
+        /// <param name="buffer">缓冲区。</param>
+        /// <param name="remote"></param>
+        /// <param name="userToken"></param>
+        public void ReceiveFromAsync(ArraySegment<byte> buffer, EndPoint remote, object userToken)
+        {
+            var e = RentEventArgs();
+            e.SetBuffer(buffer.Array, buffer.Offset, buffer.Count);
+            e.RemoteEndPoint = remote;
+            e.UserToken = userToken;
+            var b = Socket.ReceiveFromAsync(e);
+            if (!b) ProcessReceiveFrom(e);
+        }
+
+        #region IO处理操作
         void IO_Completed(object sender, SocketAsyncEventArgs e)
         {
             // determine which type of operation just completed and call the associated handler
@@ -95,25 +194,23 @@ namespace System.Net.Sockets
                 }
         }
 
-        public void SendToAsync(Span<byte> buffer, EndPoint remote)
-        {
-        }
-
-        public void ReceiveFromAsync(EndPoint remote)
-        {
-
-        }
-
+        /// <summary>
+        /// 数据发送完成的回调函数。目前是空操作。
+        /// </summary>
+        /// <param name="e"></param>
         protected virtual void ProcessSendTo(SocketAsyncEventArgs e)
         {
         }
 
+        /// <summary>
+        /// 数据到达的回调函数。自动使用参数重新侦听。
+        /// </summary>
+        /// <param name="e"></param>
         protected virtual void ProcessReceiveFrom(SocketAsyncEventArgs e)
         {
-            _Socket.ReceiveFromAsync(e);
+            //OnReceiveFrom(new ArraySegment<byte>(e.Buffer, e.Offset, e.BytesTransferred), e.RemoteEndPoint, e.UserToken);
+            Socket.ReceiveFromAsync(e);
         }
-
-        protected abstract void ProcessReceiveFrom(ArraySegment<byte> buffer, EndPoint remote);
 
         /// <summary>
         /// 处理错误。
@@ -127,7 +224,6 @@ namespace System.Net.Sockets
                 case SocketError.Shutdown:
                 case SocketError.ConnectionAborted:
                     break;
-                case SocketError.SocketError:
                 case SocketError.OperationAborted:
 
                 case SocketError.IOPending:
@@ -217,9 +313,15 @@ namespace System.Net.Sockets
                     //if (!_HostApplicationLifetime.ApplicationStopping.IsCancellationRequested)
                     //    OwRdmClient.ResetError(_Socket);
                     break;
+                case SocketError.SocketError:
+                    OwRdmClient.ResetError(Socket);
+                    break;
             }
         }
 
+        #endregion IO处理操作
+
+        #endregion 方法
     }
 
     /// <summary>
@@ -288,7 +390,9 @@ namespace System.Net.Sockets
         public static void Return(OwRdmDgram entry)
         {
             if (entry.Buffer.Length < Mtu) return; //若不符合要求
-            entry.Buffer.AsSpan().Clear();
+
+            for (int i = 0; i < entry.Buffer.Length; i++)
+                entry.Buffer[i] = 0;
             _Pool.Push(entry);
         }
 
@@ -451,7 +555,7 @@ namespace System.Net.Sockets
 
         }
 
-        public OwRdmDataReceivedEventArgs(ReadOnlySpan<byte> data)
+        public OwRdmDataReceivedEventArgs(ArraySegment<byte> data)
         {
             Datas = data.ToArray();
         }
@@ -471,27 +575,24 @@ namespace System.Net.Sockets
     /// udp客户端类。为支持Unity使用，仅使用.NET Framework 4.7支持的功能。
     /// 当前版本一个客户端对象仅能和一个Server通讯。
     /// </summary>
-    public class OwRdmClient : IDisposable
+    public class OwRdmClient : SocketAsyncWrapper, IDisposable
     {
-        /// <summary>
-        /// 构造函数。
-        /// </summary>
-        public OwRdmClient()
+
+        public OwRdmClient(string server, short port) : base(new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp))
         {
-            //new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            var ip = Dns.GetHostAddresses(server).First(c => c.AddressFamily == AddressFamily.InterNetwork);
+            var endPoint = new IPEndPoint(ip, port);
+            _RemoteEndPoing = endPoint;
         }
 
         /// <summary>
-        /// 通讯Id，仅低24位有用。若为null，标识尚未连接。
+        /// 构造函数。
         /// </summary>
-        int? _Id;
-
-        /// <summary>
-        /// 当前收到的最大连续包号。
-        /// </summary>
-        uint? _Seq;
-
-        UdpClient _UdpClient;
+        /// <param name="remote">远程服务器端点。</param>
+        public OwRdmClient(IPEndPoint remote) : base(new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp))
+        {
+            _RemoteEndPoing = remote;
+        }
 
         /// <summary>
         /// 连接的服务器端地址。
@@ -502,19 +603,26 @@ namespace System.Net.Sockets
         /// 接受数据的缓存队列。键是包序号 ，值数据条目。需要锁定使用。
         /// </summary>
         ConcurrentDictionary<uint, OwRdmDgram> _RecvData = new ConcurrentDictionary<uint, OwRdmDgram>();
+
+        /// <summary>
+        /// 通讯Id，仅低24位有用。若为null，标识尚未连接。
+        /// </summary>
+        int? _Id;
+
+        /// <summary>
+        /// 当前收到的最大连续包号。
+        /// </summary>
+        uint? _AckSeq;
+
         /// <summary>
         /// <see cref="_RecvData"/>中最小包号。
         /// </summary>
         uint _MinSeq;
+
         /// <summary>
         /// <see cref="_RecvData"/>中最大包号。
         /// </summary>
         uint _MaxSeq;
-
-        /// <summary>
-        /// 执行IO任务的对象。
-        /// </summary>
-        Task _IoTask;
 
         /// <summary>
         /// 请求结束任务的标记。
@@ -545,99 +653,9 @@ namespace System.Net.Sockets
         #endregion 静态方法
 
         /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="server">服务器IP地址或DNS名。</param>
-        /// <param name="port">端口号。</param>
-        public void Start(string server, short port)
-        {
-            _Stopping?.Cancel();
-            _Stopped?.Token.WaitHandle.WaitOne();  //等待结束
-            _Stopping = new CancellationTokenSource();
-            _Stopped = new CancellationTokenSource();
-            Connect(server, port);
-
-            _IoTask = Task.Run(IoWorker);
-        }
-
-        /// <summary>
-        /// IO线程函数。
-        /// </summary>
-        private void IoWorker()
-        {
-            var ctStopping = _Stopping.Token;
-            DateTime lastSendDgram = DateTime.UtcNow;
-            do
-            {
-                try
-                {
-                    if (_UdpClient.Available > 0)
-                        Receive();
-                    if (DateTime.UtcNow - lastSendDgram > TimeSpan.FromSeconds(1))    //若须发送心跳包
-                    {
-                        var entry = OwRdmDgram.Rent();
-                        entry.Kind = OwRdmDgramKind.CommandDgram | OwRdmDgramKind.StartDgram | OwRdmDgramKind.EndDgram;
-                        entry.Id = _Id.GetValueOrDefault();
-                        entry.Seq = (int)_Seq.GetValueOrDefault();
-                        entry.Count = 8;
-                        Send(entry);
-                    }
-                }
-                catch (Exception)
-                {
-                }
-            } while (!ctStopping.WaitHandle.WaitOne(100)); //若未请求结束
-            //已请求结束
-        }
-
-        public void Init([Range(0, OwRdmDgram.Mts)] byte[] evidence)
-        {
-            if (evidence.Length > OwRdmDgram.Mts)
-                throw new ArgumentException("超长", nameof(evidence));
-            var dataEntry = new OwRdmDgram
-            {
-                Id = 0,
-            };
-            dataEntry.Buffer = new byte[OwRdmDgram.Mtu];
-            dataEntry.Offset = 0;
-            dataEntry.Count = OwRdmDgram.Mtu;
-
-            dataEntry.Buffer[0] = (byte)(OwRdmDgramKind.CommandDgram);
-
-            evidence.CopyTo(dataEntry.Buffer, 8);
-        }
-
-        /// <summary>
-        /// 连接服务器并"握手"
-        /// </summary>
-        /// <param name="server">服务器IP地址或DNS名。</param>
-        /// <param name="port">端口号。</param>
-        public void Connect(string server, short port)
-        {
-            var ips = Dns.GetHostAddresses(server);
-            var ip = ips.FirstOrDefault(c => c.AddressFamily == AddressFamily.InterNetwork /*|| c.AddressFamily == AddressFamily.InterNetworkV6*/);
-            Connect(new IPEndPoint(ip, port));
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="endPoint">服务器终结点地址。</param>
-        /// <exception cref="SocketException">访问套接字时出错。</exception>
-        /// <exception cref="ArgumentNullException">endPoint 为 null。</exception>
-        virtual public void Connect(IPEndPoint endPoint)
-        {
-            _UdpClient?.Dispose();  //容错
-            _UdpClient = new UdpClient(0);
-            _UdpClient.Connect(endPoint);
-            //自有初始化内容
-            ConnectCore();
-        }
-
-        /// <summary>
         /// 自有初始化。
         /// </summary>
-        /// <remarks>此时 <see cref="_UdpClient"/> 应已经正确初始化。</remarks>
+        /// <remarks>此时 <see cref="Socket"/> 应已经正确初始化。</remarks>
         virtual protected void ConnectCore()
         {
             var entry = OwRdmDgram.Rent();
@@ -646,10 +664,8 @@ namespace System.Net.Sockets
                 entry.Kind = (OwRdmDgramKind.CommandDgram | OwRdmDgramKind.StartDgram | OwRdmDgramKind.EndDgram);
                 entry.Id = 0;
                 entry.Count = 0;
-                Send(entry);
+                SendToAsync(entry);
 
-                var endPoint = (IPEndPoint)_UdpClient.Client.RemoteEndPoint;
-                var buffRecv = _UdpClient.Receive(ref endPoint);
             }
             finally
             {
@@ -663,58 +679,51 @@ namespace System.Net.Sockets
         /// 本函数仅设置 <see cref="OwRdmDgram.Id"/> 和 <see cref="OwRdmDgram.Seq"/> 。
         /// </summary>
         /// <param name="entry"></param>
-        internal virtual void Send(OwRdmDgram entry)
+        public virtual void SendToAsync(OwRdmDgram entry)
         {
             entry.Id = _Id.GetValueOrDefault();
-            entry.Seq = (int)_Seq.GetValueOrDefault();
-            _UdpClient.Send(entry.Buffer, entry.Count);
-
+            entry.Seq = (int)_AckSeq.GetValueOrDefault();
+            SendToAsync(entry.Buffer, _RemoteEndPoing, entry.Buffer);
         }
 
         /// <summary>
-        /// 立即同步接受所有完整数据包并做相应处理。
+        /// 数据到达的回调函数。
         /// </summary>
-        internal virtual void Receive()
+        /// <param name="e"></param>
+        protected override void ProcessReceiveFrom(SocketAsyncEventArgs e)
         {
-            var endPoing = _UdpClient.Client.RemoteEndPoint as IPEndPoint;
-            while (_UdpClient.Available > 0)
+            var entry = new OwRdmDgram
             {
-                var data = _UdpClient.Receive(ref endPoing);
-
-                Debug.Assert(_UdpClient.Client.RemoteEndPoint.Equals(endPoing));
-
-                var entry = new OwRdmDgram
+            };
+            Buffer.BlockCopy(e.Buffer, e.Offset, entry.Buffer, entry.Offset, e.BytesTransferred);
+            base.ProcessReceiveFrom(e);
+            if (entry.Kind.HasFlag(OwRdmDgramKind.CommandDgram))  //若是一个命令帧
+            {
+                Debug.Assert(entry.Kind.HasFlag(OwRdmDgramKind.StartDgram) && entry.Kind.HasFlag(OwRdmDgramKind.EndDgram));   //仅能处理单帧命令
+                OnCommandPkg(entry);
+            }
+            else
+                lock (_RecvData)
                 {
-                    Buffer = data,
-                };
-                if (entry.Kind.HasFlag(OwRdmDgramKind.CommandDgram))  //若是一个命令帧
-                {
-                    Debug.Assert(entry.Kind.HasFlag(OwRdmDgramKind.StartDgram) && entry.Kind.HasFlag(OwRdmDgramKind.EndDgram));   //仅能处理单帧命令
-                    OnCommandPkg(entry);
-                }
-                else
-                    lock (_RecvData)
+                    if (entry.Seq <= _AckSeq || !_RecvData.TryAdd((uint)entry.Seq, entry)) //避免重复到达的包
+                        Debug.WriteLine("检测到重复到达的包，Seq = " + entry.Seq);
+                    else //若增加成功
                     {
-                        if (entry.Seq <= _Seq || !_RecvData.TryAdd((uint)entry.Seq, entry)) //避免重复到达的包
-                            Debug.WriteLine("检测到重复到达的包，Seq = " + entry.Seq);
-                        else //若增加成功
+                        if (_RecvData.Count == 1)   //若仅此一项
+                            _MinSeq = _MaxSeq = (uint)entry.Seq;
+                        else
                         {
-                            if (_RecvData.Count == 1)   //若仅此一项
-                                _MinSeq = _MaxSeq = (uint)entry.Seq;
-                            else
-                            {
-                                _MinSeq = Math.Min(_MinSeq, (uint)entry.Seq);
-                                _MaxSeq = Math.Max(_MaxSeq, (uint)entry.Seq);
-                            }
+                            _MinSeq = Math.Min(_MinSeq, (uint)entry.Seq);
+                            _MaxSeq = Math.Max(_MaxSeq, (uint)entry.Seq);
                         }
                     }
-            }
+                }
             //扫描接受队列
             ScanQueue();
         }
 
         /// <summary>
-        /// 扫描接受队列，处理完整包——引发数据到达的事件。
+        /// 扫描接收队列，处理完整包——引发数据到达的事件。
         /// </summary>
         internal void ScanQueue()
         {
@@ -759,7 +768,7 @@ namespace System.Net.Sockets
                     {
                         _MaxSeq = _RecvData.Max(c => c.Key);
                         _MinSeq = _RecvData.Min(c => c.Key);
-                        _Seq = (uint)firstEntry.Seq;
+                        _AckSeq = (uint)firstEntry.Seq;
                     }
                 }
                 else //非单一包
@@ -786,7 +795,7 @@ namespace System.Net.Sockets
                         }
                         _MaxSeq = _RecvData.Max(c => c.Key);
                         _MinSeq = _RecvData.Min(c => c.Key);
-                        _Seq = lastSeq;
+                        _AckSeq = lastSeq;
                     }
                 }
             }
@@ -800,8 +809,39 @@ namespace System.Net.Sockets
         internal virtual void OnCommandPkg(OwRdmDgram entry)
         {
             _Id = entry.Id;
-            _Seq = (uint)entry.Seq;
+            _AckSeq = (uint)entry.Seq;  //设置起始包号。
         }
+
+        /// <summary>
+        /// 发送心跳包。
+        /// </summary>
+        /// <returns>true发送成功，否则为false。</returns>
+        public bool Heartbeat()
+        {
+            if (!_Id.HasValue) return false;    //若尚未初始化成功
+            var dgram = OwRdmDgram.Rent();
+            dgram.Kind = OwRdmDgramKind.StartDgram | OwRdmDgramKind.EndDgram | OwRdmDgramKind.CommandDgram;
+            SendToAsync(dgram);
+            return true;
+        }
+
+        /// <summary>
+        /// 初始化。
+        /// </summary>
+        public void Init()
+        {
+
+        }
+
+        /// <summary>
+        /// 测试是否成功初始化。
+        /// </summary>
+        /// <returns></returns>
+        public bool IsInit()
+        {
+            return _Id.HasValue;
+        }
+
         #endregion 方法
 
         #region 事件及相关
@@ -809,6 +849,11 @@ namespace System.Net.Sockets
         /// 有数据到达的事件。此事件可能发生在任何线程。
         /// </summary>
         public event EventHandler<OwRdmDataReceivedEventArgs> OwUdpDataReceived;
+
+        /// <summary>
+        /// 引发 <see cref="OwUdpDataReceived"/> 事件。
+        /// </summary>
+        /// <param name="e"></param>
         protected virtual void OnOwUdpDataReceived(OwRdmDataReceivedEventArgs e) => OwUdpDataReceived?.Invoke(this, e);
         #endregion 事件及相关
 
@@ -849,25 +894,4 @@ namespace System.Net.Sockets
     }
 
 }
-
-//#if !NETCOREAPP //若非NetCore程序
-
-//namespace Microsoft.Extensions.Options
-//{
-//    //
-//    // 摘要:
-//    //     Used to retrieve configured TOptions instances.
-//    //
-//    // 类型参数:
-//    //   TOptions:
-//    //     The type of options being requested.
-//    public interface IOptions</*[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)]*/ out TOptions> where TOptions : class
-//    {
-//        //
-//        // 摘要:
-//        //     The default configured TOptions instance
-//        TOptions Value { get; }
-//    }
-//}
-//#endif
 

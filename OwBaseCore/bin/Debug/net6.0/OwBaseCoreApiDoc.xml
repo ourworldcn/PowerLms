@@ -1367,10 +1367,69 @@
         </member>
         <member name="T:System.Net.Sockets.SocketAsyncWrapper">
             <summary>
-            包装一个socket对象， 提供基于 SocketAsyncEventArgs 收发功能的简化。
+            包装一个socket对象， 提供基于 SocketAsyncEventArgs 异步收发功能的简化。
             </summary>
             <remarks>如果使用面向连接的协议（如 TCP），则用于 ConnectAsync 与侦听主机连接。 使用 SendAsync 或 ReceiveAsync 异步通信数据。 可以使用 AcceptAsync.. 处理传入的连接请求。
-            如果使用无连接协议（如 UDP），则可以用于 SendToAsync 发送数据报和 ReceiveFromAsync接收数据报。</remarks>
+            如果使用无连接协议（如 UDP），则可以用于 SendToAsync 发送数据报和 ReceiveFromAsync接收数据报。
+            当前版本仅支持Udp协议。</remarks>
+        </member>
+        <member name="F:System.Net.Sockets.SocketAsyncWrapper._Pool">
+            <summary>
+            为避免客户端无法使用对象池等netcore特有功能，这里自己管理对象 和 内存池。
+            </summary>
+        </member>
+        <member name="M:System.Net.Sockets.SocketAsyncWrapper.#ctor(System.Net.Sockets.Socket)">
+            <summary>
+            构造函数。
+            </summary>
+            <param name="socket"></param>
+        </member>
+        <member name="M:System.Net.Sockets.SocketAsyncWrapper.RentBuffer(System.Int32)">
+            <summary>
+            获取一个缓冲区。
+            </summary>
+            <remarks>默认分配程序为给 Unity 使用，其它程序可考虑自定义该函数。</remarks>
+            <param name="minimumLength">要在1-1024之间。</param>
+            <returns></returns>
+            <exception cref="T:System.ArgumentException"></exception>
+        </member>
+        <member name="M:System.Net.Sockets.SocketAsyncWrapper.ReturnBuffer(System.Byte[],System.Boolean)">
+            <summary>
+            返还缓冲区。
+            </summary>
+            <remarks>默认回收程序为给 Unity 使用，其它程序可考虑自定义该函数。</remarks>
+            <param name="buffer"></param>
+            <param name="clearBuffer"></param>
+        </member>
+        <member name="M:System.Net.Sockets.SocketAsyncWrapper.SendToAsync(System.ArraySegment{System.Byte},System.Net.EndPoint,System.Object)">
+            <summary>
+            
+            </summary>
+            <param name="buffer">不能发送 1024 以上的长度数据。另，实际情况最好不要使用自动拆包功能，以避免丢包和重复问题。
+            指向的数据在此函数调用后被此函数接管，不可以再使用。
+            </param>
+            <param name="remote"></param>
+            <param name="userToken"></param>
+        </member>
+        <member name="M:System.Net.Sockets.SocketAsyncWrapper.ReceiveFromAsync(System.ArraySegment{System.Byte},System.Net.EndPoint,System.Object)">
+            <summary>
+            异步接收指定端点的数据报。
+            </summary>
+            <param name="buffer">缓冲区。</param>
+            <param name="remote"></param>
+            <param name="userToken"></param>
+        </member>
+        <member name="M:System.Net.Sockets.SocketAsyncWrapper.ProcessSendTo(System.Net.Sockets.SocketAsyncEventArgs)">
+            <summary>
+            数据发送完成的回调函数。目前是空操作。
+            </summary>
+            <param name="e"></param>
+        </member>
+        <member name="M:System.Net.Sockets.SocketAsyncWrapper.ProcessReceiveFrom(System.Net.Sockets.SocketAsyncEventArgs)">
+            <summary>
+            数据到达的回调函数。自动使用参数重新侦听。
+            </summary>
+            <param name="e"></param>
         </member>
         <member name="M:System.Net.Sockets.SocketAsyncWrapper.ProcessError(System.Net.Sockets.SocketAsyncEventArgs)">
             <summary>
@@ -1535,20 +1594,11 @@
             当前版本一个客户端对象仅能和一个Server通讯。
             </summary>
         </member>
-        <member name="M:System.Net.Sockets.OwRdmClient.#ctor">
+        <member name="M:System.Net.Sockets.OwRdmClient.#ctor(System.Net.IPEndPoint)">
             <summary>
             构造函数。
             </summary>
-        </member>
-        <member name="F:System.Net.Sockets.OwRdmClient._Id">
-            <summary>
-            通讯Id，仅低24位有用。若为null，标识尚未连接。
-            </summary>
-        </member>
-        <member name="F:System.Net.Sockets.OwRdmClient._Seq">
-            <summary>
-            当前收到的最大连续包号。
-            </summary>
+            <param name="remote">远程服务器端点。</param>
         </member>
         <member name="F:System.Net.Sockets.OwRdmClient._RemoteEndPoing">
             <summary>
@@ -1560,6 +1610,16 @@
             接受数据的缓存队列。键是包序号 ，值数据条目。需要锁定使用。
             </summary>
         </member>
+        <member name="F:System.Net.Sockets.OwRdmClient._Id">
+            <summary>
+            通讯Id，仅低24位有用。若为null，标识尚未连接。
+            </summary>
+        </member>
+        <member name="F:System.Net.Sockets.OwRdmClient._AckSeq">
+            <summary>
+            当前收到的最大连续包号。
+            </summary>
+        </member>
         <member name="F:System.Net.Sockets.OwRdmClient._MinSeq">
             <summary>
             <see cref="F:System.Net.Sockets.OwRdmClient._RecvData"/>中最小包号。
@@ -1568,11 +1628,6 @@
         <member name="F:System.Net.Sockets.OwRdmClient._MaxSeq">
             <summary>
             <see cref="F:System.Net.Sockets.OwRdmClient._RecvData"/>中最大包号。
-            </summary>
-        </member>
-        <member name="F:System.Net.Sockets.OwRdmClient._IoTask">
-            <summary>
-            执行IO任务的对象。
             </summary>
         </member>
         <member name="F:System.Net.Sockets.OwRdmClient._Stopping">
@@ -1591,40 +1646,13 @@
             </summary>
             <param name="socket"></param>
         </member>
-        <member name="M:System.Net.Sockets.OwRdmClient.Start(System.String,System.Int16)">
-            <summary>
-            
-            </summary>
-            <param name="server">服务器IP地址或DNS名。</param>
-            <param name="port">端口号。</param>
-        </member>
-        <member name="M:System.Net.Sockets.OwRdmClient.IoWorker">
-            <summary>
-            IO线程函数。
-            </summary>
-        </member>
-        <member name="M:System.Net.Sockets.OwRdmClient.Connect(System.String,System.Int16)">
-            <summary>
-            连接服务器并"握手"
-            </summary>
-            <param name="server">服务器IP地址或DNS名。</param>
-            <param name="port">端口号。</param>
-        </member>
-        <member name="M:System.Net.Sockets.OwRdmClient.Connect(System.Net.IPEndPoint)">
-            <summary>
-            
-            </summary>
-            <param name="endPoint">服务器终结点地址。</param>
-            <exception cref="T:System.Net.Sockets.SocketException">访问套接字时出错。</exception>
-            <exception cref="T:System.ArgumentNullException">endPoint 为 null。</exception>
-        </member>
         <member name="M:System.Net.Sockets.OwRdmClient.ConnectCore">
             <summary>
             自有初始化。
             </summary>
-            <remarks>此时 <see cref="F:System.Net.Sockets.OwRdmClient._UdpClient"/> 应已经正确初始化。</remarks>
+            <remarks>此时 <see cref="T:System.Net.Sockets.Socket"/> 应已经正确初始化。</remarks>
         </member>
-        <member name="M:System.Net.Sockets.OwRdmClient.Send(System.Net.Sockets.OwRdmDgram)">
+        <member name="M:System.Net.Sockets.OwRdmClient.SendToAsync(System.Net.Sockets.OwRdmDgram)">
             <summary>
             立即同步发送一个数据条目，并做相应处理。
             <see cref="P:System.Net.Sockets.OwRdmDgram.Kind"/> 和 <see cref="T:System.Net.Sockets.OwRdmDgram"/>中的数据要实现设定好。
@@ -1632,14 +1660,15 @@
             </summary>
             <param name="entry"></param>
         </member>
-        <member name="M:System.Net.Sockets.OwRdmClient.Receive">
+        <member name="M:System.Net.Sockets.OwRdmClient.ProcessReceiveFrom(System.Net.Sockets.SocketAsyncEventArgs)">
             <summary>
-            立即同步接受所有完整数据包并做相应处理。
+            数据到达的回调函数。
             </summary>
+            <param name="e"></param>
         </member>
         <member name="M:System.Net.Sockets.OwRdmClient.ScanQueue">
             <summary>
-            扫描接受队列，处理完整包——引发数据到达的事件。
+            扫描接收队列，处理完整包——引发数据到达的事件。
             </summary>
         </member>
         <member name="M:System.Net.Sockets.OwRdmClient.GetDram">
@@ -1655,10 +1684,33 @@
             </summary>
             <param name="entry"></param>
         </member>
+        <member name="M:System.Net.Sockets.OwRdmClient.Heartbeat">
+            <summary>
+            发送心跳包。
+            </summary>
+            <returns>true发送成功，否则为false。</returns>
+        </member>
+        <member name="M:System.Net.Sockets.OwRdmClient.Init">
+            <summary>
+            初始化。
+            </summary>
+        </member>
+        <member name="M:System.Net.Sockets.OwRdmClient.IsInit">
+            <summary>
+            测试是否成功初始化。
+            </summary>
+            <returns></returns>
+        </member>
         <member name="E:System.Net.Sockets.OwRdmClient.OwUdpDataReceived">
             <summary>
             有数据到达的事件。此事件可能发生在任何线程。
             </summary>
+        </member>
+        <member name="M:System.Net.Sockets.OwRdmClient.OnOwUdpDataReceived(System.Net.Sockets.OwRdmDataReceivedEventArgs)">
+            <summary>
+            引发 <see cref="E:System.Net.Sockets.OwRdmClient.OwUdpDataReceived"/> 事件。
+            </summary>
+            <param name="e"></param>
         </member>
         <member name="P:System.Net.Sockets.OwRdmServerOptions.ListernAddress">
             <summary>
