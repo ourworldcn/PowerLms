@@ -1384,6 +1384,11 @@
             </summary>
             <param name="socket"></param>
         </member>
+        <member name="F:System.Net.Sockets.SocketAsyncWrapper.disposedValue">
+            <summary>
+            是否已经被处置。
+            </summary>
+        </member>
         <member name="M:System.Net.Sockets.SocketAsyncWrapper.RentBuffer(System.Int32)">
             <summary>
             获取一个缓冲区。
@@ -1491,10 +1496,10 @@
             </summary>
             <param name="entry"></param>
         </member>
-        <member name="M:System.Net.Sockets.OwRdmDgram.Create(System.Byte[],System.Int32,System.Int32)">
+        <member name="M:System.Net.Sockets.OwRdmDgram.Split(System.Byte[],System.Int32,System.Int32)">
             <summary>
             将一个大缓冲区的数据拆分为多个小包的数据。
-            只负责复制数据区，正确设置其它属性。
+            只负责复制数据区，调用者正确设置其它属性。
             </summary>
             <param name="buffer">缓冲区</param>
             <param name="startIndex">起始偏移，基于0.</param>
@@ -1504,7 +1509,7 @@
             <exception cref="T:System.ArgumentException">缓冲区长度减去 index 小于 count。。</exception>
             <exception cref="T:System.ArgumentNullException">buffer 为 null。</exception>
         </member>
-        <member name="M:System.Net.Sockets.OwRdmDgram.Create(System.IO.Stream)">
+        <member name="M:System.Net.Sockets.OwRdmDgram.Split(System.IO.Stream)">
             <summary>
             将流当前位置到最终的所有数据拆分为多个小包的数据。
             只负责复制数据区，正确设置<see cref="P:System.Net.Sockets.OwRdmDgram.Count"/>。
@@ -1515,10 +1520,17 @@
         </member>
         <member name="M:System.Net.Sockets.OwRdmDgram.ToArray(System.Collections.Generic.IList{System.Net.Sockets.OwRdmDgram})">
             <summary>
-            
+            将一组包的数据负载合成为一个字节数组。
             </summary>
             <param name="entries"></param>
             <returns></returns>
+        </member>
+        <member name="M:System.Net.Sockets.OwRdmDgram.RemoveFirstRange(System.Net.Sockets.OrderedQueue{System.Net.Sockets.OwRdmDgram})">
+            <summary>
+            从头部获取连续的分包且必须是一个完整包。
+            </summary>
+            <param name="list"></param>
+            <returns>返回按顺序获取的一个完整包。</returns>
         </member>
         <member name="M:System.Net.Sockets.OwRdmDgram.#ctor">
             <summary>
@@ -1573,6 +1585,21 @@
             <param name="other"></param>
             <returns></returns>
         </member>
+        <member name="T:System.Net.Sockets.OrderedQueue`1">
+            <summary>
+            记录收发数据的链表。
+            </summary>
+            <typeparam name="T"></typeparam>
+        </member>
+        <member name="M:System.Net.Sockets.OrderedQueue`1.Insert(System.UInt32,`0)">
+            <summary>
+            加入一个项，并保证节点按key升序排序。
+            </summary>
+            <remarks>从末尾进行搜索，故追加效率取决于key是否比较按顺序添加。</remarks>
+            <param name="key">key若重复则返回已有项。</param>
+            <param name="item"></param>
+            <returns>加入的节点。key若重复则返回已有节点。</returns>
+        </member>
         <member name="M:System.Net.Sockets.OwRdmDataReceivedEventArgs.#ctor">
             <summary>
             构造函数。
@@ -1625,11 +1652,6 @@
             <see cref="F:System.Net.Sockets.OwRdmClient._RecvData"/>中最小包号。
             </summary>
         </member>
-        <member name="F:System.Net.Sockets.OwRdmClient._MaxSeq">
-            <summary>
-            <see cref="F:System.Net.Sockets.OwRdmClient._RecvData"/>中最大包号。
-            </summary>
-        </member>
         <member name="F:System.Net.Sockets.OwRdmClient._Stopping">
             <summary>
             请求结束任务的标记。
@@ -1668,31 +1690,24 @@
         </member>
         <member name="M:System.Net.Sockets.OwRdmClient.ScanQueue">
             <summary>
-            扫描接收队列，处理完整包——引发数据到达的事件。
+            扫描接收队列，处理完整包——引发数据到达的事件。会试图锁定队列。
             </summary>
         </member>
-        <member name="M:System.Net.Sockets.OwRdmClient.GetDram">
-            <summary>
-            获取序号最低的完整包，若没有则返回空集合。
-            调用者要锁定<see cref="F:System.Net.Sockets.OwRdmClient._RecvData"/>对象才能调用此函数。
-            </summary>
-            <returns>如果没有完整数据则返回空集合。</returns>
-        </member>
-        <member name="M:System.Net.Sockets.OwRdmClient.OnCommandPkg(System.Net.Sockets.OwRdmDgram)">
+        <member name="M:System.Net.Sockets.OwRdmClient.OnCommandDgram(System.Net.Sockets.OwRdmDgram)">
             <summary>
             处理命令包。客户端目前仅能处理初始化回置。
             </summary>
             <param name="entry"></param>
         </member>
-        <member name="M:System.Net.Sockets.OwRdmClient.Heartbeat">
+        <member name="M:System.Net.Sockets.OwRdmClient.SendToHeartbeat">
             <summary>
             发送心跳包。
             </summary>
             <returns>true发送成功，否则为false。</returns>
         </member>
-        <member name="M:System.Net.Sockets.OwRdmClient.Init">
+        <member name="M:System.Net.Sockets.OwRdmClient.SendToConnect">
             <summary>
-            初始化。
+            发送试图连接服务器的包。
             </summary>
         </member>
         <member name="M:System.Net.Sockets.OwRdmClient.IsInit">
@@ -1815,15 +1830,6 @@
             </summary>
             <param name="e"></param>
         </member>
-        <member name="M:System.Net.Sockets.OwRdmServer.AddDgram(System.Net.Sockets.OwRdmDgram,System.Collections.Generic.LinkedList{System.Net.Sockets.OwRdmDgram})">
-            <summary>
-            在指定链表中增加一项数据，并使之按Seq升序排序。
-            仅对大概率递增Seq的情况，有较高效率。
-            </summary>
-            <param name="dgram">seq必须预先填充完毕，且不能与已有节点的值重复。</param>
-            <param name="list"></param>
-            <returns>添加的节点。</returns>
-        </member>
         <member name="M:System.Net.Sockets.OwRdmServer.GetOrAddEntry(System.Int32,System.Net.Sockets.OwRdmRemoteEntry@,System.TimeSpan)">
             <summary>
             获取指定Id的远程端点信息，锁定并返回。
@@ -1832,12 +1838,6 @@
             <param name="entry"></param>
             <param name="timeSpan"></param>
             <returns></returns>
-        </member>
-        <member name="M:System.Net.Sockets.OwRdmServer.ReceiveFromAsync(System.Net.Sockets.SocketAsyncEventArgs)">
-            <summary>
-            用指定的参数进行异步侦听。
-            </summary>
-            <param name="e">需要设置好侦听事件，其它参数会自动设置。</param>
         </member>
         <member name="M:System.Net.Sockets.OwRdmServer.ProcessReceive(System.Net.Sockets.SocketAsyncEventArgs)">
             <summary>

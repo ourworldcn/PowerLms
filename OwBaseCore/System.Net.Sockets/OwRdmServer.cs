@@ -55,7 +55,7 @@ namespace System.Net.Sockets
         /// 已发送的数据。按收到的包号升序排序。
         /// 暂存这里等待确认到达后删除。
         /// </summary>
-        public LinkedList<OwRdmDgram> SendedData { get; set; } = new LinkedList<OwRdmDgram>();
+        public OrderedQueue<OwRdmDgram> SendedData { get; set; } = new OrderedQueue<OwRdmDgram>();
 
         /// <summary>
         /// 远程终结点。
@@ -84,10 +84,11 @@ namespace System.Net.Sockets
     /// RDM（以可靠方式发送的消息）消息会依次到达，不会重复。 此外，如果消息丢失，将会通知发送方。 
     /// 如果使用 Rdm 初始化 Socket，则在发送和接收数据之前无需建立远程主机连接。 利用 Rdm，您可以与多个对方主机进行通信。
     /// </summary>
-    public class OwRdmServer : OwDisposableBase, IDisposable
+    public class OwRdmServer : SocketAsyncWrapper, IDisposable
     {
 
         public OwRdmServer(IOptions<OwRdmServerOptions> options, ILogger<OwRdmServer> logger, IHostApplicationLifetime hostApplicationLifetime)
+            : base(new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp))
         {
             _Options = options;
             _Logger = logger;
@@ -107,7 +108,6 @@ namespace System.Net.Sockets
                 e.Completed += IO_Completed;
                 ReceiveFromAsync(e);
             }
-
         }
 
         #region 属性及相关
@@ -154,13 +154,48 @@ namespace System.Net.Sockets
 
         public void Send(byte[] buffer, int startIndex, int count, int id)
         {
-            Task.Run(() =>
+            if (!_Id2ClientEntry.ContainsKey(id))    //若尚未建立连接
             {
-                var list = OwRdmDgram.Create(buffer, startIndex, count);
+                SendAsync(buffer, startIndex, count, id);
+                return;
+            }
+            using var dw = GetOrAddEntry(id, out var entry, TimeSpan.Zero);
+            if (dw.IsEmpty) //若未能成功锁定
+            {
+                SendAsync(buffer, startIndex, count, id);
+                return;
+            }
+            var list = OwRdmDgram.Split(buffer, startIndex, count);
+            if (list.Count > 0)
+            {
+                list[0].Kind |= OwRdmDgramKind.StartDgram;
+                list[^1].Kind |= OwRdmDgramKind.EndDgram;
+                foreach (var dgram in list)
+                {
+                    dgram.Id = id;
+                    dgram.Seq = (int)Interlocked.Increment(ref entry.MaxSeq);
+                    SendToAsync(new ArraySegment<byte>(dgram.Buffer, dgram.Offset, dgram.Count), entry.RemoteEndPoint, null);
+                    entry.SendedData.Insert((uint)dgram.Seq, dgram);
+                }
+            }
+        }
+
+        public async void SendAsync(byte[] buffer, int startIndex, int count, int id)
+        {
+            var list = OwRdmDgram.Split(buffer, startIndex, count);
+            await Task.Run(() =>
+            {
+                var now = DateTime.UtcNow;
                 while (!_Id2ClientEntry.ContainsKey(id))    //若尚未建立连接
+                {
+                    if (DateTime.UtcNow - now > TimeSpan.FromMinutes(1))
+                    {
+                        _Logger.LogWarning("等待Id={Id}的客户端连接超时", id);
+                        return;
+                    }
                     Thread.Sleep(10);
+                }
                 using var dw = GetOrAddEntry(id, out var clientEntry, Timeout.InfiniteTimeSpan);
-                if (dw.IsEmpty) throw new InvalidOperationException("异常的锁定错误");  //若锁定超时，容错
                 if (list.Count > 0)
                 {
                     list[0].Kind |= OwRdmDgramKind.StartDgram;
@@ -212,7 +247,7 @@ namespace System.Net.Sockets
         /// 处理已经发送的情况。
         /// </summary>
         /// <param name="e"></param>
-        private void ProcessSendTo(SocketAsyncEventArgs e)
+        protected override void ProcessSendTo(SocketAsyncEventArgs e)
         {
             if (e.SocketError == SocketError.Success)
             {
@@ -222,7 +257,7 @@ namespace System.Net.Sockets
                 using var dw = GetOrAddEntry(dgram.Id, out var entry, Timeout.InfiniteTimeSpan);
                 Trace.Assert(!dw.IsEmpty);
                 dgram.FirstSendDateTime = DateTime.UtcNow;
-                AddDgram(dgram, entry.SendedData);  //追加到已发送数据的链表
+                entry.SendedData.Insert((uint)dgram.Seq, dgram);  //追加到已发送数据的链表
             }
             else
             {
@@ -231,30 +266,6 @@ namespace System.Net.Sockets
         }
 
         #endregion 发送及相关
-
-        /// <summary>
-        /// 在指定链表中增加一项数据，并使之按Seq升序排序。
-        /// 仅对大概率递增Seq的情况，有较高效率。
-        /// </summary>
-        /// <param name="dgram">seq必须预先填充完毕，且不能与已有节点的值重复。</param>
-        /// <param name="list"></param>
-        /// <returns>添加的节点。</returns>
-        private LinkedListNode<OwRdmDgram> AddDgram(OwRdmDgram dgram, LinkedList<OwRdmDgram> list)
-        {
-            LinkedListNode<OwRdmDgram> result = null;
-            LinkedListNode<OwRdmDgram> node;
-            for (node = list.Last; node != null; node = node.Previous)
-            {
-                if (node.Value.Seq < dgram.Seq)    //若找到位置
-                {
-                    result = list.AddAfter(node, dgram);
-                    break;
-                }
-            }
-            if (node is null)   //若没有找到合适位置
-                result = list.AddFirst(dgram);
-            return result;
-        }
 
         /// <summary>
         /// 获取指定Id的远程端点信息，锁定并返回。
@@ -272,7 +283,10 @@ namespace System.Net.Sockets
                 if (_Id2ClientEntry.TryGetValue(id, out var entry2) && ReferenceEquals(entry2, entry))  //若成功锁定
                     result = DisposeHelper.Create(c => Monitor.Exit(c), entry);
                 else
+                {
                     Monitor.Exit(entry);
+                    result = DisposeHelper.Empty<OwRdmRemoteEntry>();
+                }
             }
             return result;
         }
@@ -307,20 +321,6 @@ namespace System.Net.Sockets
                 default:
                     throw new ArgumentException("The last operation completed on the socket was not a receive or send");
             }
-        }
-
-        /// <summary>
-        /// 用指定的参数进行异步侦听。
-        /// </summary>
-        /// <param name="e">需要设置好侦听事件，其它参数会自动设置。</param>
-        private void ReceiveFromAsync(SocketAsyncEventArgs e)
-        {
-            var dgram = OwRdmDgram.Rent();
-            e.UserToken = dgram;
-            e.SetBuffer(dgram.Buffer, dgram.Offset, dgram.Count);
-            e.RemoteEndPoint = new IPEndPoint(IPAddress.Any, 0);
-            bool willRaiseEvent = _Socket.ReceiveFromAsync(e);
-            if (!willRaiseEvent) Task.Factory.StartNew(c => ProcessReceive(c as SocketAsyncEventArgs), e, TaskCreationOptions.PreferFairness);
         }
 
         /// <summary>
@@ -367,12 +367,12 @@ namespace System.Net.Sockets
                         Trace.Assert(!dw.IsEmpty);
                         if (clientEntry.RemoteEndPoint is not null && clientEntry.RemoteMaxReceivedSeq < dg.Seq) //若需要处理该确认帧
                         {
-                            for (var node = clientEntry.SendedData.First; node != null && node.Value.Seq <= dg.Seq; //若需要清理掉的帧
+                            for (var node = clientEntry.SendedData.First; node != null && node.Value.Item1.Seq <= dg.Seq; //若需要清理掉的帧
                                 node = node.Next)
                             {
                                 var tmp = node.Value;
                                 clientEntry.SendedData.Remove(node);
-                                OwRdmDgram.Return(tmp);
+                                OwRdmDgram.Return(tmp.Item1);
                             }
                         }
                     }

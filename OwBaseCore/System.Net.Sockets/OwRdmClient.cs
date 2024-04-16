@@ -11,11 +11,13 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using OW;
 
 /*
  * 目标框架	符号	其他符号
@@ -39,7 +41,7 @@ namespace System.Net.Sockets
     /// <remarks>如果使用面向连接的协议（如 TCP），则用于 ConnectAsync 与侦听主机连接。 使用 SendAsync 或 ReceiveAsync 异步通信数据。 可以使用 AcceptAsync.. 处理传入的连接请求。
     /// 如果使用无连接协议（如 UDP），则可以用于 SendToAsync 发送数据报和 ReceiveFromAsync接收数据报。
     /// 当前版本仅支持Udp协议。</remarks>
-    public class SocketAsyncWrapper
+    public class SocketAsyncWrapper : IDisposable
     {
         #region 静态成员
 
@@ -67,6 +69,11 @@ namespace System.Net.Sockets
         #endregion 构造函数
 
         volatile Socket _Socket;
+
+        /// <summary>
+        /// 是否已经被处置。
+        /// </summary>
+        private bool disposedValue;
 
         public Socket Socket { get => _Socket; protected set => _Socket = value; }
 
@@ -154,6 +161,12 @@ namespace System.Net.Sockets
             e.SetBuffer(buffer.Array, buffer.Offset, buffer.Count);
             e.RemoteEndPoint = remote;
             e.UserToken = userToken;
+            var b = Socket.ReceiveFromAsync(e);
+            if (!b) ProcessReceiveFrom(e);
+        }
+
+        protected void ReceiveFromAsync(SocketAsyncEventArgs e)
+        {
             var b = Socket.ReceiveFromAsync(e);
             if (!b) ProcessReceiveFrom(e);
         }
@@ -321,6 +334,41 @@ namespace System.Net.Sockets
 
         #endregion IO处理操作
 
+        #region IDisposable接口及相关
+
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    // 释放托管状态(托管对象)
+                    _Socket?.Dispose();
+                }
+
+                // 释放未托管的资源(未托管的对象)并重写终结器
+                // 将大型字段设置为 null
+                _Socket = null;
+                disposedValue = true;
+            }
+        }
+
+        // 仅当“Dispose(bool disposing)”拥有用于释放未托管资源的代码时才替代终结器
+        // ~SocketAsyncWrapper()
+        // {
+        //     // 不要更改此代码。请将清理代码放入“Dispose(bool disposing)”方法中
+        //     Dispose(disposing: false);
+        // }
+
+        public void Dispose()
+        {
+            // 不要更改此代码。请将清理代码放入“Dispose(bool disposing)”方法中
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
+        }
+        #endregion IDisposable接口及相关
+
         #endregion 方法
     }
 
@@ -352,6 +400,7 @@ namespace System.Net.Sockets
 
     public class OwRdmDgram : IComparable<OwRdmDgram>
     {
+        #region 静态成员
 
         /// <summary>
         /// Internet上的标准MTU值为576字节，所以在进行Internet的UDP编程时，最好将UDP的数据长度控件在548字节(576-8-20)以内。
@@ -398,7 +447,7 @@ namespace System.Net.Sockets
 
         /// <summary>
         /// 将一个大缓冲区的数据拆分为多个小包的数据。
-        /// 只负责复制数据区，正确设置其它属性。
+        /// 只负责复制数据区，调用者正确设置其它属性。
         /// </summary>
         /// <param name="buffer">缓冲区</param>
         /// <param name="startIndex">起始偏移，基于0.</param>
@@ -407,12 +456,12 @@ namespace System.Net.Sockets
         /// <exception cref="ArgumentOutOfRangeException">index 或 count 为负。</exception>
         /// <exception cref="ArgumentException">缓冲区长度减去 index 小于 count。。</exception>
         /// <exception cref="ArgumentNullException">buffer 为 null。</exception>
-        public static List<OwRdmDgram> Create(byte[] buffer, int startIndex, int count)
+        public static List<OwRdmDgram> Split(byte[] buffer, int startIndex, int count)
         {
             var result = new List<OwRdmDgram>();
 #pragma warning disable IDE0063 // 使用简单的 "using" 语句
             using (var ms = new MemoryStream(buffer, startIndex, count))
-                return Create(ms);
+                return Split(ms);
 #pragma warning restore IDE0063 // 使用简单的 "using" 语句
         }
 
@@ -423,7 +472,7 @@ namespace System.Net.Sockets
         /// <param name="stream">数据的当前位置到最终的数据将被读取，调用者要负责对象的处置。</param>
         /// <returns>拆分的条目对象列表（维持顺序稳定），如果是空数据则返回集合。</returns>
         /// <exception cref="ArgumentNullException">stream 为 null。</exception>
-        public static List<OwRdmDgram> Create(Stream stream)
+        public static List<OwRdmDgram> Split(Stream stream)
         {
             int length;
             var result = new List<OwRdmDgram>();
@@ -443,7 +492,7 @@ namespace System.Net.Sockets
         }
 
         /// <summary>
-        /// 
+        /// 将一组包的数据负载合成为一个字节数组。
         /// </summary>
         /// <param name="entries"></param>
         /// <returns></returns>
@@ -454,10 +503,49 @@ namespace System.Net.Sockets
             MemoryStream ms;
             using (ms = new MemoryStream(ary, true))
             {
-                entries.ForEach(c => ms.Write(c.Buffer, 8, c.Count - 8));
+                entries.ForEach(c => ms.Write(c.Buffer, c.Offset + 8, c.Count - 8));
             }
             return ms.ToArray();
         }
+
+        /// <summary>
+        /// 从头部获取连续的分包且必须是一个完整包。
+        /// </summary>
+        /// <param name="list"></param>
+        /// <returns>返回按顺序获取的一个完整包。</returns>
+        public static List<OwRdmDgram> RemoveFirstRange(OrderedQueue<OwRdmDgram> list)
+        {
+            List<OwRdmDgram> result = new List<OwRdmDgram>();
+            var node = list.First;
+            //处理起始包
+            if (!node.Value.Item1.Kind.HasFlag(OwRdmDgramKind.StartDgram))   //若不是起始包
+                return result;
+            var seq = node.Value.Item1.Seq;
+            result.Add(node.Value.Item1);
+            //处理后续包
+            if (!node.Value.Item1.Kind.HasFlag(OwRdmDgramKind.EndDgram))  //若不是完整包
+                for (node = node.Next; node != null; node = node.Next, seq++)
+                {
+                    if (node.Value.Item1.Seq != seq + 1)    //若检测到包顺序号不连续
+                    {
+                        result.Clear();
+                        break;
+                    }
+                    else //若是连续包
+                    {
+                        result.Add(node.Value.Item1);
+                        if (node.Value.Item1.Kind.HasFlag(OwRdmDgramKind.EndDgram))  //若检测到包已经完整
+                            break;
+                    }
+                }
+            //处理终止包
+            if (result.Count > 0 && !result[list.Count - 1].Kind.HasFlag(OwRdmDgramKind.EndDgram))    //若不是完整包
+                result.Clear();
+            for (int i = 0; i < result.Count; i++) list.RemoveFirst();  //移除已获取的包
+            return result;
+        }
+
+        #endregion 静态成员
 
         /// <summary>
         /// 构造函数。
@@ -545,6 +633,46 @@ namespace System.Net.Sockets
         #endregion IComparable<OwUdpDataEntry> 接口及相关
     }
 
+    /// <summary>
+    /// 记录收发数据的链表。
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    public class OrderedQueue<T> : LinkedList<(T, uint)>
+    {
+        public OrderedQueue()
+        {
+        }
+
+        /// <summary>
+        /// 加入一个项，并保证节点按key升序排序。
+        /// </summary>
+        /// <remarks>从末尾进行搜索，故追加效率取决于key是否比较按顺序添加。</remarks>
+        /// <param name="key">key若重复则返回已有项。</param>
+        /// <param name="item"></param>
+        /// <returns>加入的节点。key若重复则返回已有节点。</returns>
+        public LinkedListNode<(T, uint)> Insert(uint key, T item)
+        {
+            LinkedListNode<(T, uint)> result = null;
+            for (var node = Last; node is not null; node = node.Previous)
+            {
+                if (node.Value.Item2 < key)
+                {
+                    result = AddAfter(node, (item, key));
+                    break;
+                }
+                else if (node.Value.Item2 == key)    //若找到重复项
+                {
+                    result = node;
+                    break;
+                }
+            }
+            if (result is null)  //若没有找到——须加入头部
+                result = AddFirst((item, key));
+            return result;
+        }
+
+    }
+
     public class OwRdmDataReceivedEventArgs
     {
         /// <summary>
@@ -602,7 +730,7 @@ namespace System.Net.Sockets
         /// <summary>
         /// 接受数据的缓存队列。键是包序号 ，值数据条目。需要锁定使用。
         /// </summary>
-        ConcurrentDictionary<uint, OwRdmDgram> _RecvData = new ConcurrentDictionary<uint, OwRdmDgram>();
+        OrderedQueue<OwRdmDgram> _RecvData = new OrderedQueue<OwRdmDgram>();
 
         /// <summary>
         /// 通讯Id，仅低24位有用。若为null，标识尚未连接。
@@ -618,11 +746,6 @@ namespace System.Net.Sockets
         /// <see cref="_RecvData"/>中最小包号。
         /// </summary>
         uint _MinSeq;
-
-        /// <summary>
-        /// <see cref="_RecvData"/>中最大包号。
-        /// </summary>
-        uint _MaxSeq;
 
         /// <summary>
         /// 请求结束任务的标记。
@@ -692,6 +815,11 @@ namespace System.Net.Sockets
         /// <param name="e"></param>
         protected override void ProcessReceiveFrom(SocketAsyncEventArgs e)
         {
+            if (e.BytesTransferred > OwRdmDgram.Mtu) //若无效的包长度则丢弃
+            {
+                base.ProcessReceiveFrom(e);
+                return;
+            }
             var entry = new OwRdmDgram
             {
             };
@@ -700,22 +828,16 @@ namespace System.Net.Sockets
             if (entry.Kind.HasFlag(OwRdmDgramKind.CommandDgram))  //若是一个命令帧
             {
                 Debug.Assert(entry.Kind.HasFlag(OwRdmDgramKind.StartDgram) && entry.Kind.HasFlag(OwRdmDgramKind.EndDgram));   //仅能处理单帧命令
-                OnCommandPkg(entry);
+                OnCommandDgram(entry);
             }
             else
                 lock (_RecvData)
                 {
-                    if (entry.Seq <= _AckSeq || !_RecvData.TryAdd((uint)entry.Seq, entry)) //避免重复到达的包
+                    if (entry.Seq <= _AckSeq || null != _RecvData.Insert((uint)entry.Seq, entry)) //避免重复到达的包
                         Debug.WriteLine("检测到重复到达的包，Seq = " + entry.Seq);
                     else //若增加成功
                     {
-                        if (_RecvData.Count == 1)   //若仅此一项
-                            _MinSeq = _MaxSeq = (uint)entry.Seq;
-                        else
-                        {
-                            _MinSeq = Math.Min(_MinSeq, (uint)entry.Seq);
-                            _MaxSeq = Math.Max(_MaxSeq, (uint)entry.Seq);
-                        }
+                        _MinSeq = Math.Min(_MinSeq, (uint)entry.Seq);
                     }
                 }
             //扫描接受队列
@@ -723,15 +845,14 @@ namespace System.Net.Sockets
         }
 
         /// <summary>
-        /// 扫描接收队列，处理完整包——引发数据到达的事件。
+        /// 扫描接收队列，处理完整包——引发数据到达的事件。会试图锁定队列。
         /// </summary>
         internal void ScanQueue()
         {
             lock (_RecvData)
             {
-                for (var list = GetDram(); list.Count > 0; list = GetDram())    //获取完整包
+                for (var list = OwRdmDgram.RemoveFirstRange(_RecvData); list.Count > 0; list = OwRdmDgram.RemoveFirstRange(_RecvData))    //获取完整包
                 {
-                    var totalCount = list.Sum(c => c.Count - 8);  //计算总长度
                     var buff = OwRdmDgram.ToArray(list);
                     var e = new OwRdmDataReceivedEventArgs
                     {
@@ -745,80 +866,25 @@ namespace System.Net.Sockets
         }
 
         /// <summary>
-        /// 获取序号最低的完整包，若没有则返回空集合。
-        /// 调用者要锁定<see cref="_RecvData"/>对象才能调用此函数。
-        /// </summary>
-        /// <returns>如果没有完整数据则返回空集合。</returns>
-        private List<OwRdmDgram> GetDram()
-        {
-            Debug.Assert(Monitor.IsEntered(_RecvData));
-
-            List<OwRdmDgram> result = new List<OwRdmDgram>();
-            if (_RecvData.IsEmpty) return result;
-
-            if (!_RecvData.TryGetValue(_MinSeq, out var firstEntry))
-                firstEntry = null;
-
-            if (firstEntry.Kind.HasFlag(OwRdmDgramKind.StartDgram))  //若有起始包标志
-            {
-                if (firstEntry.Kind.HasFlag(OwRdmDgramKind.EndDgram))   //若是单一包
-                {
-                    result.Add(firstEntry);
-                    if (_RecvData.TryRemove(_MinSeq, out _))    //若移除成功，容错
-                    {
-                        _MaxSeq = _RecvData.Max(c => c.Key);
-                        _MinSeq = _RecvData.Min(c => c.Key);
-                        _AckSeq = (uint)firstEntry.Seq;
-                    }
-                }
-                else //非单一包
-                {
-                    uint? lastSeq = null; //终止包的序号号
-                    for (var i = _MinSeq + 1; i <= _MaxSeq; i++)    //TODO 回绕问题
-                    {
-                        if (!_RecvData.TryGetValue(i, out var dgram))  //若包不连续
-                            break;
-                        if (dgram.Kind.HasFlag(OwRdmDgramKind.StartDgram))    //若遇到新的起始包
-                            break;
-                        if (dgram.Kind.HasFlag(OwRdmDgramKind.EndDgram))   //若找到终止包
-                        {
-                            lastSeq = i;
-                            break;
-                        }
-                    }
-                    if (lastSeq.HasValue)  //若有任何一个完整包
-                    {
-                        for (var i = _MinSeq; i <= lastSeq.Value; i++)
-                        {
-                            _RecvData.TryRemove(i, out var entry);
-                            result.Add(entry);
-                        }
-                        _MaxSeq = _RecvData.Max(c => c.Key);
-                        _MinSeq = _RecvData.Min(c => c.Key);
-                        _AckSeq = lastSeq;
-                    }
-                }
-            }
-            return result;
-        }
-
-        /// <summary>
         /// 处理命令包。客户端目前仅能处理初始化回置。
         /// </summary>
         /// <param name="entry"></param>
-        internal virtual void OnCommandPkg(OwRdmDgram entry)
+        internal virtual void OnCommandDgram(OwRdmDgram entry)
         {
-            _Id = entry.Id;
-            _AckSeq = (uint)entry.Seq;  //设置起始包号。
+            if (!IsInit())  //避免重复到达的初始化包
+            {
+                _Id = entry.Id;
+                _AckSeq = (uint)entry.Seq;  //设置起始包号。
+            }
         }
 
         /// <summary>
         /// 发送心跳包。
         /// </summary>
         /// <returns>true发送成功，否则为false。</returns>
-        public bool Heartbeat()
+        protected bool SendToHeartbeat()
         {
-            if (!_Id.HasValue) return false;    //若尚未初始化成功
+            if (!IsInit()) return false;    //若尚未初始化成功
             var dgram = OwRdmDgram.Rent();
             dgram.Kind = OwRdmDgramKind.StartDgram | OwRdmDgramKind.EndDgram | OwRdmDgramKind.CommandDgram;
             SendToAsync(dgram);
@@ -826,11 +892,15 @@ namespace System.Net.Sockets
         }
 
         /// <summary>
-        /// 初始化。
+        /// 发送试图连接服务器的包。
         /// </summary>
-        public void Init()
+        protected void SendToConnect()
         {
-
+            var entry = OwRdmDgram.Rent();
+            entry.Kind = (OwRdmDgramKind.CommandDgram | OwRdmDgramKind.StartDgram | OwRdmDgramKind.EndDgram);
+            entry.Id = 0;
+            entry.Count = 0;
+            SendToAsync(entry);
         }
 
         /// <summary>
@@ -861,7 +931,7 @@ namespace System.Net.Sockets
 
         private bool disposedValue;
 
-        protected virtual void Dispose(bool disposing)
+        protected override void Dispose(bool disposing)
         {
             if (!disposedValue)
             {
@@ -872,8 +942,10 @@ namespace System.Net.Sockets
 
                 // 释放未托管的资源(未托管的对象)并重写终结器
                 // 将大型字段设置为 null
+                _RecvData = null;
                 disposedValue = true;
             }
+            base.Dispose(disposing);
         }
 
         // // 仅当“Dispose(bool disposing)”拥有用于释放未托管资源的代码时才替代终结器
@@ -882,13 +954,6 @@ namespace System.Net.Sockets
         //     // 不要更改此代码。请将清理代码放入“Dispose(bool disposing)”方法中
         //     Dispose(disposing: false);
         // }
-
-        public void Dispose()
-        {
-            // 不要更改此代码。请将清理代码放入“Dispose(bool disposing)”方法中
-            Dispose(disposing: true);
-            GC.SuppressFinalize(this);
-        }
 
         #endregion IDisposable接口相关
     }
