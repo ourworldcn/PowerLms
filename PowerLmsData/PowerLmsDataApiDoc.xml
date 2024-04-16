@@ -257,6 +257,21 @@
             业务费用收付款申请单明细项。
             </summary>
         </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.WfTemplates">
+            <summary>
+            流程模板表。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.WfTemplateNodes">
+            <summary>
+            流程模板节点表。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.WfTemplateNodeItems">
+            <summary>
+            流程模板节点参与者表。
+            </summary>
+        </member>
         <member name="T:PowerLmsServer.EfData.OwDbContextExtensions">
             <summary>
             数据库上下文的扩展方法。
@@ -2412,73 +2427,67 @@
             创建的时间。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.OwWorkflowTemplate.OrgId">
+        <member name="T:PowerLms.Data.OwWfTemplate">
             <summary>
-            机构Id。
+            流程模板总表。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.OwWorkflowTemplate.DocTypeCode">
+        <member name="P:PowerLms.Data.OwWfTemplate.OrgId">
+            <summary>
+            所属机构Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwWfTemplate.DocTypeCode">
             <summary>
             文档类型Id。文档的类型Code,系统多方预先约定好，所有商户公用，最长16个字符，仅支持英文。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.OwWorkflowTemplate.DisplayName">
+        <member name="P:PowerLms.Data.OwWfTemplate.DisplayName">
             <summary>
-            此流转的显示名。
+            此流程的显示名。
             </summary>
         </member>
-        <member name="T:PowerLms.Data.OwWorkflowTemplateNode">
+        <member name="P:PowerLms.Data.OwWfTemplate.CreateBy">
             <summary>
-            工作流模板主数据类。
+            创建者的唯一标识。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.OwWorkflowTemplateNode.ParentId">
+        <member name="P:PowerLms.Data.OwWfTemplate.CreateDateTime">
+            <summary>
+            创建的时间。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.OwWfTemplateNode">
+            <summary>
+            工作流模板内节点表。当前节点Id就是本对象自身Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwWfTemplateNode.ParentId">
             <summary>
             流程Id。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.OwWorkflowTemplateNode.WfNodeType">
-            <summary>
-            类型，目前保留为0。预计1=抄送，即会在文档转向下一个节点成功时，会抄送到某些节点，但并不需要这些节点进行动作。
-            </summary>
-        </member>
-        <member name="P:PowerLms.Data.OwWorkflowTemplateNode.CurrentNodeId">
-            <summary>
-            当前所处节点Id。通常都是职员Id。遇特殊情况，工作流引擎自行解释。
-            </summary>
-        </member>
-        <member name="P:PowerLms.Data.OwWorkflowTemplateNode.NextNodeId">
+        <member name="P:PowerLms.Data.OwWfTemplateNode.NextId">
             <summary>
             下一个节点的Id。通常都是职员Id。遇特殊情况，工作流引擎自行解释。
             </summary>
             <remarks>如:
             <c>
-            a1,a2 => b1(0),x(1)
-            x=>c1
-            a3,a4=>b2
-            b1,b2=>c1
-            c1=>vp1
-            vp1=>ceo
             </c></remarks>
         </member>
-        <member name="P:PowerLms.Data.OwWorkflowTemplateNode.Prioriteit">
-            <summary>
-            优先度。0最高，1其次，以此类推
-            </summary>
-        </member>
-        <member name="P:PowerLms.Data.OwWorkflowTemplateNode.RejectOpertion">
+        <member name="P:PowerLms.Data.OwWfTemplateNode.RejectOpertion">
             <summary>
             拒绝后的操作，1 = 终止,2=回退
             </summary>
         </member>
-        <member name="P:PowerLms.Data.OwWorkflowTemplateNode.DisplayName">
+        <member name="P:PowerLms.Data.OwWfTemplateNode.DisplayName">
             <summary>
-            此流转的显示名。
+            此节点的显示名。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.OwWorkflowTemplateNode.GuardJsonString">
+        <member name="P:PowerLms.Data.OwWfTemplateNode.GuardJsonString">
             <summary>
-            前/后置守卫条件的Json字符串。
+            前/后置守卫条件的Json字符串。暂未启用。
             </summary>
             <remarks>如 <c>
             [
@@ -2496,19 +2505,30 @@
             ]
             </c></remarks>
         </member>
-        <member name="P:PowerLms.Data.OwWorkflowTemplateNodeItem.NodeId">
+        <member name="T:PowerLms.Data.OwWfTemplateNodeItem">
             <summary>
-            节点Id。
+            节点详细信息类。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.OwWorkflowTemplateNodeItem.WorkerId">
+        <member name="P:PowerLms.Data.OwWfTemplateNodeItem.ParentId">
             <summary>
-            员工Id。
+            所属节点Id。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.OwWorkflowTemplateNodeItem.Prioriteit">
+        <member name="P:PowerLms.Data.OwWfTemplateNodeItem.ActorId">
             <summary>
-            优先度。0最高，1其次，以此类推
+            参与者(员工)Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwWfTemplateNodeItem.OperationKind">
+            <summary>
+            参与者类型，目前保留为0。
+            预计1=抄送人，此时则无视优先度——任意一个审批人得到文档时，所有抄送人同时得到此文档。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwWfTemplateNodeItem.Priority">
+            <summary>
+            优先级。0最高，1其次，以此类推...。仅当节点类型0时有效。
             </summary>
         </member>
         <member name="T:PowerLms.Data.OwWorkflow">

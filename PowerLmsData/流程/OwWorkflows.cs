@@ -3,77 +3,80 @@ using OW.Data;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace PowerLms.Data
 {
-    public class OwWorkflowTemplate : GuidKeyObjectBase
+    /// <summary>
+    /// 流程模板总表。
+    /// </summary>
+    [Index(nameof(OrgId))]
+    public class OwWfTemplate : GuidKeyObjectBase, ICreatorInfo
     {
         /// <summary>
-        /// 机构Id。
+        /// 所属机构Id。
         /// </summary>
+        [Comment("所属机构Id")]
         public Guid? OrgId { get; set; }
 
         /// <summary>
         /// 文档类型Id。文档的类型Code,系统多方预先约定好，所有商户公用，最长16个字符，仅支持英文。
         /// </summary>
         [MaxLength(16), Unicode(false)]
+        [Comment("文档类型Id。文档的类型Code,系统多方预先约定好，所有商户公用，最长16个字符，仅支持英文。")]
         public string DocTypeCode { get; set; }
 
         /// <summary>
-        /// 此流转的显示名。
+        /// 此流程的显示名。
         /// </summary>
+        [Comment("此流程的显示名。")]
         public string DisplayName { get; set; }
 
+        #region ICreatorInfo接口
 
+        /// <summary>
+        /// 创建者的唯一标识。
+        /// </summary>
+        [Comment("创建者的唯一标识")]
+        public Guid? CreateBy { get; set; }
+
+        /// <summary>
+        /// 创建的时间。
+        /// </summary>
+        [Comment("创建的时间")]
+        public DateTime CreateDateTime { get; set; } = OwHelper.WorldNow;
+
+        #endregion ICreatorInfo接口
     }
 
     /// <summary>
-    /// 工作流模板主数据类。
+    /// 工作流模板内节点表。当前节点Id就是本对象自身Id。
     /// </summary>
-    [Index(nameof(WfNodeType), nameof(CurrentNodeId))]
-    public class OwWorkflowTemplateNode : GuidKeyObjectBase
+    [Index(nameof(ParentId))]
+    [Index(nameof(NextId))]
+    public class OwWfTemplateNode : GuidKeyObjectBase
     {
-        public OwWorkflowTemplateNode()
+        public OwWfTemplateNode()
         {
         }
 
         /// <summary>
         /// 流程Id。
         /// </summary>
+        [Comment("流程Id")]
         public Guid ParentId { get; set; }
-
-        /// <summary>
-        /// 类型，目前保留为0。预计1=抄送，即会在文档转向下一个节点成功时，会抄送到某些节点，但并不需要这些节点进行动作。
-        /// </summary>
-        public byte WfNodeType { get; set; }
-
-        /// <summary>
-        /// 当前所处节点Id。通常都是职员Id。遇特殊情况，工作流引擎自行解释。
-        /// </summary>
-        public Guid CurrentNodeId { get; set; }
-
 
         /// <summary>
         /// 下一个节点的Id。通常都是职员Id。遇特殊情况，工作流引擎自行解释。
         /// </summary>
         /// <remarks>如:
         /// <c>
-        /// a1,a2 => b1(0),x(1)
-        /// x=>c1
-        /// a3,a4=>b2
-        /// b1,b2=>c1
-        /// c1=>vp1
-        /// vp1=>ceo
         /// </c></remarks>
-        public Guid? NextNodeId { get; set; }
-
-        /// <summary>
-        /// 优先度。0最高，1其次，以此类推
-        /// </summary>
-        public int Prioriteit { get; set; }
+        [Comment("下一个节点的Id。通常都是职员Id。遇特殊情况，工作流引擎自行解释。")]
+        public Guid? NextId { get; set; }
 
         /// <summary>
         /// 拒绝后的操作，1 = 终止,2=回退
@@ -81,14 +84,15 @@ namespace PowerLms.Data
         public byte RejectOpertion { get; set; }
 
         /// <summary>
-        /// 此流转的显示名。
+        /// 此节点的显示名。
         /// </summary>
+        [Comment("此节点的显示名。")]
         public string DisplayName { get; set; }
 
         #region 前/后置守卫条件
 
         /// <summary>
-        /// 前/后置守卫条件的Json字符串。
+        /// 前/后置守卫条件的Json字符串。暂未启用。
         /// </summary>
         /// <remarks>如 <c>
         /// [
@@ -105,26 +109,52 @@ namespace PowerLms.Data
         /// }
         /// ]
         /// </c></remarks>
+        [Comment(" 前/后置守卫条件的Json字符串。暂未启用。")]
+        [Unicode(false)]
         public string GuardJsonString { get; set; }
         #endregion 前/后置守卫条件
+
+        #region 导航属性
+        ///// <summary>
+        ///// 详细项集合的导航属性。
+        ///// </summary>
+        //[InverseProperty(nameof(OwWorkflowTemplateNodeItem.ParentId))]
+        //public virtual List<OwWorkflowTemplateNodeItem> Children { get; set; } = new List<OwWorkflowTemplateNodeItem>();
+        #endregion 导航属性
     }
 
-    public class OwWorkflowTemplateNodeItem : GuidKeyObjectBase
+    /// <summary>
+    /// 节点详细信息类。
+    /// </summary>
+    [Index(nameof(ParentId))]
+    public class OwWfTemplateNodeItem : GuidKeyObjectBase
     {
+        #region 导航属性
         /// <summary>
-        /// 节点Id。
+        /// 所属节点Id。
         /// </summary>
-        public Guid NodeId { get; set; }
+        [Comment("所属节点Id。")]
+        public Guid ParentId { get; set; }
+        #endregion 导航属性
 
         /// <summary>
-        /// 员工Id。
+        /// 参与者(员工)Id。
         /// </summary>
-        public Guid WorkerId { get; set; }
+        [Comment("参与者(员工)Id。")]
+        public Guid ActorId { get; set; }
 
         /// <summary>
-        /// 优先度。0最高，1其次，以此类推
+        /// 参与者类型，目前保留为0。
+        /// 预计1=抄送人，此时则无视优先度——任意一个审批人得到文档时，所有抄送人同时得到此文档。
         /// </summary>
-        public int Prioriteit { get; set; }
+        [Comment("参与者类型，目前保留为0。预计1=抄送人，此时则无视优先度——任意一个审批人得到文档时，所有抄送人同时得到此文档。")]
+        public byte OperationKind { get; set; }
+
+        /// <summary>
+        /// 优先级。0最高，1其次，以此类推...。仅当节点类型0时有效。
+        /// </summary>
+        [Comment("优先级。0最高，1其次，以此类推...。仅当节点类型0时有效。")]
+        public int Priority { get; set; }
 
     }
 

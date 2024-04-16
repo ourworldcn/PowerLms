@@ -315,7 +315,7 @@ namespace PowerLmsServer.EfData
         /// 业务总表。
         /// </summary>
         public DbSet<PlJob> PlJobs { get; set; }
-        
+
         /// <summary>
         /// 空运出口表。
         /// </summary>
@@ -347,6 +347,24 @@ namespace PowerLmsServer.EfData
         /// 业务费用收付款申请单明细项。
         /// </summary>
         public DbSet<DocFeeRequisitionItem> DocFeeRequisitionItems { get; set; }
+        #endregion
+
+        #region 流程相关
+
+        /// <summary>
+        /// 流程模板表。
+        /// </summary>
+        public DbSet<OwWfTemplate> WfTemplates { get; set; }
+
+        /// <summary>
+        /// 流程模板节点表。
+        /// </summary>
+        public DbSet<OwWfTemplateNode> WfTemplateNodes { get; set; }
+
+        /// <summary>
+        /// 流程模板节点参与者表。
+        /// </summary>
+        public DbSet<OwWfTemplateNodeItem> WfTemplateNodeItems { get; set; }
         #endregion
     }
 

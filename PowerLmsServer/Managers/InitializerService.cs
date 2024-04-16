@@ -165,7 +165,6 @@ namespace PowerLmsServer.Managers
             //    else
             //        sb.Append($"{item.Key}=0 or ");
             //}
-            int? i1 = 2;
             var d1 = Convert.ToDecimal(OwHelper.WorldNow.ToBinary());
             var ss = db.PlCustomers.Where(c => c.IsAirway);
             var str = ss.ToQueryString();
