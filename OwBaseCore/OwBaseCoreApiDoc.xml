@@ -1389,6 +1389,21 @@
             是否已经被处置。
             </summary>
         </member>
+        <member name="P:System.Net.Sockets.SocketAsyncWrapper.Stopping">
+            <summary>
+            通过该标记指示本类停止工作。
+            </summary>
+        </member>
+        <member name="P:System.Net.Sockets.SocketAsyncWrapper.Stopped">
+            <summary>
+            该标记标志本类已经停止工作。
+            </summary>
+        </member>
+        <member name="F:System.Net.Sockets.SocketAsyncWrapper._Reseting">
+            <summary>
+            是否正在复位错误。
+            </summary>
+        </member>
         <member name="M:System.Net.Sockets.SocketAsyncWrapper.RentBuffer(System.Int32)">
             <summary>
             获取一个缓冲区。
@@ -1416,6 +1431,12 @@
             <param name="remote"></param>
             <param name="userToken"></param>
         </member>
+        <member name="M:System.Net.Sockets.SocketAsyncWrapper.SendToAsync(System.Net.Sockets.SocketAsyncEventArgs)">
+            <summary>
+            兼顾同步处理的异步发送。
+            </summary>
+            <param name="e"></param>
+        </member>
         <member name="M:System.Net.Sockets.SocketAsyncWrapper.ReceiveFromAsync(System.ArraySegment{System.Byte},System.Net.EndPoint,System.Object)">
             <summary>
             异步接收指定端点的数据报。
@@ -1423,6 +1444,12 @@
             <param name="buffer">缓冲区。</param>
             <param name="remote"></param>
             <param name="userToken"></param>
+        </member>
+        <member name="M:System.Net.Sockets.SocketAsyncWrapper.ReceiveFromAsync(System.Net.Sockets.SocketAsyncEventArgs)">
+            <summary>
+            兼顾同步完成情况的接收数据。
+            </summary>
+            <param name="e"></param>
         </member>
         <member name="M:System.Net.Sockets.SocketAsyncWrapper.ProcessSendTo(System.Net.Sockets.SocketAsyncEventArgs)">
             <summary>
@@ -1440,7 +1467,7 @@
             <summary>
             处理错误。
             </summary>
-            <param name="e"></param>
+            <param name="e">除 <see cref="F:System.Net.Sockets.SocketError.Success"/> 以外的情况会送到这里处理。当前仅考虑udp的情况</param>
         </member>
         <member name="T:System.Net.Sockets.OwRdmDgramKind">
             <summary>
@@ -1627,6 +1654,16 @@
             </summary>
             <param name="remote">远程服务器端点。</param>
         </member>
+        <member name="M:System.Net.Sockets.OwRdmClient.Initialize">
+            <summary>
+            构造函数的辅助初始化函数。
+            </summary>
+        </member>
+        <member name="F:System.Net.Sockets.OwRdmClient._Server">
+            <summary>
+            服务器地址。如果不是null，说明用了dns名指定了服务器地址。
+            </summary>
+        </member>
         <member name="F:System.Net.Sockets.OwRdmClient._RemoteEndPoing">
             <summary>
             连接的服务器端地址。
@@ -1647,11 +1684,6 @@
             当前收到的最大连续包号。
             </summary>
         </member>
-        <member name="F:System.Net.Sockets.OwRdmClient._MinSeq">
-            <summary>
-            <see cref="F:System.Net.Sockets.OwRdmClient._RecvData"/>中最小包号。
-            </summary>
-        </member>
         <member name="F:System.Net.Sockets.OwRdmClient._Stopping">
             <summary>
             请求结束任务的标记。
@@ -1668,19 +1700,11 @@
             </summary>
             <param name="socket"></param>
         </member>
-        <member name="M:System.Net.Sockets.OwRdmClient.ConnectCore">
+        <member name="M:System.Net.Sockets.OwRdmClient.ProcessSendTo(System.Net.Sockets.SocketAsyncEventArgs)">
             <summary>
-            自有初始化。
+            自动回收已用的rdm数据包对象。
             </summary>
-            <remarks>此时 <see cref="T:System.Net.Sockets.Socket"/> 应已经正确初始化。</remarks>
-        </member>
-        <member name="M:System.Net.Sockets.OwRdmClient.SendToAsync(System.Net.Sockets.OwRdmDgram)">
-            <summary>
-            立即同步发送一个数据条目，并做相应处理。
-            <see cref="P:System.Net.Sockets.OwRdmDgram.Kind"/> 和 <see cref="T:System.Net.Sockets.OwRdmDgram"/>中的数据要实现设定好。
-            本函数仅设置 <see cref="P:System.Net.Sockets.OwRdmDgram.Id"/> 和 <see cref="P:System.Net.Sockets.OwRdmDgram.Seq"/> 。
-            </summary>
-            <param name="entry"></param>
+            <param name="e"></param>
         </member>
         <member name="M:System.Net.Sockets.OwRdmClient.ProcessReceiveFrom(System.Net.Sockets.SocketAsyncEventArgs)">
             <summary>
@@ -1744,6 +1768,11 @@
             远程客户端信息类
             </summary>
         </member>
+        <member name="M:System.Net.Sockets.OwRdmRemoteEntry.#ctor">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
         <member name="P:System.Net.Sockets.OwRdmRemoteEntry.Id">
             <summary>
             远端的唯一标识。客户端是可能因为路由不同而在服务器端看来端点地址不同的。目前该版本仅低24位有效。大约支持400万客户端总数，未来可能考虑回收使用。
@@ -1802,11 +1831,6 @@
             每个客户端的信息。
             </summary>
         </member>
-        <member name="F:System.Net.Sockets.OwRdmServer._Socket">
-            <summary>
-            使用Socket对象。
-            </summary>
-        </member>
         <member name="F:System.Net.Sockets.OwRdmServer._MaxId">
             <summary>
             已经使用的最大Id值。
@@ -1817,19 +1841,6 @@
             侦听的端点。
             </summary>
         </member>
-        <member name="M:System.Net.Sockets.OwRdmServer.SendCore(System.Net.Sockets.OwRdmDgram)">
-            <summary>
-            发送一个数据帧。
-            </summary>
-            <param name="dgram">必须设置有效属性包括 Id 和 Seq。成功调用本函数后，此对象被接管，调用者不可用。
-            应尽可能使用<see cref="M:System.Net.Sockets.OwRdmDgram.Rent"/>获取，本类会在不使用后用 <see cref="M:System.Net.Sockets.OwRdmDgram.Return(System.Net.Sockets.OwRdmDgram)"/> 放入池中。 </param>
-        </member>
-        <member name="M:System.Net.Sockets.OwRdmServer.ProcessSendTo(System.Net.Sockets.SocketAsyncEventArgs)">
-            <summary>
-            处理已经发送的情况。
-            </summary>
-            <param name="e"></param>
-        </member>
         <member name="M:System.Net.Sockets.OwRdmServer.GetOrAddEntry(System.Int32,System.Net.Sockets.OwRdmRemoteEntry@,System.TimeSpan)">
             <summary>
             获取指定Id的远程端点信息，锁定并返回。
@@ -1838,18 +1849,6 @@
             <param name="entry"></param>
             <param name="timeSpan"></param>
             <returns></returns>
-        </member>
-        <member name="M:System.Net.Sockets.OwRdmServer.ProcessReceive(System.Net.Sockets.SocketAsyncEventArgs)">
-            <summary>
-            处理已接受到数据的情况。
-            </summary>
-            <param name="e"></param>
-        </member>
-        <member name="M:System.Net.Sockets.OwRdmServer.ProcessError(System.Net.Sockets.SocketAsyncEventArgs)">
-            <summary>
-            处理错误。
-            </summary>
-            <param name="e"></param>
         </member>
         <member name="P:System.Net.Sockets.OwUdpServerDataEntry.Id">
             <summary>

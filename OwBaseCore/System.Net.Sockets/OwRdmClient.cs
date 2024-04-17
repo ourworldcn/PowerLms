@@ -14,6 +14,7 @@ using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Timers;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -63,7 +64,7 @@ namespace System.Net.Sockets
         public SocketAsyncWrapper(Socket socket)
         {
             Socket = socket;
-            Socket.ReceiveBufferSize = Math.Max(Socket.ReceiveBufferSize, Environment.ProcessorCount * Environment.SystemPageSize);
+            //Socket.ReceiveBufferSize = Math.Max(Socket.ReceiveBufferSize, Environment.ProcessorCount * Environment.SystemPageSize);
         }
 
         #endregion 构造函数
@@ -77,6 +78,22 @@ namespace System.Net.Sockets
 
         public Socket Socket { get => _Socket; protected set => _Socket = value; }
 
+        CancellationTokenSource _Stopping = new CancellationTokenSource();
+        /// <summary>
+        /// 通过该标记指示本类停止工作。
+        /// </summary>
+        public CancellationTokenSource Stopping { get => _Stopping; }
+
+        CancellationTokenSource _Stopped = new CancellationTokenSource();
+        /// <summary>
+        /// 该标记标志本类已经停止工作。
+        /// </summary>
+        public CancellationTokenSource Stopped { get => _Stopped; }
+
+        /// <summary>
+        /// 是否正在复位错误。
+        /// </summary>
+        volatile bool _Reseting;
         #region 方法
 
         #region 缓冲区控制
@@ -145,8 +162,23 @@ namespace System.Net.Sockets
             e.RemoteEndPoint = remote;
             e.UserToken = userToken;
             //发送
-            var b = Socket.SendToAsync(e);
-            if (!b) ProcessSendTo(e);
+            SendToAsync(e);
+        }
+
+        /// <summary>
+        /// 兼顾同步处理的异步发送。
+        /// </summary>
+        /// <param name="e"></param>
+        protected void SendToAsync(SocketAsyncEventArgs e)
+        {
+            var b = Socket.SendToAsync(e);//如果 I/O 操作挂起，则为 true。 操作完成时，将引发 e 参数的 Completed 事件。
+                                          //如果 I/O 操作同步完成，则为 false。
+                                          //在这种情况下，将不会引发 e 参数的 Completed 事件，并且可能在方法调用返回后立即检查作为参数传递的 e 对象以检索操作的结果。
+            if (!b)
+                if (e.SocketError == SocketError.Success)
+                    ProcessSendTo(e);
+                else
+                    ProcessError(e);
         }
 
         /// <summary>
@@ -161,14 +193,21 @@ namespace System.Net.Sockets
             e.SetBuffer(buffer.Array, buffer.Offset, buffer.Count);
             e.RemoteEndPoint = remote;
             e.UserToken = userToken;
-            var b = Socket.ReceiveFromAsync(e);
-            if (!b) ProcessReceiveFrom(e);
+            ReceiveFromAsync(e);
         }
 
+        /// <summary>
+        /// 兼顾同步完成情况的接收数据。
+        /// </summary>
+        /// <param name="e"></param>
         protected void ReceiveFromAsync(SocketAsyncEventArgs e)
         {
             var b = Socket.ReceiveFromAsync(e);
-            if (!b) ProcessReceiveFrom(e);
+            if (!b)
+                if (e.SocketError == SocketError.Success)
+                    ProcessReceiveFrom(e);
+                else
+                    ProcessError(e);
         }
 
         #region IO处理操作
@@ -222,21 +261,22 @@ namespace System.Net.Sockets
         protected virtual void ProcessReceiveFrom(SocketAsyncEventArgs e)
         {
             //OnReceiveFrom(new ArraySegment<byte>(e.Buffer, e.Offset, e.BytesTransferred), e.RemoteEndPoint, e.UserToken);
-            Socket.ReceiveFromAsync(e);
+            ReceiveFromAsync(e);
         }
 
         /// <summary>
         /// 处理错误。
         /// </summary>
-        /// <param name="e"></param>
+        /// <param name="e">除 <see cref="SocketError.Success"/> 以外的情况会送到这里处理。当前仅考虑udp的情况</param>
         protected virtual void ProcessError(SocketAsyncEventArgs e)
         {
             switch (e.SocketError)
             {
                 case SocketError.Success:
+                    //成功则不会到达这里,如果到达这里说明派生类已经处理了错误，并再次调用了基类的处理函数。
+                    break;
                 case SocketError.Shutdown:
                 case SocketError.ConnectionAborted:
-                    break;
                 case SocketError.OperationAborted:
 
                 case SocketError.IOPending:
@@ -322,12 +362,40 @@ namespace System.Net.Sockets
                 case SocketError.NoRecovery:
 
                 case SocketError.NoData:
-                    //_Logger.LogWarning("Rdm传输发生错误——{err}", e.SocketError.ToString());
-                    //if (!_HostApplicationLifetime.ApplicationStopping.IsCancellationRequested)
-                    //    OwRdmClient.ResetError(_Socket);
-                    break;
                 case SocketError.SocketError:
-                    OwRdmClient.ResetError(Socket);
+                    if (_Stopping.IsCancellationRequested || _Stopped.IsCancellationRequested) //若已经请求终止
+                        break;
+                    Trace.WriteLine("Rdm传输发生错误——{err}", e.SocketError.ToString());
+                    if (!_Reseting)
+                    {
+                        _Reseting = true;
+                        Task.Factory.StartNew(c =>  //避免处理过于频繁，栈溢出
+                        {
+                            try
+                            {
+                                if (_Stopping.IsCancellationRequested || _Stopped.IsCancellationRequested) //若已经请求终止
+                                    return;
+                                switch (e.LastOperation)
+                                {
+                                    case SocketAsyncOperation.SendTo:
+                                        OwRdmClient.ResetError(Socket);
+                                        Task.Run(() => SendToAsync(e));
+                                        break;
+                                    case SocketAsyncOperation.ReceiveFrom:
+                                        OwRdmClient.ResetError(Socket);
+                                        Task.Run(() => _Socket.ReceiveFromAsync(e));
+                                        break;
+                                    default:
+                                        OwRdmClient.ResetError(Socket);
+                                        break;
+                                }
+                            }
+                            finally
+                            {
+                                _Reseting = false;
+                            }
+                        }, e, _Stopping.Token);
+                    }
                     break;
             }
         }
@@ -501,7 +569,7 @@ namespace System.Net.Sockets
             var count = entries.Sum(c => c.Count - 8);
             var ary = ArrayPool<byte>.Shared.Rent(count);
             MemoryStream ms;
-            using (ms = new MemoryStream(ary, true))
+            using (ms = new MemoryStream(ary,0,count, true))
             {
                 entries.ForEach(c => ms.Write(c.Buffer, c.Offset + 8, c.Count - 8));
             }
@@ -517,6 +585,7 @@ namespace System.Net.Sockets
         {
             List<OwRdmDgram> result = new List<OwRdmDgram>();
             var node = list.First;
+            if (node is null) return result;
             //处理起始包
             if (!node.Value.Item1.Kind.HasFlag(OwRdmDgramKind.StartDgram))   //若不是起始包
                 return result;
@@ -705,12 +774,16 @@ namespace System.Net.Sockets
     /// </summary>
     public class OwRdmClient : SocketAsyncWrapper, IDisposable
     {
+        #region 构造函数及相关
 
         public OwRdmClient(string server, short port) : base(new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp))
         {
             var ip = Dns.GetHostAddresses(server).First(c => c.AddressFamily == AddressFamily.InterNetwork);
             var endPoint = new IPEndPoint(ip, port);
             _RemoteEndPoing = endPoint;
+            _Server = server;
+            _Port = port;
+            Initialize();
         }
 
         /// <summary>
@@ -720,12 +793,41 @@ namespace System.Net.Sockets
         public OwRdmClient(IPEndPoint remote) : base(new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp))
         {
             _RemoteEndPoing = remote;
+            Initialize();
         }
 
         /// <summary>
+        /// 构造函数的辅助初始化函数。
+        /// </summary>
+        private void Initialize()
+        {
+            Socket.Bind(new IPEndPoint(IPAddress.Any, 0));
+            _Stopping.Token.Register(() =>
+            {
+                Socket.Close(500);
+                _Stopped.Cancel();
+            });
+            _Timer = new Threading.Timer(c =>
+            {
+                SendToHeartbeat();
+            }, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+            var dgram = OwRdmDgram.Rent();
+            ReceiveFromAsync(dgram.Buffer, _RemoteEndPoing, null);
+            SendToConnect();
+        }
+        #endregion 构造函数及相关
+
+        Threading.Timer _Timer;
+
+        /// <summary>
+        /// 服务器地址。如果不是null，说明用了dns名指定了服务器地址。
+        /// </summary>
+        string _Server;
+        short _Port;
+        /// <summary>
         /// 连接的服务器端地址。
         /// </summary>
-        IPEndPoint _RemoteEndPoing;
+        volatile IPEndPoint _RemoteEndPoing;
 
         /// <summary>
         /// 接受数据的缓存队列。键是包序号 ，值数据条目。需要锁定使用。
@@ -743,23 +845,18 @@ namespace System.Net.Sockets
         uint? _AckSeq;
 
         /// <summary>
-        /// <see cref="_RecvData"/>中最小包号。
-        /// </summary>
-        uint _MinSeq;
-
-        /// <summary>
         /// 请求结束任务的标记。
         /// </summary>
-        CancellationTokenSource _Stopping;
+        CancellationTokenSource _Stopping = new CancellationTokenSource();
 
         /// <summary>
         /// 后台线程已经完成操作。
         /// </summary>
-        CancellationTokenSource _Stopped;
+        CancellationTokenSource _Stopped = new CancellationTokenSource();
 
         #region 方法
 
-        #region 静态方法
+        #region 静态成员
 
         /// <summary>
         /// 
@@ -773,40 +870,17 @@ namespace System.Net.Sockets
             socket.IOControl(unchecked((int)IOC_UDP_RESET), new byte[] { Convert.ToByte(false) }, null);
         }
 
-        #endregion 静态方法
+        #endregion 静态成员
 
         /// <summary>
-        /// 自有初始化。
+        /// 自动回收已用的rdm数据包对象。
         /// </summary>
-        /// <remarks>此时 <see cref="Socket"/> 应已经正确初始化。</remarks>
-        virtual protected void ConnectCore()
+        /// <param name="e"></param>
+        protected override void ProcessSendTo(SocketAsyncEventArgs e)
         {
-            var entry = OwRdmDgram.Rent();
-            try
-            {
-                entry.Kind = (OwRdmDgramKind.CommandDgram | OwRdmDgramKind.StartDgram | OwRdmDgramKind.EndDgram);
-                entry.Id = 0;
-                entry.Count = 0;
-                SendToAsync(entry);
-
-            }
-            finally
-            {
-                OwRdmDgram.Return(entry);
-            }
-        }
-
-        /// <summary>
-        /// 立即同步发送一个数据条目，并做相应处理。
-        /// <see cref="OwRdmDgram.Kind"/> 和 <see cref="OwRdmDgram"/>中的数据要实现设定好。
-        /// 本函数仅设置 <see cref="OwRdmDgram.Id"/> 和 <see cref="OwRdmDgram.Seq"/> 。
-        /// </summary>
-        /// <param name="entry"></param>
-        public virtual void SendToAsync(OwRdmDgram entry)
-        {
-            entry.Id = _Id.GetValueOrDefault();
-            entry.Seq = (int)_AckSeq.GetValueOrDefault();
-            SendToAsync(entry.Buffer, _RemoteEndPoing, entry.Buffer);
+            base.ProcessSendTo(e);
+            var dgram = e.UserToken as OwRdmDgram;
+            if (dgram != null) OwRdmDgram.Return(dgram);
         }
 
         /// <summary>
@@ -815,7 +889,7 @@ namespace System.Net.Sockets
         /// <param name="e"></param>
         protected override void ProcessReceiveFrom(SocketAsyncEventArgs e)
         {
-            if (e.BytesTransferred > OwRdmDgram.Mtu) //若无效的包长度则丢弃
+            if (e.BytesTransferred > OwRdmDgram.Mtu || e.BytesTransferred <= 0) //若无效的包长度则丢弃
             {
                 base.ProcessReceiveFrom(e);
                 return;
@@ -824,23 +898,26 @@ namespace System.Net.Sockets
             {
             };
             Buffer.BlockCopy(e.Buffer, e.Offset, entry.Buffer, entry.Offset, e.BytesTransferred);
-            base.ProcessReceiveFrom(e);
+            entry.Count = e.BytesTransferred;
+            base.ProcessReceiveFrom(e); //尽快开始获取数据帧
             if (entry.Kind.HasFlag(OwRdmDgramKind.CommandDgram))  //若是一个命令帧
             {
-                Debug.Assert(entry.Kind.HasFlag(OwRdmDgramKind.StartDgram) && entry.Kind.HasFlag(OwRdmDgramKind.EndDgram));   //仅能处理单帧命令
+                if (!(entry.Kind.HasFlag(OwRdmDgramKind.StartDgram) && entry.Kind.HasFlag(OwRdmDgramKind.EndDgram)))  //仅能处理单帧命令
+                {
+                    //丢弃非法帧
+                    Trace.WriteLine($"非法命令帧来自{e.RemoteEndPoint}");
+                    return;
+                }
                 OnCommandDgram(entry);
             }
-            else
+            else //若是数据帧
                 lock (_RecvData)
                 {
-                    if (entry.Seq <= _AckSeq || null != _RecvData.Insert((uint)entry.Seq, entry)) //避免重复到达的包
-                        Debug.WriteLine("检测到重复到达的包，Seq = " + entry.Seq);
-                    else //若增加成功
-                    {
-                        _MinSeq = Math.Min(_MinSeq, (uint)entry.Seq);
-                    }
+                    if (_AckSeq.GetValueOrDefault() >= (uint)entry.Seq)    //若是重复包
+                        return;
+                    //加入队列
+                    _RecvData.Insert((uint)entry.Seq, entry);
                 }
-            //扫描接受队列
             ScanQueue();
         }
 
@@ -849,10 +926,17 @@ namespace System.Net.Sockets
         /// </summary>
         internal void ScanQueue()
         {
+            if (_AckSeq.GetValueOrDefault() + 1 < (uint)(_RecvData.First?.Value.Item1.Seq ?? 0)) return;   //若没有须处理的第一个包
+            else if (_AckSeq.GetValueOrDefault() + 1 > (uint)(_RecvData.First?.Value.Item1.Seq??0))
+            {
+                //TODO 需要处理重复到达已被处理的最小包的情况
+            }
+            List<OwRdmDataReceivedEventArgs> eventArgs = new List<OwRdmDataReceivedEventArgs>();
             lock (_RecvData)
             {
                 for (var list = OwRdmDgram.RemoveFirstRange(_RecvData); list.Count > 0; list = OwRdmDgram.RemoveFirstRange(_RecvData))    //获取完整包
                 {
+                    _AckSeq = Math.Max((uint)list[list.Count - 1].Seq, _AckSeq.GetValueOrDefault());
                     var buff = OwRdmDgram.ToArray(list);
                     var e = new OwRdmDataReceivedEventArgs
                     {
@@ -860,9 +944,10 @@ namespace System.Net.Sockets
                         RemoteEndPoing = _RemoteEndPoing,
                     };
                     list.ForEach(c => OwRdmDgram.Return(c));    //回收对象
-                    OnOwUdpDataReceived(e);
+                    eventArgs.Add(e);
                 }
             }
+            eventArgs.ForEach(c => OnOwUdpDataReceived(c));
         }
 
         /// <summary>
@@ -887,7 +972,9 @@ namespace System.Net.Sockets
             if (!IsInit()) return false;    //若尚未初始化成功
             var dgram = OwRdmDgram.Rent();
             dgram.Kind = OwRdmDgramKind.StartDgram | OwRdmDgramKind.EndDgram | OwRdmDgramKind.CommandDgram;
-            SendToAsync(dgram);
+            dgram.Id = _Id.Value;
+            dgram.Seq = (int)_AckSeq.GetValueOrDefault();
+            SendToAsync(new ArraySegment<byte>(dgram.Buffer, dgram.Offset, dgram.Count), _RemoteEndPoing, null);
             return true;
         }
 
@@ -896,11 +983,12 @@ namespace System.Net.Sockets
         /// </summary>
         protected void SendToConnect()
         {
-            var entry = OwRdmDgram.Rent();
-            entry.Kind = (OwRdmDgramKind.CommandDgram | OwRdmDgramKind.StartDgram | OwRdmDgramKind.EndDgram);
-            entry.Id = 0;
-            entry.Count = 0;
-            SendToAsync(entry);
+            var dgram = OwRdmDgram.Rent();
+            dgram.Kind = (OwRdmDgramKind.CommandDgram | OwRdmDgramKind.StartDgram | OwRdmDgramKind.EndDgram);
+            dgram.Id = 0;
+            dgram.Seq = 0;
+            dgram.Count = 8;
+            SendToAsync(new ArraySegment<byte>(dgram.Buffer, dgram.Offset, dgram.Count), _RemoteEndPoing, null);
         }
 
         /// <summary>
@@ -938,6 +1026,9 @@ namespace System.Net.Sockets
                 if (disposing)
                 {
                     // 释放托管状态(托管对象)
+                    _Timer.Dispose();
+                    _Stopping.Cancel(false);
+                    _Stopped.Token.WaitHandle.WaitOne();
                 }
 
                 // 释放未托管的资源(未托管的对象)并重写终结器

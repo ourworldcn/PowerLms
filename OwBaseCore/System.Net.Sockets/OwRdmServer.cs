@@ -32,7 +32,7 @@ namespace System.Net.Sockets
         /// 侦听端口。
         /// </summary>
         /// <value>默认端口0，即自动选定。</value>
-        public short ListernPort { get; set; }
+        public ushort ListernPort { get; set; }
     }
 
     /// <summary>
@@ -40,6 +40,9 @@ namespace System.Net.Sockets
     /// </summary>
     public class OwRdmRemoteEntry
     {
+        /// <summary>
+        /// 构造函数。
+        /// </summary>
         public OwRdmRemoteEntry()
         {
         }
@@ -60,7 +63,7 @@ namespace System.Net.Sockets
         /// <summary>
         /// 远程终结点。
         /// </summary>
-        public volatile IPEndPoint RemoteEndPoint;
+        public volatile EndPoint RemoteEndPoint;
 
         /// <summary>
         /// 最后一次接到客户端发来数据的时间。
@@ -99,18 +102,40 @@ namespace System.Net.Sockets
 
         void Initialize()
         {
-            _Socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-            _Socket.Bind(new IPEndPoint(IPAddress.Parse(_Options.Value.ListernAddress), _Options.Value.ListernPort));
+            Socket.Bind(new IPEndPoint(IPAddress.Parse(_Options.Value.ListernAddress), _Options.Value.ListernPort));
 
             for (int i = 0; i < 2; i++) //暂定使用两个侦听，避免漏接
             {
-                SocketAsyncEventArgs e = new SocketAsyncEventArgs();
-                e.Completed += IO_Completed;
-                ReceiveFromAsync(e);
+                var dgram = OwRdmDgram.Rent();
+                dgram.Count = dgram.Buffer.Length;
+                ReceiveFromAsync(new ArraySegment<byte>(dgram.Buffer, dgram.Offset, dgram.Count), Socket.LocalEndPoint, dgram);
             }
+            _Timer = new Timer(c =>
+            {
+                var now = DateTime.UtcNow;
+                var timeout = TimeSpan.FromSeconds(2);
+                foreach (var key in _Id2ClientEntry.Keys)
+                {
+                    using var dw = GetOrAddEntry(key, out var entry, TimeSpan.Zero);
+                    if (dw.IsEmpty) continue;
+                    for (var node = entry.SendedData.First; node is not null; node = node.Next)
+                    {
+                        var dgram = node.Value.Item1;
+                        if (DateTime.UtcNow - dgram.LastSendDateTime > timeout)  //若超时未得到回应
+                        {
+                            dgram.LastSendDateTime = DateTime.UtcNow;
+                            SendToAsync(new ArraySegment<byte>(dgram.Buffer, dgram.Offset, dgram.Count), entry.RemoteEndPoint, null);
+                        }
+                        else //若找到一个尚未超时的包
+                            break;
+                    }
+                }
+            }, null, TimeSpan.FromMilliseconds(1), TimeSpan.FromMilliseconds(1));
         }
 
         #region 属性及相关
+
+        Timer _Timer;
 
         /// <summary>
         /// 存储配置信息的字段。
@@ -133,11 +158,6 @@ namespace System.Net.Sockets
         ConcurrentDictionary<int, OwRdmRemoteEntry> _Id2ClientEntry = new ConcurrentDictionary<int, OwRdmRemoteEntry>();
 
         /// <summary>
-        /// 使用Socket对象。
-        /// </summary>
-        Socket _Socket;
-
-        /// <summary>
         /// 已经使用的最大Id值。
         /// </summary>
         int _MaxId;
@@ -145,14 +165,14 @@ namespace System.Net.Sockets
         /// <summary>
         /// 侦听的端点。
         /// </summary>
-        public EndPoint ListernEndPoing { get => _Socket.LocalEndPoint; }
+        public EndPoint ListernEndPoing { get => Socket.LocalEndPoint; }
         #endregion 属性及相关
 
         #region 方法
 
         #region 发送及相关
 
-        public void Send(byte[] buffer, int startIndex, int count, int id)
+        public void SendToAsync(byte[] buffer, int startIndex, int count, int id)
         {
             if (!_Id2ClientEntry.ContainsKey(id))    //若尚未建立连接
             {
@@ -175,6 +195,7 @@ namespace System.Net.Sockets
                     dgram.Id = id;
                     dgram.Seq = (int)Interlocked.Increment(ref entry.MaxSeq);
                     SendToAsync(new ArraySegment<byte>(dgram.Buffer, dgram.Offset, dgram.Count), entry.RemoteEndPoint, null);
+                    dgram.LastSendDateTime = DateTime.UtcNow;
                     entry.SendedData.Insert((uint)dgram.Seq, dgram);
                 }
             }
@@ -195,74 +216,21 @@ namespace System.Net.Sockets
                     }
                     Thread.Sleep(10);
                 }
-                using var dw = GetOrAddEntry(id, out var clientEntry, Timeout.InfiniteTimeSpan);
+                using var dw = GetOrAddEntry(id, out var entry, Timeout.InfiniteTimeSpan);
                 if (list.Count > 0)
                 {
                     list[0].Kind |= OwRdmDgramKind.StartDgram;
                     list[^1].Kind |= OwRdmDgramKind.EndDgram;
-                    foreach (var entry in list)
+                    foreach (var dgram in list)
                     {
-                        entry.Id = id;
-                        entry.Seq = (int)Interlocked.Increment(ref clientEntry.MaxSeq);
-                        SendCore(entry);
+                        dgram.Id = id;
+                        dgram.Seq = (int)Interlocked.Increment(ref entry.MaxSeq);
+                        SendToAsync(new ArraySegment<byte>(dgram.Buffer, dgram.Offset, dgram.Count), entry.RemoteEndPoint, null);
+                        dgram.LastSendDateTime = DateTime.UtcNow;
+                        entry.SendedData.Insert((uint)dgram.Seq, dgram);
                     }
                 }
             });
-        }
-
-        /// <summary>
-        /// 发送一个数据帧。
-        /// </summary>
-        /// <param name="dgram">必须设置有效属性包括 Id 和 Seq。成功调用本函数后，此对象被接管，调用者不可用。
-        /// 应尽可能使用<see cref="OwRdmDgram.Rent"/>获取，本类会在不使用后用 <see cref="OwRdmDgram.Return(OwRdmDgram)"/> 放入池中。 </param>
-        internal protected virtual void SendCore(OwRdmDgram dgram)
-        {
-            var now = DateTime.UtcNow;
-            using var dw = GetOrAddEntry(dgram.Id, out var clientEntry, Timeout.InfiniteTimeSpan);
-            if (dw.IsEmpty) throw new InvalidOperationException("异常的锁定错误");  //若锁定超时，容错
-
-            if (clientEntry.RemoteEndPoint is null)  //若未得到对方的端点地址，此时必然是尚未初始化
-            {
-                //存入已发送队列，后期补发,不存在此情况，因为调用者无法获知Id。
-                throw new NotImplementedException();
-            }
-            else //若已有端点地址
-            {
-                //立即发送
-                SocketAsyncEventArgs e = new SocketAsyncEventArgs
-                {
-                    UserToken = dgram, //试图回收此数据帧
-                    RemoteEndPoint = clientEntry.RemoteEndPoint,  //不怕错，后续可以重发
-                };
-                e.Completed += IO_Completed;
-                e.SetBuffer(dgram.Buffer, dgram.Offset, dgram.Count);
-                var willRaiseEvent = _Socket.SendToAsync(e);    //如果 I/O 操作挂起，则为 true。 操作完成时，将引发 e 参数的 Completed 事件。
-                //如果 I/O 操作同步完成，则为 false。
-                //在这种情况下，将不会引发 e 参数的 Completed 事件，并且可能在方法调用返回后立即检查作为参数传递的 e 对象以检索操作的结果。
-                if (!willRaiseEvent) Task.Factory.StartNew(() => ProcessSendTo(e), TaskCreationOptions.PreferFairness);
-            }
-        }
-
-        /// <summary>
-        /// 处理已经发送的情况。
-        /// </summary>
-        /// <param name="e"></param>
-        protected override void ProcessSendTo(SocketAsyncEventArgs e)
-        {
-            if (e.SocketError == SocketError.Success)
-            {
-                // done echoing data back to the client
-                var dgram = (OwRdmDgram)e.UserToken;
-                // read the next block of data send from the client
-                using var dw = GetOrAddEntry(dgram.Id, out var entry, Timeout.InfiniteTimeSpan);
-                Trace.Assert(!dw.IsEmpty);
-                dgram.FirstSendDateTime = DateTime.UtcNow;
-                entry.SendedData.Insert((uint)dgram.Seq, dgram);  //追加到已发送数据的链表
-            }
-            else
-            {
-                ProcessError(e);
-            }
         }
 
         #endregion 发送及相关
@@ -291,231 +259,81 @@ namespace System.Net.Sockets
             return result;
         }
 
-        void IO_Completed(object sender, SocketAsyncEventArgs e)
+        protected override void ProcessReceiveFrom(SocketAsyncEventArgs e)
         {
-            // determine which type of operation just completed and call the associated handler
-            switch (e.LastOperation)
+            if (e.BytesTransferred <= 0) goto goon;
+            if (e.UserToken is not OwRdmDgram dgram || !dgram.Kind.HasFlag(OwRdmDgramKind.CommandDgram) ||
+                !dgram.Kind.HasFlag(OwRdmDgramKind.StartDgram) || !dgram.Kind.HasFlag(OwRdmDgramKind.EndDgram)) goto goon;   //若非命令帧
+            if (dgram.Id == 0)   //若是连接包
             {
-                case SocketAsyncOperation.None:
-                    break;
-                case SocketAsyncOperation.Accept:
-                    break;
-                case SocketAsyncOperation.Connect:
-                    break;
-                case SocketAsyncOperation.Disconnect:
-                    break;
-                case SocketAsyncOperation.Receive:
-                    ProcessReceive(e);
-                    break;
-                case SocketAsyncOperation.ReceiveFrom:
-                    break;
-                case SocketAsyncOperation.ReceiveMessageFrom:
-                    break;
-                case SocketAsyncOperation.Send:
-                    break;
-                case SocketAsyncOperation.SendPackets:
-                    break;
-                case SocketAsyncOperation.SendTo:
-                    ProcessSendTo(e);
-                    break;
-                default:
-                    throw new ArgumentException("The last operation completed on the socket was not a receive or send");
+                var id = Interlocked.Increment(ref _MaxId);
+                using var dw = GetOrAddEntry(id, out var entry, TimeSpan.FromMilliseconds(1));
+                if (dw.IsEmpty) goto goon;   //若无法锁定则忽略此连接包
+                if (entry.RemoteEndPoint != null) goto goon; //若已被并发初始化或是重复连接包
+                entry.RemoteEndPoint = e.RemoteEndPoint;
+                var sendDgram = OwRdmDgram.Rent();
+                sendDgram.Kind = OwRdmDgramKind.CommandDgram | OwRdmDgramKind.StartDgram | OwRdmDgramKind.EndDgram;
+                sendDgram.Id = id;
+                sendDgram.Seq = 0;
+                sendDgram.Count = 8;
+                SendToAsync(sendDgram.Buffer, entry.RemoteEndPoint, null);
             }
-        }
-
-        /// <summary>
-        /// 处理已接受到数据的情况。
-        /// </summary>
-        /// <param name="e"></param>
-        private void ProcessReceive(SocketAsyncEventArgs e)
-        {
-            // check if the remote host closed the connection
-            if (e.BytesTransferred > 0 && e.SocketError == SocketError.Success)
+            else if (_Id2ClientEntry.ContainsKey(dgram.Id)) //若是心跳包
             {
-                //increment the count of the total bytes receive by the server
-                //Interlocked.Add(ref m_totalBytesRead, e.BytesTransferred);
-                //Console.WriteLine("The server has read a total of {0} bytes", m_totalBytesRead);
-                var dg = (OwRdmDgram)e.UserToken;
-                var remote = e.RemoteEndPoint as IPEndPoint;
-                var count = e.BytesTransferred;
-                //重新侦听
-                ReceiveFromAsync(e);
-
-                if (dg.Kind.HasFlag(OwRdmDgramKind.CommandDgram))    //若是命令帧
+                using var dw = GetOrAddEntry(dgram.Id, out var entry, TimeSpan.FromMilliseconds(1));
+                if (dw.IsEmpty) goto goon;   //若无法锁定则忽略此连接包
+                if (entry.MaxSeq >= (uint)dgram.Seq)    //若客户端确认的包号合法
                 {
-                    if (dg.Id == 0) //若是试图连接的帧
+                    while (entry.SendedData.First?.Value.Item1.Seq <= (uint)dgram.Seq)   //若客户端确认新的包已经到达
                     {
-                        //构造新入口
-                        var id = Interlocked.Increment(ref _MaxId);
-                        var clientEntry = _Id2ClientEntry.GetOrAdd(id, c => new OwRdmRemoteEntry()
-                        {
-                            Id = c,
-                            RemoteEndPoint = remote,
-                            LastReceivedUtc = DateTime.UtcNow,
-                            MaxSeq = 0,
-                            RemoteMaxReceivedSeq = 0,
-                        });
-                        //回应
-                        using var dw = GetOrAddEntry(dg.Id, out clientEntry, Timeout.InfiniteTimeSpan);
-                        Trace.Assert(!dw.IsEmpty);
-                        var dgram = OwRdmDgram.Rent();
-                        _Socket.SendToAsync(new ArraySegment<byte>(dgram.Buffer, dgram.Offset, dgram.Count), SocketFlags.None, clientEntry.RemoteEndPoint);
+                        var tmp = entry.SendedData.First.Value.Item1;
+                        entry.SendedData.RemoveFirst();
+                        OwRdmDgram.Return(tmp);
                     }
-                    else if (_Id2ClientEntry.ContainsKey(dg.Id)) //若是确认帧
-                    {
-                        using var dw = GetOrAddEntry(dg.Id, out var clientEntry, Timeout.InfiniteTimeSpan);
-                        Trace.Assert(!dw.IsEmpty);
-                        if (clientEntry.RemoteEndPoint is not null && clientEntry.RemoteMaxReceivedSeq < dg.Seq) //若需要处理该确认帧
-                        {
-                            for (var node = clientEntry.SendedData.First; node != null && node.Value.Item1.Seq <= dg.Seq; //若需要清理掉的帧
-                                node = node.Next)
-                            {
-                                var tmp = node.Value;
-                                clientEntry.SendedData.Remove(node);
-                                OwRdmDgram.Return(tmp.Item1);
-                            }
-                        }
-                    }
-                    OwRdmDgram.Return(dg);
                 }
-                else
-                {
-                    //暂时忽略其它帧
-                }
-
             }
-            else
-            {
-                ProcessError(e);
-                //重新侦听
-                ReceiveFromAsync(e);
-            }
+        goon:
+            base.ProcessReceiveFrom(e);
         }
 
-        /// <summary>
-        /// 处理错误。
-        /// </summary>
-        /// <param name="e"></param>
-        private void ProcessError(SocketAsyncEventArgs e)
-        {
-            switch (e.SocketError)
-            {
-                case SocketError.Success:
-                case SocketError.Shutdown:
-                case SocketError.ConnectionAborted:
-                    break;
-                case SocketError.SocketError:
-                case SocketError.OperationAborted:
-
-                case SocketError.IOPending:
-
-                case SocketError.Interrupted:
-
-                case SocketError.AccessDenied:
-
-                case SocketError.Fault:
-
-                case SocketError.InvalidArgument:
-
-                case SocketError.TooManyOpenSockets:
-
-                case SocketError.WouldBlock:
-
-                case SocketError.InProgress:
-
-                case SocketError.AlreadyInProgress:
-
-                case SocketError.NotSocket:
-
-                case SocketError.DestinationAddressRequired:
-
-                case SocketError.MessageSize:
-
-                case SocketError.ProtocolType:
-
-                case SocketError.ProtocolOption:
-
-                case SocketError.ProtocolNotSupported:
-
-                case SocketError.SocketNotSupported:
-
-                case SocketError.OperationNotSupported:
-
-                case SocketError.ProtocolFamilyNotSupported:
-
-                case SocketError.AddressFamilyNotSupported:
-
-                case SocketError.AddressAlreadyInUse:
-
-                case SocketError.AddressNotAvailable:
-
-                case SocketError.NetworkDown:
-
-                case SocketError.NetworkUnreachable:
-
-                case SocketError.NetworkReset:
-
-                case SocketError.ConnectionReset:
-
-                case SocketError.NoBufferSpaceAvailable:
-
-                case SocketError.IsConnected:
-
-                case SocketError.NotConnected:
-
-                case SocketError.TimedOut:
-
-                case SocketError.ConnectionRefused:
-
-                case SocketError.HostDown:
-
-                case SocketError.HostUnreachable:
-
-                case SocketError.ProcessLimit:
-
-                case SocketError.SystemNotReady:
-
-                case SocketError.VersionNotSupported:
-
-                case SocketError.NotInitialized:
-
-                case SocketError.Disconnecting:
-
-                case SocketError.TypeNotFound:
-
-                case SocketError.HostNotFound:
-
-                case SocketError.TryAgain:
-
-                case SocketError.NoRecovery:
-
-                case SocketError.NoData:
-                    _Logger.LogWarning("Rdm传输发生错误——{err}", e.SocketError.ToString());
-                    if (!_HostApplicationLifetime.ApplicationStopping.IsCancellationRequested)
-                        OwRdmClient.ResetError(_Socket);
-                    break;
-            }
-        }
         #endregion 方法
 
         protected override void Dispose(bool disposing)
         {
             if (disposing)
             {
-                _Socket?.Shutdown(SocketShutdown.Both);
-                _Socket.Dispose();
             }
             //将大型字段设置为null以便于释放空间
-            _Socket = null;
             base.Dispose(disposing);
         }
     }
 
-    public class TestOwRdm
+    public class TestRdm
     {
+        public TestRdm(IServiceProvider serviceProvider)
+        {
+            _ServiceProvider = serviceProvider;
+            Initialize();
+        }
+
+        IServiceProvider _ServiceProvider;
+
+        OwRdmClient _Client;
+
+        OwRdmServer _Server;
+
+        public void Initialize()
+        {
+            _Server = _ServiceProvider.GetService<OwRdmServer>();
+            _Client = new OwRdmClient(new IPEndPoint(IPAddress.Parse("192.168.0.104"), 50000));
+        }
+
         public void Test()
         {
+            var buffer = new byte[2048];
+            for (int i = 0; i < buffer.Length; i++) buffer[i] = (byte)(i % byte.MaxValue + 1);
 
+            _Server.SendToAsync(buffer, 0, buffer.Length, 1);
         }
     }
 }
