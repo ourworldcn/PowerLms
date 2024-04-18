@@ -282,7 +282,12 @@ namespace System.Net.Sockets
             {
                 using var dw = GetOrAddEntry(dgram.Id, out var entry, TimeSpan.FromMilliseconds(1));
                 if (dw.IsEmpty) goto goon;   //若无法锁定则忽略此连接包
-                if (entry.MaxSeq >= (uint)dgram.Seq)    //若客户端确认的包号合法
+                if (entry.RemoteEndPoint != e.RemoteEndPoint)   //若远端端点改变
+                {
+                    _Logger.LogDebug("Id = {id}的客户端 改变了地址 {oep} -> {nep}", entry.Id, entry.RemoteEndPoint, e.RemoteEndPoint);
+                    entry.RemoteEndPoint = e.RemoteEndPoint;    //重置远程端点
+                }
+                if ((uint)dgram.Seq <= entry.MaxSeq)    //若客户端确认的包号合法
                 {
                     while (entry.SendedData.First?.Value.Item1.Seq <= (uint)dgram.Seq)   //若客户端确认新的包已经到达
                     {
