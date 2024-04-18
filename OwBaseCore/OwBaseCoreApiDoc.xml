@@ -1368,6 +1368,7 @@
         <member name="T:System.Net.Sockets.SocketAsyncWrapper">
             <summary>
             包装一个socket对象， 提供基于 SocketAsyncEventArgs 异步收发功能的简化。
+            <see cref="P:System.Net.Sockets.SocketAsyncWrapper.Stopping"/> 的 <see cref="M:System.Threading.CancellationTokenSource.Cancel"/> 可以指示本对象进入清理状态。
             </summary>
             <remarks>如果使用面向连接的协议（如 TCP），则用于 ConnectAsync 与侦听主机连接。 使用 SendAsync 或 ReceiveAsync 异步通信数据。 可以使用 AcceptAsync.. 处理传入的连接请求。
             如果使用无连接协议（如 UDP），则可以用于 SendToAsync 发送数据报和 ReceiveFromAsync接收数据报。
@@ -1382,11 +1383,21 @@
             <summary>
             构造函数。
             </summary>
-            <param name="socket"></param>
+            <param name="socket">调用此函数后，<paramref name="socket"/>不可再操作，仅能由本对象操作。</param>
         </member>
-        <member name="F:System.Net.Sockets.SocketAsyncWrapper.disposedValue">
+        <member name="F:System.Net.Sockets.SocketAsyncWrapper._Disposed">
             <summary>
             是否已经被处置。
+            </summary>
+        </member>
+        <member name="P:System.Net.Sockets.SocketAsyncWrapper.Disposed">
+            <summary>
+            是否已经被处置。
+            </summary>
+        </member>
+        <member name="P:System.Net.Sockets.SocketAsyncWrapper.Socket">
+            <summary>
+            使用的<see cref="P:System.Net.Sockets.SocketAsyncWrapper.Socket"/>对象。
             </summary>
         </member>
         <member name="P:System.Net.Sockets.SocketAsyncWrapper.Stopping">
@@ -1468,6 +1479,12 @@
             处理错误。
             </summary>
             <param name="e">除 <see cref="F:System.Net.Sockets.SocketError.Success"/> 以外的情况会送到这里处理。当前仅考虑udp的情况</param>
+        </member>
+        <member name="M:System.Net.Sockets.SocketAsyncWrapper.Dispose(System.Boolean)">
+            <summary>
+            不能并发调用。
+            </summary>
+            <param name="disposing"></param>
         </member>
         <member name="T:System.Net.Sockets.OwRdmDgramKind">
             <summary>
@@ -1646,13 +1663,13 @@
             <summary>
             udp客户端类。为支持Unity使用，仅使用.NET Framework 4.7支持的功能。
             当前版本一个客户端对象仅能和一个Server通讯。
+            设置 <see cref="P:System.Net.Sockets.OwRdmClient.LoggerCallback"/> 用于获取日志。
             </summary>
         </member>
-        <member name="M:System.Net.Sockets.OwRdmClient.#ctor(System.Net.IPEndPoint)">
+        <member name="M:System.Net.Sockets.OwRdmClient.#ctor">
             <summary>
-            构造函数。
+            
             </summary>
-            <param name="remote">远程服务器端点。</param>
         </member>
         <member name="M:System.Net.Sockets.OwRdmClient.Initialize">
             <summary>
@@ -1666,7 +1683,7 @@
         </member>
         <member name="F:System.Net.Sockets.OwRdmClient._RemoteEndPoing">
             <summary>
-            连接的服务器端地址。
+            连接的服务器端地址。若为null，标识尚未开始工作。
             </summary>
         </member>
         <member name="F:System.Net.Sockets.OwRdmClient._RecvData">
@@ -1676,7 +1693,7 @@
         </member>
         <member name="F:System.Net.Sockets.OwRdmClient._Id">
             <summary>
-            通讯Id，仅低24位有用。若为null，标识尚未连接。
+            通讯Id，仅低24位有用。若为null，标识尚未成功连接。
             </summary>
         </member>
         <member name="F:System.Net.Sockets.OwRdmClient._AckSeq">
@@ -1684,14 +1701,9 @@
             当前收到的最大连续包号。
             </summary>
         </member>
-        <member name="F:System.Net.Sockets.OwRdmClient._Stopping">
+        <member name="P:System.Net.Sockets.OwRdmClient.LoggerCallback">
             <summary>
-            请求结束任务的标记。
-            </summary>
-        </member>
-        <member name="F:System.Net.Sockets.OwRdmClient._Stopped">
-            <summary>
-            后台线程已经完成操作。
+            获取或设置日志使用的回调函数。
             </summary>
         </member>
         <member name="M:System.Net.Sockets.OwRdmClient.ResetError(System.Net.Sockets.Socket)">
@@ -1699,6 +1711,20 @@
             
             </summary>
             <param name="socket"></param>
+        </member>
+        <member name="M:System.Net.Sockets.OwRdmClient.Start(System.String,System.Int16)">
+            <summary>
+            连接到特定的地址端口。
+            </summary>
+            <remarks>如果</remarks>
+            <param name="server">可以是IP地址的四段表示法："xxx.xxx.xxx.xxx"，也可以是DNS名；无论怎样，都会自动定期解析名称。</param>
+            <param name="port"></param>
+        </member>
+        <member name="M:System.Net.Sockets.OwRdmClient.Start(System.Net.EndPoint)">
+            <summary>
+            要连接的远程端口号。
+            </summary>
+            <param name="remote"></param>
         </member>
         <member name="M:System.Net.Sockets.OwRdmClient.ProcessSendTo(System.Net.Sockets.SocketAsyncEventArgs)">
             <summary>
@@ -1734,11 +1760,16 @@
             发送试图连接服务器的包。
             </summary>
         </member>
-        <member name="M:System.Net.Sockets.OwRdmClient.IsInit">
+        <member name="M:System.Net.Sockets.OwRdmClient.IsConnected">
             <summary>
-            测试是否成功初始化。
+            测试是否成功连接。
             </summary>
             <returns></returns>
+        </member>
+        <member name="M:System.Net.Sockets.OwRdmClient.OnTimer">
+            <summary>
+            定时触发，用于发送心跳包和试图重连。
+            </summary>
         </member>
         <member name="E:System.Net.Sockets.OwRdmClient.OwUdpDataReceived">
             <summary>

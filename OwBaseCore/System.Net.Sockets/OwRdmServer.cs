@@ -103,7 +103,10 @@ namespace System.Net.Sockets
         void Initialize()
         {
             Socket.Bind(new IPEndPoint(IPAddress.Parse(_Options.Value.ListernAddress), _Options.Value.ListernPort));
-
+            Stopping.Token.Register(() =>
+            {
+                _Timer?.Dispose();
+            });
             for (int i = 0; i < 2; i++) //暂定使用两个侦听，避免漏接
             {
                 var dgram = OwRdmDgram.Rent();
@@ -131,11 +134,15 @@ namespace System.Net.Sockets
                     }
                 }
             }, null, TimeSpan.FromMilliseconds(1), TimeSpan.FromMilliseconds(1));
+            _HostApplicationLifetime.ApplicationStopping.Register(() =>
+            {
+                Stopping.Cancel();
+            });
         }
 
         #region 属性及相关
 
-        Timer _Timer;
+        private Timer _Timer;
 
         /// <summary>
         /// 存储配置信息的字段。
@@ -330,7 +337,8 @@ namespace System.Net.Sockets
         public void Initialize()
         {
             _Server = _ServiceProvider.GetService<OwRdmServer>();
-            _Client = new OwRdmClient(new IPEndPoint(IPAddress.Parse("192.168.0.104"), 50000));
+            _Client = new OwRdmClient();
+            _Client.Start(new IPEndPoint(IPAddress.Parse("192.168.0.104"), 50000));
         }
 
         public void Test()

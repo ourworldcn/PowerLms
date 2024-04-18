@@ -38,6 +38,7 @@ namespace System.Net.Sockets
 {
     /// <summary>
     /// 包装一个socket对象， 提供基于 SocketAsyncEventArgs 异步收发功能的简化。
+    /// <see cref="Stopping"/> 的 <see cref="CancellationTokenSource.Cancel()"/> 可以指示本对象进入清理状态。
     /// </summary>
     /// <remarks>如果使用面向连接的协议（如 TCP），则用于 ConnectAsync 与侦听主机连接。 使用 SendAsync 或 ReceiveAsync 异步通信数据。 可以使用 AcceptAsync.. 处理传入的连接请求。
     /// 如果使用无连接协议（如 UDP），则可以用于 SendToAsync 发送数据报和 ReceiveFromAsync接收数据报。
@@ -60,13 +61,21 @@ namespace System.Net.Sockets
         /// <summary>
         /// 构造函数。
         /// </summary>
-        /// <param name="socket"></param>
+        /// <param name="socket">调用此函数后，<paramref name="socket"/>不可再操作，仅能由本对象操作。</param>
         public SocketAsyncWrapper(Socket socket)
         {
-            Socket = socket;
-            //Socket.ReceiveBufferSize = Math.Max(Socket.ReceiveBufferSize, Environment.ProcessorCount * Environment.SystemPageSize);
+            _Socket = socket;
+            Initialize();
         }
 
+        void Initialize()
+        {
+            _Stopping.Token.Register(() =>
+            {
+                _Socket?.Close(10);
+                Stopped.CancelAfter(10);
+            });
+        }
         #endregion 构造函数
 
         volatile Socket _Socket;
@@ -74,9 +83,17 @@ namespace System.Net.Sockets
         /// <summary>
         /// 是否已经被处置。
         /// </summary>
-        private bool disposedValue;
+        private bool _Disposed;
 
-        public Socket Socket { get => _Socket; protected set => _Socket = value; }
+        /// <summary>
+        /// 是否已经被处置。
+        /// </summary>
+        public bool Disposed { get => _Disposed; }
+
+        /// <summary>
+        /// 使用的<see cref="Socket"/>对象。
+        /// </summary>
+        public Socket Socket { get => _Socket; }
 
         CancellationTokenSource _Stopping = new CancellationTokenSource();
         /// <summary>
@@ -404,10 +421,13 @@ namespace System.Net.Sockets
 
         #region IDisposable接口及相关
 
-
+        /// <summary>
+        /// 不能并发调用。
+        /// </summary>
+        /// <param name="disposing"></param>
         protected virtual void Dispose(bool disposing)
         {
-            if (!disposedValue)
+            if (!_Disposed)
             {
                 if (disposing)
                 {
@@ -418,7 +438,7 @@ namespace System.Net.Sockets
                 // 释放未托管的资源(未托管的对象)并重写终结器
                 // 将大型字段设置为 null
                 _Socket = null;
-                disposedValue = true;
+                _Disposed = true;
             }
         }
 
@@ -569,7 +589,7 @@ namespace System.Net.Sockets
             var count = entries.Sum(c => c.Count - 8);
             var ary = ArrayPool<byte>.Shared.Rent(count);
             MemoryStream ms;
-            using (ms = new MemoryStream(ary,0,count, true))
+            using (ms = new MemoryStream(ary, 0, count, true))
             {
                 entries.ForEach(c => ms.Write(c.Buffer, c.Offset + 8, c.Count - 8));
             }
@@ -771,28 +791,17 @@ namespace System.Net.Sockets
     /// <summary>
     /// udp客户端类。为支持Unity使用，仅使用.NET Framework 4.7支持的功能。
     /// 当前版本一个客户端对象仅能和一个Server通讯。
+    /// 设置 <see cref="LoggerCallback"/> 用于获取日志。
     /// </summary>
     public class OwRdmClient : SocketAsyncWrapper, IDisposable
     {
         #region 构造函数及相关
 
-        public OwRdmClient(string server, short port) : base(new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp))
-        {
-            var ip = Dns.GetHostAddresses(server).First(c => c.AddressFamily == AddressFamily.InterNetwork);
-            var endPoint = new IPEndPoint(ip, port);
-            _RemoteEndPoing = endPoint;
-            _Server = server;
-            _Port = port;
-            Initialize();
-        }
-
         /// <summary>
-        /// 构造函数。
+        /// 
         /// </summary>
-        /// <param name="remote">远程服务器端点。</param>
-        public OwRdmClient(IPEndPoint remote) : base(new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp))
+        public OwRdmClient() : base(new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp))
         {
-            _RemoteEndPoing = remote;
             Initialize();
         }
 
@@ -802,20 +811,17 @@ namespace System.Net.Sockets
         private void Initialize()
         {
             Socket.Bind(new IPEndPoint(IPAddress.Any, 0));
-            _Stopping.Token.Register(() =>
+            Stopping.Token.Register(() =>
             {
-                Socket.Close(500);
-                _Stopped.Cancel();
+                _Timer?.Dispose();
             });
             _Timer = new Threading.Timer(c =>
             {
-                SendToHeartbeat();
+                OnTimer();
             }, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
-            var dgram = OwRdmDgram.Rent();
-            ReceiveFromAsync(dgram.Buffer, _RemoteEndPoing, null);
-            SendToConnect();
         }
         #endregion 构造函数及相关
+
 
         Threading.Timer _Timer;
 
@@ -823,11 +829,14 @@ namespace System.Net.Sockets
         /// 服务器地址。如果不是null，说明用了dns名指定了服务器地址。
         /// </summary>
         string _Server;
+
+        DateTime _LastDnsUtc;
         short _Port;
+
         /// <summary>
-        /// 连接的服务器端地址。
+        /// 连接的服务器端地址。若为null，标识尚未开始工作。
         /// </summary>
-        volatile IPEndPoint _RemoteEndPoing;
+        volatile EndPoint _RemoteEndPoing;
 
         /// <summary>
         /// 接受数据的缓存队列。键是包序号 ，值数据条目。需要锁定使用。
@@ -835,7 +844,7 @@ namespace System.Net.Sockets
         OrderedQueue<OwRdmDgram> _RecvData = new OrderedQueue<OwRdmDgram>();
 
         /// <summary>
-        /// 通讯Id，仅低24位有用。若为null，标识尚未连接。
+        /// 通讯Id，仅低24位有用。若为null，标识尚未成功连接。
         /// </summary>
         int? _Id;
 
@@ -845,15 +854,9 @@ namespace System.Net.Sockets
         uint? _AckSeq;
 
         /// <summary>
-        /// 请求结束任务的标记。
+        /// 获取或设置日志使用的回调函数。
         /// </summary>
-        CancellationTokenSource _Stopping = new CancellationTokenSource();
-
-        /// <summary>
-        /// 后台线程已经完成操作。
-        /// </summary>
-        CancellationTokenSource _Stopped = new CancellationTokenSource();
-
+        public Action<string> LoggerCallback { get; set; }
         #region 方法
 
         #region 静态成员
@@ -871,6 +874,34 @@ namespace System.Net.Sockets
         }
 
         #endregion 静态成员
+
+        /// <summary>
+        /// 连接到特定的地址端口。
+        /// </summary>
+        /// <remarks>如果</remarks>
+        /// <param name="server">可以是IP地址的四段表示法："xxx.xxx.xxx.xxx"，也可以是DNS名；无论怎样，都会自动定期解析名称。</param>
+        /// <param name="port"></param>
+        public void Start(string server, short port)
+        {
+            var ip = Dns.GetHostAddresses(server).First(c => c.AddressFamily == AddressFamily.InterNetwork);
+            var endPoint = new IPEndPoint(ip, port);
+            _LastDnsUtc = DateTime.UtcNow;
+            _Server = server;
+            _Port = port;
+            Start(endPoint);
+        }
+
+        /// <summary>
+        /// 要连接的远程端口号。
+        /// </summary>
+        /// <param name="remote"></param>
+        public void Start(EndPoint remote)
+        {
+            _RemoteEndPoing = remote;
+            var dgram = OwRdmDgram.Rent();
+            ReceiveFromAsync(dgram.Buffer, _RemoteEndPoing, null);
+            SendToConnect();
+        }
 
         /// <summary>
         /// 自动回收已用的rdm数据包对象。
@@ -916,7 +947,9 @@ namespace System.Net.Sockets
                     if (_AckSeq.GetValueOrDefault() >= (uint)entry.Seq)    //若是重复包
                         return;
                     //加入队列
+                    LoggerCallback?.Invoke($"收到数据帧——Seq = {(uint)entry.Seq}，总负载长度={entry.Count}");
                     _RecvData.Insert((uint)entry.Seq, entry);
+
                 }
             ScanQueue();
         }
@@ -926,8 +959,9 @@ namespace System.Net.Sockets
         /// </summary>
         internal void ScanQueue()
         {
+            if (!IsConnected()) return;
             if (_AckSeq.GetValueOrDefault() + 1 < (uint)(_RecvData.First?.Value.Item1.Seq ?? 0)) return;   //若没有须处理的第一个包
-            else if (_AckSeq.GetValueOrDefault() + 1 > (uint)(_RecvData.First?.Value.Item1.Seq??0))
+            else if (_AckSeq.GetValueOrDefault() + 1 > (uint)(_RecvData.First?.Value.Item1.Seq ?? 0))
             {
                 //TODO 需要处理重复到达已被处理的最小包的情况
             }
@@ -938,6 +972,8 @@ namespace System.Net.Sockets
                 {
                     _AckSeq = Math.Max((uint)list[list.Count - 1].Seq, _AckSeq.GetValueOrDefault());
                     var buff = OwRdmDgram.ToArray(list);
+                    LoggerCallback?.Invoke($"确认完整数据包—— Seq =[{string.Join(',', list.Select(c => c))}]，总有效数据长度={buff.Length:0,0}字节");
+
                     var e = new OwRdmDataReceivedEventArgs
                     {
                         Datas = buff,
@@ -956,8 +992,9 @@ namespace System.Net.Sockets
         /// <param name="entry"></param>
         internal virtual void OnCommandDgram(OwRdmDgram entry)
         {
-            if (!IsInit())  //避免重复到达的初始化包
+            if (!IsConnected())  //避免重复到达的初始化包
             {
+                LoggerCallback?.Invoke($"获取到初始化恢复帧——Id: {_Id} -> {entry.Id};AckSeq {_AckSeq} -> {(uint)entry.Seq}");
                 _Id = entry.Id;
                 _AckSeq = (uint)entry.Seq;  //设置起始包号。
             }
@@ -969,7 +1006,7 @@ namespace System.Net.Sockets
         /// <returns>true发送成功，否则为false。</returns>
         protected bool SendToHeartbeat()
         {
-            if (!IsInit()) return false;    //若尚未初始化成功
+            if (!IsConnected()) return false;    //若尚未成功连接
             var dgram = OwRdmDgram.Rent();
             dgram.Kind = OwRdmDgramKind.StartDgram | OwRdmDgramKind.EndDgram | OwRdmDgramKind.CommandDgram;
             dgram.Id = _Id.Value;
@@ -992,12 +1029,33 @@ namespace System.Net.Sockets
         }
 
         /// <summary>
-        /// 测试是否成功初始化。
+        /// 测试是否成功连接。
         /// </summary>
         /// <returns></returns>
-        public bool IsInit()
+        public bool IsConnected()
         {
             return _Id.HasValue;
+        }
+
+        /// <summary>
+        /// 定时触发，用于发送心跳包和试图重连。
+        /// </summary>
+        private void OnTimer()
+        {
+            if (!string.IsNullOrWhiteSpace(_Server) && DateTime.UtcNow - _LastDnsUtc > TimeSpan.FromMinutes(1))
+            {
+                var ip = Dns.GetHostAddresses(_Server).First(c => c.AddressFamily == AddressFamily.InterNetwork);
+                var endPoint = new IPEndPoint(ip, _Port);
+                if (!endPoint.Equals(_RemoteEndPoing))
+                    _RemoteEndPoing = endPoint;
+            }
+            if (_RemoteEndPoing != null)    //若已经有了服务器地址
+            {
+                if (IsConnected())   //若已经成功连接
+                    SendToHeartbeat();
+                else
+                    SendToConnect();
+            }
         }
 
         #endregion 方法
@@ -1012,29 +1070,34 @@ namespace System.Net.Sockets
         /// 引发 <see cref="OwUdpDataReceived"/> 事件。
         /// </summary>
         /// <param name="e"></param>
-        protected virtual void OnOwUdpDataReceived(OwRdmDataReceivedEventArgs e) => OwUdpDataReceived?.Invoke(this, e);
+        protected virtual void OnOwUdpDataReceived(OwRdmDataReceivedEventArgs e)
+        {
+            try
+            {
+                OwUdpDataReceived?.Invoke(this, e);
+            }
+            catch (Exception excp)
+            {
+                LoggerCallback?.Invoke($"OwRdmDataReceived事件处理程序抛出异常——Seq = {excp.Message}");
+            }
+        }
         #endregion 事件及相关
 
         #region IDisposable接口相关
 
-        private bool disposedValue;
-
         protected override void Dispose(bool disposing)
         {
-            if (!disposedValue)
+            if (!Disposed)
             {
                 if (disposing)
                 {
                     // 释放托管状态(托管对象)
-                    _Timer.Dispose();
-                    _Stopping.Cancel(false);
-                    _Stopped.Token.WaitHandle.WaitOne();
+                    Stopping.Cancel(false);
                 }
 
                 // 释放未托管的资源(未托管的对象)并重写终结器
                 // 将大型字段设置为 null
                 _RecvData = null;
-                disposedValue = true;
             }
             base.Dispose(disposing);
         }
