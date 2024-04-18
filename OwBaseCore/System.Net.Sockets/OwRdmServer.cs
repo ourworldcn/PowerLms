@@ -111,7 +111,7 @@ namespace System.Net.Sockets
             {
                 var dgram = OwRdmDgram.Rent();
                 dgram.Count = dgram.Buffer.Length;
-                ReceiveFromAsync(new ArraySegment<byte>(dgram.Buffer, dgram.Offset, dgram.Count), Socket.LocalEndPoint, dgram);
+                ReceiveFromAsync(new ArraySegment<byte>(dgram.Buffer, dgram.Offset, dgram.Count), new IPEndPoint(IPAddress.Any, 0), dgram);
             }
             _Timer = new Timer(c =>
             {
@@ -173,6 +173,11 @@ namespace System.Net.Sockets
         /// 侦听的端点。
         /// </summary>
         public EndPoint ListernEndPoing { get => Socket.LocalEndPoint; }
+
+        /// <summary>
+        /// 记录客户端名称与Id的映射关系。有隐患。
+        /// </summary>
+        ConcurrentDictionary<Guid, int> _Token2Id = new ConcurrentDictionary<Guid, int>();
         #endregion 属性及相关
 
         #region 方法
@@ -266,6 +271,16 @@ namespace System.Net.Sockets
             return result;
         }
 
+        /// <summary>
+        /// 获取客户端名称。
+        /// </summary>
+        /// <param name="buffer"></param>
+        /// <returns></returns>
+        string GetClientName(Span<byte> buffer)
+        {
+            return Encoding.UTF8.GetString(buffer);
+        }
+
         protected override void ProcessReceiveFrom(SocketAsyncEventArgs e)
         {
             if (e.BytesTransferred <= 0) goto goon;
@@ -278,6 +293,25 @@ namespace System.Net.Sockets
                 if (dw.IsEmpty) goto goon;   //若无法锁定则忽略此连接包
                 if (entry.RemoteEndPoint != null) goto goon; //若已被并发初始化或是重复连接包
                 entry.RemoteEndPoint = e.RemoteEndPoint;
+
+                var clientName = GetClientName(new Span<byte>(e.Buffer, e.Offset + 8, e.BytesTransferred - 8)); //获取客户端传来的名称
+                if (!Guid.TryParse(clientName, out var token)) goto goon;
+                _Token2Id.AddOrUpdate(token, c => id, (c, d) => id);
+
+                var recvDgram = new OwRdmDgram
+                {
+                    Buffer = e.Buffer,
+                    Count = e.BytesTransferred,
+                };
+                try
+                {
+                    OnRequestConnect(recvDgram, e.RemoteEndPoint);
+                }
+                catch (Exception excp)
+                {
+                    _Logger.LogDebug(excp, "收到连接请求包时出现错误");
+                }
+
                 var sendDgram = OwRdmDgram.Rent();
                 sendDgram.Kind = OwRdmDgramKind.CommandDgram | OwRdmDgramKind.StartDgram | OwRdmDgramKind.EndDgram;
                 sendDgram.Id = id;
@@ -291,11 +325,16 @@ namespace System.Net.Sockets
                 if (dw.IsEmpty) goto goon;   //若无法锁定则忽略此连接包
                 if (entry.RemoteEndPoint != e.RemoteEndPoint)   //若远端端点改变
                 {
-                    _Logger.LogDebug("Id = {id}的客户端 改变了地址 {oep} -> {nep}", entry.Id, entry.RemoteEndPoint, e.RemoteEndPoint);
+                    _Logger.LogDebug("Id = {id}的客户端 改变了可见端点 {oep} -> {nep}", entry.Id, entry.RemoteEndPoint, e.RemoteEndPoint);
                     entry.RemoteEndPoint = e.RemoteEndPoint;    //重置远程端点
                 }
                 if ((uint)dgram.Seq <= entry.MaxSeq)    //若客户端确认的包号合法
                 {
+
+                    var clientName = GetClientName(new Span<byte>(e.Buffer, e.Offset + 8, e.BytesTransferred - 8)); //获取客户端传来的名称
+                    if (!Guid.TryParse(clientName, out var token)) goto goon;
+                    _Token2Id.AddOrUpdate(token, c => dgram.Id, (c, d) => dgram.Id);
+
                     while (entry.SendedData.First?.Value.Item1.Seq <= (uint)dgram.Seq)   //若客户端确认新的包已经到达
                     {
                         var tmp = entry.SendedData.First.Value.Item1;
@@ -308,15 +347,37 @@ namespace System.Net.Sockets
             base.ProcessReceiveFrom(e);
         }
 
+        /// <summary>
+        /// 当请求连接的包到达时。
+        /// </summary>
+        /// <param name="datas">负载内的数据。</param>
+        /// <param name="remote">远端端点。</param>
+        protected virtual void OnRequestConnect(OwRdmDgram datas, EndPoint remote)
+        {
+
+        }
+
+        /// <summary>
+        /// 当心跳包到达时。
+        /// </summary>
+        /// <param name="datas">负载内的数据。</param>
+        /// <param name="remote">远端端点。</param>
+        protected virtual void OnHeartbeat(OwRdmDgram datas, EndPoint remote)
+        {
+        }
         #endregion 方法
 
         protected override void Dispose(bool disposing)
         {
-            if (disposing)
+            if (!Disposed)
             {
+                if (disposing)
+                {
+                    Stopping.Cancel();
+                }
+                //将大型字段设置为null以便于释放空间
+                base.Dispose(disposing);
             }
-            //将大型字段设置为null以便于释放空间
-            base.Dispose(disposing);
         }
     }
 
@@ -338,7 +399,8 @@ namespace System.Net.Sockets
         {
             _Server = _ServiceProvider.GetService<OwRdmServer>();
             _Client = new OwRdmClient();
-            _Client.Start(new IPEndPoint(IPAddress.Parse("192.168.0.104"), 50000));
+            var serverOptions = _ServiceProvider.GetService<IOptions<OwRdmServerOptions>>().Value;
+            _Client.Start(new IPEndPoint(IPAddress.Parse("192.168.0.104"), serverOptions.ListernPort));
         }
 
         public void Test()

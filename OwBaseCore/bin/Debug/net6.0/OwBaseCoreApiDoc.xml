@@ -1508,12 +1508,12 @@
             可能既是起始帧又是终止帧，这说明是一个独立帧。也能是既非起始帧也非终止帧，这说明是一个中间帧，
             </summary>
         </member>
-        <member name="F:System.Net.Sockets.OwRdmDgram.Mtu">
+        <member name="F:System.Net.Sockets.OwRdmDgram.RdmMtu">
             <summary>
             Internet上的标准MTU值为576字节，所以在进行Internet的UDP编程时，最好将UDP的数据长度控件在548字节(576-8-20)以内。
             </summary>
         </member>
-        <member name="F:System.Net.Sockets.OwRdmDgram.Mts">
+        <member name="F:System.Net.Sockets.OwRdmDgram.RdmMts">
             <summary>
             本类使用的负载长度，去掉1个标志字节,3个字节通讯Id，4位序号。
             </summary>
@@ -1609,7 +1609,7 @@
         <member name="P:System.Net.Sockets.OwRdmDgram.Buffer">
             <summary>
             缓冲区。第一个是标志字节，随后是3字节客户Id,4字节包顺序号。后跟负载数据。
-            大小必须是<see cref="F:System.Net.Sockets.OwRdmDgram.Mtu"/>个字节。第一个字节有特殊含义<seealso cref="T:System.Net.Sockets.OwRdmDgramKind"/>。
+            大小必须是<see cref="F:System.Net.Sockets.OwRdmDgram.RdmMtu"/>个字节。第一个字节有特殊含义<seealso cref="T:System.Net.Sockets.OwRdmDgramKind"/>。
             </summary>
         </member>
         <member name="P:System.Net.Sockets.OwRdmDgram.Offset">
@@ -1619,7 +1619,12 @@
         </member>
         <member name="P:System.Net.Sockets.OwRdmDgram.Count">
             <summary>
-            小于或等于<see cref="F:System.Net.Sockets.OwRdmDgram.Mtu"/>。总计有多少字节数据。包含头部8字节。
+            小于或等于<see cref="F:System.Net.Sockets.OwRdmDgram.RdmMtu"/>。总计有多少字节数据。包含头部8字节。
+            </summary>
+        </member>
+        <member name="P:System.Net.Sockets.OwRdmDgram.LoadData">
+            <summary>
+            有效的负载数据。会根据 Count 和 Offset 属性设置在 Buffer 上的片段。可读写。
             </summary>
         </member>
         <member name="M:System.Net.Sockets.OwRdmDgram.CompareTo(System.Net.Sockets.OwRdmDgram)">
@@ -1704,6 +1709,17 @@
         <member name="P:System.Net.Sockets.OwRdmClient.LoggerCallback">
             <summary>
             获取或设置日志使用的回调函数。
+            </summary>
+        </member>
+        <member name="P:System.Net.Sockets.OwRdmClient.Name">
+            <summary>
+            设置客户端的名字。在连接包 和 心跳包时，会补上该字符串。
+            最长64个字符。
+            </summary>
+        </member>
+        <member name="P:System.Net.Sockets.OwRdmClient.ConnectLoadData">
+            <summary>
+            连接服务器时。
             </summary>
         </member>
         <member name="M:System.Net.Sockets.OwRdmClient.ResetError(System.Net.Sockets.Socket)">
@@ -1872,6 +1888,11 @@
             侦听的端点。
             </summary>
         </member>
+        <member name="F:System.Net.Sockets.OwRdmServer._Token2Id">
+            <summary>
+            记录客户端名称与Id的映射关系。有隐患。
+            </summary>
+        </member>
         <member name="M:System.Net.Sockets.OwRdmServer.GetOrAddEntry(System.Int32,System.Net.Sockets.OwRdmRemoteEntry@,System.TimeSpan)">
             <summary>
             获取指定Id的远程端点信息，锁定并返回。
@@ -1881,35 +1902,26 @@
             <param name="timeSpan"></param>
             <returns></returns>
         </member>
-        <member name="P:System.Net.Sockets.OwUdpServerDataEntry.Id">
+        <member name="M:System.Net.Sockets.OwRdmServer.GetClientName(System.Span{System.Byte})">
             <summary>
-            唯一不变标识。
+            获取客户端名称。
             </summary>
-        </member>
-        <member name="T:System.Net.Sockets.OwUdpServer">
-            <summary>
-            Udp服务端。与 OwUdpClient 配合使用。
-            </summary>
-        </member>
-        <member name="F:System.Net.Sockets.OwUdpServer.Mtu">
-            <summary>
-            Internet上的标准MTU值为576字节，所以在进行Internet的UDP编程时，最好将UDP的数据长度控件在548字节(576-8-20)以内。
-            </summary>
-        </member>
-        <member name="F:System.Net.Sockets.OwUdpServer._Datas">
-            <summary>
-            待发送数据。
-            </summary>
-        </member>
-        <member name="M:System.Net.Sockets.OwUdpServer.Chunk(System.Byte[],System.Int32,System.Int32,System.Buffers.ArrayPool{System.Byte})">
-            <summary>
-            将序列的元素拆分为最大 size大小的区块。
-            </summary>
-            <param name="data"></param>
-            <param name="offset">每个分割块最前面保留的空余元素数量。</param>
-            <param name="count">每个块的最大尺寸,不含偏移空白区域，单位:字节。</param>
-            <param name="pool">池对象。</param>
+            <param name="buffer"></param>
             <returns></returns>
+        </member>
+        <member name="M:System.Net.Sockets.OwRdmServer.OnRequestConnect(System.Net.Sockets.OwRdmDgram,System.Net.EndPoint)">
+            <summary>
+            当请求连接的包到达时。
+            </summary>
+            <param name="datas">负载内的数据。</param>
+            <param name="remote">远端端点。</param>
+        </member>
+        <member name="M:System.Net.Sockets.OwRdmServer.OnHeartbeat(System.Net.Sockets.OwRdmDgram,System.Net.EndPoint)">
+            <summary>
+            当心跳包到达时。
+            </summary>
+            <param name="datas">负载内的数据。</param>
+            <param name="remote">远端端点。</param>
         </member>
         <member name="T:System.Text.Json.Serialization.OwGuidJsonConverter">
             <summary>
