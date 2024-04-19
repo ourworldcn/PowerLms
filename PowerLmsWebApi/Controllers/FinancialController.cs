@@ -179,7 +179,7 @@ namespace PowerLmsWebApi.Controllers
                 {
                     Fee = c.fee,
                     Job = c.job,
-                    Remaining = dicRem.GetValueOrDefault(c.fee.Id),
+                    Remaining = c.fee.Amount - dicRem.GetValueOrDefault(c.fee.Id),
                 };
                 return r;
             }));
