@@ -1581,6 +1581,11 @@
             构造函数。
             </summary>
         </member>
+        <member name="P:System.Net.Sockets.OwRdmDgram.Header">
+            <summary>
+            获取包头。
+            </summary>
+        </member>
         <member name="P:System.Net.Sockets.OwRdmDgram.Kind">
             <summary>
             包的类型。
@@ -1621,6 +1626,7 @@
             <summary>
             小于或等于<see cref="F:System.Net.Sockets.OwRdmDgram.RdmMtu"/>。总计有多少字节数据。包含头部8字节。
             </summary>
+            <value>默认值:<see cref="F:System.Net.Sockets.OwRdmDgram.RdmMtu"/></value>
         </member>
         <member name="P:System.Net.Sockets.OwRdmDgram.LoadData">
             <summary>
@@ -1799,6 +1805,19 @@
             引发 <see cref="E:System.Net.Sockets.OwRdmClient.OwUdpDataReceived"/> 事件。
             </summary>
             <param name="e"></param>
+        </member>
+        <member name="T:System.Net.Sockets.OwRdmDgramV2">
+            <summary>
+            避免包顺序号回绕，使用40位的顺序号。
+            </summary>
+        </member>
+        <member name="M:System.Net.Sockets.OwRdmBase.#ctor(System.Net.Sockets.Socket)">
+            <summary>
+            构造函数。
+            </summary>
+            <param name="socket"><code>
+            new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp)
+            </code></param>
         </member>
         <member name="P:System.Net.Sockets.OwRdmServerOptions.ListernAddress">
             <summary>

@@ -505,8 +505,10 @@ namespace System.Net.Sockets
         /// <returns></returns>
         public static OwRdmDgram Rent()
         {
-            if (_Pool.TryPop(out var result)) return result;
-            return new OwRdmDgram();
+            if (!_Pool.TryPop(out var result))
+                result = new OwRdmDgram();
+            result.Count = result.Buffer.Length - result.Offset;
+            return result;
         }
 
         /// <summary>
@@ -620,7 +622,7 @@ namespace System.Net.Sockets
                     }
                 }
             //处理终止包
-            if (result.Count > 0 && !result[list.Count - 1].Kind.HasFlag(OwRdmDgramKind.EndDgram))    //若不是完整包
+            if (result.Count > 0 && !result[result.Count - 1].Kind.HasFlag(OwRdmDgramKind.EndDgram))    //若不是完整包
                 result.Clear();
             for (int i = 0; i < result.Count; i++) list.RemoveFirst();  //移除已获取的包
             return result;
@@ -635,6 +637,17 @@ namespace System.Net.Sockets
         {
             Buffer = new byte[RdmMtu];
             Count = RdmMtu;
+        }
+
+        /// <summary>
+        /// 获取包头。
+        /// </summary>
+        public ulong Header
+        {
+            get
+            {
+                return (ulong)IPAddress.NetworkToHostOrder(BitConverter.ToInt64(Buffer, Offset));
+            }
         }
 
         /// <summary>
@@ -699,6 +712,7 @@ namespace System.Net.Sockets
         /// <summary>
         /// 小于或等于<see cref="RdmMtu"/>。总计有多少字节数据。包含头部8字节。
         /// </summary>
+        /// <value>默认值:<see cref="RdmMtu"/></value>
         public int Count { get; set; }
 
         /// <summary>

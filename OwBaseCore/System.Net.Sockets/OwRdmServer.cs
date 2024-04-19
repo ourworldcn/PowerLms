@@ -7,17 +7,117 @@ using OW;
 using OW.DDD;
 using System;
 using System.Buffers;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Numerics;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace System.Net.Sockets
 {
+    /// <summary>
+    /// 避免包顺序号回绕，使用40位的顺序号。
+    /// </summary>
+    public class OwRdmDgramV2
+    {
+        public OwRdmDgramV2()
+        {
+            Buffer = new byte[OwRdmDgram.RdmMtu];
+            Offset = 0;
+            Count = OwRdmDgram.RdmMtu;
+        }
+
+        public byte[] Buffer;
+
+        public int Offset { get; set; }
+
+        public int Count { get; set; }
+
+        public bool IsCommand
+        {
+            get
+            {
+                return (Buffer[0] & 0x7f) != 0;
+            }
+        }
+
+        public byte KindByte
+        {
+            get
+            {
+                return (byte)((Buffer[0] >> 4) & 0x0f);
+            }
+            set
+            {
+                if (value >= 16) throw new ArgumentOutOfRangeException();
+                Buffer[0] = (byte)((value << 4) & 0xf0 | Buffer[0] & 0x0f);
+            }
+        }
+
+        public uint Id
+        {
+            get
+            {
+                // BigEnding
+                return ((Buffer[0] & 0x0fu) << 16) + (uint)(Buffer[1] << 8) + Buffer[2];
+            }
+            set
+            {
+                if (value >= 0x1_0000u) throw new ArgumentOutOfRangeException();
+                Buffer[0] = (byte)((value >> 16) & 0x0f + ((Buffer[0] & 0xf0) << 16));
+                Buffer[1] = (byte)((value >> 8) & 0xff);
+                Buffer[2] = (byte)(value & 0xff);
+            }
+        }
+
+        public ulong Seq
+        {
+            get
+            {
+                // BigEnding
+                var result = (ulong)Buffer[3] << 32 | (ulong)Buffer[4] << 24 | (ulong)Buffer[5] << 16 | (ulong)Buffer[6] << 8 | Buffer[7];
+                return result;
+            }
+        }
+    }
+
+    public class OwRdmBase : SocketAsyncWrapper
+    {
+        /// <summary>
+        /// 构造函数。
+        /// </summary>
+        /// <param name="socket"><code>
+        /// new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp)
+        /// </code></param>
+        public OwRdmBase(Socket socket) : base(socket)
+        {
+            Initialize();
+        }
+
+        void Initialize()
+        {
+            //64
+            //-4 = 60
+        }
+
+        protected override void ProcessSendTo(SocketAsyncEventArgs e)
+        {
+            base.ProcessSendTo(e);
+        }
+
+        protected override void ProcessReceiveFrom(SocketAsyncEventArgs e)
+        {
+            base.ProcessReceiveFrom(e);
+        }
+    }
+
     public class OwRdmServerOptions : IOptions<OwRdmServerOptions>
     {
         public virtual OwRdmServerOptions Value => this;
@@ -312,7 +412,7 @@ namespace System.Net.Sockets
                 {
                     _Logger.LogInformation(excp, "收到连接请求包时,{mname}抛出异常", nameof(OnRequestConnect));
                 }
-                _Logger.LogDebug("收到连接请求,分配Id = {id}",id);
+                _Logger.LogDebug("收到连接请求,分配Id = {id}", id);
 
                 var sendDgram = OwRdmDgram.Rent();
                 sendDgram.Kind = OwRdmDgramKind.CommandDgram | OwRdmDgramKind.StartDgram | OwRdmDgramKind.EndDgram;
