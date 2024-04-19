@@ -791,6 +791,8 @@ namespace System.Net.Sockets
     /// 当前版本一个客户端对象仅能和一个Server通讯。
     /// 设置 <see cref="LoggerCallback"/> 用于获取日志。
     /// </summary>
+    /// <remarks>支持无连接、面向消息、以可靠方式发送的消息，并保留数据中的消息边界。 
+    /// RDM（以可靠方式发送的消息）消息会依次到达，不会重复。 此外，如果消息丢失，将会通知发送方。</remarks>
     public class OwRdmClient : SocketAsyncWrapper, IDisposable
     {
         #region 构造函数及相关
@@ -1050,7 +1052,7 @@ namespace System.Net.Sockets
             if (Name != null)
             {
                 var buff = Encoding.UTF8.GetBytes(Name);   //TODO 须评估每次生成 和 一次性生成的优略
-                Buffer.BlockCopy(buff, 0, dgram.Buffer, dgram.Offset, buff.Length);
+                Buffer.BlockCopy(buff, 0, dgram.LoadData.Array, dgram.LoadData.Offset, buff.Length);
                 dgram.Count = buff.Length;
             }
             else

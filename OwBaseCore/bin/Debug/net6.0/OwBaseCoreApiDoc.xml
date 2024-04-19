@@ -1670,6 +1670,8 @@
             当前版本一个客户端对象仅能和一个Server通讯。
             设置 <see cref="P:System.Net.Sockets.OwRdmClient.LoggerCallback"/> 用于获取日志。
             </summary>
+            <remarks>支持无连接、面向消息、以可靠方式发送的消息，并保留数据中的消息边界。 
+            RDM（以可靠方式发送的消息）消息会依次到达，不会重复。 此外，如果消息丢失，将会通知发送方。</remarks>
         </member>
         <member name="M:System.Net.Sockets.OwRdmClient.#ctor">
             <summary>
@@ -1801,14 +1803,15 @@
         <member name="P:System.Net.Sockets.OwRdmServerOptions.ListernAddress">
             <summary>
             侦听地址。
+            指定使用的本地终结点Ip,通常不用设置。
             </summary>
             <value>默认侦听虚四段表示法中的 0.0.0.0。</value>
         </member>
         <member name="P:System.Net.Sockets.OwRdmServerOptions.ListernPort">
             <summary>
-            侦听端口。
+            使用的本机侦听端口。应通过配置指定端口，避免防火墙拒绝侦听请求。
             </summary>
-            <value>默认端口0，即自动选定。</value>
+            <value>默认值：0,自动选择。</value>
         </member>
         <member name="T:System.Net.Sockets.OwRdmRemoteEntry">
             <summary>
@@ -1853,10 +1856,11 @@
         </member>
         <member name="T:System.Net.Sockets.OwRdmServer">
             <summary>
-            支持无连接、面向消息、以可靠方式发送的消息，并保留数据中的消息边界,底层使用Udp来实现。
-            RDM（以可靠方式发送的消息）消息会依次到达，不会重复。 此外，如果消息丢失，将会通知发送方。 
+            支持无连接、面向消息、以可靠方式发送的消息，并保留数据中的消息边界。 
+            RDM（以可靠方式发送的消息）消息会依次到达，不会重复。 此外，如果消息丢失，将会通知发送方。底层使用Udp来实现。
             如果使用 Rdm 初始化 Socket，则在发送和接收数据之前无需建立远程主机连接。 利用 Rdm，您可以与多个对方主机进行通信。
             </summary>
+            <remarks></remarks>
         </member>
         <member name="F:System.Net.Sockets.OwRdmServer._Options">
             <summary>
@@ -1866,6 +1870,11 @@
         <member name="F:System.Net.Sockets.OwRdmServer._Logger">
             <summary>
             存储日志接口字段。
+            </summary>
+        </member>
+        <member name="P:System.Net.Sockets.OwRdmServer.Logger">
+            <summary>
+            日志接口。
             </summary>
         </member>
         <member name="F:System.Net.Sockets.OwRdmServer._HostApplicationLifetime">
@@ -1883,14 +1892,20 @@
             已经使用的最大Id值。
             </summary>
         </member>
-        <member name="P:System.Net.Sockets.OwRdmServer.ListernEndPoing">
+        <member name="P:System.Net.Sockets.OwRdmServer.ListernEndPoint">
             <summary>
-            侦听的端点。
+            本地侦听使用的终结点。
             </summary>
+            <value>默认值：new IPEndPoint(IPAddress.Any, 0),可通过配置指定。</value>
         </member>
         <member name="F:System.Net.Sockets.OwRdmServer._Token2Id">
             <summary>
             记录客户端名称与Id的映射关系。有隐患。
+            </summary>
+        </member>
+        <member name="P:System.Net.Sockets.OwRdmServer.RemoteEndPoint">
+            <summary>
+            侦听远程的终结点。
             </summary>
         </member>
         <member name="M:System.Net.Sockets.OwRdmServer.GetOrAddEntry(System.Int32,System.Net.Sockets.OwRdmRemoteEntry@,System.TimeSpan)">
@@ -1902,16 +1917,9 @@
             <param name="timeSpan"></param>
             <returns></returns>
         </member>
-        <member name="M:System.Net.Sockets.OwRdmServer.GetClientName(System.Span{System.Byte})">
-            <summary>
-            获取客户端名称。
-            </summary>
-            <param name="buffer"></param>
-            <returns></returns>
-        </member>
         <member name="M:System.Net.Sockets.OwRdmServer.OnRequestConnect(System.Net.Sockets.OwRdmDgram,System.Net.EndPoint)">
             <summary>
-            当请求连接的包到达时。
+            当请求连接的包到达时。空操作。
             </summary>
             <param name="datas">负载内的数据。</param>
             <param name="remote">远端端点。</param>

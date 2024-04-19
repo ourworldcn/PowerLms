@@ -20,18 +20,19 @@ namespace System.Net.Sockets
 {
     public class OwRdmServerOptions : IOptions<OwRdmServerOptions>
     {
-        public OwRdmServerOptions Value => this;
+        public virtual OwRdmServerOptions Value => this;
 
         /// <summary>
         /// 侦听地址。
+        /// 指定使用的本地终结点Ip,通常不用设置。
         /// </summary>
         /// <value>默认侦听虚四段表示法中的 0.0.0.0。</value>
         public string ListernAddress { get; set; } = "0.0.0.0";
 
         /// <summary>
-        /// 侦听端口。
+        /// 使用的本机侦听端口。应通过配置指定端口，避免防火墙拒绝侦听请求。
         /// </summary>
-        /// <value>默认端口0，即自动选定。</value>
+        /// <value>默认值：0,自动选择。</value>
         public ushort ListernPort { get; set; }
     }
 
@@ -83,10 +84,11 @@ namespace System.Net.Sockets
     }
 
     /// <summary>
-    /// 支持无连接、面向消息、以可靠方式发送的消息，并保留数据中的消息边界,底层使用Udp来实现。
-    /// RDM（以可靠方式发送的消息）消息会依次到达，不会重复。 此外，如果消息丢失，将会通知发送方。 
+    /// 支持无连接、面向消息、以可靠方式发送的消息，并保留数据中的消息边界。 
+    /// RDM（以可靠方式发送的消息）消息会依次到达，不会重复。 此外，如果消息丢失，将会通知发送方。底层使用Udp来实现。
     /// 如果使用 Rdm 初始化 Socket，则在发送和接收数据之前无需建立远程主机连接。 利用 Rdm，您可以与多个对方主机进行通信。
     /// </summary>
+    /// <remarks></remarks>
     public class OwRdmServer : SocketAsyncWrapper, IDisposable
     {
 
@@ -111,7 +113,7 @@ namespace System.Net.Sockets
             {
                 var dgram = OwRdmDgram.Rent();
                 dgram.Count = dgram.Buffer.Length;
-                ReceiveFromAsync(new ArraySegment<byte>(dgram.Buffer, dgram.Offset, dgram.Count), new IPEndPoint(IPAddress.Any, 0), dgram);
+                ReceiveFromAsync(new ArraySegment<byte>(dgram.Buffer, dgram.Offset, dgram.Count), RemoteEndPoint, dgram);
             }
             _Timer = new Timer(c =>
             {
@@ -155,6 +157,11 @@ namespace System.Net.Sockets
         ILogger<OwRdmServer> _Logger;
 
         /// <summary>
+        /// 日志接口。
+        /// </summary>
+        public ILogger<OwRdmServer> Logger { get => _Logger; }
+
+        /// <summary>
         /// 允许通知使用者应用程序生存期事件。
         /// </summary>
         IHostApplicationLifetime _HostApplicationLifetime;
@@ -170,31 +177,38 @@ namespace System.Net.Sockets
         int _MaxId;
 
         /// <summary>
-        /// 侦听的端点。
+        /// 本地侦听使用的终结点。
         /// </summary>
-        public EndPoint ListernEndPoing { get => Socket.LocalEndPoint; }
+        /// <value>默认值：new IPEndPoint(IPAddress.Any, 0),可通过配置指定。</value>
+        public EndPoint ListernEndPoint { get => Socket?.LocalEndPoint; }
 
         /// <summary>
         /// 记录客户端名称与Id的映射关系。有隐患。
         /// </summary>
         ConcurrentDictionary<Guid, int> _Token2Id = new ConcurrentDictionary<Guid, int>();
+
+        /// <summary>
+        /// 侦听远程的终结点。
+        /// </summary>
+        public IPEndPoint RemoteEndPoint { get; } = new IPEndPoint(IPAddress.Any, 0);
+
         #endregion 属性及相关
 
         #region 方法
 
         #region 发送及相关
 
-        public void SendToAsync(byte[] buffer, int startIndex, int count, int id)
+        public void SendTo(byte[] buffer, int startIndex, int count, int id)
         {
             if (!_Id2ClientEntry.ContainsKey(id))    //若尚未建立连接
             {
-                SendAsync(buffer, startIndex, count, id);
+                SendToAsync(buffer, startIndex, count, id);
                 return;
             }
             using var dw = GetOrAddEntry(id, out var entry, TimeSpan.Zero);
             if (dw.IsEmpty) //若未能成功锁定
             {
-                SendAsync(buffer, startIndex, count, id);
+                SendToAsync(buffer, startIndex, count, id);
                 return;
             }
             var list = OwRdmDgram.Split(buffer, startIndex, count);
@@ -213,7 +227,7 @@ namespace System.Net.Sockets
             }
         }
 
-        public async void SendAsync(byte[] buffer, int startIndex, int count, int id)
+        public async void SendToAsync(byte[] buffer, int startIndex, int count, int id)
         {
             var list = OwRdmDgram.Split(buffer, startIndex, count);
             await Task.Run(() =>
@@ -271,16 +285,6 @@ namespace System.Net.Sockets
             return result;
         }
 
-        /// <summary>
-        /// 获取客户端名称。
-        /// </summary>
-        /// <param name="buffer"></param>
-        /// <returns></returns>
-        string GetClientName(Span<byte> buffer)
-        {
-            return Encoding.UTF8.GetString(buffer);
-        }
-
         protected override void ProcessReceiveFrom(SocketAsyncEventArgs e)
         {
             if (e.BytesTransferred <= 0) goto goon;
@@ -294,23 +298,21 @@ namespace System.Net.Sockets
                 if (entry.RemoteEndPoint != null) goto goon; //若已被并发初始化或是重复连接包
                 entry.RemoteEndPoint = e.RemoteEndPoint;
 
-                var clientName = GetClientName(new Span<byte>(e.Buffer, e.Offset + 8, e.BytesTransferred - 8)); //获取客户端传来的名称
-                if (!Guid.TryParse(clientName, out var token)) goto goon;
-                _Token2Id.AddOrUpdate(token, c => id, (c, d) => id);
-
                 var recvDgram = new OwRdmDgram
                 {
-                    Buffer = e.Buffer,
                     Count = e.BytesTransferred,
                 };
+                Buffer.BlockCopy(e.Buffer, e.Offset, recvDgram.Buffer, recvDgram.Offset, e.BytesTransferred);
+                recvDgram.Id = id;
                 try
                 {
                     OnRequestConnect(recvDgram, e.RemoteEndPoint);
                 }
                 catch (Exception excp)
                 {
-                    _Logger.LogDebug(excp, "收到连接请求包时出现错误");
+                    _Logger.LogInformation(excp, "收到连接请求包时,{mname}抛出异常", nameof(OnRequestConnect));
                 }
+                _Logger.LogDebug("收到连接请求,分配Id = {id}",id);
 
                 var sendDgram = OwRdmDgram.Rent();
                 sendDgram.Kind = OwRdmDgramKind.CommandDgram | OwRdmDgramKind.StartDgram | OwRdmDgramKind.EndDgram;
@@ -331,10 +333,19 @@ namespace System.Net.Sockets
                 if ((uint)dgram.Seq <= entry.MaxSeq)    //若客户端确认的包号合法
                 {
 
-                    var clientName = GetClientName(new Span<byte>(e.Buffer, e.Offset + 8, e.BytesTransferred - 8)); //获取客户端传来的名称
-                    if (!Guid.TryParse(clientName, out var token)) goto goon;
-                    _Token2Id.AddOrUpdate(token, c => dgram.Id, (c, d) => dgram.Id);
-
+                    var recvDgram = new OwRdmDgram
+                    {
+                        Count = e.BytesTransferred,
+                    };
+                    Buffer.BlockCopy(e.Buffer, e.Offset, recvDgram.Buffer, recvDgram.Offset, e.BytesTransferred);
+                    try
+                    {
+                        OnHeartbeat(recvDgram, e.RemoteEndPoint);
+                    }
+                    catch (Exception excp)
+                    {
+                        _Logger.LogInformation(excp, "收到心跳包时，OnHeartbeat 成员抛出异常。");
+                    }
                     while (entry.SendedData.First?.Value.Item1.Seq <= (uint)dgram.Seq)   //若客户端确认新的包已经到达
                     {
                         var tmp = entry.SendedData.First.Value.Item1;
@@ -348,7 +359,7 @@ namespace System.Net.Sockets
         }
 
         /// <summary>
-        /// 当请求连接的包到达时。
+        /// 当请求连接的包到达时。空操作。
         /// </summary>
         /// <param name="datas">负载内的数据。</param>
         /// <param name="remote">远端端点。</param>
@@ -407,8 +418,13 @@ namespace System.Net.Sockets
         {
             var buffer = new byte[2048];
             for (int i = 0; i < buffer.Length; i++) buffer[i] = (byte)(i % byte.MaxValue + 1);
+            _Client.OwUdpDataReceived += _Client_OwUdpDataReceived;
+            _Server.SendTo(buffer, 0, buffer.Length, 1);
+        }
 
-            _Server.SendToAsync(buffer, 0, buffer.Length, 1);
+        private void _Client_OwUdpDataReceived(object sender, OwRdmDataReceivedEventArgs e)
+        {
+            Debug.WriteLine($"{GetType().Name} 对象得到数据到达事件，有效长度 {e.Datas.Length} 字节");
         }
     }
 }
