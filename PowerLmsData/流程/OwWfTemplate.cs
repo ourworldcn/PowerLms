@@ -102,11 +102,12 @@ namespace PowerLms.Data
         [Comment("下一个操作人的Id。通常都是职员Id。遇特殊情况，工作流引擎自行解释。为null标识最后一个节点。")]
         public Guid? NextId { get; set; }
 
-        /// <summary>
+        /*/// <summary>
         /// 拒绝后的操作，1 = 终止,2=回退
         /// </summary>
         [Comment("拒绝后的操作，1 = 终止,2=回退")]
-        public byte RejectOperation { get; set; }
+        public byte RejectOperation { get; set; }   //直接终止
+        */
 
         /// <summary>
         /// 此节点的显示名。
