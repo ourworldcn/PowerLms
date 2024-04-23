@@ -1,0 +1,47 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Class Name="PowerLms.Data.OwWf">
+    <Position X="2.25" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAEAAAAAAAAAQAAAAAAAAAAAAAAABAAAAAAAAAAQA=</HashCode>
+      <FileName>流程\OwWorkflow.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="PowerLms.Data.OwWfNode">
+    <Position X="4" Y="2.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAgAAAAAAAAA=</HashCode>
+      <FileName>流程\OwWorkflow.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="PowerLms.Data.OwWfNodeItem">
+    <Position X="2.25" Y="3.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAEARAAEAAAAAAAAAAAAAAAAAAAAAAAAAkAAAAAAAAA=</HashCode>
+      <FileName>流程\OwWorkflow.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="PowerLms.Data.OwWfTemplate" BaseTypeListCollapsed="true">
+    <Position X="6.75" Y="1.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAEAEAAAAAAAAAgAAAAAAAQAAEAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>流程\OwWfTemplate.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="PowerLms.Data.OwWfTemplateNode">
+    <Position X="9.5" Y="2.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAEAQAAAAAEIAAAAAAAAAAAAAAAAAAAgAAAAAAAAA=</HashCode>
+      <FileName>流程\OwWfTemplate.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="PowerLms.Data.OwWfTemplateNodeItem">
+    <Position X="6.75" Y="4" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAEAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAkAAAAAAAAA=</HashCode>
+      <FileName>流程\OwWfTemplate.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Font Name="Microsoft YaHei UI" Size="9" />
+</ClassDiagram>

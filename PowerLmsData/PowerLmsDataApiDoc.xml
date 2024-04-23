@@ -2427,6 +2427,26 @@
             创建的时间。
             </summary>
         </member>
+        <member name="T:PowerLms.Data.OwWfKindCodeDic">
+            <summary>
+            流程类型表
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwWfKindCodeDic.Id">
+            <summary>
+            文档类型Id(唯一键)。文档的类型Code,系统多方预先约定好，所有商户公用，最长16个ASCII字符(建议仅用低127个字符，否则在json等UTF8编码时，视同多字节字符，客户端需要特别注意)。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwWfKindCodeDic.DisplayName">
+            <summary>
+            此流程的显示名。最长64个字符。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwWfKindCodeDic.Remark">
+            <summary>
+            备注。
+            </summary>
+        </member>
         <member name="T:PowerLms.Data.OwWfTemplate">
             <summary>
             流程模板总表。
@@ -2437,7 +2457,7 @@
             所属机构Id。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.OwWfTemplate.DocTypeCode">
+        <member name="P:PowerLms.Data.OwWfTemplate.KindCode">
             <summary>
             文档类型Id。文档的类型Code,系统多方预先约定好，所有商户公用，最长16个字符，仅支持英文。
             </summary>
@@ -2459,23 +2479,23 @@
         </member>
         <member name="T:PowerLms.Data.OwWfTemplateNode">
             <summary>
-            工作流模板内节点表。当前节点Id就是本对象自身Id。
+            工作流模板内节点表。
             </summary>
         </member>
         <member name="P:PowerLms.Data.OwWfTemplateNode.ParentId">
             <summary>
-            流程Id。
+            流程模板Id。
             </summary>
         </member>
         <member name="P:PowerLms.Data.OwWfTemplateNode.NextId">
             <summary>
-            下一个节点的Id。通常都是职员Id。遇特殊情况，工作流引擎自行解释。
+            下一个操作人的Id。通常都是职员Id。遇特殊情况，工作流引擎自行解释。为null标识最后一个节点。
             </summary>
             <remarks>如:
             <c>
             </c></remarks>
         </member>
-        <member name="P:PowerLms.Data.OwWfTemplateNode.RejectOpertion">
+        <member name="P:PowerLms.Data.OwWfTemplateNode.RejectOperation">
             <summary>
             拒绝后的操作，1 = 终止,2=回退
             </summary>
@@ -2487,7 +2507,7 @@
         </member>
         <member name="P:PowerLms.Data.OwWfTemplateNode.GuardJsonString">
             <summary>
-            前/后置守卫条件的Json字符串。暂未启用。
+            前/后置守卫条件的Json字符串。暂未启用，针对网状结构判断实例是否可流转的条件。
             </summary>
             <remarks>如 <c>
             [
@@ -2515,9 +2535,9 @@
             所属节点Id。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.OwWfTemplateNodeItem.ActorId">
+        <member name="P:PowerLms.Data.OwWfTemplateNodeItem.OpertorId">
             <summary>
-            参与者(员工)Id。
+            操作人Id。
             </summary>
         </member>
         <member name="P:PowerLms.Data.OwWfTemplateNodeItem.OperationKind">
@@ -2531,56 +2551,80 @@
             优先级。0最高，1其次，以此类推...。仅当节点类型0时有效。
             </summary>
         </member>
-        <member name="T:PowerLms.Data.OwWorkflow">
+        <member name="T:PowerLms.Data.OwWf">
             <summary>
-            记录工作流实例的表
+            流程实例顶层类。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.OwWorkflow.WfType">
+        <member name="P:PowerLms.Data.OwWf.TemplateId">
             <summary>
-            流转的类型，当前保留为0.
+            所属模板的Id。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.OwWorkflow.DocId">
+        <member name="P:PowerLms.Data.OwWf.DocId">
             <summary>
-            文档的唯一Id。
-            与 CurrentNodeId 形成联合主键。
+            流程文档Id。如申请单Id。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.OwWorkflow.CurrentNodeId">
+        <member name="P:PowerLms.Data.OwWf.DisplayName">
             <summary>
-            文档当前所处节点。
-            与 DocId 形成联合主键。
+            记录创建此流程的显示名。任何时刻可更改不必与模板对应。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.OwWorkflow.Comment">
+        <member name="P:PowerLms.Data.OwWf.Remark">
             <summary>
-            审核批示。
+            备注。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.OwWorkflow.IsSuccess">
+        <member name="T:PowerLms.Data.OwWfNode">
             <summary>
-            是否审核通过。
+            记录工作流实例节点的表。
             </summary>
         </member>
-        <member name="T:PowerLms.Data.OwWorkflowHistory">
+        <member name="P:PowerLms.Data.OwWfNode.ParentId">
             <summary>
-            工作流历史记录。冗余记录。员工离职 软删除。
+            流程Id。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.OwWorkflowHistory.DocId">
+        <member name="P:PowerLms.Data.OwWfNode.ArrivalDateTime">
             <summary>
-            文档Id。
+            到达此节点的时间，如果是第一个节点则是创建并保存节点的时间。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.OwWorkflowHistory.CurrentNodeId">
+        <member name="T:PowerLms.Data.OwWfNodeItem">
             <summary>
-            所处节点Id。
+            工作流实例节点详细信息。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.OwWorkflowHistory.WorldDateTime">
+        <member name="P:PowerLms.Data.OwWfNodeItem.ParentId">
             <summary>
-            到达该节点的时间。
+            流程Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwWfNodeItem.OpertorId">
+            <summary>
+            文档当前操作人的Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwWfNodeItem.OpertorDisplayName">
+            <summary>
+            这里冗余额外记录一个操作人的显示名称。可随时更改。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwWfNodeItem.Comment">
+            <summary>
+            审核批示。对非审批人，则是意见。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwWfNodeItem.OperationKind">
+            <summary>
+            操作人类型，目前保留为0(审批者)。预计1=抄送人。对模板定义的时点记录，不会再跟随流程模板而变化。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwWfNodeItem.IsSuccess">
+            <summary>
+            是否审核通过。目前 <see cref="T:PowerLms.Data.OwWfNodeItem"/> 中有唯一的审批人，这里记录的是审批人的处理种类。
+            仅对 <see cref="P:PowerLms.Data.OwWfNodeItem.OperationKind"/> 为0 才有意义。
             </summary>
         </member>
         <member name="T:PowerLms.Data.SystemResource">

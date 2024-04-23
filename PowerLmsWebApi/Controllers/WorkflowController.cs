@@ -12,12 +12,12 @@ namespace PowerLmsWebApi.Controllers
     /// <summary>
     /// 工作流及模板相关操作的控制器类。
     /// </summary>
-    public class WorkflowController : PlControllerBase
+    public class WfTemplateController : PlControllerBase
     {
         /// <summary>
         /// 构造函数。
         /// </summary>
-        public WorkflowController(AccountManager accountManager, IServiceProvider serviceProvider, PowerLmsUserDbContext dbContext, EntityManager entityManager, IMapper mapper)
+        public WfTemplateController(AccountManager accountManager, IServiceProvider serviceProvider, PowerLmsUserDbContext dbContext, EntityManager entityManager, IMapper mapper)
         {
             _AccountManager = accountManager;
             _ServiceProvider = serviceProvider;
@@ -42,7 +42,7 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpPost]
-        public ActionResult<AddWorkflowTemplateReturnDto> AddWorkflowTemplate(AddWorkflowTemplateParamsDto model)
+        public ActionResult<AddWorkflowTemplateReturnDto> AddWfTemplate(AddWorkflowTemplateParamsDto model)
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddWorkflowTemplateReturnDto();
@@ -61,12 +61,12 @@ namespace PowerLmsWebApi.Controllers
         /// 获取全部工作流模板节点。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">查询的条件。Id,DisplayName,DocTypeCode。不区分大小写。</param>
+        /// <param name="conditional">查询的条件。Id,DisplayName,KindCode。不区分大小写。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetAllWorkflowTemplateReturnDto> GetAllWorkflowTemplate([FromQuery] PagingParamsDtoBase model,
+        public ActionResult<GetAllWorkflowTemplateReturnDto> GetAllWfTemplate([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
@@ -78,9 +78,9 @@ namespace PowerLmsWebApi.Controllers
                 {
                     coll = coll.Where(c => c.DisplayName.Contains(item.Value));
                 }
-                else if (string.Equals(item.Key, nameof(OwWfTemplate.DocTypeCode), StringComparison.OrdinalIgnoreCase))
+                else if (string.Equals(item.Key, nameof(OwWfTemplate.KindCode), StringComparison.OrdinalIgnoreCase))
                 {
-                    coll = coll.Where(c => c.DocTypeCode.Contains(item.Value));
+                    coll = coll.Where(c => c.KindCode.Contains(item.Value));
                 }
                 else if (string.Equals(item.Key, "Id", StringComparison.OrdinalIgnoreCase))
                 {
@@ -101,7 +101,7 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">指定Id的工作流模板节点不存在。</response>  
         [HttpPut]
-        public ActionResult<ModifyWorkflowTemplateReturnDto> ModifyWorkflowTemplate(ModifyWorkflowTemplateParamsDto model)
+        public ActionResult<ModifyWorkflowTemplateReturnDto> ModifyWfTemplate(ModifyWorkflowTemplateParamsDto model)
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyWorkflowTemplateReturnDto();
@@ -124,7 +124,7 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">指定Id中，至少有一个不存在相应实体。</response>  
         [HttpDelete]
-        public ActionResult<RemoveWorkflowTemplateReturnDto> RemoveWorkflowTemplate(RemoveWorkflowTemplatePatamsDto model)
+        public ActionResult<RemoveWorkflowTemplateReturnDto> RemoveWfTemplate(RemoveWorkflowTemplatePatamsDto model)
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveWorkflowTemplateReturnDto();
