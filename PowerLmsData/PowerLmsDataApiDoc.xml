@@ -2500,11 +2500,6 @@
             <c>
             </c></remarks>
         </member>
-        <member name="P:PowerLms.Data.OwWfTemplateNode.RejectOperation">
-            <summary>
-            拒绝后的操作，1 = 终止,2=回退
-            </summary>
-        </member>
         <member name="P:PowerLms.Data.OwWfTemplateNode.DisplayName">
             <summary>
             此节点的显示名。
@@ -2571,11 +2566,6 @@
             流程文档Id。如申请单Id。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.OwWf.DisplayName">
-            <summary>
-            记录创建此流程的显示名。任何时刻可更改不必与模板对应。
-            </summary>
-        </member>
         <member name="P:PowerLms.Data.OwWf.Remark">
             <summary>
             备注。
@@ -2603,7 +2593,7 @@
         </member>
         <member name="P:PowerLms.Data.OwWfNodeItem.ParentId">
             <summary>
-            流程Id。
+            流程节点Id。
             </summary>
         </member>
         <member name="P:PowerLms.Data.OwWfNodeItem.OpertorId">
