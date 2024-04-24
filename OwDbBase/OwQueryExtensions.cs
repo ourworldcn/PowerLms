@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -53,8 +54,8 @@ namespace OW.Data
         public static PropertyInfo GetPropertyInfo(Type objType, string name, bool ignoreCase = false)
         {
             var properties = objType.GetProperties();
-            var tmp = ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-            var matchedProperty = properties.FirstOrDefault(p => p.Name.Equals(name, tmp)) ?? throw new ArgumentException("对象不包含指定属性名");
+            var comparison = ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+            var matchedProperty = properties.FirstOrDefault(p => p.Name.Equals(name, comparison)) ?? throw new ArgumentException("对象不包含指定属性名");
             return matchedProperty;
         }
 
@@ -70,6 +71,28 @@ namespace OW.Data
             var propAccess = Expression.PropertyOrField(paramExpr, pi.Name);
             var expr = Expression.Lambda(propAccess, paramExpr);
             return expr;
+        }
+    }
+
+    public class EfHelper
+    {
+        public static Expression PropertyOrField(Expression property, string value, bool ignoreCase = false)
+        {
+            return Expression.PropertyOrField(property, value);
+        }
+
+        /// <summary>
+        /// <c>
+        /// 
+        /// </c>
+        /// </summary>
+        /// <param name="property"></param>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        public static Expression StringContains(Expression property, Expression value)
+        {
+            var method = Expression.Call(property, typeof(string).GetMethod("Contains", new Type[] { typeof(string) }), value);
+            return method; 
         }
     }
 }
