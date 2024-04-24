@@ -49,6 +49,22 @@ namespace PowerLmsWebApi.Controllers
         readonly EntityManager _EntityManager;
         OrganizationManager _OrganizationManager;
 
+#if DEBUG
+        /*
+        /// <summary>
+        /// 测试
+        /// </summary>
+        /// <param name="model">查询的一般条件</param>
+        /// <param name="conditional">通用条件</param>
+        /// <returns></returns>
+        [HttpGet]
+        public ActionResult<bool> Test([FromQuery] ConditionalQueryParamsDto model, [FromQuery] Dictionary<string, string> conditional = null)
+        {
+            Func<ShippingLane, bool> f = c => c.Id == Guid.Empty;
+            //var ary = _DbContext.Set(typeof(ShippingLane)).Where(f).ToArray();
+            return default;
+        }*/
+#endif //DEBUG
         #region 用户相关
 
         /// <summary>

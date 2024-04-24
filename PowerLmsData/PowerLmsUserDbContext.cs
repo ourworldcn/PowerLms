@@ -354,6 +354,11 @@ namespace PowerLmsServer.EfData
         /// <summary>
         /// 流程模板表。
         /// </summary>
+        public DbSet<OwWfKindCodeDic> WfKindCodeDics { get; set; }
+
+        /// <summary>
+        /// 流程模板表。
+        /// </summary>
         public DbSet<OwWfTemplate> WfTemplates { get; set; }
 
         /// <summary>

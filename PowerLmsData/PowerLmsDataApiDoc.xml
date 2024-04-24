@@ -257,6 +257,11 @@
             业务费用收付款申请单明细项。
             </summary>
         </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.WfKindCodeDics">
+            <summary>
+            流程模板表。
+            </summary>
+        </member>
         <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.WfTemplates">
             <summary>
             流程模板表。

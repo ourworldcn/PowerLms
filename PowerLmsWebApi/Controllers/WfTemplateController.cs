@@ -147,6 +147,7 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="404">未找到指定的前向节点。</response>  
         [HttpPost]
         public ActionResult<AddWfTemplateNodeReturnDto> AddWfTemplateNode(AddWfTemplateNodeParamsDto model)
         {
@@ -155,6 +156,15 @@ namespace PowerLmsWebApi.Controllers
             model.Item.GenerateNewId();
 
             _DbContext.WfTemplateNodes.Add(model.Item);
+            if (model.PreNodeId != null) //若须增加前向节点
+            {
+                var prv = _DbContext.WfTemplateNodes.Find(model.PreNodeId);
+                if (prv == null)
+                {
+                    return NotFound();
+                }
+                prv.NextId = model.Item.Id;
+            }
             //model.Item.CreateDateTime = OwHelper.WorldNow;
             //model.Item.CreateBy = context.User.Id;
             //model.Item.OrgId = context.User.OrgId;
@@ -394,7 +404,50 @@ namespace PowerLmsWebApi.Controllers
 
         #endregion 模板节点详细表相关
 
+        #region 流程模板类型码相关
+        /// <summary>
+        /// 获取全部工作流模板类型码详细。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="conditional">查询的条件。Id，DisplayName，。不区分大小写。</param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        public ActionResult<GetAllWfTemplateKindCodeReturnDto> GetAllWfTemplateKindCode([FromQuery] PagingParamsDtoBase model,
+            [FromQuery] Dictionary<string, string> conditional = null)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetAllWfTemplateKindCodeReturnDto();
+            var dbSet = _DbContext.WfKindCodeDics/*.Where(c => c.OrgId == context.User.OrgId)*/;
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
+            foreach (var item in conditional)
+                if (string.Equals(item.Key, nameof(OwWfKindCodeDic.Id), StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.Id.Contains(item.Value));
+                }
+                else if (string.Equals(item.Key, nameof(OwWfKindCodeDic.DisplayName), StringComparison.OrdinalIgnoreCase))
+                {
+                    if (Guid.TryParse(item.Value, out var id))
+                        coll = coll.Where(c => c.DisplayName.Contains(item.Value));
+                }
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
+            _Mapper.Map(prb, result);
+            return result;
+        }
+
+        #endregion 流程模板类型码相关
     }
+
+    #region 流程模板类型码相关
+    /// <summary>
+    /// 查询工作流模板节点详细对象返回值封装类。
+    /// </summary>
+    public class GetAllWfTemplateKindCodeReturnDto : PagingReturnDtoBase<OwWfKindCodeDic>
+    {
+    }
+
+    #endregion 流程模板类型码相关
 
     #region 模板节点详细表相关
     /// <summary>
@@ -518,6 +571,10 @@ namespace PowerLmsWebApi.Controllers
     /// </summary>
     public class AddWfTemplateNodeParamsDto : AddParamsDtoBase<OwWfTemplateNode>
     {
+        /// <summary>
+        /// 前向节点的Id。省略或为空则不连接的前向节点。
+        /// </summary>
+        public Guid? PreNodeId { get; set; }
     }
 
     /// <summary>

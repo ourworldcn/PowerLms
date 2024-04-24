@@ -2828,6 +2828,80 @@
             修改业务费用申请单信息功能返回值封装类。
             </summary>
         </member>
+        <member name="T:PowerLmsWebApi.Controllers.GeneralEfController">
+            <summary>
+            一般性的Ef操作控制器。
+            </summary>
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.GeneralEfController.#ctor(PowerLmsServer.EfData.PowerLmsUserDbContext)">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.GeneralEfController.GetAll(PowerLmsWebApi.Controllers.ConditionalQueryParamsDto,System.Collections.Generic.Dictionary{System.String,System.String})">
+            <summary>
+            通用查询获取一组实体。
+            </summary>
+            <param name="model"></param>
+            <param name="conditional">通用条件。</param>
+            <returns></returns>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.ConditionalQueryParamsDto">
+            <summary>
+            通用查询条件。
+            </summary>
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.ConditionalQueryParamsDto.#ctor">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.ConditionalQueryParamsDto.StartIndex">
+            <summary>
+            起始位置，从0开始。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.ConditionalQueryParamsDto.Count">
+            <summary>
+            最大返回数量。
+            默认值-1，不限定返回数量。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.ConditionalQueryParamsDto.OrderFieldName">
+            <summary>
+            排序的字段名。默认值:"Id"。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.ConditionalQueryParamsDto.IsDesc">
+            <summary>
+            是否降序排序：true降序排序，false升序排序（省略或默认）。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.ConditionalQueryParamsDto.EntityTypeName">
+            <summary>
+            实体类型名称，注意不是表名。如: OwWfKindCodeDic
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GeneralEfGetAllReturnDto">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.GeneralEfGetAllReturnDto.#ctor">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.GeneralEfGetAllReturnDto.Total">
+            <summary>
+            集合元素的最大总数量。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.GeneralEfGetAllReturnDto.Result">
+            <summary>
+            返回的集合。
+            </summary>
+        </member>
         <member name="T:PowerLmsWebApi.Controllers.JobNumberController">
             <summary>
             生成序号控制器。
@@ -4289,6 +4363,7 @@
             <returns></returns>
             <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
             <response code="401">无效令牌。</response>  
+            <response code="404">未找到指定的前向节点。</response>  
         </member>
         <member name="M:PowerLmsWebApi.Controllers.WfTemplateController.GetAllWfTemplateNode(PowerLmsWebApi.Dto.PagingParamsDtoBase,System.Collections.Generic.Dictionary{System.String,System.String})">
             <summary>
@@ -4369,6 +4444,21 @@
             <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
             <response code="401">无效令牌。</response>  
             <response code="404">指定Id的业务费用流程模板节点不存在。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.WfTemplateController.GetAllWfTemplateKindCode(PowerLmsWebApi.Dto.PagingParamsDtoBase,System.Collections.Generic.Dictionary{System.String,System.String})">
+            <summary>
+            获取全部工作流模板类型码详细。
+            </summary>
+            <param name="model"></param>
+            <param name="conditional">查询的条件。Id，DisplayName，。不区分大小写。</param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetAllWfTemplateKindCodeReturnDto">
+            <summary>
+            查询工作流模板节点详细对象返回值封装类。
+            </summary>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.SetWfTemplateNodeItemParamsDto">
             <summary>
@@ -4459,6 +4549,11 @@
         <member name="T:PowerLmsWebApi.Controllers.AddWfTemplateNodeParamsDto">
             <summary>
             增加工作流模板节点对象功能参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.AddWfTemplateNodeParamsDto.PreNodeId">
+            <summary>
+            前向节点的Id。省略或为空则不连接的前向节点。
             </summary>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.AddWfTemplateNodeReturnDto">
