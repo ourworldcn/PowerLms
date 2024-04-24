@@ -78,13 +78,11 @@ namespace OW.Data
     {
         public static Expression PropertyOrField(Expression property, string value, bool ignoreCase = false)
         {
-            return Expression.PropertyOrField(property, value);
+            return Expression.Property(property, value);
         }
 
         /// <summary>
-        /// <c>
-        /// 
-        /// </c>
+        /// 获取字符串包含的表达式。
         /// </summary>
         /// <param name="property"></param>
         /// <param name="value"></param>
@@ -92,7 +90,21 @@ namespace OW.Data
         public static Expression StringContains(Expression property, Expression value)
         {
             var method = Expression.Call(property, typeof(string).GetMethod("Contains", new Type[] { typeof(string) }), value);
-            return method; 
+            return method;
+        }
+
+        /// <summary>
+        /// 获取介于2者之间的表达式。
+        /// </summary>
+        /// <param name="property"></param>
+        /// <param name="min"></param>
+        /// <param name="max"></param>
+        /// <returns></returns>
+        public static Expression Between(Expression property, Expression min, Expression max)
+        {
+            var l = Expression.GreaterThanOrEqual(property, min);
+            var r = Expression.LessThanOrEqual(property, max);
+            return Expression.AndAlso(l, r);
         }
     }
 }
