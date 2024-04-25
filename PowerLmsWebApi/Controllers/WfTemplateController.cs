@@ -72,7 +72,8 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllWorkflowTemplateReturnDto();
             var dbSet = _DbContext.WfTemplates.Where(c => c.OrgId == context.User.OrgId);
-            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
+             dbSet = _DbContext.WfTemplates;
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsQueryable();
             foreach (var item in conditional)
                 if (string.Equals(item.Key, nameof(OwWfTemplate.DisplayName), StringComparison.OrdinalIgnoreCase))
                 {
@@ -188,7 +189,7 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllWfTemplateNodeReturnDto();
             var dbSet = _DbContext.WfTemplateNodes/*.Where(c => c.OrgId == context.User.OrgId)*/;
-            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsQueryable();
             foreach (var item in conditional)
                 if (string.Equals(item.Key, nameof(OwWfTemplateNode.DisplayName), StringComparison.OrdinalIgnoreCase))
                 {
