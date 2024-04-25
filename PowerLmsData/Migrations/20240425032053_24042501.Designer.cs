@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PowerLmsServer.EfData;
 
@@ -11,9 +12,10 @@ using PowerLmsServer.EfData;
 namespace PowerLmsData.Migrations
 {
     [DbContext(typeof(PowerLmsUserDbContext))]
-    partial class PowerLmsUserDbContextModelSnapshot : ModelSnapshot
+    [Migration("20240425032053_24042501")]
+    partial class _24042501
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -995,35 +997,6 @@ namespace PowerLmsData.Migrations
                     b.ToTable("DD_OtherNumberRules");
                 });
 
-            modelBuilder.Entity("PowerLms.Data.OwWf", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier")
-                        .HasColumnOrder(0);
-
-                    b.Property<Guid?>("DocId")
-                        .HasColumnType("uniqueidentifier")
-                        .HasComment("流程文档Id。");
-
-                    b.Property<string>("Remark")
-                        .HasColumnType("nvarchar(max)")
-                        .HasComment("备注。");
-
-                    b.Property<Guid?>("TemplateId")
-                        .HasColumnType("uniqueidentifier")
-                        .HasComment("所属模板的Id。");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("DocId");
-
-                    b.HasIndex("TemplateId");
-
-                    b.ToTable("OwWfs");
-
-                    b.HasComment("流程实例顶层类。");
-                });
-
             modelBuilder.Entity("PowerLms.Data.OwWfKindCodeDic", b =>
                 {
                     b.Property<string>("Id")
@@ -1044,74 +1017,6 @@ namespace PowerLmsData.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("WfKindCodeDics");
-                });
-
-            modelBuilder.Entity("PowerLms.Data.OwWfNode", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier")
-                        .HasColumnOrder(0);
-
-                    b.Property<DateTime>("ArrivalDateTime")
-                        .HasColumnType("datetime2")
-                        .HasComment("到达此节点的时间，如果是第一个节点则是创建并保存节点的时间。");
-
-                    b.Property<Guid?>("ParentId")
-                        .HasColumnType("uniqueidentifier")
-                        .HasComment("流程Id");
-
-                    b.Property<Guid>("TemplateId")
-                        .HasColumnType("uniqueidentifier")
-                        .HasComment("节点模板的Id。");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ParentId");
-
-                    b.ToTable("OwWfNodes");
-
-                    b.HasComment("记录工作流实例节点的表");
-                });
-
-            modelBuilder.Entity("PowerLms.Data.OwWfNodeItem", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier")
-                        .HasColumnOrder(0);
-
-                    b.Property<string>("Comment")
-                        .HasColumnType("nvarchar(max)")
-                        .HasComment("审核批示。对非审批人，则是意见。");
-
-                    b.Property<bool>("IsSuccess")
-                        .HasColumnType("bit")
-                        .HasComment("是否审核通过");
-
-                    b.Property<byte>("OperationKind")
-                        .HasColumnType("tinyint")
-                        .HasComment("操作人类型，目前保留为0(审批者)。预计1=抄送人。");
-
-                    b.Property<string>("OpertorDisplayName")
-                        .HasColumnType("nvarchar(max)")
-                        .HasComment("这里冗余额外记录一个操作人的显示名称。可随时更改。");
-
-                    b.Property<Guid?>("OpertorId")
-                        .HasColumnType("uniqueidentifier")
-                        .HasComment("文档当前操作人的Id。");
-
-                    b.Property<Guid?>("ParentId")
-                        .HasColumnType("uniqueidentifier")
-                        .HasComment("流程节点Id");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OpertorId");
-
-                    b.HasIndex("ParentId");
-
-                    b.ToTable("OwWfNodeItems");
-
-                    b.HasComment("工作流实例节点详细信息。");
                 });
 
             modelBuilder.Entity("PowerLms.Data.OwWfTemplate", b =>
@@ -2633,24 +2538,6 @@ namespace PowerLmsData.Migrations
                     b.ToTable("DD_UnitConversions");
                 });
 
-            modelBuilder.Entity("PowerLms.Data.OwWfNode", b =>
-                {
-                    b.HasOne("PowerLms.Data.OwWf", "Parent")
-                        .WithMany("Children")
-                        .HasForeignKey("ParentId");
-
-                    b.Navigation("Parent");
-                });
-
-            modelBuilder.Entity("PowerLms.Data.OwWfNodeItem", b =>
-                {
-                    b.HasOne("PowerLms.Data.OwWfNode", "Parent")
-                        .WithMany("Children")
-                        .HasForeignKey("ParentId");
-
-                    b.Navigation("Parent");
-                });
-
             modelBuilder.Entity("PowerLms.Data.OwWfTemplateNode", b =>
                 {
                     b.HasOne("PowerLms.Data.OwWfTemplate", "Parent")
@@ -3063,16 +2950,6 @@ namespace PowerLmsData.Migrations
                         });
 
                     b.Navigation("Name");
-                });
-
-            modelBuilder.Entity("PowerLms.Data.OwWf", b =>
-                {
-                    b.Navigation("Children");
-                });
-
-            modelBuilder.Entity("PowerLms.Data.OwWfNode", b =>
-                {
-                    b.Navigation("Children");
                 });
 
             modelBuilder.Entity("PowerLms.Data.OwWfTemplate", b =>

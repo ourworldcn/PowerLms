@@ -277,6 +277,11 @@
             流程模板节点参与者表。
             </summary>
         </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.OwWfs">
+            <summary>
+            工作流实例表
+            </summary>
+        </member>
         <member name="T:PowerLmsServer.EfData.OwDbContextExtensions">
             <summary>
             数据库上下文的扩展方法。
@@ -2492,6 +2497,16 @@
             流程模板Id。
             </summary>
         </member>
+        <member name="P:PowerLms.Data.OwWfTemplateNode.Parent">
+            <summary>
+            模板对象。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwWfTemplateNode.Children">
+            <summary>
+            所有操作人的详细信息集合。
+            </summary>
+        </member>
         <member name="P:PowerLms.Data.OwWfTemplateNode.NextId">
             <summary>
             下一个操作人的Id。通常都是职员Id。遇特殊情况，工作流引擎自行解释。为null标识最后一个节点。
@@ -2535,6 +2550,11 @@
             所属节点Id。
             </summary>
         </member>
+        <member name="P:PowerLms.Data.OwWfTemplateNodeItem.Parent">
+            <summary>
+            模板节点对象。
+            </summary>
+        </member>
         <member name="P:PowerLms.Data.OwWfTemplateNodeItem.OpertorId">
             <summary>
             操作人Id。
@@ -2571,6 +2591,11 @@
             备注。
             </summary>
         </member>
+        <member name="P:PowerLms.Data.OwWf.Children">
+            <summary>
+            所有操作人的详细信息集合。
+            </summary>
+        </member>
         <member name="T:PowerLms.Data.OwWfNode">
             <summary>
             记录工作流实例节点的表。
@@ -2581,9 +2606,19 @@
             流程Id。
             </summary>
         </member>
+        <member name="P:PowerLms.Data.OwWfNode.Children">
+            <summary>
+            所有操作人的详细信息集合。
+            </summary>
+        </member>
         <member name="P:PowerLms.Data.OwWfNode.ArrivalDateTime">
             <summary>
             到达此节点的时间，如果是第一个节点则是创建并保存节点的时间。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwWfNode.TemplateId">
+            <summary>
+            节点模板的Id。
             </summary>
         </member>
         <member name="T:PowerLms.Data.OwWfNodeItem">

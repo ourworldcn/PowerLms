@@ -4306,6 +4306,115 @@
             <param name="hostEnvironment"></param>
             <returns></returns>
         </member>
+        <member name="T:PowerLmsWebApi.Controllers.WfController">
+            <summary>
+            工作流实例相关控制器。
+            </summary>
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.WfController.#ctor(System.IServiceProvider,PowerLmsServer.Managers.AccountManager,PowerLmsServer.EfData.PowerLmsUserDbContext,AutoMapper.IMapper)">
+            <summary>
+            构造函数。
+            </summary>
+            <param name="serviceProvider"></param>
+            <param name="accountManager"></param>
+            <param name="dbContext"></param>
+            <param name="mapper"></param>
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.WfController.GetWfByDocId(PowerLmsWebApi.Controllers.GetWfParamsDto)">
+            <summary>
+            获取文档相关的流程信息。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.WfController.Send(PowerLmsWebApi.Controllers.WfSendParamsDto)">
+            <summary>
+            发送工作流文档的功能。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+            <response code="404">指定模板不存在。</response>  
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetWfParamsDto">
+            <summary>
+            获取文档相关的流程信息的参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.GetWfParamsDto.EntityId">
+            <summary>
+            要获取工作流实例的相关文档ID。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.OwWfDto">
+            <summary>
+            工作流实例的封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.OwWfDto.State">
+            <summary>
+            该工作流所处状态。0=0流转中，1=成功完成，2=已被终止。未来可能有其它状态。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.OwWfDto.CreateDateTime">
+            <summary>
+            该工作流的创建时间。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetWfReturnDto">
+            <summary>
+            获取文档相关的流程信息的返回值封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.GetWfReturnDto.Result">
+            <summary>
+            相关工作流实例的集合。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.WfSendParamsDto">
+            <summary>
+            发送工作流文档功能的参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.WfSendParamsDto.TemplateId">
+            <summary>
+            工作流模板的Id。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.WfSendParamsDto.DocId">
+            <summary>
+            流程文档Id。如申请单Id。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.WfSendParamsDto.Approval">
+            <summary>
+            审批结果，0通过，1终止。对起始节点只能是0.
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.WfSendParamsDto.Comment">
+            <summary>
+            审核批示。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.WfSendParamsDto.NextOpertorId">
+            <summary>
+            指定发送的下一个操作人的Id。必须符合流程定义。
+            如果是null或省略，对起始节点是仅保存批示意见，不进行流转。对最后一个节点这个属性被忽视。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.WfSendReturnDto">
+            <summary>
+            发送工作流文档功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.WfSendReturnDto.WfId">
+            <summary>
+            工作流实例的Id。
+            </summary>
+        </member>
         <member name="T:PowerLmsWebApi.Controllers.WfTemplateController">
             <summary>
             工作流及模板相关操作的控制器类。
@@ -4347,7 +4456,7 @@
         </member>
         <member name="M:PowerLmsWebApi.Controllers.WfTemplateController.RemoveWfTemplate(PowerLmsWebApi.Controllers.RemoveWorkflowTemplatePatamsDto)">
             <summary>
-            批量删除工作流模板信息。(物理硬删除)
+            批量删除工作流模板信息。(物理硬删除,请先移除子对象)
             </summary>
             <param name="model"></param>
             <returns></returns>
@@ -4387,7 +4496,7 @@
         </member>
         <member name="M:PowerLmsWebApi.Controllers.WfTemplateController.RemoveWfTemplateNode(PowerLmsWebApi.Controllers.RemoveWfTemplateNodePatamsDto)">
             <summary>
-            批量删除工作流模板信息。(物理硬删除)
+            批量删除工作流模板信息。(物理硬删除，请先移除子对象)
             </summary>
             <param name="model"></param>
             <returns></returns>

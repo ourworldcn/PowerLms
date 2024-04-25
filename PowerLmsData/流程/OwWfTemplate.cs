@@ -1,6 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using OW.Data;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace PowerLms.Data
 {
@@ -35,7 +37,7 @@ namespace PowerLms.Data
     /// <summary>
     /// 流程模板总表。
     /// </summary>
-    [Index(nameof(OrgId))]
+    [Index(nameof(OrgId), nameof(KindCode))]
     [Comment("流程模板总表")]
     public class OwWfTemplate : GuidKeyObjectBase, ICreatorInfo
     {
@@ -73,12 +75,15 @@ namespace PowerLms.Data
         public DateTime CreateDateTime { get; set; } = OwHelper.WorldNow;
 
         #endregion ICreatorInfo接口
+
+        #region 导航属性
+        public virtual List<OwWfTemplateNode> Children { get; set; } = new List<OwWfTemplateNode>();
+        #endregion 导航属性
     }
 
     /// <summary>
     /// 工作流模板内节点表。
     /// </summary>
-    [Index(nameof(ParentId))]
     [Index(nameof(NextId))]
     [Comment("工作流模板内节点表")]
     public class OwWfTemplateNode : GuidKeyObjectBase
@@ -87,11 +92,26 @@ namespace PowerLms.Data
         {
         }
 
+        #region 导航属性
+
         /// <summary>
         /// 流程模板Id。
         /// </summary>
         [Comment("流程模板Id")]
+        [ForeignKey(nameof(Parent))]
         public Guid? ParentId { get; set; }
+
+        /// <summary>
+        /// 模板对象。
+        /// </summary>
+        [JsonIgnore]
+        public virtual OwWfTemplate Parent { get; set; }
+
+        /// <summary>
+        /// 所有操作人的详细信息集合。
+        /// </summary>
+        public virtual List<OwWfTemplateNodeItem> Children { get; set; } = new List<OwWfTemplateNodeItem>();
+        #endregion 导航属性
 
         /// <summary>
         /// 下一个操作人的Id。通常都是职员Id。遇特殊情况，工作流引擎自行解释。为null标识最后一个节点。
@@ -140,19 +160,11 @@ namespace PowerLms.Data
         public string GuardJsonString { get; set; }
         #endregion 前/后置守卫条件
 
-        #region 导航属性
-        ///// <summary>
-        ///// 详细项集合的导航属性。
-        ///// </summary>
-        //[InverseProperty(nameof(OwWorkflowTemplateNodeItem.ParentId))]
-        //public virtual List<OwWorkflowTemplateNodeItem> Children { get; set; } = new List<OwWorkflowTemplateNodeItem>();
-        #endregion 导航属性
     }
 
     /// <summary>
     /// 节点详细信息类。
     /// </summary>
-    [Index(nameof(ParentId))]
     [Comment("节点详细信息类")]
     public class OwWfTemplateNodeItem : GuidKeyObjectBase
     {
@@ -161,7 +173,15 @@ namespace PowerLms.Data
         /// 所属节点Id。
         /// </summary>
         [Comment("所属节点Id。")]
+        [ForeignKey(nameof(Parent))]
         public Guid? ParentId { get; set; }
+
+        /// <summary>
+        /// 模板节点对象。
+        /// </summary>
+        [JsonIgnore]
+        public virtual OwWfTemplateNode Parent { get; set; }
+
         #endregion 导航属性
 
         /// <summary>

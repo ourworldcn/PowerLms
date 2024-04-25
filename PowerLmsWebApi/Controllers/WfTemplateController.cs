@@ -116,7 +116,7 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// 批量删除工作流模板信息。(物理硬删除)
+        /// 批量删除工作流模板信息。(物理硬删除,请先移除子对象)
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
@@ -238,7 +238,7 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// 批量删除工作流模板信息。(物理硬删除)
+        /// 批量删除工作流模板信息。(物理硬删除，请先移除子对象)
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>

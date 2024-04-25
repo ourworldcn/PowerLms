@@ -6,6 +6,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace PowerLms.Data
@@ -43,43 +44,72 @@ namespace PowerLms.Data
         [Comment("备注。")]
         public string Remark { get; set; }
 
-        //dto加入一个创建时间
+        #region 导航属性
+
+        /// <summary>
+        /// 所有操作人的详细信息集合。
+        /// </summary>
+        public virtual List<OwWfNode> Children { get; set; } = new List<OwWfNode>();
+        #endregion 导航属性
+
     }
 
     /// <summary>
     /// 记录工作流实例节点的表。
     /// </summary>
-    [Index(nameof(ParentId))]
     [Comment("记录工作流实例节点的表")]
+    [Table("OwWfNodes")]
     public class OwWfNode : GuidKeyObjectBase
     {
+        #region 导航属性
         /// <summary>
         /// 流程Id。
         /// </summary>
         [Comment("流程Id")]
         public Guid? ParentId { get; set; }
 
+        [JsonIgnore]
+        public virtual OwWf Parent { get; set; }
+
+        /// <summary>
+        /// 所有操作人的详细信息集合。
+        /// </summary>
+        public virtual List<OwWfNodeItem> Children { get; set; } = new List<OwWfNodeItem>();
+        #endregion 导航属性
+
         /// <summary>
         /// 到达此节点的时间，如果是第一个节点则是创建并保存节点的时间。
         /// </summary>
         [Comment("到达此节点的时间，如果是第一个节点则是创建并保存节点的时间。")]
         public DateTime ArrivalDateTime { get; set; }
+
+        /// <summary>
+        /// 节点模板的Id。
+        /// </summary>
+        [Comment("节点模板的Id。")]
+        public Guid TemplateId { get; set; } = Guid.Empty;
     }
 
     /// <summary>
     /// 工作流实例节点详细信息。
     /// </summary>
-    [Index(nameof(ParentId))]
     [Index(nameof(OpertorId))]
     [Comment("工作流实例节点详细信息。")]
+    [Table("OwWfNodeItems")]
     public class OwWfNodeItem : GuidKeyObjectBase
     {
+        #region 导航属性
         /// <summary>
         /// 流程节点Id。
         /// </summary>
         [Comment("流程节点Id")]
+        [ForeignKey(nameof(Parent))]
         public Guid? ParentId { get; set; }
 
+        [JsonIgnore]
+        public virtual OwWfNode Parent { get; set; }
+
+        #endregion 导航属性
         /// <summary>
         /// 文档当前操作人的Id。
         /// </summary>
@@ -102,8 +132,8 @@ namespace PowerLms.Data
         /// 操作人类型，目前保留为0(审批者)。预计1=抄送人。对模板定义的时点记录，不会再跟随流程模板而变化。
         /// </summary>
         [Comment("操作人类型，目前保留为0(审批者)。预计1=抄送人。")]
-        public byte OperationKind { get; set; } 
-        
+        public byte OperationKind { get; set; }
+
         /// <summary>
         /// 是否审核通过。目前 <see cref="OwWfNodeItem"/> 中有唯一的审批人，这里记录的是审批人的处理种类。
         /// 仅对 <see cref="OperationKind"/> 为0 才有意义。

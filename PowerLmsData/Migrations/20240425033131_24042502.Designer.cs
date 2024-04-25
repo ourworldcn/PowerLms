@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PowerLmsServer.EfData;
 
@@ -11,9 +12,10 @@ using PowerLmsServer.EfData;
 namespace PowerLmsData.Migrations
 {
     [DbContext(typeof(PowerLmsUserDbContext))]
-    partial class PowerLmsUserDbContextModelSnapshot : ModelSnapshot
+    [Migration("20240425033131_24042502")]
+    partial class _24042502
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1060,10 +1062,6 @@ namespace PowerLmsData.Migrations
                         .HasColumnType("uniqueidentifier")
                         .HasComment("流程Id");
 
-                    b.Property<Guid>("TemplateId")
-                        .HasColumnType("uniqueidentifier")
-                        .HasComment("节点模板的Id。");
-
                     b.HasKey("Id");
 
                     b.HasIndex("ParentId");
@@ -1099,6 +1097,9 @@ namespace PowerLmsData.Migrations
                         .HasColumnType("uniqueidentifier")
                         .HasComment("文档当前操作人的Id。");
 
+                    b.Property<Guid?>("OwWfNodeId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid?>("ParentId")
                         .HasColumnType("uniqueidentifier")
                         .HasComment("流程节点Id");
@@ -1106,6 +1107,8 @@ namespace PowerLmsData.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("OpertorId");
+
+                    b.HasIndex("OwWfNodeId");
 
                     b.HasIndex("ParentId");
 
@@ -2644,8 +2647,12 @@ namespace PowerLmsData.Migrations
 
             modelBuilder.Entity("PowerLms.Data.OwWfNodeItem", b =>
                 {
-                    b.HasOne("PowerLms.Data.OwWfNode", "Parent")
+                    b.HasOne("PowerLms.Data.OwWfNode", null)
                         .WithMany("Children")
+                        .HasForeignKey("OwWfNodeId");
+
+                    b.HasOne("PowerLms.Data.OwWf", "Parent")
+                        .WithMany()
                         .HasForeignKey("ParentId");
 
                     b.Navigation("Parent");

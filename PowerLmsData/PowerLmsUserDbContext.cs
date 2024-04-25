@@ -370,6 +370,11 @@ namespace PowerLmsServer.EfData
         /// 流程模板节点参与者表。
         /// </summary>
         public DbSet<OwWfTemplateNodeItem> WfTemplateNodeItems { get; set; }
+
+        /// <summary>
+        /// 工作流实例表
+        /// </summary>
+        public DbSet<OwWf> OwWfs { get; set; }
         #endregion
     }
 
