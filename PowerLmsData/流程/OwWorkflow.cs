@@ -135,11 +135,12 @@ namespace PowerLms.Data
         public byte OperationKind { get; set; }
 
         /// <summary>
-        /// 是否审核通过。目前 <see cref="OwWfNodeItem"/> 中有唯一的审批人，这里记录的是审批人的处理种类。
-        /// 仅对 <see cref="OperationKind"/> 为0 才有意义。
+        /// 是否审核通过。这里记录的是操作人的操作结果。
+        /// 对 <see cref="OperationKind"/> 为0（审批者）时，false表示否决,true表示通过,空表示待处理状态。
+        /// 对 <see cref="OperationKind"/> 为1(抄阅者) 空标识未阅读，true表示已阅。
         /// </summary>
         [Comment("是否审核通过")]
-        public bool IsSuccess { get; set; }
+        public bool? IsSuccess { get; set; }
 
     }
 }

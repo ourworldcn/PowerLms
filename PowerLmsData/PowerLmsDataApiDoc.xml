@@ -2653,8 +2653,9 @@
         </member>
         <member name="P:PowerLms.Data.OwWfNodeItem.IsSuccess">
             <summary>
-            是否审核通过。目前 <see cref="T:PowerLms.Data.OwWfNodeItem"/> 中有唯一的审批人，这里记录的是审批人的处理种类。
-            仅对 <see cref="P:PowerLms.Data.OwWfNodeItem.OperationKind"/> 为0 才有意义。
+            是否审核通过。这里记录的是操作人的操作结果。
+            对 <see cref="P:PowerLms.Data.OwWfNodeItem.OperationKind"/> 为0（审批者）时，false表示否决,true表示通过,空表示待处理状态。
+            对 <see cref="P:PowerLms.Data.OwWfNodeItem.OperationKind"/> 为1(抄阅者) 空标识未阅读，true表示已阅。
             </summary>
         </member>
         <member name="T:PowerLms.Data.SystemResource">

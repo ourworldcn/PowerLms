@@ -42,7 +42,7 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetWfReturnDto> GetWfByDocId(GetWfParamsDto model)
+        public ActionResult<GetWfReturnDto> GetWfByDocId([FromQuery] GetWfParamsDto model)
         {
             var result = new GetWfReturnDto();
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
@@ -51,21 +51,110 @@ namespace PowerLmsWebApi.Controllers
             result.Result.ForEach(c =>
             {
                 c.CreateDateTime = c.Children.Min(d => d.ArrivalDateTime);
-                var b = c.Children.SelectMany(c => c.Children).Any(d => !d.IsSuccess);
-                if (b) c.State = 2;
-                else
-                {
-                    var last = c.Children.OrderByDescending(d => d.ArrivalDateTime).FirstOrDefault();   //最后一个节点
-                    var template = _DbContext.WfTemplates.First(d => d.Id == c.TemplateId);   //模板
-                    var lastNode = template.Children.FirstOrDefault(d => d.NextId is null);    //最后一个模板节点
-                    var operIds = lastNode.Children.Select(d => d.OpertorId);
-                    var lastOpId = last.Children.FirstOrDefault()?.OpertorId;
-                    if (lastOpId is null)
-                        c.State = 0;
-                    else if (operIds.Contains(lastOpId.Value)) c.State = 1;
-                    else c.State = 0;
-                }
+                c.State = GetWfState(c);
             });
+            return result;
+        }
+
+        /// <summary>
+        /// 获取流程当前状态。
+        /// </summary>
+        /// <param name="wf"></param>
+        /// <returns>0=0流转中，1=成功完成，2=已被终止。未来可能有其它状态。</returns>
+        int GetWfState(OwWf wf)
+        {
+            var lastApvNode = GetLastApprovalNode(wf);
+            if (lastApvNode == null) return 0;
+            if (!GetNodeState(lastApvNode, out var state)) return 0;
+            if (!state.HasValue) return 0;
+            return state.Value ? 1 : 2;
+        }
+
+        /// <summary>
+        /// 获取节点的审批状态。
+        /// </summary>
+        /// <param name="node"></param>
+        /// <param name="state">false=否决，true=通过,空=待审批。</param>
+        /// <returns>false=不是审批节点，true=是审批节点。</returns>
+        bool GetNodeState(OwWfNode node, out bool? state)
+        {
+            var tt = _DbContext.WfTemplateNodes.Find(node.TemplateId);
+            var coll = from ttNode in tt.Children.Where(c => c.OperationKind == 0)    //模板节点审批人集合
+                       join instNode in node.Children.Where(c => c.OperationKind == 0)    ////实例结点审批人集合
+                       on ttNode.OpertorId equals instNode.OpertorId
+                       select instNode;
+            var result = false;
+            state = true;
+            foreach (var item in coll)
+            {
+                result = true;
+                if (item.IsSuccess is null)  //若在审批中
+                {
+                    state = null;
+                    break;
+                }
+                else if (item.IsSuccess == false)  //若已否决否决
+                {
+                    state = false;
+                    break;
+                }
+            }
+            return result;
+        }
+
+        //OwWfNode GetFirstNode(OwWf wf)
+        //{
+        //    var coll = wf.Children.AsEnumerable().OrderBy(c => c.ArrivalDateTime).ToArray();
+        //    foreach (var node in coll)
+        //    {
+        //        var nodeTemplate = _DbContext.WfTemplateNodes.Find(node.TemplateId);    //获取模板
+        //        if (!nodeTemplate.NextId.HasValue && nodeTemplate.Children.Any(c => c.OperationKind == 0))   //若找到了第一个节点
+        //            return node;
+        //    }
+        //    return null;
+        //}
+
+        /// <summary>
+        /// 获取流程当前状态下的最后一个审批的节点。该节点的 <see cref="OwWfNodeItem.IsSuccess"/> 决定了流程的状态。
+        /// </summary>
+        /// <param name="wf"></param>
+        /// <returns></returns>
+        private OwWfNode GetLastApprovalNode(OwWf wf)
+        {
+            var coll = wf.Children.OrderByDescending(c => c.ArrivalDateTime);
+            foreach (var node in coll)
+            {
+                var b = GetNodeState(node, out var state);
+                if (!b) continue;   //若不是审批节点
+                return node;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// 获取人员相关流转的信息。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        public ActionResult<GetWfByOpertorIdReturnDto> GetWfByOpertorId([FromQuery] GetWfByOpertorIdParamsDto model)
+        {
+            var result = new GetWfByOpertorIdReturnDto();
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+
+            var operatorId = context.User.Id;
+            var collItems = _DbContext.OwWfs.SelectMany(c => c.Children).SelectMany(c => c.Children).Where(c => c.OpertorId == operatorId);   //所有相关的Items
+            var wfs = collItems.Select(c => c.Parent.Parent).Distinct().ToArray();  //所有相关流程
+
+            result.Result.AddRange(wfs.Select(c =>
+            {
+                var r = _Mapper.Map<OwWfDto>(c);
+                r.CreateDateTime = c.Children.Min(d => d.ArrivalDateTime);
+                r.State = GetWfState(c);
+                return r;
+            }));
             return result;
         }
 
@@ -85,7 +174,7 @@ namespace PowerLmsWebApi.Controllers
             var template = _DbContext.WfTemplates.Include(c => c.Children).ThenInclude(c => c.Children).Single(c => c.Id == model.TemplateId);
             if (template is null) return NotFound();
 
-            var wf = _DbContext.OwWfs.Where(c => c.DocId == model.DocId && !c.Children.Any(c => !c.Children.Any(d => !d.IsSuccess))).FirstOrDefault();  //当前流程
+            var wf = _DbContext.OwWfs.Where(c => c.DocId == model.DocId && !c.Children.Any(c => !c.Children.Any(d => d.IsSuccess == false))).FirstOrDefault();  //当前流程
             if (wf is null)  //若没有流程正在执行
             {
                 //创建流程及首节点
@@ -151,6 +240,25 @@ namespace PowerLmsWebApi.Controllers
             }
             return result;
         }
+    }
+
+    /// <summary>
+    /// 获取人员相关流转信息的参数封装类。
+    /// </summary>
+    public class GetWfByOpertorIdParamsDto : TokenDtoBase
+    {
+
+    }
+
+    /// <summary>
+    /// 获取人员相关流转信息的返回值封装类。
+    /// </summary>
+    public class GetWfByOpertorIdReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 相关流程的集合。
+        /// </summary>
+        public List<OwWfDto> Result { get; set; } = new List<OwWfDto>();
     }
 
     /// <summary>
