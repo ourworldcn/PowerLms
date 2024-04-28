@@ -6,6 +6,7 @@ using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
+using System.Text.Json.Serialization;
 
 namespace PowerLmsWebApi.Controllers
 {
@@ -72,7 +73,7 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllWorkflowTemplateReturnDto();
             var dbSet = _DbContext.WfTemplates.Where(c => c.OrgId == context.User.OrgId);
-             dbSet = _DbContext.WfTemplates;
+            dbSet = _DbContext.WfTemplates;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsQueryable();
             foreach (var item in conditional)
                 if (string.Equals(item.Key, nameof(OwWfTemplate.DisplayName), StringComparison.OrdinalIgnoreCase))
@@ -377,7 +378,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new SetWfTemplateNodeItemReturnDto();
-            var parent = _DbContext.DocFeeRequisitions.Find(model.ParentId);
+            var parent = _DbContext.WfTemplateNodes.FirstOrDefault(c => c.Id == model.ParentId);
             if (parent is null) return NotFound();
             var aryIds = model.Items.Select(c => c.Id).ToArray();   //指定的Id
             var existsIds = _DbContext.WfTemplateNodeItems.Where(c => c.ParentId == parent.Id).Select(c => c.Id).ToArray();    //已经存在的Id
@@ -391,8 +392,13 @@ namespace PowerLmsWebApi.Controllers
             //增加
             var addIds = aryIds.Except(existsIds).ToArray();
             var adds = model.Items.Where(c => addIds.Contains(c.Id)).ToArray();
-            Array.ForEach(adds, c => c.GenerateNewId());
-            _DbContext.AddRange(adds);
+            Array.ForEach(adds, c =>
+            {
+                var ss = _Mapper.Map<OwWfTemplateNodeItem>(c);
+                ss.GenerateNewId();
+                parent.Children.Add(ss);
+            });
+            //_DbContext.AddRange(adds);
             //删除
             var removeIds = existsIds.Except(aryIds).ToArray();
             _DbContext.RemoveRange(_DbContext.WfTemplateNodeItems.Where(c => removeIds.Contains(c.Id)));
@@ -451,6 +457,20 @@ namespace PowerLmsWebApi.Controllers
     #endregion 流程模板类型码相关
 
     #region 模板节点详细表相关
+
+    /// <summary>
+    /// 
+    /// </summary>
+    [AutoMap(typeof(OwWfTemplateNodeItem), ReverseMap = true)]
+    public class OwWfTemplateNodeItemDto : OwWfTemplateNodeItem
+    {
+        /// <summary>
+        /// 
+        /// </summary>
+        [JsonIgnore]
+        public new Guid? ParentId { get => base.ParentId; set => base.ParentId = value; }
+    }
+
     /// <summary>
     /// 设置指定的流程模板节点下所有明细功能的参数封装类。
     /// </summary>
@@ -465,7 +485,7 @@ namespace PowerLmsWebApi.Controllers
         /// 流程模板节点明细表的集合。
         /// 指定存在id的明细则更新，Id全0或不存在的Id自动添加，原有未指定的明细将被删除。
         /// </summary>
-        public List<OwWfTemplateNodeItem> Items { get; set; } = new List<OwWfTemplateNodeItem>();
+        public List<OwWfTemplateNodeItemDto> Items { get; set; } = new List<OwWfTemplateNodeItemDto>();
     }
 
     /// <summary>

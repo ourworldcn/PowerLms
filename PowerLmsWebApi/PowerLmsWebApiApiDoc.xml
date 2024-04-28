@@ -4615,6 +4615,16 @@
             查询工作流模板节点详细对象返回值封装类。
             </summary>
         </member>
+        <member name="T:PowerLmsWebApi.Controllers.OwWfTemplateNodeItemDto">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.OwWfTemplateNodeItemDto.ParentId">
+            <summary>
+            
+            </summary>
+        </member>
         <member name="T:PowerLmsWebApi.Controllers.SetWfTemplateNodeItemParamsDto">
             <summary>
             设置指定的流程模板节点下所有明细功能的参数封装类。
