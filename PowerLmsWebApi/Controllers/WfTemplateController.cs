@@ -149,12 +149,18 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
-        /// <response code="404">未找到指定的前向节点。</response>  
+        /// <response code="404">未找到指定的前向节点或后向节点，NextId可以省略视同为null，但如果指定则必须是一个已存在节点的Id。</response>  
         [HttpPost]
         public ActionResult<AddWfTemplateNodeReturnDto> AddWfTemplateNode(AddWfTemplateNodeParamsDto model)
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddWfTemplateNodeReturnDto();
+
+            if (model.Item.NextId is not null)
+            {
+                var nextNode = _DbContext.WfTemplateNodes.Find(model.Item.NextId.Value);
+                if (nextNode is null) return NotFound();
+            }
             model.Item.GenerateNewId();
 
             _DbContext.WfTemplateNodes.Add(model.Item);
@@ -223,12 +229,15 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
-        /// <response code="404">指定Id的工作流模板节点不存在。</response>  
+        /// <response code="404">指定Id的工作流模板节点或NextId指定节点不存在。NextId可以省略视同为null，但如果指定则必须是一个已存在节点的Id。</response>  
         [HttpPut]
         public ActionResult<ModifyWfTemplateNodeReturnDto> ModifyWfTemplateNode(ModifyWfTemplateNodeParamsDto model)
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyWfTemplateNodeReturnDto();
+            var ids = model.Items.Where(c => c.NextId is not null).Select(c => c.NextId);
+            var nextNodeCount = _DbContext.WfTemplateNodes.Count(c => ids.Contains(c.Id));
+            if (nextNodeCount != ids.Count()) return NotFound();
             if (!_EntityManager.Modify(model.Items)) return NotFound();
             //foreach (var item in model.Items)
             //{
@@ -252,11 +261,14 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveWfTemplateNodeReturnDto();
-
             var dbSet = _DbContext.WfTemplateNodes;
+            var prvs = dbSet.Where(c => c.NextId != null && model.Ids.Contains(c.NextId.Value)).ToArray();
+
             var items = dbSet.Where(c => model.Ids.Contains(c.Id)).ToArray();
             if (items.Length != model.Ids.Count) return BadRequest("指定Id中，至少有一个不存在相应实体。");
+
             _DbContext.RemoveRange(items);
+            prvs.ForEach(c => c.NextId = null);
             _DbContext.SaveChanges();
             return result;
         }
