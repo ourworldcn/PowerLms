@@ -5,6 +5,7 @@ using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -27,6 +28,18 @@ using System.Threading.Tasks;
 
 namespace System.Net.Sockets
 {
+    public class RdmDgramQueue
+    {
+        public RdmDgramQueue()
+        {
+
+        }
+
+        LinkedList<OwRdmDgram> _List = new LinkedList<OwRdmDgram>();
+
+
+    }
+
     /// <summary>
     /// 包装一个socket对象， 提供基于 SocketAsyncEventArgs 异步收发功能的简化。
     /// <see cref="Stopping"/> 的 <see cref="CancellationTokenSource.Cancel()"/> 可以指示本对象进入清理状态。
@@ -477,6 +490,9 @@ namespace System.Net.Sockets
         EndDgram = 4,
     }
 
+    /// <summary>
+    /// Rdm的数据帧类。
+    /// </summary>
     public class OwRdmDgram : IComparable<OwRdmDgram>
     {
         #region 静态成员
@@ -742,6 +758,7 @@ namespace System.Net.Sockets
     {
         public OrderedQueue()
         {
+
         }
 
         /// <summary>
@@ -772,6 +789,10 @@ namespace System.Net.Sockets
             return result;
         }
 
+        public void GetNext()
+        {
+
+        }
     }
 
     public class OwRdmDataReceivedEventArgs

@@ -1508,6 +1508,11 @@
             可能既是起始帧又是终止帧，这说明是一个独立帧。也能是既非起始帧也非终止帧，这说明是一个中间帧，
             </summary>
         </member>
+        <member name="T:System.Net.Sockets.OwRdmDgram">
+            <summary>
+            Rdm的数据帧类。
+            </summary>
+        </member>
         <member name="F:System.Net.Sockets.OwRdmDgram.RdmMtu">
             <summary>
             Internet上的标准MTU值为576字节，所以在进行Internet的UDP编程时，最好将UDP的数据长度控件在548字节(576-8-20)以内。
