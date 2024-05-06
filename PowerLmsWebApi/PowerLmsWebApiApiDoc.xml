@@ -2568,7 +2568,9 @@
             获取全部业务费用申请单。
             </summary>
             <param name="model"></param>
-            <param name="conditional">查询的条件。支持 Id。不区分大小写。</param>
+            <param name="conditional">查询的条件。实体属性名不区分大小写。
+            通用条件写法:所有条件都是字符串，对区间的写法是用逗号分隔（字符串类型暂时不支持区间且都是模糊查询）如"2024-1-1,2024-1-2"。
+            对强制取null的约束，则写"null"。</param>
             <returns></returns>
             <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
             <response code="401">无效令牌。</response>  
