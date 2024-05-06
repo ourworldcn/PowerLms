@@ -17,6 +17,7 @@ using System.Text.RegularExpressions;
 using OW.Data;
 using System.Data;
 using System.Linq.Expressions;
+using System.Reflection;
 
 namespace PowerLmsServer.Managers
 {
@@ -156,22 +157,15 @@ namespace PowerLmsServer.Managers
         private void Test(IServiceProvider svc)
         {
             var db = svc.GetRequiredService<PowerLmsUserDbContext>();
-            StringBuilder sb = new StringBuilder("select * from PlCustomers where ");
-            //foreach (var item in conditional)
-            //{
-            //    if (!bool.TryParse(item.Value, out var b)) continue;
-            //    if (b)
-            //        sb.Append($"{item.Key}=1 or ");
-            //    else
-            //        sb.Append($"{item.Key}=0 or ");
-            //}
-            var d1 = Convert.ToDecimal(OwHelper.WorldNow.ToBinary());
-            var ss = db.PlCustomers.Where(c => c.IsAirway);
-            var str = ss.ToQueryString();
+            var dic = new Dictionary<string, string> {
+                //{ "id", "B084BD4E-28BE-4052-A613-1C79B0AB268E" },
+                {"CreateUtc","2024-1-19 ,2024-1-30 " },
+                {"loginname","string" },
+            };
+            var query = EfHelper.GenerateWhereAnd(db.Accounts, dic);
+            var tmp = typeof(Account).GetProperty("loginName", BindingFlags.IgnoreCase | BindingFlags.GetProperty | BindingFlags.Public | BindingFlags.Instance|BindingFlags.FlattenHierarchy);
 
-            sb.Remove(sb.Length - 6, 6);    //获得条件
-            var coll = db.PlCustomers.FromSqlRaw(str).ToArray();
-
+            var ary = query.ToArray();
         }
 
         private void CreateDb()

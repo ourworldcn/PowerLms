@@ -262,10 +262,10 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveWfTemplateNodeReturnDto();
             var dbSet = _DbContext.WfTemplateNodes;
-            var prvs = dbSet.Where(c => c.NextId != null && model.Ids.Contains(c.NextId.Value)).ToArray();
 
             var items = dbSet.Where(c => model.Ids.Contains(c.Id)).ToArray();
             if (items.Length != model.Ids.Count) return BadRequest("指定Id中，至少有一个不存在相应实体。");
+            var prvs = dbSet.Where(c => c.NextId != null && model.Ids.Contains(c.NextId.Value)).ToArray();
 
             _DbContext.RemoveRange(items);
             prvs.ForEach(c => c.NextId = null);
