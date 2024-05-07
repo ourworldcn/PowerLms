@@ -133,7 +133,7 @@ namespace System.Net.Sockets
         /// 使用的本机侦听端口。应通过配置指定端口，避免防火墙拒绝侦听请求。
         /// </summary>
         /// <value>默认值：0,自动选择。</value>
-        public ushort ListernPort { get; set; }
+        public int ListernPort { get; set; }
     }
 
     /// <summary>
@@ -204,6 +204,7 @@ namespace System.Net.Sockets
 
         void Initialize()
         {
+            //if (_Options.Value.ListernPort == 0) _Options.Value.ListernPort = 20089;
             Socket.Bind(new IPEndPoint(IPAddress.Parse(_Options.Value.ListernAddress), _Options.Value.ListernPort));
             Stopping.Token.Register(() =>
             {

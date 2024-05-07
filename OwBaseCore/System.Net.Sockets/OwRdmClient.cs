@@ -37,7 +37,10 @@ namespace System.Net.Sockets
 
         LinkedList<OwRdmDgram> _List = new LinkedList<OwRdmDgram>();
 
+        public void Add(OwRdmDgram dgram)
+        {
 
+        }
     }
 
     /// <summary>
