@@ -90,6 +90,7 @@ namespace System.Net.Sockets
         public LinkedListNode<OwRdmDgram> Add(OwRdmDgram dgram)
         {
             LinkedListNode<OwRdmDgram> result = Rent();
+            result.Value = dgram;
             var tmp = Add(result);
             if (!ReferenceEquals(result, tmp))  //若是已存在节点
             {
@@ -177,7 +178,7 @@ namespace System.Net.Sockets
         {
             for (var tmp = _List.First; tmp != null; tmp = _List.First)
             {
-                if (tmp.Value.Seq <= maxSeq)
+                if (tmp.Value.Seq <= maxSeq)    //若需要删除
                 {
                     removed?.Add(tmp.Value);
                     _List.Remove(tmp);
