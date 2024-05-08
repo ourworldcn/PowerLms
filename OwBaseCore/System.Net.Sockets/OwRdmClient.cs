@@ -28,18 +28,163 @@ using System.Threading.Tasks;
 
 namespace System.Net.Sockets
 {
+    /// <summary>
+    /// 处理rdm数据帧的辅助类。
+    /// </summary>
     public class RdmDgramQueue
     {
-        public RdmDgramQueue()
-        {
+        #region 静态成员
 
+        /// <summary>
+        /// 池中元素最大数量。
+        /// </summary>
+        static readonly int MaxCount;
+
+        static ConcurrentStack<LinkedListNode<OwRdmDgram>> _Pool;
+
+        static RdmDgramQueue()
+        {
+#if NETCOREAPP
+            MaxCount = Environment.ProcessorCount * 40;
+#else
+            MaxCount = 100;
+#endif
+            Interlocked.CompareExchange(ref _Pool, new ConcurrentStack<LinkedListNode<OwRdmDgram>>(), null);
         }
 
+        /// <summary>
+        /// 租用一个节点。
+        /// </summary>
+        /// <returns></returns>
+        public static LinkedListNode<OwRdmDgram> Rent()
+        {
+            if (_Pool.TryPop(out var result)) return result;
+            return new LinkedListNode<OwRdmDgram>(null);
+        }
+
+        /// <summary>
+        /// 返还节点。
+        /// </summary>
+        /// <param name="node">只能返还不在链表中的节点。</param>
+        /// <returns>true 成功返回池，false由于种种原因未能返回池。</returns>
+        public static bool Return(LinkedListNode<OwRdmDgram> node)
+        {
+            if (_Pool.Count > MaxCount) return false;
+            if (node.List != null) return false;
+            node.Value = null;
+            _Pool.Push(node);
+            return true;
+        }
+        #endregion 静态成员
+
+        /// <summary>
+        /// 数据帧的节点集合。内部按帧的序号升序排序。
+        /// </summary>
         LinkedList<OwRdmDgram> _List = new LinkedList<OwRdmDgram>();
 
-        public void Add(OwRdmDgram dgram)
+        /// <summary>
+        /// 追加一个数据帧。
+        /// </summary>
+        /// <param name="dgram"></param>
+        /// <returns></returns>
+        public LinkedListNode<OwRdmDgram> Add(OwRdmDgram dgram)
         {
+            LinkedListNode<OwRdmDgram> result = Rent();
+            var tmp = Add(result);
+            if (!ReferenceEquals(result, tmp))  //若是已存在节点
+            {
+                Return(result);
+                result = tmp;
+            }
+            return result;
+        }
 
+        /// <summary>
+        /// 追加一个数据帧。
+        /// </summary>
+        /// <param name="node"></param>
+        /// <returns>成功插入则返回<paramref name="node"/>,如果有重复项则返回已有的节点。</returns>
+        public virtual LinkedListNode<OwRdmDgram> Add(LinkedListNode<OwRdmDgram> node)
+        {
+            var key = node.Value.Seq;
+            LinkedListNode<OwRdmDgram> tmp = null;
+            for (tmp = _List.Last; tmp != null; tmp = tmp.Previous)
+            {
+                if (tmp.Value.Seq < key)   //若找到插入点
+                {
+                    _List.AddAfter(tmp, node);
+                    break;
+                }
+                else if (tmp.Value.Seq == key)    //若找到重复项
+                {
+                    node = tmp;
+                    break;
+                }
+            }
+            if (tmp is null)  //若没有找到——须加入头部
+                _List.AddFirst(node);
+            return node;
+        }
+
+        /// <summary>
+        /// 获取连续的数据包。
+        /// </summary>
+        /// <returns>返回连续的完整包集合。如果没有则返回空集合。</returns>
+        public IList<OwRdmDgram> GetDgrams()
+        {
+            List<OwRdmDgram> result = new List<OwRdmDgram>();
+            var node = _List.First;
+            if (node is null) return result;
+            //处理起始包
+            if (!node.Value.Kind.HasFlag(OwRdmDgramKind.StartDgram))   //若不是起始包
+                return result;
+            var seq = node.Value.Seq;
+            result.Add(node.Value);
+            //处理后续包
+            if (!node.Value.Kind.HasFlag(OwRdmDgramKind.EndDgram))  //若不是完整包
+                for (node = node.Next; node != null; node = node.Next, seq++)
+                {
+                    if (node.Value.Seq != seq + 1)    //若检测到包顺序号不连续
+                    {
+                        result.Clear();
+                        break;
+                    }
+                    else //若是连续包
+                    {
+                        result.Add(node.Value);
+                        if (node.Value.Kind.HasFlag(OwRdmDgramKind.EndDgram))  //若检测到包已经完整
+                            break;
+                    }
+                }
+            //处理终止包
+            if (result.Count > 0 && !result[result.Count - 1].Kind.HasFlag(OwRdmDgramKind.EndDgram))    //若不是完整包
+                result.Clear();
+            for (int i = 0; i < result.Count; i++)   //移除已获取的包
+            {
+                var tmp = _List.First;
+                _List.RemoveFirst();
+                Return(tmp);
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// 强制移除小于或等于指定序号的数据帧。
+        /// </summary>
+        /// <param name="maxSeq">最大序号。</param>
+        /// <param name="removed">记录删除的节点数据的集合，如果省略或为null，则不记录。</param>
+        public void RemoveWhere(int maxSeq, ICollection<OwRdmDgram> removed = null)
+        {
+            for (var tmp = _List.First; tmp != null; tmp = _List.First)
+            {
+                if (tmp.Value.Seq <= maxSeq)
+                {
+                    removed?.Add(tmp.Value);
+                    _List.Remove(tmp);
+                    Return(tmp);
+                }
+                else break;
+            }
         }
     }
 

@@ -18,7 +18,7 @@
   <Class Name="System.Net.Sockets.OwRdmServer">
     <Position X="9.25" Y="0.75" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAAAmgAAQAAAEAFAAAAAACAAAABBAEBAQAAICA=</HashCode>
+      <HashCode>AAACAAAAQCIAAQAAAAAFQAAACAQAAAABAAEQASAAIAA=</HashCode>
       <FileName>System.Net.Sockets\OwRdmServer.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="0.2" />
@@ -26,7 +26,7 @@
   <Class Name="System.Net.Sockets.OwRdmDgram" Collapsed="true" BaseTypeListCollapsed="true">
     <Position X="2.75" Y="5" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAACAAAAAABABAQAAAAAAAQCBCAIAMAAAAAAEABAwAA=</HashCode>
+      <HashCode>BAACAAAAAABQBAQADAAAAAQCBCAAAIAQAAAAEABAwAA=</HashCode>
       <FileName>System.Net.Sockets\OwRdmClient.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="0.2" />
@@ -41,10 +41,32 @@
   <Class Name="System.Net.Sockets.OwRdmClient" BaseTypeListCollapsed="true">
     <Position X="0.5" Y="0.75" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AACAAAAAACgAAAACQHAAIKIAAQAAAAAWIAACEgAEBAE=</HashCode>
+      <HashCode>QACAAAAAACAAIQBAAKgAoCYACQgAAAACAAAAACAEHCA=</HashCode>
       <FileName>System.Net.Sockets\OwRdmClient.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="System.Net.Sockets.RdmDgramQueue" Collapsed="true">
+    <Position X="13.5" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAIAAAAAAAAAAAAAwAAAEAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>System.Net.Sockets\OwRdmClient.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="System.Net.Sockets.SocketAsyncWrapper" Collapsed="true">
+    <Position X="6.5" Y="6" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAACAACIAmIAAQBAAAAVAAAADACAAQAUAAAAEACCACQ=</HashCode>
+      <FileName>System.Net.Sockets\OwRdmClient.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="System.Net.Sockets.OrderedQueue&lt;T&gt;" Collapsed="true">
+    <Position X="11.75" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAEAAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAA=</HashCode>
+      <FileName>System.Net.Sockets\OwRdmClient.cs</FileName>
+    </TypeIdentifier>
   </Class>
   <Enum Name="System.Net.Sockets.OwRdmDgramKind">
     <Position X="2.75" Y="1.5" Width="1.5" />

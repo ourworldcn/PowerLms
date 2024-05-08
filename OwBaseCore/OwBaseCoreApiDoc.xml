@@ -1365,6 +1365,61 @@
             <returns></returns>
             <exception cref="T:System.ArgumentException">找不到属性。</exception>
         </member>
+        <member name="T:System.Net.Sockets.RdmDgramQueue">
+            <summary>
+            处理rdm数据帧的辅助类。
+            </summary>
+        </member>
+        <member name="F:System.Net.Sockets.RdmDgramQueue.MaxCount">
+            <summary>
+            池中元素最大数量。
+            </summary>
+        </member>
+        <member name="M:System.Net.Sockets.RdmDgramQueue.Rent">
+            <summary>
+            租用一个节点。
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:System.Net.Sockets.RdmDgramQueue.Return(System.Collections.Generic.LinkedListNode{System.Net.Sockets.OwRdmDgram})">
+            <summary>
+            返还节点。
+            </summary>
+            <param name="node">只能返还不在链表中的节点。</param>
+            <returns>true 成功返回池，false由于种种原因未能返回池。</returns>
+        </member>
+        <member name="F:System.Net.Sockets.RdmDgramQueue._List">
+            <summary>
+            数据帧的节点集合。内部按帧的序号升序排序。
+            </summary>
+        </member>
+        <member name="M:System.Net.Sockets.RdmDgramQueue.Add(System.Net.Sockets.OwRdmDgram)">
+            <summary>
+            追加一个数据帧。
+            </summary>
+            <param name="dgram"></param>
+            <returns></returns>
+        </member>
+        <member name="M:System.Net.Sockets.RdmDgramQueue.Add(System.Collections.Generic.LinkedListNode{System.Net.Sockets.OwRdmDgram})">
+            <summary>
+            追加一个数据帧。
+            </summary>
+            <param name="node"></param>
+            <returns>成功插入则返回<paramref name="node"/>,如果有重复项则返回已有的节点。</returns>
+        </member>
+        <member name="M:System.Net.Sockets.RdmDgramQueue.GetDgrams">
+            <summary>
+            获取连续的数据包。
+            </summary>
+            <returns>返回连续的完整包集合。如果没有则返回空集合。</returns>
+        </member>
+        <member name="M:System.Net.Sockets.RdmDgramQueue.RemoveWhere(System.Int32,System.Collections.Generic.ICollection{System.Net.Sockets.OwRdmDgram})">
+            <summary>
+            强制移除小于或等于指定序号的数据帧。
+            </summary>
+            <param name="maxSeq">最大序号。</param>
+            <param name="removed">记录删除的节点数据的集合，如果省略或为null，则不记录。</param>
+        </member>
         <member name="T:System.Net.Sockets.SocketAsyncWrapper">
             <summary>
             包装一个socket对象， 提供基于 SocketAsyncEventArgs 异步收发功能的简化。
