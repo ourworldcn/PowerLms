@@ -159,6 +159,35 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
+        /// 获取指定文档下一个操作人集合的信息。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定文档不存在。</response>  
+        [HttpGet]
+        public ActionResult<GetNextNodeItemsByDocIdReturnDto> GetNextNodeItemsByDocId([FromQuery] GetNextNodeItemsByDocIdParamsDto model)
+        {
+            var result = new GetNextNodeItemsByDocIdReturnDto();
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var doc = _DbContext.OwWfs.Find(model.DocId);
+            if (doc is null) return NotFound();
+
+            var node = GetLastApprovalNode(doc);
+            if (node is null) return result;
+
+            var ttNode = _DbContext.WfTemplateNodes.Find(node.TemplateId);
+            if (ttNode?.NextId is null) return result;
+
+            var nextNode = _DbContext.WfTemplateNodes.Find(ttNode.NextId);
+
+            var coll = nextNode.Children.Select(c => _Mapper.Map<OwWfTemplateNodeItemDto>(c));
+            result.Result.AddRange(coll);
+            return result;
+        }
+
+        /// <summary>
         /// 发送工作流文档的功能。
         /// </summary>
         /// <param name="model"></param>
@@ -240,6 +269,28 @@ namespace PowerLmsWebApi.Controllers
             }
             return result;
         }
+    }
+
+    /// <summary>
+    /// 获取指定文档下一组操作人的信息功能的参数封装类。
+    /// </summary>
+    public class GetNextNodeItemsByDocIdParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 文档的Id。
+        /// </summary>
+        public Guid DocId { get; set; }
+    }
+
+    /// <summary>
+    /// 获取指定文档下一组操作人的信息功能的返回值封装类。
+    /// </summary>
+    public class GetNextNodeItemsByDocIdReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 发送的下一个操作人的集合。可能为空，因为该模板仅有单一节点或已经到达最后一个节点，无法向下发送。
+        /// </summary>
+        public List<OwWfTemplateNodeItemDto> Result { get; set; } = new List<OwWfTemplateNodeItemDto>();
     }
 
     /// <summary>

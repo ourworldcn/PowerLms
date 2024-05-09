@@ -4362,6 +4362,16 @@
             <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
             <response code="401">无效令牌。</response>  
         </member>
+        <member name="M:PowerLmsWebApi.Controllers.WfController.GetNextNodeItemsByDocId(PowerLmsWebApi.Controllers.GetNextNodeItemsByDocIdParamsDto)">
+            <summary>
+            获取指定文档下一个操作人集合的信息。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+            <response code="404">指定文档不存在。</response>  
+        </member>
         <member name="M:PowerLmsWebApi.Controllers.WfController.Send(PowerLmsWebApi.Controllers.WfSendParamsDto)">
             <summary>
             发送工作流文档的功能。
@@ -4371,6 +4381,26 @@
             <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
             <response code="401">无效令牌。</response>  
             <response code="404">指定模板不存在。</response>  
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetNextNodeItemsByDocIdParamsDto">
+            <summary>
+            获取指定文档下一组操作人的信息功能的参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.GetNextNodeItemsByDocIdParamsDto.DocId">
+            <summary>
+            文档的Id。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetNextNodeItemsByDocIdReturnDto">
+            <summary>
+            获取指定文档下一组操作人的信息功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.GetNextNodeItemsByDocIdReturnDto.Result">
+            <summary>
+            发送的下一个操作人的集合。可能为空，因为该模板仅有单一节点或已经到达最后一个节点，无法向下发送。
+            </summary>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.GetWfByOpertorIdParamsDto">
             <summary>
@@ -4552,6 +4582,16 @@
             <response code="401">无效令牌。</response>  
             <response code="404">指定Id中，至少有一个不存在相应实体。</response>  
         </member>
+        <member name="M:PowerLmsWebApi.Controllers.WfTemplateController.GetNextNodeItemsByTemplateId(PowerLmsWebApi.Controllers.GetNextNodeItemsByTemplateIdParamsDto)">
+            <summary>
+            获取首次发送时可选操作人的信息。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+            <response code="404">指定的模板不存在。</response>  
+        </member>
         <member name="M:PowerLmsWebApi.Controllers.WfTemplateController.AddWfTemplateNodeItem(PowerLmsWebApi.Controllers.AddWfTemplateNodeItemParamsDto)">
             <summary>
             增加新工作流模板节点详细。
@@ -4611,6 +4651,26 @@
             <returns></returns>
             <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
             <response code="401">无效令牌。</response>  
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetNextNodeItemsByTemplateIdParamsDto">
+            <summary>
+            获取模板首次发送时节点的信息功能的参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.GetNextNodeItemsByTemplateIdParamsDto.TemplateId">
+            <summary>
+            工作流模板的Id。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetNextNodeItemsByTemplateIdReturnDto">
+            <summary>
+            获取模板首次发送时节点的信息功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.GetNextNodeItemsByTemplateIdReturnDto.Result">
+            <summary>
+            发送的下一个操作人的集合。可能为空，因为该模板仅有单一节点，第一个人无法向下发送。
+            </summary>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.GetAllWfTemplateKindCodeReturnDto">
             <summary>

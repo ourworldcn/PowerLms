@@ -272,6 +272,34 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.SaveChanges();
             return result;
         }
+
+        /// <summary>
+        /// 获取首次发送时可选操作人的信息。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定的模板不存在。</response>  
+        [HttpGet]
+        public ActionResult<GetNextNodeItemsByTemplateIdReturnDto> GetNextNodeItemsByTemplateId([FromQuery] GetNextNodeItemsByTemplateIdParamsDto model)
+        {
+            var result = new GetNextNodeItemsByTemplateIdReturnDto { };
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var tt = _DbContext.WfTemplates.Find(model.TemplateId);
+            if (tt is null) return NotFound();
+            var nextNodeIds = tt.Children.Where(c => c.NextId != null).Select(c => c.NextId).ToArray(); //后续节点的Id集合
+            var firstNodes = tt.Children.Where(c => !nextNodeIds.Contains(c.Id));   //最前面的节点
+            firstNodes = firstNodes.Where(c => c.Children.Any(d => d.OpertorId == context.User.Id)).ToArray();    //含自身的节点
+            var nodeIds = firstNodes.Select(c => c.NextId);    //含自身的下一个节点的Id集合
+            var nextNodes = tt.Children.Where(c => nodeIds.Contains(c.Id));
+
+            var r = nextNodes.SelectMany(c => c.Children).Where(c => c.OperationKind == 0);
+
+            result.Result.AddRange(r.Select(c => _Mapper.Map<OwWfTemplateNodeItemDto>(c)));
+            return result;
+        }
+
         #endregion 模板节点表相关
 
         #region 模板节点详细表相关
@@ -456,6 +484,28 @@ namespace PowerLmsWebApi.Controllers
         }
 
         #endregion 流程模板类型码相关
+    }
+
+    /// <summary>
+    /// 获取模板首次发送时节点的信息功能的参数封装类。
+    /// </summary>
+    public class GetNextNodeItemsByTemplateIdParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 工作流模板的Id。
+        /// </summary>
+        public Guid TemplateId { get; set; }
+    }
+
+    /// <summary>
+    /// 获取模板首次发送时节点的信息功能的返回值封装类。
+    /// </summary>
+    public class GetNextNodeItemsByTemplateIdReturnDto: ReturnDtoBase
+    {
+        /// <summary>
+        /// 发送的下一个操作人的集合。可能为空，因为该模板仅有单一节点，第一个人无法向下发送。
+        /// </summary>
+        public List<OwWfTemplateNodeItemDto> Result { get; set; } = new List<OwWfTemplateNodeItemDto>();
     }
 
     #region 流程模板类型码相关

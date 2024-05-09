@@ -77,8 +77,6 @@ namespace PowerLmsWebApi.Dto
         /// 是否降序排序：true降序排序，false升序排序（省略或默认）。
         /// </summary>
         public bool IsDesc { get; set; }
-
-        public Dictionary<string, string> MyProperty { get; set; } = new Dictionary<string, string>();
     }
 
     /// <summary>
