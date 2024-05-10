@@ -286,7 +286,7 @@ namespace PowerLmsWebApi.Controllers
         {
             var result = new GetNextNodeItemsByTemplateIdReturnDto { };
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            var tt = _DbContext.WfTemplates.Find(model.TemplateId);
+            var tt = _DbContext.WfTemplates.FirstOrDefault(c => c.KindCode == model.KindCode);
             if (tt is null) return NotFound();
             var nextNodeIds = tt.Children.Where(c => c.NextId != null).Select(c => c.NextId).ToArray(); //后续节点的Id集合
             var firstNodes = tt.Children.Where(c => !nextNodeIds.Contains(c.Id));   //最前面的节点
@@ -492,15 +492,15 @@ namespace PowerLmsWebApi.Controllers
     public class GetNextNodeItemsByTemplateIdParamsDto : TokenDtoBase
     {
         /// <summary>
-        /// 工作流模板的Id。
+        /// 工作流模板的KindCode。
         /// </summary>
-        public Guid TemplateId { get; set; }
+        public string KindCode { get; set; }
     }
 
     /// <summary>
     /// 获取模板首次发送时节点的信息功能的返回值封装类。
     /// </summary>
-    public class GetNextNodeItemsByTemplateIdReturnDto: ReturnDtoBase
+    public class GetNextNodeItemsByTemplateIdReturnDto : ReturnDtoBase
     {
         /// <summary>
         /// 发送的下一个操作人的集合。可能为空，因为该模板仅有单一节点，第一个人无法向下发送。

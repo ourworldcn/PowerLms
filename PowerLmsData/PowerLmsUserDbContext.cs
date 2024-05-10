@@ -371,10 +371,13 @@ namespace PowerLmsServer.EfData
         /// </summary>
         public DbSet<OwWfTemplateNodeItem> WfTemplateNodeItems { get; set; }
 
+        public DbSet<OwWfNodeItem> OwWfNodeItems { get; set; }
+
         /// <summary>
         /// 工作流实例表
         /// </summary>
         public DbSet<OwWf> OwWfs { get; set; }
+        public DbSet<OwWfNode> OwWfNodes { get; set; }
         #endregion
     }
 

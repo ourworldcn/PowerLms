@@ -21,17 +21,20 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="accountManager"></param>
         /// <param name="dbContext"></param>
         /// <param name="mapper"></param>
-        public WfController(IServiceProvider serviceProvider, AccountManager accountManager, PowerLmsUserDbContext dbContext, IMapper mapper)
+        /// <param name="entityManager"></param>
+        public WfController(IServiceProvider serviceProvider, AccountManager accountManager, PowerLmsUserDbContext dbContext, IMapper mapper, EntityManager entityManager)
         {
             _ServiceProvider = serviceProvider;
             _AccountManager = accountManager;
             _DbContext = dbContext;
             _Mapper = mapper;
+            _EntityManager = entityManager;
         }
 
         private IServiceProvider _ServiceProvider;
         private AccountManager _AccountManager;
         private PowerLmsUserDbContext _DbContext;
+        EntityManager _EntityManager;
         IMapper _Mapper;
 
         /// <summary>
@@ -51,7 +54,6 @@ namespace PowerLmsWebApi.Controllers
             result.Result.ForEach(c =>
             {
                 c.CreateDateTime = c.Children.Min(d => d.ArrivalDateTime);
-                c.State = GetWfState(c);
             });
             return result;
         }
@@ -145,16 +147,16 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
 
             var operatorId = context.User.Id;
-            var collItems = _DbContext.OwWfs.SelectMany(c => c.Children).SelectMany(c => c.Children).Where(c => c.OpertorId == operatorId);   //所有相关的Items
-            var wfs = collItems.Select(c => c.Parent.Parent).Distinct().ToArray();  //所有相关流程
+            var collBase = _DbContext.OwWfNodeItems.Where(c => c.OpertorId == operatorId).Select(c => c.Parent.Parent).Where(c => c.State == model.State).Distinct();
+            var coll = collBase.OrderBy(model.OrderFieldName, model.IsDesc);
 
-            result.Result.AddRange(wfs.Select(c =>
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
+            _Mapper.Map(prb, result);
+
+            result.Result.ForEach(c =>
             {
-                var r = _Mapper.Map<OwWfDto>(c);
-                r.CreateDateTime = c.Children.Min(d => d.ArrivalDateTime);
-                r.State = GetWfState(c);
-                return r;
-            }));
+                c.CreateDateTime = c.Children.Min(d => d.ArrivalDateTime);
+            });
             return result;
         }
 
@@ -296,20 +298,19 @@ namespace PowerLmsWebApi.Controllers
     /// <summary>
     /// 获取人员相关流转信息的参数封装类。
     /// </summary>
-    public class GetWfByOpertorIdParamsDto : TokenDtoBase
+    public class GetWfByOpertorIdParamsDto : PagingParamsDtoBase
     {
-
+        /// <summary>
+        /// 过滤流文档状态的参数，
+        /// </summary>
+        public byte State { get; set; }
     }
 
     /// <summary>
     /// 获取人员相关流转信息的返回值封装类。
     /// </summary>
-    public class GetWfByOpertorIdReturnDto : ReturnDtoBase
+    public class GetWfByOpertorIdReturnDto : PagingReturnDtoBase<OwWfDto>
     {
-        /// <summary>
-        /// 相关流程的集合。
-        /// </summary>
-        public List<OwWfDto> Result { get; set; } = new List<OwWfDto>();
     }
 
     /// <summary>
@@ -329,11 +330,6 @@ namespace PowerLmsWebApi.Controllers
     [AutoMap(typeof(OwWf))]
     public class OwWfDto : OwWf
     {
-        /// <summary>
-        /// 该工作流所处状态。0=0流转中，1=成功完成，2=已被终止。未来可能有其它状态。
-        /// </summary>
-        public int State { get; set; }
-
         /// <summary>
         /// 该工作流的创建时间。
         /// </summary>

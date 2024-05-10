@@ -4313,7 +4313,7 @@
             工作流实例相关控制器。
             </summary>
         </member>
-        <member name="M:PowerLmsWebApi.Controllers.WfController.#ctor(System.IServiceProvider,PowerLmsServer.Managers.AccountManager,PowerLmsServer.EfData.PowerLmsUserDbContext,AutoMapper.IMapper)">
+        <member name="M:PowerLmsWebApi.Controllers.WfController.#ctor(System.IServiceProvider,PowerLmsServer.Managers.AccountManager,PowerLmsServer.EfData.PowerLmsUserDbContext,AutoMapper.IMapper,PowerLmsServer.Managers.EntityManager)">
             <summary>
             构造函数。
             </summary>
@@ -4321,6 +4321,7 @@
             <param name="accountManager"></param>
             <param name="dbContext"></param>
             <param name="mapper"></param>
+            <param name="entityManager"></param>
         </member>
         <member name="M:PowerLmsWebApi.Controllers.WfController.GetWfByDocId(PowerLmsWebApi.Controllers.GetWfParamsDto)">
             <summary>
@@ -4407,14 +4408,14 @@
             获取人员相关流转信息的参数封装类。
             </summary>
         </member>
+        <member name="P:PowerLmsWebApi.Controllers.GetWfByOpertorIdParamsDto.State">
+            <summary>
+            过滤流文档状态的参数，
+            </summary>
+        </member>
         <member name="T:PowerLmsWebApi.Controllers.GetWfByOpertorIdReturnDto">
             <summary>
             获取人员相关流转信息的返回值封装类。
-            </summary>
-        </member>
-        <member name="P:PowerLmsWebApi.Controllers.GetWfByOpertorIdReturnDto.Result">
-            <summary>
-            相关流程的集合。
             </summary>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.GetWfParamsDto">
@@ -4430,11 +4431,6 @@
         <member name="T:PowerLmsWebApi.Controllers.OwWfDto">
             <summary>
             工作流实例的封装类。
-            </summary>
-        </member>
-        <member name="P:PowerLmsWebApi.Controllers.OwWfDto.State">
-            <summary>
-            该工作流所处状态。0=0流转中，1=成功完成，2=已被终止。未来可能有其它状态。
             </summary>
         </member>
         <member name="P:PowerLmsWebApi.Controllers.OwWfDto.CreateDateTime">
@@ -4657,9 +4653,9 @@
             获取模板首次发送时节点的信息功能的参数封装类。
             </summary>
         </member>
-        <member name="P:PowerLmsWebApi.Controllers.GetNextNodeItemsByTemplateIdParamsDto.TemplateId">
+        <member name="P:PowerLmsWebApi.Controllers.GetNextNodeItemsByTemplateIdParamsDto.KindCode">
             <summary>
-            工作流模板的Id。
+            工作流模板的KindCode。
             </summary>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.GetNextNodeItemsByTemplateIdReturnDto">

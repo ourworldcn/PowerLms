@@ -39,6 +39,12 @@ namespace PowerLms.Data
         /// */
 
         /// <summary>
+        /// 该工作流所处状态。0=0流转中，1=成功完成，2=已被终止。未来可能有其它状态。
+        /// </summary>
+        [Comment("该工作流所处状态。0=0流转中，1=成功完成，2=已被终止。未来可能有其它状态。")]
+        public byte State { get; set; }
+
+        /// <summary>
         /// 备注。
         /// </summary>
         [Comment("备注。")]
