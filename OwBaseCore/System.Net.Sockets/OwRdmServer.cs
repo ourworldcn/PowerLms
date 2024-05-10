@@ -22,102 +22,6 @@ using System.Threading.Tasks;
 
 namespace System.Net.Sockets
 {
-    /// <summary>
-    /// 避免包顺序号回绕，使用40位的顺序号。
-    /// </summary>
-    public class OwRdmDgramV2
-    {
-        public OwRdmDgramV2()
-        {
-            Buffer = new byte[OwRdmDgram.RdmMtu];
-            Offset = 0;
-            Count = OwRdmDgram.RdmMtu;
-        }
-
-        public byte[] Buffer;
-
-        public int Offset { get; set; }
-
-        public int Count { get; set; }
-
-        public bool IsCommand
-        {
-            get
-            {
-                return (Buffer[0] & 0x7f) != 0;
-            }
-        }
-
-        public byte KindByte
-        {
-            get
-            {
-                return (byte)((Buffer[0] >> 4) & 0x0f);
-            }
-            set
-            {
-                if (value >= 16) throw new ArgumentOutOfRangeException();
-                Buffer[0] = (byte)((value << 4) & 0xf0 | Buffer[0] & 0x0f);
-            }
-        }
-
-        public uint Id
-        {
-            get
-            {
-                // BigEnding
-                return ((Buffer[0] & 0x0fu) << 16) + (uint)(Buffer[1] << 8) + Buffer[2];
-            }
-            set
-            {
-                if (value >= 0x1_0000u) throw new ArgumentOutOfRangeException();
-                Buffer[0] = (byte)((value >> 16) & 0x0f + ((Buffer[0] & 0xf0) << 16));
-                Buffer[1] = (byte)((value >> 8) & 0xff);
-                Buffer[2] = (byte)(value & 0xff);
-            }
-        }
-
-        public ulong Seq
-        {
-            get
-            {
-                // BigEnding
-                var result = (ulong)Buffer[3] << 32 | (ulong)Buffer[4] << 24 | (ulong)Buffer[5] << 16 | (ulong)Buffer[6] << 8 | Buffer[7];
-                return result;
-            }
-        }
-    }
-
-    public class OwRdmBase : SocketAsyncWrapper
-    {
-        /// <summary>
-        /// 构造函数。
-        /// </summary>
-        /// <param name="socket"><code>
-        /// new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp)
-        /// </code></param>
-        public OwRdmBase(Socket socket) : base(socket)
-        {
-            Initialize();
-        }
-
-        void Initialize()
-        {
-            //64
-            //-4 = 60
-        }
-
-        protected override void ProcessSendTo(SocketAsyncEventArgs e)
-        {
-            base.ProcessSendTo(e);
-        }
-
-        protected override void ProcessReceiveFrom(SocketAsyncEventArgs e)
-        {
-            base.ProcessReceiveFrom(e);
-        }
-    }
-
     public class OwRdmServerOptions : IOptions<OwRdmServerOptions>
     {
         public virtual OwRdmServerOptions Value => this;
@@ -204,7 +108,6 @@ namespace System.Net.Sockets
 
         void Initialize()
         {
-            //if (_Options.Value.ListernPort == 0) _Options.Value.ListernPort = 20089;
             Socket.Bind(new IPEndPoint(IPAddress.Parse(_Options.Value.ListernAddress), _Options.Value.ListernPort));
             Stopping.Token.Register(() =>
             {
@@ -227,7 +130,8 @@ namespace System.Net.Sockets
                     for (var node = entry.SendedData.First; node is not null; node = node.Next)
                     {
                         var dgram = node.Value.Item1;
-                        if (DateTime.UtcNow - dgram.LastSendDateTime > timeout)  //若超时未得到回应
+                        var now2 = DateTime.UtcNow;
+                        if (now2 - dgram.LastSendDateTime > timeout)  //若超时未得到回应
                         {
                             dgram.LastSendDateTime = DateTime.UtcNow;
                             SendToAsync(new ArraySegment<byte>(dgram.Buffer, dgram.Offset, dgram.Count), entry.RemoteEndPoint, null);
@@ -426,9 +330,9 @@ namespace System.Net.Sockets
             {
                 using var dw = GetOrAddEntry(dgram.Id, out var entry, TimeSpan.FromMilliseconds(1));
                 if (dw.IsEmpty) goto goon;   //若无法锁定则忽略此连接包
-                if (entry.RemoteEndPoint != e.RemoteEndPoint)   //若远端端点改变
+                if (!entry.RemoteEndPoint.Equals(e.RemoteEndPoint))   //若远端端点改变
                 {
-                    _Logger.LogDebug("Id = {id}的客户端 改变了可见端点 {oep} -> {nep}", entry.Id, entry.RemoteEndPoint, e.RemoteEndPoint);
+                    _Logger.LogDebug("Id = {id} 的客户端 改变了可见端点 {oep} -> {nep}", entry.Id, entry.RemoteEndPoint, e.RemoteEndPoint);
                     entry.RemoteEndPoint = e.RemoteEndPoint;    //重置远程端点
                 }
                 if ((uint)dgram.Seq <= entry.MaxSeq)    //若客户端确认的包号合法
@@ -466,7 +370,7 @@ namespace System.Net.Sockets
         /// <param name="remote">远端端点。</param>
         protected virtual void OnRequestConnect(OwRdmDgram datas, EndPoint remote)
         {
-
+            
         }
 
         /// <summary>

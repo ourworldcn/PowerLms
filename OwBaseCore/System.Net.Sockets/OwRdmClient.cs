@@ -187,6 +187,25 @@ namespace System.Net.Sockets
                 else break;
             }
         }
+
+        /// <summary>
+        /// 强制移除时间过早的帧。
+        /// </summary>
+        /// <param name="minDatetime">最早的时间。</param>
+        /// <param name="removed">记录删除的节点数据的集合，如果省略或为null，则不记录。</param>
+        public void RemoveWhere(DateTime minDatetime, ICollection<OwRdmDgram> removed = null)
+        {
+            for (var tmp = _List.First; tmp != null; tmp = _List.First)
+            {
+                if (tmp.Value.LastSendDateTime < minDatetime)    //若需要删除
+                {
+                    removed?.Add(tmp.Value);
+                    _List.Remove(tmp);
+                    Return(tmp);
+                }
+                else break;
+            }
+        }
     }
 
     /// <summary>
@@ -682,13 +701,14 @@ namespace System.Net.Sockets
         /// 无法返回租用的缓冲区不是致命错误。 但是，这可能会导致应用程序性能下降，因为池可能需要创建新的缓冲区来替换丢失的缓冲区。
         /// </summary>
         /// <param name="entry"></param>
-        public static void Return(OwRdmDgram entry)
+        public static bool Return(OwRdmDgram entry)
         {
-            if (entry.Buffer.Length < RdmMtu) return; //若不符合要求
+            if (entry.Buffer.Length < RdmMtu) return false; //若不符合要求
 
             for (int i = 0; i < entry.Buffer.Length; i++)
                 entry.Buffer[i] = 0;
             _Pool.Push(entry);
+            return true;
         }
 
         /// <summary>
