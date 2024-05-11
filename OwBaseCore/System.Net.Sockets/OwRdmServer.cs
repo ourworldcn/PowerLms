@@ -370,7 +370,7 @@ namespace System.Net.Sockets
         /// <param name="remote">远端端点。</param>
         protected virtual void OnRequestConnect(OwRdmDgram datas, EndPoint remote)
         {
-            
+
         }
 
         /// <summary>
