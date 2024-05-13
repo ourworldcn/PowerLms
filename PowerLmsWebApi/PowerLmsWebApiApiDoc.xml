@@ -4403,6 +4403,11 @@
             发送的下一个操作人的集合。可能为空，因为该模板仅有单一节点或已经到达最后一个节点，无法向下发送。
             </summary>
         </member>
+        <member name="P:PowerLmsWebApi.Controllers.GetNextNodeItemsByDocIdReturnDto.Template">
+            <summary>
+            所属流程模板信息。
+            </summary>
+        </member>
         <member name="T:PowerLmsWebApi.Controllers.GetWfByOpertorIdParamsDto">
             <summary>
             获取人员相关流转信息的参数封装类。
@@ -4570,7 +4575,7 @@
         </member>
         <member name="M:PowerLmsWebApi.Controllers.WfTemplateController.RemoveWfTemplateNode(PowerLmsWebApi.Controllers.RemoveWfTemplateNodePatamsDto)">
             <summary>
-            批量删除工作流模板信息。(物理硬删除，请先移除子对象)
+            批量删除工作流模板节点信息。
             </summary>
             <param name="model"></param>
             <returns></returns>
@@ -4578,7 +4583,7 @@
             <response code="401">无效令牌。</response>  
             <response code="404">指定Id中，至少有一个不存在相应实体。</response>  
         </member>
-        <member name="M:PowerLmsWebApi.Controllers.WfTemplateController.GetNextNodeItemsByTemplateId(PowerLmsWebApi.Controllers.GetNextNodeItemsByTemplateIdParamsDto)">
+        <member name="M:PowerLmsWebApi.Controllers.WfTemplateController.GetNextNodeItemsByKindCode(PowerLmsWebApi.Controllers.GetNextNodeItemsByKindCodeParamsDto)">
             <summary>
             获取首次发送时可选操作人的信息。
             </summary>
@@ -4648,24 +4653,29 @@
             <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
             <response code="401">无效令牌。</response>  
         </member>
-        <member name="T:PowerLmsWebApi.Controllers.GetNextNodeItemsByTemplateIdParamsDto">
+        <member name="T:PowerLmsWebApi.Controllers.GetNextNodeItemsByKindCodeParamsDto">
             <summary>
             获取模板首次发送时节点的信息功能的参数封装类。
             </summary>
         </member>
-        <member name="P:PowerLmsWebApi.Controllers.GetNextNodeItemsByTemplateIdParamsDto.KindCode">
+        <member name="P:PowerLmsWebApi.Controllers.GetNextNodeItemsByKindCodeParamsDto.KindCode">
             <summary>
             工作流模板的KindCode。
             </summary>
         </member>
-        <member name="T:PowerLmsWebApi.Controllers.GetNextNodeItemsByTemplateIdReturnDto">
+        <member name="T:PowerLmsWebApi.Controllers.GetNextNodeItemsByKindCodeReturnDto">
             <summary>
             获取模板首次发送时节点的信息功能的返回值封装类。
             </summary>
         </member>
-        <member name="P:PowerLmsWebApi.Controllers.GetNextNodeItemsByTemplateIdReturnDto.Result">
+        <member name="P:PowerLmsWebApi.Controllers.GetNextNodeItemsByKindCodeReturnDto.Result">
             <summary>
             发送的下一个操作人的集合。可能为空，因为该模板仅有单一节点，第一个人无法向下发送。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.GetNextNodeItemsByKindCodeReturnDto.Template">
+            <summary>
+            所属模板数据。
             </summary>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.GetAllWfTemplateKindCodeReturnDto">
@@ -4747,6 +4757,11 @@
         <member name="T:PowerLmsWebApi.Controllers.RemoveWfTemplateNodePatamsDto">
             <summary>
             批量删除工作流模板信息功能参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.RemoveWfTemplateNodePatamsDto.IsRemoveChildren">
+            <summary>
+            是否强制删除已有的子项，true=强制删除，false有子项则不能删除。
             </summary>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.RemoveWfTemplateNodeReturnDto">

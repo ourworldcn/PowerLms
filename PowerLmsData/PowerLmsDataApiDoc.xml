@@ -2487,6 +2487,11 @@
             创建的时间。
             </summary>
         </member>
+        <member name="P:PowerLms.Data.OwWfTemplate.ClientString">
+            <summary>
+            客户端记录一些必要信息，服务器不使用。
+            </summary>
+        </member>
         <member name="T:PowerLms.Data.OwWfTemplateNode">
             <summary>
             工作流模板内节点表。
@@ -2540,6 +2545,11 @@
             ]
             </c></remarks>
         </member>
+        <member name="P:PowerLms.Data.OwWfTemplateNode.ClientString">
+            <summary>
+            客户端记录一些必要信息，服务器不使用。
+            </summary>
+        </member>
         <member name="T:PowerLms.Data.OwWfTemplateNodeItem">
             <summary>
             节点详细信息类。
@@ -2569,6 +2579,11 @@
         <member name="P:PowerLms.Data.OwWfTemplateNodeItem.Priority">
             <summary>
             优先级。0最高，1其次，以此类推...。仅当节点类型0时有效。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwWfTemplateNodeItem.ClientString">
+            <summary>
+            客户端记录一些必要信息，服务器不使用。
             </summary>
         </member>
         <member name="T:PowerLms.Data.OwWf">

@@ -179,8 +179,10 @@ namespace PowerLmsWebApi.Controllers
             var node = GetLastApprovalNode(doc);
             if (node is null) return result;
 
-            var ttNode = _DbContext.WfTemplateNodes.Find(node.TemplateId);
+            var ttNode = _DbContext.WfTemplateNodes.Include(c => c.Children).FirstOrDefault(c => c.Id == node.TemplateId);
             if (ttNode?.NextId is null) return result;
+
+            result.Template = ttNode.Parent; //模板信息
 
             var nextNode = _DbContext.WfTemplateNodes.Find(ttNode.NextId);
 
@@ -293,6 +295,11 @@ namespace PowerLmsWebApi.Controllers
         /// 发送的下一个操作人的集合。可能为空，因为该模板仅有单一节点或已经到达最后一个节点，无法向下发送。
         /// </summary>
         public List<OwWfTemplateNodeItemDto> Result { get; set; } = new List<OwWfTemplateNodeItemDto>();
+
+        /// <summary>
+        /// 所属流程模板信息。
+        /// </summary>
+        public OwWfTemplate Template { get; set; }
     }
 
     /// <summary>

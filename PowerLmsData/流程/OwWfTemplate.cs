@@ -6,6 +6,11 @@ using System.Text.Json.Serialization;
 
 namespace PowerLms.Data
 {
+    public interface IClientInfo
+    {
+        public string ClientString { get; set; }
+    }
+
     /// <summary>
     /// 流程类型表
     /// </summary>
@@ -39,7 +44,7 @@ namespace PowerLms.Data
     /// </summary>
     [Index(nameof(OrgId), nameof(KindCode))]
     [Comment("流程模板总表")]
-    public class OwWfTemplate : GuidKeyObjectBase, ICreatorInfo
+    public class OwWfTemplate : GuidKeyObjectBase, ICreatorInfo, IClientInfo
     {
         /// <summary>
         /// 所属机构Id。
@@ -79,6 +84,12 @@ namespace PowerLms.Data
         #region 导航属性
         public virtual List<OwWfTemplateNode> Children { get; set; } = new List<OwWfTemplateNode>();
         #endregion 导航属性
+
+        /// <summary>
+        /// 客户端记录一些必要信息，服务器不使用。
+        /// </summary>
+        [Comment("客户端记录一些必要信息，服务器不使用。")]
+        public string ClientString { get; set; }
     }
 
     /// <summary>
@@ -86,7 +97,7 @@ namespace PowerLms.Data
     /// </summary>
     [Index(nameof(NextId))]
     [Comment("工作流模板内节点表")]
-    public class OwWfTemplateNode : GuidKeyObjectBase
+    public class OwWfTemplateNode : GuidKeyObjectBase,IClientInfo
     {
         public OwWfTemplateNode()
         {
@@ -160,13 +171,18 @@ namespace PowerLms.Data
         public string GuardJsonString { get; set; }
         #endregion 前/后置守卫条件
 
+        /// <summary>
+        /// 客户端记录一些必要信息，服务器不使用。
+        /// </summary>
+        [Comment("客户端记录一些必要信息，服务器不使用。")]
+        public string ClientString { get; set; }
     }
 
     /// <summary>
     /// 节点详细信息类。
     /// </summary>
     [Comment("节点详细信息类")]
-    public class OwWfTemplateNodeItem : GuidKeyObjectBase
+    public class OwWfTemplateNodeItem : GuidKeyObjectBase, IClientInfo
     {
         #region 导航属性
         /// <summary>
@@ -203,6 +219,11 @@ namespace PowerLms.Data
         [Comment("优先级。0最高，1其次，以此类推...。仅当节点类型0时有效。")]
         public int Priority { get; set; }
 
+        /// <summary>
+        /// 客户端记录一些必要信息，服务器不使用。
+        /// </summary>
+        [Comment("客户端记录一些必要信息，服务器不使用。")]
+        public string ClientString { get; set; }
     }
 
 

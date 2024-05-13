@@ -249,7 +249,7 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// 批量删除工作流模板信息。(物理硬删除，请先移除子对象)
+        /// 批量删除工作流模板节点信息。
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
@@ -267,6 +267,11 @@ namespace PowerLmsWebApi.Controllers
             if (items.Length != model.Ids.Count) return BadRequest("指定Id中，至少有一个不存在相应实体。");
             var prvs = dbSet.Where(c => c.NextId != null && model.Ids.Contains(c.NextId.Value)).ToArray();
 
+            if (model.IsRemoveChildren)  //若需要删除子项
+            {
+                var children = items.SelectMany(c => c.Children);
+                _DbContext.RemoveRange(children);
+            }
             _DbContext.RemoveRange(items);
             prvs.ForEach(c => c.NextId = null);
             _DbContext.SaveChanges();
@@ -282,11 +287,13 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">指定的模板不存在。</response>  
         [HttpGet]
-        public ActionResult<GetNextNodeItemsByTemplateIdReturnDto> GetNextNodeItemsByTemplateId([FromQuery] GetNextNodeItemsByTemplateIdParamsDto model)
+        public ActionResult<GetNextNodeItemsByKindCodeReturnDto> GetNextNodeItemsByKindCode([FromQuery] GetNextNodeItemsByKindCodeParamsDto model)
         {
-            var result = new GetNextNodeItemsByTemplateIdReturnDto { };
+            var result = new GetNextNodeItemsByKindCodeReturnDto { };
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            var tt = _DbContext.WfTemplates.FirstOrDefault(c => c.KindCode == model.KindCode);
+
+            var tt = _DbContext.WfTemplates.Include(c => c.Children).ThenInclude(c => c.Children).
+                FirstOrDefault(c => c.KindCode == model.KindCode && c.OrgId == context.User.OrgId);
             if (tt is null) return NotFound();
             var nextNodeIds = tt.Children.Where(c => c.NextId != null).Select(c => c.NextId).ToArray(); //后续节点的Id集合
             var firstNodes = tt.Children.Where(c => !nextNodeIds.Contains(c.Id));   //最前面的节点
@@ -295,7 +302,7 @@ namespace PowerLmsWebApi.Controllers
             var nextNodes = tt.Children.Where(c => nodeIds.Contains(c.Id));
 
             var r = nextNodes.SelectMany(c => c.Children).Where(c => c.OperationKind == 0);
-
+            result.Template = tt;    //模板数据
             result.Result.AddRange(r.Select(c => _Mapper.Map<OwWfTemplateNodeItemDto>(c)));
             return result;
         }
@@ -489,7 +496,7 @@ namespace PowerLmsWebApi.Controllers
     /// <summary>
     /// 获取模板首次发送时节点的信息功能的参数封装类。
     /// </summary>
-    public class GetNextNodeItemsByTemplateIdParamsDto : TokenDtoBase
+    public class GetNextNodeItemsByKindCodeParamsDto : TokenDtoBase
     {
         /// <summary>
         /// 工作流模板的KindCode。
@@ -500,12 +507,17 @@ namespace PowerLmsWebApi.Controllers
     /// <summary>
     /// 获取模板首次发送时节点的信息功能的返回值封装类。
     /// </summary>
-    public class GetNextNodeItemsByTemplateIdReturnDto : ReturnDtoBase
+    public class GetNextNodeItemsByKindCodeReturnDto : ReturnDtoBase
     {
         /// <summary>
         /// 发送的下一个操作人的集合。可能为空，因为该模板仅有单一节点，第一个人无法向下发送。
         /// </summary>
         public List<OwWfTemplateNodeItemDto> Result { get; set; } = new List<OwWfTemplateNodeItemDto>();
+
+        /// <summary>
+        /// 所属模板数据。
+        /// </summary>
+        public OwWfTemplate Template { get; set; }
     }
 
     #region 流程模板类型码相关
@@ -618,7 +630,10 @@ namespace PowerLmsWebApi.Controllers
     /// </summary>
     public class RemoveWfTemplateNodePatamsDto : RemoveItemsParamsDtoBase
     {
-
+        /// <summary>
+        /// 是否强制删除已有的子项，true=强制删除，false有子项则不能删除。
+        /// </summary>
+        public bool IsRemoveChildren { get; set; }
     }
 
     /// <summary>
