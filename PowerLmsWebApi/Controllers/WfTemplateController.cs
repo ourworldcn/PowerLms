@@ -269,8 +269,12 @@ namespace PowerLmsWebApi.Controllers
 
             if (model.IsRemoveChildren)  //若需要删除子项
             {
-                var children = items.SelectMany(c => c.Children);
-                _DbContext.RemoveRange(children);
+                foreach (var item in items)
+                {
+                    var tmp = item.Children.ToArray();
+                    item.Children.Clear();
+                    _DbContext.RemoveRange(tmp);
+                }
             }
             _DbContext.RemoveRange(items);
             prvs.ForEach(c => c.NextId = null);

@@ -532,6 +532,11 @@
             金额,两位小数、可以为负数.
             </summary>
         </member>
+        <member name="P:PowerLms.Data.DocFee.Currency">
+            <summary>
+            币种。标准货币缩写。
+            </summary>
+        </member>
         <member name="P:PowerLms.Data.DocFee.ExchangeRate">
             <summary>
             本位币汇率,默认从汇率表调取,机构本位币

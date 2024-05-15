@@ -2,6 +2,7 @@
 using OW.Data;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
@@ -77,6 +78,13 @@ namespace PowerLms.Data
         [Comment("金额,两位小数、可以为负数")]
         [Precision(18, 2)]
         public decimal Amount { get; set; }
+
+        /// <summary>
+        /// 币种。标准货币缩写。
+        /// </summary>
+        [MaxLength(4), Unicode(false)]
+        [Comment("币种。标准货币缩写。")]
+        public string Currency { get; set; }
 
         /// <summary>
         /// 本位币汇率,默认从汇率表调取,机构本位币

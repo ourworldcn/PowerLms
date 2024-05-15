@@ -247,6 +247,14 @@ namespace PowerLmsWebApi.Controllers
                 var currentNode = wf.Children.OrderBy(c => c.ArrivalDateTime).Last(c => c.Children.Select(d => d.OpertorId).Contains(context.User.Id));   //当前节点
                 var tNode = template.Children.First(c => c.Id == currentNode.TemplateId);   //当前节点模板
                 var nextTItem = tNode.Children.FirstOrDefault(c => c.OpertorId == model.NextOpertorId);    //下一个操作人的模板
+                if(nextTItem == null)
+                {
+                    result.HasError = true;
+                    result.ErrorCode = 400;
+                    result.DebugMessage = $"指定下一个操作人Id={model.NextOpertorId},但它不是合法的下一个操作人。";
+                    return result;
+                }
+
                 var nextTNode = nextTItem.Parent;    //下一个节点模板
 
                 var nextNode = new OwWfNode
