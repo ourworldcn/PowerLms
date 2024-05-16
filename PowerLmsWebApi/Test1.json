@@ -1,19 +1,18 @@
-[
-  {
-    "NumberCondition": {
-      "PropertyName": "Count",
+{
+  "TypeGuid": "F3F9B16B-499E-4228-AEC0-FFA5B9F18E9B",
+  "Count": 15,
+  "stk": -1,
+  "Count0Reserved": true,
+  "ptid": "9c559895-9a2c-43a7-b793-e879a600487c",
+  "Fcps": {
+    "Count": {
       "MinValue": 0,
-      "MaxValue": null,
-      "Subtrahend": 0,
-      "Modulus": 42,
-      "MinRemainder": 0,
-      "MaxRemainder": 6
-    },
-    "其它条件类型": {
-      //保留将来添加可能
+      "MaxValue": 0,
+      "StepValue": 1,
+      "Delay": "00:20:00",
+      "CurrentValue": 15
     }
   },
-  { //多个条件，与关系
-
-  }
-]
+  "name_txt": 10293,
+  "comment_txt": 10294
+}

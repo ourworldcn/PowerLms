@@ -36,8 +36,9 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="entityManager"></param>
         /// <param name="mapper"></param>
         /// <param name="organizationManager"></param>
+        /// <param name="dataManager"></param>
         public AdminController(PowerLmsUserDbContext context, NpoiManager npoiManager, AccountManager accountManager, IServiceProvider scope, EntityManager entityManager,
-            IMapper mapper, OrganizationManager organizationManager)
+            IMapper mapper, OrganizationManager organizationManager, DataDicManager dataManager)
         {
             _DbContext = context;
             _NpoiManager = npoiManager;
@@ -46,6 +47,7 @@ namespace PowerLmsWebApi.Controllers
             _EntityManager = entityManager;
             _Mapper = mapper;
             _OrganizationManager = organizationManager;
+            _DataManager = dataManager;
         }
 
         readonly PowerLmsUserDbContext _DbContext;
@@ -55,7 +57,7 @@ namespace PowerLmsWebApi.Controllers
         readonly EntityManager _EntityManager;
         readonly IMapper _Mapper;
         OrganizationManager _OrganizationManager;
-
+        DataDicManager _DataManager;
         #region 字典目录
 
         /// <summary>
@@ -152,6 +154,33 @@ namespace PowerLmsWebApi.Controllers
         }
 
         #endregion 字典目录
+
+        /// <summary>
+        /// 复制简单数据字典。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response> 
+        [HttpPost]
+        public ActionResult<CopySimpleDataDicReturnDto> CopySimpleDataDic(CopySimpleDataDicParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new CopySimpleDataDicReturnDto();
+            //var merch = _DbContext.Merchants.Find(model.SrcOrgId);
+            //if (merch == null) return NotFound();
+            #region 复制简单字典
+            var baseCatalogs = _DbContext.DD_DataDicCatalogs.Where(c => c.OrgId == model.SrcOrgId).AsNoTracking();  //基本字典目录集合
+            foreach (var catalog in baseCatalogs)
+            {
+                _DataManager.CopyTo(catalog, model.DestOrgId);
+            }
+            //_DataManager.CopyAllSpecialDataDicBase(model.Id);
+            #endregion 复制简单字典
+
+            _DbContext.SaveChanges();
+            return result;
+        }
 
         /// <summary>
         /// 获取系统资源列表。
@@ -393,7 +422,7 @@ namespace PowerLmsWebApi.Controllers
             model.Item.GenerateNewId();
             _DbContext.DD_DataDicCatalogs.Add(model.Item);
 
-            if (model.CopyToChildren)   //若须下下复制。
+            if (model.CopyToChildren)   //若须向下复制。
             {
                 IEnumerable<Guid> catalogIds;
                 if (model.CopyToChildren)    //若须向下传播
@@ -1865,6 +1894,29 @@ namespace PowerLmsWebApi.Controllers
         }
 
         #endregion 币种相关
+    }
+
+    /// <summary>
+    /// 复制简单数据字典功能的参数封装类。
+    /// </summary>
+    public class CopySimpleDataDicParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 源组织机构Id,省略则以全局简单字典为源。
+        /// </summary>
+        public Guid? SrcOrgId { get; set; }
+
+        /// <summary>
+        /// 目标组织机构Id。
+        /// </summary>
+        public Guid DestOrgId { get; set; }
+    }
+
+    /// <summary>
+    /// 复制简单数据字典功能的返回值封装类。
+    /// </summary>
+    public class CopySimpleDataDicReturnDto : ReturnDtoBase
+    {
     }
 
     /// <summary>

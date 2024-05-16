@@ -250,7 +250,7 @@
             管理员功能控制器。
             </summary>
         </member>
-        <member name="M:PowerLmsWebApi.Controllers.AdminController.#ctor(PowerLmsServer.EfData.PowerLmsUserDbContext,PowerLmsServer.Managers.NpoiManager,PowerLmsServer.Managers.AccountManager,System.IServiceProvider,PowerLmsServer.Managers.EntityManager,AutoMapper.IMapper,PowerLmsServer.Managers.OrganizationManager)">
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.#ctor(PowerLmsServer.EfData.PowerLmsUserDbContext,PowerLmsServer.Managers.NpoiManager,PowerLmsServer.Managers.AccountManager,System.IServiceProvider,PowerLmsServer.Managers.EntityManager,AutoMapper.IMapper,PowerLmsServer.Managers.OrganizationManager,PowerLmsServer.Managers.DataDicManager)">
             <summary>
             
             </summary>
@@ -261,6 +261,7 @@
             <param name="entityManager"></param>
             <param name="mapper"></param>
             <param name="organizationManager"></param>
+            <param name="dataManager"></param>
         </member>
         <member name="M:PowerLmsWebApi.Controllers.AdminController.GetAllDataDicCatalog(PowerLmsWebApi.Dto.PagingParamsDtoBase,System.Collections.Generic.Dictionary{System.String,System.String})">
             <summary>
@@ -291,6 +292,15 @@
             <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
             <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
             <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.AdminController.CopySimpleDataDic(PowerLmsWebApi.Controllers.CopySimpleDataDicParamsDto)">
+            <summary>
+            复制简单数据字典。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response> 
         </member>
         <member name="M:PowerLmsWebApi.Controllers.AdminController.GetSystemResource">
             <summary>
@@ -849,6 +859,26 @@
             <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
             <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
             <response code="401">无效令牌。</response>  
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.CopySimpleDataDicParamsDto">
+            <summary>
+            复制简单数据字典功能的参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.CopySimpleDataDicParamsDto.SrcOrgId">
+            <summary>
+            源组织机构Id,省略则以全局简单字典为源。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.CopySimpleDataDicParamsDto.DestOrgId">
+            <summary>
+            目标组织机构Id。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.CopySimpleDataDicReturnDto">
+            <summary>
+            复制简单数据字典功能的返回值封装类。
+            </summary>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.RestorePlCurrencyParamsDto">
             <summary>
