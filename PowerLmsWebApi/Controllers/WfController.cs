@@ -197,6 +197,7 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="model"></param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">参数错误。</response>  
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">指定模板不存在。</response>  
         [HttpPost]
@@ -208,6 +209,9 @@ namespace PowerLmsWebApi.Controllers
             if (template is null) return NotFound();
 
             var wf = _DbContext.OwWfs.Where(c => c.DocId == model.DocId && !c.Children.Any(c => !c.Children.Any(d => d.IsSuccess == false))).FirstOrDefault();  //当前流程
+            
+            OwWfNode currentNode = default;   //当前节点
+            OwWfTemplateNode ttCurrentNode = default; //当前节点的模板
             if (wf is null)  //若没有流程正在执行
             {
                 //创建流程及首节点
@@ -219,40 +223,38 @@ namespace PowerLmsWebApi.Controllers
                 var list = template.Children.ToList();
                 var noneFirst = list.Where(c => list.Any(d => d.NextId == c.Id)).ToList();   //非首节点集合
                 noneFirst.ForEach(c => list.Remove(c));  //首节点集合
-                var node = list.FirstOrDefault(c => c.Children.Any(d => d.OpertorId == context.User.Id));   //使用的节点
+                ttCurrentNode = list.FirstOrDefault(c => c.Children.Any(d => d.OpertorId == context.User.Id));   //使用的节点模板
 
-                var firstNode = new OwWfNode
+                currentNode = new OwWfNode
                 {
                     ArrivalDateTime = OwHelper.WorldNow,
                     Parent = wf,
                     ParentId = wf.Id,
-                    TemplateId = node.Id,
+                    TemplateId = ttCurrentNode.Id,
                 };
-                wf.Children.Add(firstNode);
+                wf.Children.Add(currentNode);
                 var firstItem = new OwWfNodeItem
                 {
                     Comment = model.Comment,
                     IsSuccess = true,
                     OperationKind = 0,
                     OpertorId = context.User.Id,
-                    ParentId = firstNode.Id,
-                    Parent = firstNode,
+                    ParentId = currentNode.Id,
+                    Parent = currentNode,
                     OpertorDisplayName = context.User.DisplayName,
                 };
-                firstNode.Children.Add(firstItem);
+                currentNode.Children.Add(firstItem);
                 _DbContext.OwWfs.Add(wf);
             }
+            currentNode ??= wf.Children.OrderBy(c => c.ArrivalDateTime).Last(c => c.Children.Select(d => d.OpertorId).Contains(context.User.Id));   //当前节点
+            ttCurrentNode ??= _DbContext.WfTemplateNodes.Find(currentNode.TemplateId);  //当前节点的模板
             if (model.NextOpertorId is not null)    //若需要流转
             {
-                var currentNode = wf.Children.OrderBy(c => c.ArrivalDateTime).Last(c => c.Children.Select(d => d.OpertorId).Contains(context.User.Id));   //当前节点
                 var tNode = template.Children.First(c => c.Id == currentNode.TemplateId);   //当前节点模板
-                var nextTItem = tNode.Children.FirstOrDefault(c => c.OpertorId == model.NextOpertorId);    //下一个操作人的模板
-                if(nextTItem == null)
+                var nextTItem = tNode.Children.FirstOrDefault(c => c.OpertorId == model.NextOpertorId && c.ParentId != ttCurrentNode.Id);    //下一个操作人的模板
+                if (nextTItem == null)
                 {
-                    result.HasError = true;
-                    result.ErrorCode = 400;
-                    result.DebugMessage = $"指定下一个操作人Id={model.NextOpertorId},但它不是合法的下一个操作人。";
-                    return result;
+                    return BadRequest($"指定下一个操作人Id={model.NextOpertorId},但它不是合法的下一个操作人。");
                 }
 
                 var nextTNode = nextTItem.Parent;    //下一个节点模板
@@ -279,6 +281,18 @@ namespace PowerLmsWebApi.Controllers
                 nextNode.Children.Add(nextItem);
                 wf.Children.Add(nextNode);
             }
+            else //流程结束
+            {
+                if (model.Approval == 0)   //若通过
+                {
+                    wf.State = 1;
+                }
+                else if (model.Approval == 1) //若拒绝
+                    wf.State = 2;
+                else
+                    return BadRequest($"{nameof(model.Approval)} 参数值非法。");
+            }
+            _DbContext.SaveChanges();
             return result;
         }
     }

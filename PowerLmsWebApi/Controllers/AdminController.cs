@@ -173,7 +173,8 @@ namespace PowerLmsWebApi.Controllers
             var baseCatalogs = _DbContext.DD_DataDicCatalogs.Where(c => c.OrgId == model.SrcOrgId).AsNoTracking();  //基本字典目录集合
             foreach (var catalog in baseCatalogs)
             {
-                _DataManager.CopyTo(catalog, model.DestOrgId);
+                if (model.CatalogCodes.Contains(catalog.Code))
+                    _DataManager.CopyTo(catalog, model.DestOrgId);
             }
             //_DataManager.CopyAllSpecialDataDicBase(model.Id);
             #endregion 复制简单字典
@@ -1902,9 +1903,14 @@ namespace PowerLmsWebApi.Controllers
     public class CopySimpleDataDicParamsDto : TokenDtoBase
     {
         /// <summary>
-        /// 源组织机构Id,省略则以全局简单字典为源。
+        /// 源组织机构Id,省略或为null则以全局简单字典为源。
         /// </summary>
         public Guid? SrcOrgId { get; set; }
+
+        /// <summary>
+        /// 指定要复制的字典项目录代码的集合。为空则没有字典会被复制。
+        /// </summary>
+        public List<string> CatalogCodes { get; set; } = new List<string>();
 
         /// <summary>
         /// 目标组织机构Id。

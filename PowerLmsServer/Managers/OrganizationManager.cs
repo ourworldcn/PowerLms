@@ -16,11 +16,39 @@ using System.Threading.Tasks;
 namespace PowerLmsServer.Managers
 {
     /// <summary>
+    /// 商户信息。
+    /// </summary>
+    public class MerchantInfo
+    {
+        /// <summary>
+        /// 商户对象。
+        /// </summary>
+        public PlMerchant Merchant { get; set; }
+
+        /// <summary>
+        /// 所有机构信息。
+        /// </summary>
+        public ConcurrentDictionary<Guid, PlOrganization> Orgs { get; set; } = new ConcurrentDictionary<Guid, PlOrganization>();
+    }
+
+    /// <summary>
     /// 组织机构管理器。
     /// </summary>
     [OwAutoInjection(ServiceLifetime.Scoped, AutoCreateFirst = true)]
     public class OrganizationManager
     {
+        /// <summary>
+        /// 商户缓存信息缓存条目名的前缀。具体商户信息的缓存条目名是该前缀后接商户Id的<see cref="Guid.ToString()"/>形式字符串。
+        /// </summary>
+        const string MerchantCkp = $"{nameof(MerchantCkp)}.";
+
+        const string MerchantCacheKey = "MerchantCacheKey.256a2f95-bd83-480b-97ae-d3c978ffbe0b";
+        /// <summary>
+        /// 所有机构到商户的<see cref="ConcurrentDictionary{TKey, TValue}"/>，键是机构Id，值是商户Id。
+        /// </summary>
+        const string OrgCacheKey = "OrgCacheKey.fa85fb74-d809-403a-902f-8da913cf8f4a";
+        const string DbCacheKey = "DbCacheKey.fde207c2-99bc-4401-aab6-f5f0465ee368";
+
         /// <summary>
         /// 构造函数。
         /// </summary>
@@ -137,16 +165,14 @@ namespace PowerLmsServer.Managers
             }
         }
 
-        const string MerchantCacheKey = "MerchantCacheKey.256a2f95-bd83-480b-97ae-d3c978ffbe0b";
-        const string OrgCacheKey = "OrgCacheKey.fa85fb74-d809-403a-902f-8da913cf8f4a";
-        const string DbCacheKey = "DbCacheKey.fde207c2-99bc-4401-aab6-f5f0465ee368";
+        #region 获取基础数据结构
 
         /// <summary>
-        /// 获取一个读写用的数据库上下文。
+        /// 获取一个读写商户/机构信息用的专属数据库上下文对象。若要使用需要加独占锁，且最好不要使用异步操作，避免产生并发问题。
         /// </summary>
         /// <returns></returns>
         [MethodImpl(MethodImplOptions.Synchronized)]
-        PowerLmsUserDbContext GetDb()
+        protected PowerLmsUserDbContext GetDb()
         {
             var result = _Cache.GetOrCreate(DbCacheKey, c =>
             {
@@ -154,6 +180,66 @@ namespace PowerLmsServer.Managers
             });
             return result;
         }
+
+        /// <summary>
+        /// 获取指定商户信息对象在缓存中的条目名。
+        /// </summary>
+        /// <param name="merchantId"></param>
+        /// <returns></returns>
+        public string GetMerchantInfoCacheKey(Guid merchantId)
+        {
+            return $"{MerchantCkp}{merchantId}";
+        }
+
+        /// <summary>
+        /// 获取缓存的商户信息。
+        /// </summary>
+        /// <param name="merchantId">商户Id。</param>
+        /// <returns>没有找到则返回null，这不表示指定商户一定不存在，可能是未加载</returns>
+        public MerchantInfo GetMerchantInfo(Guid merchantId)
+        {
+            return _Cache.Get(GetMerchantInfoCacheKey(merchantId)) as MerchantInfo;
+        }
+
+        /// <summary>
+        /// 加载商户信息，不涉及到缓存操作。
+        /// </summary>
+        /// <param name="merchantId"></param>
+        /// <returns>商户的信息，可能返回null，若指定Id不存在。</returns>
+        public MerchantInfo LoadMerchantInfo(Guid merchantId)
+        {
+            var db = GetDb();
+            lock (db)
+            {
+                var merc = db.Merchants.Find(merchantId);
+                if (merc is null) return null;
+                var result = new MerchantInfo() { Merchant = merc };
+
+                return result;
+            }
+        }
+
+        /// <summary>
+        /// 获取或加载指定Id的商户信息。
+        /// </summary>
+        /// <param name="merchantId"></param>
+        /// <returns></returns>
+        public MerchantInfo GetOrLoadMerchantInfo(Guid merchantId)
+        {
+            return _Cache.GetOrCreate(GetMerchantInfoCacheKey(merchantId), entry => LoadMerchantInfo(Guid.Parse(entry.Key as string)));
+        }
+
+        /// <summary>
+        /// 获取指定机构或商户的，完整商户信息集合。
+        /// </summary>
+        /// <param name="orgId"></param>
+        /// <param name="result"></param>
+        protected DisposeHelper<MerchantInfo> GetOrLoadMerchantInfo(Guid orgId, out MerchantInfo result)
+        {
+            result = default;
+            return DisposeHelper.Empty<MerchantInfo>();
+        }
+        #endregion 获取基础数据结构
 
         /// <summary>
         /// 
@@ -183,6 +269,24 @@ namespace PowerLmsServer.Managers
                     return result;
                 });
             }
+        }
+
+        /// <summary>
+        /// 获取直接间接所属所有机构/商户Id。
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        public List<Guid> GetAncestors(Guid id)
+        {
+            var result = new List<Guid>();
+            var org = _DbContext.PlOrganizations.Find(id);
+            if (org == null)
+            {
+                var merc = _DbContext.Merchants.Find(id);
+                if (merc == null) return result;
+            }
+
+            return result;
         }
     }
 
