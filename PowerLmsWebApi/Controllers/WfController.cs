@@ -205,11 +205,13 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new WfSendReturnDto();
+
             var template = _DbContext.WfTemplates.Include(c => c.Children).ThenInclude(c => c.Children).Single(c => c.Id == model.TemplateId);
             if (template is null) return NotFound();
 
-            var wf = _DbContext.OwWfs.Where(c => c.DocId == model.DocId && !c.Children.Any(c => !c.Children.Any(d => d.IsSuccess == false))).FirstOrDefault();  //当前流程
-            
+            //var wf = _DbContext.OwWfs.Where(c => c.DocId == model.DocId && !c.Children.Any(c => !c.Children.Any(d => d.IsSuccess == false))).FirstOrDefault();  //当前流程
+            var wf = _DbContext.OwWfs.Where(c => c.DocId == model.DocId && c.TemplateId == model.TemplateId).FirstOrDefault();  //当前流程
+
             OwWfNode currentNode = default;   //当前节点
             OwWfTemplateNode ttCurrentNode = default; //当前节点的模板
             if (wf is null)  //若没有流程正在执行
@@ -246,12 +248,16 @@ namespace PowerLmsWebApi.Controllers
                 currentNode.Children.Add(firstItem);
                 _DbContext.OwWfs.Add(wf);
             }
-            currentNode ??= wf.Children.OrderBy(c => c.ArrivalDateTime).Last(c => c.Children.Select(d => d.OpertorId).Contains(context.User.Id));   //当前节点
+            currentNode ??= wf.Children.OrderBy(c => c.ArrivalDateTime).Last();   //当前节点
+            var currentNodeItem = currentNode.Children.FirstOrDefault(c => c.OperationKind == 0 && c.OpertorId == context.User.Id); //当前审批人
+            if (currentNodeItem is null)
+                return BadRequest("非法的投递目标");
+
             ttCurrentNode ??= _DbContext.WfTemplateNodes.Find(currentNode.TemplateId);  //当前节点的模板
             if (model.NextOpertorId is not null)    //若需要流转
             {
-                var tNode = template.Children.First(c => c.Id == currentNode.TemplateId);   //当前节点模板
-                var nextTItem = tNode.Children.FirstOrDefault(c => c.OpertorId == model.NextOpertorId && c.ParentId != ttCurrentNode.Id);    //下一个操作人的模板
+                //var tNode = template.Children.First(c => c.Id == currentNode.TemplateId);   //当前节点模板
+                var nextTItem = _DbContext.WfTemplateNodeItems.FirstOrDefault(c => c.ParentId == ttCurrentNode.NextId && c.OpertorId == model.NextOpertorId);    //下一个操作人的模板
                 if (nextTItem == null)
                 {
                     return BadRequest($"指定下一个操作人Id={model.NextOpertorId},但它不是合法的下一个操作人。");
