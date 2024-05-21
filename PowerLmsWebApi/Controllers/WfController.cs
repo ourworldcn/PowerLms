@@ -248,6 +248,10 @@ namespace PowerLmsWebApi.Controllers
                 currentNode.Children.Add(firstItem);
                 _DbContext.OwWfs.Add(wf);
             }
+            else if (wf.State != 0)
+            {
+                return BadRequest("文档所处流程已经结束。");
+            }
             currentNode ??= wf.Children.OrderBy(c => c.ArrivalDateTime).Last();   //当前节点
             var currentNodeItem = currentNode.Children.FirstOrDefault(c => c.OperationKind == 0 && c.OpertorId == context.User.Id); //当前审批人
             if (currentNodeItem is null)
