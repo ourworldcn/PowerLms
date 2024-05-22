@@ -303,6 +303,7 @@ namespace PowerLmsWebApi.Controllers
                     return BadRequest($"{nameof(model.Approval)} 参数值非法。");
             }
             _DbContext.SaveChanges();
+            result.WfId = wf.Id;
             return result;
         }
     }
