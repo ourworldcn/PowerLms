@@ -63,7 +63,8 @@ namespace PowerLmsWebApi.Controllers
             {
                 allOrg = _OrganizationManager.GetAllOrgInRoot(merId.Value).Select(c => c.Id).ToArray();
             }
-            var dbSet = _DbContext.PlCustomers.Where(c => c.OrgId.HasValue && allOrg.Contains(c.OrgId.Value));
+            //var dbSet = _DbContext.PlCustomers.Where(c => c.OrgId.HasValue && allOrg.Contains(c.OrgId.Value));
+            var dbSet = _DbContext.PlCustomers.Where(c => c.OrgId == context.User.OrgId);
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             foreach (var item in conditional)
                 if (string.Equals(item.Key, "name", StringComparison.OrdinalIgnoreCase))
@@ -156,8 +157,8 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveCustomerReturnDto();
             var id = model.Id;
-            var dbSet = _DbContext.PlCustomers;
-            var item = dbSet.Find(id);
+            var dbSet = _DbContext.PlCustomers.Where(c => c.OrgId == context.User.OrgId);
+            var item = dbSet.FirstOrDefault(c => c.Id == id);
             if (item is null) return BadRequest();
 
             //删除子表
@@ -192,11 +193,12 @@ namespace PowerLmsWebApi.Controllers
             {
                 allOrg = _OrganizationManager.GetAllOrgInRoot(merId.Value).Select(c => c.Id).ToArray();
             }
-            var dbSet = _DbContext.PlCustomers.Where(c => c.OrgId.HasValue && allOrg.Contains(c.OrgId.Value));
+            //var dbSet = _DbContext.PlCustomers.Where(c => c.OrgId.HasValue && allOrg.Contains(c.OrgId.Value));
+            var dbSet = _DbContext.PlCustomers.Where(c => c.OrgId == context.User.OrgId);
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
 
             StringBuilder sb = new StringBuilder("select * from PlCustomers where   ");
-            foreach (var item in conditional.Where(c=>c.Key!= "IsDesc"))
+            foreach (var item in conditional.Where(c => c.Key != "IsDesc"))
             {
                 if (!bool.TryParse(item.Value, out var b)) continue;
                 if (b)
@@ -206,7 +208,8 @@ namespace PowerLmsWebApi.Controllers
             }
             sb.Remove(sb.Length - 3, 3);    //获得条件
             var collBase = _DbContext.PlCustomers.FromSqlRaw(sb.ToString()).ToArray();
-            var collR = collBase.Where(c => c.OrgId.HasValue && allOrg.Contains(c.OrgId.Value)).AsQueryable();
+            //var collR = collBase.Where(c => c.OrgId.HasValue && allOrg.Contains(c.OrgId.Value)).AsQueryable();
+            var collR = collBase.Where(c => c.OrgId == context.User.OrgId).AsQueryable();
 
             var prb = _EntityManager.GetAll(collR, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
