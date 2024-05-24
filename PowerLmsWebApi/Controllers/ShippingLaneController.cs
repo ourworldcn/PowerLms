@@ -59,6 +59,8 @@ namespace PowerLmsWebApi.Controllers
             model.Item.CreateDateTime = OwHelper.WorldNow;
             model.Item.CreateBy = context.User.Id;
             model.Item.OrgId = context.User.OrgId;
+            model.Item.UpdateBy = context.User.Id;
+            model.Item.UpdateDateTime = OwHelper.WorldNow;
             _DbContext.SaveChanges();
             result.Id = model.Item.Id;
             return result;
@@ -68,7 +70,9 @@ namespace PowerLmsWebApi.Controllers
         /// 获取全部航线费用。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">查询的条件。支持 ValidDateTime(有效期)， StartCreateDateTime（开始创建/更新时间）,EndCreateDateTime（结束创建/更新时间），StartCode，EndCode，Id。不区分大小写。</param>
+        /// <param name="conditional">查询的条件。实体属性名不区分大小写。
+        /// 通用条件写法:所有条件都是字符串，对区间的写法是用逗号分隔（字符串类型暂时不支持区间且都是模糊查询）如"2024-1-1,2024-1-2"。
+        /// 对强制取null的约束，则写"null"。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
@@ -80,35 +84,7 @@ namespace PowerLmsWebApi.Controllers
             var result = new GetAllShippingLaneReturnDto();
             var dbSet = _DbContext.ShippingLanes.Where(c => c.OrgId == context.User.OrgId);
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-            foreach (var item in conditional)
-                if (string.Equals(item.Key, "StartCreateDateTime", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (DateTime.TryParse(item.Value, out var date))
-                        coll = coll.Where(c => c.UpdateDateTime >= date);
-                }
-                else if (string.Equals(item.Key, "EndCreateDateTime", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (DateTime.TryParse(item.Value, out var date))
-                        coll = coll.Where(c => c.UpdateDateTime <= date);
-                }
-                else if (string.Equals(item.Key, "ValidDateTime", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (DateTime.TryParse(item.Value, out var date))
-                        coll = coll.Where(c => c.StartDateTime <= date && c.EndDateTime >= date);
-                }
-                else if (string.Equals(item.Key, "Id", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (Guid.TryParse(item.Value, out var id))
-                        coll = coll.Where(c => c.Id == id);
-                }
-                else if (string.Equals(item.Key, "StartCode", StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.StartCode.Contains(item.Value));
-                }
-                else if (string.Equals(item.Key, "EndCode", StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.EndCode.Contains(item.Value));
-                }
+            coll = EfHelper.GenerateWhereAnd(coll, conditional);
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;

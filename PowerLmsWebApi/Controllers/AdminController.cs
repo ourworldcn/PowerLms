@@ -1388,6 +1388,12 @@ namespace PowerLmsWebApi.Controllers
                 var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
                 return errResult;
             }
+            model.Items.Select(c => c.Id).ToList().ForEach(c =>
+            {
+                var entity = _DbContext.DD_OtherNumberRules.Find(c);
+                if (entity is null) return;
+                _DbContext.Entry(entity).Property(c => c.OrgId).IsModified = false;
+            });
             _DbContext.SaveChanges();
             return result;
         }
@@ -1534,6 +1540,12 @@ namespace PowerLmsWebApi.Controllers
                 var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
                 return errResult;
             }
+            model.Items.Select(c => c.Id).ToList().ForEach(c =>
+            {
+                var entity = _DbContext.DD_OtherNumberRules.Find(c);
+                if (entity is null) return;
+                _DbContext.Entry(entity).Property(c => c.OrgId).IsModified = false;
+            });
             _DbContext.SaveChanges();
             return result;
         }

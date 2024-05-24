@@ -234,7 +234,7 @@ namespace PowerLmsWebApi.Controllers
         /// 获取全部空运出口单。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">查询的条件。支持 JobNo(业务号)，Id，EaDocNo(单号)。不区分大小写。</param>
+        /// <param name="conditional">已支持通用查询——除个别涉及敏感信息字段外，所有实体字段都可作为条件。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
@@ -247,20 +247,7 @@ namespace PowerLmsWebApi.Controllers
 
             var dbSet = _DbContext.PlEaDocs;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-            foreach (var item in conditional)
-                if (string.Equals(item.Key, "Id", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (Guid.TryParse(item.Value, out var id))
-                        coll = coll.Where(c => c.Id == id);
-                }
-                else if (string.Equals(item.Key, "JobNo", StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.JobNo == item.Value);
-                }
-                else if (string.Equals(item.Key, "EaDocNo", StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.DocNo == item.Value);
-                }
+            coll = EfHelper.GenerateWhereAnd(coll, conditional);
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;

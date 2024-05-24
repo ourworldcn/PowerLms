@@ -3586,7 +3586,7 @@
             获取全部空运出口单。
             </summary>
             <param name="model"></param>
-            <param name="conditional">查询的条件。支持 JobNo(业务号)，Id，EaDocNo(单号)。不区分大小写。</param>
+            <param name="conditional">已支持通用查询——除个别涉及敏感信息字段外，所有实体字段都可作为条件。</param>
             <returns></returns>
             <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
             <response code="401">无效令牌。</response>  
@@ -4135,7 +4135,9 @@
             获取全部航线费用。
             </summary>
             <param name="model"></param>
-            <param name="conditional">查询的条件。支持 ValidDateTime(有效期)， StartCreateDateTime（开始创建/更新时间）,EndCreateDateTime（结束创建/更新时间），StartCode，EndCode，Id。不区分大小写。</param>
+            <param name="conditional">查询的条件。实体属性名不区分大小写。
+            通用条件写法:所有条件都是字符串，对区间的写法是用逗号分隔（字符串类型暂时不支持区间且都是模糊查询）如"2024-1-1,2024-1-2"。
+            对强制取null的约束，则写"null"。</param>
             <returns></returns>
             <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
             <response code="401">无效令牌。</response>  

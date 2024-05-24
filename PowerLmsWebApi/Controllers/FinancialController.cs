@@ -84,6 +84,8 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.DocFeeRequisitions.Add(model.DocFeeRequisition);
             entity.MakerId = context.User.Id;
             entity.MakeDateTime = OwHelper.WorldNow;
+            entity.OrgId=context.User.OrgId;
+
             _DbContext.SaveChanges();
             result.Id = model.DocFeeRequisition.Id;
             return result;
@@ -107,6 +109,7 @@ namespace PowerLmsWebApi.Controllers
             var entity = _DbContext.Entry(model.DocFeeRequisition);
             entity.Property(c => c.MakeDateTime).IsModified = false;
             entity.Property(c => c.MakerId).IsModified = false;
+            entity.Property(c => c.OrgId).IsModified = false;
             _DbContext.SaveChanges();
             return result;
         }
