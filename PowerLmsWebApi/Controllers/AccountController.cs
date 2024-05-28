@@ -202,23 +202,26 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new CreateAccountReturnDto();
             //检验机构/商户Id合规性
-            var orgIds = model.OrgIds.Distinct().ToArray();
-            if (orgIds.Length != model.OrgIds.Count) return BadRequest($"{nameof(model.OrgIds)} 存在重复键值。");
-            if (orgIds.Length > 0)
+            Guid[] orgIds = null;
+            if (model.OrgIds != null)
             {
-                var merches = _DbContext.Merchants.Where(c => orgIds.Contains(c.Id)).ToArray();
-                var orgs = _DbContext.PlOrganizations.Where(c => orgIds.Contains(c.Id)).ToArray();
-                if (merches.Length + orgs.Length != orgIds.Length) return BadRequest($"{nameof(model.OrgIds)} 至少一个键值的实体不存在。");
-                if ((context.User.State & 4) == 0)  //若非超管
-                    if ((context.User.State & 8) == 0)  //若非商管
-                        return BadRequest("仅超管和商管才可创建用户。");
-                    else //商管
-                    {
-                        if (!_OrganizationManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("商管数据结构损坏——无法找到其所属商户");
-                        if (!orgIds.All(c => _OrganizationManager.GetMerchantIdFromOrgId(c, out var mId) && mId == merchId)) return BadRequest("商户管理员仅可以设置商户和其下属的机构id。");
-                    }
+                orgIds = model.OrgIds.Distinct().ToArray();
+                if (orgIds.Length != model.OrgIds.Count) return BadRequest($"{nameof(model.OrgIds)} 存在重复键值。");
+                if (orgIds.Length > 0)
+                {
+                    var merches = _DbContext.Merchants.Where(c => orgIds.Contains(c.Id)).ToArray();
+                    var orgs = _DbContext.PlOrganizations.Where(c => orgIds.Contains(c.Id)).ToArray();
+                    if (merches.Length + orgs.Length != orgIds.Length) return BadRequest($"{nameof(model.OrgIds)} 至少一个键值的实体不存在。");
+                    if ((context.User.State & 4) == 0)  //若非超管
+                        if ((context.User.State & 8) == 0)  //若非商管
+                            return BadRequest("仅超管和商管才可创建用户。");
+                        else //商管
+                        {
+                            if (!_OrganizationManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("商管数据结构损坏——无法找到其所属商户");
+                            if (!orgIds.All(c => _OrganizationManager.GetMerchantIdFromOrgId(c, out var mId) && mId == merchId)) return BadRequest("商户管理员仅可以设置商户和其下属的机构id。");
+                        }
+                }
             }
-
             var pwd = model.Pwd;
             var b = _AccountManager.CreateNew(model.Item.LoginName, ref pwd, out Guid id, _ServiceProvider, model.Item);
             if (b)
@@ -227,8 +230,9 @@ namespace PowerLmsWebApi.Controllers
                 result.Result = _DbContext.Accounts.Find(id);
 
                 var b1 = _DbContext.PlOrganizations.Select(c => c.Id).Concat(_DbContext.Merchants.Select(c => c.Id)).All(c => model.OrgIds.Contains(c));
-                var rela = orgIds.Select(c => new AccountPlOrganization { UserId = result.Result.Id, OrgId = c });
-                _DbContext.AccountPlOrganizations.AddRange(rela);
+                var rela = orgIds?.Select(c => new AccountPlOrganization { UserId = result.Result.Id, OrgId = c });
+                if (rela != null)
+                    _DbContext.AccountPlOrganizations.AddRange(rela);
             }
             else
             {
@@ -298,7 +302,11 @@ namespace PowerLmsWebApi.Controllers
                 else
                     account.State &= 255 - 8;
             }
-            _DbContext.Entry(account).Property(c => c.PwdHash).IsModified = false;
+            var entityAccount = _DbContext.Entry(account);
+            entityAccount.Property(c => c.PwdHash).IsModified = false;
+            entityAccount.Property(c => c.Token).IsModified = false;
+            entityAccount.Property(c => c.NodeNum).IsModified = false;
+            entityAccount.Property(c => c.OrgId).IsModified = false;
             _DbContext.SaveChanges();
             return result;
         }
