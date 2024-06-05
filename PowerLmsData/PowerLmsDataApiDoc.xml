@@ -1505,7 +1505,17 @@
             源币种。
             </summary>
         </member>
+        <member name="P:PowerLms.Data.PlExchangeRate.SCurrency">
+            <summary>
+            源币种。
+            </summary>
+        </member>
         <member name="P:PowerLms.Data.PlExchangeRate.DCurrencyId">
+            <summary>
+            宿币种。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlExchangeRate.DCurrency">
             <summary>
             宿币种。
             </summary>

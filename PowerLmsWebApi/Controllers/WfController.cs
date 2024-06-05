@@ -147,7 +147,16 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
 
             var operatorId = context.User.Id;
-            var collBase = _DbContext.OwWfNodeItems.Where(c => c.OpertorId == operatorId).Select(c => c.Parent.Parent).Where(c => c.State == model.State).Distinct();
+            byte state = 0;
+            switch (model.State)
+            {
+                case 2:
+                    break;
+                default:
+                    break;
+            };
+            var collBase = _DbContext.OwWfNodeItems.Where(c => c.OpertorId == operatorId).Select(c => c.Parent.Parent).Where(c => c.State == model.State).Distinct()
+                .Include(c => c.Children).ThenInclude(c => c.Children);   //获取相关流程
             var coll = collBase.OrderBy(model.OrderFieldName, model.IsDesc);
 
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
@@ -341,7 +350,7 @@ namespace PowerLmsWebApi.Controllers
     public class GetWfByOpertorIdParamsDto : PagingParamsDtoBase
     {
         /// <summary>
-        /// 过滤流文档状态的参数，
+        /// 过滤流文档状态的参数，0=待审批，1=已审批但仍在流转中，2=已结束的流程。
         /// </summary>
         public byte State { get; set; }
     }

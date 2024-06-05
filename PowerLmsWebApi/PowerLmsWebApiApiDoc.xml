@@ -4453,7 +4453,7 @@
         </member>
         <member name="P:PowerLmsWebApi.Controllers.GetWfByOpertorIdParamsDto.State">
             <summary>
-            过滤流文档状态的参数，
+            过滤流文档状态的参数，0=待审批，1=已审批但仍在流转中，2=已结束的流程。
             </summary>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.GetWfByOpertorIdReturnDto">

@@ -2,6 +2,7 @@
 using OW.Data;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -27,10 +28,24 @@ namespace PowerLms.Data
         public Guid SCurrencyId { get; set; }
 
         /// <summary>
+        /// 源币种。
+        /// </summary>
+        [Comment("源币种码")]
+        [Unicode(false), MaxLength(4)]
+        public string SCurrency { get; set; }
+
+        /// <summary>
         /// 宿币种。
         /// </summary>
         [Comment("宿币种")]
         public Guid DCurrencyId { get; set; }
+
+        /// <summary>
+        /// 宿币种。
+        /// </summary>
+        [Comment("宿币种码")]
+        [Unicode(false), MaxLength(4)]
+        public string DCurrency { get; set; }
 
         /// <summary>
         /// 基准，此处默认为100。

@@ -89,8 +89,14 @@ namespace PowerLmsServer.Managers
                     entity.Property(nameof(ci.CreateBy)).IsModified = false;
                     entity.Property(nameof(ci.CreateDateTime)).IsModified = false;
                 }
-                var orgidProp = entity?.Property("OrgId");
-                if (orgidProp != null) orgidProp.IsModified = false;
+                try
+                {
+                    var orgidProp = entity?.Property("OrgId");
+                    if (orgidProp != null) orgidProp.IsModified = false;
+                }
+                catch (Exception)
+                {
+                }
             }
             return true;
         }

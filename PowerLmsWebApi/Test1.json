@@ -1,18 +1,18 @@
 {
   "TypeGuid": "F3F9B16B-499E-4228-AEC0-FFA5B9F18E9B",
-  "Count": 15,
+  "Count": 30,
   "stk": -1,
   "Count0Reserved": true,
-  "ptid": "9c559895-9a2c-43a7-b793-e879a600487c",
+  "ptid": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
   "Fcps": {
     "Count": {
       "MinValue": 0,
-      "MaxValue": 0,
+      "MaxValue": 30,
       "StepValue": 1,
       "Delay": "00:20:00",
-      "CurrentValue": 15
+      "CurrentValue": 30
     }
   },
-  "name_txt": 10293,
-  "comment_txt": 10294
+  "name_txt": 10180,
+  "comment_txt": 10277
 }

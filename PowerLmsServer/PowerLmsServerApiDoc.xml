@@ -597,6 +597,25 @@
             <param name="user"></param>
             <returns></returns>
         </member>
+        <member name="T:PowerLmsServer.Managers.OwWfManager">
+            <summary>
+            工作流相关功能管理器。
+            </summary>
+        </member>
+        <member name="M:PowerLmsServer.Managers.OwWfManager.#ctor(PowerLmsServer.EfData.PowerLmsUserDbContext)">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
+        <member name="M:PowerLmsServer.Managers.OwWfManager.GetWfNodeItemByOpertorId(System.Guid,System.Byte)">
+            <summary>
+            获取指定人员相关的节点项。
+            </summary>
+            <param name="opertorId">人员Id。</param>
+            <param name="state">1=正等待指定操作者审批，2=指定操作者已审批但仍在流转中，4=指定操作者参与的且已成功结束的流程,8=指定操作者参与的且已失败结束的流程。</param>
+            <returns></returns>
+            <exception cref="T:System.ArgumentOutOfRangeException"><paramref name="state"/> 数值错误。</exception>
+        </member>
         <member name="T:PowerLmsServer.Managers.SystemResourceManager">
             <summary>
             
