@@ -20,6 +20,6 @@ Admin/AddDataDic 和 Admin/AddDataDicCatalog 接口增加实体时可选向下传播。
 240604
 修复保留orgId引发的相关bug。
 汇率使用 币种三字码
+增加接口支持主营业务
 send 首节点，错误的自动对次节点审批了
 增加接口说明 State。
-增加接口支持主营业务

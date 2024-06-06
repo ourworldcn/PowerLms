@@ -2593,12 +2593,12 @@
             财务相关功能控制器。
             </summary>
         </member>
-        <member name="M:PowerLmsWebApi.Controllers.FinancialController.#ctor(PowerLmsServer.Managers.AccountManager,System.IServiceProvider,PowerLmsServer.Managers.EntityManager,PowerLmsServer.EfData.PowerLmsUserDbContext,Microsoft.Extensions.Logging.ILogger{PowerLmsWebApi.Controllers.FinancialController},AutoMapper.IMapper)">
+        <member name="M:PowerLmsWebApi.Controllers.FinancialController.#ctor(PowerLmsServer.Managers.AccountManager,System.IServiceProvider,PowerLmsServer.Managers.EntityManager,PowerLmsServer.EfData.PowerLmsUserDbContext,Microsoft.Extensions.Logging.ILogger{PowerLmsWebApi.Controllers.FinancialController},AutoMapper.IMapper,PowerLmsServer.Managers.OwWfManager)">
             <summary>
             构造函数。Debit 和credit。
             </summary>
         </member>
-        <member name="M:PowerLmsWebApi.Controllers.FinancialController.GetAllDocFeeRequisition(PowerLmsWebApi.Dto.PagingParamsDtoBase,System.Collections.Generic.Dictionary{System.String,System.String})">
+        <member name="M:PowerLmsWebApi.Controllers.FinancialController.GetAllDocFeeRequisition(PowerLmsWebApi.Controllers.GetAllDocFeeRequisitionParamsDto,System.Collections.Generic.Dictionary{System.String,System.String})">
             <summary>
             获取全部业务费用申请单。
             </summary>
@@ -2823,6 +2823,23 @@
         <member name="T:PowerLmsWebApi.Controllers.RemoveDocFeeRequisitionReturnDto">
             <summary>
             标记删除业务费用申请单功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetAllDocFeeRequisitionParamsDto">
+            <summary>
+            获取全部业务费用申请单功能的参数封装类。
+            </summary>
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.GetAllDocFeeRequisitionParamsDto.#ctor">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.GetAllDocFeeRequisitionParamsDto.WfState">
+            <summary>
+            限定流程状态。省略或为null则不限定。若限定流程状态，则操作人默认去当前登录用户。
+            1=正等待指定操作者审批，2=指定操作者已审批但仍在流转中，4=指定操作者参与的且已成功结束的流程,8=指定操作者参与的且已失败结束的流程。
+            12=指定操作者参与的且已结束的流程（包括成功/失败）
             </summary>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.GetAllDocFeeRequisitionReturnDto">

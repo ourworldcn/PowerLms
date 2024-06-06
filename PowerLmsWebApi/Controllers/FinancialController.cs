@@ -19,7 +19,7 @@ namespace PowerLmsWebApi.Controllers
         /// 构造函数。Debit 和credit。
         /// </summary>
         public FinancialController(AccountManager accountManager, IServiceProvider serviceProvider, EntityManager entityManager,
-            PowerLmsUserDbContext dbContext, ILogger<FinancialController> logger, IMapper mapper)
+            PowerLmsUserDbContext dbContext, ILogger<FinancialController> logger, IMapper mapper, OwWfManager wfManager)
         {
             _AccountManager = accountManager;
             _ServiceProvider = serviceProvider;
@@ -27,6 +27,7 @@ namespace PowerLmsWebApi.Controllers
             _DbContext = dbContext;
             _Logger = logger;
             _Mapper = mapper;
+            _WfManager = wfManager;
         }
 
         private AccountManager _AccountManager;
@@ -35,6 +36,7 @@ namespace PowerLmsWebApi.Controllers
         private PowerLmsUserDbContext _DbContext;
         readonly ILogger<FinancialController> _Logger;
         readonly IMapper _Mapper;
+        readonly OwWfManager _WfManager;
 
         #region 业务费用申请单
 
@@ -49,13 +51,17 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetAllDocFeeRequisitionReturnDto> GetAllDocFeeRequisition([FromQuery] PagingParamsDtoBase model,
+        public ActionResult<GetAllDocFeeRequisitionReturnDto> GetAllDocFeeRequisition([FromQuery] GetAllDocFeeRequisitionParamsDto model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllDocFeeRequisitionReturnDto();
-
             var dbSet = _DbContext.DocFeeRequisitions.Where(c => c.OrgId == context.User.OrgId);
+            if (model.WfState.HasValue)  //须限定审批流程状态
+            {
+                var tmpColl = _WfManager.GetWfNodeItemByOpertorId(context.User.Id, model.WfState.Value).Select(c => c.Parent.Parent.DocId);
+                dbSet = dbSet.Where(c => tmpColl.Contains(c.Id));
+            }
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             coll = EfHelper.GenerateWhereAnd(coll, conditional);
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
@@ -84,7 +90,7 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.DocFeeRequisitions.Add(model.DocFeeRequisition);
             entity.MakerId = context.User.Id;
             entity.MakeDateTime = OwHelper.WorldNow;
-            entity.OrgId=context.User.OrgId;
+            entity.OrgId = context.User.OrgId;
 
             _DbContext.SaveChanges();
             result.Id = model.DocFeeRequisition.Id;
@@ -483,6 +489,28 @@ namespace PowerLmsWebApi.Controllers
     public class RemoveDocFeeRequisitionReturnDto : RemoveReturnDtoBase
     {
     }
+
+    /// <summary>
+    /// 获取全部业务费用申请单功能的参数封装类。
+    /// </summary>
+    public class GetAllDocFeeRequisitionParamsDto : PagingParamsDtoBase
+    {
+        /// <summary>
+        /// 构造函数。
+        /// </summary>
+        public GetAllDocFeeRequisitionParamsDto()
+        {
+
+        }
+
+        /// <summary>
+        /// 限定流程状态。省略或为null则不限定。若限定流程状态，则操作人默认去当前登录用户。
+        /// 1=正等待指定操作者审批，2=指定操作者已审批但仍在流转中，4=指定操作者参与的且已成功结束的流程,8=指定操作者参与的且已失败结束的流程。
+        /// 12=指定操作者参与的且已结束的流程（包括成功/失败）
+        /// </summary>
+        public byte? WfState { get; set; }
+    }
+
 
     /// <summary>
     /// 获取所有业务费用申请单功能的返回值封装类。

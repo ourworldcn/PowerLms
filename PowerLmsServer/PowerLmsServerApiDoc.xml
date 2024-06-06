@@ -612,7 +612,8 @@
             获取指定人员相关的节点项。
             </summary>
             <param name="opertorId">人员Id。</param>
-            <param name="state">1=正等待指定操作者审批，2=指定操作者已审批但仍在流转中，4=指定操作者参与的且已成功结束的流程,8=指定操作者参与的且已失败结束的流程。</param>
+            <param name="state">1=正等待指定操作者审批，2=指定操作者已审批但仍在流转中，4=指定操作者参与的且已成功结束的流程,8=指定操作者参与的且已失败结束的流程。
+            12=指定操作者参与的且已结束的流程（包括成功/失败）</param>
             <returns></returns>
             <exception cref="T:System.ArgumentOutOfRangeException"><paramref name="state"/> 数值错误。</exception>
         </member>
