@@ -385,6 +385,18 @@ namespace System.Net.Sockets
         protected virtual void OnHeartbeat(OwRdmDgram datas, EndPoint remote)
         {
         }
+
+        /// <summary>
+        /// 终止指定的id的收发。
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="result"></param>
+        /// <returns></returns>
+        public bool RemoveId(int id,out OwRdmRemoteEntry result)
+        {
+            return _Id2ClientEntry.TryRemove(id, out result);
+        }
+
         #endregion 方法
 
         protected override void Dispose(bool disposing)
