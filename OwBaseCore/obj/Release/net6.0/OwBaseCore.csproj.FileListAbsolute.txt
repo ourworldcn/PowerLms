@@ -38,3 +38,17 @@ E:\Users\zc-home\repos\Bak\OwBaseCore\obj\Release\net6.0\OwBaseCore.dll
 E:\Users\zc-home\repos\Bak\OwBaseCore\obj\Release\net6.0\refint\OwBaseCore.dll
 E:\Users\zc-home\repos\Bak\OwBaseCore\obj\Release\net6.0\OwBaseCore.pdb
 E:\Users\zc-home\repos\Bak\OwBaseCore\obj\Release\net6.0\ref\OwBaseCore.dll
+E:\Users\zc-home\Source\Bak\OwBaseCore\bin\Release\net6.0\OwBaseCore.deps.json
+E:\Users\zc-home\Source\Bak\OwBaseCore\bin\Release\net6.0\OwBaseCore.dll
+E:\Users\zc-home\Source\Bak\OwBaseCore\bin\Release\net6.0\OwBaseCore.pdb
+E:\Users\zc-home\Source\Bak\OwBaseCore\bin\Release\net6.0\OwBaseCoreApiDoc.xml
+E:\Users\zc-home\Source\Bak\OwBaseCore\obj\Release\net6.0\OwBaseCore.csproj.AssemblyReference.cache
+E:\Users\zc-home\Source\Bak\OwBaseCore\obj\Release\net6.0\OwBaseCore.GeneratedMSBuildEditorConfig.editorconfig
+E:\Users\zc-home\Source\Bak\OwBaseCore\obj\Release\net6.0\OwBaseCore.AssemblyInfoInputs.cache
+E:\Users\zc-home\Source\Bak\OwBaseCore\obj\Release\net6.0\OwBaseCore.AssemblyInfo.cs
+E:\Users\zc-home\Source\Bak\OwBaseCore\obj\Release\net6.0\OwBaseCore.csproj.CoreCompileInputs.cache
+E:\Users\zc-home\Source\Bak\OwBaseCore\obj\Release\net6.0\OwBaseCore.sourcelink.json
+E:\Users\zc-home\Source\Bak\OwBaseCore\obj\Release\net6.0\OwBaseCore.dll
+E:\Users\zc-home\Source\Bak\OwBaseCore\obj\Release\net6.0\refint\OwBaseCore.dll
+E:\Users\zc-home\Source\Bak\OwBaseCore\obj\Release\net6.0\OwBaseCore.pdb
+E:\Users\zc-home\Source\Bak\OwBaseCore\obj\Release\net6.0\ref\OwBaseCore.dll
