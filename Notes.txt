@@ -23,3 +23,7 @@ Admin/AddDataDic 和 Admin/AddDataDicCatalog 接口增加实体时可选向下传播。
 增加接口支持主营业务
 send 首节点，错误的自动对次节点审批了
 增加接口说明 State。
+
+240609
+增加接口 返回值增加审批状态及单据字段过滤，增加工作号条件
+修改 send Bug
