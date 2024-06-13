@@ -613,9 +613,33 @@
             </summary>
             <param name="opertorId">人员Id。</param>
             <param name="state">1=正等待指定操作者审批，2=指定操作者已审批但仍在流转中，4=指定操作者参与的且已成功结束的流程,8=指定操作者参与的且已失败结束的流程。
-            12=指定操作者参与的且已结束的流程（包括成功/失败）</param>
+            12=指定操作者参与的且已结束的流程（包括成功/失败）,15=不限定状态</param>
             <returns></returns>
             <exception cref="T:System.ArgumentOutOfRangeException"><paramref name="state"/> 数值错误。</exception>
+        </member>
+        <member name="M:PowerLmsServer.Managers.OwWfManager.GetFlow(System.Guid,System.Nullable{System.Guid},PowerLms.Data.OwWfTemplate)">
+            <summary>
+            根据当前操作人和下一个操作人，获得整个流程的节点。
+            </summary>
+            <param name="currentOpertorId"></param>
+            <param name="nextOpertorId">下一个操作人，null表示没有下一个操作人，也就是 <paramref name="currentOpertorId"/>是最后一个节点的操作人。</param>
+            <param name="template"></param>
+            <returns></returns>
+        </member>
+        <member name="M:PowerLmsServer.Managers.OwWfManager.GetFirstNodes(PowerLms.Data.OwWfTemplate)">
+            <summary>
+            获取模板中所有首节点。
+            </summary>
+            <param name="template"></param>
+            <returns></returns>
+        </member>
+        <member name="M:PowerLmsServer.Managers.OwWfManager.Contains(System.Guid,PowerLms.Data.OwWfTemplateNode)">
+            <summary>
+            指定操作人是否在指定的节点中。
+            </summary>
+            <param name="opertorId"></param>
+            <param name="node"></param>
+            <returns></returns>
         </member>
         <member name="T:PowerLmsServer.Managers.SystemResourceManager">
             <summary>

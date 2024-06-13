@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using NPOI.HSSF.UserModel;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
@@ -22,13 +23,16 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="dbContext"></param>
         /// <param name="mapper"></param>
         /// <param name="entityManager"></param>
-        public WfController(IServiceProvider serviceProvider, AccountManager accountManager, PowerLmsUserDbContext dbContext, IMapper mapper, EntityManager entityManager)
+        /// <param name="owWfManager"></param>
+        public WfController(IServiceProvider serviceProvider, AccountManager accountManager, PowerLmsUserDbContext dbContext, IMapper mapper, EntityManager entityManager,
+            OwWfManager owWfManager)
         {
             _ServiceProvider = serviceProvider;
             _AccountManager = accountManager;
             _DbContext = dbContext;
             _Mapper = mapper;
             _EntityManager = entityManager;
+            _WfManager = owWfManager;
         }
 
         private IServiceProvider _ServiceProvider;
@@ -36,6 +40,7 @@ namespace PowerLmsWebApi.Controllers
         private PowerLmsUserDbContext _DbContext;
         EntityManager _EntityManager;
         IMapper _Mapper;
+        OwWfManager _WfManager;
 
         /// <summary>
         /// 获取文档相关的流程信息。
@@ -214,13 +219,14 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new WfSendReturnDto();
+            var now = OwHelper.WorldNow;
 
             var template = _DbContext.WfTemplates.Include(c => c.Children).ThenInclude(c => c.Children).Single(c => c.Id == model.TemplateId);
             if (template is null) return NotFound();
 
-            //var wf = _DbContext.OwWfs.Where(c => c.DocId == model.DocId && !c.Children.Any(c => !c.Children.Any(d => d.IsSuccess == false))).FirstOrDefault();  //当前流程
-            var wf = _DbContext.OwWfs.Where(c => c.DocId == model.DocId && c.TemplateId == model.TemplateId).FirstOrDefault();  //当前流程
-
+            var wfs = _DbContext.OwWfs.Where(c => c.DocId == model.DocId && c.TemplateId == model.TemplateId && c.State == 0);  //所有可能的流程
+            if (wfs.Count() > 1) return BadRequest("一个文档针对一个模板只能有一个流程");
+            var wf = wfs.FirstOrDefault();
             OwWfNode currentNode = default;   //当前节点
             OwWfTemplateNode ttCurrentNode = default; //当前节点的模板
             if (wf is null)  //若没有流程正在执行
@@ -230,15 +236,13 @@ namespace PowerLmsWebApi.Controllers
                 {
                     DocId = model.DocId,
                     TemplateId = model.TemplateId,
+                    State = 0,
                 };
-                var list = template.Children.ToList();
-                var noneFirst = list.Where(c => list.Any(d => d.NextId == c.Id)).ToList();   //非首节点集合
-                noneFirst.ForEach(c => list.Remove(c));  //首节点集合
-                ttCurrentNode = list.FirstOrDefault(c => c.Children.Any(d => d.OpertorId == context.User.Id));   //使用的节点模板
+                ttCurrentNode = _WfManager.GetFirstNodes(template).SingleOrDefault(c => _WfManager.Contains(context.User.Id, c)); //首节点模板
 
                 currentNode = new OwWfNode
                 {
-                    ArrivalDateTime = OwHelper.WorldNow,
+                    ArrivalDateTime = now,
                     Parent = wf,
                     ParentId = wf.Id,
                     TemplateId = ttCurrentNode.Id,
@@ -262,15 +266,19 @@ namespace PowerLmsWebApi.Controllers
                 return BadRequest("文档所处流程已经结束。");
             }
             currentNode ??= wf.Children.OrderBy(c => c.ArrivalDateTime).Last();   //当前节点
+            ttCurrentNode = _DbContext.WfTemplateNodes.Find(currentNode.TemplateId);  //当前节点的模板
+
             var currentNodeItem = currentNode.Children.FirstOrDefault(c => c.OperationKind == 0 && c.OpertorId == context.User.Id); //当前审批人
             if (currentNodeItem is null)
                 return BadRequest("非法的投递目标");
 
-            ttCurrentNode ??= _DbContext.WfTemplateNodes.Find(currentNode.TemplateId);  //当前节点的模板
-            if (model.NextOpertorId is not null)    //若需要流转
+            if (model.NextOpertorId is Guid nextOpertorId)    //若需要流转
             {
-                //var tNode = template.Children.First(c => c.Id == currentNode.TemplateId);   //当前节点模板
-                var nextTItem = _DbContext.WfTemplateNodeItems.FirstOrDefault(c => c.ParentId == ttCurrentNode.NextId && c.OpertorId == model.NextOpertorId);    //下一个操作人的模板
+                currentNodeItem.IsSuccess = true;
+                currentNodeItem.Comment = model.Comment;
+                
+                var nextTItem = _DbContext.WfTemplateNodeItems.FirstOrDefault(c => c.ParentId == ttCurrentNode.NextId &&
+                    c.OpertorId == nextOpertorId);    //下一个操作人的模板
                 if (nextTItem == null)
                 {
                     return BadRequest($"指定下一个操作人Id={model.NextOpertorId},但它不是合法的下一个操作人。");
@@ -282,7 +290,7 @@ namespace PowerLmsWebApi.Controllers
                 {
                     ParentId = wf.Id,
                     Parent = wf,
-                    ArrivalDateTime = OwHelper.WorldNow + TimeSpan.FromMilliseconds(1), //避免同时到达
+                    ArrivalDateTime = now + TimeSpan.FromMilliseconds(1), //避免同时到达
                     TemplateId = nextTNode.Id,
                 };
 
@@ -290,7 +298,7 @@ namespace PowerLmsWebApi.Controllers
                 var nextItem = new OwWfNodeItem
                 {
                     Comment = null,
-                    IsSuccess = true,
+                    IsSuccess = null,
                     OperationKind = 0,
                     OpertorId = model.NextOpertorId,
                     OpertorDisplayName = nextOpId.DisplayName,

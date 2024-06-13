@@ -2610,6 +2610,18 @@
             <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
             <response code="401">无效令牌。</response>  
         </member>
+        <member name="M:PowerLmsWebApi.Controllers.FinancialController.GetAllDocFeeRequisitionWithWf(PowerLmsWebApi.Controllers.GetAllDocFeeRequisitionWithWfParamsDto,System.Collections.Generic.Dictionary{System.String,System.String})">
+            <summary>
+            获取当前用户相关的业务费用申请单和审批流状态。
+            </summary>
+            <param name="model"></param>
+            <param name="conditional">查询的条件。实体属性名不区分大小写。
+            通用条件写法:所有条件都是字符串，对区间的写法是用逗号分隔（字符串类型暂时不支持区间且都是模糊查询）如"2024-1-1,2024-1-2"。
+            对强制取null的约束，则写"null"。</param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
         <member name="M:PowerLmsWebApi.Controllers.FinancialController.AddDocFeeRequisition(PowerLmsWebApi.Controllers.AddDocFeeRequisitionParamsDto)">
             <summary>
             增加新业务费用申请单。
@@ -2823,6 +2835,23 @@
         <member name="T:PowerLmsWebApi.Controllers.RemoveDocFeeRequisitionReturnDto">
             <summary>
             标记删除业务费用申请单功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetAllDocFeeRequisitionWithWfParamsDto">
+            <summary>
+            获取当前用户相关的业务费用申请单和审批流状态功能的参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.GetAllDocFeeRequisitionWithWfParamsDto.WfState">
+            <summary>
+            限定流程状态。省略或为null则不限定。若限定流程状态，则操作人默认去当前登录用户。
+            1=正等待指定操作者审批，2=指定操作者已审批但仍在流转中，4=指定操作者参与的且已成功结束的流程,8=指定操作者参与的且已失败结束的流程。
+            12=指定操作者参与的且已结束的流程（包括成功/失败）
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetAllDocFeeRequisitionWithWfReturnDto">
+            <summary>
+            获取当前用户相关的业务费用申请单和审批流状态的返回值封装类。
             </summary>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.GetAllDocFeeRequisitionParamsDto">
@@ -4367,7 +4396,7 @@
             工作流实例相关控制器。
             </summary>
         </member>
-        <member name="M:PowerLmsWebApi.Controllers.WfController.#ctor(System.IServiceProvider,PowerLmsServer.Managers.AccountManager,PowerLmsServer.EfData.PowerLmsUserDbContext,AutoMapper.IMapper,PowerLmsServer.Managers.EntityManager)">
+        <member name="M:PowerLmsWebApi.Controllers.WfController.#ctor(System.IServiceProvider,PowerLmsServer.Managers.AccountManager,PowerLmsServer.EfData.PowerLmsUserDbContext,AutoMapper.IMapper,PowerLmsServer.Managers.EntityManager,PowerLmsServer.Managers.OwWfManager)">
             <summary>
             构造函数。
             </summary>
@@ -4376,6 +4405,7 @@
             <param name="dbContext"></param>
             <param name="mapper"></param>
             <param name="entityManager"></param>
+            <param name="owWfManager"></param>
         </member>
         <member name="M:PowerLmsWebApi.Controllers.WfController.GetWfByDocId(PowerLmsWebApi.Controllers.GetWfParamsDto)">
             <summary>

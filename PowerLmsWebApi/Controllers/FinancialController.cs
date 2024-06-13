@@ -70,6 +70,40 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
+        /// 获取当前用户相关的业务费用申请单和审批流状态。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="conditional">查询的条件。实体属性名不区分大小写。
+        /// 通用条件写法:所有条件都是字符串，对区间的写法是用逗号分隔（字符串类型暂时不支持区间且都是模糊查询）如"2024-1-1,2024-1-2"。
+        /// 对强制取null的约束，则写"null"。</param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        public ActionResult<GetAllDocFeeRequisitionWithWfReturnDto> GetAllDocFeeRequisitionWithWf([FromQuery] GetAllDocFeeRequisitionWithWfParamsDto model,
+            [FromQuery] Dictionary<string, string> conditional = null)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetAllDocFeeRequisitionWithWfReturnDto();
+            var dbSet = _DbContext.DocFeeRequisitions.Where(c => c.OrgId == context.User.OrgId);
+            if (model.WfState.HasValue)  //须限定审批流程状态
+            {
+                var tmpColl = _WfManager.GetWfNodeItemByOpertorId(context.User.Id, model.WfState.Value).Select(c => c.Parent.Parent.DocId);
+                dbSet = dbSet.Where(c => tmpColl.Contains(c.Id));
+            }
+            else
+            {
+                var tmpColl = _WfManager.GetWfNodeItemByOpertorId(context.User.Id, 15).Select(c => c.Parent.Parent.DocId);
+                dbSet = dbSet.Where(c => tmpColl.Contains(c.Id));
+            }
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
+            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
+            _Mapper.Map(prb, result);
+            return result;
+        }
+
+        /// <summary>
         /// 增加新业务费用申请单。
         /// </summary>
         /// <param name="model"></param>
@@ -487,6 +521,26 @@ namespace PowerLmsWebApi.Controllers
     /// 标记删除业务费用申请单功能的返回值封装类。
     /// </summary>
     public class RemoveDocFeeRequisitionReturnDto : RemoveReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 获取当前用户相关的业务费用申请单和审批流状态功能的参数封装类。
+    /// </summary>
+    public class GetAllDocFeeRequisitionWithWfParamsDto : PagingParamsDtoBase
+    {
+        /// <summary>
+        /// 限定流程状态。省略或为null则不限定。若限定流程状态，则操作人默认去当前登录用户。
+        /// 1=正等待指定操作者审批，2=指定操作者已审批但仍在流转中，4=指定操作者参与的且已成功结束的流程,8=指定操作者参与的且已失败结束的流程。
+        /// 12=指定操作者参与的且已结束的流程（包括成功/失败）
+        /// </summary>
+        public byte? WfState { get; set; }
+    }
+
+    /// <summary>
+    /// 获取当前用户相关的业务费用申请单和审批流状态的返回值封装类。
+    /// </summary>
+    public class GetAllDocFeeRequisitionWithWfReturnDto : PagingReturnDtoBase<DocFeeRequisition>
     {
     }
 
