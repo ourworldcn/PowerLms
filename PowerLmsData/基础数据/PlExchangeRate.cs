@@ -22,9 +22,10 @@ namespace PowerLms.Data
         public Guid BusinessTypeId { get; set; }
 
         /// <summary>
-        /// 源币种。
+        /// 源币种。废弃，请使用SCurrency属性。
         /// </summary>
-        [Comment("源币种")]
+        [Comment("源币种.废弃，请使用SCurrency属性。")]
+        [Obsolete]
         public Guid SCurrencyId { get; set; }
 
         /// <summary>
@@ -35,9 +36,10 @@ namespace PowerLms.Data
         public string SCurrency { get; set; }
 
         /// <summary>
-        /// 宿币种。
+        /// 宿币种。废弃，请使用 DCurrency 属性。
         /// </summary>
-        [Comment("宿币种")]
+        [Comment("宿币种。废弃，请使用 DCurrency 属性。")]
+        [Obsolete]
         public Guid DCurrencyId { get; set; }
 
         /// <summary>

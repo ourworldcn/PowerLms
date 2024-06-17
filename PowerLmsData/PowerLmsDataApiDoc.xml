@@ -1502,7 +1502,7 @@
         </member>
         <member name="P:PowerLms.Data.PlExchangeRate.SCurrencyId">
             <summary>
-            源币种。
+            源币种。废弃，请使用SCurrency属性。
             </summary>
         </member>
         <member name="P:PowerLms.Data.PlExchangeRate.SCurrency">
@@ -1512,7 +1512,7 @@
         </member>
         <member name="P:PowerLms.Data.PlExchangeRate.DCurrencyId">
             <summary>
-            宿币种。
+            宿币种。废弃，请使用 DCurrency 属性。
             </summary>
         </member>
         <member name="P:PowerLms.Data.PlExchangeRate.DCurrency">
@@ -2631,9 +2631,19 @@
             所有操作人的详细信息集合。
             </summary>
         </member>
+        <member name="P:PowerLms.Data.OwWf.FirstNodeId">
+            <summary>
+            第一个节点的Id。
+            </summary>
+        </member>
         <member name="T:PowerLms.Data.OwWfNode">
             <summary>
             记录工作流实例节点的表。
+            </summary>
+        </member>
+        <member name="M:PowerLms.Data.OwWfNode.#ctor">
+            <summary>
+            构造函数。
             </summary>
         </member>
         <member name="P:PowerLms.Data.OwWfNode.ParentId">
@@ -2930,7 +2940,7 @@
         </member>
         <member name="P:PowerLms.Data.DocFeeRequisition.Amount">
             <summary>
-            保留未用！金额,可以不用实体字段，明细合计显示也行.
+            金额,所有子项的金额的求和。
             </summary>
         </member>
         <member name="P:PowerLms.Data.DocFeeRequisition.Remark">

@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using NPOI.SS.Formula.Functions;
 using NuGet.Packaging;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
@@ -99,7 +100,22 @@ namespace PowerLmsWebApi.Controllers
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             coll = EfHelper.GenerateWhereAnd(coll, conditional);
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
-            _Mapper.Map(prb, result);
+
+            //后处理
+            var ids = prb.Result.Select(c => c.Id).ToList();
+            var wfs = _DbContext.OwWfs.Where(c => ids.Contains(c.DocId.Value)).ToArray();
+
+            prb.Result.ForEach(c =>
+            {
+                result.Result.Add(new GetAllDocFeeRequisitionWithWfItemDto()
+                {
+                    Requisition = c,
+                    Wf = _Mapper.Map<OwWfDto>(wfs.FirstOrDefault(d => d.DocId == c.Id)),
+                });
+            });
+            result.Total = prb.Total;
+            //_Mapper.Map(prb, result);
+
             return result;
         }
 
@@ -282,7 +298,16 @@ namespace PowerLmsWebApi.Controllers
             var entity = model.DocFeeRequisitionItem;
             entity.GenerateNewId();
             _DbContext.DocFeeRequisitionItems.Add(model.DocFeeRequisitionItem);
+            var req = _DbContext.DocFeeRequisitions.Find(model.DocFeeRequisitionItem.ParentId);
+            //计算合计
+            var parent = _DbContext.DocFeeRequisitions.Find(model.DocFeeRequisitionItem.ParentId);
+            if (parent is null) return BadRequest("没有找到 指定的 ParentId 实体");
+            var collSum = _DbContext.DocFeeRequisitionItems.Where(c => c.ParentId == model.DocFeeRequisitionItem.ParentId && c.Id != model.DocFeeRequisitionItem.Id);
+            var amount = collSum.Sum(c => c.Amount) + model.DocFeeRequisitionItem.Amount;
+            parent.Amount = amount;
+
             _DbContext.SaveChanges();
+
             result.Id = model.DocFeeRequisitionItem.Id;
             return result;
         }
@@ -303,6 +328,12 @@ namespace PowerLmsWebApi.Controllers
             if (!_EntityManager.Modify(new[] { model.DocFeeRequisitionItem })) return NotFound();
             //忽略不可更改字段
             var entity = _DbContext.Entry(model.DocFeeRequisitionItem);
+            //计算合计
+            var parent = _DbContext.DocFeeRequisitions.Find(model.DocFeeRequisitionItem.ParentId);
+            if (parent is null) return BadRequest("没有找到 指定的 ParentId 实体");
+            var collSum = _DbContext.DocFeeRequisitionItems.Where(c => c.ParentId == model.DocFeeRequisitionItem.ParentId && c.Id != model.DocFeeRequisitionItem.Id);
+            var amount = collSum.Sum(c => c.Amount) + model.DocFeeRequisitionItem.Amount;
+            parent.Amount = amount;
             _DbContext.SaveChanges();
             return result;
         }
@@ -325,6 +356,12 @@ namespace PowerLmsWebApi.Controllers
             var item = dbSet.Find(id);
             if (item is null) return BadRequest();
             _EntityManager.Remove(item);
+            //计算合计
+            var parent = _DbContext.DocFeeRequisitions.Find(item.ParentId);
+            if (parent is null) return BadRequest("没有找到 指定的 ParentId 实体");
+            var collSum = _DbContext.DocFeeRequisitionItems.Where(c => c.ParentId == item.ParentId && c.Id != item.Id);
+            var amount = collSum.Sum(c => c.Amount);
+            parent.Amount = amount;
             _DbContext.SaveChanges();
             return result;
         }
@@ -538,10 +575,35 @@ namespace PowerLmsWebApi.Controllers
     }
 
     /// <summary>
+    /// 
+    /// </summary>
+    public class GetAllDocFeeRequisitionWithWfItemDto
+    {
+        /// <summary>
+        /// 申请单对象。
+        /// </summary>
+        public DocFeeRequisition Requisition { get; set; }
+
+        /// <summary>
+        /// 相关流程对象。
+        /// </summary>
+        public OwWfDto Wf { get; set; }
+    }
+
+    /// <summary>
     /// 获取当前用户相关的业务费用申请单和审批流状态的返回值封装类。
     /// </summary>
-    public class GetAllDocFeeRequisitionWithWfReturnDto : PagingReturnDtoBase<DocFeeRequisition>
+    public class GetAllDocFeeRequisitionWithWfReturnDto
     {
+        /// <summary>
+        /// 集合元素的最大总数量。
+        /// </summary>
+        public int Total { get; set; }
+
+        /// <summary>
+        /// 返回的集合。
+        /// </summary>
+        public List<GetAllDocFeeRequisitionWithWfItemDto> Result { get; set; } = new List<GetAllDocFeeRequisitionWithWfItemDto>();
     }
 
     /// <summary>

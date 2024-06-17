@@ -247,7 +247,9 @@ namespace PowerLmsWebApi.Controllers
                     ParentId = wf.Id,
                     TemplateId = ttCurrentNode.Id,
                 };
+                wf.FirstNodeId = currentNode.Id;
                 wf.Children.Add(currentNode);
+
                 var firstItem = new OwWfNodeItem
                 {
                     Comment = model.Comment,

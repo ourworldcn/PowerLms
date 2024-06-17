@@ -41,7 +41,7 @@ namespace PowerLms.Data
         /// <summary>
         /// 该工作流所处状态。0=0流转中，1=成功完成，2=已被终止。未来可能有其它状态。
         /// </summary>
-        [Comment("该工作流所处状态。0=流转中，1=成功完成，2=已被终止。未来可能有其它状态。")]
+        [Comment("该工作流所处状态。0=流转中，1=成功完成，2=已被终止（失败）。未来可能有其它状态。")]
         public byte State { get; set; }
 
         /// <summary>
@@ -56,6 +56,11 @@ namespace PowerLms.Data
         /// 所有操作人的详细信息集合。
         /// </summary>
         public virtual List<OwWfNode> Children { get; set; } = new List<OwWfNode>();
+
+        /// <summary>
+        /// 第一个节点的Id。
+        /// </summary>
+        public Guid? FirstNodeId { get; set; }
         #endregion 导航属性
 
     }
@@ -67,6 +72,14 @@ namespace PowerLms.Data
     [Table("OwWfNodes")]
     public class OwWfNode : GuidKeyObjectBase
     {
+        /// <summary>
+        /// 构造函数。
+        /// </summary>
+        public OwWfNode()
+        {
+            
+        }
+
         #region 导航属性
         /// <summary>
         /// 流程Id。

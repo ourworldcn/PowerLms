@@ -124,9 +124,9 @@ namespace PowerLms.Data
         public string Currency { get; set; }
 
         /// <summary>
-        /// 保留未用！金额,可以不用实体字段，明细合计显示也行.
+        /// 金额,所有子项的金额的求和。
         /// </summary>
-        [Comment("金额,可以不用实体字段，明细合计显示也行.")]
+        [Comment("金额,所有子项的金额的求和。")]
         [Precision(18, 4)]
         public decimal Amount { get; set; }
 

@@ -2849,9 +2849,34 @@
             12=指定操作者参与的且已结束的流程（包括成功/失败）
             </summary>
         </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetAllDocFeeRequisitionWithWfItemDto">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.GetAllDocFeeRequisitionWithWfItemDto.Requisition">
+            <summary>
+            申请单对象。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.GetAllDocFeeRequisitionWithWfItemDto.Wf">
+            <summary>
+            相关流程对象。
+            </summary>
+        </member>
         <member name="T:PowerLmsWebApi.Controllers.GetAllDocFeeRequisitionWithWfReturnDto">
             <summary>
             获取当前用户相关的业务费用申请单和审批流状态的返回值封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.GetAllDocFeeRequisitionWithWfReturnDto.Total">
+            <summary>
+            集合元素的最大总数量。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.GetAllDocFeeRequisitionWithWfReturnDto.Result">
+            <summary>
+            返回的集合。
             </summary>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.GetAllDocFeeRequisitionParamsDto">
