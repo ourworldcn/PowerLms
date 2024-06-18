@@ -113,7 +113,7 @@ namespace OW.Data
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="queryable"></param>
-        /// <param name="conditional"></param>
+        /// <param name="conditional">条件集合，为空集合则立即返回 <paramref name="queryable"/> </param>
         /// <returns>返回的可查询接口，null表示出错。</returns>
         public static IQueryable<T> GenerateWhereAnd<T>(IQueryable<T> queryable, IDictionary<string, string> conditional) where T : class
         {
