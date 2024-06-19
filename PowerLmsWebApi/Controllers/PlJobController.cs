@@ -2,11 +2,13 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using NPOI.SS.Formula.Functions;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
 using System.Net;
+using System.Threading.Tasks.Dataflow;
 using static PowerLmsWebApi.Controllers.GetDocBillsByJobIdReturnDto;
 
 namespace PowerLmsWebApi.Controllers
@@ -488,6 +490,46 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
+        /// 按复杂的多表条件返回费用。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="conditional">支持的查询条件字典，键的写法须在前加实体名用.分隔，如 PlJob.JobNo 表示工作对象的工作号；目前支持的实体有DocFee,DocBill,PlJob。
+        /// 值的写法和一般条件一致。</param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        public ActionResult<GetDocFeeReturnDto> GetDocFee([FromQuery] GetDocFeeParamsDto model, [FromQuery] Dictionary<string, string> conditional = null)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+
+            string[] entityNames = new string[] { nameof(DocFee), nameof(DocBill), nameof(PlJob) };
+            var result = new GetDocFeeReturnDto();
+
+            var keyJob = conditional.Where(c => c.Key.StartsWith(nameof(PlJob) + "."));
+            var dicJob = new Dictionary<string, string>(keyJob.Select(c => new KeyValuePair<string, string>(c.Key.Replace(nameof(PlJob) + ".", string.Empty), c.Value)));
+            var collJob = EfHelper.GenerateWhereAnd(_DbContext.PlJobs, dicJob).Where(c => c.OrgId == context.User.OrgId);
+
+            var keyBill = conditional.Where(c => c.Key.StartsWith(nameof(DocBill) + "."));
+            var dicBill = new Dictionary<string, string>(keyBill.Select(c => new KeyValuePair<string, string>(c.Key.Replace(nameof(DocBill) + ".", string.Empty), c.Value)));
+            var collBill = EfHelper.GenerateWhereAnd(_DbContext.DocBills, dicBill);
+
+            var keyDocFee = conditional.Where(c => c.Key.StartsWith(nameof(DocFee) + "."));
+            var dicDocFee = new Dictionary<string, string>(keyDocFee.Select(c => new KeyValuePair<string, string>(c.Key.Replace(nameof(DocFee) + ".", string.Empty), c.Value)));
+            var collDocFee = EfHelper.GenerateWhereAnd(_DbContext.DocFees, dicDocFee);
+
+            var collBase = from fee in collDocFee
+                           join job in collJob on fee.JobId equals job.Id
+                           join bill in collBill on fee.BillId equals bill.Id
+                           select fee;
+            collBase = collBase.OrderBy(model.OrderFieldName, model.IsDesc);    //18210644348
+            collBase = collBase.Skip(model.StartIndex);
+            if (model.Count > -1)
+                collBase = collBase.Take(model.Count);
+            result.Result.AddRange(collBase);
+            return result;
+        }
+
+        /// <summary>
         /// 增加新业务单的费用单。
         /// </summary>
         /// <param name="model"></param>
@@ -725,6 +767,29 @@ namespace PowerLmsWebApi.Controllers
         }
 
         #endregion 业务单的账单
+    }
+
+    /// <summary>
+    /// 按复杂的多表条件返回费用功能的返回值封装类。
+    /// </summary>
+    public class GetDocFeeReturnDto
+    {
+        /// <summary>
+        /// 集合元素的最大总数量。
+        /// </summary>
+        public int Total { get; set; }
+
+        /// <summary>
+        /// 返回的集合。
+        /// </summary>
+        public List<DocFee> Result { get; set; } = new List<DocFee>();
+    }
+
+    /// <summary>
+    /// 按复杂的多表条件返回费用功能的参数封装类。
+    /// </summary>
+    public class GetDocFeeParamsDto : PagingParamsDtoBase
+    {
     }
 
     /// <summary>

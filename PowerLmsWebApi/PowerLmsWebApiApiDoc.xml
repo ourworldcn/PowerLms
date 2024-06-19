@@ -3753,6 +3753,17 @@
             <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
             <response code="401">无效令牌。</response>  
         </member>
+        <member name="M:PowerLmsWebApi.Controllers.PlJobController.GetDocFee(PowerLmsWebApi.Controllers.GetDocFeeParamsDto,System.Collections.Generic.Dictionary{System.String,System.String})">
+            <summary>
+            按复杂的多表条件返回费用。
+            </summary>
+            <param name="model"></param>
+            <param name="conditional">支持的查询条件字典，键的写法须在前加实体名用.分隔，如 PlJob.JobNo 表示工作对象的工作号；目前支持的实体有DocFee,DocBill,PlJob。
+            值的写法和一般条件一致。</param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
         <member name="M:PowerLmsWebApi.Controllers.PlJobController.AddDocFee(PowerLmsWebApi.Controllers.AddDocFeeParamsDto)">
             <summary>
             增加新业务单的费用单。
@@ -3834,6 +3845,26 @@
             <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
             <response code="401">无效令牌。</response>  
             <response code="404">至少有一个指定Id的业务不存在。</response>  
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetDocFeeReturnDto">
+            <summary>
+            按复杂的多表条件返回费用功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.GetDocFeeReturnDto.Total">
+            <summary>
+            集合元素的最大总数量。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.GetDocFeeReturnDto.Result">
+            <summary>
+            返回的集合。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetDocFeeParamsDto">
+            <summary>
+            按复杂的多表条件返回费用功能的参数封装类。
+            </summary>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.AuditDocFeeParamsDto">
             <summary>
