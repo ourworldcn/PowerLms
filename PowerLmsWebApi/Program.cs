@@ -8,6 +8,7 @@ using OW;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
+using PowerLmsWebApi;
 using PowerLmsWebApi.Middleware;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -147,24 +148,6 @@ internal class Program
         #endregion 配置 AutoMapper
 
         return builder;
-    }
-
-    /// <summary>
-    /// 海关日期时间格式(格式类似2009-06-15 13:45:30.000)。
-    /// </summary>
-    public class CustomsJsonConverter :System.Text.Json.Serialization.JsonConverter<DateTime>
-    {
-        public override DateTime Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-        {
-            var str = reader.GetString();
-            return DateTime.Parse(str);
-        }
-
-        public override void Write(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)
-        {
-            writer.WriteStringValue(value.ToString("yyyy-MM-dd HH:mm:ss.fff"));
-        }
-
     }
 
 
