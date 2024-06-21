@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
+using Newtonsoft.Json;
 using OW;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
@@ -10,6 +11,7 @@ using PowerLmsServer.Managers;
 using PowerLmsWebApi.Middleware;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 using static Org.BouncyCastle.Math.EC.ECCurve;
 
 
@@ -87,9 +89,11 @@ internal class Program
         {
             options.EnableForHttps = true;
         });
-
-        services.AddControllers();
-
+        //JsonSerializerSettings settings = new JsonSerializerSettings() { DateFormatString=""};
+        services.AddControllers().AddJsonOptions(opt =>
+        {
+            opt.JsonSerializerOptions.Converters.Add(new CustomsJsonConverter());
+        });
         #region 配置Swagger
         // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
         builder.Services.AddEndpointsApiExplorer();
@@ -144,5 +148,25 @@ internal class Program
 
         return builder;
     }
+
+    /// <summary>
+    /// 海关日期时间格式(格式类似2009-06-15 13:45:30.000)。
+    /// </summary>
+    public class CustomsJsonConverter :System.Text.Json.Serialization.JsonConverter<DateTime>
+    {
+        public override DateTime Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            var str = reader.GetString();
+            return DateTime.Parse(str);
+        }
+
+        public override void Write(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)
+        {
+            writer.WriteStringValue(value.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+        }
+
+    }
+
+
 }
 

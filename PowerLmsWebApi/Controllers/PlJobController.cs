@@ -508,20 +508,22 @@ namespace PowerLmsWebApi.Controllers
 
             var keyJob = conditional.Where(c => c.Key.StartsWith(nameof(PlJob) + "."));
             var dicJob = new Dictionary<string, string>(keyJob.Select(c => new KeyValuePair<string, string>(c.Key.Replace(nameof(PlJob) + ".", string.Empty), c.Value)));
-            var collJob = EfHelper.GenerateWhereAnd(_DbContext.PlJobs, dicJob).Where(c => c.OrgId == context.User.OrgId);
+            var collJob = EfHelper.GenerateWhereAnd(_DbContext.PlJobs.Where(c => c.OrgId == context.User.OrgId), dicJob);
 
             var keyBill = conditional.Where(c => c.Key.StartsWith(nameof(DocBill) + "."));
             var dicBill = new Dictionary<string, string>(keyBill.Select(c => new KeyValuePair<string, string>(c.Key.Replace(nameof(DocBill) + ".", string.Empty), c.Value)));
             var collBill = EfHelper.GenerateWhereAnd(_DbContext.DocBills, dicBill);
 
+            var jobIds = collJob.Select(c => c.Id).ToArray();
             var keyDocFee = conditional.Where(c => c.Key.StartsWith(nameof(DocFee) + "."));
             var dicDocFee = new Dictionary<string, string>(keyDocFee.Select(c => new KeyValuePair<string, string>(c.Key.Replace(nameof(DocFee) + ".", string.Empty), c.Value)));
-            var collDocFee = EfHelper.GenerateWhereAnd(_DbContext.DocFees, dicDocFee);
+            var collDocFee = EfHelper.GenerateWhereAnd(_DbContext.DocFees.Where(c => jobIds.Contains(c.JobId.Value)), dicDocFee);
 
-            var collBase = from fee in collDocFee
-                           join job in collJob on fee.JobId equals job.Id
-                           join bill in collBill on fee.BillId equals bill.Id
-                           select fee;
+            var collBase =
+                from fee in collDocFee
+                    //from job in collJob on fee.JobId equals job.Id 
+                join bill in collBill on fee.BillId equals bill.Id
+                select fee;
             collBase = collBase.OrderBy(model.OrderFieldName, model.IsDesc);    //18210644348
             collBase = collBase.Skip(model.StartIndex);
             if (model.Count > -1)

@@ -5437,5 +5437,10 @@
             当前环境名。
             </summary>
         </member>
+        <member name="T:Program.CustomsJsonConverter">
+            <summary>
+            海关日期时间格式(格式类似2009-06-15 13:45:30.000)。
+            </summary>
+        </member>
     </members>
 </doc>
