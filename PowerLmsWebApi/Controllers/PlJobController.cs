@@ -547,7 +547,7 @@ namespace PowerLmsWebApi.Controllers
             var entity = model.DocFee;
             entity.GenerateNewId();
             _DbContext.DocFees.Add(model.DocFee);
-            model.DocFee.BillId = null;
+            //model.DocFee.BillId = null;
             _DbContext.SaveChanges();
             result.Id = model.DocFee.Id;
             return result;
