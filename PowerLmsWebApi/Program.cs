@@ -3,13 +3,16 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
+using Newtonsoft.Json;
 using OW;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
+using PowerLmsWebApi;
 using PowerLmsWebApi.Middleware;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 using static Org.BouncyCastle.Math.EC.ECCurve;
 
 
@@ -87,9 +90,11 @@ internal class Program
         {
             options.EnableForHttps = true;
         });
-
-        services.AddControllers();
-
+        //JsonSerializerSettings settings = new JsonSerializerSettings() { DateFormatString=""};
+        services.AddControllers().AddJsonOptions(opt =>
+        {
+            opt.JsonSerializerOptions.Converters.Add(new CustomsJsonConverter());
+        });
         #region ≈‰÷√Swagger
         // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
         builder.Services.AddEndpointsApiExplorer();
@@ -144,5 +149,7 @@ internal class Program
 
         return builder;
     }
+
+
 }
 

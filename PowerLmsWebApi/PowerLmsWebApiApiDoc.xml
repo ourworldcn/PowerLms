@@ -5633,6 +5633,28 @@
             返回的组机构。嵌套关系在对象内部体现。多个顶层公司则返回多个元素。
             </summary>
         </member>
+        <member name="T:PowerLmsWebApi.CustomsJsonConverter">
+            <summary>
+            海关日期时间格式(格式类似2009-06-15 13:45:30.000)。
+            </summary>
+        </member>
+        <member name="M:PowerLmsWebApi.CustomsJsonConverter.Read(System.Text.Json.Utf8JsonReader@,System.Type,System.Text.Json.JsonSerializerOptions)">
+            <summary>
+            <inheritdoc/>
+            </summary>
+            <param name="reader"></param>
+            <param name="typeToConvert"></param>
+            <param name="options"></param>
+            <returns></returns>
+        </member>
+        <member name="M:PowerLmsWebApi.CustomsJsonConverter.Write(System.Text.Json.Utf8JsonWriter,System.DateTime,System.Text.Json.JsonSerializerOptions)">
+            <summary>
+            <inheritdoc/>
+            </summary>
+            <param name="writer"></param>
+            <param name="value"></param>
+            <param name="options"></param>
+        </member>
         <member name="T:PowerLmsWebApi.Middleware.PlExceptionMiddleware">
             <summary>
             自定义中间件。
