@@ -257,6 +257,16 @@
             业务费用收付款申请单明细项。
             </summary>
         </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.PlInvoicess">
+            <summary>
+            费用结算单。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.PlInvoicesItems">
+            <summary>
+            费用结算单明细。
+            </summary>
+        </member>
         <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.WfKindCodeDics">
             <summary>
             流程模板表。
@@ -2966,6 +2976,126 @@
         <member name="P:PowerLms.Data.DocFeeRequisitionItem.Amount">
             <summary>
             本次申请金额。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.PlInvoices">
+            <summary>
+            结算单。
+            </summary>
+        </member>
+        <member name="M:PowerLms.Data.PlInvoices.#ctor">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlInvoices.IoPingzhengNo">
+            <summary>
+            收付凭证号
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlInvoices.IoDateTime">
+            <summary>
+            首付日期。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlInvoices.BankId">
+            <summary>
+            收付银行账号,本公司信息中银行id
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlInvoices.Currency">
+            <summary>
+            币种。标准货币缩写。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlInvoices.Amount">
+            <summary>
+            金额。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlInvoices.JiesuanDanweiId">
+            <summary>
+            结算单位Id。客户资料的id.
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlInvoices.Remark">
+            <summary>
+            摘要。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlInvoices.IsYushoufu">
+            <summary>
+            是否预收付
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlInvoices.Surplus">
+            <summary>
+            余额。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlInvoices.FinanceFee">
+            <summary>
+            财务费用。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlInvoices.ExchangeLoss">
+            <summary>
+            汇差损益。外币结算时损失的部分
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlInvoices.Remark2">
+            <summary>
+            附加说明。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlInvoices.BankSerialNo">
+            <summary>
+            银行流水号。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlInvoices.FinanceDateTime">
+            <summary>
+            财务日期
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlInvoices.ConfirmDateTime">
+            <summary>
+            确认时间,为null表示未确认。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlInvoices.ConfirmId">
+            <summary>
+            确认人Id.
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.PlInvoicesItem">
+            <summary>
+            结算单明细。
+            </summary>
+        </member>
+        <member name="M:PowerLms.Data.PlInvoicesItem.#ctor">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlInvoicesItem.ParentId">
+            <summary>
+            结算单id
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlInvoicesItem.Amount">
+            <summary>
+            本次核销（结算）金额。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlInvoicesItem.ExchangeRate">
+            <summary>
+            结算汇率
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlInvoicesItem.RequisitionItemId">
+            <summary>
+            申请单明细id,对应申请明细的费用。
             </summary>
         </member>
         <member name="T:PowerLms.Data.Account">

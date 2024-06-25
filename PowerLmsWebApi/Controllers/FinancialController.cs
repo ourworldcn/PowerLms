@@ -407,7 +407,426 @@ namespace PowerLmsWebApi.Controllers
         }
         #endregion 业务费用申请单明细
 
+        #region 结算单
+
+        /// <summary>
+        /// 获取全部结算单。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="conditional">查询的条件。
+        /// 通用条件写法:所有条件都是字符串，对区间的写法是用逗号分隔（字符串类型暂时不支持区间且都是模糊查询）如"2024-1-1,2024-1-2"。
+        /// 对强制取null的约束，则写"null"。</param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        public ActionResult<GetAllPlInvoicesReturnDto> GetAllPlInvoices([FromQuery] PagingParamsDtoBase model,
+            [FromQuery] Dictionary<string, string> conditional = null)
+        {
+
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetAllPlInvoicesReturnDto();
+            var dbSet = _DbContext.PlInvoicess;
+
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
+            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
+            _Mapper.Map(prb, result);
+            return result;
+        }
+
+        /// <summary>
+        /// 增加新结算单。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPost]
+        public ActionResult<AddPlInvoicesReturnDto> AddPlInvoices(AddPlInvoicesParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context)
+            {
+                _Logger.LogWarning("无效的令牌{token}", model.Token);
+                return Unauthorized();
+            }
+            var result = new AddPlInvoicesReturnDto();
+            var entity = model.PlInvoices;
+            entity.GenerateNewId();
+            _DbContext.PlInvoicess.Add(model.PlInvoices);
+
+            _DbContext.SaveChanges();
+
+            result.Id = model.PlInvoices.Id;
+            return result;
+        }
+
+        /// <summary>
+        /// 修改结算单信息。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定Id的结算单不存在。</response>  
+        [HttpPut]
+        public ActionResult<ModifyPlInvoicesReturnDto> ModifyPlInvoices(ModifyPlInvoicesParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new ModifyPlInvoicesReturnDto();
+            if (!_EntityManager.Modify(new[] { model.PlInvoices })) return NotFound();
+            //忽略不可更改字段
+            var entity = _DbContext.Entry(model.PlInvoices);
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        /// <summary>
+        /// 删除指定Id的结算单。慎用！
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定Id的结算单不存在。</response>  
+        [HttpDelete]
+        public ActionResult<RemovePlInvoicesReturnDto> RemovePlInvoices(RemovePlInvoicesParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new RemovePlInvoicesReturnDto();
+            var id = model.Id;
+            var dbSet = _DbContext.PlInvoicess;
+            var item = dbSet.Find(id);
+            if (item is null) return BadRequest();
+            _EntityManager.Remove(item);
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        #endregion 结算单
+
+        #region 结算单明细
+
+        /// <summary>
+        /// 获取全部结算单明细。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="conditional">查询的条件。
+        /// 通用条件写法:所有条件都是字符串，对区间的写法是用逗号分隔（字符串类型暂时不支持区间且都是模糊查询）如"2024-1-1,2024-1-2"。
+        /// 对强制取null的约束，则写"null"。</param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        public ActionResult<GetAllPlInvoicesItemReturnDto> GetAllPlInvoicesItem([FromQuery] PagingParamsDtoBase model,
+            [FromQuery] Dictionary<string, string> conditional = null)
+        {
+
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetAllPlInvoicesItemReturnDto();
+            var dbSet = _DbContext.PlInvoicesItems;
+
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
+            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
+            _Mapper.Map(prb, result);
+            return result;
+        }
+
+        /// <summary>
+        /// 增加新结算单明细。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPost]
+        public ActionResult<AddPlInvoicesItemReturnDto> AddPlInvoicesItem(AddPlInvoicesItemParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context)
+            {
+                _Logger.LogWarning("无效的令牌{token}", model.Token);
+                return Unauthorized();
+            }
+            var result = new AddPlInvoicesItemReturnDto();
+            var entity = model.PlInvoicesItem;
+            entity.GenerateNewId();
+            _DbContext.PlInvoicesItems.Add(model.PlInvoicesItem);
+
+            _DbContext.SaveChanges();
+
+            result.Id = model.PlInvoicesItem.Id;
+            return result;
+        }
+
+        /// <summary>
+        /// 修改结算单明细信息。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定Id的结算单明细不存在。</response>  
+        [HttpPut]
+        public ActionResult<ModifyPlInvoicesItemReturnDto> ModifyPlInvoicesItem(ModifyPlInvoicesItemParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new ModifyPlInvoicesItemReturnDto();
+            if (!_EntityManager.Modify(new[] { model.PlInvoicesItem })) return NotFound();
+            //忽略不可更改字段
+            var entity = _DbContext.Entry(model.PlInvoicesItem);
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        /// <summary>
+        /// 删除指定Id的结算单明细。慎用！
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定Id的结算单明细不存在。</response>  
+        [HttpDelete]
+        public ActionResult<RemovePlInvoicesItemReturnDto> RemovePlInvoicesItem(RemovePlInvoicesItemParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new RemovePlInvoicesItemReturnDto();
+            var id = model.Id;
+            var dbSet = _DbContext.PlInvoicesItems;
+            var item = dbSet.Find(id);
+            if (item is null) return BadRequest();
+            _EntityManager.Remove(item);
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        /// <summary>
+        /// 设置指定的申请单下所有明细。
+        /// 指定存在id的明细则更新，Id全0或不存在的Id到自动添加，原有未指定的明细将被删除。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定Id的业务费用申请单不存在。</response>  
+        [HttpPut]
+        public ActionResult<SetPlInvoicesItemReturnDto> SetPlInvoicesItem(SetPlInvoicesItemParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new SetPlInvoicesItemReturnDto();
+            var fr = _DbContext.DocFeeRequisitions.Find(model.FrId);
+            if (fr is null) return NotFound();
+            var aryIds = model.Items.Select(c => c.Id).ToArray();   //指定的Id
+            var existsIds = _DbContext.PlInvoicesItems.Where(c => c.ParentId == fr.Id).Select(c => c.Id).ToArray();    //已经存在的Id
+            //更改
+            var modifies = model.Items.Where(c => existsIds.Contains(c.Id));
+            foreach (var item in modifies)
+            {
+                _DbContext.Entry(item).CurrentValues.SetValues(item);
+                _DbContext.Entry(item).State = EntityState.Modified;
+            }
+            //增加
+            var addIds = aryIds.Except(existsIds).ToArray();
+            var adds = model.Items.Where(c => addIds.Contains(c.Id)).ToArray();
+            Array.ForEach(adds, c => c.GenerateNewId());
+            _DbContext.AddRange(adds);
+            //删除
+            var removeIds = existsIds.Except(aryIds).ToArray();
+            _DbContext.RemoveRange(_DbContext.PlInvoicesItems.Where(c => removeIds.Contains(c.Id)));
+
+            _DbContext.SaveChanges();
+            //后处理
+            result.Result.AddRange(model.Items);
+            return result;
+        }
+
+        #endregion 结算单明细
     }
+
+    #region 结算单明细
+
+    /// <summary>
+    /// 设置指定的申请单下所有明细功能的参数封装类。
+    /// </summary>
+    public class SetPlInvoicesItemParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 申请单的Id。
+        /// </summary>
+        public Guid FrId { get; set; }
+
+        /// <summary>
+        /// 申请单明细表的集合。
+        /// 指定存在id的明细则更新，Id全0或不存在的Id自动添加，原有未指定的明细将被删除。
+        /// </summary>
+        public List<PlInvoicesItem> Items { get; set; } = new List<PlInvoicesItem>();
+    }
+
+    /// <summary>
+    /// 设置指定的申请单下所有明细功能的返回值封装类。
+    /// </summary>
+    public class SetPlInvoicesItemReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 指定申请单下，所有明细的对象。
+        /// </summary>
+        public List<PlInvoicesItem> Result { get; set; } = new List<PlInvoicesItem>();
+    }
+
+    /// <summary>
+    /// 标记删除结算单明细功能的参数封装类。
+    /// </summary>
+    public class RemovePlInvoicesItemParamsDto : RemoveParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 标记删除结算单明细功能的返回值封装类。
+    /// </summary>
+    public class RemovePlInvoicesItemReturnDto : RemoveReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 获取所有结算单明细功能的返回值封装类。
+    /// </summary>
+    public class GetAllPlInvoicesItemReturnDto : PagingReturnDtoBase<PlInvoicesItem>
+    {
+    }
+
+    /// <summary>
+    /// 增加新结算单明细功能参数封装类。
+    /// </summary>
+    public class AddPlInvoicesItemParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 新结算单明细信息。其中Id可以是任何值，返回时会指定新值。
+        /// </summary>
+        public PlInvoicesItem PlInvoicesItem { get; set; }
+    }
+
+    /// <summary>
+    /// 增加新结算单明细功能返回值封装类。
+    /// </summary>
+    public class AddPlInvoicesItemReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 如果成功添加，这里返回新结算单明细的Id。
+        /// </summary>
+        public Guid Id { get; set; }
+    }
+
+    /// <summary>
+    /// 修改结算单明细信息功能参数封装类。
+    /// </summary>
+    public class ModifyPlInvoicesItemParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 结算单明细数据。
+        /// </summary>
+        public PlInvoicesItem PlInvoicesItem { get; set; }
+    }
+
+    /// <summary>
+    /// 修改结算单明细信息功能返回值封装类。
+    /// </summary>
+    public class ModifyPlInvoicesItemReturnDto : ReturnDtoBase
+    {
+    }
+    #endregion 结算单明细
+
+    #region 结算单
+
+    /// <summary>
+    /// 设置指定的申请单下所有明细功能的参数封装类。
+    /// </summary>
+    public class SetPlInvoicesParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 申请单的Id。
+        /// </summary>
+        public Guid FrId { get; set; }
+
+        /// <summary>
+        /// 申请单明细表的集合。
+        /// 指定存在id的明细则更新，Id全0或不存在的Id自动添加，原有未指定的明细将被删除。
+        /// </summary>
+        public List<PlInvoices> Items { get; set; } = new List<PlInvoices>();
+    }
+
+    /// <summary>
+    /// 设置指定的申请单下所有明细功能的返回值封装类。
+    /// </summary>
+    public class SetPlInvoicesReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 指定申请单下，所有明细的对象。
+        /// </summary>
+        public List<PlInvoices> Result { get; set; } = new List<PlInvoices>();
+    }
+
+    /// <summary>
+    /// 标记删除结算单功能的参数封装类。
+    /// </summary>
+    public class RemovePlInvoicesParamsDto : RemoveParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 标记删除结算单功能的返回值封装类。
+    /// </summary>
+    public class RemovePlInvoicesReturnDto : RemoveReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 获取所有结算单功能的返回值封装类。
+    /// </summary>
+    public class GetAllPlInvoicesReturnDto : PagingReturnDtoBase<PlInvoices>
+    {
+    }
+
+    /// <summary>
+    /// 增加新结算单功能参数封装类。
+    /// </summary>
+    public class AddPlInvoicesParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 新结算单信息。其中Id可以是任何值，返回时会指定新值。
+        /// </summary>
+        public PlInvoices PlInvoices { get; set; }
+    }
+
+    /// <summary>
+    /// 增加新结算单功能返回值封装类。
+    /// </summary>
+    public class AddPlInvoicesReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 如果成功添加，这里返回新结算单的Id。
+        /// </summary>
+        public Guid Id { get; set; }
+    }
+
+    /// <summary>
+    /// 修改结算单信息功能参数封装类。
+    /// </summary>
+    public class ModifyPlInvoicesParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 结算单数据。
+        /// </summary>
+        public PlInvoices PlInvoices { get; set; }
+    }
+
+    /// <summary>
+    /// 修改结算单信息功能返回值封装类。
+    /// </summary>
+    public class ModifyPlInvoicesReturnDto : ReturnDtoBase
+    {
+    }
+    #endregion 结算单
 
     #region 业务费用申请单明细
 

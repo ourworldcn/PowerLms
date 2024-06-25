@@ -347,6 +347,16 @@ namespace PowerLmsServer.EfData
         /// 业务费用收付款申请单明细项。
         /// </summary>
         public DbSet<DocFeeRequisitionItem> DocFeeRequisitionItems { get; set; }
+
+        /// <summary>
+        /// 费用结算单。
+        /// </summary>
+        public DbSet<PlInvoices> PlInvoicess { get; set; }
+
+        /// <summary>
+        /// 费用结算单明细。
+        /// </summary>
+        public DbSet<PlInvoicesItem> PlInvoicesItems { get; set; }
         #endregion
 
         #region 流程相关
