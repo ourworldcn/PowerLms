@@ -73,6 +73,7 @@ namespace System.Net.Sockets
             if (node.List != null) return false;
             node.Value = null;
             _Pool.Push(node);
+            //Span<byte> span = stackalloc byte[100];
             return true;
         }
         #endregion 静态成员
