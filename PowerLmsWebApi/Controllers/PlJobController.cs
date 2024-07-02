@@ -91,6 +91,8 @@ namespace PowerLmsWebApi.Controllers
             entity.CreateDateTime = OwHelper.WorldNow;
             entity.JobState = 2;
             entity.OperateState = 0;
+            entity.OperatingDateTime = OwHelper.WorldNow;
+            entity.OperatorId = context.User.Id;
             _DbContext.SaveChanges();
             result.Id = model.PlJob.Id;
             return result;
@@ -114,6 +116,8 @@ namespace PowerLmsWebApi.Controllers
             var entity = _DbContext.Entry(model.PlJob);
             entity.Property(c => c.OperateState).IsModified = false;
             entity.Property(c => c.JobState).IsModified = false;
+            model.PlJob.OperatingDateTime = OwHelper.WorldNow;
+            model.PlJob.OperatorId = context.User.Id;
             _DbContext.SaveChanges();
             return result;
         }

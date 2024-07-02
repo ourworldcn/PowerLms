@@ -280,6 +280,71 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
+        /// 获取申请单明细增强接口功能。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="conditional">条件使用 实体名.字段名 格式,值格式参见通用格式。
+        /// 支持的实体名有：DocFeeRequisition,PlJob,DocFee,DocFeeRequisitionItem</param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        public ActionResult<GetDocFeeRequisitionItemReturnDto> GetDocFeeRequisitionItem(GetDocFeeRequisitionItemParamsDto model,
+            [FromQuery] Dictionary<string, string> conditional = null)
+        {
+            //查询 需要返回 申请单 job 费用实体 申请明细的余额（未结算）
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetDocFeeRequisitionItemReturnDto();
+            var dbSet = _DbContext.DocFeeRequisitionItems;
+
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
+
+            var dic = new Dictionary<string, string>(conditional.Where(c => c.Key.StartsWith(nameof(DocFeeRequisitionItem)))
+                .Select(c => new KeyValuePair<string, string>(c.Key.Remove(0, nameof(DocFeeRequisitionItem).Length), c.Value)));
+            var collDocFeeRequisitionItem = EfHelper.GenerateWhereAnd(coll, dic);
+
+            dic = new Dictionary<string, string>(conditional.Where(c => c.Key.StartsWith(nameof(PlJob)))
+               .Select(c => new KeyValuePair<string, string>(c.Key.Remove(0, nameof(PlJob).Length), c.Value)));
+            var collPlJob = EfHelper.GenerateWhereAnd(_DbContext.PlJobs, dic);
+
+            dic = new Dictionary<string, string>(conditional.Where(c => c.Key.StartsWith(nameof(DocFee)))
+               .Select(c => new KeyValuePair<string, string>(c.Key.Remove(0, nameof(DocFee).Length), c.Value)));
+            var collDocFee = EfHelper.GenerateWhereAnd(_DbContext.DocFees, dic);
+
+            dic = new Dictionary<string, string>(conditional.Where(c => c.Key.StartsWith(nameof(DocFeeRequisition)))
+               .Select(c => new KeyValuePair<string, string>(c.Key.Remove(0, nameof(DocFeeRequisition).Length), c.Value)));
+            var collDocFeeRequisitions = EfHelper.GenerateWhereAnd(_DbContext.DocFeeRequisitions, dic).Where(c => c.OrgId == context.User.OrgId);
+
+            var collTmp = from item in collDocFeeRequisitionItem
+                          join fee in collDocFee on item.FeeId equals fee.Id
+                          join job in collPlJob on fee.JobId equals job.Id
+                          join ri in collDocFeeRequisitions on item.ParentId equals ri.Id
+                          select item;
+
+            collTmp = collTmp.Distinct();
+            result.Total = collTmp.Count();
+            collTmp = collTmp.Skip(model.StartIndex);
+            if (model.Count > 0)
+                collTmp = collTmp.Take(model.Count);
+
+            var aryResult = collTmp.ToArray();
+
+            foreach (var item in aryResult)
+            {
+                var tmp = new GetDocFeeRequisitionItemItem
+                {
+                    DocFeeRequisitionItem = item,
+                    DocFeeRequisition = _DbContext.DocFeeRequisitions.First(c => c.Id == item.ParentId),
+                    DocFee = _DbContext.DocFees.First(c => c.Id == item.FeeId)
+                };
+                tmp.PlJob = _DbContext.PlJobs.First(c => c.Id == tmp.DocFee.JobId);
+                tmp.Remainder = item.Amount - _DbContext.PlInvoicesItems.Where(c => c.RequisitionItemId == item.Id).Sum(c => c.Amount);
+                result.Result.Add(tmp);
+            }
+            return result;
+        }
+
+        /// <summary>
         /// 增加新业务费用申请单明细。
         /// </summary>
         /// <param name="model"></param>
@@ -694,6 +759,53 @@ namespace PowerLmsWebApi.Controllers
     public class GetAllPlInvoicesItemReturnDto : PagingReturnDtoBase<PlInvoicesItem>
     {
     }
+
+    /// <summary>
+    /// 获取申请单明细增强接口功能参数封装类。
+    /// </summary>
+    public class GetDocFeeRequisitionItemParamsDto : PagingParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 获取申请单明细增强接口功能返回值封装类。
+    /// </summary>
+    public class GetDocFeeRequisitionItemReturnDto : PagingReturnDtoBase<GetDocFeeRequisitionItemItem>
+    {
+
+    }
+
+    /// <summary>
+    /// 获取申请单明细增强接口功能的返回值中的元素类型。
+    /// </summary>
+    public class GetDocFeeRequisitionItemItem
+    {
+        /// <summary>
+        /// 申请单明细对象。
+        /// </summary>
+        public DocFeeRequisitionItem DocFeeRequisitionItem { get; set; }
+
+        /// <summary>
+        /// 相关的任务对象。
+        /// </summary>
+        public PlJob PlJob { get; set; }
+
+        /// <summary>
+        /// 相关的申请单对象。
+        /// </summary>
+        public DocFeeRequisition DocFeeRequisition { get; set; }
+
+        /// <summary>
+        /// 相关的费用对象。
+        /// </summary>
+        public DocFee DocFee { get; set; }
+
+        /// <summary>
+        /// 申请单明细对象未结算的剩余费用。
+        /// </summary>
+        public decimal Remainder { get; set; }
+    }
+
 
     /// <summary>
     /// 增加新结算单明细功能参数封装类。

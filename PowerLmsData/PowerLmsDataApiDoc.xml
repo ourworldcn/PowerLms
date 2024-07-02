@@ -732,6 +732,11 @@
             总业务数据类。
             </summary>
         </member>
+        <member name="M:PowerLms.Data.PlJob.#ctor">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
         <member name="P:PowerLms.Data.PlJob.OrgId">
             <summary>
             所属机构Id。
@@ -815,6 +820,16 @@
         <member name="P:PowerLms.Data.PlJob.CreateDateTime">
             <summary>
             新建时间,系统默认，不能更改
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.OperatorId">
+            <summary>
+            操作人Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlJob.OperatingDateTime">
+            <summary>
+            操作时间
             </summary>
         </member>
         <member name="P:PowerLms.Data.PlJob.JobState">
@@ -2868,6 +2883,11 @@
             业务费用收付款申请单。
             </summary>
         </member>
+        <member name="P:PowerLms.Data.DocFeeRequisition.OrgId">
+            <summary>
+            机构Id。
+            </summary>
+        </member>
         <member name="P:PowerLms.Data.DocFeeRequisition.FrNo">
             <summary>
             申请单号,其他编码规则中【申请单号】自动生成
@@ -3066,6 +3086,16 @@
         <member name="P:PowerLms.Data.PlInvoices.ConfirmId">
             <summary>
             确认人Id.
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlInvoices.CreateBy">
+            <summary>
+            创建者Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlInvoices.CreateDateTime">
+            <summary>
+            <inheritdoc/>
             </summary>
         </member>
         <member name="T:PowerLms.Data.PlInvoicesItem">

@@ -12,7 +12,7 @@ namespace PowerLms.Data
     /// <summary>
     /// 结算单。
     /// </summary>
-    public class PlInvoices : GuidKeyObjectBase
+    public class PlInvoices : GuidKeyObjectBase, ICreatorInfo
     {
         /// <summary>
         /// 构造函数。
@@ -124,6 +124,21 @@ namespace PowerLms.Data
         /// </summary>
         [Comment("确认人Id。")]
         public Guid? ConfirmId { get; set; }
+
+        #region ICreatorInfo
+
+        /// <summary>
+        /// 创建者Id。
+        /// </summary>
+        [Comment("创建者的唯一标识。")]
+        public Guid? CreateBy { get; set; }
+
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        [Comment("创建的时间。")]
+        public DateTime CreateDateTime { get; set; }
+        #endregion ICreatorInfo
     }
 
     /// <summary>

@@ -15,6 +15,9 @@ namespace PowerLms.Data
     /// </summary>
     public class DocFeeRequisition : GuidKeyObjectBase
     {
+        /// <summary>
+        /// 机构Id。
+        /// </summary>
         public Guid? OrgId { get; set; }
 
         /// <summary>

@@ -17,6 +17,14 @@ namespace PowerLms.Data
     public class PlJob : GuidKeyObjectBase, ICreatorInfo
     {
         /// <summary>
+        /// 构造函数。
+        /// </summary>
+        public PlJob()
+        {
+            
+        }
+
+        /// <summary>
         /// 所属机构Id。
         /// </summary>
         [Comment("所属机构Id")]
@@ -124,6 +132,18 @@ namespace PowerLms.Data
         /// </summary>
         [Comment("新建时间,系统默认，不能更改。")]
         public DateTime CreateDateTime { get; set; }
+
+        /// <summary>
+        /// 操作人Id。
+        /// </summary>
+        [Comment("操作人Id。")]
+        public Guid? OperatorId { get; set; }
+
+        /// <summary>
+        /// 操作时间
+        /// </summary>
+        [Comment("操作时间。")]
+        public DateTime? OperatingDateTime { get; set; }
 
         /// <summary>
         /// 工作状态。Operating正操作=2，Operated操作完成=4，Checked已审核=8，Closed已关闭=16.

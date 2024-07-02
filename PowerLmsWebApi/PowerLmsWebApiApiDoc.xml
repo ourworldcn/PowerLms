@@ -2671,6 +2671,17 @@
             <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
             <response code="401">无效令牌。</response>  
         </member>
+        <member name="M:PowerLmsWebApi.Controllers.FinancialController.GetDocFeeRequisitionItem(PowerLmsWebApi.Controllers.GetDocFeeRequisitionItemParamsDto,System.Collections.Generic.Dictionary{System.String,System.String})">
+            <summary>
+            获取申请单明细增强接口功能。
+            </summary>
+            <param name="model"></param>
+            <param name="conditional">条件使用 实体名.字段名 格式,值格式参见通用格式。
+            支持的实体名有：DocFeeRequisition,PlJob,DocFee,DocFeeRequisitionItem</param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
         <member name="M:PowerLmsWebApi.Controllers.FinancialController.AddDocFeeRequisitionItem(PowerLmsWebApi.Controllers.AddDocFeeRequisitionItemParamsDto)">
             <summary>
             增加新业务费用申请单明细。
@@ -2843,6 +2854,46 @@
         <member name="T:PowerLmsWebApi.Controllers.GetAllPlInvoicesItemReturnDto">
             <summary>
             获取所有结算单明细功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetDocFeeRequisitionItemParamsDto">
+            <summary>
+            获取申请单明细增强接口功能参数封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetDocFeeRequisitionItemReturnDto">
+            <summary>
+            获取申请单明细增强接口功能返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetDocFeeRequisitionItemItem">
+            <summary>
+            获取申请单明细增强接口功能的返回值中的元素类型。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.GetDocFeeRequisitionItemItem.DocFeeRequisitionItem">
+            <summary>
+            申请单明细对象。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.GetDocFeeRequisitionItemItem.PlJob">
+            <summary>
+            相关的任务对象。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.GetDocFeeRequisitionItemItem.DocFeeRequisition">
+            <summary>
+            相关的申请单对象。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.GetDocFeeRequisitionItemItem.DocFee">
+            <summary>
+            相关的费用对象。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.GetDocFeeRequisitionItemItem.Remainder">
+            <summary>
+            申请单明细对象未结算的剩余费用。
             </summary>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.AddPlInvoicesItemParamsDto">
