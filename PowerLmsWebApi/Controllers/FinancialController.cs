@@ -470,6 +470,7 @@ namespace PowerLmsWebApi.Controllers
             result.Result.AddRange(model.Items);
             return result;
         }
+
         #endregion 业务费用申请单明细
 
         #region 结算单
@@ -567,6 +568,36 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.SaveChanges();
             return result;
         }
+
+        /// <summary>
+        /// 结算单确认.
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">至少有一个结算单已被确认或至少有一个结算单是自己创建的。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定Id的结算单不存在。</response>  
+        [HttpPost]
+        public ActionResult<ConfirmPlInvoicesReturnDto> ConfirmPlInvoices(ConfirmPlInvoicesParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new ConfirmPlInvoicesReturnDto();
+            var coll = _DbContext.PlInvoicess.Where(c => model.Ids.Contains(c.Id)).ToArray();
+            if (coll.Length != model.Ids.Count) return BadRequest("至少有一个id不存在对应的结算单");
+            if (coll.Any(c => c.ConfirmDateTime is not null)) return BadRequest("至少有一个结算单已被确认");
+            if (coll.Any(c => c.CreateBy == context.User.Id)) return BadRequest("至少有一个结算单是自己创建的");
+            var now = OwHelper.WorldNow;
+            coll.ForEach(c =>
+            {
+                c.ConfirmDateTime = now;
+                c.ConfirmId = context.User.Id;
+            });
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+
 
         #endregion 结算单
 
@@ -707,6 +738,24 @@ namespace PowerLmsWebApi.Controllers
         }
 
         #endregion 结算单明细
+    }
+
+    /// <summary>
+    /// 结算单确认功能参数封装类。
+    /// </summary>
+    public class ConfirmPlInvoicesParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 结算单的Id集合。
+        /// </summary>
+        public List<Guid> Ids { get; set; }
+    }
+
+    /// <summary>
+    /// 结算单确认功能返回值封装类。
+    /// </summary>
+    public class ConfirmPlInvoicesReturnDto : ReturnDtoBase
+    {
     }
 
     #region 结算单明细
