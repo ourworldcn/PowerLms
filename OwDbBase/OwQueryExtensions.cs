@@ -109,7 +109,7 @@ namespace OW.Data
         }
 
         /// <summary>
-        /// 
+        /// 识别带实体名加.的格式，并生成查询。
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="queryable"></param>
@@ -149,6 +149,15 @@ namespace OW.Data
                 var func = Expression.Lambda<Func<T, bool>>(body, para);
                 result = result.Where(func);
             }
+            return result;
+        }
+
+        public static IQueryable<T> GenerateWhereAndWithEntityName<T>(IQueryable<T> queryable, IDictionary<string, string> conditional) where T : class
+        {
+            var name = typeof(T).Name;
+            var dic = new Dictionary<string, string>(conditional.Where(c => c.Key.StartsWith(name + "."))
+                .Select(c => new KeyValuePair<string, string>(c.Key.Remove(0, name.Length + 1), c.Value)));
+            var result= GenerateWhereAnd(queryable, dic);
             return result;
         }
 
