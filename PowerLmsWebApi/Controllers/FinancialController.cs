@@ -289,7 +289,7 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetDocFeeRequisitionItemReturnDto> GetDocFeeRequisitionItem(GetDocFeeRequisitionItemParamsDto model,
+        public ActionResult<GetDocFeeRequisitionItemReturnDto> GetDocFeeRequisitionItem([FromQuery] GetDocFeeRequisitionItemParamsDto model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
             //查询 需要返回 申请单 job 费用实体 申请明细的余额（未结算）
@@ -608,7 +608,7 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetPlInvoicesItemReturnDto> GetDocInvoicesItem(GetPlInvoicesItemParamsDto model,
+        public ActionResult<GetPlInvoicesItemReturnDto> GetDocInvoicesItem([FromQuery] GetPlInvoicesItemParamsDto model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
             //查询 需要返回 申请单 job 费用实体 申请明细的余额（未结算）
@@ -658,6 +658,8 @@ namespace PowerLmsWebApi.Controllers
             {
                 var tmp = new GetPlInvoicesItemItem
                 {
+                    InvoicesItem = item.fii,
+                    Invoices = item.fi,
                     PlJob = item.job,
                     DocFeeRequisitionItem = item.fri,
                     DocFeeRequisition = item.fr,
@@ -838,6 +840,16 @@ namespace PowerLmsWebApi.Controllers
         {
             //申请单 job 费用实体 申请明细的余额（未结算）
         }
+
+        /// <summary>
+        /// 结算单详细项
+        /// </summary>
+        public PlInvoicesItem InvoicesItem { get; set; }
+
+        /// <summary>
+        /// 结算单。
+        /// </summary>
+        public PlInvoices Invoices { get; set; }
 
         /// <summary>
         /// 相关的任务对象。

@@ -2857,6 +2857,16 @@
             构造函数。
             </summary>
         </member>
+        <member name="P:PowerLmsWebApi.Controllers.GetPlInvoicesItemItem.InvoicesItem">
+            <summary>
+            结算单详细项
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.GetPlInvoicesItemItem.Invoices">
+            <summary>
+            结算单。
+            </summary>
+        </member>
         <member name="P:PowerLmsWebApi.Controllers.GetPlInvoicesItemItem.PlJob">
             <summary>
             相关的任务对象。
