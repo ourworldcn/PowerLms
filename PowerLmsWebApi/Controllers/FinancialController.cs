@@ -299,21 +299,13 @@ namespace PowerLmsWebApi.Controllers
 
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
 
-            var dic = new Dictionary<string, string>(conditional.Where(c => c.Key.StartsWith(nameof(DocFeeRequisitionItem)))
-                .Select(c => new KeyValuePair<string, string>(c.Key.Remove(0, nameof(DocFeeRequisitionItem).Length), c.Value)));
-            var collDocFeeRequisitionItem = EfHelper.GenerateWhereAnd(coll, dic);
+            var collDocFeeRequisitionItem = EfHelper.GenerateWhereAndWithEntityName(coll, conditional);
 
-            dic = new Dictionary<string, string>(conditional.Where(c => c.Key.StartsWith(nameof(PlJob)))
-               .Select(c => new KeyValuePair<string, string>(c.Key.Remove(0, nameof(PlJob).Length), c.Value)));
-            var collPlJob = EfHelper.GenerateWhereAnd(_DbContext.PlJobs, dic);
+            var collPlJob = EfHelper.GenerateWhereAndWithEntityName(_DbContext.PlJobs, conditional);
 
-            dic = new Dictionary<string, string>(conditional.Where(c => c.Key.StartsWith(nameof(DocFee)))
-               .Select(c => new KeyValuePair<string, string>(c.Key.Remove(0, nameof(DocFee).Length), c.Value)));
-            var collDocFee = EfHelper.GenerateWhereAnd(_DbContext.DocFees, dic);
+            var collDocFee = EfHelper.GenerateWhereAndWithEntityName(_DbContext.DocFees, conditional);
 
-            dic = new Dictionary<string, string>(conditional.Where(c => c.Key.StartsWith(nameof(DocFeeRequisition)))
-               .Select(c => new KeyValuePair<string, string>(c.Key.Remove(0, nameof(DocFeeRequisition).Length), c.Value)));
-            var collDocFeeRequisitions = EfHelper.GenerateWhereAnd(_DbContext.DocFeeRequisitions, dic).Where(c => c.OrgId == context.User.OrgId);
+            var collDocFeeRequisitions = EfHelper.GenerateWhereAndWithEntityName(_DbContext.DocFeeRequisitions, conditional).Where(c => c.OrgId == context.User.OrgId);
 
             var collTmp = from item in collDocFeeRequisitionItem
                           join fee in collDocFee on item.FeeId equals fee.Id
@@ -618,25 +610,15 @@ namespace PowerLmsWebApi.Controllers
 
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
 
-            var dic = new Dictionary<string, string>(conditional.Where(c => c.Key.StartsWith(nameof(PlInvoicesItem)))
-                .Select(c => new KeyValuePair<string, string>(c.Key.Remove(0, nameof(PlInvoicesItem).Length), c.Value)));
-            var collInvoicesItem = EfHelper.GenerateWhereAnd(coll, dic);
+            var collInvoicesItem = EfHelper.GenerateWhereAndWithEntityName(coll, conditional);
 
-            dic = new Dictionary<string, string>(conditional.Where(c => c.Key.StartsWith(nameof(PlJob)))
-               .Select(c => new KeyValuePair<string, string>(c.Key.Remove(0, nameof(PlJob).Length), c.Value)));
-            var collPlJob = EfHelper.GenerateWhereAnd(_DbContext.PlJobs, dic);
+            var collPlJob = EfHelper.GenerateWhereAndWithEntityName(_DbContext.PlJobs, conditional);
 
-            dic = new Dictionary<string, string>(conditional.Where(c => c.Key.StartsWith(nameof(PlInvoices)))
-               .Select(c => new KeyValuePair<string, string>(c.Key.Remove(0, nameof(PlInvoices).Length), c.Value)));
-            var collInvoice = EfHelper.GenerateWhereAnd(_DbContext.PlInvoicess, dic);
+            var collInvoice = EfHelper.GenerateWhereAndWithEntityName(_DbContext.PlInvoicess, conditional);
 
-            dic = new Dictionary<string, string>(conditional.Where(c => c.Key.StartsWith(nameof(DocFeeRequisition)))
-               .Select(c => new KeyValuePair<string, string>(c.Key.Remove(0, nameof(DocFeeRequisition).Length), c.Value)));
-            var collDocFeeRequisition = EfHelper.GenerateWhereAnd(_DbContext.DocFeeRequisitions, dic).Where(c => c.OrgId == context.User.OrgId);
+            var collDocFeeRequisition = EfHelper.GenerateWhereAndWithEntityName(_DbContext.DocFeeRequisitions, conditional).Where(c => c.OrgId == context.User.OrgId);
 
-            dic = new Dictionary<string, string>(conditional.Where(c => c.Key.StartsWith(nameof(DocFeeRequisitionItem)))
-               .Select(c => new KeyValuePair<string, string>(c.Key.Remove(0, nameof(DocFeeRequisitionItem).Length), c.Value)));
-            var collDocFeeRequisitionItem = EfHelper.GenerateWhereAnd(_DbContext.DocFeeRequisitionItems, dic);
+            var collDocFeeRequisitionItem = EfHelper.GenerateWhereAndWithEntityName(_DbContext.DocFeeRequisitionItems, conditional);
 
             var collBase = from fii in collInvoicesItem
                            join fi in collInvoice on fii.ParentId equals fi.Id
