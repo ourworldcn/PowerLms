@@ -511,6 +511,8 @@ namespace PowerLmsWebApi.Controllers
             var result = new AddPlInvoicesReturnDto();
             var entity = model.PlInvoices;
             entity.GenerateNewId();
+            model.PlInvoices.CreateBy = context.User.Id;
+            model.PlInvoices.CreateDateTime = OwHelper.WorldNow;
             _DbContext.PlInvoicess.Add(model.PlInvoices);
 
             _DbContext.SaveChanges();
