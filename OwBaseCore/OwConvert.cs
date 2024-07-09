@@ -196,7 +196,7 @@ namespace System
         }
 
         /// <summary>
-        /// 尽可能转换为Guid类型。
+        /// 尽可能转换为bool类型。
         /// </summary>
         /// <param name="obj"></param>
         /// <param name="result"></param>
