@@ -247,6 +247,11 @@
             业务单的账单。
             </summary>
         </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.PlIaDocs">
+            <summary>
+            空运进口单表。
+            </summary>
+        </member>
         <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.DocFeeRequisitions">
             <summary>
             业务费用收付款申请单.
@@ -290,6 +295,16 @@
         <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.OwWfs">
             <summary>
             工作流实例表
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.OwWfNodes">
+            <summary>
+            工作流实例节点表。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.OwWfNodeItems">
+            <summary>
+            工作流实例节点详细信息表。
             </summary>
         </member>
         <member name="T:PowerLmsServer.EfData.OwDbContextExtensions">
@@ -725,6 +740,121 @@
         <member name="P:PowerLms.Data.HuochangChuchong.CargoSize">
             <summary>
             尺寸。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.PlIaDoc">
+            <summary>
+            空运进口单。
+            </summary>
+        </member>
+        <member name="M:PowerLms.Data.PlIaDoc.#ctor">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIaDoc.JobId">
+            <summary>
+            所属业务Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIaDoc.CreateBy">
+            <summary>
+            制单人，建立时系统默认，可以更改相当于工作号的所有者。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIaDoc.CreateDateTime">
+            <summary>
+            制单时间,系统默认，不能更改
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIaDoc.PositionNumber">
+            <summary>
+            仓位号。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIaDoc.GoodssSatusId">
+            <summary>
+            货物状态字典Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIaDoc.ShishouCount">
+            <summary>
+            实收件数。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIaDoc.RukuDateTime">
+            <summary>
+            入库日期。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIaDoc.CargoTypeIdString">
+            <summary>
+            货物类型字典id的字符串集合，逗号分隔。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIaDoc.FollowAircraftFilesIsString">
+            <summary>
+            简单字典进口随机文件FollowAircraftFiles字典Id的字符串集合，逗号分隔.
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIaDoc.PickUpPlace">
+            <summary>
+            提货地
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIaDoc.PickUpCo">
+            <summary>
+            提货公司
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIaDoc.PickUpPerson">
+            <summary>
+            提货人
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIaDoc.PickUpDateTime">
+            <summary>
+            提货时间。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIaDoc.OperatorId">
+            <summary>
+            放行人Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIaDoc.IsInspection">
+            <summary>
+            是否海关查验。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIaDoc.IsQuarantine">
+            <summary>
+            是否检疫查验。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIaDoc.TradeModeId">
+            <summary>
+            贸易方式Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIaDoc.YujiXiaobaoDateTime">
+            <summary>
+            预计消保日期。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIaDoc.XiaobaoDateTime">
+            <summary>
+            实际消保日期，null表示未消保。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIaDoc.Remark">
+            <summary>
+            特别说明。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIaDoc.OperationalStatus">
+            <summary>
+            操作状态。简单的按顺序：初始化单据（此时未经任何操作）=0,已调单=1,已申报=2,已出税=3,海关已放行=4,已入库=5,仓库已放行=6
             </summary>
         </member>
         <member name="T:PowerLms.Data.PlJob">

@@ -774,6 +774,97 @@ namespace PowerLmsWebApi.Controllers
         }
 
         #endregion 业务单的账单
+
+        #region 空运进口单相关
+
+        /// <summary>
+        /// 获取全部空运进口单。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="conditional">已支持通用查询——除个别涉及敏感信息字段外，所有实体字段都可作为条件。</param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        public ActionResult<GetAllPlIaDocReturnDto> GetAllPlIaDoc([FromQuery] PagingParamsDtoBase model,
+            [FromQuery] Dictionary<string, string> conditional = null)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetAllPlIaDocReturnDto();
+
+            var dbSet = _DbContext.PlIaDocs;
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
+            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
+            _Mapper.Map(prb, result);
+            return result;
+        }
+
+        /// <summary>
+        /// 增加新空运进口单。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPost]
+        public ActionResult<AddPlIaDocReturnDto> AddPlIaDoc(AddPlIaDocParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new AddPlIaDocReturnDto();
+            var entity = model.PlIaDoc;
+            entity.GenerateNewId();
+            _DbContext.PlIaDocs.Add(model.PlIaDoc);
+            entity.CreateBy = context.User.Id;
+            entity.CreateDateTime = OwHelper.WorldNow;
+            _DbContext.SaveChanges();
+            result.Id = model.PlIaDoc.Id;
+            return result;
+        }
+
+        /// <summary>
+        /// 修改空运进口单信息。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定Id的空运进口单不存在。</response>  
+        [HttpPut]
+        public ActionResult<ModifyPlIaDocReturnDto> ModifyPlIaDoc(ModifyPlIaDocParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new ModifyPlIaDocReturnDto();
+            if (!_EntityManager.Modify(new[] { model.PlIaDoc })) return NotFound();
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        /// <summary>
+        /// 删除指定Id的空运进口单。慎用！
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">未找到指定的业务，或该业务不在初始创建状态——无法删除。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定Id的空运进口单不存在。</response>  
+        [HttpDelete]
+        public ActionResult<RemovePlIaDocReturnDto> RemovePlIaDoc(RemovePlIaDocParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new RemovePlIaDocReturnDto();
+            var id = model.Id;
+            var dbSet = _DbContext.PlIaDocs;
+            var item = dbSet.Find(id);
+            if (item.OperationalStatus> 0) return BadRequest("业务已经开始，无法删除。");
+            if (item is null) return BadRequest();
+            _EntityManager.Remove(item);
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        #endregion  空运进口单相关
     }
 
     /// <summary>
@@ -1219,5 +1310,67 @@ namespace PowerLmsWebApi.Controllers
     }
     #endregion 业务总表
 
+    #region 空运进口单相关
 
+    /// <summary>
+    /// 标记删除空运进口单功能的参数封装类。
+    /// </summary>
+    public class RemovePlIaDocParamsDto : RemoveParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 标记删除空运进口单功能的返回值封装类。
+    /// </summary>
+    public class RemovePlIaDocReturnDto : RemoveReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 获取所有空运进口单功能的返回值封装类。
+    /// </summary>
+    public class GetAllPlIaDocReturnDto : PagingReturnDtoBase<PlIaDoc>
+    {
+    }
+
+    /// <summary>
+    /// 增加新空运进口单功能参数封装类。
+    /// </summary>
+    public class AddPlIaDocParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 新空运进口单信息。其中Id可以是任何值，返回时会指定新值。
+        /// </summary>
+        public PlIaDoc PlIaDoc { get; set; }
+    }
+
+    /// <summary>
+    /// 增加新空运进口单功能返回值封装类。
+    /// </summary>
+    public class AddPlIaDocReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 如果成功添加，这里返回新空运进口单的Id。
+        /// </summary>
+        public Guid Id { get; set; }
+    }
+
+    /// <summary>
+    /// 修改空运进口单信息功能参数封装类。
+    /// </summary>
+    public class ModifyPlIaDocParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 空运进口单数据。
+        /// </summary>
+        public PlIaDoc PlIaDoc { get; set; }
+    }
+
+    /// <summary>
+    /// 修改空运进口单信息功能返回值封装类。
+    /// </summary>
+    public class ModifyPlIaDocReturnDto : ReturnDtoBase
+    {
+    }
+    #endregion  空运进口单相关
 }

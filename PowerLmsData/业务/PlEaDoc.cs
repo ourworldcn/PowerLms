@@ -15,7 +15,7 @@ namespace PowerLms.Data
     /// 空运出口单。
     /// </summary>
     [Comment("空运出口单")]
-    [Index(nameof(JobId))]
+    [Index(nameof(JobId), IsUnique = false)]
     public class PlEaDoc : GuidKeyObjectBase, ICreatorInfo
     {
         /// <summary>
@@ -157,7 +157,7 @@ namespace PowerLms.Data
     /// <summary>
     /// 货场出重子表。
     /// </summary>
-    [Index(nameof(EaDocId))]
+    [Index(nameof(EaDocId), IsUnique = false)]
     public class HuochangChuchong : GuidKeyObjectBase
     {
         /// <summary>

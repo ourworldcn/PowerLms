@@ -335,6 +335,11 @@ namespace PowerLmsServer.EfData
         /// 业务单的账单。
         /// </summary>
         public DbSet<DocBill> DocBills { get; set; }
+
+        /// <summary>
+        /// 空运进口单表。
+        /// </summary>
+        public DbSet<PlIaDoc> PlIaDocs { get; set; }
         #endregion
 
         #region 财务相关
@@ -381,13 +386,21 @@ namespace PowerLmsServer.EfData
         /// </summary>
         public DbSet<OwWfTemplateNodeItem> WfTemplateNodeItems { get; set; }
 
-        public DbSet<OwWfNodeItem> OwWfNodeItems { get; set; }
-
         /// <summary>
         /// 工作流实例表
         /// </summary>
         public DbSet<OwWf> OwWfs { get; set; }
+
+        /// <summary>
+        /// 工作流实例节点表。
+        /// </summary>
         public DbSet<OwWfNode> OwWfNodes { get; set; }
+
+        /// <summary>
+        /// 工作流实例节点详细信息表。
+        /// </summary>
+        public DbSet<OwWfNodeItem> OwWfNodeItems { get; set; }
+
         #endregion
     }
 
