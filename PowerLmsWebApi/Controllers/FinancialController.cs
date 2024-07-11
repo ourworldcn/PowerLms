@@ -579,8 +579,8 @@ namespace PowerLmsWebApi.Controllers
             var result = new ConfirmPlInvoicesReturnDto();
             var coll = _DbContext.PlInvoicess.Where(c => model.Ids.Contains(c.Id)).ToArray();
             if (coll.Length != model.Ids.Count) return BadRequest("至少有一个id不存在对应的结算单");
-            if (coll.Any(c => c.ConfirmDateTime is not null)) return BadRequest("至少有一个结算单已被确认");
-            if (coll.Any(c => c.CreateBy == context.User.Id)) return BadRequest("至少有一个结算单是自己创建的");
+            //if (coll.Any(c => c.ConfirmDateTime is not null)) return BadRequest("至少有一个结算单已被确认");
+            //if (coll.Any(c => c.CreateBy == context.User.Id)) return BadRequest("至少有一个结算单是自己创建的");
             var now = OwHelper.WorldNow;
             coll.ForEach(c =>
             {
