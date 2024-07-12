@@ -278,7 +278,7 @@ namespace PowerLmsWebApi.Controllers
             {
                 currentNodeItem.IsSuccess = true;
                 currentNodeItem.Comment = model.Comment;
-                
+
                 var nextTItem = _DbContext.WfTemplateNodeItems.FirstOrDefault(c => c.ParentId == ttCurrentNode.NextId &&
                     c.OpertorId == nextOpertorId);    //下一个操作人的模板
                 if (nextTItem == null)
@@ -315,9 +315,13 @@ namespace PowerLmsWebApi.Controllers
                 if (model.Approval == 0)   //若通过
                 {
                     wf.State = 1;
+                    currentNodeItem.IsSuccess = true;
                 }
                 else if (model.Approval == 1) //若拒绝
+                {
                     wf.State = 2;
+                    currentNodeItem.IsSuccess = false;
+                }
                 else
                     return BadRequest($"{nameof(model.Approval)} 参数值非法。");
             }
