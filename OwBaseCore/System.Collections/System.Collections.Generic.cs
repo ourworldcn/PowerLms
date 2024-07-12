@@ -12,7 +12,7 @@ namespace System.Collections.Generic
         /// 对 集合 的每个元素执行指定操作。
         /// </summary>
         /// <typeparam name="T"></typeparam>
-        /// <param name="obj"></param>
+        /// <param name="obj">修改该集合本身将引发异常。可以修改其元素的内容。</param>
         /// <param name="action"></param>
         /// <exception cref="ArgumentNullException">action 为 null。</exception>
         /// <exception cref="InvalidOperationException">已修改集合中的某个元素。</exception>
@@ -55,5 +55,14 @@ namespace System.Collections.Generic
         /// <param name="source"></param>
         /// <returns></returns>
         public static ICollection<T> TryToCollection<T>(this IEnumerable<T> source) => source is ICollection<T> coll ? coll : source.ToArray();
+
+
+        /// <summary>
+        /// 尝试在不强制枚举的情况下确定序列中的元素数,若不能则用 Count() 数量。
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="source"></param>
+        /// <returns></returns>
+        public static int GetNonEnumeratedCountOrCount<T>(this IEnumerable<T> source) => source.TryGetNonEnumeratedCount(out var count) ? count : source.Count();
     }
 }
