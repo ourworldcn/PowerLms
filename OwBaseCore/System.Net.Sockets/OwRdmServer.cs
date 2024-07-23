@@ -121,22 +121,31 @@ namespace System.Net.Sockets
             }
             _Timer = new Timer(c =>
             {
+                var maxTimeout = TimeSpan.FromSeconds(10);
                 var now = DateTime.UtcNow;
                 var timeout = TimeSpan.FromSeconds(2);
                 foreach (var key in _Id2ClientEntry.Keys)
                 {
                     using var dw = GetOrAddEntry(key, out var entry, TimeSpan.Zero);
                     if (dw.IsEmpty) continue;
+                    var now2 = DateTime.UtcNow;
                     for (var node = entry.SendedData.First; node is not null; node = node.Next)
                     {
                         var dgram = node.Value.Item1;
-                        var now2 = DateTime.UtcNow;
+
                         if (now2 - dgram.LastSendDateTime > timeout)  //若超时未得到回应
                         {
                             dgram.LastSendDateTime = DateTime.UtcNow;
                             SendToAsync(new ArraySegment<byte>(dgram.Buffer, dgram.Offset, dgram.Count), entry.RemoteEndPoint, null);
                         }
                         else //若找到一个尚未超时的包
+                            break;
+                    }
+                    for (var node = entry.SendedData.First; node?.Value.Item1.FirstSendDateTime.HasValue ?? false; node = entry.SendedData.First)
+                    {
+                        if (DateTime.UtcNow - node.Value.Item1.FirstSendDateTime.Value > maxTimeout)    //若已超过最大超时
+                            entry.SendedData.RemoveFirst();
+                        else
                             break;
                     }
                 }
@@ -226,7 +235,9 @@ namespace System.Net.Sockets
                     dgram.Id = id;
                     dgram.Seq = (int)Interlocked.Increment(ref entry.MaxSeq);
                     SendToAsync(new ArraySegment<byte>(dgram.Buffer, dgram.Offset, dgram.Count), entry.RemoteEndPoint, null);
-                    dgram.LastSendDateTime = DateTime.UtcNow;
+                    var now = DateTime.UtcNow;
+                    dgram.LastSendDateTime = now;
+                    dgram.FirstSendDateTime ??= now;
                     entry.SendedData.Insert((uint)dgram.Seq, dgram);
                 }
             }
@@ -258,6 +269,7 @@ namespace System.Net.Sockets
                         dgram.Seq = (int)Interlocked.Increment(ref entry.MaxSeq);
                         SendToAsync(new ArraySegment<byte>(dgram.Buffer, dgram.Offset, dgram.Count), entry.RemoteEndPoint, null);
                         dgram.LastSendDateTime = DateTime.UtcNow;
+                        dgram.FirstSendDateTime ??= DateTime.UtcNow;
                         entry.SendedData.Insert((uint)dgram.Seq, dgram);
                     }
                 }
@@ -392,7 +404,7 @@ namespace System.Net.Sockets
         /// <param name="id"></param>
         /// <param name="result"></param>
         /// <returns></returns>
-        public bool RemoveId(int id,out OwRdmRemoteEntry result)
+        public bool RemoveId(int id, out OwRdmRemoteEntry result)
         {
             return _Id2ClientEntry.TryRemove(id, out result);
         }
