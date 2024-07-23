@@ -166,67 +166,84 @@ namespace PowerLmsWebApi.Controllers
             var result = new ChangeStateReturnDto();
             var job = _DbContext.PlJobs.Find(model.JobId);
             if (job is null) return NotFound();
-
-            if (model.JobState.HasValue)
+            var iaDoc = _DbContext.PlIaDocs.FirstOrDefault(c => c.JobId == model.JobId);
+            if (iaDoc is not null)   //若存在进口单
             {
-                switch (model.JobState)
+                if (model.OperateState.HasValue && (model.OperateState.Value > byte.MaxValue || Math.Abs(model.OperateState.Value - iaDoc.OperationalStatus) != 1)) return BadRequest("model.OperateState不合法。");
+                if (model.OperateState.HasValue)
                 {
-                    case 2:
-                        if (job.JobState != 4) return BadRequest();
-                        break;
-                    case 4:
-                        if (job.JobState != 2 && job.JobState != 8) return BadRequest();
-                        break;
-                    case 8:
-                        if (job.JobState != 4 && job.JobState != 16) return BadRequest();
-                        break;
-                    case 16:
-                        if (job.JobState != 8) return BadRequest();
-                        break;
-                    default:
-                        return BadRequest();
+                    iaDoc.OperationalStatus = (byte)model.OperateState.Value;
                 }
-                _Logger.LogInformation("用户{uid}改变任务状态，任务Id={Id}.JobState {ov} -> {nv}", context.User.Id, job.Id, job.JobState, model.JobState.Value);
-                job.JobState = (byte)model.JobState.Value;
+                if (model.JobState.HasValue)
+                    job.JobState = (byte)model.JobState.Value;
             }
-            if (model.OperateState.HasValue)    //若改变操作状态
+            else
             {
-                switch (model.OperateState)
+                if (model.JobState.HasValue)
                 {
-                    case 0:
-                        if (job.JobState != 2 || job.OperateState != 2) return BadRequest();
-                        _Logger.LogInformation("用户{uid}改变任务状态，任务Id={Id}.JobState {ov} -> {nv}", context.User.Id, job?.Id, job?.JobState, 2);
-                        job.JobState = 2;
-                        break;
-                    case 2:
-                        if (job.JobState > 2 || job.OperateState != 0 && job.OperateState != 4) return BadRequest();
-                        _Logger.LogInformation("用户{uid}改变任务状态，任务Id={Id}.JobState {ov} -> {nv}", context.User.Id, job.Id, job.JobState, 2);
-                        job.JobState = 2;
-                        break;
-                    case 4:
-                        if (job.JobState > 2 || job.OperateState != 2 && job.OperateState != 8) return BadRequest();
-                        break;
-                    case 8:
-                        if (job.JobState > 2 || job.OperateState != 4 && job.OperateState != 16) return BadRequest();
-                        break;
-                    case 16:
-                        if (job.JobState > 2 || job.OperateState != 8 && job.OperateState != 32) return BadRequest();
-                        break;
-                    case 32:
-                        if (job.JobState > 2 || job.OperateState != 16) return BadRequest();
-                        _Logger.LogInformation("用户{uid}改变任务状态，任务Id={Id}.JobState {ov} -> {nv}", context.User.Id, job.Id, job.JobState, 4);
-                        job.JobState = 4;
-                        break;
-                    default:
-                        return BadRequest();
+                    switch (model.JobState)
+                    {
+                        case 2:
+                            if (job.JobState != 4) return BadRequest();
+                            break;
+                        case 4:
+                            if (job.JobState != 2 && job.JobState != 8) return BadRequest();
+                            break;
+                        case 8:
+                            if (job.JobState != 4 && job.JobState != 16) return BadRequest();
+                            break;
+                        case 16:
+                            if (job.JobState != 8) return BadRequest();
+                            break;
+                        default:
+                            return BadRequest();
+                    }
+                    if (model.JobState.Value == 0) return BadRequest("model.JobState不可为0.");
+                    _Logger.LogInformation("用户{uid}改变任务状态，任务Id={Id}.JobState {ov} -> {nv}", context.User.Id, job.Id, job.JobState, model.JobState.Value);
+                    job.JobState = (byte)model.JobState.Value;
                 }
-                _Logger.LogInformation("用户{uid}改变任务状态，任务Id={Id}.OperateState {ov} -> {nv}", context.User.Id, job.Id, job.OperateState, model.OperateState.Value);
-                job.OperateState = (byte)model.OperateState.Value;
+                if (model.OperateState.HasValue)    //若改变操作状态
+                {
+                    switch (model.OperateState)
+                    {
+                        case 0:
+                            if (job.JobState != 2 || job.OperateState != 2) return BadRequest();
+                            _Logger.LogInformation("用户{uid}改变任务状态，任务Id={Id}.JobState {ov} -> {nv}", context.User.Id, job?.Id, job?.JobState, 2);
+                            job.JobState = 2;
+                            break;
+                        case 2:
+                            if (job.JobState > 2 || job.OperateState != 0 && job.OperateState != 4) return BadRequest();
+                            _Logger.LogInformation("用户{uid}改变任务状态，任务Id={Id}.JobState {ov} -> {nv}", context.User.Id, job.Id, job.JobState, 2);
+                            job.JobState = 2;
+                            break;
+                        case 4:
+                            if (job.JobState > 2 || job.OperateState != 2 && job.OperateState != 8) return BadRequest();
+                            break;
+                        case 8:
+                            if (job.JobState > 2 || job.OperateState != 4 && job.OperateState != 16) return BadRequest();
+                            break;
+                        case 16:
+                            if (job.JobState > 2 || job.OperateState != 8 && job.OperateState != 32) return BadRequest();
+                            break;
+                        case 32:
+                            if (job.JobState > 2 || job.OperateState != 16) return BadRequest();
+                            _Logger.LogInformation("用户{uid}改变任务状态，任务Id={Id}.JobState {ov} -> {nv}", context.User.Id, job.Id, job.JobState, 4);
+                            job.JobState = 4;
+                            break;
+                        default:
+                            return BadRequest();
+                    }
+                    _Logger.LogInformation("用户{uid}改变任务状态，任务Id={Id}.OperateState {ov} -> {nv}", context.User.Id, job.Id, job.OperateState, model.OperateState.Value);
+                    job.OperateState = (byte)model.OperateState.Value;
+                }
+                else return BadRequest();
             }
-            else return BadRequest();
             _DbContext.SaveChanges();
             result.JobState = job.JobState;
-            result.OperateState = job.OperateState;
+            if (iaDoc is not null)
+                result.OperateState = iaDoc.OperationalStatus;
+            else
+                result.OperateState = job.OperateState;
             return result;
 
         }
@@ -857,7 +874,7 @@ namespace PowerLmsWebApi.Controllers
             var id = model.Id;
             var dbSet = _DbContext.PlIaDocs;
             var item = dbSet.Find(id);
-            if (item.OperationalStatus> 0) return BadRequest("业务已经开始，无法删除。");
+            if (item.OperationalStatus > 0) return BadRequest("业务已经开始，无法删除。");
             if (item is null) return BadRequest();
             _EntityManager.Remove(item);
             _DbContext.SaveChanges();
@@ -1228,6 +1245,7 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 新的操作状态。不改变则为空。
         /// NewJob初始=0,Arrived 已到货=2,Declared 已申报=4,Delivered 已配送=8,Submitted 已交单=16,Notified 已通知=32
+        /// 如果是空运进口单，则遵循空运进口单的规则。
         /// </summary>
         public int? OperateState { get; set; }
     }

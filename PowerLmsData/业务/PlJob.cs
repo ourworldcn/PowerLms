@@ -153,6 +153,7 @@ namespace PowerLms.Data
 
         /// <summary>
         /// 操作状态。NewJob初始=0,Arrived 已到货=2,Declared 已申报=4,Delivered 已配送=8,Submitted 已交单=16,Notified 已通知=32
+        /// 对空运进口单使用空运进口单的相关定义。
         /// </summary>
         [Comment("操作状态。NewJob初始=0,Arrived 已到货=2,Declared 已申报=4,Delivered 已配送=8,Submitted 已交单=16,Notified 已通知=32")]
         public byte OperateState { get; set; }

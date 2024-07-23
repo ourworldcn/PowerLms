@@ -4569,6 +4569,7 @@
             <summary>
             新的操作状态。不改变则为空。
             NewJob初始=0,Arrived 已到货=2,Declared 已申报=4,Delivered 已配送=8,Submitted 已交单=16,Notified 已通知=32
+            如果是空运进口单，则遵循空运进口单的规则。
             </summary>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.ChangeStateReturnDto">
