@@ -64,6 +64,75 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.SaveChanges();
             return result;
         }
+
+        /// <summary>
+        /// 复制编码规则。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">至少有一个指定代码的规则无法找到。</response> 
+        /// <response code="401">无效令牌。</response> 
+        [HttpPost]
+        public ActionResult<CopyJobNumberRuleReturnDto> CopyJobNumberRule(CopyJobNumberRuleParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new CopyJobNumberRuleReturnDto();
+
+            var srcs = _DbContext.DD_JobNumberRules.Where(c => model.Codes.Contains(c.Code)).ToArray();
+            if (srcs.Length != model.Codes.Count) return BadRequest("至少有一个指定代码的规则无法找到。");
+
+            var dests = srcs.Select(c =>
+            {
+                var r = new JobNumberRule
+                {
+                    Code = c.Code,
+                    DisplayName = c.DisplayName,
+                    IsDelete = c.IsDelete,
+                    OrgId = model.DestOrgId,
+                    Remark = c.Remark,
+                    RepeatDate = c.RepeatDate,
+                    ShortcutName = c.ShortcutName,
+                    RuleString = c.RuleString,
+                    RepeatMode = c.RepeatMode,
+                    ShortName = c.ShortName,
+                    StartValue = c.StartValue,
+                    BusinessTypeId = c.BusinessTypeId,
+                };
+                r.CurrentNumber = r.StartValue;
+                return r;
+            });
+            _DbContext.DD_JobNumberRules.AddRange(dests);
+            _DbContext.SaveChanges();
+            return result;
+        }
+    }
+
+    /// <summary>
+    /// 复制编码规则功能的参数封装类。
+    /// </summary>
+    public class CopyJobNumberRuleParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 指定要复制的规则的Code代码的集合。为空则没有字典会被复制。
+        /// </summary>
+        public List<string> Codes { get; set; } = new List<string>();
+
+        /// <summary>
+        /// 目标组织机构Id。
+        /// </summary>
+        public Guid DestOrgId { get; set; }
+    }
+
+    /// <summary>
+    /// 复制编码规则功能的返回值封装类。
+    /// </summary>
+    public class CopyJobNumberRuleReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 新的编码规则的Id集合。
+        /// </summary>
+        public List<Guid> Result = new List<Guid>();
     }
 
     /// <summary>
