@@ -119,6 +119,7 @@ namespace PowerLmsServer.Managers
             mng.AddTo(mng.DbContext.DD_PlExchangeRates.Where(c => c.OrgId == null).AsNoTracking(), orgId);
             mng.AddTo(mng.DbContext.DD_PlPorts.Where(c => c.OrgId == null).AsNoTracking(), orgId);
             mng.AddTo(mng.DbContext.DD_UnitConversions.Where(c => c.OrgId == null).AsNoTracking(), orgId);
+            mng.AddTo(mng.DbContext.DD_ShippingContainersKinds.Where(c => c.OrgId == null).AsNoTracking(), orgId);
         }
     }
 }

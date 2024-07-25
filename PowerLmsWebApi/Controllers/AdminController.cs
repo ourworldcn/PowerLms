@@ -24,7 +24,7 @@ namespace PowerLmsWebApi.Controllers
     /// <summary>
     /// 管理员功能控制器。
     /// </summary>
-    public class AdminController : PlControllerBase
+    public partial class AdminController : PlControllerBase
     {
         /// <summary>
         /// 
@@ -1907,7 +1907,233 @@ namespace PowerLmsWebApi.Controllers
         }
 
         #endregion 币种相关
+
+        #region 箱型相关
+        /// <summary>
+        /// 获取箱型。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="conditional">查询的条件。支持 DisplayName 和 ShortName ,orgId查询。</param>
+        /// 
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定类别Id无效。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        public ActionResult<GetAllShippingContainersKindReturnDto> GetAllShippingContainersKind([FromQuery] PagingParamsDtoBase model, [FromQuery] Dictionary<string, string> conditional = null)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetAllShippingContainersKindReturnDto();
+            var dbSet = _DbContext.DD_ShippingContainersKinds;
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
+            if (_AccountManager.IsAdmin(context.User))  //若是超管
+                coll = coll.Where(c => c.OrgId == null);
+            else
+            {
+                if (!_OrganizationManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
+                if (context.User.OrgId is null) //若没有指定机构
+                {
+                    coll = coll.Where(c => c.OrgId == merchId);
+                }
+                else
+                {
+                    coll = coll.Where(c => c.OrgId == context.User.OrgId);
+                }
+            }
+            foreach (var item in conditional)
+                if (string.Equals(item.Key, nameof(ShippingContainersKind.Id), StringComparison.OrdinalIgnoreCase))
+                {
+                    if (OwConvert.TryToGuid(item.Value, out var id))
+                        coll = coll.Where(c => c.Id == id);
+                }
+                else if (string.Equals(item.Key, nameof(ShippingContainersKind.OrgId), StringComparison.OrdinalIgnoreCase))
+                {
+                    if (OwConvert.TryToGuid(item.Value, out var id))
+                        coll = coll.Where(c => c.OrgId == id);
+                }
+                else if (string.Equals(item.Key, nameof(ShippingContainersKind.DisplayName), StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.DisplayName.Contains(item.Value));
+                }
+                else if (string.Equals(item.Key, nameof(ShippingContainersKind.ShortName), StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.ShortName.Contains(item.Value));
+                }
+                else if (string.Equals(item.Key, "ShortcutName", StringComparison.OrdinalIgnoreCase))
+                {
+                    coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
+                }
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
+            _Mapper.Map(prb, result);
+            return result;
+        }
+
+        /// <summary>
+        /// 增加箱型记录。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">参数错误。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPost]
+        public ActionResult<AddShippingContainersKindReturnDto> AddShippingContainersKind(AddShippingContainersKindParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new AddShippingContainersKindReturnDto();
+            model.Item.GenerateNewId();
+            var id = model.Item.Id;
+            _DbContext.DD_ShippingContainersKinds.Add(model.Item);
+            _DbContext.SaveChanges();
+            result.Id = id;
+            return result;
+        }
+
+        /// <summary>
+        /// 修改箱型记录。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPut]
+        public ActionResult<ModifyShippingContainersKindReturnDto> ModifyShippingContainersKind(ModifyShippingContainersKindParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new ModifyShippingContainersKindReturnDto();
+            if (!_EntityManager.ModifyWithMarkDelete(model.Items))
+            {
+                var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
+                return errResult;
+            }
+            foreach (var item in model.Items)
+            {
+                _DbContext.Entry(item).Property(c => c.OrgId).IsModified = false;
+            }
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        /// <summary>
+        /// 删除箱型的记录。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpDelete]
+        public ActionResult<RemoveShippingContainersKindReturnDto> RemoveShippingContainersKind(RemoveShippingContainersKindParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new RemoveShippingContainersKindReturnDto();
+            var id = model.Id;
+            var dbSet = _DbContext.DD_ShippingContainersKinds;
+            var item = dbSet.Find(id);
+            if (item is null) return BadRequest();
+            _EntityManager.Remove(item);
+            _DbContext.SaveChanges();
+            //if (item.DataDicType == 1) //若是简单字典
+            //    _DbContext.Database.ExecuteSqlRaw($"delete from {nameof(_DbContext.SimpleDataDics)} where {nameof(SimpleDataDic.DataDicId)}='{id.ToString()}'");
+            //else //其他字典待定
+            //{
+
+            //}
+            return result;
+        }
+
+        /// <summary>
+        /// 恢复指定的被删除箱型记录。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPost]
+        public ActionResult<RestoreShippingContainersKindReturnDto> RestoreShippingContainersKind(RestoreShippingContainersKindParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new RestoreShippingContainersKindReturnDto();
+            if (!_EntityManager.Restore<ShippingContainersKind>(model.Id))
+            {
+                var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
+                return errResult;
+            }
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        #endregion 箱型相关
     }
+
+    #region 箱型相关
+
+    /// <summary>
+    /// 恢复箱型记录的功能参数封装类。
+    /// </summary>
+    public class RestoreShippingContainersKindParamsDto : RestoreParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 恢复箱型记录的功能返回值封装类。
+    /// </summary>
+    public class RestoreShippingContainersKindReturnDto : RestoreReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 删除箱型记录的功能参数封装类。
+    /// </summary>
+    public class RemoveShippingContainersKindParamsDto : RemoveParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 删除箱型记录的功能返回值封装类。
+    /// </summary>
+    public class RemoveShippingContainersKindReturnDto : RemoveReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 修改箱型记录的功能参数封装类。
+    /// </summary>
+    public class ModifyShippingContainersKindParamsDto : ModifyParamsDtoBase<ShippingContainersKind>
+    {
+    }
+
+    /// <summary>
+    /// 修改箱型记录的功能返回值封装类。
+    /// </summary>
+    public class ModifyShippingContainersKindReturnDto : ModifyReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 增加箱型记录的功能参数封装类。
+    /// </summary>
+    public class AddShippingContainersKindParamsDto : AddParamsDtoBase<ShippingContainersKind>
+    {
+    }
+
+    /// <summary>
+    /// 增加箱型记录的功能返回值封装类。
+    /// </summary>
+    public class AddShippingContainersKindReturnDto : AddReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 获取箱型的功能返回值封装类。
+    /// </summary>
+    public class GetAllShippingContainersKindReturnDto : PagingReturnDtoBase<ShippingContainersKind>
+    {
+    }
+
+    #endregion 箱型相关
 
     /// <summary>
     /// 复制简单数据字典功能的参数封装类。
@@ -2196,6 +2422,8 @@ namespace PowerLmsWebApi.Controllers
 
     #endregion 业务编码规则
 
+    #region 费用种类相关
+
     /// <summary>
     /// 恢复费用种类记录的功能参数封装类。
     /// </summary>
@@ -2258,6 +2486,8 @@ namespace PowerLmsWebApi.Controllers
     public class GetAllFeesTypeReturnDto : PagingReturnDtoBase<FeesType>
     {
     }
+
+    #endregion 费用种类相关
 
     /// <summary>
     /// 恢复指定的被删除单位换算记录的功能参数封装类。

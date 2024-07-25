@@ -127,6 +127,11 @@
             币种表。
             </summary>
         </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.DD_ShippingContainersKinds">
+            <summary>
+            箱型。
+            </summary>
+        </member>
         <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.Multilinguals">
             <summary>
             多语言资源表。
@@ -1734,6 +1739,37 @@
         <member name="P:PowerLms.Data.PlCargoRoute.CAFRate">
             <summary>
             CAF比率，取%值。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.ShippingContainersKind">
+            <summary>
+            集装箱类型。
+            Code 是代码，DisplayName是标题，Remark是描述
+            </summary>
+        </member>
+        <member name="M:PowerLms.Data.ShippingContainersKind.#ctor">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.ShippingContainersKind.Kind">
+            <summary>
+            箱型。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.ShippingContainersKind.Size">
+            <summary>
+            尺寸。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.ShippingContainersKind.Teu">
+            <summary>
+            TEU。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.ShippingContainersKind.Kgs">
+            <summary>
+            皮重。单位Kg。
             </summary>
         </member>
         <member name="T:PowerLms.Data.SimpleDataDic">

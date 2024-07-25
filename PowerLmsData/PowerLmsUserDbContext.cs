@@ -188,6 +188,11 @@ namespace PowerLmsServer.EfData
         public DbSet<PlCurrency> DD_PlCurrencys { get; set; }
 
         public DbSet<OtherNumberRule> DD_OtherNumberRules { get; set; }
+
+        /// <summary>
+        /// 箱型。
+        /// </summary>
+        public DbSet<ShippingContainersKind> DD_ShippingContainersKinds { get; set; }
         #endregion 系统资源相关
 
         #region 多语言相关
