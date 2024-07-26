@@ -345,6 +345,11 @@ namespace PowerLmsServer.EfData
         /// 空运进口单表。
         /// </summary>
         public DbSet<PlIaDoc> PlIaDocs { get; set; }
+
+        /// <summary>
+        /// 海运进口单表。
+        /// </summary>
+        public DbSet<PlIsDoc> PlIsDocs { get; set; }
         #endregion
 
         #region 财务相关

@@ -257,6 +257,11 @@
             空运进口单表。
             </summary>
         </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.PlIsDocs">
+            <summary>
+            海运进口单表。
+            </summary>
+        </member>
         <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.DocFeeRequisitions">
             <summary>
             业务费用收付款申请单.
@@ -860,6 +865,151 @@
         <member name="P:PowerLms.Data.PlIaDoc.OperationalStatus">
             <summary>
             操作状态。简单的按顺序：初始化单据（此时未经任何操作）=0,已调单=1,已申报=2,已出税=3,海关已放行=4,已入库=5,仓库已放行=6
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIsDoc.JobId">
+            <summary>
+            所属业务Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIsDoc.CreateBy">
+            <summary>
+            制单人，建立时系统默认，可以更改相当于工作号的所有者。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIsDoc.CreateDateTime">
+            <summary>
+            制单时间,系统默认，不能更改
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIsDoc.ShipSNumber">
+            <summary>
+            船次。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIsDoc.CargoRouteId">
+            <summary>
+            航线字典id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIsDoc.PlaceModeId">
+            <summary>
+            放货方式字典Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIsDoc.BargeName">
+            <summary>
+            驳船船名。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIsDoc.BargeSNumber">
+            <summary>
+            驳船班次。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIsDoc.BargeStartDateTime">
+            <summary>
+            驳船开航日期。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIsDoc.AnticipateBillDateTime">
+            <summary>
+            预计换单日期。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIsDoc.BillDateTime">
+            <summary>
+            实际换单日期。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIsDoc.ArrivedDateTime">
+            <summary>
+            进口日期。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIsDoc.DeliveryDateTime">
+            <summary>
+            提货日期。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIsDoc.UpToDateTime">
+            <summary>
+            截关日期。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIsDoc.BillModeId">
+            <summary>
+            提单方式Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIsDoc.ContainerFreeDateTime">
+            <summary>
+            免箱期。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIsDoc.ContainerNumber">
+            <summary>
+            箱号。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIsDoc.SpeelContainerNumber">
+            <summary>
+            箱封号。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIsDoc.MerchantStyleId">
+            <summary>
+            贸易条款Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIsDoc.DestPortId">
+            <summary>
+            目的港港区Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIsDoc.DelegationKind">
+            <summary>
+            委托类型。FCL=1、LCL=2、BULK=4。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIsDoc.TransTermId">
+            <summary>
+            运输条款Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIsDoc.BillPaymentModeId">
+            <summary>
+            付款方式Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIsDoc.FileStrings">
+            <summary>
+            随船文件。服务器不解析，逗号分隔。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIsDoc.Status">
+            <summary>
+            操作状态。1=已换单（默认）,2=已申报,4=海关已放行,8=已提箱，16=已提货。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.ContainerKindCount">
+            <summary>
+            箱型箱量。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.ContainerKindCount.ParentId">
+            <summary>
+            所属业务单据Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.ContainerKindCount.Kind">
+            <summary>
+            箱型。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.ContainerKindCount.Count">
+            <summary>
+            数量。
             </summary>
         </member>
         <member name="T:PowerLms.Data.PlJob">
