@@ -28,7 +28,7 @@ namespace PowerLms.Data
         /// </summary>
         [Comment("箱型")]
         [MaxLength(64)]
-        public int Kind { get; set; }
+        public string Kind { get; set; }
 
         /// <summary>
         /// 尺寸。
