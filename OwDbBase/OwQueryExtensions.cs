@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,6 +9,7 @@ using System.Reflection;
 using System.Reflection.Metadata;
 using System.Text;
 using System.Threading.Tasks;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace OW.Data
 {
@@ -157,7 +159,7 @@ namespace OW.Data
             var name = typeof(T).Name;
             var dic = new Dictionary<string, string>(conditional.Where(c => c.Key.StartsWith(name + "."))
                 .Select(c => new KeyValuePair<string, string>(c.Key.Remove(0, name.Length + 1), c.Value)));
-            var result= GenerateWhereAnd(queryable, dic);
+            var result = GenerateWhereAnd(queryable, dic);
             return result;
         }
 
@@ -253,6 +255,40 @@ namespace OW.Data
                     return null;
             }
             return result;
+        }
+
+        /// <summary>
+        /// 设置一个子表的完全集合，不在参数内的都删除，对已有Id的实体更新，对新Id执行添加操作。
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="src"></param>
+        /// <param name="context">使用的数据库上下位，不会自动保存，调用者需要自己保存数据。</param>
+        public static bool SetChildren<T>(IEnumerable<T> src, Func<T, Guid?> getParentCallback, DbContext context) where T : GuidKeyObjectBase
+        {
+            //var ids = new HashSet<Guid>(src.Select(c => c.Id)); //如果 collection 包含重复项，则集将包含每个唯一元素之一。 不会引发异常。 因此，生成的集的大小与 的大小 collection不同。
+            //if (!src.TryGetNonEnumeratedCount(out var idCount)) idCount = src.Count();
+            //if (idCount != ids.Count)
+            //{
+            //    OwHelper.SetLastErrorAndMessage(400, $"{nameof(src)}中有重复键值。");
+            //    return false;
+            //}
+            //var parentIds = src.Select(c => getParentCallback(c)).Distinct().ToArray();
+            //if (parentIds.Length != 1)
+            //{
+            //    OwHelper.SetLastErrorAndMessage(400, $"{nameof(src)}中有多个父对象Id。");
+            //    return false;
+            //}
+            //var adds
+            //var count = context.Set<T>().Count(c => ids.Contains(c.Id));
+            //if (count != ids.Count) return BadRequest($"{nameof(model.OrgIds)}中至少有一个实体不存在。");
+
+            //var removes = context.Set<T>().Where(c => c.UserId == model.UserId && !ids.Contains(c.OrgId));
+            //_DbContext.AccountPlOrganizations.RemoveRange(removes);
+
+            //var adds = ids.Except(_DbContext.AccountPlOrganizations.Where(c => c.UserId == model.UserId).Select(c => c.OrgId).AsEnumerable()).ToArray();
+            //_DbContext.AccountPlOrganizations.AddRange(adds.Select(c => new AccountPlOrganization { OrgId = c, UserId = model.UserId }));
+            
+            return true;
         }
     }
 }
