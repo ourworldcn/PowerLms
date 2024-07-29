@@ -350,6 +350,13 @@ namespace PowerLmsServer.EfData
         /// 海运进口单表。
         /// </summary>
         public DbSet<PlIsDoc> PlIsDocs { get; set; }
+
+        /// <summary>
+        /// 海运箱量表。
+        /// </summary>
+        public DbSet<ContainerKindCount> ContainerKindCounts { get; set; }
+
+
         #endregion
 
         #region 财务相关

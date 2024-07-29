@@ -262,6 +262,11 @@
             海运进口单表。
             </summary>
         </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.ContainerKindCounts">
+            <summary>
+            海运箱量表。
+            </summary>
+        </member>
         <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.DocFeeRequisitions">
             <summary>
             业务费用收付款申请单.

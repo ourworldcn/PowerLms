@@ -4401,96 +4401,6 @@
             <response code="401">无效令牌。</response>  
             <response code="404">指定Id的空运进口单不存在。</response>  
         </member>
-        <member name="M:PowerLmsWebApi.Controllers.PlJobController.GetAllPlIsDoc(PowerLmsWebApi.Dto.PagingParamsDtoBase,System.Collections.Generic.Dictionary{System.String,System.String})">
-            <summary>
-            获取全部海运进口单。
-            </summary>
-            <param name="model"></param>
-            <param name="conditional">已支持通用查询——除个别涉及敏感信息字段外，所有实体字段都可作为条件。</param>
-            <returns></returns>
-            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
-            <response code="401">无效令牌。</response>  
-        </member>
-        <member name="M:PowerLmsWebApi.Controllers.PlJobController.AddPlIsDoc(PowerLmsWebApi.Controllers.AddPlIsDocParamsDto)">
-            <summary>
-            增加新海运进口单。
-            </summary>
-            <param name="model"></param>
-            <returns></returns>
-            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
-            <response code="401">无效令牌。</response>  
-        </member>
-        <member name="M:PowerLmsWebApi.Controllers.PlJobController.ModifyPlIsDoc(PowerLmsWebApi.Controllers.ModifyPlIsDocParamsDto)">
-            <summary>
-            修改海运进口单信息。
-            </summary>
-            <param name="model"></param>
-            <returns></returns>
-            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
-            <response code="401">无效令牌。</response>  
-            <response code="404">指定Id的海运进口单不存在。</response>  
-        </member>
-        <member name="M:PowerLmsWebApi.Controllers.PlJobController.RemovePlIsDoc(PowerLmsWebApi.Controllers.RemovePlIsDocParamsDto)">
-            <summary>
-            删除指定Id的海运进口单。慎用！
-            </summary>
-            <param name="model"></param>
-            <returns></returns>
-            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
-            <response code="400">未找到指定的业务，或该业务不在初始创建状态——无法删除。</response>  
-            <response code="401">无效令牌。</response>  
-            <response code="404">指定Id的海运进口单不存在。</response>  
-        </member>
-        <member name="T:PowerLmsWebApi.Controllers.RemovePlIsDocParamsDto">
-            <summary>
-            标记删除海运进口单功能的参数封装类。
-            </summary>
-        </member>
-        <member name="T:PowerLmsWebApi.Controllers.RemovePlIsDocReturnDto">
-            <summary>
-            标记删除海运进口单功能的返回值封装类。
-            </summary>
-        </member>
-        <member name="T:PowerLmsWebApi.Controllers.GetAllPlIsDocReturnDto">
-            <summary>
-            获取所有海运进口单功能的返回值封装类。
-            </summary>
-        </member>
-        <member name="T:PowerLmsWebApi.Controllers.AddPlIsDocParamsDto">
-            <summary>
-            增加新海运进口单功能参数封装类。
-            </summary>
-        </member>
-        <member name="P:PowerLmsWebApi.Controllers.AddPlIsDocParamsDto.PlIsDoc">
-            <summary>
-            新海运进口单信息。其中Id可以是任何值，返回时会指定新值。
-            </summary>
-        </member>
-        <member name="T:PowerLmsWebApi.Controllers.AddPlIsDocReturnDto">
-            <summary>
-            增加新海运进口单功能返回值封装类。
-            </summary>
-        </member>
-        <member name="P:PowerLmsWebApi.Controllers.AddPlIsDocReturnDto.Id">
-            <summary>
-            如果成功添加，这里返回新海运进口单的Id。
-            </summary>
-        </member>
-        <member name="T:PowerLmsWebApi.Controllers.ModifyPlIsDocParamsDto">
-            <summary>
-            修改海运进口单信息功能参数封装类。
-            </summary>
-        </member>
-        <member name="P:PowerLmsWebApi.Controllers.ModifyPlIsDocParamsDto.PlIsDoc">
-            <summary>
-            海运进口单数据。
-            </summary>
-        </member>
-        <member name="T:PowerLmsWebApi.Controllers.ModifyPlIsDocReturnDto">
-            <summary>
-            修改海运进口单信息功能返回值封装类。
-            </summary>
-        </member>
         <member name="T:PowerLmsWebApi.Controllers.GetDocFeeReturnDto">
             <summary>
             按复杂的多表条件返回费用功能的返回值封装类。
@@ -4907,6 +4817,201 @@
         <member name="T:PowerLmsWebApi.Controllers.ModifyPlIaDocReturnDto">
             <summary>
             修改空运进口单信息功能返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.PlSeaborneController">
+            <summary>
+            海运业务相关控制器。
+            </summary>
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.PlSeaborneController.#ctor(PowerLmsServer.Managers.AccountManager,Microsoft.Extensions.DependencyInjection.ServiceProvider,PowerLmsServer.EfData.PowerLmsUserDbContext,PowerLmsServer.Managers.EntityManager,AutoMapper.IMapper)">
+            <summary>
+            狗构造函数。
+            </summary>
+            <param name="accountManager"></param>
+            <param name="serviceProvider"></param>
+            <param name="dbContext"></param>
+            <param name="entityManager"></param>
+            <param name="mapper"></param>
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.PlSeaborneController.GetAllPlIsDoc(PowerLmsWebApi.Dto.PagingParamsDtoBase,System.Collections.Generic.Dictionary{System.String,System.String})">
+            <summary>
+            获取全部海运进口单。
+            </summary>
+            <param name="model"></param>
+            <param name="conditional">已支持通用查询——除个别涉及敏感信息字段外，所有实体字段都可作为条件。</param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.PlSeaborneController.AddPlIsDoc(PowerLmsWebApi.Controllers.AddPlIsDocParamsDto)">
+            <summary>
+            增加新海运进口单。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.PlSeaborneController.ModifyPlIsDoc(PowerLmsWebApi.Controllers.ModifyPlIsDocParamsDto)">
+            <summary>
+            修改海运进口单信息。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+            <response code="404">指定Id的海运进口单不存在。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.PlSeaborneController.RemovePlIsDoc(PowerLmsWebApi.Controllers.RemovePlIsDocParamsDto)">
+            <summary>
+            删除指定Id的海运进口单。慎用！
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="400">未找到指定的业务，或该业务不在初始创建状态——无法删除。</response>  
+            <response code="401">无效令牌。</response>  
+            <response code="404">指定Id的海运进口单不存在。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.PlSeaborneController.GetAllContainerKindCount(PowerLmsWebApi.Dto.PagingParamsDtoBase,System.Collections.Generic.Dictionary{System.String,System.String})">
+            <summary>
+            获取全部海运箱量。
+            </summary>
+            <param name="model"></param>
+            <param name="conditional">已支持通用查询——除个别涉及敏感信息字段外，所有实体字段都可作为条件。</param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.PlSeaborneController.AddContainerKindCount(PowerLmsWebApi.Controllers.AddContainerKindCountParamsDto)">
+            <summary>
+            增加新海运箱量。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.PlSeaborneController.ModifyContainerKindCount(PowerLmsWebApi.Controllers.ModifyContainerKindCountParamsDto)">
+            <summary>
+            修改海运箱量信息。
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="401">无效令牌。</response>  
+            <response code="404">指定Id的海运箱量不存在。</response>  
+        </member>
+        <member name="M:PowerLmsWebApi.Controllers.PlSeaborneController.RemoveContainerKindCount(PowerLmsWebApi.Controllers.RemoveContainerKindCountParamsDto)">
+            <summary>
+            删除指定Id的海运箱量。慎用！
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+            <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+            <response code="400">未找到指定的业务，或该业务不在初始创建状态——无法删除。</response>  
+            <response code="401">无效令牌。</response>  
+            <response code="404">指定Id的海运箱量不存在。</response>  
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RemovePlIsDocParamsDto">
+            <summary>
+            标记删除海运进口单功能的参数封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RemovePlIsDocReturnDto">
+            <summary>
+            标记删除海运进口单功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetAllPlIsDocReturnDto">
+            <summary>
+            获取所有海运进口单功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddPlIsDocParamsDto">
+            <summary>
+            增加新海运进口单功能参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.AddPlIsDocParamsDto.PlIsDoc">
+            <summary>
+            新海运进口单信息。其中Id可以是任何值，返回时会指定新值。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddPlIsDocReturnDto">
+            <summary>
+            增加新海运进口单功能返回值封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.AddPlIsDocReturnDto.Id">
+            <summary>
+            如果成功添加，这里返回新海运进口单的Id。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.ModifyPlIsDocParamsDto">
+            <summary>
+            修改海运进口单信息功能参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.ModifyPlIsDocParamsDto.PlIsDoc">
+            <summary>
+            海运进口单数据。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.ModifyPlIsDocReturnDto">
+            <summary>
+            修改海运进口单信息功能返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RemoveContainerKindCountParamsDto">
+            <summary>
+            删除海运箱量功能的参数封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.RemoveContainerKindCountReturnDto">
+            <summary>
+            删除海运箱量功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.GetAllContainerKindCountReturnDto">
+            <summary>
+            获取所有海运箱量功能的返回值封装类。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddContainerKindCountParamsDto">
+            <summary>
+            增加新海运箱量功能参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.AddContainerKindCountParamsDto.ContainerKindCount">
+            <summary>
+            新海运箱量信息。其中Id可以是任何值，返回时会指定新值。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.AddContainerKindCountReturnDto">
+            <summary>
+            增加新海运箱量功能返回值封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.AddContainerKindCountReturnDto.Id">
+            <summary>
+            如果成功添加，这里返回新海运箱量的Id。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.ModifyContainerKindCountParamsDto">
+            <summary>
+            修改海运箱量信息功能参数封装类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsWebApi.Controllers.ModifyContainerKindCountParamsDto.ContainerKindCount">
+            <summary>
+            海运箱量数据。
+            </summary>
+        </member>
+        <member name="T:PowerLmsWebApi.Controllers.ModifyContainerKindCountReturnDto">
+            <summary>
+            修改海运箱量信息功能返回值封装类。
             </summary>
         </member>
         <member name="T:PowerLmsWebApi.Controllers.ShippingLaneController">
