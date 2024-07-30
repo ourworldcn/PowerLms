@@ -13,6 +13,17 @@ using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace OW.Data
 {
+    /// <summary>
+    /// 子实体表的标记接口。
+    /// </summary>
+    public interface IOwSubtables
+    {
+        /// <summary>
+        /// 父实体的Id。
+        /// </summary>
+        public Guid? ParentId { get; set; }
+    }
+
     public static class OwQueryExtensions
     {
         /// <summary>
@@ -163,6 +174,12 @@ namespace OW.Data
             return result;
         }
 
+        /// <summary>
+        /// 分析字符串获得一个指定类型的常量表达式。
+        /// </summary>
+        /// <param name="value"></param>
+        /// <param name="type"></param>
+        /// <returns></returns>
         public static Expression Constant(string value, Type type)
         {
             Expression result;
@@ -263,32 +280,54 @@ namespace OW.Data
         /// <typeparam name="T"></typeparam>
         /// <param name="src"></param>
         /// <param name="context">使用的数据库上下位，不会自动保存，调用者需要自己保存数据。</param>
-        public static bool SetChildren<T>(IEnumerable<T> src, Func<T, Guid?> getParentCallback, DbContext context) where T : GuidKeyObjectBase
+        public static bool SetChildren<T>(IEnumerable<T> src, Guid parentId, DbContext context, ICollection<T> result = null) where T : GuidKeyObjectBase, IOwSubtables
         {
-            //var ids = new HashSet<Guid>(src.Select(c => c.Id)); //如果 collection 包含重复项，则集将包含每个唯一元素之一。 不会引发异常。 因此，生成的集的大小与 的大小 collection不同。
-            //if (!src.TryGetNonEnumeratedCount(out var idCount)) idCount = src.Count();
-            //if (idCount != ids.Count)
-            //{
-            //    OwHelper.SetLastErrorAndMessage(400, $"{nameof(src)}中有重复键值。");
-            //    return false;
-            //}
-            //var parentIds = src.Select(c => getParentCallback(c)).Distinct().ToArray();
-            //if (parentIds.Length != 1)
-            //{
-            //    OwHelper.SetLastErrorAndMessage(400, $"{nameof(src)}中有多个父对象Id。");
-            //    return false;
-            //}
-            //var adds
-            //var count = context.Set<T>().Count(c => ids.Contains(c.Id));
-            //if (count != ids.Count) return BadRequest($"{nameof(model.OrgIds)}中至少有一个实体不存在。");
+            var ids = new HashSet<Guid>(src.Select(c => c.Id)); //如果 collection 包含重复项，则集将包含每个唯一元素之一。 不会引发异常。 因此，生成的集的大小与 的大小 collection不同。
+            if (!src.TryGetNonEnumeratedCount(out var idCount)) idCount = src.Count();
+            if (idCount != ids.Count)
+            {
+                OwHelper.SetLastErrorAndMessage(400, $"{nameof(src)}中有重复键值。");
+                return false;
+            }
+            if (src.Any(c => c.ParentId != parentId))   //若父实体对象Id非法
+            {
+                OwHelper.SetLastErrorAndMessage(400, $"{nameof(src)}中父实体对象Id非法——应为{parentId}。");
+                return false;
+            }
+            var exists = context.Set<T>().Where(c => c.ParentId == parentId).ToArray();   //所有已存在的实体
+            var removes = exists.Where(c => !ids.Contains(c.Id));   //需要移除的实体
+            context.RemoveRange(removes);
 
-            //var removes = context.Set<T>().Where(c => c.UserId == model.UserId && !ids.Contains(c.OrgId));
-            //_DbContext.AccountPlOrganizations.RemoveRange(removes);
+            var existsIds = exists.Select(c => c.Id); //已存在的实体Id集合
+            var adds = src.Where(c => !existsIds.Contains(c.Id)); //需要添加的实体
+            context.AddRange(adds);
+            if (result is not null)
+                adds.ForEach(c => result.Add(c));
 
-            //var adds = ids.Except(_DbContext.AccountPlOrganizations.Where(c => c.UserId == model.UserId).Select(c => c.OrgId).AsEnumerable()).ToArray();
-            //_DbContext.AccountPlOrganizations.AddRange(adds.Select(c => new AccountPlOrganization { OrgId = c, UserId = model.UserId }));
-            
+            var modifies = src.Where(c => existsIds.Contains(c.Id));    //要更改的实体
+            var set = context.Set<T>();
+            foreach (var item in modifies)
+            {
+                var entity = set.Find(item.Id);
+                context.Entry(entity).CurrentValues.SetValues(item);
+                result?.Add(item);
+            }
             return true;
+        }
+
+        /// <summary>
+        /// 对子表实体标准化，统一设置父对象Id，如果Id是<see cref="Guid.Empty"/>则生成一个新Id。
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="srcs"></param>
+        /// <param name="parentId"></param>
+        public static void NormalizeChildren<T>(IEnumerable<T> srcs, Guid parentId) where T : GuidKeyObjectBase, IOwSubtables
+        {
+            srcs.ForEach(c =>
+            {
+                c.GenerateIdIfEmpty();
+                c.ParentId = parentId;
+            });
         }
     }
 }
