@@ -21,7 +21,7 @@ namespace PowerLms.Data
         /// </summary>
         public PlJob()
         {
-            
+
         }
 
         /// <summary>
@@ -150,13 +150,6 @@ namespace PowerLms.Data
         /// </summary>
         [Comment("工作状态。Operating正操作=2，Operated操作完成=4，Checked已审核=8，Closed已关闭=16.")]
         public byte JobState { get; set; }
-
-        /// <summary>
-        /// 操作状态。NewJob初始=0,Arrived 已到货=2,Declared 已申报=4,Delivered 已配送=8,Submitted 已交单=16,Notified 已通知=32
-        /// 对空运进口单使用空运进口单的相关定义。
-        /// </summary>
-        [Comment("操作状态。NewJob初始=0,Arrived 已到货=2,Declared 已申报=4,Delivered 已配送=8,Submitted 已交单=16,Notified 已通知=32")]
-        public byte OperateState { get; set; }
 
         /// <summary>
         ///  财务日期。出口默认出港日期，进口默认出库日期。
@@ -340,5 +333,21 @@ goodssize	尺寸	string100	字符串表达
         [Comment("尺寸,字符串表达.")]
         [MaxLength(128)]
         public string GoodsSize { get; set; }
+    }
+
+    /// <summary>
+    /// 业务表单标记。
+    /// </summary>
+    public interface IPlBusinessDoc
+    {
+        /// <summary>
+        /// 所属业务Id。
+        /// </summary>
+        public Guid? JobId { get; set; }
+
+        /// <summary>
+        /// 操作状态。0=初始化单据但尚未操作，128=最后一个状态，此状态下将业务对象状态自动切换为下一个状态。
+        /// </summary>
+        public byte Status { get; set; } 
     }
 }

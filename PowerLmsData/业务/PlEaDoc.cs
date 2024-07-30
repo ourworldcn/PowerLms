@@ -3,6 +3,7 @@ using OW.Data;
 using PowerLms.Data;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
@@ -16,13 +17,20 @@ namespace PowerLms.Data
     /// </summary>
     [Comment("空运出口单")]
     [Index(nameof(JobId), IsUnique = false)]
-    public class PlEaDoc : GuidKeyObjectBase, ICreatorInfo
+    public class PlEaDoc : GuidKeyObjectBase, ICreatorInfo, IPlBusinessDoc
     {
         /// <summary>
         /// 所属业务Id。
         /// </summary>
         [Comment("所属业务Id")]
         public Guid? JobId { get; set; }
+
+        /// <summary>
+        /// 操作状态。初始=0表示已建单据但尚未操作，128=最后一个状态，此状态下将业务对象状态自动切换为下一个状态。
+        /// NewJob初始=0,Arrived 已到货=1,Declared 已申报=2,Delivered 已配送=4,Submitted 已交单=8,Notified 已通知=128
+        /// </summary>
+        [Comment("操作状态。NewJob初始=0,Arrived 已到货=1,Declared 已申报=2,Delivered 已配送=4,Submitted 已交单=8,Notified 已通知=128")]
+        public byte Status { get; set; } = 0;
 
         /// <summary>
         /// 单号.

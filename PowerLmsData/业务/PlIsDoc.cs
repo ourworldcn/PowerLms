@@ -11,14 +11,26 @@ namespace PowerLms.Data
 {
     [Comment("海运进口单")]
     [Index(nameof(JobId), IsUnique = false)]
-    public class PlIsDoc : GuidKeyObjectBase, ICreatorInfo
+    public class PlIsDoc : GuidKeyObjectBase, ICreatorInfo, IPlBusinessDoc
     {
+        #region IPlBusinessDoc接口相关
+
         /// <summary>
         /// 所属业务Id。
         /// </summary>
         [Comment("所属业务Id")]
         public Guid? JobId { get; set; }
 
+        /// <summary>
+        /// 操作状态。0=初始化单据但尚未操作，128=最后一个状态，此状态下将业务对象状态自动切换为下一个状态。
+        /// 0=初始化单据但尚未操作，1=已换单,2=已申报,4=海关已放行,8=已提箱，128=已提货。
+        /// </summary>
+        [Comment("操作状态。0=初始化单据但尚未操作，1=已换单,2=已申报,4=海关已放行,8=已提箱，128=已提货。")]
+        public byte Status { get; set; } = 0;
+
+        #endregion IPlBusinessDoc接口相关
+
+        #region ICreatorInfo接口相关
         /// <summary>
         /// 制单人，建立时系统默认，可以更改相当于工作号的所有者。
         /// </summary>
@@ -30,6 +42,8 @@ namespace PowerLms.Data
         /// </summary>
         [Comment("新建时间,系统默认，不能更改。")]
         public DateTime CreateDateTime { get; set; }
+
+        #endregion ICreatorInfo接口相关
 
         /// <summary>
         /// 船次。
@@ -162,19 +176,13 @@ namespace PowerLms.Data
         /// </summary>
         [Comment("随船文件。服务器不解析，逗号分隔。")]
         public string FileStrings { get; set; }
-
-        /// <summary>
-        /// 操作状态。1=已换单（默认）,2=已申报,4=海关已放行,8=已提箱，16=已提货。
-        /// </summary>
-        [Comment("操作状态。1=已换单,2=船已到港,4=卸货完成,8=已提货。")]
-        public byte Status { get; set; } = 1;
     }
 
     /// <summary>
     /// 箱型箱量。
     /// </summary>
     [Index(nameof(ParentId), IsUnique = false)]
-    public class ContainerKindCount : GuidKeyObjectBase
+    public class ContainerKindCount : GuidKeyObjectBase,IOwSubtables
     {
         /// <summary>
         /// 所属业务单据Id。

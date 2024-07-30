@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
@@ -213,6 +214,56 @@ namespace PowerLmsWebApi.Controllers
             return result;
         }
 
+        /// <summary>
+        /// 设置全量箱量表。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">参数错误。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPut]
+        public ActionResult<SetContainerKindCountReturnDto> SetContainerKindCount(SetContainerKindCountParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new SetContainerKindCountReturnDto();
+            EfHelper.NormalizeChildren(model.Items, model.ParentId);
+            List<ContainerKindCount> list = new List<ContainerKindCount>();
+            if (!EfHelper.SetChildren(model.Items, model.ParentId, _DbContext, list))
+            {
+                return BadRequest(OwHelper.GetLastErrorMessage());
+            }
+            result.Result.AddRange(list);
+            return result;
+        }
         #endregion  海运箱量相关
+    }
+
+    /// <summary>
+    /// 设置全量箱量表功能的参数封装类。
+    /// </summary>
+    public class SetContainerKindCountParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 所属业务单据的Id。
+        /// </summary>
+        public Guid ParentId { get; set; }
+
+        /// <summary>
+        /// 全量箱量表的集合。
+        /// 指定存在id的实体则更新，Id全0或不存在的Id自动添加，原有未指定的实体将被删除。
+        /// </summary>
+        public List<ContainerKindCount> Items { get; set; } = new List<ContainerKindCount>();
+    }
+
+    /// <summary>
+    /// 设置全量箱量表功能的返回值封装类。
+    /// </summary>
+    public class SetContainerKindCountReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 指定业务单据下，所有实体的对象。
+        /// </summary>
+        public List<ContainerKindCount> Result { get; set; } = new List<ContainerKindCount>();
     }
 }

@@ -15,7 +15,7 @@ namespace PowerLms.Data
     /// </summary>
     [Comment("空运进口单")]
     [Index(nameof(JobId), IsUnique = false)]
-    public class PlIaDoc : GuidKeyObjectBase, ICreatorInfo
+    public class PlIaDoc : GuidKeyObjectBase, ICreatorInfo, IPlBusinessDoc
     {
         /// <summary>
         /// 构造函数。
@@ -42,6 +42,13 @@ namespace PowerLms.Data
         /// </summary>
         [Comment("新建时间,系统默认，不能更改。")]
         public DateTime CreateDateTime { get; set; }
+
+        /// <summary>
+        /// 操作状态。0=初始化单据但尚未操作，128=最后一个状态，此状态下将业务对象状态自动切换为下一个状态。
+        /// 0=初始化单据但尚未操作，,已调单=1,已申报=2,已出税=4,海关已放行=8,已入库=16,仓库已放行=128。
+        /// </summary>
+        [Comment("操作状态。0=初始化单据但尚未操作，,已调单=1,已申报=2,已出税=4,海关已放行=8,已入库=16,仓库已放行=128。")]
+        public byte Status { get; set; } = 0;
 
         /// <summary>
         /// 仓位号。
@@ -146,10 +153,5 @@ namespace PowerLms.Data
         [Comment("特别说明。")]
         public string Remark { get; set; }
 
-        /// <summary>
-        /// 操作状态。简单的按顺序：初始化单据（此时未经任何操作）=0,已调单=1,已申报=2,已出税=3,海关已放行=4,已入库=5,仓库已放行=6
-        /// </summary>
-        [Comment("操作状态。初始化单据（此时未经任何操作）=0,已调单=1,已申报=2,已出税=3,海关已放行=4,已入库=5,仓库已放行=6。")]
-        public byte OperationalStatus { get; set; }
     }
 }

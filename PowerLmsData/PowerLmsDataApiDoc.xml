@@ -622,6 +622,12 @@
             所属业务Id。
             </summary>
         </member>
+        <member name="P:PowerLms.Data.PlEaDoc.Status">
+            <summary>
+            操作状态。初始=0表示已建单据但尚未操作，128=最后一个状态，此状态下将业务对象状态自动切换为下一个状态。
+            NewJob初始=0,Arrived 已到货=1,Declared 已申报=2,Delivered 已配送=4,Submitted 已交单=8,Notified 已通知=128
+            </summary>
+        </member>
         <member name="P:PowerLms.Data.PlEaDoc.DocNo">
             <summary>
             单号.
@@ -782,6 +788,12 @@
             制单时间,系统默认，不能更改
             </summary>
         </member>
+        <member name="P:PowerLms.Data.PlIaDoc.Status">
+            <summary>
+            操作状态。0=初始化单据但尚未操作，128=最后一个状态，此状态下将业务对象状态自动切换为下一个状态。
+            0=初始化单据但尚未操作，,已调单=1,已申报=2,已出税=4,海关已放行=8,已入库=16,仓库已放行=128。
+            </summary>
+        </member>
         <member name="P:PowerLms.Data.PlIaDoc.PositionNumber">
             <summary>
             仓位号。
@@ -867,14 +879,15 @@
             特别说明。
             </summary>
         </member>
-        <member name="P:PowerLms.Data.PlIaDoc.OperationalStatus">
-            <summary>
-            操作状态。简单的按顺序：初始化单据（此时未经任何操作）=0,已调单=1,已申报=2,已出税=3,海关已放行=4,已入库=5,仓库已放行=6
-            </summary>
-        </member>
         <member name="P:PowerLms.Data.PlIsDoc.JobId">
             <summary>
             所属业务Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlIsDoc.Status">
+            <summary>
+            操作状态。0=初始化单据但尚未操作，128=最后一个状态，此状态下将业务对象状态自动切换为下一个状态。
+            0=初始化单据但尚未操作，1=已换单,2=已申报,4=海关已放行,8=已提箱，128=已提货。
             </summary>
         </member>
         <member name="P:PowerLms.Data.PlIsDoc.CreateBy">
@@ -990,11 +1003,6 @@
         <member name="P:PowerLms.Data.PlIsDoc.FileStrings">
             <summary>
             随船文件。服务器不解析，逗号分隔。
-            </summary>
-        </member>
-        <member name="P:PowerLms.Data.PlIsDoc.Status">
-            <summary>
-            操作状态。1=已换单（默认）,2=已申报,4=海关已放行,8=已提箱，16=已提货。
             </summary>
         </member>
         <member name="T:PowerLms.Data.ContainerKindCount">
@@ -1127,12 +1135,6 @@
             工作状态。Operating正操作=2，Operated操作完成=4，Checked已审核=8，Closed已关闭=16.
             </summary>
         </member>
-        <member name="P:PowerLms.Data.PlJob.OperateState">
-            <summary>
-            操作状态。NewJob初始=0,Arrived 已到货=2,Declared 已申报=4,Delivered 已配送=8,Submitted 已交单=16,Notified 已通知=32
-            对空运进口单使用空运进口单的相关定义。
-            </summary>
-        </member>
         <member name="P:PowerLms.Data.PlJob.AccountDate">
             <summary>
              财务日期。出口默认出港日期，进口默认出库日期。
@@ -1251,6 +1253,21 @@
         <member name="P:PowerLms.Data.PlJob.GoodsSize">
             <summary>
             尺寸,字符串表达.
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.IPlBusinessDoc">
+            <summary>
+            业务表单标记。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.IPlBusinessDoc.JobId">
+            <summary>
+            所属业务Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.IPlBusinessDoc.Status">
+            <summary>
+            操作状态。0=初始化单据但尚未操作，128=最后一个状态，此状态下将业务对象状态自动切换为下一个状态。
             </summary>
         </member>
         <member name="T:PowerLms.Data.IDataDic">
