@@ -129,6 +129,97 @@ namespace PowerLmsWebApi.Controllers
 
         #endregion  海运进口单相关
 
+        #region 海运出口单相关
+
+        /// <summary>
+        /// 获取全部海运出口单。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="conditional">已支持通用查询——除个别涉及敏感信息字段外，所有实体字段都可作为条件。</param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        public ActionResult<GetAllPlEsDocReturnDto> GetAllPlEsDoc([FromQuery] PagingParamsDtoBase model,
+            [FromQuery] Dictionary<string, string> conditional = null)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetAllPlEsDocReturnDto();
+
+            var dbSet = _DbContext.PlEsDocs;
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
+            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
+            _Mapper.Map(prb, result);
+            return result;
+        }
+
+        /// <summary>
+        /// 增加新海运出口单。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPost]
+        public ActionResult<AddPlEsDocReturnDto> AddPlEsDoc(AddPlEsDocParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new AddPlEsDocReturnDto();
+            var entity = model.PlEsDoc;
+            entity.GenerateNewId();
+            _DbContext.PlEsDocs.Add(model.PlEsDoc);
+            entity.CreateBy = context.User.Id;
+            entity.CreateDateTime = OwHelper.WorldNow;
+            _DbContext.SaveChanges();
+            result.Id = model.PlEsDoc.Id;
+            return result;
+        }
+
+        /// <summary>
+        /// 修改海运出口单信息。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定Id的海运出口单不存在。</response>  
+        [HttpPut]
+        public ActionResult<ModifyPlEsDocReturnDto> ModifyPlEsDoc(ModifyPlEsDocParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new ModifyPlEsDocReturnDto();
+            if (!_EntityManager.Modify(new[] { model.PlEsDoc })) return NotFound();
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        /// <summary>
+        /// 删除指定Id的海运出口单。慎用！
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">未找到指定的业务，或该业务不在初始创建状态——无法删除。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定Id的海运出口单不存在。</response>  
+        [HttpDelete]
+        public ActionResult<RemovePlEsDocReturnDto> RemovePlEsDoc(RemovePlEsDocParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new RemovePlEsDocReturnDto();
+            var id = model.Id;
+            var dbSet = _DbContext.PlEsDocs;
+            var item = dbSet.Find(id);
+            if (item.Status > 0) return BadRequest("业务已经开始，无法删除。");
+            if (item is null) return BadRequest();
+            _EntityManager.Remove(item);
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        #endregion  海运出口单相关
+
         #region 海运箱量相关
 
         /// <summary>
@@ -240,31 +331,4 @@ namespace PowerLmsWebApi.Controllers
         #endregion  海运箱量相关
     }
 
-    /// <summary>
-    /// 设置全量箱量表功能的参数封装类。
-    /// </summary>
-    public class SetContainerKindCountParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 所属业务单据的Id。
-        /// </summary>
-        public Guid ParentId { get; set; }
-
-        /// <summary>
-        /// 全量箱量表的集合。
-        /// 指定存在id的实体则更新，Id全0或不存在的Id自动添加，原有未指定的实体将被删除。
-        /// </summary>
-        public List<ContainerKindCount> Items { get; set; } = new List<ContainerKindCount>();
-    }
-
-    /// <summary>
-    /// 设置全量箱量表功能的返回值封装类。
-    /// </summary>
-    public class SetContainerKindCountReturnDto : ReturnDtoBase
-    {
-        /// <summary>
-        /// 指定业务单据下，所有实体的对象。
-        /// </summary>
-        public List<ContainerKindCount> Result { get; set; } = new List<ContainerKindCount>();
-    }
 }

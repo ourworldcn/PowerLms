@@ -262,6 +262,11 @@
             海运进口单表。
             </summary>
         </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.PlEsDocs">
+            <summary>
+            海运出口单表。
+            </summary>
+        </member>
         <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.ContainerKindCounts">
             <summary>
             海运箱量表。
@@ -761,6 +766,267 @@
         <member name="P:PowerLms.Data.HuochangChuchong.CargoSize">
             <summary>
             尺寸。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.PlEsDoc">
+            <summary>
+            海运出口单。
+            </summary>
+        </member>
+        <member name="M:PowerLms.Data.PlEsDoc.#ctor">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.JobId">
+            <summary>
+            所属业务Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.Status">
+            <summary>
+            操作状态。0=初始化单据但尚未操作，128=最后一个状态，此状态下将业务对象状态自动切换为下一个状态。
+            0=初始化单据但尚未操作，1=已报价,2=已订舱,4=已配舱,8=已装箱，16=已申报,32=已出提单,128=已放货。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.CreateBy">
+            <summary>
+            制单人，建立时系统默认，可以更改相当于工作号的所有者。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.CreateDateTime">
+            <summary>
+            制单时间,系统默认，不能更改
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.IsSpecifyLoad">
+            <summary>
+            是否指装。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.IsPartial">
+            <summary>
+            是否分批。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.IsFumigation">
+            <summary>
+            是否熏蒸。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.IsTranshipment">
+            <summary>
+            是否转运。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.MerchantStyleId">
+            <summary>
+            贸易条款Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.LoadStyle">
+            <summary>
+            装运条款。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.SeaPortAreaId">
+            <summary>
+            装船港港区Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.DelegationKind">
+            <summary>
+            委托类型。FCL=1、LCL=2、BULK=4。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.TransTermId">
+            <summary>
+            运输条款Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.BookingsRemark">
+            <summary>
+            订舱要求。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.BookingsDateTime">
+            <summary>
+            订舱日期。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.BillPaymentModeId">
+            <summary>
+            付款方式Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.BillPaymentPlace">
+            <summary>
+            付款地点。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.SoNumber">
+            <summary>
+            S/O编号。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.WarehousingNumber">
+            <summary>
+            进仓编号。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.GoodsReleaseModeId">
+            <summary>
+            放货方式。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.WarehousingDateTime">
+            <summary>
+            放舱日期。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.Voyage">
+            <summary>
+            航次。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.CargoRouteId">
+            <summary>
+            航线字典ID。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.TransitPort">
+            <summary>
+            中转港。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.CutOffGoodsDateTime">
+            <summary>
+            截货日期
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.CutOffDateTime">
+            <summary>
+            截关日期
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.SeaborneRemark">
+            <summary>
+            海运说明
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.BargeName">
+            <summary>
+            驳船船名.
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.BargeVoyage">
+            <summary>
+            驳船船名.
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.BargeSailDateTime">
+            <summary>
+            驳船开航日期.
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.BargeArrivalDateTime">
+            <summary>
+            驳船到港日期.
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.BargeLoadingHarbor">
+            <summary>
+            驳船装船港.
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.BargeDestinationHarbor">
+            <summary>
+            驳船目的港.
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.Consigner">
+            <summary>
+            发货人.
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.ConsignerTitle">
+            <summary>
+            发货人抬头.
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.Informers">
+            <summary>
+            通知人.
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.InformersTitle">
+            <summary>
+            通知人抬头.
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.MarkHeader">
+            <summary>
+            唛头.
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.ContainerKindCountString">
+            <summary>
+            箱量。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.GoodsName">
+            <summary>
+            品名。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.Total1">
+            <summary>
+            总计1,箱。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.Total2">
+            <summary>
+            总计1,箱。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.Total3">
+            <summary>
+            总计1,箱。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.BookingGoodsTypeId">
+            <summary>
+            货种Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.DangerousLevel">
+            <summary>
+            危险级别。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.DangerousPage">
+            <summary>
+            危规页码。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.Features">
+            <summary>
+            特征。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.UnNumber">
+            <summary>
+            UN No。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.FlashPoint">
+            <summary>
+            闪点。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.PlEsDoc.RefrigerationTemperature">
+            <summary>
+            冷藏温度。
             </summary>
         </member>
         <member name="T:PowerLms.Data.PlIaDoc">

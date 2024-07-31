@@ -19,6 +19,7 @@ namespace PowerLms.Data
     [Index(nameof(JobId), IsUnique = false)]
     public class PlEaDoc : GuidKeyObjectBase, ICreatorInfo, IPlBusinessDoc
     {
+        #region IPlBusinessDoc接口相关
         /// <summary>
         /// 所属业务Id。
         /// </summary>
@@ -31,6 +32,8 @@ namespace PowerLms.Data
         /// </summary>
         [Comment("操作状态。NewJob初始=0,Arrived 已到货=1,Declared 已申报=2,Delivered 已配送=4,Submitted 已交单=8,Notified 已通知=128")]
         public byte Status { get; set; } = 0;
+
+        #endregion IPlBusinessDoc接口相关
 
         /// <summary>
         /// 单号.

@@ -352,6 +352,11 @@ namespace PowerLmsServer.EfData
         public DbSet<PlIsDoc> PlIsDocs { get; set; }
 
         /// <summary>
+        /// 海运出口单表。
+        /// </summary>
+        public DbSet<PlEsDoc> PlEsDocs { get; set; }
+
+        /// <summary>
         /// 海运箱量表。
         /// </summary>
         public DbSet<ContainerKindCount> ContainerKindCounts { get; set; }
