@@ -15,7 +15,7 @@ namespace PowerLmsWebApi.Controllers
     public class PlSeaborneController : PlControllerBase
     {
         private AccountManager _AccountManager;
-        private ServiceProvider _ServiceProvider;
+        private IServiceProvider _ServiceProvider;
         private PowerLmsUserDbContext _DbContext;
         private EntityManager _EntityManager;
         private IMapper _Mapper;
@@ -28,7 +28,8 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="dbContext"></param>
         /// <param name="entityManager"></param>
         /// <param name="mapper"></param>
-        public PlSeaborneController(AccountManager accountManager, ServiceProvider serviceProvider, PowerLmsUserDbContext dbContext, EntityManager entityManager, IMapper mapper)
+        public PlSeaborneController(AccountManager accountManager, IServiceProvider serviceProvider, PowerLmsUserDbContext dbContext,
+            EntityManager entityManager, IMapper mapper)
         {
             _AccountManager = accountManager;
             _ServiceProvider = serviceProvider;

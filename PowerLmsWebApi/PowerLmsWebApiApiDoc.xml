@@ -4823,7 +4823,7 @@
             海运业务相关控制器。
             </summary>
         </member>
-        <member name="M:PowerLmsWebApi.Controllers.PlSeaborneController.#ctor(PowerLmsServer.Managers.AccountManager,Microsoft.Extensions.DependencyInjection.ServiceProvider,PowerLmsServer.EfData.PowerLmsUserDbContext,PowerLmsServer.Managers.EntityManager,AutoMapper.IMapper)">
+        <member name="M:PowerLmsWebApi.Controllers.PlSeaborneController.#ctor(PowerLmsServer.Managers.AccountManager,System.IServiceProvider,PowerLmsServer.EfData.PowerLmsUserDbContext,PowerLmsServer.Managers.EntityManager,AutoMapper.IMapper)">
             <summary>
             狗构造函数。
             </summary>
