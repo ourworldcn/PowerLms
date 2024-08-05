@@ -177,6 +177,10 @@ namespace PowerLmsWebApi.Controllers
             {
                 plBusinessDoc = isDoc;
             }
+            else if (_DbContext.PlEsDocs.FirstOrDefault(c => c.JobId == model.JobId) is PlEsDoc esDoc)   //若存在海运出口单
+            {
+                plBusinessDoc = esDoc;
+            }
             else
             {
                 return BadRequest($"找不到业务单据对象，Id={model.JobId}");
