@@ -122,6 +122,12 @@ namespace PowerLmsServer.EfData
         #endregion 方法
 
         #region 系统资源相关
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public DbSet<OwSystemLog> OwSystemLogs { get; set; }
+
         /// <summary>
         /// 系统资源表。包含数据字典目录。
         /// </summary>

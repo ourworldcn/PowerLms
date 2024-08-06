@@ -2852,7 +2852,7 @@
         </member>
         <member name="M:PowerLmsWebApi.Controllers.FinancialController.RemovePlInvoices(PowerLmsWebApi.Controllers.RemovePlInvoicesParamsDto)">
             <summary>
-            删除指定Id的结算单。慎用！
+            删除指定Id的结算单。这会删除所有结算单明细项。慎用！
             </summary>
             <param name="model"></param>
             <returns></returns>

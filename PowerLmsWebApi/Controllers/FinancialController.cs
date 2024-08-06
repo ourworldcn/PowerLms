@@ -542,7 +542,7 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// 删除指定Id的结算单。慎用！
+        /// 删除指定Id的结算单。这会删除所有结算单明细项。慎用！
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
@@ -558,7 +558,15 @@ namespace PowerLmsWebApi.Controllers
             var dbSet = _DbContext.PlInvoicess;
             var item = dbSet.Find(id);
             if (item is null) return BadRequest();
+            var children = _DbContext.PlInvoicesItems.Where(c => c.ParentId == item.Id).ToArray();
             _EntityManager.Remove(item);
+            if (children.Length > 0) _DbContext.RemoveRange(children);
+            _DbContext.OwSystemLogs.Add(new OwSystemLog
+            {
+                ActionId = $"Delete.{nameof(PlInvoices)}.{item.Id}",
+                ExtraGuid = context.User.Id,
+                ExtraDecimal = children.Length,
+            });
             _DbContext.SaveChanges();
             return result;
         }

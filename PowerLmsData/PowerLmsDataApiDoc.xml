@@ -62,6 +62,11 @@
             </summary>
             <returns></returns>
         </member>
+        <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.OwSystemLogs">
+            <summary>
+            
+            </summary>
+        </member>
         <member name="P:PowerLmsServer.EfData.PowerLmsUserDbContext.DD_SystemResources">
             <summary>
             系统资源表。包含数据字典目录。
@@ -2067,6 +2072,39 @@
         <member name="P:PowerLms.Data.OtherNumberRule.IsDelete">
             <summary>
             是否已标记为删除。false(默认)未标记为删除，true标记为删除。
+            </summary>
+        </member>
+        <member name="T:PowerLms.Data.OwSystemLog">
+            <summary>
+            通用数据库存储的日志实体对象。
+            此类可能放在玩家数据库中也可能放于专用的日志库中，但可能有些游戏内操作需要此数据。
+            当前没有启动第二上下文，暂时放在业务数据库中。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwSystemLog.ActionId">
+            <summary>
+            行为Id。如操作名.实体名.Id。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwSystemLog.WorldDateTime">
+            <summary>
+            这个行为发生的世界时间。
+            </summary>
+            <value>默认是构造此对象的<see cref="P:System.OwHelper.WorldNow"/>时间。</value>
+        </member>
+        <member name="P:PowerLms.Data.OwSystemLog.ExtraGuid">
+            <summary>
+            额外Guid。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwSystemLog.ExtraString">
+            <summary>
+            额外的字符串，通常行为Id，最长64字符。
+            </summary>
+        </member>
+        <member name="P:PowerLms.Data.OwSystemLog.ExtraDecimal">
+            <summary>
+            额外数字，具体意义取决于该条记录的类型。
             </summary>
         </member>
         <member name="T:PowerLms.Data.PlCountry">
