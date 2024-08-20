@@ -95,7 +95,12 @@ namespace System.Net.Sockets
     /// <remarks></remarks>
     public class OwRdmServer : SocketAsyncWrapper, IDisposable
     {
-
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="options"></param>
+        /// <param name="logger"></param>
+        /// <param name="hostApplicationLifetime"></param>
         public OwRdmServer(IOptions<OwRdmServerOptions> options, ILogger<OwRdmServer> logger, IHostApplicationLifetime hostApplicationLifetime)
             : base(new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp))
         {
@@ -106,6 +111,9 @@ namespace System.Net.Sockets
             Initialize();
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
         void Initialize()
         {
             Socket.Bind(new IPEndPoint(IPAddress.Parse(_Options.Value.ListernAddress), _Options.Value.ListernPort));
@@ -212,6 +220,13 @@ namespace System.Net.Sockets
 
         #region 发送及相关
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="buffer"></param>
+        /// <param name="startIndex"></param>
+        /// <param name="count"></param>
+        /// <param name="id"></param>
         public void SendTo(byte[] buffer, int startIndex, int count, int id)
         {
             if (!_Id2ClientEntry.ContainsKey(id))    //若尚未建立连接
@@ -243,6 +258,13 @@ namespace System.Net.Sockets
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="buffer"></param>
+        /// <param name="startIndex"></param>
+        /// <param name="count"></param>
+        /// <param name="id"></param>
         public async void SendToAsync(byte[] buffer, int startIndex, int count, int id)
         {
             var list = OwRdmDgram.Split(buffer, startIndex, count);
