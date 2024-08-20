@@ -4,6 +4,7 @@ using OW.Data;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -210,14 +211,18 @@ AirlineMan	航线负责人	用户id
         [MaxLength(32)]
         public string ContractNo { get; set; }
 
-        /*verifyDate	审核日期	
-CloseDate	关闭日期	
-*/
         /// <summary>
-        /// 审核日期。
+        /// 审核日期,未审核则为空。
         /// </summary>
-        [Comment("审核日期")]
-        public DateTime? VerifyDate { get; set; }
+        [Comment("审核日期,未审核则为空")]
+        [Column(TypeName = "datetime2(2)")]
+        public DateTime? AuditDateTime { get; set; }
+
+        /// <summary>
+        /// 审核人Id，为空则未审核。
+        /// </summary>
+        [Comment("审核人Id，为空则未审核")]
+        public Guid? AuditOperatorId { get; set; }
 
         /// <summary>
         /// 关闭日期。
@@ -348,6 +353,6 @@ goodssize	尺寸	string100	字符串表达
         /// <summary>
         /// 操作状态。0=初始化单据但尚未操作，128=最后一个状态，此状态下将业务对象状态自动切换为下一个状态。
         /// </summary>
-        public byte Status { get; set; } 
+        public byte Status { get; set; }
     }
 }

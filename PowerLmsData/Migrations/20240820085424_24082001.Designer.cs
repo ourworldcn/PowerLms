@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PowerLmsServer.EfData;
 
@@ -11,9 +12,10 @@ using PowerLmsServer.EfData;
 namespace PowerLmsData.Migrations
 {
     [DbContext(typeof(PowerLmsUserDbContext))]
-    partial class PowerLmsUserDbContextModelSnapshot : ModelSnapshot
+    [Migration("20240820085424_24082001")]
+    partial class _24082001
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1056,19 +1058,15 @@ namespace PowerLmsData.Migrations
                         .HasColumnType("varchar(max)")
                         .HasColumnOrder(10);
 
-                    b.Property<Guid?>("OrgId")
-                        .HasColumnType("uniqueidentifier")
-                        .HasComment("所属机构Id");
-
                     b.Property<DateTime>("WorldDateTime")
                         .HasColumnType("datetime2")
                         .HasComment("这个行为发生的世界时间。");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OrgId", "ActionId", "WorldDateTime");
+                    b.HasIndex("ActionId", "WorldDateTime");
 
-                    b.HasIndex("OrgId", "WorldDateTime", "ActionId");
+                    b.HasIndex("WorldDateTime", "ActionId");
 
                     b.ToTable("OwSystemLogs");
 

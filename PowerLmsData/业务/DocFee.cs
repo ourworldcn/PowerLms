@@ -122,13 +122,13 @@ namespace PowerLms.Data
         /// 审核日期，为空则未审核。
         /// </summary>
         [Comment("审核日期，为空则未审核"), Column(TypeName = "datetime2(2)")]
-        public DateTime? CheckDate { get; set; }
+        public DateTime? AuditDateTime { get; set; }
 
         /// <summary>
         /// 审核人Id，为空则未审核。
         /// </summary>
         [Comment("审核人Id，为空则未审核")]
-        public Guid? ChechManId { get; set; }
+        public Guid? AuditOperatorId { get; set; }
 
     }
 }

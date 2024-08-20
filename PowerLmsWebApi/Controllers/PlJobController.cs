@@ -114,6 +114,8 @@ namespace PowerLmsWebApi.Controllers
             //忽略不可更改字段
             var entity = _DbContext.Entry(model.PlJob);
             entity.Property(c => c.JobState).IsModified = false;
+            entity.Property(c => c.AuditOperatorId).IsModified = false;
+            entity.Property(c => c.AuditDateTime).IsModified = false;
             model.PlJob.OperatingDateTime = OwHelper.WorldNow;
             model.PlJob.OperatorId = context.User.Id;
             _DbContext.SaveChanges();
@@ -204,6 +206,50 @@ namespace PowerLmsWebApi.Controllers
 
         }
 
+        /// <summary>
+        /// 审核任务及下属所有费用。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">未找到指定的业务对象(Job) -或- 没有找到对应的业务单据。</response>  
+        /// <response code="400">任务状态非法。要审核任务的 JobStata 必须是4时才能调用，成功后 JobStata 自动切换为8。
+        /// 要取消审核任务的 JobStata 必须是8才能调用，成功后 JobStata 自动切换为4（此时不会更改下属费用的状态）。</response>  
+        [HttpPost]
+        public ActionResult<AuditJobAndDocFeeReturnDto> AuditJobAndDocFee(AuditJobAndDocFeeParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context)
+            {
+                _Logger.LogWarning("无效的令牌{token}", model.Token);
+                return Unauthorized();
+            }
+            var result = new AuditJobAndDocFeeReturnDto();
+            if (_DbContext.PlJobs.Find(model.JobId) is not PlJob job) return NotFound($"未找到指定的任务 ，Id={model.JobId}");
+            var now = OwHelper.WorldNow;
+            if (model.IsAudit)   //若审核
+            {
+                if (job.JobState != 4) return BadRequest($"审核的任务状态必须是4");
+                var fees = _DbContext.DocFees.Where(c => c.JobId == model.JobId).ToList();
+                fees.ForEach(c =>
+                {
+                    c.AuditDateTime = now;
+                    c.AuditOperatorId = context.User.Id;
+                });
+                job.JobState = 8;
+                job.AuditDateTime = now;
+                job.AuditOperatorId = context.User.Id;
+            }
+            else //取消审核
+            {
+                if (job.JobState != 8) return BadRequest($"取消审核的任务状态必须是8");
+                job.JobState = 4;
+                job.AuditDateTime = null;
+                job.AuditOperatorId = null;
+            }
+            _DbContext.SaveChanges();
+            return result;
+        }
 
         #endregion 业务总表
 
@@ -414,9 +460,9 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AuditDocFeeReturnDto();
             if (_DbContext.DocFees.Find(model.FeeId) is not DocFee fee) return NotFound();
-            if (fee.CheckDate is not null || fee.ChechManId is not null) return BadRequest();
-            fee.CheckDate = OwHelper.WorldNow;
-            fee.ChechManId = context.User.Id;
+            if (fee.AuditDateTime is not null || fee.AuditOperatorId is not null) return BadRequest();
+            fee.AuditDateTime = OwHelper.WorldNow;
+            fee.AuditOperatorId = context.User.Id;
             _DbContext.SaveChanges();
             return result;
         }
@@ -544,6 +590,10 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyDocFeeReturnDto();
             if (!_EntityManager.Modify(new[] { model.DocFee })) return NotFound();
+            var entity = _DbContext.Entry(model.DocFee);
+            entity.Property(c => c.AuditOperatorId).IsModified = false;
+            entity.Property(c => c.AuditDateTime).IsModified = false;
+
             _DbContext.SaveChanges();
             return result;
         }
@@ -1180,108 +1230,6 @@ namespace PowerLmsWebApi.Controllers
     {
     }
     #endregion 空运出口单
-
-    #region 业务总表
-    /// <summary>
-    /// 切换业务状态接口参数封装类。
-    /// </summary>
-    public class ChangeStateParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 要修改业务的唯一Id。
-        /// </summary>
-        public Guid JobId { get; set; }
-
-        /// <summary>
-        /// 新的业务状态。不改变则为空。
-        /// NewJob初始=0，Operating正操作=2，Operated操作完成=4，Checked已审核=8，Closed已关闭=16.
-        /// </summary>
-        public int? JobState { get; set; }
-
-        /// <summary>
-        /// 新的操作状态。不改变则为空。
-        /// 具体规则参加各业务表单 Status 字段说明。
-        /// </summary>
-        public byte? OperateState { get; set; }
-    }
-
-    /// <summary>
-    /// 切换业务状态接口返回值封装类。
-    /// </summary>
-    public class ChangeStateReturnDto : ReturnDtoBase
-    {
-        /// <summary>
-        /// 如果成功这里是切换后的业务状态。
-        /// </summary>
-        public int JobState { get; set; }
-
-        /// <summary>
-        /// 如果成功这里是切换后的操作状态。
-        /// </summary>
-        public int OperateState { get; set; }
-    }
-
-    /// <summary>
-    /// 标记删除业务总表功能的参数封装类。
-    /// </summary>
-    public class RemovePlJobParamsDto : RemoveParamsDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 标记删除业务总表功能的返回值封装类。
-    /// </summary>
-    public class RemovePlJobReturnDto : RemoveReturnDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 获取所有业务总表功能的返回值封装类。
-    /// </summary>
-    public class GetAllPlJobReturnDto : PagingReturnDtoBase<PlJob>
-    {
-    }
-
-    /// <summary>
-    /// 增加新业务总表功能参数封装类。
-    /// </summary>
-    public class AddPlJobParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 新业务总表信息。其中Id可以是任何值，返回时会指定新值。
-        /// </summary>
-        public PlJob PlJob { get; set; }
-    }
-
-    /// <summary>
-    /// 增加新业务总表功能返回值封装类。
-    /// </summary>
-    public class AddPlJobReturnDto : ReturnDtoBase
-    {
-        /// <summary>
-        /// 如果成功添加，这里返回新业务总表的Id。
-        /// </summary>
-        public Guid Id { get; set; }
-    }
-
-    /// <summary>
-    /// 修改业务总表信息功能参数封装类。
-    /// </summary>
-    public class ModifyPlJobParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 业务总表数据。
-        /// </summary>
-        public PlJob PlJob { get; set; }
-    }
-
-    /// <summary>
-    /// 修改业务总表信息功能返回值封装类。
-    /// </summary>
-    public class ModifyPlJobReturnDto : ReturnDtoBase
-    {
-    }
-    #endregion 业务总表
 
     #region 空运进口单相关
 

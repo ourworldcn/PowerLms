@@ -14,8 +14,8 @@ namespace PowerLms.Data
     /// 此类可能放在玩家数据库中也可能放于专用的日志库中，但可能有些游戏内操作需要此数据。
     /// 当前没有启动第二上下文，暂时放在业务数据库中。
     /// </summary>
-    [Index(nameof(ActionId), nameof(WorldDateTime), IsUnique = false)]
-    [Index(nameof(WorldDateTime), nameof(ActionId), IsUnique = false)]
+    [Index(nameof(OrgId), nameof(ActionId), nameof(WorldDateTime), IsUnique = false)]
+    [Index(nameof(OrgId), nameof(WorldDateTime), nameof(ActionId), IsUnique = false)]
     [Comment("通用数据库存储的日志实体对象。")]
     public class OwSystemLog : JsonDynamicPropertyBase
     {
@@ -26,6 +26,12 @@ namespace PowerLms.Data
         public OwSystemLog(Guid id) : base(id)
         {
         }
+
+        /// <summary>
+        /// 所属机构Id。
+        /// </summary>
+        [Comment("所属机构Id")]
+        public Guid? OrgId { get; set; }
 
         /// <summary>
         /// 行为Id。如操作名.实体名.Id。

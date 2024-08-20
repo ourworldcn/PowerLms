@@ -563,6 +563,7 @@ namespace PowerLmsWebApi.Controllers
             if (children.Length > 0) _DbContext.RemoveRange(children);
             _DbContext.OwSystemLogs.Add(new OwSystemLog
             {
+                OrgId = context.User.OrgId,
                 ActionId = $"Delete.{nameof(PlInvoices)}.{item.Id}",
                 ExtraGuid = context.User.Id,
                 ExtraDecimal = children.Length,
