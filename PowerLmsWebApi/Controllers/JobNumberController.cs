@@ -16,7 +16,7 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 构造函数。
         /// </summary>
-        public JobNumberController(IServiceProvider serviceProvider, AccountManager accountManager, PowerLmsUserDbContext dbContext, JobNumberManager jobNumber)
+        public JobNumberController(IServiceProvider serviceProvider, AccountManager accountManager, PowerLmsUserDbContext dbContext, JobManager jobNumber)
         {
             _ServiceProvider = serviceProvider;
             _AccountManager = accountManager;
@@ -27,7 +27,7 @@ namespace PowerLmsWebApi.Controllers
         IServiceProvider _ServiceProvider;
         AccountManager _AccountManager;
         PowerLmsUserDbContext _DbContext;
-        JobNumberManager _JobNumber;
+        JobManager _JobNumber;
 
         /// <summary>
         /// 用指定的编码规则生成一个新的编码。

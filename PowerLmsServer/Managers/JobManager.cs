@@ -1,7 +1,10 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.ObjectPool;
 using NPOI.SS.Formula.Functions;
+using Org.BouncyCastle.Asn1.IsisMtt.X509;
 using PowerLms.Data;
+using PowerLmsServer.EfData;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,7 +18,7 @@ namespace PowerLmsServer.Managers
     /// 编号生成管理器。
     /// </summary>
     [OwAutoInjection(ServiceLifetime.Singleton)]
-    public class JobNumberManager
+    public class JobManager
     {
         /// <summary>
         /// 工作编码的译码表，不含序号。
@@ -192,5 +195,60 @@ namespace PowerLmsServer.Managers
             return str;
         }
 
+        #region 任务相关
+
+        /// <summary>
+        /// 审核工作任务并审核所有下属费用。
+        /// </summary>
+        /// <param name="job"></param>
+        /// <param name="context"></param>
+        /// <returns></returns>
+        public bool Audit(PlJob job, OwContext context)
+        {
+            var db = context.ServiceProvider.GetRequiredService<PowerLmsUserDbContext>();
+            if (job.JobState != 4)
+            {
+                OwHelper.SetLastErrorAndMessage(400, $"{nameof(job.JobState)}必须是4才能审核");
+                return false;
+            }
+            job.JobState = 8;
+            job.AuditDateTime = context.CreateDateTime;
+            job.AuditOperatorId = context.User.Id;
+            var fees = db.DocFees.Where(c => c.JobId == job.Id).ToList();
+            fees.ForEach(c =>
+            {
+                c.AuditDateTime = context.CreateDateTime;
+                c.AuditOperatorId = context.User.Id;
+            });
+            return true;
+        }
+
+        /// <summary>
+        /// 取消审核工作任务并取消审核所有下属费用。
+        /// </summary>
+        /// <param name="job"></param>
+        /// <param name="context"></param>
+        /// <returns></returns>
+        public bool UnAudit(PlJob job, OwContext context)
+        {
+            var db = context.ServiceProvider.GetRequiredService<PowerLmsUserDbContext>();
+            if (job.JobState != 8)
+            {
+                OwHelper.SetLastErrorAndMessage(400, $"{nameof(job.JobState)}必须是8才能取消审核");
+                return false;
+            }
+            job.JobState = 4;
+            job.AuditDateTime = null;
+            job.AuditOperatorId = null;
+            var fees = db.DocFees.Where(c => c.JobId == job.Id).ToList();
+            fees.ForEach(c =>
+            {
+                c.AuditDateTime = null;
+                c.AuditOperatorId = null;
+            });
+            return true;
+        }
+
+        #endregion 任务相关
     }
 }

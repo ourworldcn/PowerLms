@@ -21,7 +21,7 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 构造函数。
         /// </summary>
-        public PlJobController(AccountManager accountManager, IServiceProvider serviceProvider, PowerLmsUserDbContext dbContext, OrganizationManager organizationManager, IMapper mapper, EntityManager entityManager, DataDicManager dataManager, ILogger<PlJobController> logger)
+        public PlJobController(AccountManager accountManager, IServiceProvider serviceProvider, PowerLmsUserDbContext dbContext, OrganizationManager organizationManager, IMapper mapper, EntityManager entityManager, DataDicManager dataManager, ILogger<PlJobController> logger, JobManager jobManager)
         {
             _AccountManager = accountManager;
             _ServiceProvider = serviceProvider;
@@ -31,6 +31,7 @@ namespace PowerLmsWebApi.Controllers
             _EntityManager = entityManager;
             _DataManager = dataManager;
             _Logger = logger;
+            _JobManager = jobManager;
         }
 
         readonly AccountManager _AccountManager;
@@ -41,6 +42,7 @@ namespace PowerLmsWebApi.Controllers
         readonly EntityManager _EntityManager;
         readonly DataDicManager _DataManager;
         readonly ILogger<PlJobController> _Logger;
+        JobManager _JobManager;
 
         #region 业务总表
 
@@ -167,6 +169,7 @@ namespace PowerLmsWebApi.Controllers
             var job = _DbContext.PlJobs.Find(model.JobId);
             if (job is null) return NotFound($"找不到指定的业务对象，Id={model.JobId}");
             IPlBusinessDoc plBusinessDoc = null;
+            var now = OwHelper.WorldNow;
             if (_DbContext.PlIaDocs.FirstOrDefault(c => c.JobId == model.JobId) is PlIaDoc iaDoc)   //若存在空运进口单
             {
                 plBusinessDoc = iaDoc;
@@ -197,6 +200,10 @@ namespace PowerLmsWebApi.Controllers
             }
             else if (model.JobState.HasValue)
             {
+                if (job.JobState == 8 && model.JobState.GetValueOrDefault() == 16)   //若关闭
+                    job.CloseDate = now;
+                else if (job.JobState == 16 && model.JobState.GetValueOrDefault() == 8)   //若取消关闭
+                    job.CloseDate = null;
                 job.JobState = (byte)model.JobState.Value;
             }
             result.OperateState = plBusinessDoc.Status;
@@ -207,7 +214,7 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// 审核任务及下属所有费用。
+        /// 审核任务及下属所有费用或取消审核工作任务并取消审核所有下属费用。
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
@@ -215,7 +222,7 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">未找到指定的业务对象(Job) -或- 没有找到对应的业务单据。</response>  
         /// <response code="400">任务状态非法。要审核任务的 JobStata 必须是4时才能调用，成功后 JobStata 自动切换为8。
-        /// 要取消审核任务的 JobStata 必须是8才能调用，成功后 JobStata 自动切换为4（此时不会更改下属费用的状态）。</response>  
+        /// 要取消审核任务的 JobStata 必须是8才能调用，成功后 JobStata 自动切换为4,此时会取消下属费用的已审核状态。</response>  
         [HttpPost]
         public ActionResult<AuditJobAndDocFeeReturnDto> AuditJobAndDocFee(AuditJobAndDocFeeParamsDto model)
         {
@@ -229,23 +236,13 @@ namespace PowerLmsWebApi.Controllers
             var now = OwHelper.WorldNow;
             if (model.IsAudit)   //若审核
             {
-                if (job.JobState != 4) return BadRequest($"审核的任务状态必须是4");
-                var fees = _DbContext.DocFees.Where(c => c.JobId == model.JobId).ToList();
-                fees.ForEach(c =>
-                {
-                    c.AuditDateTime = now;
-                    c.AuditOperatorId = context.User.Id;
-                });
-                job.JobState = 8;
-                job.AuditDateTime = now;
-                job.AuditOperatorId = context.User.Id;
+                if (!_JobManager.Audit(job, context))
+                    return BadRequest(OwHelper.GetLastErrorMessage());
             }
             else //取消审核
             {
-                if (job.JobState != 8) return BadRequest($"取消审核的任务状态必须是8");
-                job.JobState = 4;
-                job.AuditDateTime = null;
-                job.AuditOperatorId = null;
+                if (!_JobManager.UnAudit(job, context))
+                    return BadRequest(OwHelper.GetLastErrorMessage());
             }
             _DbContext.SaveChanges();
             return result;
@@ -451,7 +448,7 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="model"></param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
-        /// <response code="400">费用已被审核。</response>  
+        /// <response code="400">费用已被审核 -或- 所属任务已不可更改。</response>  
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">找不到指定Id的费用。</response>  
         [HttpPost]
@@ -460,9 +457,19 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AuditDocFeeReturnDto();
             if (_DbContext.DocFees.Find(model.FeeId) is not DocFee fee) return NotFound();
-            if (fee.AuditDateTime is not null || fee.AuditOperatorId is not null) return BadRequest();
-            fee.AuditDateTime = OwHelper.WorldNow;
-            fee.AuditOperatorId = context.User.Id;
+            if (_DbContext.PlJobs.Find(fee.JobId) is not PlJob job) return NotFound();
+            if (job.JobState > 4) return BadRequest("所属任务已经不可更改。");
+            if(model.IsAudit)
+            {
+                fee.AuditDateTime = OwHelper.WorldNow;
+                fee.AuditOperatorId = context.User.Id;
+
+            }
+            else
+            {
+                fee.AuditDateTime =null;
+                fee.AuditOperatorId = null;
+            }
             _DbContext.SaveChanges();
             return result;
         }
@@ -922,6 +929,11 @@ namespace PowerLmsWebApi.Controllers
         /// 要审核的费用Id。
         /// </summary>
         public Guid FeeId { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public bool IsAudit { get; set; }
     }
 
     /// <summary>
