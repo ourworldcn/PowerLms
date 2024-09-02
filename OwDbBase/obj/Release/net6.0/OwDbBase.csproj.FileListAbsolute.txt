@@ -56,8 +56,8 @@ E:\Users\zc-home\Source\Bak\OwDbBase\obj\Release\net6.0\OwDbBase.AssemblyInfoInp
 E:\Users\zc-home\Source\Bak\OwDbBase\obj\Release\net6.0\OwDbBase.AssemblyInfo.cs
 E:\Users\zc-home\Source\Bak\OwDbBase\obj\Release\net6.0\OwDbBase.csproj.CoreCompileInputs.cache
 E:\Users\zc-home\Source\Bak\OwDbBase\obj\Release\net6.0\OwDbBase.sourcelink.json
-E:\Users\zc-home\Source\Bak\OwDbBase\obj\Release\net6.0\OwDbBase.csproj.CopyComplete
 E:\Users\zc-home\Source\Bak\OwDbBase\obj\Release\net6.0\OwDbBase.dll
 E:\Users\zc-home\Source\Bak\OwDbBase\obj\Release\net6.0\refint\OwDbBase.dll
 E:\Users\zc-home\Source\Bak\OwDbBase\obj\Release\net6.0\OwDbBase.pdb
 E:\Users\zc-home\Source\Bak\OwDbBase\obj\Release\net6.0\ref\OwDbBase.dll
+E:\Users\zc-home\Source\Bak\OwDbBase\obj\Release\net6.0\OwDbBase.csproj.Up2Date
