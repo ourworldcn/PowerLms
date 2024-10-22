@@ -139,6 +139,12 @@ namespace PowerLms.Data
         [Comment("创建的时间。")]
         public DateTime CreateDateTime { get; set; }
         #endregion ICreatorInfo
+
+        /// <summary>
+        /// 收支方向。true=收入，false=支出(默认)。
+        /// </summary>
+        [Comment("收支方向。true=收入，false=支出(默认)。")]
+        public bool DirectionOfIE { get; set; }
     }
 
     /// <summary>
