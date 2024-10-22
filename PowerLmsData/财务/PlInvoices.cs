@@ -141,10 +141,11 @@ namespace PowerLms.Data
         #endregion ICreatorInfo
 
         /// <summary>
-        /// 收支方向。true=收入，false=支出(默认)。
+        /// 收付，false支出，true收入。
         /// </summary>
-        [Comment("收支方向。true=收入，false=支出(默认)。")]
-        public bool DirectionOfIE { get; set; }
+        [Comment("收付，false支出，true收入。")]
+        public bool IO { get; set; }
+
     }
 
     /// <summary>
