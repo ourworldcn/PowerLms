@@ -75,3 +75,7 @@ send 首节点，错误的自动对次节点审批了
 240825
 GetAllPlJob支持多业务单据状态查询
 
+241027
+DocBill.ClearAmount DocBill.Amount是否回写
+费用方案接口
+权限
