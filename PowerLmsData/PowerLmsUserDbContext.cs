@@ -390,6 +390,16 @@ namespace PowerLmsServer.EfData
         /// 费用结算单明细。
         /// </summary>
         public DbSet<PlInvoicesItem> PlInvoicesItems { get; set; }
+
+        /// <summary>
+        /// 费用方案。
+        /// </summary>
+        public DbSet<DocFeeTemplate> DocFeeTemplates { get; set; }
+
+        /// <summary>
+        /// 费用方案明细项。
+        /// </summary>
+        public DbSet<DocFeeTemplateItem> DocFeeTemplateItems { get; set; }
         #endregion
 
         #region 流程相关

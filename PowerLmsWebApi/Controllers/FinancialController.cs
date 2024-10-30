@@ -803,581 +803,316 @@ namespace PowerLmsWebApi.Controllers
         }
 
         #endregion 结算单明细
-    }
 
-    #region 结算单明细
+        #region 费用方案
 
-    /// <summary>
-    /// 获取结算单明细增强接口功能参数封装类。
-    /// </summary>
-    public class GetPlInvoicesItemParamsDto : PagingParamsDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 获取结算单明细增强接口功能返回值封装类。
-    /// </summary>
-    public class GetPlInvoicesItemReturnDto : PagingReturnDtoBase<GetPlInvoicesItemItem>
-    {
-    }
-
-    /// <summary>
-    /// 
-    /// </summary>
-    public class GetPlInvoicesItemItem
-    {
         /// <summary>
-        /// 构造函数。
+        /// 获取全部费用方案。
         /// </summary>
-        public GetPlInvoicesItemItem()
+        /// <param name="model"></param>
+        /// <param name="conditional">查询的条件。
+        /// 通用条件写法:所有条件都是字符串，对区间的写法是用逗号分隔（字符串类型暂时不支持区间且都是模糊查询）如"2024-1-1,2024-1-2"。
+        /// 对强制取null的约束，则写"null"。</param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        public ActionResult<GetAllDocFeeTemplateReturnDto> GetAllDocFeeTemplate([FromQuery] PagingParamsDtoBase model,
+            [FromQuery] Dictionary<string, string> conditional = null)
         {
-            //申请单 job 费用实体 申请明细的余额（未结算）
+
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetAllDocFeeTemplateReturnDto();
+            var dbSet = _DbContext.DocFeeTemplates;
+
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
+            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
+            _Mapper.Map(prb, result);
+            return result;
         }
 
         /// <summary>
-        /// 结算单详细项
+        /// 增加新费用方案。
         /// </summary>
-        public PlInvoicesItem InvoicesItem { get; set; }
-
-        /// <summary>
-        /// 结算单。
-        /// </summary>
-        public PlInvoices Invoices { get; set; }
-
-        /// <summary>
-        /// 相关的任务对象。
-        /// </summary>
-        public PlJob PlJob { get; set; }
-
-        /// <summary>
-        /// 相关的申请单对象。
-        /// </summary>
-        public DocFeeRequisition DocFeeRequisition { get; set; }
-
-        /// <summary>
-        /// 申请单明细对象。
-        /// </summary>
-        public DocFeeRequisitionItem DocFeeRequisitionItem { get; set; }
-
-        /// <summary>
-        /// 相关的结算单对象。
-        /// </summary>
-        public PlInvoices Parent { get; set; }
-    }
-
-    /// <summary>
-    /// 结算单确认功能参数封装类。
-    /// </summary>
-    public class ConfirmPlInvoicesParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 结算单的Id集合。
-        /// </summary>
-        public List<Guid> Ids { get; set; }
-    }
-
-    /// <summary>
-    /// 结算单确认功能返回值封装类。
-    /// </summary>
-    public class ConfirmPlInvoicesReturnDto : ReturnDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 设置指定的申请单下所有明细功能的参数封装类。
-    /// </summary>
-    public class SetPlInvoicesItemParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 申请单的Id。
-        /// </summary>
-        public Guid FrId { get; set; }
-
-        /// <summary>
-        /// 申请单明细表的集合。
-        /// 指定存在id的明细则更新，Id全0或不存在的Id自动添加，原有未指定的明细将被删除。
-        /// </summary>
-        public List<PlInvoicesItem> Items { get; set; } = new List<PlInvoicesItem>();
-    }
-
-    /// <summary>
-    /// 设置指定的申请单下所有明细功能的返回值封装类。
-    /// </summary>
-    public class SetPlInvoicesItemReturnDto : ReturnDtoBase
-    {
-        /// <summary>
-        /// 指定申请单下，所有明细的对象。
-        /// </summary>
-        public List<PlInvoicesItem> Result { get; set; } = new List<PlInvoicesItem>();
-    }
-
-    /// <summary>
-    /// 标记删除结算单明细功能的参数封装类。
-    /// </summary>
-    public class RemovePlInvoicesItemParamsDto : RemoveParamsDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 标记删除结算单明细功能的返回值封装类。
-    /// </summary>
-    public class RemovePlInvoicesItemReturnDto : RemoveReturnDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 获取所有结算单明细功能的返回值封装类。
-    /// </summary>
-    public class GetAllPlInvoicesItemReturnDto : PagingReturnDtoBase<PlInvoicesItem>
-    {
-    }
-
-    /// <summary>
-    /// 获取申请单明细增强接口功能参数封装类。
-    /// </summary>
-    public class GetDocFeeRequisitionItemParamsDto : PagingParamsDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 获取申请单明细增强接口功能返回值封装类。
-    /// </summary>
-    public class GetDocFeeRequisitionItemReturnDto : PagingReturnDtoBase<GetDocFeeRequisitionItemItem>
-    {
-
-    }
-
-    /// <summary>
-    /// 获取申请单明细增强接口功能的返回值中的元素类型。
-    /// </summary>
-    public class GetDocFeeRequisitionItemItem
-    {
-        /// <summary>
-        /// 申请单明细对象。
-        /// </summary>
-        public DocFeeRequisitionItem DocFeeRequisitionItem { get; set; }
-
-        /// <summary>
-        /// 相关的任务对象。
-        /// </summary>
-        public PlJob PlJob { get; set; }
-
-        /// <summary>
-        /// 相关的申请单对象。
-        /// </summary>
-        public DocFeeRequisition DocFeeRequisition { get; set; }
-
-        /// <summary>
-        /// 相关的费用对象。
-        /// </summary>
-        public DocFee DocFee { get; set; }
-
-        /// <summary>
-        /// 申请单明细对象未结算的剩余费用。
-        /// </summary>
-        public decimal Remainder { get; set; }
-    }
-
-
-    /// <summary>
-    /// 增加新结算单明细功能参数封装类。
-    /// </summary>
-    public class AddPlInvoicesItemParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 新结算单明细信息。其中Id可以是任何值，返回时会指定新值。
-        /// </summary>
-        public PlInvoicesItem PlInvoicesItem { get; set; }
-    }
-
-    /// <summary>
-    /// 增加新结算单明细功能返回值封装类。
-    /// </summary>
-    public class AddPlInvoicesItemReturnDto : ReturnDtoBase
-    {
-        /// <summary>
-        /// 如果成功添加，这里返回新结算单明细的Id。
-        /// </summary>
-        public Guid Id { get; set; }
-    }
-
-    /// <summary>
-    /// 修改结算单明细信息功能参数封装类。
-    /// </summary>
-    public class ModifyPlInvoicesItemParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 结算单明细数据。
-        /// </summary>
-        public PlInvoicesItem PlInvoicesItem { get; set; }
-    }
-
-    /// <summary>
-    /// 修改结算单明细信息功能返回值封装类。
-    /// </summary>
-    public class ModifyPlInvoicesItemReturnDto : ReturnDtoBase
-    {
-    }
-    #endregion 结算单明细
-
-    #region 结算单
-
-    /// <summary>
-    /// 设置指定的申请单下所有明细功能的参数封装类。
-    /// </summary>
-    public class SetPlInvoicesParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 申请单的Id。
-        /// </summary>
-        public Guid FrId { get; set; }
-
-        /// <summary>
-        /// 申请单明细表的集合。
-        /// 指定存在id的明细则更新，Id全0或不存在的Id自动添加，原有未指定的明细将被删除。
-        /// </summary>
-        public List<PlInvoices> Items { get; set; } = new List<PlInvoices>();
-    }
-
-    /// <summary>
-    /// 设置指定的申请单下所有明细功能的返回值封装类。
-    /// </summary>
-    public class SetPlInvoicesReturnDto : ReturnDtoBase
-    {
-        /// <summary>
-        /// 指定申请单下，所有明细的对象。
-        /// </summary>
-        public List<PlInvoices> Result { get; set; } = new List<PlInvoices>();
-    }
-
-    /// <summary>
-    /// 标记删除结算单功能的参数封装类。
-    /// </summary>
-    public class RemovePlInvoicesParamsDto : RemoveParamsDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 标记删除结算单功能的返回值封装类。
-    /// </summary>
-    public class RemovePlInvoicesReturnDto : RemoveReturnDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 获取所有结算单功能的返回值封装类。
-    /// </summary>
-    public class GetAllPlInvoicesReturnDto : PagingReturnDtoBase<PlInvoices>
-    {
-    }
-
-    /// <summary>
-    /// 增加新结算单功能参数封装类。
-    /// </summary>
-    public class AddPlInvoicesParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 新结算单信息。其中Id可以是任何值，返回时会指定新值。
-        /// </summary>
-        public PlInvoices PlInvoices { get; set; }
-    }
-
-    /// <summary>
-    /// 增加新结算单功能返回值封装类。
-    /// </summary>
-    public class AddPlInvoicesReturnDto : ReturnDtoBase
-    {
-        /// <summary>
-        /// 如果成功添加，这里返回新结算单的Id。
-        /// </summary>
-        public Guid Id { get; set; }
-    }
-
-    /// <summary>
-    /// 修改结算单信息功能参数封装类。
-    /// </summary>
-    public class ModifyPlInvoicesParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 结算单数据。
-        /// </summary>
-        public PlInvoices PlInvoices { get; set; }
-    }
-
-    /// <summary>
-    /// 修改结算单信息功能返回值封装类。
-    /// </summary>
-    public class ModifyPlInvoicesReturnDto : ReturnDtoBase
-    {
-    }
-    #endregion 结算单
-
-    #region 业务费用申请单明细
-
-    /// <summary>
-    /// 设置指定的申请单下所有明细功能的参数封装类。
-    /// </summary>
-    public class SetDocFeeRequisitionItemParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 申请单的Id。
-        /// </summary>
-        public Guid FrId { get; set; }
-
-        /// <summary>
-        /// 申请单明细表的集合。
-        /// 指定存在id的明细则更新，Id全0或不存在的Id自动添加，原有未指定的明细将被删除。
-        /// </summary>
-        public List<DocFeeRequisitionItem> Items { get; set; } = new List<DocFeeRequisitionItem>();
-    }
-
-    /// <summary>
-    /// 设置指定的申请单下所有明细功能的返回值封装类。
-    /// </summary>
-    public class SetDocFeeRequisitionItemReturnDto : ReturnDtoBase
-    {
-        /// <summary>
-        /// 指定申请单下，所有明细的对象。
-        /// </summary>
-        public List<DocFeeRequisitionItem> Result { get; set; } = new List<DocFeeRequisitionItem>();
-    }
-
-    /// <summary>
-    /// 标记删除业务费用申请单明细功能的参数封装类。
-    /// </summary>
-    public class RemoveDocFeeRequisitionItemParamsDto : RemoveParamsDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 标记删除业务费用申请单明细功能的返回值封装类。
-    /// </summary>
-    public class RemoveDocFeeRequisitionItemReturnDto : RemoveReturnDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 获取所有业务费用申请单明细功能的返回值封装类。
-    /// </summary>
-    public class GetAllDocFeeRequisitionItemReturnDto : PagingReturnDtoBase<DocFeeRequisitionItem>
-    {
-    }
-
-    /// <summary>
-    /// 增加新业务费用申请单明细功能参数封装类。
-    /// </summary>
-    public class AddDocFeeRequisitionItemParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 新业务费用申请单明细信息。其中Id可以是任何值，返回时会指定新值。
-        /// </summary>
-        public DocFeeRequisitionItem DocFeeRequisitionItem { get; set; }
-    }
-
-    /// <summary>
-    /// 增加新业务费用申请单明细功能返回值封装类。
-    /// </summary>
-    public class AddDocFeeRequisitionItemReturnDto : ReturnDtoBase
-    {
-        /// <summary>
-        /// 如果成功添加，这里返回新业务费用申请单明细的Id。
-        /// </summary>
-        public Guid Id { get; set; }
-    }
-
-    /// <summary>
-    /// 修改业务费用申请单明细信息功能参数封装类。
-    /// </summary>
-    public class ModifyDocFeeRequisitionItemParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 业务费用申请单明细数据。
-        /// </summary>
-        public DocFeeRequisitionItem DocFeeRequisitionItem { get; set; }
-    }
-
-    /// <summary>
-    /// 修改业务费用申请单明细信息功能返回值封装类。
-    /// </summary>
-    public class ModifyDocFeeRequisitionItemReturnDto : ReturnDtoBase
-    {
-    }
-    #endregion 业务费用申请单明细
-
-    #region 业务费用申请单
-
-    /// <summary>
-    /// 获取指定费用的剩余未申请金额参数封装类。
-    /// </summary>
-    public class GetFeeRemainingParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 费用的Id集合。
-        /// </summary>
-        public List<Guid> FeeIds { get; set; } = new List<Guid>();
-    }
-
-    /// <summary>
-    /// 获取指定费用的剩余未申请金额功能返回值封装类。
-    /// </summary>
-    public class GetFeeRemainingItemReturnDto
-    {
-        /// <summary>
-        /// 关联的费用的对象。
-        /// </summary>
-        public DocFee Fee { get; set; }
-
-        /// <summary>
-        /// 剩余未申请的费用。
-        /// </summary>
-        public decimal Remaining { get; set; }
-
-        /// <summary>
-        /// 费用关联的任务对象。
-        /// </summary>
-        public PlJob Job { get; set; }
-
-    }
-
-    /// <summary>
-    /// 获取指定费用的剩余未申请金额功能返回值封装类。
-    /// </summary>
-    public class GetFeeRemainingReturnDto : ReturnDtoBase
-    {
-        /// <summary>
-        /// 费用单据的额外信息。
-        /// </summary>
-        public List<GetFeeRemainingItemReturnDto> Result { get; set; } = new List<GetFeeRemainingItemReturnDto>();
-    }
-
-    /// <summary>
-    /// 标记删除业务费用申请单功能的参数封装类。
-    /// </summary>
-    public class RemoveDocFeeRequisitionParamsDto : RemoveParamsDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 标记删除业务费用申请单功能的返回值封装类。
-    /// </summary>
-    public class RemoveDocFeeRequisitionReturnDto : RemoveReturnDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 获取当前用户相关的业务费用申请单和审批流状态功能的参数封装类。
-    /// </summary>
-    public class GetAllDocFeeRequisitionWithWfParamsDto : PagingParamsDtoBase
-    {
-        /// <summary>
-        /// 限定流程状态。省略或为null则不限定。若限定流程状态，则操作人默认去当前登录用户。
-        /// 1=正等待指定操作者审批，2=指定操作者已审批但仍在流转中，4=指定操作者参与的且已成功结束的流程,8=指定操作者参与的且已失败结束的流程。
-        /// 12=指定操作者参与的且已结束的流程（包括成功/失败）
-        /// </summary>
-        public byte? WfState { get; set; }
-    }
-
-    /// <summary>
-    /// 
-    /// </summary>
-    public class GetAllDocFeeRequisitionWithWfItemDto
-    {
-        /// <summary>
-        /// 申请单对象。
-        /// </summary>
-        public DocFeeRequisition Requisition { get; set; }
-
-        /// <summary>
-        /// 相关流程对象。
-        /// </summary>
-        public OwWfDto Wf { get; set; }
-    }
-
-    /// <summary>
-    /// 获取当前用户相关的业务费用申请单和审批流状态的返回值封装类。
-    /// </summary>
-    public class GetAllDocFeeRequisitionWithWfReturnDto
-    {
-        /// <summary>
-        /// 集合元素的最大总数量。
-        /// </summary>
-        public int Total { get; set; }
-
-        /// <summary>
-        /// 返回的集合。
-        /// </summary>
-        public List<GetAllDocFeeRequisitionWithWfItemDto> Result { get; set; } = new List<GetAllDocFeeRequisitionWithWfItemDto>();
-    }
-
-    /// <summary>
-    /// 获取全部业务费用申请单功能的参数封装类。
-    /// </summary>
-    public class GetAllDocFeeRequisitionParamsDto : PagingParamsDtoBase
-    {
-        /// <summary>
-        /// 构造函数。
-        /// </summary>
-        public GetAllDocFeeRequisitionParamsDto()
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPost]
+        public ActionResult<AddDocFeeTemplateReturnDto> AddDocFeeTemplate(AddDocFeeTemplateParamsDto model)
         {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context)
+            {
+                _Logger.LogWarning("无效的令牌{token}", model.Token);
+                return Unauthorized();
+            }
+            var result = new AddDocFeeTemplateReturnDto();
+            var entity = model.DocFeeTemplate;
+            entity.GenerateNewId();
+            model.DocFeeTemplate.CreateBy = context.User.Id;
+            model.DocFeeTemplate.CreateDateTime = OwHelper.WorldNow;
+            _DbContext.DocFeeTemplates.Add(model.DocFeeTemplate);
 
+            _DbContext.SaveChanges();
+
+            result.Id = model.DocFeeTemplate.Id;
+            return result;
         }
 
         /// <summary>
-        /// 限定流程状态。省略或为null则不限定。若限定流程状态，则操作人默认去当前登录用户。
-        /// 1=正等待指定操作者审批，2=指定操作者已审批但仍在流转中，4=指定操作者参与的且已成功结束的流程,8=指定操作者参与的且已失败结束的流程。
-        /// 12=指定操作者参与的且已结束的流程（包括成功/失败）
+        /// 修改费用方案信息。
         /// </summary>
-        public byte? WfState { get; set; }
-    }
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定Id的费用方案不存在。</response>  
+        [HttpPut]
+        public ActionResult<ModifyDocFeeTemplateReturnDto> ModifyDocFeeTemplate(ModifyDocFeeTemplateParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new ModifyDocFeeTemplateReturnDto();
+            if (!_EntityManager.Modify(new[] { model.DocFeeTemplate })) return NotFound();
+            //忽略不可更改字段
+            var entity = _DbContext.Entry(model.DocFeeTemplate);
+            _DbContext.SaveChanges();
+            return result;
+        }
 
-
-    /// <summary>
-    /// 获取所有业务费用申请单功能的返回值封装类。
-    /// </summary>
-    public class GetAllDocFeeRequisitionReturnDto : PagingReturnDtoBase<DocFeeRequisition>
-    {
-    }
-
-    /// <summary>
-    /// 增加新业务费用申请单功能参数封装类。
-    /// </summary>
-    public class AddDocFeeRequisitionParamsDto : TokenDtoBase
-    {
         /// <summary>
-        /// 新业务费用申请单信息。其中Id可以是任何值，返回时会指定新值。
+        /// 删除指定Id的费用方案。这会删除所有费用方案明细项。慎用！
         /// </summary>
-        public DocFeeRequisition DocFeeRequisition { get; set; }
-    }
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定Id的费用方案不存在。</response>  
+        [HttpDelete]
+        public ActionResult<RemoveDocFeeTemplateReturnDto> RemoveDocFeeTemplate(RemoveDocFeeTemplateParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new RemoveDocFeeTemplateReturnDto();
+            var id = model.Id;
+            var dbSet = _DbContext.DocFeeTemplates;
+            var item = dbSet.Find(id);
+            if (item is null) return BadRequest();
+            var children = _DbContext.DocFeeTemplateItems.Where(c => c.ParentId == item.Id).ToArray();
+            _EntityManager.Remove(item);
+            if (children.Length > 0) _DbContext.RemoveRange(children);
+            _DbContext.OwSystemLogs.Add(new OwSystemLog
+            {
+                OrgId = context.User.OrgId,
+                ActionId = $"Delete.{nameof(DocFeeTemplate)}.{item.Id}",
+                ExtraGuid = context.User.Id,
+                ExtraDecimal = children.Length,
+            });
+            _DbContext.SaveChanges();
+            return result;
+        }
 
-    /// <summary>
-    /// 增加新业务费用申请单功能返回值封装类。
-    /// </summary>
-    public class AddDocFeeRequisitionReturnDto : ReturnDtoBase
-    {
         /// <summary>
-        /// 如果成功添加，这里返回新业务费用申请单的Id。
+        /// 获取费用方案明细增强接口功能。
         /// </summary>
-        public Guid Id { get; set; }
-    }
+        /// <param name="model"></param>
+        /// <param name="conditional">条件使用 [实体名.字段名] (带实体名前缀的需要方括号括住)格式,值格式参见通用格式。
+        /// 支持的实体名有：PlJob,DocFeeRequisition,DocFeeRequisitionItem，DocFeeTemplate ,DocFeeTemplateItem</param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        //[HttpGet]
+        //public ActionResult<GetDocFeeTemplateItemReturnDto> GetDocInvoicesItem([FromQuery] GetDocFeeTemplateItemParamsDto model,
+        //    [FromQuery] Dictionary<string, string> conditional = null)
+        //{
+        //    //查询 需要返回 申请单 job 费用实体 申请明细的余额（未结算）
+        //    if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+        //    var result = new GetDocFeeTemplateItemReturnDto();
+        //    var dbSet = _DbContext.DocFeeTemplateItems;
 
-    /// <summary>
-    /// 修改业务费用申请单信息功能参数封装类。
-    /// </summary>
-    public class ModifyDocFeeRequisitionParamsDto : TokenDtoBase
-    {
+        //    var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
+
+        //    var collInvoicesItem = EfHelper.GenerateWhereAndWithEntityName(coll, conditional);
+
+        //    var collPlJob = EfHelper.GenerateWhereAndWithEntityName(_DbContext.PlJobs, conditional);
+
+        //    var collInvoice = EfHelper.GenerateWhereAndWithEntityName(_DbContext.DocFeeTemplates, conditional);
+
+        //    var collDocFeeRequisition = EfHelper.GenerateWhereAndWithEntityName(_DbContext.DocFeeRequisitions, conditional).Where(c => c.OrgId == context.User.OrgId);
+
+        //    var collDocFeeRequisitionItem = EfHelper.GenerateWhereAndWithEntityName(_DbContext.DocFeeRequisitionItems, conditional);
+
+        //    var collBase = from fii in collInvoicesItem
+        //                   join fi in collInvoice on fii.ParentId equals fi.Id
+        //                   join fri in collDocFeeRequisitionItem on fii.RequisitionItemId equals fri.Id
+        //                   join fr in collDocFeeRequisition on fri.ParentId equals fr.Id
+        //                   join fee in _DbContext.DocFees on fri.FeeId equals fee.Id
+        //                   join job in collPlJob on fee.JobId equals job.Id
+        //                   select new { fii, fi, job, fr, fri };
+        //    //获取总数
+        //    var collCount = collBase.Distinct();
+        //    result.Total = collCount.Count();
+        //    //获取集合
+        //    collBase = collBase.Skip(model.StartIndex);
+        //    if (model.Count > 0)
+        //        collBase = collBase.Take(model.Count);
+        //    var aryResult = collBase.ToArray();
+
+        //    foreach (var item in aryResult)
+        //    {
+        //        var tmp = new GetDocFeeTemplateItemItem
+        //        {
+        //            InvoicesItem = item.fii,
+        //            Invoices = item.fi,
+        //            PlJob = item.job,
+        //            DocFeeRequisitionItem = item.fri,
+        //            DocFeeRequisition = item.fr,
+        //            Parent = item.fi,
+        //        };
+        //        //tmp.Remainder = item.Amount - _DbContext.DocFeeTemplateItems.Where(c => c.RequisitionItemId == item.Id).Sum(c => c.Amount);
+        //        result.Result.Add(tmp);
+        //    }
+        //    return result;
+        //}
+
+        #endregion 费用方案
+
+        #region 费用方案明细
+
         /// <summary>
-        /// 业务费用申请单数据。
+        /// 获取全部费用方案明细。
         /// </summary>
-        public DocFeeRequisition DocFeeRequisition { get; set; }
+        /// <param name="model"></param>
+        /// <param name="conditional">查询的条件。
+        /// 通用条件写法:所有条件都是字符串，对区间的写法是用逗号分隔（字符串类型暂时不支持区间且都是模糊查询）如"2024-1-1,2024-1-2"。
+        /// 对强制取null的约束，则写"null"。</param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        public ActionResult<GetAllDocFeeTemplateItemReturnDto> GetAllDocFeeTemplateItem([FromQuery] PagingParamsDtoBase model,
+            [FromQuery] Dictionary<string, string> conditional = null)
+        {
+
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetAllDocFeeTemplateItemReturnDto();
+            var dbSet = _DbContext.DocFeeTemplateItems;
+
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
+            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
+            _Mapper.Map(prb, result);
+            return result;
+        }
+
+        /// <summary>
+        /// 增加新费用方案明细。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPost]
+        public ActionResult<AddDocFeeTemplateItemReturnDto> AddDocFeeTemplateItem(AddDocFeeTemplateItemParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context)
+            {
+                _Logger.LogWarning("无效的令牌{token}", model.Token);
+                return Unauthorized();
+            }
+            var result = new AddDocFeeTemplateItemReturnDto();
+            var entity = model.DocFeeTemplateItem;
+            entity.GenerateNewId();
+            _DbContext.DocFeeTemplateItems.Add(model.DocFeeTemplateItem);
+
+            _DbContext.SaveChanges();
+
+            result.Id = model.DocFeeTemplateItem.Id;
+            return result;
+        }
+
+        /// <summary>
+        /// 修改费用方案明细信息。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定Id的费用方案明细不存在。</response>
+        [HttpPut]
+        public ActionResult<ModifyDocFeeTemplateItemReturnDto> ModifyDocFeeTemplateItem(ModifyDocFeeTemplateItemParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new ModifyDocFeeTemplateItemReturnDto();
+            if (!_EntityManager.Modify(new[] { model.DocFeeTemplateItem })) return NotFound();
+            //忽略不可更改字段
+            var entity = _DbContext.Entry(model.DocFeeTemplateItem);
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        /// <summary>
+        /// 删除指定Id的费用方案明细。慎用！
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定Id的费用方案明细不存在。</response>  
+        [HttpDelete]
+        public ActionResult<RemoveDocFeeTemplateItemReturnDto> RemoveDocFeeTemplateItem(RemoveDocFeeTemplateItemParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new RemoveDocFeeTemplateItemReturnDto();
+            var id = model.Id;
+            var dbSet = _DbContext.DocFeeTemplateItems;
+            var item = dbSet.Find(id);
+            if (item is null) return BadRequest();
+            _EntityManager.Remove(item);
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        /// <summary>
+        /// 设置指定的申请单下所有明细。
+        /// 指定存在id的明细则更新，Id全0或不存在的Id到自动添加，原有未指定的明细将被删除。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定Id的业务费用申请单不存在。</response>  
+        [HttpPut]
+        public ActionResult<SetDocFeeTemplateItemReturnDto> SetDocFeeTemplateItem(SetDocFeeTemplateItemParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new SetDocFeeTemplateItemReturnDto();
+            var fr = _DbContext.DocFeeRequisitions.Find(model.FrId);
+            if (fr is null) return NotFound();
+            var aryIds = model.Items.Select(c => c.Id).ToArray();   //指定的Id
+            var existsIds = _DbContext.DocFeeTemplateItems.Where(c => c.ParentId == fr.Id).Select(c => c.Id).ToArray();    //已经存在的Id
+            //更改
+            var modifies = model.Items.Where(c => existsIds.Contains(c.Id));
+            foreach (var item in modifies)
+            {
+                _DbContext.Entry(item).CurrentValues.SetValues(item);
+                _DbContext.Entry(item).State = EntityState.Modified;
+            }
+            //增加
+            var addIds = aryIds.Except(existsIds).ToArray();
+            var adds = model.Items.Where(c => addIds.Contains(c.Id)).ToArray();
+            Array.ForEach(adds, c => c.GenerateNewId());
+            _DbContext.AddRange(adds);
+            //删除
+            var removeIds = existsIds.Except(aryIds).ToArray();
+            _DbContext.RemoveRange(_DbContext.DocFeeTemplateItems.Where(c => removeIds.Contains(c.Id)));
+
+            _DbContext.SaveChanges();
+            //后处理
+            result.Result.AddRange(model.Items);
+            return result;
+        }
+
+        #endregion 费用方案明细
+
     }
-
-    /// <summary>
-    /// 修改业务费用申请单信息功能返回值封装类。
-    /// </summary>
-    public class ModifyDocFeeRequisitionReturnDto : ReturnDtoBase
-    {
-    }
-    #endregion 业务费用申请单
-
-
 }
