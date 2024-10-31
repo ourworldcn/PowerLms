@@ -50,3 +50,4 @@ InsufficientStorage	507
 服务器遇到该以下异常DbUpdateConcurrencyException DBConcurrencyException，将返回507以表示并发冲突。客户端须妥善处理。不再每个接口单独注释。
 
 测试服务器 101.200.75.226 Administrator//ZAQ!xsw2
+测试服务器 101.200.75.226 Administrator//Www.)(*&1234
