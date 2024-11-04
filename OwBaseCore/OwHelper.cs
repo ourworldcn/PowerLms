@@ -75,6 +75,17 @@ namespace System
     public static class OwHelper
     {
         /// <summary>
+        /// 公用的每线程独立的随机数生成器。
+        /// </summary>
+        [ThreadStatic]
+        public static Random _Random;
+
+        /// <summary>
+        /// 公用的每线程独立的随机数生成器。
+        /// </summary>
+        public static Random Random => _Random ??= new Random();
+
+        /// <summary>
         /// 游戏内使用的时间与Utc时间的偏移量。
         /// </summary>
         public static TimeSpan _Offset;
@@ -429,21 +440,6 @@ namespace System
             }
             return default;
         }
-
-        //public static (T, decimal)? GetRandom<T>(IEnumerable<(T, decimal)> items, Random random = null)
-        //{
-        //    var coll = items.TryToCollection();
-        //    var totalWeight = coll.Sum(c => c.Item2);    //总权重
-        //    random ??= new Random();
-        //    var total = (decimal)random.NextDouble() * totalWeight; //此次随机权重
-        //    foreach (var item in coll)
-        //    {
-        //        if (item.Item2 <= decimal.Zero) continue; //容错
-        //        if (total <= item.Item2) return item;
-        //        total -= item.Item2;
-        //    }
-        //    return default; //210101
-        //}
 
         /// <summary>
         /// 按概率权重获取无重复的多项数据。
