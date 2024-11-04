@@ -116,6 +116,37 @@
             构造函数。
             </summary>
         </member>
+        <member name="T:PowerLmsServer.Managers.CaptchaManager">
+            <summary>
+            验证码管理器。
+            </summary>
+        </member>
+        <member name="M:PowerLmsServer.Managers.CaptchaManager.#ctor">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
+        <member name="M:PowerLmsServer.Managers.CaptchaManager.GetNew(System.String)">
+            <summary>
+            
+            </summary>
+            <param name="fullFileName">存储文件的全路径名，扩展名虽然可以任意指定，但存储格式总是jpeg。</param>
+            <returns>答案。</returns>
+        </member>
+        <member name="M:PowerLmsServer.Managers.CaptchaManager.GetNewQuestionString(System.String@)">
+            <summary>
+            获取一个问答字符串。
+            </summary>
+            <param name="gut">内容。</param>
+            <returns>答案。</returns>
+        </member>
+        <member name="M:PowerLmsServer.Managers.CaptchaManager.GetNewPic(System.String)">
+            <summary>
+            生成一个验证图片。
+            </summary>
+            <param name="str">显示的内容。</param>
+            <returns></returns>
+        </member>
         <member name="T:PowerLmsServer.Managers.CustomerManager">
             <summary>
             客户资料及相关管理器。

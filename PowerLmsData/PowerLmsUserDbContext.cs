@@ -288,6 +288,11 @@ namespace PowerLmsServer.EfData
         /// </summary>
         public DbSet<PlFileInfo> PlFileInfos { get; set; }
 
+        /// <summary>
+        /// 验证码信息表。
+        /// </summary>
+        public DbSet<CaptchaInfo> CaptchaInfos { get; set; }
+
         #region 权限相关
 
         /// <summary>

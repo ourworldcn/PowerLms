@@ -911,69 +911,6 @@ namespace PowerLmsWebApi.Controllers
             return result;
         }
 
-        /// <summary>
-        /// 获取费用方案明细增强接口功能。
-        /// </summary>
-        /// <param name="model"></param>
-        /// <param name="conditional">条件使用 [实体名.字段名] (带实体名前缀的需要方括号括住)格式,值格式参见通用格式。
-        /// 支持的实体名有：PlJob,DocFeeRequisition,DocFeeRequisitionItem，DocFeeTemplate ,DocFeeTemplateItem</param>
-        /// <returns></returns>
-        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
-        /// <response code="401">无效令牌。</response>  
-        //[HttpGet]
-        //public ActionResult<GetDocFeeTemplateItemReturnDto> GetDocInvoicesItem([FromQuery] GetDocFeeTemplateItemParamsDto model,
-        //    [FromQuery] Dictionary<string, string> conditional = null)
-        //{
-        //    //查询 需要返回 申请单 job 费用实体 申请明细的余额（未结算）
-        //    if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-        //    var result = new GetDocFeeTemplateItemReturnDto();
-        //    var dbSet = _DbContext.DocFeeTemplateItems;
-
-        //    var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-
-        //    var collInvoicesItem = EfHelper.GenerateWhereAndWithEntityName(coll, conditional);
-
-        //    var collPlJob = EfHelper.GenerateWhereAndWithEntityName(_DbContext.PlJobs, conditional);
-
-        //    var collInvoice = EfHelper.GenerateWhereAndWithEntityName(_DbContext.DocFeeTemplates, conditional);
-
-        //    var collDocFeeRequisition = EfHelper.GenerateWhereAndWithEntityName(_DbContext.DocFeeRequisitions, conditional).Where(c => c.OrgId == context.User.OrgId);
-
-        //    var collDocFeeRequisitionItem = EfHelper.GenerateWhereAndWithEntityName(_DbContext.DocFeeRequisitionItems, conditional);
-
-        //    var collBase = from fii in collInvoicesItem
-        //                   join fi in collInvoice on fii.ParentId equals fi.Id
-        //                   join fri in collDocFeeRequisitionItem on fii.RequisitionItemId equals fri.Id
-        //                   join fr in collDocFeeRequisition on fri.ParentId equals fr.Id
-        //                   join fee in _DbContext.DocFees on fri.FeeId equals fee.Id
-        //                   join job in collPlJob on fee.JobId equals job.Id
-        //                   select new { fii, fi, job, fr, fri };
-        //    //获取总数
-        //    var collCount = collBase.Distinct();
-        //    result.Total = collCount.Count();
-        //    //获取集合
-        //    collBase = collBase.Skip(model.StartIndex);
-        //    if (model.Count > 0)
-        //        collBase = collBase.Take(model.Count);
-        //    var aryResult = collBase.ToArray();
-
-        //    foreach (var item in aryResult)
-        //    {
-        //        var tmp = new GetDocFeeTemplateItemItem
-        //        {
-        //            InvoicesItem = item.fii,
-        //            Invoices = item.fi,
-        //            PlJob = item.job,
-        //            DocFeeRequisitionItem = item.fri,
-        //            DocFeeRequisition = item.fr,
-        //            Parent = item.fi,
-        //        };
-        //        //tmp.Remainder = item.Amount - _DbContext.DocFeeTemplateItems.Where(c => c.RequisitionItemId == item.Id).Sum(c => c.Amount);
-        //        result.Result.Add(tmp);
-        //    }
-        //    return result;
-        //}
-
         #endregion 费用方案
 
         #region 费用方案明细
