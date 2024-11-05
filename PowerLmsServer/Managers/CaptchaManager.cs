@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using PowerLms.Data;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
@@ -18,6 +20,41 @@ namespace PowerLmsServer.Managers
         public CaptchaManager()
         {
 
+        }
+
+        /// <summary>
+        /// 校验验证码。
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="answer"></param>
+        /// <param name="dbContext"></param>
+        /// <param name="reserved">true强制保留，不在数据库中删除，false如果有效验证则删除。</param>
+        /// <returns></returns>
+        public bool Verify(string id, string answer, DbContext dbContext, bool reserved = false)
+        {
+            var fileName = Path.GetFileNameWithoutExtension(id);
+            if (!Guid.TryParse(fileName, out Guid guid))
+            {
+                return false;
+            }
+            if (dbContext.Set<CaptchaInfo>().FirstOrDefault(c => c.Id == guid && c.Answer == answer) is not CaptchaInfo captchaInfo)
+                return false;
+            if (captchaInfo.DownloadDateTime is null) return false;
+            if (captchaInfo.VerifyDateTime is not null) return false;
+            if (!reserved)
+            {
+                try
+                {
+                    if (File.Exists(captchaInfo.FullPath))
+                        File.Delete(captchaInfo.FullPath);
+                }
+                catch
+                {
+                }
+                dbContext.Remove(captchaInfo);
+                dbContext.SaveChanges();
+            }
+            return true;
         }
 
         /// <summary>
@@ -57,7 +94,7 @@ namespace PowerLmsServer.Managers
         {
             // 生成随机生成器
             var random = OwHelper.Random;
-            var image = new Bitmap((int)(12.5 * str.Length), 23);
+            var image = new Bitmap(12 * str.Length, 22);
             using var g = Graphics.FromImage(image);
             try
             {
@@ -75,7 +112,13 @@ namespace PowerLmsServer.Managers
 
                 var font = new Font("Arial", 12, FontStyle.Bold | FontStyle.Italic);
                 var brush = new LinearGradientBrush(new Rectangle(0, 0, image.Width, image.Height), Color.Blue, Color.DarkRed, 1.2f, true);
-                g.DrawString(str, font, brush, 2, 2);
+                // Set format of string.
+                StringFormat drawFormat = new StringFormat();
+                drawFormat.Alignment = StringAlignment.Center;
+                //绘制区
+                var rect = new Rectangle(Point.Empty, image.Size);
+                rect.Inflate(-2, -1);
+                g.DrawString(str, font, brush, rect, drawFormat);
 
                 //画图片的前景噪音点
                 var pixelCount = image.Width * image.Height;

@@ -9,6 +9,18 @@ namespace PowerLmsWebApi.Dto
     public class LoginParamsDto
     {
         /// <summary>
+        /// 验证码的id,就是图片文件的文件名，不带路径，可以带扩展名（但忽略扩展名）
+        /// </summary>
+        //[Required, MinLength(1)]
+        public string CaptchaId { get; set; }
+
+        /// <summary>
+        /// 验证码的答案。
+        /// </summary>
+        //[Required, MinLength(1)]
+        public string Answer { get; set; }
+
+        /// <summary>
         /// 登录名。可用手机号，邮箱。
         /// </summary>
         [Required]

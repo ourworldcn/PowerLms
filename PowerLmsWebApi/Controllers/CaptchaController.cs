@@ -50,6 +50,7 @@ namespace PowerLmsWebApi.Controllers
                 Answer = ans,
                 CreateDateTime = DateTime.UtcNow,
                 FullPath = fullPath,
+                DownloadDateTime = DateTime.UtcNow,
             };
             _UserDbContext.CaptchaInfos.Add(captchaInfo);
             _UserDbContext.SaveChanges();

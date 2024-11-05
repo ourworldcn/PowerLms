@@ -126,6 +126,16 @@
             构造函数。
             </summary>
         </member>
+        <member name="M:PowerLmsServer.Managers.CaptchaManager.Verify(System.String,System.String,Microsoft.EntityFrameworkCore.DbContext,System.Boolean)">
+            <summary>
+            校验验证码。
+            </summary>
+            <param name="id"></param>
+            <param name="answer"></param>
+            <param name="dbContext"></param>
+            <param name="reserved">true强制保留，不在数据库中删除，false如果有效验证则删除。</param>
+            <returns></returns>
+        </member>
         <member name="M:PowerLmsServer.Managers.CaptchaManager.GetNew(System.String)">
             <summary>
             

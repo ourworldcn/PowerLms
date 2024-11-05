@@ -31,8 +31,9 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="mapper"></param>
         /// <param name="entityManager"></param>
         /// <param name="organizationManager"></param>
+        /// <param name="captchaManager"></param>
         public AccountController(PowerLmsUserDbContext dbContext, AccountManager accountManager, IServiceProvider serviceProvider, IMapper mapper, EntityManager entityManager,
-            OrganizationManager organizationManager)
+            OrganizationManager organizationManager, CaptchaManager captchaManager)
         {
             _DbContext = dbContext;
             _AccountManager = accountManager;
@@ -40,6 +41,7 @@ namespace PowerLmsWebApi.Controllers
             _Mapper = mapper;
             _EntityManager = entityManager;
             _OrganizationManager = organizationManager;
+            _CaptchaManager = captchaManager;
         }
 
         readonly IServiceProvider _ServiceProvider;
@@ -48,6 +50,7 @@ namespace PowerLmsWebApi.Controllers
         readonly IMapper _Mapper;
         readonly EntityManager _EntityManager;
         OrganizationManager _OrganizationManager;
+        CaptchaManager _CaptchaManager;
 
 #if DEBUG
         /*
@@ -149,10 +152,15 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。</response>  
         /// <response code="400">参数错误，这里特指用户名或密码不正确。</response>  
+        /// <response code="409">验证码错误。</response>  
         [HttpPost]
         public ActionResult<LoginReturnDto> Login(LoginParamsDto model)
         {
             var result = new LoginReturnDto();
+            //if (!_CaptchaManager.Verify(model.CaptchaId, model.Answer, _DbContext))
+            //{
+            //    return Conflict();
+            //}
             var pwdHash = Account.GetPwdHash(model.Pwd);
             Account user;
             switch (model.EvidenceType)
