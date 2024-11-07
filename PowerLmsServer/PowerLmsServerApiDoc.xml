@@ -271,6 +271,14 @@
             <param name="item"></param>
             <returns></returns>
         </member>
+        <member name="M:PowerLmsServer.Managers.EntityManager.Set``1(System.Collections.Generic.IEnumerable{``0},System.Collections.Generic.IEnumerable{``0})">
+            <summary>
+            比对新旧集合 进行增加，更改删除操作。
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="older"></param>
+            <param name="newer"></param>
+        </member>
         <member name="T:PowerLmsServer.Managers.PagingParamsBase">
             <summary>
             分页/排序要求的基类。

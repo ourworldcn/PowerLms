@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualBasic;
+using NPOI.Util;
 using OW.Data;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
@@ -155,6 +156,38 @@ namespace PowerLmsServer.Managers
             }
             else
                 return _DbContext.Remove(item);
+        }
+
+        /// <summary>
+        /// 比对新旧集合 进行增加，更改删除操作。
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="older"></param>
+        /// <param name="newer"></param>
+        public void Set<T>(IEnumerable<T> older, IEnumerable<T> newer) where T : GuidKeyObjectBase
+        {
+            var dbSet = _DbContext.Set<T>();    //数据集
+
+            //ISet<T> o = older as ISet<T>; o ??= older.ToHashSet();
+            //ISet<T> n = newer as ISet<T>; n ??= newer.ToHashSet();
+
+            var olderIds = older.Select(c => c.Id).ToHashSet();
+            var newerIds = newer.Select(c => c.Id).ToHashSet();
+            //删除
+            var removes = older.ExceptBy(newerIds, c => c.Id).ToArray();
+            //增加
+            var adds = newer.ExceptBy(olderIds, c => c.Id).ToArray();
+            //更新
+            var updates = older.Join(newer, c => c.Id, c => c.Id, (c, d) => (c, d)).ToArray();
+
+            dbSet.RemoveRange(removes);
+            dbSet.AddRange(adds);
+            foreach (var (o, n) in updates)
+            {
+                var entry = _DbContext.Entry(o);
+                entry.CurrentValues.SetValues(n);
+                //entry.State = EntityState.Modified;
+            }
         }
     }
 
