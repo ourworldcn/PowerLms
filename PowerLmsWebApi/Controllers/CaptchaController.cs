@@ -29,7 +29,7 @@ namespace PowerLmsWebApi.Controllers
         /// </summary>
         /// <returns></returns>
         [HttpGet]
-        public ActionResult GetNewCaptcha()
+        public ActionResult GetNewCaptcha([FromQuery]Guid id)
         {
             //var result = new GetNewCaptchaReturnDto();
             //if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
@@ -38,7 +38,7 @@ namespace PowerLmsWebApi.Controllers
             //var stream = new FileStream(path, FileMode.Open);
             //return File(stream, "application/octet-stream", info.FileName);
 
-            var id = Guid.NewGuid();
+            //var id = Guid.NewGuid();
             var fileName = id.ToString();
             var path = Path.GetTempPath();
             var fullPath = Path.Combine(path, fileName);
