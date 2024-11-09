@@ -24,7 +24,6 @@ E:\Users\zc-home\repos\Bak\OwDbBase\obj\Release\net6.0\OwDbBase.AssemblyInfoInpu
 E:\Users\zc-home\repos\Bak\OwDbBase\obj\Release\net6.0\OwDbBase.AssemblyInfo.cs
 E:\Users\zc-home\repos\Bak\OwDbBase\obj\Release\net6.0\OwDbBase.csproj.CoreCompileInputs.cache
 E:\Users\zc-home\repos\Bak\OwDbBase\obj\Release\net6.0\OwDbBase.sourcelink.json
-E:\Users\zc-home\repos\Bak\OwDbBase\obj\Release\net6.0\OwDbBase.csproj.CopyComplete
 E:\Users\zc-home\repos\Bak\OwDbBase\obj\Release\net6.0\OwDbBase.dll
 E:\Users\zc-home\repos\Bak\OwDbBase\obj\Release\net6.0\refint\OwDbBase.dll
 E:\Users\zc-home\repos\Bak\OwDbBase\obj\Release\net6.0\OwDbBase.pdb
@@ -61,3 +60,4 @@ d:\Users\光元\source\repos\Bak\OwDbBase\obj\Release\net6.0\OwDbBase.dll
 d:\Users\光元\source\repos\Bak\OwDbBase\obj\Release\net6.0\refint\OwDbBase.dll
 d:\Users\光元\source\repos\Bak\OwDbBase\obj\Release\net6.0\OwDbBase.pdb
 d:\Users\光元\source\repos\Bak\OwDbBase\obj\Release\net6.0\ref\OwDbBase.dll
+E:\Users\zc-home\repos\Bak\OwDbBase\obj\Release\net6.0\OwDbBase.csproj.Up2Date

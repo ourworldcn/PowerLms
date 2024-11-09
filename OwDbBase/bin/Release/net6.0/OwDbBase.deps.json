@@ -497,7 +497,10 @@
           "Microsoft.Extensions.ObjectPool": "6.0.11"
         },
         "runtime": {
-          "OwBaseCore.dll": {}
+          "OwBaseCore.dll": {
+            "assemblyVersion": "1.0.0",
+            "fileVersion": "1.0.0.0"
+          }
         }
       }
     }
