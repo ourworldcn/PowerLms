@@ -157,10 +157,10 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<LoginReturnDto> Login(LoginParamsDto model)
         {
             var result = new LoginReturnDto();
-            //if (!_CaptchaManager.Verify(model.CaptchaId, model.Answer, _DbContext))
-            //{
-            //    return Conflict();
-            //}
+            if (!_CaptchaManager.Verify(model.CaptchaId, model.Answer, _DbContext))
+            {
+                return Conflict();
+            }
             var pwdHash = Account.GetPwdHash(model.Pwd);
             Account user;
             switch (model.EvidenceType)
