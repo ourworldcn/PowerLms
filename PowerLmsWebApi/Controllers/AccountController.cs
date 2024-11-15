@@ -32,8 +32,9 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="entityManager"></param>
         /// <param name="organizationManager"></param>
         /// <param name="captchaManager"></param>
+        /// <param name="authorizationManager"></param>
         public AccountController(PowerLmsUserDbContext dbContext, AccountManager accountManager, IServiceProvider serviceProvider, IMapper mapper, EntityManager entityManager,
-            OrganizationManager organizationManager, CaptchaManager captchaManager)
+            OrganizationManager organizationManager, CaptchaManager captchaManager, AuthorizationManager authorizationManager)
         {
             _DbContext = dbContext;
             _AccountManager = accountManager;
@@ -42,11 +43,13 @@ namespace PowerLmsWebApi.Controllers
             _EntityManager = entityManager;
             _OrganizationManager = organizationManager;
             _CaptchaManager = captchaManager;
+            _AuthorizationManager = authorizationManager;
         }
 
         readonly IServiceProvider _ServiceProvider;
         readonly PowerLmsUserDbContext _DbContext;
         readonly AccountManager _AccountManager;
+        AuthorizationManager _AuthorizationManager;
         readonly IMapper _Mapper;
         readonly EntityManager _EntityManager;
         OrganizationManager _OrganizationManager;
@@ -361,6 +364,8 @@ namespace PowerLmsWebApi.Controllers
             context.User.CurrentLanguageTag = model.LanguageTag;
             context.Nop();
             context.SaveChanges();
+
+            result.Permissions.AddRange(_AuthorizationManager.GetPermissionsFromUser(context.User));
             return result;
         }
 

@@ -99,6 +99,9 @@ namespace PowerLmsServer.Managers
             var sheet = workbook.GetSheet(nameof(db.PlPermissions));
             _NpoiManager.WriteToDb(sheet, db, db.PlPermissions);
 
+            using var scope = _ServiceScopeFactory.CreateScope();
+            var mng = scope.ServiceProvider.GetService<AuthorizationManager>();
+
             //var sheet = workbook.GetSheet(nameof(db.DD_DataDicCatalogs));
             //_NpoiManager.WriteToDb(sheet, db, db.DD_DataDicCatalogs);
 

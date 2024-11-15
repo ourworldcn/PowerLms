@@ -485,6 +485,22 @@ namespace PowerLmsWebApi.Controllers
             return result;
         }
 
+        /// <summary>
+        /// 获取当前用户在当前机构下的所有权限。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="400">参数错误。</response>  
+        [HttpGet]
+        public ActionResult<GetAllPermissionsInCurrentUserReturnDto> GetAllPermissionsInCurrentUser([FromQuery] GetAllPermissionsInCurrentUserParamsDto model)
+        {
+            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetAllPermissionsInCurrentUserReturnDto();
+            result.Permissions.AddRange(_AuthorizationManager.GetPermissionsFromUser(context.User));
+            return result;
+        }
     }
 
     /// <summary>

@@ -111,10 +111,30 @@
             权限管理器。
             </summary>
         </member>
-        <member name="M:PowerLmsServer.Managers.AuthorizationManager.#ctor">
+        <member name="M:PowerLmsServer.Managers.AuthorizationManager.#ctor(PowerLmsServer.EfData.PowerLmsUserDbContext)">
             <summary>
             构造函数。
             </summary>
+        </member>
+        <member name="M:PowerLmsServer.Managers.AuthorizationManager.GetPermissionsFromUser(PowerLms.Data.Account)">
+            <summary>
+            获取所有指定用户Id的权限。会考虑其当前所属机构。
+            </summary>
+            <param name="account"></param>
+        </member>
+        <member name="M:PowerLmsServer.Managers.AuthorizationManager.GetPermissionsFromRoleIds(System.Linq.IQueryable{System.Guid})">
+            <summary>
+            用角色Id集合获取所有的权限集合。
+            </summary>
+            <param name="roleIds">一组角色Id。</param>
+            <returns></returns>
+        </member>
+        <member name="M:PowerLmsServer.Managers.AuthorizationManager.GetRolesFromUserId(PowerLms.Data.Account)">
+            <summary>
+            获取指定用户的所有所属角色。会考虑其当前所属机构。
+            </summary>
+            <param name="account"></param>
+            <returns></returns>
         </member>
         <member name="T:PowerLmsServer.Managers.CaptchaManager">
             <summary>
