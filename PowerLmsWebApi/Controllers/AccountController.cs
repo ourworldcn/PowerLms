@@ -365,7 +365,7 @@ namespace PowerLmsWebApi.Controllers
             context.Nop();
             context.SaveChanges();
 
-            result.Permissions.AddRange(_AuthorizationManager.GetPermissionsFromUser(context.User));
+            result.Permissions.AddRange(_AuthorizationManager.LoadPermission(context.User).Values);
             return result;
         }
 

@@ -58,10 +58,68 @@ namespace PowerLmsServer.Managers
                 CreateSystemResource(svc);
                 InitializeDataDic(svc);
                 CreateAdmin(svc);
+                SeedData();
                 Test(svc);
             }, CancellationToken.None);
             _Logger.LogInformation("Pl服务成功上线");
             return task;
+        }
+
+        /// <summary>
+        /// 生成种子数据。
+        /// </summary>
+        /// <exception cref="NotImplementedException"></exception>
+        [Conditional("DEBUG")]
+        private void SeedData()
+        {
+            using var scope = _ServiceScopeFactory.CreateScope();
+            var svc = scope.ServiceProvider;
+
+            var db = svc.GetService<PowerLmsUserDbContext>();
+            var org = new PlOrganization
+            {
+                Id = Guid.Parse("{FB069576-3E3D-46DF-9F13-B7D5FBA84717}"),
+                Name = new PlOwnedName() { DisplayName = "种子机构" },
+                MerchantId = Guid.Parse("{FB069576-3E3D-46DF-9F13-B7D5FBA84717}"),
+                Otc = 2,
+            };
+            db.AddOrUpdate(org);
+
+            var user = new Account
+            {
+                Id = Guid.Parse("{61810FEA-7CE1-4458-BD2E-436BD22C894E}"),
+                LoginName = "SeedUser",
+                DisplayName = "种子用户",
+                OrgId = org.Id,
+                Token = Guid.Parse("{7B823D05-F7CD-4A0C-9EA8-5D2D8CA630EB}"),
+            };
+            user.SetPwd("!@#$");
+            db.AddOrUpdate(user);
+
+            var role = new PlRole
+            {
+                Id = Guid.Parse("{310319E1-39EE-4140-8100-1E598113E1FE}"),
+                Name = new PlOwnedName() { DisplayName = "种子角色" },
+                OrgId = org.Id,
+            };
+            db.AddOrUpdate(role);
+
+            if (db.AccountPlOrganizations.FirstOrDefault(c => c.UserId == user.Id && c.OrgId == org.Id) is not AccountPlOrganization accountOrg)
+            {
+                accountOrg = new AccountPlOrganization { OrgId = org.Id, UserId = user.Id };
+                db.Add(accountOrg);
+            }
+            if (db.PlAccountRoles.FirstOrDefault(c => c.UserId == user.Id && c.RoleId == role.Id) is not AccountRole accountRole)
+            {
+                accountRole = new AccountRole { RoleId = role.Id, UserId = user.Id };
+                db.Add(accountRole);
+            }
+            if (db.PlRolePermissions.FirstOrDefault(c => c.PermissionId == "D0.1.1.10" && c.RoleId == role.Id) is not RolePermission rolePermission)
+            {
+                rolePermission = new RolePermission { RoleId = role.Id, PermissionId = "D0.1.1.10" };
+                db.Add(rolePermission);
+            }
+            db.SaveChanges();
         }
 
         /// <summary>
@@ -166,7 +224,7 @@ namespace PowerLmsServer.Managers
                 {"loginname","string" },
             };
             var query = EfHelper.GenerateWhereAnd(db.Accounts, dic);
-            var tmp = typeof(Account).GetProperty("loginName", BindingFlags.IgnoreCase | BindingFlags.GetProperty | BindingFlags.Public | BindingFlags.Instance|BindingFlags.FlattenHierarchy);
+            var tmp = typeof(Account).GetProperty("loginName", BindingFlags.IgnoreCase | BindingFlags.GetProperty | BindingFlags.Public | BindingFlags.Instance | BindingFlags.FlattenHierarchy);
 
             var ary = query.ToArray();
         }

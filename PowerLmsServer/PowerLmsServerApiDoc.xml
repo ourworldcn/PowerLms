@@ -111,9 +111,14 @@
             权限管理器。
             </summary>
         </member>
-        <member name="M:PowerLmsServer.Managers.AuthorizationManager.#ctor(PowerLmsServer.EfData.PowerLmsUserDbContext)">
+        <member name="M:PowerLmsServer.Managers.AuthorizationManager.#ctor(PowerLmsServer.EfData.PowerLmsUserDbContext,Microsoft.Extensions.Caching.Memory.IMemoryCache)">
             <summary>
             构造函数。
+            </summary>
+        </member>
+        <member name="F:PowerLmsServer.Managers.AuthorizationManager.CachePrefix">
+            <summary>
+            缓存项的前缀。
             </summary>
         </member>
         <member name="M:PowerLmsServer.Managers.AuthorizationManager.GetPermissionsFromUser(PowerLms.Data.Account)">
@@ -135,6 +140,34 @@
             </summary>
             <param name="account"></param>
             <returns></returns>
+        </member>
+        <member name="M:PowerLmsServer.Managers.AuthorizationManager.GetOrLoadPermission(PowerLms.Data.Account)">
+            <summary>
+            加载或获取指定用户的所有权限缓存项。
+            </summary>
+            <param name="user"></param>
+            <returns></returns>
+        </member>
+        <member name="M:PowerLmsServer.Managers.AuthorizationManager.LoadPermission(PowerLms.Data.Account)">
+            <summary>
+            强制刷新缓存并返回所有权限。
+            </summary>
+            <param name="user"></param>
+            <returns></returns>
+        </member>
+        <member name="M:PowerLmsServer.Managers.AuthorizationManager.SetChange(System.Guid)">
+            <summary>
+            指出指定用户的权限缓存已经无效。
+            </summary>
+            <param name="userId"></param>
+        </member>
+        <member name="M:PowerLmsServer.Managers.AuthorizationManager.HasPermission(PowerLms.Data.Account,System.String[])">
+            <summary>
+            是否拥有指定的一组权限。
+            </summary>
+            <param name="user"></param>
+            <param name="pIds"></param>
+            <returns>拥有指定的所有权限则返回true,否则返回false。</returns>
         </member>
         <member name="T:PowerLmsServer.Managers.CaptchaManager">
             <summary>
@@ -391,6 +424,12 @@
             </summary>
             <param name="stoppingToken"></param>
             <returns></returns>
+        </member>
+        <member name="M:PowerLmsServer.Managers.InitializerService.SeedData">
+            <summary>
+            生成种子数据。
+            </summary>
+            <exception cref="T:System.NotImplementedException"></exception>
         </member>
         <member name="M:PowerLmsServer.Managers.InitializerService.CreateSystemResource(System.IServiceProvider)">
             <summary>

@@ -5,6 +5,7 @@ using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
+using System.Net;
 
 namespace PowerLmsWebApi.Controllers
 {
@@ -16,28 +17,36 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 构造函数。
         /// </summary>
-        public JobNumberController(IServiceProvider serviceProvider, AccountManager accountManager, PowerLmsUserDbContext dbContext, JobManager jobNumber)
+        public JobNumberController(IServiceProvider serviceProvider, AccountManager accountManager, PowerLmsUserDbContext dbContext, JobManager jobNumber, AuthorizationManager authorizationManager)
         {
             _ServiceProvider = serviceProvider;
             _AccountManager = accountManager;
             _DbContext = dbContext;
             _JobNumber = jobNumber;
+            _AuthorizationManager = authorizationManager;
         }
 
         IServiceProvider _ServiceProvider;
         AccountManager _AccountManager;
         PowerLmsUserDbContext _DbContext;
         JobManager _JobNumber;
+        AuthorizationManager _AuthorizationManager;
 
         /// <summary>
         /// 用指定的编码规则生成一个新的编码。
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定类别Id无效。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         public ActionResult<GeneratedJobNumberReturnDto> GeneratedJobNumber(GeneratedJobNumberParamsDto model)
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            //if (!_AuthorizationManager.HasPermission(context.User, "D0.1.1.10")) return StatusCode((int)HttpStatusCode.Forbidden);
+
             var result = new GeneratedJobNumberReturnDto();
             if (_DbContext.DD_JobNumberRules.Find(model.RuleId) is not JobNumberRule jnr) return BadRequest($"指定的规则不存在，Id={model.RuleId}");
             using var dw = DisposeHelper.Create((key, timeout) => SingletonLocker.TryEnter(key, timeout), key => SingletonLocker.Exit(key), model.RuleId.ToString(), TimeSpan.FromSeconds(2)); //锁定该规则
@@ -52,6 +61,9 @@ namespace PowerLmsWebApi.Controllers
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定类别Id无效。</response>  
+        /// <response code="401">无效令牌。</response>  
         [HttpPost]
         public ActionResult<GeneratedOtherNumberReturnDto> GeneratedOtherNumber(GeneratedOtherNumberParamsDto model)
         {

@@ -118,6 +118,10 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.PlRoles.Add(model.Item);
             _DbContext.SaveChanges();
             result.Id = model.Item.Id;
+
+            var userIds = _DbContext.PlAccountRoles.Where(c => model.Item.Id == c.RoleId).Select(c => c.UserId).ToArray();
+            foreach (var id in userIds)
+                _AuthorizationManager.SetChange(id);
             return result;
         }
 
@@ -152,12 +156,15 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemovePlRoleReturnDto();
+            var userIds = _DbContext.PlAccountRoles.Where(c => model.Id == c.RoleId).Select(c => c.UserId).ToArray();
             var id = model.Id;
             var dbSet = _DbContext.PlRoles;
             var item = dbSet.Find(id);
             if (item is null) return BadRequest();
             _EntityManager.Remove(item);
             _DbContext.SaveChanges();
+            foreach (var userId in userIds)
+                _AuthorizationManager.SetChange(userId);
             return result;
         }
         #endregion 角色的CRUD
@@ -325,7 +332,7 @@ namespace PowerLmsWebApi.Controllers
             //model.AccountRole.GenerateNewId();
             _DbContext.PlAccountRoles.Add(model.AccountRole);
             _DbContext.SaveChanges();
-            //result.Id = model.AccountRole.Id;
+            _AuthorizationManager.SetChange(model.AccountRole.UserId);
             return result;
         }
 
@@ -348,6 +355,7 @@ namespace PowerLmsWebApi.Controllers
             if (item is null) return BadRequest();
             _EntityManager.Remove(item);
             _DbContext.SaveChanges();
+            _AuthorizationManager.SetChange(model.UserId);
             return result;
         }
         #endregion 用户-角色关系的CRUD
@@ -401,6 +409,9 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.PlRolePermissions.Add(model.RolePermission);
             _DbContext.SaveChanges();
             //result.Id = model.RolePermission.Id;
+            var userIds = _DbContext.PlAccountRoles.Where(c => model.RolePermission.RoleId == c.RoleId).Select(c => c.UserId).ToArray();
+            foreach (var id in userIds)
+                _AuthorizationManager.SetChange(id);
             return result;
         }
 
@@ -423,6 +434,9 @@ namespace PowerLmsWebApi.Controllers
             if (item is null) return BadRequest();
             _EntityManager.Remove(item);
             _DbContext.SaveChanges();
+            var userIds = _DbContext.PlAccountRoles.Where(c => model.RoleId == c.RoleId).Select(c => c.UserId).ToArray();
+            foreach (var id in userIds)
+                _AuthorizationManager.SetChange(id);
             return result;
         }
         #endregion 角色-权限关系的CRUD
@@ -452,6 +466,9 @@ namespace PowerLmsWebApi.Controllers
             var adds = ids.Except(_DbContext.PlAccountRoles.Where(c => c.RoleId == model.RoleId).Select(c => c.UserId).AsEnumerable()).ToArray();
             _DbContext.PlAccountRoles.AddRange(adds.Select(c => new AccountRole { RoleId = model.RoleId, UserId = c }));
             _DbContext.SaveChanges();
+
+            foreach (var id in model.UserIds)
+                _AuthorizationManager.SetChange(id);
             return result;
         }
 
@@ -482,6 +499,9 @@ namespace PowerLmsWebApi.Controllers
             var adds = ids.Except(setRela.Where(c => c.RoleId == model.RoleId).Select(c => c.PermissionId).AsEnumerable()).ToArray();
             setRela.AddRange(adds.Select(c => new RolePermission { RoleId = model.RoleId, PermissionId = c, CreateBy = context.User.Id }));
             _DbContext.SaveChanges();
+            var userIds = _DbContext.PlAccountRoles.Where(c => model.RoleId == c.RoleId).Select(c => c.UserId).ToArray();
+            foreach (var id in userIds)
+                _AuthorizationManager.SetChange(id);
             return result;
         }
 
@@ -498,7 +518,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPermissionsInCurrentUserReturnDto();
-            result.Permissions.AddRange(_AuthorizationManager.GetPermissionsFromUser(context.User));
+            result.Permissions.AddRange(_AuthorizationManager.GetOrLoadPermission(context.User).Values);
             return result;
         }
     }
