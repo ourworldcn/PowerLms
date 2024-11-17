@@ -117,6 +117,12 @@ namespace PowerLms.Data
         [Comment("基价,默认为0."), Precision(18, 4)]
         public decimal BasePrice { get; set; }
 
+        /// <summary>
+        /// 最低收费,默认为0.
+        /// </summary>
+        [Comment("最低收费,默认为0."), Precision(18, 4)]
+        public decimal MinFee { get; set; }
+
         #region 空运独有
 
         /// <summary>
