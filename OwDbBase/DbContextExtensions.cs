@@ -51,7 +51,14 @@ namespace OW.Data
                 var existingEntity = set.Find(id);
                 if (existingEntity is null)
                 {
-                    set.Add(entity);
+                    try
+                    {
+                        set.Add(entity); 
+                    }
+                    catch (Exception)
+                    {
+                        throw; 
+                    }
                 }
                 else
                 {
