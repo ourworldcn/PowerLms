@@ -93,6 +93,10 @@ namespace PowerLmsWebApi.Dto
     /// </summary>
     public class SetUserInfoReturnDto : ReturnDtoBase
     {
+        /// <summary>
+        /// 权限集合，无重复。
+        /// </summary>
+        public List<PlPermission> Permissions { get; set; } = new List<PlPermission>();
     }
 
     /// <summary>
