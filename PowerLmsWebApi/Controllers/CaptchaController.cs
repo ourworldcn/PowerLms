@@ -32,7 +32,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult GetNewCaptcha([FromQuery]Guid id)
         {
             //var result = new GetNewCaptchaReturnDto();
-            //if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            //if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
 
             //var path = Path.Combine(AppContext.BaseDirectory, "Files", info.FilePath);
             //var stream = new FileStream(path, FileMode.Open);

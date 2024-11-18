@@ -56,7 +56,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetAllCustomerReturnDto> GetAllCustomer([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllCustomerReturnDto();
             Guid[] allOrg = Array.Empty<Guid>();
             if (_OrganizationManager.GetMerchantId(context.User.Id, out var merId))
@@ -103,7 +103,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<AddCustomerReturnDto> AddCustomer(AddCustomerParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddCustomerReturnDto();
             model.Customer.GenerateNewId();
 
@@ -127,7 +127,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<ModifyCustomerReturnDto> ModifyCustomer(ModifyCustomerParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyCustomerReturnDto();
             if (!_EntityManager.Modify(model.Items)) return NotFound();
             foreach (var item in model.Items)
@@ -154,7 +154,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpDelete]
         public ActionResult<RemoveCustomerReturnDto> RemoveCustomer(RemoveCustomerParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveCustomerReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.PlCustomers.Where(c => c.OrgId == context.User.OrgId);
@@ -186,7 +186,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetAllCustomer2ReturnDto> GetAllCustomer2([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllCustomer2ReturnDto();
             Guid[] allOrg = Array.Empty<Guid>();
             if (_OrganizationManager.GetMerchantId(context.User.Id, out var merId))
@@ -232,7 +232,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetAllCustomerContactReturnDto> GetAllCustomerContact([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllCustomerContactReturnDto();
             var dbSet = _DbContext.PlCustomerContacts;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
@@ -266,7 +266,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<AddCustomerContactReturnDto> AddCustomerContact(AddCustomerContactParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddCustomerContactReturnDto();
             model.CustomerContact.GenerateNewId();
             _DbContext.PlCustomerContacts.Add(model.CustomerContact);
@@ -286,7 +286,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<ModifyCustomerContactReturnDto> ModifyCustomerContact(ModifyCustomerContactParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyCustomerContactReturnDto();
             if (!_EntityManager.Modify(new[] { model.CustomerContact })) return NotFound();
             _DbContext.SaveChanges();
@@ -304,7 +304,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpDelete]
         public ActionResult<RemoveCustomerContactReturnDto> RemoveCustomerContact(RemoveCustomerContactParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveCustomerContactReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.PlCustomerContacts;
@@ -331,7 +331,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetAllPlBusinessHeaderReturnDto> GetAllPlBusinessHeader([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlBusinessHeaderReturnDto();
             if (model.OrderFieldName == "Id") model.OrderFieldName = "CustomerId";
 
@@ -369,7 +369,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<AddPlBusinessHeaderReturnDto> AddPlBusinessHeader(AddPlBusinessHeaderParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddPlBusinessHeaderReturnDto();
             _DbContext.PlCustomerBusinessHeaders.Add(model.Item);
             _DbContext.SaveChanges();
@@ -387,7 +387,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpDelete]
         public ActionResult<RemovePlBusinessHeaderReturnDto> RemovePlBusinessHeader(RemovePlBusinessHeaderParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemovePlBusinessHeaderReturnDto();
             DbSet<PlBusinessHeader> dbSet = _DbContext.PlCustomerBusinessHeaders;
             var item = dbSet.Find(model.CustomerId, model.UserId, model.OrderTypeId);
@@ -413,7 +413,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetAllPlTaxInfoReturnDto> GetAllPlTaxInfo([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlTaxInfoReturnDto();
 
             var dbSet = _DbContext.PlCustomerTaxInfos;
@@ -448,7 +448,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<AddPlTaxInfoReturnDto> AddPlTaxInfo(AddPlTaxInfoParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddPlTaxInfoReturnDto();
             model.PlTaxInfo.GenerateNewId();
             _DbContext.PlCustomerTaxInfos.Add(model.PlTaxInfo);
@@ -468,7 +468,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<ModifyPlTaxInfoReturnDto> ModifyPlTaxInfo(ModifyPlTaxInfoParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyPlTaxInfoReturnDto();
             if (!_EntityManager.Modify(new[] { model.PlTaxInfo })) return NotFound();
             _DbContext.SaveChanges();
@@ -486,7 +486,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpDelete]
         public ActionResult<RemovePlTaxInfoReturnDto> RemovePlTaxInfo(RemovePlTaxInfoParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemovePlTaxInfoReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.PlCustomerTaxInfos;
@@ -512,7 +512,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetAllPlTidanReturnDto> GetAllPlTidan([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlTidanReturnDto();
 
             var dbSet = _DbContext.PlCustomerTidans;
@@ -543,7 +543,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<AddPlTidanReturnDto> AddPlTidan(AddPlTidanParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddPlTidanReturnDto();
             model.PlTidan.GenerateNewId();
             _DbContext.PlCustomerTidans.Add(model.PlTidan);
@@ -563,7 +563,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<ModifyPlTidanReturnDto> ModifyPlTidan(ModifyPlTidanParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyPlTidanReturnDto();
             if (!_EntityManager.Modify(new[] { model.PlTidan })) return NotFound();
             _DbContext.SaveChanges();
@@ -581,7 +581,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpDelete]
         public ActionResult<RemovePlTidanReturnDto> RemovePlTidan(RemovePlTidanParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemovePlTidanReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.PlCustomerTaxInfos;
@@ -607,7 +607,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetAllCustomerBlacklistReturnDto> GetAllCustomerBlacklist([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllCustomerBlacklistReturnDto();
             var dbSet = _DbContext.CustomerBlacklists;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
@@ -646,7 +646,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<AddCustomerBlacklistReturnDto> AddCustomerBlacklist(AddCustomerBlacklistParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddCustomerBlacklistReturnDto();
             model.CustomerBlacklist.GenerateNewId();
             if (_DbContext.PlCustomers.Find(model.CustomerBlacklist.CustomerId) is not PlCustomer customer)
@@ -677,7 +677,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpDelete]
         public ActionResult<RemoveCustomerBlacklistReturnDto> RemoveCustomerBlacklist(RemoveCustomerBlacklistParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveCustomerBlacklistReturnDto();
             var id = model.CustomerId;
             var customer = _DbContext.PlCustomers.Find(model.CustomerId);
@@ -721,7 +721,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetAllPlLoadingAddrReturnDto> GetAllPlLoadingAddr([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlLoadingAddrReturnDto();
 
             var dbSet = _DbContext.PlCustomerLoadingAddrs;
@@ -756,7 +756,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<AddPlLoadingAddrReturnDto> AddPlLoadingAddr(AddPlLoadingAddrParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddPlLoadingAddrReturnDto();
             model.PlLoadingAddr.GenerateNewId();
             _DbContext.PlCustomerLoadingAddrs.Add(model.PlLoadingAddr);
@@ -776,7 +776,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<ModifyPlLoadingAddrReturnDto> ModifyPlLoadingAddr(ModifyPlLoadingAddrParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyPlLoadingAddrReturnDto();
             if (!_EntityManager.Modify(new[] { model.PlLoadingAddr })) return NotFound();
             _DbContext.SaveChanges();
@@ -794,7 +794,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpDelete]
         public ActionResult<RemovePlLoadingAddrReturnDto> RemovePlLoadingAddr(RemovePlLoadingAddrParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemovePlLoadingAddrReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.PlCustomerTaxInfos;

@@ -58,7 +58,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetAllPlJobReturnDto> GetAllPlJob([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlJobReturnDto();
 
             var dbSet = _DbContext.PlJobs.Where(c => c.OrgId == context.User.OrgId);
@@ -80,7 +80,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<AddPlJobReturnDto> AddPlJob(AddPlJobParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context)
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context)
             {
                 _Logger.LogWarning("无效的令牌{token}", model.Token);
                 return Unauthorized();
@@ -110,7 +110,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<ModifyPlJobReturnDto> ModifyPlJob(ModifyPlJobParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyPlJobReturnDto();
             if (!_EntityManager.Modify(new[] { model.PlJob })) return NotFound();
             //忽略不可更改字段
@@ -136,7 +136,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpDelete]
         public ActionResult<RemovePlJobReturnDto> RemovePlJob(RemovePlJobParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemovePlJobReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.PlJobs;
@@ -160,7 +160,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<ChangeStateReturnDto> ChangeState(ChangeStateParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context)
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context)
             {
                 _Logger.LogWarning("无效的令牌{token}", model.Token);
                 return Unauthorized();
@@ -226,7 +226,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<AuditJobAndDocFeeReturnDto> AuditJobAndDocFee(AuditJobAndDocFeeParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context)
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context)
             {
                 _Logger.LogWarning("无效的令牌{token}", model.Token);
                 return Unauthorized();
@@ -264,7 +264,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetAllPlEaDocReturnDto> GetAllPlEaDoc([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlEaDocReturnDto();
 
             var dbSet = _DbContext.PlEaDocs;
@@ -285,7 +285,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<AddPlEaDocReturnDto> AddPlEaDoc(AddPlEaDocParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddPlEaDocReturnDto();
             var entity = model.PlEaDoc;
             entity.GenerateNewId();
@@ -308,7 +308,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<ModifyPlEaDocReturnDto> ModifyPlEaDoc(ModifyPlEaDocParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyPlEaDocReturnDto();
             if (!_EntityManager.Modify(new[] { model.PlEaDoc })) return NotFound();
             _DbContext.SaveChanges();
@@ -327,7 +327,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpDelete]
         public ActionResult<RemovePlEaDocReturnDto> RemovePlEaDoc(RemovePlEaDocParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemovePlEaDocReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.PlEaDocs;
@@ -355,7 +355,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetAllHuochangChuchongReturnDto> GetAllHuochangChuchong([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllHuochangChuchongReturnDto();
 
             var dbSet = _DbContext.HuochangChuchongs;
@@ -386,7 +386,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<AddHuochangChuchongReturnDto> AddHuochangChuchong(AddHuochangChuchongParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddHuochangChuchongReturnDto();
             var entity = model.HuochangChuchong;
             entity.GenerateNewId();
@@ -407,7 +407,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<ModifyHuochangChuchongReturnDto> ModifyHuochangChuchong(ModifyHuochangChuchongParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyHuochangChuchongReturnDto();
             if (!_EntityManager.Modify(new[] { model.HuochangChuchong })) return NotFound();
             _DbContext.SaveChanges();
@@ -426,7 +426,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpDelete]
         public ActionResult<RemoveHuochangChuchongReturnDto> RemoveHuochangChuchong(RemoveHuochangChuchongParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveHuochangChuchongReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.HuochangChuchongs;
@@ -454,7 +454,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<AuditDocFeeReturnDto> AuditDocFee(AuditDocFeeParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AuditDocFeeReturnDto();
             if (_DbContext.DocFees.Find(model.FeeId) is not DocFee fee) return NotFound();
             if (_DbContext.PlJobs.Find(fee.JobId) is not PlJob job) return NotFound();
@@ -486,7 +486,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetAllDocFeeReturnDto> GetAllDocFee([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllDocFeeReturnDto();
 
             var dbSet = _DbContext.DocFees;
@@ -531,7 +531,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpGet]
         public ActionResult<GetDocFeeReturnDto> GetDocFee([FromQuery] GetDocFeeParamsDto model, [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
 
             string[] entityNames = new string[] { nameof(DocFee), nameof(DocBill), nameof(PlJob) };
             var result = new GetDocFeeReturnDto();
@@ -572,7 +572,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<AddDocFeeReturnDto> AddDocFee(AddDocFeeParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddDocFeeReturnDto();
             var entity = model.DocFee;
             entity.GenerateNewId();
@@ -594,7 +594,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<ModifyDocFeeReturnDto> ModifyDocFee(ModifyDocFeeParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyDocFeeReturnDto();
             if (!_EntityManager.Modify(new[] { model.DocFee })) return NotFound();
             var entity = _DbContext.Entry(model.DocFee);
@@ -617,7 +617,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpDelete]
         public ActionResult<RemoveDocFeeReturnDto> RemoveDocFee(RemoveDocFeeParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveDocFeeReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.DocFees;
@@ -645,7 +645,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetAllDocBillReturnDto> GetAllDocBill([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllDocBillReturnDto();
 
             var dbSet = _DbContext.DocBills;
@@ -690,7 +690,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<AddDocBillReturnDto> AddDocBill(AddDocBillParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddDocBillReturnDto();
             var entity = model.DocBill;
             entity.GenerateNewId();
@@ -725,7 +725,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<ModifyDocBillReturnDto> ModifyDocBill(ModifyDocBillParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyDocBillReturnDto();
             if (!_EntityManager.Modify(new[] { model.DocBill })) return NotFound();
             //处理费用对象
@@ -754,7 +754,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpDelete]
         public ActionResult<RemoveDocBillReturnDto> RemoveDocBill(RemoveDocBillParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveDocBillReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.DocBills;
@@ -777,7 +777,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpGet]
         public ActionResult<GetDocBillsByJobIdReturnDto> GetDocBillsByJobIds([FromQuery] GetDocBillsByJobIdParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetDocBillsByJobIdReturnDto();
             var collJob = _DbContext.PlJobs.Where(c => model.Ids.Contains(c.Id));
             if (collJob.Count() != model.Ids.Count) return NotFound();
@@ -819,7 +819,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetAllPlIaDocReturnDto> GetAllPlIaDoc([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlIaDocReturnDto();
 
             var dbSet = _DbContext.PlIaDocs;
@@ -840,7 +840,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<AddPlIaDocReturnDto> AddPlIaDoc(AddPlIaDocParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddPlIaDocReturnDto();
             var entity = model.PlIaDoc;
             entity.GenerateNewId();
@@ -863,7 +863,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<ModifyPlIaDocReturnDto> ModifyPlIaDoc(ModifyPlIaDocParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyPlIaDocReturnDto();
             if (!_EntityManager.Modify(new[] { model.PlIaDoc })) return NotFound();
             _DbContext.SaveChanges();
@@ -882,7 +882,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpDelete]
         public ActionResult<RemovePlIaDocReturnDto> RemovePlIaDoc(RemovePlIaDocParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemovePlIaDocReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.PlIaDocs;

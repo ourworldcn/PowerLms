@@ -53,7 +53,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetWfReturnDto> GetWfByDocId([FromQuery] GetWfParamsDto model)
         {
             var result = new GetWfReturnDto();
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var coll = _DbContext.OwWfs.Where(c => c.DocId == model.EntityId).AsEnumerable();
             result.Result.AddRange(coll.Select(c => _Mapper.Map<OwWfDto>(c)));
             result.Result.ForEach(c =>
@@ -149,7 +149,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetWfByOpertorIdReturnDto> GetWfByOpertorId([FromQuery] GetWfByOpertorIdParamsDto model)
         {
             var result = new GetWfByOpertorIdReturnDto();
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
 
             var operatorId = context.User.Id;
             byte state = 0;
@@ -186,7 +186,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetNextNodeItemsByDocIdReturnDto> GetNextNodeItemsByDocId([FromQuery] GetNextNodeItemsByDocIdParamsDto model)
         {
             var result = new GetNextNodeItemsByDocIdReturnDto();
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var doc = _DbContext.OwWfs.Find(model.DocId);
             if (doc is null) return NotFound();
 
@@ -217,7 +217,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<WfSendReturnDto> Send(WfSendParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new WfSendReturnDto();
             var now = OwHelper.WorldNow;
 

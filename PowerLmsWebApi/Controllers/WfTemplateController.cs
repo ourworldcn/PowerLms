@@ -45,7 +45,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<AddWorkflowTemplateReturnDto> AddWfTemplate(AddWorkflowTemplateParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddWorkflowTemplateReturnDto();
             model.Item.GenerateNewId();
 
@@ -70,7 +70,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetAllWorkflowTemplateReturnDto> GetAllWfTemplate([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllWorkflowTemplateReturnDto();
             var dbSet = _DbContext.WfTemplates.Where(c => c.OrgId == context.User.OrgId);
             dbSet = _DbContext.WfTemplates;
@@ -105,7 +105,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<ModifyWorkflowTemplateReturnDto> ModifyWfTemplate(ModifyWorkflowTemplateParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyWorkflowTemplateReturnDto();
             if (!_EntityManager.Modify(model.Items)) return NotFound();
             //foreach (var item in model.Items)
@@ -128,7 +128,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpDelete]
         public ActionResult<RemoveWorkflowTemplateReturnDto> RemoveWfTemplate(RemoveWorkflowTemplatePatamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveWorkflowTemplateReturnDto();
 
             var dbSet = _DbContext.WfTemplates;
@@ -153,7 +153,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<AddWfTemplateNodeReturnDto> AddWfTemplateNode(AddWfTemplateNodeParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddWfTemplateNodeReturnDto();
 
             if (model.Item.NextId is not null)
@@ -193,7 +193,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetAllWfTemplateNodeReturnDto> GetAllWfTemplateNode([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllWfTemplateNodeReturnDto();
             var dbSet = _DbContext.WfTemplateNodes/*.Where(c => c.OrgId == context.User.OrgId)*/;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsQueryable();
@@ -233,7 +233,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<ModifyWfTemplateNodeReturnDto> ModifyWfTemplateNode(ModifyWfTemplateNodeParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyWfTemplateNodeReturnDto();
             var ids = model.Items.Where(c => c.NextId is not null).Select(c => c.NextId);
             var nextNodeCount = _DbContext.WfTemplateNodes.Count(c => ids.Contains(c.Id));
@@ -259,7 +259,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpDelete]
         public ActionResult<RemoveWfTemplateNodeReturnDto> RemoveWfTemplateNode(RemoveWfTemplateNodePatamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveWfTemplateNodeReturnDto();
             var dbSet = _DbContext.WfTemplateNodes;
 
@@ -294,7 +294,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetNextNodeItemsByKindCodeReturnDto> GetNextNodeItemsByKindCode([FromQuery] GetNextNodeItemsByKindCodeParamsDto model)
         {
             var result = new GetNextNodeItemsByKindCodeReturnDto { };
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
 
             var tt = _DbContext.WfTemplates.Include(c => c.Children).ThenInclude(c => c.Children).
                 FirstOrDefault(c => c.KindCode == model.KindCode && c.OrgId == context.User.OrgId);
@@ -325,7 +325,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<AddWfTemplateNodeItemReturnDto> AddWfTemplateNodeItem(AddWfTemplateNodeItemParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddWfTemplateNodeItemReturnDto();
             model.Item.GenerateNewId();
 
@@ -350,7 +350,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetAllWfTemplateNodeItemReturnDto> GetAllWfTemplateNodeItem([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllWfTemplateNodeItemReturnDto();
             var dbSet = _DbContext.WfTemplateNodeItems/*.Where(c => c.OrgId == context.User.OrgId)*/;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
@@ -381,7 +381,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<ModifyWfTemplateNodeItemReturnDto> ModifyWfTemplateNodeItem(ModifyWfTemplateNodeItemParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyWfTemplateNodeItemReturnDto();
             if (!_EntityManager.Modify(model.Items)) return NotFound();
             //foreach (var item in model.Items)
@@ -404,7 +404,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpDelete]
         public ActionResult<RemoveWfTemplateNodeItemReturnDto> RemoveWfTemplateNodeItem(RemoveWfTemplateNodeItemPatamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveWfTemplateNodeItemReturnDto();
 
             var dbSet = _DbContext.WfTemplateNodeItems;
@@ -427,7 +427,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<SetWfTemplateNodeItemReturnDto> SetWfTemplateNodeItem(SetWfTemplateNodeItemParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new SetWfTemplateNodeItemReturnDto();
             var parent = _DbContext.WfTemplateNodes.FirstOrDefault(c => c.Id == model.ParentId);
             if (parent is null) return NotFound();
@@ -475,7 +475,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetAllWfTemplateKindCodeReturnDto> GetAllWfTemplateKindCode([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllWfTemplateKindCodeReturnDto();
             var dbSet = _DbContext.WfKindCodeDics/*.Where(c => c.OrgId == context.User.OrgId)*/;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();

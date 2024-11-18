@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Primitives;
+using NPOI.POIFS.FileSystem;
 using OW;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
@@ -80,7 +81,7 @@ namespace PowerLmsServer.Managers
         /// <param name="token">登录令牌。</param>
         /// <param name="scope">范围服务容器。</param>
         /// <returns>上下文对象，可能是null如果出错。</returns>
-        public OwContext GetAccountFromToken(Guid token, IServiceProvider scope)
+        public OwContext GetOrLoadAccountFromToken(Guid token, IServiceProvider scope)
         {
             Account user;
             if (_Token2Key.TryGetValue(token, out var key))    //若找到token
@@ -108,7 +109,27 @@ namespace PowerLmsServer.Managers
         }
 
         /// <summary>
-        /// 
+        /// 按证据获取用户缓存或加载。
+        /// </summary>
+        /// <param name="evidence"></param>
+        /// <returns></returns>
+        public Account GetOrLoadAccountFromEvidence(IDictionary<string, string> evidence)
+        {
+            Account user = null;
+            if (evidence.TryGetValue(nameof(Account.LoginName), out var loginName) && evidence.TryGetValue("Pwd", out var pwd))   //用户登录名登录
+            {
+                using var db = _DbContextFactory.CreateDbContext();
+                user = db.Accounts.FirstOrDefault(c => c.LoginName == loginName);
+                if (user is null) goto lbErr;
+                if (!user.IsPwd(pwd)) goto lbErr;
+            }
+            return user;
+        lbErr:
+            return null;
+        }
+
+        /// <summary>
+        /// 获取用户对象的键。
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
@@ -138,6 +159,27 @@ namespace PowerLmsServer.Managers
                 return user;
             });
             return result;
+        }
+
+        /// <summary>
+        /// 设置缓存中的数据(新缓存项)。若有已有项不会自动调用过期事件。
+        /// </summary>
+        /// <param name="user"></param>
+        public void SetAccount(Account user)
+        {
+            var key = GetKey(user.Id);
+
+            var ct = user.ExpirationTokenSource;
+            ct.Token.Register(c =>
+            {
+                var u = c as Account;
+                u.DbContext?.Dispose();
+            }, user);
+            var entryOptions = new MemoryCacheEntryOptions()
+                .SetSlidingExpiration(TimeSpan.FromMinutes(15))
+                .AddExpirationToken(new CancellationChangeToken(ct.Token));
+
+            _MemoryCache.Set(key, user, entryOptions);
         }
 
         /// <summary>

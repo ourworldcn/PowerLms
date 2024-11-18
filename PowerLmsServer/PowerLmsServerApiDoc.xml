@@ -38,7 +38,7 @@
             <param name="service">当前范围的服务容器。</param>
             <param name="template"></param>
         </member>
-        <member name="M:PowerLmsServer.Managers.AccountManager.GetAccountFromToken(System.Guid,System.IServiceProvider)">
+        <member name="M:PowerLmsServer.Managers.AccountManager.GetOrLoadAccountFromToken(System.Guid,System.IServiceProvider)">
             <summary>
             获取缓存上下文。当前版本未实现缓存，未来将使用缓存加速。
             </summary>
@@ -46,9 +46,16 @@
             <param name="scope">范围服务容器。</param>
             <returns>上下文对象，可能是null如果出错。</returns>
         </member>
+        <member name="M:PowerLmsServer.Managers.AccountManager.GetOrLoadAccountFromEvidence(System.Collections.Generic.IDictionary{System.String,System.String})">
+            <summary>
+            按证据获取用户缓存或加载。
+            </summary>
+            <param name="evidence"></param>
+            <returns></returns>
+        </member>
         <member name="M:PowerLmsServer.Managers.AccountManager.GetKey(System.Guid)">
             <summary>
-            
+            获取用户对象的键。
             </summary>
             <param name="id"></param>
             <returns></returns>
@@ -59,6 +66,12 @@
             </summary>
             <param name="id"></param>
             <returns>返回用户对象，没有找到则返回null。</returns>
+        </member>
+        <member name="M:PowerLmsServer.Managers.AccountManager.SetAccount(PowerLms.Data.Account)">
+            <summary>
+            设置缓存中的数据(新缓存项)。若有已有项不会自动调用过期事件。
+            </summary>
+            <param name="user"></param>
         </member>
         <member name="M:PowerLmsServer.Managers.AccountManager.IsAdmin(PowerLms.Data.Account)">
             <summary>

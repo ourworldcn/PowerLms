@@ -55,7 +55,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetAllDocFeeRequisitionReturnDto> GetAllDocFeeRequisition([FromQuery] GetAllDocFeeRequisitionParamsDto model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllDocFeeRequisitionReturnDto();
             var dbSet = _DbContext.DocFeeRequisitions.Where(c => c.OrgId == context.User.OrgId);
             if (model.WfState.HasValue)  //须限定审批流程状态
@@ -84,7 +84,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetAllDocFeeRequisitionWithWfReturnDto> GetAllDocFeeRequisitionWithWf([FromQuery] GetAllDocFeeRequisitionWithWfParamsDto model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllDocFeeRequisitionWithWfReturnDto();
             var dbSet = _DbContext.DocFeeRequisitions.Where(c => c.OrgId == context.User.OrgId);
             if (model.WfState.HasValue)  //须限定审批流程状态
@@ -129,7 +129,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<AddDocFeeRequisitionReturnDto> AddDocFeeRequisition(AddDocFeeRequisitionParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context)
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context)
             {
                 _Logger.LogWarning("无效的令牌{token}", model.Token);
                 return Unauthorized();
@@ -158,7 +158,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<ModifyDocFeeRequisitionReturnDto> ModifyDocFeeRequisition(ModifyDocFeeRequisitionParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyDocFeeRequisitionReturnDto();
             if (!_EntityManager.Modify(new[] { model.DocFeeRequisition })) return NotFound();
             //忽略不可更改字段
@@ -181,7 +181,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpDelete]
         public ActionResult<RemoveDocFeeRequisitionReturnDto> RemoveDocFeeRequisition(RemoveDocFeeRequisitionParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveDocFeeRequisitionReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.DocFeeRequisitions;
@@ -203,7 +203,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpGet]
         public ActionResult<GetFeeRemainingReturnDto> GetFeeRemaining([FromQuery] GetFeeRemainingParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetFeeRemainingReturnDto();
             var fees = _DbContext.DocFees.Where(c => model.FeeIds.Contains(c.Id));
             if (fees.Count() != model.FeeIds.Count) return NotFound();
@@ -258,7 +258,7 @@ namespace PowerLmsWebApi.Controllers
             [FromQuery] Dictionary<string, string> conditional = null)
         {
 
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllDocFeeRequisitionItemReturnDto();
 
             var dbSet = _DbContext.DocFeeRequisitionItems;
@@ -293,7 +293,7 @@ namespace PowerLmsWebApi.Controllers
             [FromQuery] Dictionary<string, string> conditional = null)
         {
             //查询 需要返回 申请单 job 费用实体 申请明细的余额（未结算）
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetDocFeeRequisitionItemReturnDto();
             var dbSet = _DbContext.DocFeeRequisitionItems;
 
@@ -346,7 +346,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<AddDocFeeRequisitionItemReturnDto> AddDocFeeRequisitionItem(AddDocFeeRequisitionItemParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context)
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context)
             {
                 _Logger.LogWarning("无效的令牌{token}", model.Token);
                 return Unauthorized();
@@ -380,7 +380,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<ModifyDocFeeRequisitionItemReturnDto> ModifyDocFeeRequisitionItem(ModifyDocFeeRequisitionItemParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyDocFeeRequisitionItemReturnDto();
             if (!_EntityManager.Modify(new[] { model.DocFeeRequisitionItem })) return NotFound();
             //忽略不可更改字段
@@ -406,7 +406,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpDelete]
         public ActionResult<RemoveDocFeeRequisitionItemReturnDto> RemoveDocFeeRequisitionItem(RemoveDocFeeRequisitionItemParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveDocFeeRequisitionItemReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.DocFeeRequisitionItems;
@@ -435,7 +435,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<SetDocFeeRequisitionItemReturnDto> SetDocFeeRequisitionItem(SetDocFeeRequisitionItemParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new SetDocFeeRequisitionItemReturnDto();
             var fr = _DbContext.DocFeeRequisitions.Find(model.FrId);
             if (fr is null) return NotFound();
@@ -482,7 +482,7 @@ namespace PowerLmsWebApi.Controllers
             [FromQuery] Dictionary<string, string> conditional = null)
         {
 
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlInvoicesReturnDto();
             var dbSet = _DbContext.PlInvoicess;
 
@@ -503,7 +503,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<AddPlInvoicesReturnDto> AddPlInvoices(AddPlInvoicesParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context)
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context)
             {
                 _Logger.LogWarning("无效的令牌{token}", model.Token);
                 return Unauthorized();
@@ -532,7 +532,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<ModifyPlInvoicesReturnDto> ModifyPlInvoices(ModifyPlInvoicesParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyPlInvoicesReturnDto();
             if (!_EntityManager.Modify(new[] { model.PlInvoices })) return NotFound();
             //忽略不可更改字段
@@ -552,7 +552,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpDelete]
         public ActionResult<RemovePlInvoicesReturnDto> RemovePlInvoices(RemovePlInvoicesParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemovePlInvoicesReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.PlInvoicess;
@@ -584,7 +584,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<ConfirmPlInvoicesReturnDto> ConfirmPlInvoices(ConfirmPlInvoicesParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ConfirmPlInvoicesReturnDto();
             var coll = _DbContext.PlInvoicess.Where(c => model.Ids.Contains(c.Id)).ToArray();
             if (coll.Length != model.Ids.Count) return BadRequest("至少有一个id不存在对应的结算单");
@@ -615,7 +615,7 @@ namespace PowerLmsWebApi.Controllers
             [FromQuery] Dictionary<string, string> conditional = null)
         {
             //查询 需要返回 申请单 job 费用实体 申请明细的余额（未结算）
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetPlInvoicesItemReturnDto();
             var dbSet = _DbContext.PlInvoicesItems;
 
@@ -683,7 +683,7 @@ namespace PowerLmsWebApi.Controllers
             [FromQuery] Dictionary<string, string> conditional = null)
         {
 
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlInvoicesItemReturnDto();
             var dbSet = _DbContext.PlInvoicesItems;
 
@@ -704,7 +704,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<AddPlInvoicesItemReturnDto> AddPlInvoicesItem(AddPlInvoicesItemParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context)
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context)
             {
                 _Logger.LogWarning("无效的令牌{token}", model.Token);
                 return Unauthorized();
@@ -731,7 +731,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<ModifyPlInvoicesItemReturnDto> ModifyPlInvoicesItem(ModifyPlInvoicesItemParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyPlInvoicesItemReturnDto();
             if (!_EntityManager.Modify(new[] { model.PlInvoicesItem })) return NotFound();
             //忽略不可更改字段
@@ -751,7 +751,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpDelete]
         public ActionResult<RemovePlInvoicesItemReturnDto> RemovePlInvoicesItem(RemovePlInvoicesItemParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemovePlInvoicesItemReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.PlInvoicesItems;
@@ -774,7 +774,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<SetPlInvoicesItemReturnDto> SetPlInvoicesItem(SetPlInvoicesItemParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new SetPlInvoicesItemReturnDto();
             var fr = _DbContext.DocFeeRequisitions.Find(model.FrId);
             if (fr is null) return NotFound();
@@ -821,7 +821,7 @@ namespace PowerLmsWebApi.Controllers
             [FromQuery] Dictionary<string, string> conditional = null)
         {
 
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllDocFeeTemplateReturnDto();
             var dbSet = _DbContext.DocFeeTemplates;
 
@@ -842,7 +842,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<AddDocFeeTemplateReturnDto> AddDocFeeTemplate(AddDocFeeTemplateParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context)
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context)
             {
                 _Logger.LogWarning("无效的令牌{token}", model.Token);
                 return Unauthorized();
@@ -871,7 +871,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<ModifyDocFeeTemplateReturnDto> ModifyDocFeeTemplate(ModifyDocFeeTemplateParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyDocFeeTemplateReturnDto();
             if (!_EntityManager.Modify(new[] { model.DocFeeTemplate })) return NotFound();
             //忽略不可更改字段
@@ -891,7 +891,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpDelete]
         public ActionResult<RemoveDocFeeTemplateReturnDto> RemoveDocFeeTemplate(RemoveDocFeeTemplateParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveDocFeeTemplateReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.DocFeeTemplates;
@@ -930,7 +930,7 @@ namespace PowerLmsWebApi.Controllers
             [FromQuery] Dictionary<string, string> conditional = null)
         {
 
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllDocFeeTemplateItemReturnDto();
             var dbSet = _DbContext.DocFeeTemplateItems;
 
@@ -951,7 +951,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<AddDocFeeTemplateItemReturnDto> AddDocFeeTemplateItem(AddDocFeeTemplateItemParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context)
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context)
             {
                 _Logger.LogWarning("无效的令牌{token}", model.Token);
                 return Unauthorized();
@@ -978,7 +978,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<ModifyDocFeeTemplateItemReturnDto> ModifyDocFeeTemplateItem(ModifyDocFeeTemplateItemParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyDocFeeTemplateItemReturnDto();
             if (!_EntityManager.Modify(new[] { model.DocFeeTemplateItem })) return NotFound();
             //忽略不可更改字段
@@ -998,7 +998,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpDelete]
         public ActionResult<RemoveDocFeeTemplateItemReturnDto> RemoveDocFeeTemplateItem(RemoveDocFeeTemplateItemParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveDocFeeTemplateItemReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.DocFeeTemplateItems;
@@ -1021,7 +1021,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<SetDocFeeTemplateItemReturnDto> SetDocFeeTemplateItem(SetDocFeeTemplateItemParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new SetDocFeeTemplateItemReturnDto();
             var fr = _DbContext.DocFeeRequisitions.Find(model.FrId);
             if (fr is null) return NotFound();

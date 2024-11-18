@@ -87,7 +87,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpGet]
         public ActionResult<GetAllAccountReturnDto> GetAll([FromQuery] PagingParamsDtoBase model, [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllAccountReturnDto();
             var dbSet = _DbContext.Accounts;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
@@ -210,7 +210,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<CreateAccountReturnDto> CreateAccount(CreateAccountParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new CreateAccountReturnDto();
             //检验机构/商户Id合规性
             Guid[] orgIds = null;
@@ -264,7 +264,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<GetAccountInfoReturnDto> GetAccountInfo(GetAccountInfoParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAccountInfoReturnDto
             {
                 Account = _DbContext.Accounts.Find(model.UserId)
@@ -288,7 +288,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<ModifyAccountReturnDto> ModifyAccount(ModifyAccountParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyAccountReturnDto();
             var list = new List<Account>();
             if (!_EntityManager.Modify(new[] { model.Item }, list)) return NotFound();
@@ -334,7 +334,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpDelete]
         public ActionResult<RemoveAccountReturnDto> RemoveAccount(RemoveAccountParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveAccountReturnDto();
             var id = model.Id;
             var item = _DbContext.Accounts.Find(id);
@@ -357,7 +357,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<SetUserInfoReturnDto> SetUserInfo(SetUserInfoParams model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new SetUserInfoReturnDto();
             if (!_DbContext.AccountPlOrganizations.Any(c => c.UserId == context.User.Id && c.OrgId == model.CurrentOrgId)) return BadRequest("错误的当前组织机构Id。");
             context.User.OrgId = model.CurrentOrgId;
@@ -379,7 +379,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<NopReturnDto> Nop(NopParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new NopReturnDto();
             context.User.Token = Guid.NewGuid();
             context.Nop();
@@ -399,7 +399,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<ModifyPwdReturnDto> ModifyPwd(ModifyPwdParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyPwdReturnDto();
             if (!context.User.IsPwd(model.OldPwd)) return BadRequest();
             context.User.SetPwd(model.NewPwd);
@@ -419,7 +419,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<ResetPwdReturnDto> ResetPwd(ResetPwdParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             return base.NotFound();
         }
 
@@ -434,7 +434,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<SetOrgsReturnDto> SetOrgs(SetOrgsParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new SetOrgsReturnDto();
             var ids = new HashSet<Guid>(model.OrgIds);
             if (ids.Count != model.OrgIds.Count) return BadRequest($"{nameof(model.OrgIds)}中有重复键值。");
@@ -464,7 +464,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<SetRolesReturnDto> SetRoles(SetRolesParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new SetRolesReturnDto();
             var ids = new HashSet<Guid>(model.RoleIds);
             if (ids.Count != model.RoleIds.Count) return BadRequest($"{nameof(model.RoleIds)}中有重复键值。");

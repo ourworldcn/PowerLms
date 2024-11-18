@@ -59,7 +59,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetAllMerchantReturnDto> GetAllMerchant([FromQuery]PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllMerchantReturnDto();
             var dbSet = _DbContext.Merchants;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
@@ -101,7 +101,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<ModifyMerchantReturnDto> ModifyMerchant(ModifyMerchantParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyMerchantReturnDto();
             if (!_EntityManager.Modify(new[] { model.Merchant })) return NotFound();
             _DbContext.SaveChanges();
@@ -118,7 +118,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<AddMerchantReturnDto> AddMerchant(AddMerchantParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddMerchantReturnDto();
             model.Merchant.GenerateNewId();
             _DbContext.Merchants.Add(model.Merchant);
@@ -143,7 +143,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpDelete]
         public ActionResult<RemoveMerchantReturnDto> RemoveMerchant(RemoveMerchantParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveMerchantReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.Merchants;
@@ -172,7 +172,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<InitializeMerchantReturnDto> InitializeMerchant(InitializeMerchantParamsDto model)
         {
-            if (_AccountManager.GetAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new InitializeMerchantReturnDto();
             var merch = _DbContext.Merchants.Find(model.Id);
             if (merch == null) return NotFound();
