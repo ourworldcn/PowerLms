@@ -1,7 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using OW.Data;
+using PowerLmsServer.EfData;
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -116,14 +118,40 @@ namespace PowerLms.Data
         public byte ReportPermission { get; set; }
 
         /// <summary>
-        /// 报表权限。1=个人，2=组织，4=公司，8=商户。
+        /// 业务权限。1=个人，2=组织，4=公司，8=商户。
         /// </summary>
-        [Comment("报表权限。1=个人，2=组织，4=公司。")]
+        [Comment("业务权限。1=个人，2=组织，4=公司。")]
         [Range(1, 4)]
         public byte JobPermission { get; set; }
 
         #region 瞬时属性
+        ConcurrentDictionary<string, object> _RuntimeProperties = new ConcurrentDictionary<string, object>();
 
+        /// <summary>
+        /// 记录瞬时属性的字典。
+        /// </summary>
+        [NotMapped, JsonIgnore]
+        public ConcurrentDictionary<string, object> RuntimeProperties { get => _RuntimeProperties; }
+
+        /// <summary>
+        /// 获取或设置缓存超期的取消令牌。
+        /// </summary>
+        [NotMapped, JsonIgnore]
+        public CancellationTokenSource ExpirationTokenSource
+        {
+            get => RuntimeProperties.GetValueOrDefault(nameof(ExpirationTokenSource), null) as CancellationTokenSource;
+            set => RuntimeProperties[nameof(ExpirationTokenSource)] = value;
+        }
+
+        /// <summary>
+        /// 获取或设置存储使用的数据库上下文。
+        /// </summary>
+        [NotMapped, JsonIgnore]
+        public PowerLmsUserDbContext DbContext
+        {
+            get => RuntimeProperties.GetValueOrDefault(nameof(DbContext), null) as PowerLmsUserDbContext;
+            set => RuntimeProperties[nameof(DbContext)] = value;
+        }
         #endregion 瞬时属性
 
         #region 导航属性

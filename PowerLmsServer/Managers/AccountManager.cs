@@ -1,14 +1,19 @@
 ﻿using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Primitives;
 using OW;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using static System.Formats.Asn1.AsnWriter;
 
 namespace PowerLmsServer.Managers
 {
@@ -23,14 +28,23 @@ namespace PowerLmsServer.Managers
         /// </summary>
         /// <param name="passwordGenerator"></param>
         /// <param name="mapper"></param>
-        public AccountManager(PasswordGenerator passwordGenerator, IMapper mapper)
+        /// <param name="memoryCache"></param>
+        /// <param name="dbContextFactory"></param>
+        public AccountManager(PasswordGenerator passwordGenerator, IMapper mapper, IMemoryCache memoryCache, IDbContextFactory<PowerLmsUserDbContext> dbContextFactory)
         {
             _PasswordGenerator = passwordGenerator;
             _Mapper = mapper;
+            _MemoryCache = memoryCache;
+            _DbContextFactory = dbContextFactory;
         }
 
         readonly PasswordGenerator _PasswordGenerator;
         IMapper _Mapper;
+        IMemoryCache _MemoryCache;
+        IDbContextFactory<PowerLmsUserDbContext> _DbContextFactory;
+
+
+        ConcurrentDictionary<Guid, string> _Token2Key = new ConcurrentDictionary<Guid, string> { };
 
         /// <summary>
         /// 创建一个新账号。
@@ -68,16 +82,62 @@ namespace PowerLmsServer.Managers
         /// <returns>上下文对象，可能是null如果出错。</returns>
         public OwContext GetAccountFromToken(Guid token, IServiceProvider scope)
         {
-            var db = scope.GetService<PowerLmsUserDbContext>();
-            var user = db.Accounts.FirstOrDefault(c => c.Token == token);
-            if (user is null) goto lbErr;
+            Account user;
+            if (_Token2Key.TryGetValue(token, out var key))    //若找到token
+                user = GetOrLoadAccount(Guid.Parse(key));
+            else
+            {
+                using var db = scope.GetService<PowerLmsUserDbContext>();
+                user = db.Accounts.FirstOrDefault(c => c.Token == token);
+                if (user is null) goto lbErr;
+                user = GetOrLoadAccount(user.Id);
+                user.ExpirationTokenSource.Token.Register(c =>
+                {
+                    var u = c as Account;
+                    _Token2Key.TryRemove(u.Token.Value, out _);
+                }, user);
+            }
             var context = scope.GetRequiredService<OwContext>();
             context.Token = token;
             context.User = user;
+            _Token2Key[token] = user.Id.ToString();
             return context;
         lbErr:
             OwHelper.SetLastError(315);
             return null;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        public string GetKey(Guid id)
+        {
+            return $"Account.{id}";
+        }
+
+        /// <summary>
+        /// 获取缓存中的用户对象或加载。
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns>返回用户对象，没有找到则返回null。</returns>
+        public Account GetOrLoadAccount(Guid id)
+        {
+            var result = _MemoryCache.GetOrCreate(GetKey(id), entry =>
+            {
+                var db = _DbContextFactory.CreateDbContext();
+                if (db.Accounts.FirstOrDefault(c => c.Id == Guid.Parse(entry.Key as string)) is not Account user)
+                    return null;
+                user.DbContext = db;
+                entry.SetSlidingExpiration(TimeSpan.FromMinutes(15));
+                var ct = new CancellationTokenSource();
+                user.ExpirationTokenSource = ct;
+                entry.AddExpirationToken(new CancellationChangeToken(ct.Token));
+
+                return user;
+            });
+            return result;
         }
 
         /// <summary>

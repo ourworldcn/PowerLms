@@ -19,12 +19,14 @@
             账号管理器。
             </summary>
         </member>
-        <member name="M:PowerLmsServer.Managers.AccountManager.#ctor(OW.PasswordGenerator,AutoMapper.IMapper)">
+        <member name="M:PowerLmsServer.Managers.AccountManager.#ctor(OW.PasswordGenerator,AutoMapper.IMapper,Microsoft.Extensions.Caching.Memory.IMemoryCache,Microsoft.EntityFrameworkCore.IDbContextFactory{PowerLmsServer.EfData.PowerLmsUserDbContext})">
             <summary>
             构造函数。
             </summary>
             <param name="passwordGenerator"></param>
             <param name="mapper"></param>
+            <param name="memoryCache"></param>
+            <param name="dbContextFactory"></param>
         </member>
         <member name="M:PowerLmsServer.Managers.AccountManager.CreateNew(System.String,System.String@,System.Guid@,System.IServiceProvider,PowerLms.Data.Account)">
             <summary>
@@ -43,6 +45,20 @@
             <param name="token">登录令牌。</param>
             <param name="scope">范围服务容器。</param>
             <returns>上下文对象，可能是null如果出错。</returns>
+        </member>
+        <member name="M:PowerLmsServer.Managers.AccountManager.GetKey(System.Guid)">
+            <summary>
+            
+            </summary>
+            <param name="id"></param>
+            <returns></returns>
+        </member>
+        <member name="M:PowerLmsServer.Managers.AccountManager.GetOrLoadAccount(System.Guid)">
+            <summary>
+            获取缓存中的用户对象或加载。
+            </summary>
+            <param name="id"></param>
+            <returns>返回用户对象，没有找到则返回null。</returns>
         </member>
         <member name="M:PowerLmsServer.Managers.AccountManager.IsAdmin(PowerLms.Data.Account)">
             <summary>
