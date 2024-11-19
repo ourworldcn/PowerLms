@@ -53,11 +53,18 @@
             <param name="evidence"></param>
             <returns></returns>
         </member>
-        <member name="M:PowerLmsServer.Managers.AccountManager.GetKey(System.Guid)">
+        <member name="M:PowerLmsServer.Managers.AccountManager.GetCacheKeyFromUserId(System.Guid)">
             <summary>
             获取用户对象的键。
             </summary>
             <param name="id"></param>
+            <returns></returns>
+        </member>
+        <member name="M:PowerLmsServer.Managers.AccountManager.GetUserIdFromCacheKey(System.String)">
+            <summary>
+            获取键值对应的用户Id。
+            </summary>
+            <param name="key"></param>
             <returns></returns>
         </member>
         <member name="M:PowerLmsServer.Managers.AccountManager.GetOrLoadAccount(System.Guid)">
@@ -72,6 +79,34 @@
             设置缓存中的数据(新缓存项)。若有已有项不会自动调用过期事件。
             </summary>
             <param name="user"></param>
+        </member>
+        <member name="M:PowerLmsServer.Managers.AccountManager.LoadAccountFromEvidence(System.Collections.Generic.IDictionary{System.String,System.String})">
+            <summary>
+            按证据获取用户缓存或加载。
+            </summary>
+            <param name="evidence"></param>
+            <returns></returns>
+        </member>
+        <member name="M:PowerLmsServer.Managers.AccountManager.LoadAccountFromId(System.Guid)">
+            <summary>
+            加载用户对象。
+            </summary>
+            <param name="id"></param>
+            <returns></returns>
+        </member>
+        <member name="M:PowerLmsServer.Managers.AccountManager.LoadAccountFromToken(System.Guid)">
+            <summary>
+            加载用户对象。
+            </summary>
+            <param name="token"></param>
+            <returns></returns>
+        </member>
+        <member name="M:PowerLmsServer.Managers.AccountManager.Loaded(PowerLms.Data.Account,PowerLmsServer.EfData.PowerLmsUserDbContext)">
+            <summary>
+            加载用户对象后调用。
+            </summary>
+            <param name="user"></param>
+            <param name="db"></param>
         </member>
         <member name="M:PowerLmsServer.Managers.AccountManager.IsAdmin(PowerLms.Data.Account)">
             <summary>
@@ -617,6 +652,11 @@
         <member name="T:PowerLmsServer.Managers.MerchantInfo">
             <summary>
             商户信息。
+            </summary>
+        </member>
+        <member name="M:PowerLmsServer.Managers.MerchantInfo.#ctor">
+            <summary>
+            构造函数。
             </summary>
         </member>
         <member name="P:PowerLmsServer.Managers.MerchantInfo.Merchant">

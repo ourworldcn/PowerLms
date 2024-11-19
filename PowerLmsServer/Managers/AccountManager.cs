@@ -85,23 +85,25 @@ namespace PowerLmsServer.Managers
         {
             Account user;
             if (_Token2Key.TryGetValue(token, out var key))    //若找到token
-                user = GetOrLoadAccount(Guid.Parse(key));
+                user = GetOrLoadAccount(GetUserIdFromCacheKey(key));
             else
             {
-                using var db = scope.GetService<PowerLmsUserDbContext>();
-                user = db.Accounts.FirstOrDefault(c => c.Token == token);
+                user = LoadAccountFromToken(token);
                 if (user is null) goto lbErr;
-                user = GetOrLoadAccount(user.Id);
-                user.ExpirationTokenSource.Token.Register(c =>
+                if (_Token2Key.TryAdd(user.Token ??= Guid.NewGuid(), GetCacheKeyFromUserId(user.Id)))
                 {
-                    var u = c as Account;
-                    _Token2Key.TryRemove(u.Token.Value, out _);
-                }, user);
+                    user.ExpirationTokenSource.Token.Register(c =>
+                    {
+                        var u = (Guid)c;
+                        _Token2Key.TryRemove(u, out _);
+                    }, token);
+                    SetAccount(user);
+                }
             }
             var context = scope.GetRequiredService<OwContext>();
             context.Token = token;
             context.User = user;
-            _Token2Key[token] = user.Id.ToString();
+            //_Token2Key[token] = user.Id.ToString();
             return context;
         lbErr:
             OwHelper.SetLastError(315);
@@ -133,9 +135,30 @@ namespace PowerLmsServer.Managers
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        public string GetKey(Guid id)
+        public string GetCacheKeyFromUserId(Guid id)
         {
             return $"Account.{id}";
+        }
+
+        /// <summary>
+        /// 获取键值对应的用户Id。
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        public Guid GetUserIdFromCacheKey(string key)
+        {
+            var ary = key.Split('.');
+            if (ary.Length != 2)
+            {
+                OwHelper.SetLastErrorAndMessage(400, "格式错误");
+                return Guid.Empty;
+            }
+            if (!Guid.TryParse(ary[1], out var id))
+            {
+                OwHelper.SetLastErrorAndMessage(400, "格式错误");
+                return Guid.Empty;
+            }
+            return id;
         }
 
         /// <summary>
@@ -145,12 +168,9 @@ namespace PowerLmsServer.Managers
         /// <returns>返回用户对象，没有找到则返回null。</returns>
         public Account GetOrLoadAccount(Guid id)
         {
-            var result = _MemoryCache.GetOrCreate(GetKey(id), entry =>
+            var result = _MemoryCache.GetOrCreate(GetCacheKeyFromUserId(id), entry =>
             {
-                var db = _DbContextFactory.CreateDbContext();
-                if (db.Accounts.FirstOrDefault(c => c.Id == Guid.Parse(entry.Key as string)) is not Account user)
-                    return null;
-                user.DbContext = db;
+                var user = LoadAccountFromId(GetUserIdFromCacheKey(entry.Key as string));
                 entry.SetSlidingExpiration(TimeSpan.FromMinutes(15));
                 var ct = new CancellationTokenSource();
                 user.ExpirationTokenSource = ct;
@@ -167,20 +187,88 @@ namespace PowerLmsServer.Managers
         /// <param name="user"></param>
         public void SetAccount(Account user)
         {
-            var key = GetKey(user.Id);
+            var key = GetCacheKeyFromUserId(user.Id);
 
-            var ct = user.ExpirationTokenSource;
-            ct.Token.Register(c =>
+            var cts = user.ExpirationTokenSource;
+            var ct = cts.Token;
+            var entryOptions = new MemoryCacheEntryOptions()
+                .SetSlidingExpiration(TimeSpan.FromMinutes(15))
+                .AddExpirationToken(new CancellationChangeToken(ct));
+
+            _MemoryCache.Set(key, user, entryOptions);
+        }
+
+        #region 加载用户对象及相关
+
+        /// <summary>
+        /// 按证据获取用户缓存或加载。
+        /// </summary>
+        /// <param name="evidence"></param>
+        /// <returns></returns>
+        public Account LoadAccountFromEvidence(IDictionary<string, string> evidence)
+        {
+            Account user = null;
+            PowerLmsUserDbContext db;
+            if (evidence.TryGetValue(nameof(Account.LoginName), out var loginName) && evidence.TryGetValue("Pwd", out var pwd))   //用户登录名登录
+            {
+                db = _DbContextFactory.CreateDbContext();
+                user = db.Accounts.FirstOrDefault(c => c.LoginName == loginName);
+                if (user is null) goto lbErr;
+                if (!user.IsPwd(pwd)) goto lbErr;
+            }
+            else
+                return null;
+            Loaded(user, db);
+            return user;
+        lbErr:
+            return null;
+        }
+
+        /// <summary>
+        /// 加载用户对象。
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        public Account LoadAccountFromId(Guid id)
+        {
+            var db = _DbContextFactory.CreateDbContext();
+            if (db.Accounts.FirstOrDefault(c => c.Id == id) is not Account user)
+                return null;
+            Loaded(user, db);
+            return user;
+        }
+
+        /// <summary>
+        /// 加载用户对象。
+        /// </summary>
+        /// <param name="token"></param>
+        /// <returns></returns>
+        public Account LoadAccountFromToken(Guid token)
+        {
+            var db = _DbContextFactory.CreateDbContext();
+            if (db.Accounts.FirstOrDefault(c => c.Token == token) is not Account user)
+                return null;
+            Loaded(user, db);
+            return user;
+        }
+
+        /// <summary>
+        /// 加载用户对象后调用。
+        /// </summary>
+        /// <param name="user"></param>
+        /// <param name="db"></param>
+        public void Loaded(Account user, PowerLmsUserDbContext db)
+        {
+            user.DbContext = db;
+            user.ExpirationTokenSource = new CancellationTokenSource();
+            user.ExpirationTokenSource.Token.Register(c =>
             {
                 var u = c as Account;
                 u.DbContext?.Dispose();
             }, user);
-            var entryOptions = new MemoryCacheEntryOptions()
-                .SetSlidingExpiration(TimeSpan.FromMinutes(15))
-                .AddExpirationToken(new CancellationChangeToken(ct.Token));
-
-            _MemoryCache.Set(key, user, entryOptions);
         }
+
+        #endregion 加载用户对象及相关
 
         /// <summary>
         /// 是否是超管。

@@ -21,6 +21,14 @@ namespace PowerLmsServer.Managers
     public class MerchantInfo
     {
         /// <summary>
+        /// 构造函数。
+        /// </summary>
+        public MerchantInfo()
+        {
+            
+        }
+
+        /// <summary>
         /// 商户对象。
         /// </summary>
         public PlMerchant Merchant { get; set; }
