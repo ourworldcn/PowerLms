@@ -157,9 +157,9 @@ namespace PowerLms.Data
         #region 导航属性
 
         /// <summary>
-        /// 当前使用的组织机构Id。在登陆后要首先设置。
+        /// 当前登录的组织机构Id（仅能是公司）。在登陆后要首先设置。
         /// </summary>
-        [Comment("当前使用的组织机构Id。在登陆后要首先设置")]
+        [Comment("当前登录的组织机构Id（仅能是公司）。在登陆后要首先设置")]
         public Guid? OrgId { get; set; }
 
         /// <summary>

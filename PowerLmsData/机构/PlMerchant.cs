@@ -8,6 +8,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using OW.Data;
+using PowerLmsServer.EfData;
+using System.Collections.Concurrent;
+using System.Text.Json.Serialization;
 
 namespace PowerLms.Data
 {
@@ -64,6 +67,36 @@ namespace PowerLms.Data
         /// </summary>
         [Comment("创建的时间")]
         public DateTime CreateDateTime { get; set; } = OwHelper.WorldNow;
+
+        #region 瞬时属性
+        ConcurrentDictionary<string, object> _RuntimeProperties = new ConcurrentDictionary<string, object>();
+
+        /// <summary>
+        /// 记录瞬时属性的字典。
+        /// </summary>
+        [NotMapped, JsonIgnore]
+        public ConcurrentDictionary<string, object> RuntimeProperties { get => _RuntimeProperties; }
+
+        /// <summary>
+        /// 获取或设置缓存超期的取消令牌。
+        /// </summary>
+        [NotMapped, JsonIgnore]
+        public CancellationTokenSource ExpirationTokenSource
+        {
+            get => RuntimeProperties.GetValueOrDefault(nameof(ExpirationTokenSource), null) as CancellationTokenSource;
+            set => RuntimeProperties[nameof(ExpirationTokenSource)] = value;
+        }
+
+        /// <summary>
+        /// 获取或设置存储使用的数据库上下文。
+        /// </summary>
+        [NotMapped, JsonIgnore]
+        public PowerLmsUserDbContext DbContext
+        {
+            get => RuntimeProperties.GetValueOrDefault(nameof(DbContext), null) as PowerLmsUserDbContext;
+            set => RuntimeProperties[nameof(DbContext)] = value;
+        }
+        #endregion 瞬时属性
 
     }
 }

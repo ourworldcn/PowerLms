@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Primitives;
@@ -25,7 +26,7 @@ namespace PowerLmsServer.Managers
         /// </summary>
         public MerchantInfo()
         {
-            
+
         }
 
         /// <summary>
@@ -228,16 +229,6 @@ namespace PowerLmsServer.Managers
         }
 
         /// <summary>
-        /// 获取或加载指定Id的商户信息。
-        /// </summary>
-        /// <param name="merchantId"></param>
-        /// <returns></returns>
-        public MerchantInfo GetOrLoadMerchantInfo(Guid merchantId)
-        {
-            return _Cache.GetOrCreate(GetMerchantInfoCacheKey(merchantId), entry => LoadMerchantInfo(Guid.Parse(entry.Key as string)));
-        }
-
-        /// <summary>
         /// 获取指定机构或商户的，完整商户信息集合。
         /// </summary>
         /// <param name="orgId"></param>
@@ -296,6 +287,111 @@ namespace PowerLmsServer.Managers
 
             return result;
         }
+
+        #region 机构/商户缓存及相关
+
+        /// <summary>
+        /// 根据指定Id加载商户对象。
+        /// </summary>
+        /// <param name="merchId"></param>
+        /// <param name="dbContext">传递null，则用池自动获取一个数据库上下文。</param>
+        /// <returns>没有找到则返回null。</returns>
+        public PlMerchant LoadMerchantFromId(Guid merchId, ref PowerLmsUserDbContext dbContext)
+        {
+            dbContext ??= _DbContextFactory.CreateDbContext();
+            var result = dbContext.Merchants.FirstOrDefault(c => c.Id == merchId);
+            MerchantLoaded(result, dbContext);
+            return result;
+        }
+
+        /// <summary>
+        /// 加载或获取缓存的商户对象。
+        /// </summary>
+        /// <returns></returns>
+        public PlMerchant GetOrLoadMerchantFromId(Guid id)
+        {
+            var result = _Cache.GetOrCreate($"Merchant.{id}", c =>
+                {
+                    PowerLmsUserDbContext db = null;
+                    return LoadMerchantFromId(GetMerchantIdFromCacheKey(c.Key as string), ref db);
+                });
+            return result;
+        }
+
+        /// <summary>
+        /// 获取商会缓存的键。
+        /// </summary>
+        /// <param name="cacheKey"></param>
+        /// <returns></returns>
+        public Guid GetMerchantIdFromCacheKey(string cacheKey)
+        {
+            var ary = cacheKey.Split('.');
+            if (ary.Length != 2)
+            {
+                OwHelper.SetLastErrorAndMessage(400, "格式错误");
+                return Guid.Empty;
+            }
+            if (!Guid.TryParse(ary[1], out var id))
+            {
+                OwHelper.SetLastErrorAndMessage(400, "格式错误");
+                return Guid.Empty;
+            }
+            return id;
+        }
+
+        private void MerchantLoaded(PlMerchant merch, PowerLmsUserDbContext dbContext)
+        {
+            merch.DbContext = dbContext;
+            merch.ExpirationTokenSource = new CancellationTokenSource();
+        }
+
+        /// <summary>
+        /// 加载指定商户下所有机构对象。
+        /// </summary>
+        /// <param name="merchId"></param>
+        /// <param name="dbContext">使用的数据库上下文，null则自动从池中取一个新上下文,调用者负责处置对象。</param>
+        /// <returns></returns>
+        public ConcurrentDictionary<Guid, PlOrganization> LoadOrgsFromMerchId(Guid merchId, ref PowerLmsUserDbContext dbContext)
+        {
+            dbContext ??= _DbContextFactory.CreateDbContext();
+            var orgs = dbContext.PlOrganizations.Where(c => c.MerchantId == merchId);
+            var tmp = orgs.SelectMany(c => GetChidren(c)).AsEnumerable().ToDictionary(c => c.Id, c => c);
+            var result = new ConcurrentDictionary<Guid, PlOrganization>(tmp);
+            return result;
+        }
+
+        public ConcurrentDictionary<Guid, PlOrganization> GetOrLoadOrgsFromMerchId(Guid merchId, ref PowerLmsUserDbContext dbContext)
+        {
+            dbContext ??= _DbContextFactory.CreateDbContext();
+            var result = _Cache.GetOrCreate($"Orgs.{merchId}", c =>
+            {
+                PowerLmsUserDbContext db = null;
+                return LoadOrgsFromMerchId(GetMerchIdFromCacheKey(c.Key as string), ref db);
+            });
+            return result;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="cacheKey"></param>
+        /// <returns></returns>
+        public Guid GetMerchIdFromCacheKey(string cacheKey)
+        {
+            var ary = cacheKey.Split('.');
+            if (ary.Length != 2)
+            {
+                OwHelper.SetLastErrorAndMessage(400, "格式错误");
+                return Guid.Empty;
+            }
+            if (!Guid.TryParse(ary[1], out var id))
+            {
+                OwHelper.SetLastErrorAndMessage(400, "格式错误");
+                return Guid.Empty;
+            }
+            return id;
+        }
+        #endregion 机构/商户缓存及相关
     }
 
     /// <summary>

@@ -354,13 +354,18 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="model"></param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。</response>  
+        /// <response code="400">指定的组织机构Id错误，可能不是公司。</response>  
         [HttpPut]
         public ActionResult<SetUserInfoReturnDto> SetUserInfo(SetUserInfoParams model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new SetUserInfoReturnDto();
             if (!_DbContext.AccountPlOrganizations.Any(c => c.UserId == context.User.Id && c.OrgId == model.CurrentOrgId)) return BadRequest("错误的当前组织机构Id。");
+            if (_DbContext.PlOrganizations.Find(model.CurrentOrgId) is not PlOrganization currentOrg)   //若没有找到指定机构
+                return BadRequest("错误的当前组织机构Id。");
             context.User.OrgId = model.CurrentOrgId;
+            if (currentOrg.Otc != 2)
+                return BadRequest("错误的当前组织机构Id——不是公司。");
             context.User.CurrentLanguageTag = model.LanguageTag;
             context.Nop();
             context.SaveChanges();
