@@ -37,8 +37,9 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="mapper"></param>
         /// <param name="organizationManager"></param>
         /// <param name="dataManager"></param>
+        /// <param name="authorizationManager"></param>
         public AdminController(PowerLmsUserDbContext context, NpoiManager npoiManager, AccountManager accountManager, IServiceProvider scope, EntityManager entityManager,
-            IMapper mapper, OrganizationManager organizationManager, DataDicManager dataManager)
+            IMapper mapper, OrganizationManager organizationManager, DataDicManager dataManager, AuthorizationManager authorizationManager)
         {
             _DbContext = context;
             _NpoiManager = npoiManager;
@@ -48,6 +49,7 @@ namespace PowerLmsWebApi.Controllers
             _Mapper = mapper;
             _OrganizationManager = organizationManager;
             _DataManager = dataManager;
+            _AuthorizationManager = authorizationManager;
         }
 
         readonly PowerLmsUserDbContext _DbContext;
@@ -58,6 +60,8 @@ namespace PowerLmsWebApi.Controllers
         readonly IMapper _Mapper;
         OrganizationManager _OrganizationManager;
         DataDicManager _DataManager;
+        AuthorizationManager _AuthorizationManager;
+
         #region 字典目录
 
         /// <summary>
@@ -162,10 +166,13 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response> 
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         public ActionResult<CopySimpleDataDicReturnDto> CopySimpleDataDic(CopySimpleDataDicParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden);
+
             var result = new CopySimpleDataDicReturnDto();
             //var merch = _DbContext.Merchants.Find(model.SrcOrgId);
             //if (merch == null) return NotFound();
@@ -2099,7 +2106,7 @@ namespace PowerLmsWebApi.Controllers
     /// <summary>
     /// 获取系统日志功能的返回值封装类。
     /// </summary>
-    public class GetAllSystemLogReturnDto: PagingReturnDtoBase<ContainerKindCount>
+    public class GetAllSystemLogReturnDto : PagingReturnDtoBase<ContainerKindCount>
     {
     }
 

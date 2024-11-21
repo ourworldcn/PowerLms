@@ -214,7 +214,7 @@
         </member>
         <member name="M:PowerLmsServer.Managers.AuthorizationManager.LoadPermission(PowerLms.Data.Account)">
             <summary>
-            强制刷新缓存并返回所有权限。
+            加载数据库中许可对象。
             </summary>
             <param name="user"></param>
             <returns></returns>
@@ -559,6 +559,37 @@
             <param name="context"></param>
             <returns></returns>
         </member>
+        <member name="T:PowerLmsServer.Managers.MerchantManager">
+            <summary>
+            商户功能管理服务。
+            </summary>
+        </member>
+        <member name="M:PowerLmsServer.Managers.MerchantManager.#ctor(PowerLmsServer.EfData.PowerLmsUserDbContext,Microsoft.Extensions.Caching.Memory.IMemoryCache,Microsoft.EntityFrameworkCore.IDbContextFactory{PowerLmsServer.EfData.PowerLmsUserDbContext})">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
+        <member name="M:PowerLmsServer.Managers.MerchantManager.LoadMerchantFromId(System.Guid,PowerLmsServer.EfData.PowerLmsUserDbContext@)">
+            <summary>
+            根据指定Id加载商户对象。
+            </summary>
+            <param name="merchId"></param>
+            <param name="dbContext">传递null，则用池自动获取一个数据库上下文。</param>
+            <returns>没有找到则返回null。</returns>
+        </member>
+        <member name="M:PowerLmsServer.Managers.MerchantManager.MerchantLoaded(PowerLms.Data.PlMerchant,PowerLmsServer.EfData.PowerLmsUserDbContext)">
+            <summary>
+            
+            </summary>
+            <param name="merch"></param>
+            <param name="dbContext"></param>
+        </member>
+        <member name="M:PowerLmsServer.Managers.MerchantManager.GetOrLoadMerchantFromId(System.Guid)">
+            <summary>
+            加载或获取缓存的商户对象。
+            </summary>
+            <returns></returns>
+        </member>
         <member name="T:PowerLmsServer.Managers.MultilingualManager">
             <summary>
             多语言管理器。
@@ -684,7 +715,7 @@
             所有机构到商户的<see cref="T:System.Collections.Concurrent.ConcurrentDictionary`2"/>，键是机构Id，值是商户Id。
             </summary>
         </member>
-        <member name="M:PowerLmsServer.Managers.OrganizationManager.#ctor(PowerLmsServer.EfData.PowerLmsUserDbContext,Microsoft.Extensions.Caching.Memory.IMemoryCache,Microsoft.EntityFrameworkCore.IDbContextFactory{PowerLmsServer.EfData.PowerLmsUserDbContext})">
+        <member name="M:PowerLmsServer.Managers.OrganizationManager.#ctor(PowerLmsServer.EfData.PowerLmsUserDbContext,Microsoft.Extensions.Caching.Memory.IMemoryCache,Microsoft.EntityFrameworkCore.IDbContextFactory{PowerLmsServer.EfData.PowerLmsUserDbContext},PowerLmsServer.Managers.MerchantManager)">
             <summary>
             构造函数。
             </summary>
@@ -770,27 +801,6 @@
             <param name="id"></param>
             <returns></returns>
         </member>
-        <member name="M:PowerLmsServer.Managers.OrganizationManager.LoadMerchantFromId(System.Guid,PowerLmsServer.EfData.PowerLmsUserDbContext@)">
-            <summary>
-            根据指定Id加载商户对象。
-            </summary>
-            <param name="merchId"></param>
-            <param name="dbContext">传递null，则用池自动获取一个数据库上下文。</param>
-            <returns>没有找到则返回null。</returns>
-        </member>
-        <member name="M:PowerLmsServer.Managers.OrganizationManager.GetOrLoadMerchantFromId(System.Guid)">
-            <summary>
-            加载或获取缓存的商户对象。
-            </summary>
-            <returns></returns>
-        </member>
-        <member name="M:PowerLmsServer.Managers.OrganizationManager.GetMerchantIdFromCacheKey(System.String)">
-            <summary>
-            获取商会缓存的键。
-            </summary>
-            <param name="cacheKey"></param>
-            <returns></returns>
-        </member>
         <member name="M:PowerLmsServer.Managers.OrganizationManager.LoadOrgsFromMerchId(System.Guid,PowerLmsServer.EfData.PowerLmsUserDbContext@)">
             <summary>
             加载指定商户下所有机构对象。
@@ -799,11 +809,11 @@
             <param name="dbContext">使用的数据库上下文，null则自动从池中取一个新上下文,调用者负责处置对象。</param>
             <returns></returns>
         </member>
-        <member name="M:PowerLmsServer.Managers.OrganizationManager.GetMerchIdFromCacheKey(System.String)">
+        <member name="M:PowerLmsServer.Managers.OrganizationManager.GetOrLoadOrgsFromMerchId(System.Guid)">
             <summary>
-            
+            按指定商户Id获取或加载所有下属机构信息。
             </summary>
-            <param name="cacheKey"></param>
+            <param name="merchId"></param>
             <returns></returns>
         </member>
         <member name="T:PowerLmsServer.Managers.OrganizationManagerExtensions">
@@ -863,10 +873,111 @@
             <param name="node"></param>
             <returns></returns>
         </member>
+        <member name="T:PowerLmsServer.Managers.PermissionManager">
+            <summary>
+            许可对象的管理器。
+            </summary>
+        </member>
+        <member name="M:PowerLmsServer.Managers.PermissionManager.#ctor(Microsoft.Extensions.Caching.Memory.IMemoryCache,Microsoft.EntityFrameworkCore.IDbContextFactory{PowerLmsServer.EfData.PowerLmsUserDbContext})">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
+        <member name="F:PowerLmsServer.Managers.PermissionManager.PermissionsCacheKey">
+            <summary>
+            缓存中的Key。
+            </summary>
+        </member>
+        <member name="M:PowerLmsServer.Managers.PermissionManager.LoadPermission(PowerLmsServer.EfData.PowerLmsUserDbContext@)">
+            <summary>
+            加载数据库中许可对象。
+            </summary>
+            <param name="dbContext"></param>
+            <returns></returns>
+        </member>
+        <member name="M:PowerLmsServer.Managers.PermissionManager.PermissionLoaded(System.Collections.Generic.IDictionary{System.String,PowerLms.Data.PlPermission})">
+            <summary>
+            
+            </summary>
+            <param name="dic"></param>
+        </member>
+        <member name="M:PowerLmsServer.Managers.PermissionManager.GetOrLoadPermission">
+            <summary>
+            
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="T:PowerLmsServer.Managers.RoleManager">
+            <summary>
+            角色管理器
+            </summary>
+        </member>
+        <member name="M:PowerLmsServer.Managers.RoleManager.#ctor(PowerLmsServer.Managers.MerchantManager,PowerLmsServer.Managers.OrganizationManager,Microsoft.Extensions.Caching.Memory.IMemoryCache,Microsoft.EntityFrameworkCore.IDbContextFactory{PowerLmsServer.EfData.PowerLmsUserDbContext})">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
+        <member name="M:PowerLmsServer.Managers.RoleManager.LoadRolesFromMerchantId(System.Guid,PowerLmsServer.EfData.PowerLmsUserDbContext@)">
+            <summary>
+            
+            </summary>
+            <param name="merchId"></param>
+            <param name="dbContext"></param>
+            <returns></returns>
+        </member>
+        <member name="M:PowerLmsServer.Managers.RoleManager.GetOrLoadRolesFromMerchantId(System.Guid)">
+            <summary>
+            获取商户下所有角色的字典。
+            </summary>
+            <param name="merchId"></param>
+            <returns></returns>
+        </member>
         <member name="T:PowerLmsServer.Managers.SystemResourceManager">
             <summary>
             
             </summary>
+        </member>
+        <member name="T:PowerLmsServer.OwCacheHelper">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="F:PowerLmsServer.OwCacheHelper.IdKeyLength">
+            <summary>
+            Id在缓存键值中的长度。
+            </summary>
+        </member>
+        <member name="M:PowerLmsServer.OwCacheHelper.GetIdFromCacheKey(System.String,System.String)">
+            <summary>
+            根据缓存的键值和后缀获取其Id。
+            </summary>
+            <param name="key"></param>
+            <param name="suffix">为null则不会验证后缀是否合法。</param>
+            <returns>获取id,如果不合法的后缀或格式则返回null。</returns>
+        </member>
+        <member name="M:PowerLmsServer.OwCacheHelper.GetIdFromCacheKey``1(System.String,System.String)">
+            <summary>
+            根据缓存的键值和后缀获取其Id。
+            </summary>
+            <param name="key"></param>
+            <param name="suffix">为null则不会验证后缀是否合法。</param>
+            <returns>获取id,如果不合法的后缀或格式则返回null。</returns>
+        </member>
+        <member name="M:PowerLmsServer.OwCacheHelper.GetCacheKeyFromId(System.Guid,System.String)">
+            <summary>
+            根据指定Id和前缀获取其用于缓存的键值。
+            </summary>
+            <param name="id"></param>
+            <param name="suffix">后缀</param>
+            <returns></returns>
+        </member>
+        <member name="M:PowerLmsServer.OwCacheHelper.GetCacheKeyFromId``1(System.Guid,System.String)">
+            <summary>
+            根据指定Id和前缀获取其用于缓存的键值。
+            </summary>
+            <param name="id"></param>
+            <param name="suffix"></param>
+            <returns></returns>
         </member>
     </members>
 </doc>

@@ -82,7 +82,7 @@ namespace PowerLmsServer.Managers
         }
 
         /// <summary>
-        /// 强制刷新缓存并返回所有权限。
+        /// 加载数据库中许可对象。
         /// </summary>
         /// <param name="user"></param>
         /// <returns></returns>

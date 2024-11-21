@@ -43,7 +43,7 @@ namespace PowerLmsServer.Managers
     /// <summary>
     /// 组织机构管理器。
     /// </summary>
-    [OwAutoInjection(ServiceLifetime.Scoped, AutoCreateFirst = true)]
+    [OwAutoInjection(ServiceLifetime.Scoped)]
     public class OrganizationManager
     {
         /// <summary>
@@ -61,11 +61,12 @@ namespace PowerLmsServer.Managers
         /// <summary>
         /// 构造函数。
         /// </summary>
-        public OrganizationManager(PowerLmsUserDbContext dbContext, IMemoryCache cache, IDbContextFactory<PowerLmsUserDbContext> dbContextFactory)
+        public OrganizationManager(PowerLmsUserDbContext dbContext, IMemoryCache cache, IDbContextFactory<PowerLmsUserDbContext> dbContextFactory, MerchantManager merchantManager)
         {
             _DbContext = dbContext;
             _Cache = cache;
             _DbContextFactory = dbContextFactory;
+            _MerchantManager = merchantManager;
             Initialize();
         }
 
@@ -78,6 +79,7 @@ namespace PowerLmsServer.Managers
         PowerLmsUserDbContext _DbContext;
         IMemoryCache _Cache;
         readonly IDbContextFactory<PowerLmsUserDbContext> _DbContextFactory;
+        MerchantManager _MerchantManager;
 
         /// <summary>
         /// 获取指定账户所属的商户Id。
@@ -291,61 +293,6 @@ namespace PowerLmsServer.Managers
         #region 机构/商户缓存及相关
 
         /// <summary>
-        /// 根据指定Id加载商户对象。
-        /// </summary>
-        /// <param name="merchId"></param>
-        /// <param name="dbContext">传递null，则用池自动获取一个数据库上下文。</param>
-        /// <returns>没有找到则返回null。</returns>
-        public PlMerchant LoadMerchantFromId(Guid merchId, ref PowerLmsUserDbContext dbContext)
-        {
-            dbContext ??= _DbContextFactory.CreateDbContext();
-            var result = dbContext.Merchants.FirstOrDefault(c => c.Id == merchId);
-            MerchantLoaded(result, dbContext);
-            return result;
-        }
-
-        /// <summary>
-        /// 加载或获取缓存的商户对象。
-        /// </summary>
-        /// <returns></returns>
-        public PlMerchant GetOrLoadMerchantFromId(Guid id)
-        {
-            var result = _Cache.GetOrCreate($"Merchant.{id}", c =>
-                {
-                    PowerLmsUserDbContext db = null;
-                    return LoadMerchantFromId(GetMerchantIdFromCacheKey(c.Key as string), ref db);
-                });
-            return result;
-        }
-
-        /// <summary>
-        /// 获取商会缓存的键。
-        /// </summary>
-        /// <param name="cacheKey"></param>
-        /// <returns></returns>
-        public Guid GetMerchantIdFromCacheKey(string cacheKey)
-        {
-            var ary = cacheKey.Split('.');
-            if (ary.Length != 2)
-            {
-                OwHelper.SetLastErrorAndMessage(400, "格式错误");
-                return Guid.Empty;
-            }
-            if (!Guid.TryParse(ary[1], out var id))
-            {
-                OwHelper.SetLastErrorAndMessage(400, "格式错误");
-                return Guid.Empty;
-            }
-            return id;
-        }
-
-        private void MerchantLoaded(PlMerchant merch, PowerLmsUserDbContext dbContext)
-        {
-            merch.DbContext = dbContext;
-            merch.ExpirationTokenSource = new CancellationTokenSource();
-        }
-
-        /// <summary>
         /// 加载指定商户下所有机构对象。
         /// </summary>
         /// <param name="merchId"></param>
@@ -354,43 +301,33 @@ namespace PowerLmsServer.Managers
         public ConcurrentDictionary<Guid, PlOrganization> LoadOrgsFromMerchId(Guid merchId, ref PowerLmsUserDbContext dbContext)
         {
             dbContext ??= _DbContextFactory.CreateDbContext();
-            var orgs = dbContext.PlOrganizations.Where(c => c.MerchantId == merchId);
-            var tmp = orgs.SelectMany(c => GetChidren(c)).AsEnumerable().ToDictionary(c => c.Id, c => c);
+            IDictionary<Guid, PlOrganization> tmp;
+            lock (dbContext)
+            {
+                var orgs = dbContext.PlOrganizations.Where(c => c.MerchantId == merchId);
+                tmp = orgs.SelectMany(c => GetChidren(c)).AsEnumerable().ToDictionary(c => c.Id, c => c);
+            }
             var result = new ConcurrentDictionary<Guid, PlOrganization>(tmp);
             return result;
         }
 
-        public ConcurrentDictionary<Guid, PlOrganization> GetOrLoadOrgsFromMerchId(Guid merchId, ref PowerLmsUserDbContext dbContext)
+        /// <summary>
+        /// 按指定商户Id获取或加载所有下属机构信息。
+        /// </summary>
+        /// <param name="merchId"></param>
+        /// <returns></returns>
+        public ConcurrentDictionary<Guid, PlOrganization> GetOrLoadOrgsFromMerchId(Guid merchId)
         {
-            dbContext ??= _DbContextFactory.CreateDbContext();
-            var result = _Cache.GetOrCreate($"Orgs.{merchId}", c =>
+            var result = _Cache.GetOrCreate(OwCacheHelper.GetCacheKeyFromId(merchId, ".Orgs"), c =>
             {
-                PowerLmsUserDbContext db = null;
-                return LoadOrgsFromMerchId(GetMerchIdFromCacheKey(c.Key as string), ref db);
+                var merch = _MerchantManager.GetOrLoadMerchantFromId(OwCacheHelper.GetIdFromCacheKey(c.Key as string, ".Orgs").Value);
+                PowerLmsUserDbContext db = merch.DbContext;
+                c.AddExpirationToken(new CancellationChangeToken(merch.ExpirationTokenSource.Token));
+                return LoadOrgsFromMerchId(OwCacheHelper.GetIdFromCacheKey(c.Key as string, ".Orgs").Value, ref db);
             });
             return result;
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="cacheKey"></param>
-        /// <returns></returns>
-        public Guid GetMerchIdFromCacheKey(string cacheKey)
-        {
-            var ary = cacheKey.Split('.');
-            if (ary.Length != 2)
-            {
-                OwHelper.SetLastErrorAndMessage(400, "格式错误");
-                return Guid.Empty;
-            }
-            if (!Guid.TryParse(ary[1], out var id))
-            {
-                OwHelper.SetLastErrorAndMessage(400, "格式错误");
-                return Guid.Empty;
-            }
-            return id;
-        }
         #endregion 机构/商户缓存及相关
     }
 

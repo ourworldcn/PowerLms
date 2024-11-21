@@ -1,0 +1,74 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Class Name="PowerLmsServer.Managers.AccountManager" Collapsed="true">
+    <Position X="9" Y="1" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AACAAAAAIgEAAAQECIAAAgAACAAAARAAAgAAQAAAARI=</HashCode>
+      <FileName>Managers\AccountManager.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="PowerLmsServer.Managers.OwContext">
+    <Position X="12.75" Y="1.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>gAABAAAAACAAAAAAAAAAAAAAQCAAAAAAAQAAAAABAAA=</HashCode>
+      <FileName>Managers\AccountManager.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="PowerLmsServer.Managers.MerchantManager">
+    <Position X="3.5" Y="2.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAABAAAAAAAAAAAAYAAAQBAAAAAAAAQAAA=</HashCode>
+      <FileName>Managers\MerchantManager.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="PowerLmsServer.Managers.MerchantInfo" Collapsed="true">
+    <Position X="10.75" Y="1" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAQAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Managers\OrganizationManager.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="PowerLmsServer.Managers.OrganizationManager">
+    <Position X="0.75" Y="1" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AIAKAAAAAAEAAREACAAAAAAAAYAABRAEoAAAEAAEUBE=</HashCode>
+      <FileName>Managers\OrganizationManager.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Field Name="_MerchantManager" />
+    </ShowAsAssociation>
+  </Class>
+  <Class Name="PowerLmsServer.Managers.OrganizationManagerExtensions" Collapsed="true">
+    <Position X="9" Y="2" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Managers\OrganizationManager.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="PowerLmsServer.Managers.RoleManager">
+    <Position X="6.5" Y="3.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAEAAAAAAAAAAAAAIAAAAIAAAQAEAAAAAIAAAAA=</HashCode>
+      <FileName>Managers\RoleManager.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Field Name="_MerchantManager" />
+      <Field Name="_OrganizationManager" />
+    </ShowAsAssociation>
+  </Class>
+  <Class Name="PowerLmsServer.Managers.AuthorizationManager">
+    <Position X="10.75" Y="3.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>ACgAgAAAAAAAAIQAAAACAAAAAYBAAAAAAAABAAAAAAA=</HashCode>
+      <FileName>Managers\AuthorizationManager.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="PowerLmsServer.Managers.PermissionManager" Collapsed="true">
+    <Position X="4.75" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAgAAAAAAAAAAACAAAAAAAAAAIAAAQAAAAEBAAAAAAA=</HashCode>
+      <FileName>Managers\PermissionManager.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Font Name="Microsoft YaHei UI" Size="9" />
+</ClassDiagram>
