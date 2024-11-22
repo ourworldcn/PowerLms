@@ -148,7 +148,7 @@ namespace PowerLmsServer.Managers
             {
                 foreach (var org in _DbContext.PlOrganizations.Where(c => c.MerchantId == rootId))
                 {
-                    result.AddRange(GetChidren(org));
+                    result.AddRange(OwHelper.GetAllSubItemsOfTree(new PlOrganization[] { org }, c => c.Children));
                     result.Add(org);
                 }
             }
@@ -156,24 +156,9 @@ namespace PowerLmsServer.Managers
             {
                 var root = _DbContext.PlOrganizations.Find(rootId);
                 if (root is null) return result;
-                result.AddRange(GetChidren(root));
+                result.AddRange(OwHelper.GetAllSubItemsOfTree(new PlOrganization[] { root }, c => c.Children));
             }
             return result;
-        }
-
-        /// <summary>
-        /// 获取指定机构的所有子机构，不包含自身。
-        /// </summary>
-        /// <param name="org"></param>
-        /// <returns></returns>
-        public IEnumerable<PlOrganization> GetChidren(PlOrganization org)
-        {
-            foreach (var child in org.Children)
-            {
-                foreach (var item in GetChidren(child))
-                    yield return item;
-                yield return child;
-            }
         }
 
         #region 获取基础数据结构
@@ -305,7 +290,8 @@ namespace PowerLmsServer.Managers
             lock (dbContext)
             {
                 var orgs = dbContext.PlOrganizations.Where(c => c.MerchantId == merchId);
-                tmp = orgs.SelectMany(c => GetChidren(c)).AsEnumerable().ToDictionary(c => c.Id, c => c);
+                tmp = orgs.SelectMany(c => OwHelper.GetAllSubItemsOfTree(new PlOrganization[] { c }, d => d.Children)).Include(c => c.Parent).Include(c => c.Children)
+                    .AsEnumerable().ToDictionary(c => c.Id, c => c);
             }
             var result = new ConcurrentDictionary<Guid, PlOrganization>(tmp);
             return result;

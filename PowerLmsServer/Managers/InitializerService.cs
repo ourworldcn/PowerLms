@@ -217,16 +217,13 @@ namespace PowerLmsServer.Managers
         [Conditional("DEBUG")]
         private void Test(IServiceProvider svc)
         {
-            var db = svc.GetRequiredService<PowerLmsUserDbContext>();
-            var dic = new Dictionary<string, string> {
-                //{ "id", "B084BD4E-28BE-4052-A613-1C79B0AB268E" },
-                {"CreateUtc","2024-1-19 ,2024-1-30 " },
-                {"loginname","string" },
-            };
-            var query = EfHelper.GenerateWhereAnd(db.Accounts, dic);
-            var tmp = typeof(Account).GetProperty("loginName", BindingFlags.IgnoreCase | BindingFlags.GetProperty | BindingFlags.Public | BindingFlags.Instance | BindingFlags.FlattenHierarchy);
-
-            var ary = query.ToArray();
+            var pm = svc.GetRequiredService<PermissionManager>();
+            var dic = pm.GetOrLoadPermission();
+            foreach (var kvp in dic)
+            {
+                var tmp = kvp.Value.Parent?.Parent;
+            }
+            ;
         }
 
         private void CreateDb()

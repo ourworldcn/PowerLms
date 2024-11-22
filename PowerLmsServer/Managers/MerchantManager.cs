@@ -20,14 +20,12 @@ namespace PowerLmsServer.Managers
         /// <summary>
         /// 构造函数。
         /// </summary>
-        public MerchantManager(PowerLmsUserDbContext dbContext, IMemoryCache cache, IDbContextFactory<PowerLmsUserDbContext> dbContextFactory)
+        public MerchantManager(IMemoryCache cache, IDbContextFactory<PowerLmsUserDbContext> dbContextFactory)
         {
-            _DbContext = dbContext;
             _Cache = cache;
             _DbContextFactory = dbContextFactory;
         }
 
-        readonly PowerLmsUserDbContext _DbContext;
         readonly IMemoryCache _Cache;
         readonly IDbContextFactory<PowerLmsUserDbContext> _DbContextFactory;
 
@@ -41,7 +39,7 @@ namespace PowerLmsServer.Managers
         {
             dbContext ??= _DbContextFactory.CreateDbContext();
             PlMerchant result;
-            lock (_DbContext)
+            lock (dbContext)
                 result = dbContext.Merchants.FirstOrDefault(c => c.Id == merchId);
             MerchantLoaded(result, dbContext);
             return result;

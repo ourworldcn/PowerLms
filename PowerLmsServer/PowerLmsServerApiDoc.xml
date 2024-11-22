@@ -564,7 +564,7 @@
             商户功能管理服务。
             </summary>
         </member>
-        <member name="M:PowerLmsServer.Managers.MerchantManager.#ctor(PowerLmsServer.EfData.PowerLmsUserDbContext,Microsoft.Extensions.Caching.Memory.IMemoryCache,Microsoft.EntityFrameworkCore.IDbContextFactory{PowerLmsServer.EfData.PowerLmsUserDbContext})">
+        <member name="M:PowerLmsServer.Managers.MerchantManager.#ctor(Microsoft.Extensions.Caching.Memory.IMemoryCache,Microsoft.EntityFrameworkCore.IDbContextFactory{PowerLmsServer.EfData.PowerLmsUserDbContext})">
             <summary>
             构造函数。
             </summary>
@@ -743,13 +743,6 @@
             <param name="rootId"></param>
             <returns></returns>
         </member>
-        <member name="M:PowerLmsServer.Managers.OrganizationManager.GetChidren(PowerLms.Data.PlOrganization)">
-            <summary>
-            获取指定机构的所有子机构，不包含自身。
-            </summary>
-            <param name="org"></param>
-            <returns></returns>
-        </member>
         <member name="M:PowerLmsServer.Managers.OrganizationManager.GetDb">
             <summary>
             获取一个读写商户/机构信息用的专属数据库上下文对象。若要使用需要加独占锁，且最好不要使用异步操作，避免产生并发问题。
@@ -892,7 +885,7 @@
             <summary>
             加载数据库中许可对象。
             </summary>
-            <param name="dbContext"></param>
+            <param name="dbContext">返回时此上下文已经不再使用，加载对象均已完全加载。</param>
             <returns></returns>
         </member>
         <member name="M:PowerLmsServer.Managers.PermissionManager.PermissionLoaded(System.Collections.Generic.IDictionary{System.String,PowerLms.Data.PlPermission})">

@@ -40,7 +40,7 @@ namespace PowerLmsServer.Managers
         /// <summary>
         /// 加载数据库中许可对象。
         /// </summary>
-        /// <param name="dbContext"></param>
+        /// <param name="dbContext">返回时此上下文已经不再使用，加载对象均已完全加载。</param>
         /// <returns></returns>
         public ConcurrentDictionary<string, PlPermission> LoadPermission(ref PowerLmsUserDbContext dbContext)
         {
@@ -48,7 +48,7 @@ namespace PowerLmsServer.Managers
             IDictionary<string, PlPermission> dic;
             lock (dbContext)
             {
-                dic = dbContext.PlPermissions.Include(c => c.Children).Include(c => c.Parent).AsNoTracking().AsEnumerable().ToDictionary(c => c.Name);
+                dic = dbContext.PlPermissions.Include(c => c.Children).Include(c => c.Parent).AsEnumerable().ToDictionary(c => c.Name);
                 PermissionLoaded(dic);
             }
             return new ConcurrentDictionary<string, PlPermission>(dic);
@@ -60,7 +60,11 @@ namespace PowerLmsServer.Managers
         /// <param name="dic"></param>
         public void PermissionLoaded(IDictionary<string, PlPermission> dic)
         {
-
+            //foreach (var kvp in dic)
+            //{
+            //    var p = kvp.Value.Parent;
+            //    var c = kvp.Value.Children;
+            //}
         }
 
         /// <summary>
@@ -73,8 +77,10 @@ namespace PowerLmsServer.Managers
             {
                 var db = _DbContextFactory.CreateDbContext();
                 var cts = new CancellationTokenSource();
-                entry.AddExpirationToken(new CancellationChangeToken(cts.Token));
+                var ct = cts.Token;
+                entry.AddExpirationToken(new CancellationChangeToken(ct));
                 var result = LoadPermission(ref db);
+                using var t = db;
                 return result;
             });
             return result;
