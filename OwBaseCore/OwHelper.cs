@@ -299,12 +299,31 @@ namespace System
         /// 遍历一个树结构的所有子项。深度优先算法遍历子树。
         /// </summary>
         /// <typeparam name="T"></typeparam>
-        /// <param name="roots">多个根的节点集合。</param>
+        /// <param name="root">多个根的节点集合。</param>
         /// <param name="getChildren">从每个节点获取其所有子节点的委托。</param>
-        /// <returns>一个可枚举集合，包含所有根下的所有节点。</returns>
-        public static IEnumerable<T> GetAllSubItemsOfTree<T>(IEnumerable<T> roots, Func<T, IEnumerable<T>> getChildren)
+        /// <returns>一个可枚举集合，包含所有根下(含根)的所有节点。</returns>
+        public static IEnumerable<T> GetAllSubItemsOfTree<T>(IEnumerable<T> root, Func<T, IEnumerable<T>> getChildren)
         {
-            Stack<T> gameItems = new Stack<T>(roots);
+            Stack<T> gameItems = new Stack<T>(root);
+            while (gameItems.TryPop(out T result))
+            {
+                foreach (var item in getChildren(result))
+                    gameItems.Push(item);
+                yield return result;
+            }
+        }
+
+        /// <summary>
+        /// 遍历一个树结构的所有子项。深度优先算法遍历子树。
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="root">根的节点集合。</param>
+        /// <param name="getChildren">从每个节点获取其所有子节点的委托。</param>
+        /// <returns>一个可枚举集合，包含所有根下(含根)的所有节点。</returns>
+        public static IEnumerable<T> GetAllSubItemsOfTree<T>(T root, Func<T, IEnumerable<T>> getChildren)
+        {
+            Stack<T> gameItems = new Stack<T>(getChildren(root));
+            yield return root;
             while (gameItems.TryPop(out T result))
             {
                 foreach (var item in getChildren(result))
