@@ -79,3 +79,9 @@ GetAllPlJob支持多业务单据状态查询
 DocBill.ClearAmount DocBill.Amount是否回写
 费用方案接口
 权限
+
+241124
+不要重置币种
+增加汇率接口
+基础数据都能看，仅限制增删改
+需要增加流程增删改
