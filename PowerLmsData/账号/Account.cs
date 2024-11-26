@@ -152,6 +152,16 @@ namespace PowerLms.Data
             get => RuntimeProperties.GetValueOrDefault(nameof(DbContext), null) as PowerLmsUserDbContext;
             set => RuntimeProperties[nameof(DbContext)] = value;
         }
+
+        /// <summary>
+        /// 获取或设置用户所属的商户Id。可能为null。
+        /// </summary>
+        [NotMapped, JsonIgnore]
+        public Guid? MerchantId
+        {
+            get => RuntimeProperties.TryGetGuid(nameof(MerchantId), out var merchId) ? merchId : null;
+            set => RuntimeProperties[nameof(MerchantId)] = value;
+        }
         #endregion 瞬时属性
 
         #region 导航属性

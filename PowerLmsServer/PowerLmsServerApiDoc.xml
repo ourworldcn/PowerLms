@@ -588,6 +588,14 @@
             <summary>
             加载或获取缓存的商户对象。
             </summary>
+            <param name="id"></param>
+            <returns></returns>
+        </member>
+        <member name="M:PowerLmsServer.Managers.MerchantManager.GetOrLoadMerchantFromUser(PowerLms.Data.Account)">
+            <summary>
+            
+            </summary>
+            <param name="user"></param>
             <returns></returns>
         </member>
         <member name="T:PowerLmsServer.Managers.MultilingualManager">

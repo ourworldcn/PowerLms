@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
+using NPOI.SS.Formula.Functions;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using System;
@@ -59,6 +60,7 @@ namespace PowerLmsServer.Managers
         /// <summary>
         /// 加载或获取缓存的商户对象。
         /// </summary>
+        /// <param name="id"></param>
         /// <returns></returns>
         public PlMerchant GetOrLoadMerchantFromId(Guid id)
         {
@@ -70,6 +72,19 @@ namespace PowerLmsServer.Managers
             return result;
         }
 
-
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="user"></param>
+        /// <returns></returns>
+        public PlMerchant GetOrLoadMerchantFromUser(Account user)
+        {
+            var merchId = user.MerchantId;
+            if (merchId is null)
+            {
+                user.MerchantId = merchId;
+            }
+            return GetOrLoadMerchantFromId(merchId.Value);
+        }
     }
 }

@@ -81,7 +81,7 @@ DocBill.ClearAmount DocBill.Amount是否回写
 权限
 
 241124
-不要重置币种
 增加汇率接口
+不要重置币种
 基础数据都能看，仅限制增删改
 需要增加流程增删改
