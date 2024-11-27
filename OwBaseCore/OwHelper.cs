@@ -78,17 +78,22 @@ namespace System
         /// 公用的每线程独立的随机数生成器。
         /// </summary>
         [ThreadStatic]
-        public static Random _Random;
+        static Random _Random;
 
         /// <summary>
-        /// 公用的每线程独立的随机数生成器。
+        /// 公用的每线程独立的随机数生成器。每个线程独立实例。
         /// </summary>
         public static Random Random => _Random ??= new Random();
 
         /// <summary>
         /// 游戏内使用的时间与Utc时间的偏移量。
         /// </summary>
-        public static TimeSpan _Offset;
+        static TimeSpan _Offset;
+
+        /// <summary>
+        /// 游戏内使用的时间与Utc时间的偏移量。
+        /// </summary>
+        public static TimeSpan Offset { get => _Offset; set => _Offset = value; }
 
         /// <summary>
         /// 应用内使用的时间。
@@ -304,11 +309,10 @@ namespace System
         /// <returns>一个可枚举集合，包含所有根下(含根)的所有节点。</returns>
         public static IEnumerable<T> GetAllSubItemsOfTree<T>(IEnumerable<T> root, Func<T, IEnumerable<T>> getChildren)
         {
-            Stack<T> gameItems = new Stack<T>(root);
-            while (gameItems.TryPop(out T result))
+            Stack<T> stk = new Stack<T>(root);    //辅助栈
+            while (stk.TryPop(out T result))
             {
-                foreach (var item in getChildren(result))
-                    gameItems.Push(item);
+                foreach (var item in getChildren(result).AsEnumerable()) stk.Push(item);
                 yield return result;
             }
         }
@@ -322,12 +326,11 @@ namespace System
         /// <returns>一个可枚举集合，包含所有根下(含根)的所有节点。</returns>
         public static IEnumerable<T> GetAllSubItemsOfTree<T>(T root, Func<T, IEnumerable<T>> getChildren)
         {
-            Stack<T> gameItems = new Stack<T>(getChildren(root));
+            Stack<T> stk = new Stack<T>(getChildren(root));
             yield return root;
-            while (gameItems.TryPop(out T result))
+            while (stk.TryPop(out T result))
             {
-                foreach (var item in getChildren(result))
-                    gameItems.Push(item);
+                foreach (var item in getChildren(result).AsEnumerable()) stk.Push(item);
                 yield return result;
             }
         }
@@ -458,36 +461,6 @@ namespace System
                 total -= item.Item2;
             }
             return default;
-        }
-
-        /// <summary>
-        /// 按概率权重获取无重复的多项数据。
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="items"></param>
-        /// <param name="count"></param>
-        /// <param name="random"></param>
-        /// <returns></returns>
-        public static IEnumerable<(T, decimal)> GetRandom<T>(IEnumerable<(T, decimal)> items, int count, Random random = null)
-        {
-            decimal totalWeight = 0;    //总权重
-            foreach (var item in items)
-            {
-                if (item.Item2 < 0)
-                {
-                    SetLastError(160);
-                    SetLastErrorMessage($"权重不能小于0.");
-                    return default;
-                }
-                totalWeight += item.Item2;
-            }
-            random ??= new Random();
-            List<(T, decimal)> result = new List<(T, decimal)>();
-            for (int i = 0; i < count; i++)
-            {
-
-            }
-            return result;
         }
 
         /// <summary>
