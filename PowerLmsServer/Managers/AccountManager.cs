@@ -40,12 +40,11 @@ namespace PowerLmsServer.Managers
         }
 
         readonly PasswordGenerator _PasswordGenerator;
-        IMapper _Mapper;
-        IMemoryCache _MemoryCache;
-        IDbContextFactory<PowerLmsUserDbContext> _DbContextFactory;
+        readonly IMapper _Mapper;
+        readonly IMemoryCache _MemoryCache;
+        readonly IDbContextFactory<PowerLmsUserDbContext> _DbContextFactory;
 
-
-        ConcurrentDictionary<Guid, string> _Token2Key = new ConcurrentDictionary<Guid, string> { };
+        readonly ConcurrentDictionary<Guid, string> _Token2Key = new() { };
 
         /// <summary>
         /// 创建一个新账号。
@@ -324,7 +323,7 @@ namespace PowerLmsServer.Managers
         /// <summary>
         /// 当前使用的范围服务容器。
         /// </summary>
-        public IServiceProvider ServiceProvider { get; set; }
+        public IServiceProvider ServiceProvider { get; }
 
         #region 方法
 

@@ -23,7 +23,8 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 构造函数。
         /// </summary>
-        public AuthorizationController(IServiceProvider serviceProvider, AccountManager accountManager, PowerLmsUserDbContext dbContext, EntityManager entityManager, IMapper mapper, AuthorizationManager authorizationManager, OrganizationManager organizationManager)
+        public AuthorizationController(IServiceProvider serviceProvider, AccountManager accountManager, PowerLmsUserDbContext dbContext, EntityManager entityManager,
+            IMapper mapper, AuthorizationManager authorizationManager, OrganizationManager organizationManager, MerchantManager merchantManager)
         {
             _ServiceProvider = serviceProvider;
             _AccountManager = accountManager;
@@ -32,6 +33,7 @@ namespace PowerLmsWebApi.Controllers
             _Mapper = mapper;
             _AuthorizationManager = authorizationManager;
             _OrganizationManager = organizationManager;
+            _MerchantManager = merchantManager;
         }
 
         readonly IServiceProvider _ServiceProvider;
@@ -41,6 +43,7 @@ namespace PowerLmsWebApi.Controllers
         readonly IMapper _Mapper;
         readonly AuthorizationManager _AuthorizationManager;
         readonly OrganizationManager _OrganizationManager;
+        readonly MerchantManager _MerchantManager;
 
         #region 角色的CRUD
 
@@ -110,7 +113,7 @@ namespace PowerLmsWebApi.Controllers
             model.Item.GenerateNewId();
             if (!model.Item.OrgId.HasValue)
             {
-                if (_OrganizationManager.GetMerchantId(context.User.Id, out var mId))
+                if (_MerchantManager.GetMerchantId(context.User.Id, out var mId))
                     model.Item.OrgId = mId;
             }
             model.Item.CreateBy ??= context.User.Id;

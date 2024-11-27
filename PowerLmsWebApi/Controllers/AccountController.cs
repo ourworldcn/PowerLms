@@ -33,8 +33,9 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="organizationManager"></param>
         /// <param name="captchaManager"></param>
         /// <param name="authorizationManager"></param>
+        /// <param name="merchantManager"></param>
         public AccountController(PowerLmsUserDbContext dbContext, AccountManager accountManager, IServiceProvider serviceProvider, IMapper mapper, EntityManager entityManager,
-            OrganizationManager organizationManager, CaptchaManager captchaManager, AuthorizationManager authorizationManager)
+            OrganizationManager organizationManager, CaptchaManager captchaManager, AuthorizationManager authorizationManager, MerchantManager merchantManager)
         {
             _DbContext = dbContext;
             _AccountManager = accountManager;
@@ -44,16 +45,18 @@ namespace PowerLmsWebApi.Controllers
             _OrganizationManager = organizationManager;
             _CaptchaManager = captchaManager;
             _AuthorizationManager = authorizationManager;
+            _MerchantManager = merchantManager;
         }
 
         readonly IServiceProvider _ServiceProvider;
         readonly PowerLmsUserDbContext _DbContext;
         readonly AccountManager _AccountManager;
-        AuthorizationManager _AuthorizationManager;
+        readonly AuthorizationManager _AuthorizationManager;
         readonly IMapper _Mapper;
         readonly EntityManager _EntityManager;
-        OrganizationManager _OrganizationManager;
-        CaptchaManager _CaptchaManager;
+        readonly OrganizationManager _OrganizationManager;
+        readonly CaptchaManager _CaptchaManager;
+        readonly MerchantManager _MerchantManager;
 
 #if DEBUG
         /*
@@ -91,9 +94,10 @@ namespace PowerLmsWebApi.Controllers
             var result = new GetAllAccountReturnDto();
             var dbSet = _DbContext.Accounts;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-            if (_AccountManager.IsMerchantAdmin(context.User) && _OrganizationManager.GetMerchantId(context.User.Id, out var merchantId))
+            if (_AccountManager.IsMerchantAdmin(context.User) && _MerchantManager.GetMerchantId(context.User.Id, out var merchantId))
             {
-                var tmp = _OrganizationManager.GetAllOrg(context.User).Select(c => c.Id);    //所有机构Id
+                var orgs = _OrganizationManager.GetOrLoadOrgsFromMerchId(merchantId.Value);
+                var tmp = orgs.Keys;    //所有机构Id
                 if (merchantId.HasValue) tmp = tmp.Append(merchantId.Value).ToArray();
                 var userIds = _DbContext.AccountPlOrganizations.Where(c => tmp.Contains(c.OrgId)).Select(c => c.UserId).Distinct().ToArray();
                 coll = coll.Where(c => userIds.Contains(c.Id));
@@ -190,7 +194,7 @@ namespace PowerLmsWebApi.Controllers
             var orgIds = _DbContext.AccountPlOrganizations.Where(c => c.UserId == user.Id).Select(c => c.OrgId);
             result.Orgs.AddRange(_DbContext.PlOrganizations.Where(c => orgIds.Contains(c.Id)));
             result.User = user;
-            if (_OrganizationManager.GetMerchantId(user.Id, out var merchId)) //若找到商户Id
+            if (_MerchantManager.GetMerchantId(user.Id, out var merchId)) //若找到商户Id
             {
                 result.MerchantId = merchId;
                 if (result.User.IsMerchantAdmin)
@@ -228,8 +232,8 @@ namespace PowerLmsWebApi.Controllers
                             return BadRequest("仅超管和商管才可创建用户。");
                         else //商管
                         {
-                            if (!_OrganizationManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("商管数据结构损坏——无法找到其所属商户");
-                            if (!orgIds.All(c => _OrganizationManager.GetMerchantIdFromOrgId(c, out var mId) && mId == merchId)) return BadRequest("商户管理员仅可以设置商户和其下属的机构id。");
+                            if (!_MerchantManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("商管数据结构损坏——无法找到其所属商户");
+                            if (!orgIds.All(c => _MerchantManager.GetMerchantIdFromOrgId(c, out var mId) && mId == merchId)) return BadRequest("商户管理员仅可以设置商户和其下属的机构id。");
                         }
                 }
             }

@@ -60,7 +60,7 @@ namespace PowerLmsServer.Managers
             int cellsCount = cells.PhysicalNumberOfCells;
             int emptyCount = 0;
             int cellIndex = sheet.FirstRowNum;
-            List<(string, int)> listColumns = new List<(string, int)> { };
+            var listColumns = new List<(string, int)> { };
             bool isFindColumn = false;
             while (!isFindColumn)
             {
@@ -94,11 +94,11 @@ namespace PowerLmsServer.Managers
         public string GetJson(ISheet sheet, int startIndex = 0)
         {
             var cols = GetColumnName(sheet, startIndex);
-            List<Dictionary<string, object>> list = new List<Dictionary<string, object>>();
+            var list = new List<Dictionary<string, object>>();
             for (int rowIndex = startIndex + 1; rowIndex < sheet.PhysicalNumberOfRows; rowIndex++)
             {
                 var row = sheet.GetRow(rowIndex);
-                Dictionary<string, object> dic = new Dictionary<string, object>();
+                var dic = new Dictionary<string, object>();
                 for (int columnIndex = 0; columnIndex < cols.Count; columnIndex++)
                 {
                     var cell = row.GetCell(columnIndex);
@@ -126,13 +126,13 @@ namespace PowerLmsServer.Managers
         /// <returns></returns>
         public DataTable ReadExcelFunc(IWorkbook workbook, ISheet sheet)
         {
-            DataTable dt = new DataTable();
+            var dt = new DataTable();
             //获取列信息
             IRow cells = sheet.GetRow(sheet.FirstRowNum);
             int cellsCount = cells.PhysicalNumberOfCells;
             int emptyCount = 0;
             int cellIndex = sheet.FirstRowNum;
-            List<string> listColumns = new List<string>();
+            var listColumns = new List<string>();
             bool isFindColumn = false;
             while (!isFindColumn)
             {
@@ -202,9 +202,11 @@ namespace PowerLmsServer.Managers
         /// <param name="destinationTableName"></param>
         public void WriteToDb<T>(DataTable dt, DbContext context, string destinationTableName) where T : class
         {
-            SqlBulkCopy bulkCopy = new SqlBulkCopy(context.Database.GetConnectionString(), SqlBulkCopyOptions.KeepIdentity);
-            bulkCopy.DestinationTableName = destinationTableName;
-            bulkCopy.BatchSize = Math.Max(2000, dt.Rows.Count);
+            var bulkCopy = new SqlBulkCopy(context.Database.GetConnectionString(), SqlBulkCopyOptions.KeepIdentity)
+            {
+                DestinationTableName = destinationTableName,
+                BatchSize = Math.Max(2000, dt.Rows.Count)
+            };
             try
             {
                 bulkCopy.WriteToServer(dt); //"6ae3bbb3-bac9-4509-bf82-c8578830cd24"

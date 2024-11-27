@@ -38,8 +38,10 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="organizationManager"></param>
         /// <param name="dataManager"></param>
         /// <param name="authorizationManager"></param>
+        /// <param name="merchantManager"></param>
         public AdminController(PowerLmsUserDbContext context, NpoiManager npoiManager, AccountManager accountManager, IServiceProvider scope, EntityManager entityManager,
-            IMapper mapper, OrganizationManager organizationManager, DataDicManager dataManager, AuthorizationManager authorizationManager)
+            IMapper mapper, OrganizationManager organizationManager, DataDicManager dataManager, AuthorizationManager authorizationManager,
+            MerchantManager merchantManager)
         {
             _DbContext = context;
             _NpoiManager = npoiManager;
@@ -50,6 +52,7 @@ namespace PowerLmsWebApi.Controllers
             _OrganizationManager = organizationManager;
             _DataManager = dataManager;
             _AuthorizationManager = authorizationManager;
+            _MerchantManager = merchantManager;
         }
 
         readonly PowerLmsUserDbContext _DbContext;
@@ -58,9 +61,10 @@ namespace PowerLmsWebApi.Controllers
         readonly IServiceProvider _ServiceProvider;
         readonly EntityManager _EntityManager;
         readonly IMapper _Mapper;
-        OrganizationManager _OrganizationManager;
-        DataDicManager _DataManager;
-        AuthorizationManager _AuthorizationManager;
+        readonly OrganizationManager _OrganizationManager;
+        readonly DataDicManager _DataManager;
+        readonly AuthorizationManager _AuthorizationManager;
+        readonly MerchantManager _MerchantManager;
 
         #region 字典目录
 
@@ -84,7 +88,7 @@ namespace PowerLmsWebApi.Controllers
                 coll = coll.Where(c => c.OrgId == null);
             else
             {
-                if (!_OrganizationManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
+                if (!_MerchantManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
                 if (context.User.OrgId is null) //若没有指定机构
                 {
                     coll = coll.Where(c => c.OrgId == merchId);
@@ -380,7 +384,7 @@ namespace PowerLmsWebApi.Controllers
                 coll = coll.Where(c => c.OrgId == null);
             else
             {
-                if (!_OrganizationManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
+                if (!_MerchantManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
                 if (context.User.OrgId is null) //若没有指定机构
                 {
                     coll = coll.Where(c => c.OrgId == merchId);
@@ -603,7 +607,7 @@ namespace PowerLmsWebApi.Controllers
                 coll = coll.Where(c => c.OrgId == null);
             else
             {
-                if (!_OrganizationManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
+                if (!_MerchantManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
                 if (context.User.OrgId is null) //若没有指定机构
                 {
                     coll = coll.Where(c => c.OrgId == merchId);
@@ -755,7 +759,7 @@ namespace PowerLmsWebApi.Controllers
                 coll = coll.Where(c => c.OrgId == null);
             else
             {
-                if (!_OrganizationManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
+                if (!_MerchantManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
                 if (context.User.OrgId is null) //若没有指定机构
                 {
                     coll = coll.Where(c => c.OrgId == merchId);
@@ -909,7 +913,7 @@ namespace PowerLmsWebApi.Controllers
                 coll = coll.Where(c => c.OrgId == null);
             else
             {
-                if (!_OrganizationManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
+                if (!_MerchantManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
                 if (context.User.OrgId is null) //若没有指定机构
                 {
                     coll = coll.Where(c => c.OrgId == merchId);
@@ -963,7 +967,7 @@ namespace PowerLmsWebApi.Controllers
             coll = coll.Where(c => c.OrgId == context.User.OrgId);
             coll = coll.Where(c => c.BeginDate <= model.StartDateTime && c.EndData >= model.EndDateTime);
 
-            if (!_OrganizationManager.GetMerchantId(context.User.Id, out var merchId))
+            if (!_MerchantManager.GetMerchantId(context.User.Id, out var merchId))
                 return result;
             var org = _OrganizationManager.GetOrLoadOrgsFromMerchId(merchId.Value)[context.User.OrgId.Value];
             var curr = _DbContext.DD_PlCurrencys.Find(org.BaseCurrencyId.Value); if (curr is null) return result;
@@ -1041,7 +1045,7 @@ namespace PowerLmsWebApi.Controllers
                 coll = coll.Where(c => c.OrgId == null);
             else
             {
-                if (!_OrganizationManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
+                if (!_MerchantManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
                 if (context.User.OrgId is null) //若没有指定机构
                 {
                     coll = coll.Where(c => c.OrgId == merchId);
@@ -1191,7 +1195,7 @@ namespace PowerLmsWebApi.Controllers
                 coll = coll.Where(c => c.OrgId == null);
             else
             {
-                if (!_OrganizationManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
+                if (!_MerchantManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
                 if (context.User.OrgId is null) //若没有指定机构
                 {
                     coll = coll.Where(c => c.OrgId == merchId);
@@ -1349,7 +1353,7 @@ namespace PowerLmsWebApi.Controllers
                 coll = coll.Where(c => c.OrgId == null);
             else
             {
-                if (!_OrganizationManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
+                if (!_MerchantManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
                 if (context.User.OrgId is null) //若没有指定机构
                 {
                     coll = coll.Where(c => c.OrgId == merchId);
@@ -1510,7 +1514,7 @@ namespace PowerLmsWebApi.Controllers
                 coll = coll.Where(c => c.OrgId == null);
             else
             {
-                if (!_OrganizationManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
+                if (!_MerchantManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
                 if (context.User.OrgId is null) //若没有指定机构
                 {
                     coll = coll.Where(c => c.OrgId == merchId);
@@ -1662,7 +1666,7 @@ namespace PowerLmsWebApi.Controllers
                 coll = coll.Where(c => c.OrgId == null);
             else
             {
-                if (!_OrganizationManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
+                if (!_MerchantManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
                 if (context.User.OrgId is null) //若没有指定机构
                 {
                     coll = coll.Where(c => c.OrgId == merchId);
@@ -1815,7 +1819,7 @@ namespace PowerLmsWebApi.Controllers
                 coll = coll.Where(c => c.OrgId == null);
             else
             {
-                if (!_OrganizationManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
+                if (!_MerchantManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
                 if (context.User.OrgId is null) //若没有指定机构
                 {
                     coll = coll.Where(c => c.OrgId == merchId);
@@ -1969,7 +1973,7 @@ namespace PowerLmsWebApi.Controllers
                 coll = coll.Where(c => c.OrgId == null);
             else
             {
-                if (!_OrganizationManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
+                if (!_MerchantManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
                 if (context.User.OrgId is null) //若没有指定机构
                 {
                     coll = coll.Where(c => c.OrgId == merchId);

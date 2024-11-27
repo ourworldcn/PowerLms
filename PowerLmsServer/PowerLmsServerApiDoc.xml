@@ -175,7 +175,7 @@
             权限管理器。
             </summary>
         </member>
-        <member name="M:PowerLmsServer.Managers.AuthorizationManager.#ctor(PowerLmsServer.EfData.PowerLmsUserDbContext,Microsoft.Extensions.Caching.Memory.IMemoryCache)">
+        <member name="M:PowerLmsServer.Managers.AuthorizationManager.#ctor(PowerLmsServer.EfData.PowerLmsUserDbContext,Microsoft.Extensions.Caching.Memory.IMemoryCache,PowerLmsServer.Managers.PermissionManager)">
             <summary>
             构造函数。
             </summary>
@@ -489,7 +489,7 @@
             <param name="stoppingToken"></param>
             <returns></returns>
         </member>
-        <member name="M:PowerLmsServer.Managers.InitializerService.SeedData">
+        <member name="M:PowerLmsServer.Managers.InitializerService.SeedData(System.IServiceProvider)">
             <summary>
             生成种子数据。
             </summary>
@@ -564,7 +564,7 @@
             商户功能管理服务。
             </summary>
         </member>
-        <member name="M:PowerLmsServer.Managers.MerchantManager.#ctor(Microsoft.Extensions.Caching.Memory.IMemoryCache,Microsoft.EntityFrameworkCore.IDbContextFactory{PowerLmsServer.EfData.PowerLmsUserDbContext})">
+        <member name="M:PowerLmsServer.Managers.MerchantManager.#ctor(Microsoft.Extensions.Caching.Memory.IMemoryCache,Microsoft.EntityFrameworkCore.IDbContextFactory{PowerLmsServer.EfData.PowerLmsUserDbContext},PowerLmsServer.EfData.PowerLmsUserDbContext)">
             <summary>
             构造函数。
             </summary>
@@ -593,10 +593,26 @@
         </member>
         <member name="M:PowerLmsServer.Managers.MerchantManager.GetOrLoadMerchantFromUser(PowerLms.Data.Account)">
             <summary>
-            
+            从指定的用户对象获取其商户信息。
             </summary>
             <param name="user"></param>
-            <returns></returns>
+            <returns>对于不属于商户的账号返回null。</returns>
+        </member>
+        <member name="M:PowerLmsServer.Managers.MerchantManager.GetMerchantId(System.Guid,System.Nullable{System.Guid}@)">
+            <summary>
+            获取指定账户所属的商户Id。
+            </summary>
+            <param name="accountId"></param>
+            <param name="MerchantId"></param>
+            <returns>true指定账户所属商户Id,如果不属于任何商户则返回null。false 没有找到指定的用户Id。</returns>
+        </member>
+        <member name="M:PowerLmsServer.Managers.MerchantManager.GetMerchantIdFromOrgId(System.Guid,System.Nullable{System.Guid}@)">
+            <summary>
+            取指定组织机构Id所属的商户Id。
+            </summary>
+            <param name="orgId">机构Id。</param>
+            <param name="MerchantId"></param>
+            <returns>true则找到了商户Id，false没有找到。</returns>
         </member>
         <member name="T:PowerLmsServer.Managers.MultilingualManager">
             <summary>
@@ -713,94 +729,10 @@
             组织机构管理器。
             </summary>
         </member>
-        <member name="F:PowerLmsServer.Managers.OrganizationManager.MerchantCkp">
-            <summary>
-            商户缓存信息缓存条目名的前缀。具体商户信息的缓存条目名是该前缀后接商户Id的<see cref="M:System.Guid.ToString"/>形式字符串。
-            </summary>
-        </member>
-        <member name="F:PowerLmsServer.Managers.OrganizationManager.OrgCacheKey">
-            <summary>
-            所有机构到商户的<see cref="T:System.Collections.Concurrent.ConcurrentDictionary`2"/>，键是机构Id，值是商户Id。
-            </summary>
-        </member>
-        <member name="M:PowerLmsServer.Managers.OrganizationManager.#ctor(PowerLmsServer.EfData.PowerLmsUserDbContext,Microsoft.Extensions.Caching.Memory.IMemoryCache,Microsoft.EntityFrameworkCore.IDbContextFactory{PowerLmsServer.EfData.PowerLmsUserDbContext},PowerLmsServer.Managers.MerchantManager)">
+        <member name="M:PowerLmsServer.Managers.OrganizationManager.#ctor(Microsoft.Extensions.Caching.Memory.IMemoryCache,Microsoft.EntityFrameworkCore.IDbContextFactory{PowerLmsServer.EfData.PowerLmsUserDbContext},PowerLmsServer.Managers.MerchantManager)">
             <summary>
             构造函数。
             </summary>
-        </member>
-        <member name="M:PowerLmsServer.Managers.OrganizationManager.GetMerchantId(System.Guid,System.Nullable{System.Guid}@)">
-            <summary>
-            获取指定账户所属的商户Id。
-            </summary>
-            <param name="accountId"></param>
-            <param name="MerchantId"></param>
-            <returns>true指定账户所属商户Id,如果不属于任何商户则返回null。false 没有找到指定的用户Id。</returns>
-        </member>
-        <member name="M:PowerLmsServer.Managers.OrganizationManager.GetMerchantIdFromOrgId(System.Guid,System.Nullable{System.Guid}@)">
-            <summary>
-            取指定组织机构Id所属的商户Id。
-            </summary>
-            <param name="orgId">机构Id。</param>
-            <param name="MerchantId"></param>
-            <returns>true则找到了商户Id，false没有找到。</returns>
-        </member>
-        <member name="M:PowerLmsServer.Managers.OrganizationManager.GetAllOrgInRoot(System.Guid)">
-            <summary>
-            获取指定根Id(商户或机构)下所有组织机构。不包含指定id的实体。
-            </summary>
-            <param name="rootId"></param>
-            <returns></returns>
-        </member>
-        <member name="M:PowerLmsServer.Managers.OrganizationManager.GetDb">
-            <summary>
-            获取一个读写商户/机构信息用的专属数据库上下文对象。若要使用需要加独占锁，且最好不要使用异步操作，避免产生并发问题。
-            </summary>
-            <returns></returns>
-        </member>
-        <member name="M:PowerLmsServer.Managers.OrganizationManager.GetMerchantInfoCacheKey(System.Guid)">
-            <summary>
-            获取指定商户信息对象在缓存中的条目名。
-            </summary>
-            <param name="merchantId"></param>
-            <returns></returns>
-        </member>
-        <member name="M:PowerLmsServer.Managers.OrganizationManager.GetMerchantInfo(System.Guid)">
-            <summary>
-            获取缓存的商户信息。
-            </summary>
-            <param name="merchantId">商户Id。</param>
-            <returns>没有找到则返回null，这不表示指定商户一定不存在，可能是未加载</returns>
-        </member>
-        <member name="M:PowerLmsServer.Managers.OrganizationManager.LoadMerchantInfo(System.Guid)">
-            <summary>
-            加载商户信息，不涉及到缓存操作。
-            </summary>
-            <param name="merchantId"></param>
-            <returns>商户的信息，可能返回null，若指定Id不存在。</returns>
-        </member>
-        <member name="M:PowerLmsServer.Managers.OrganizationManager.GetOrLoadMerchantInfo(System.Guid,PowerLmsServer.Managers.MerchantInfo@)">
-            <summary>
-            获取指定机构或商户的，完整商户信息集合。
-            </summary>
-            <param name="orgId"></param>
-            <param name="result"></param>
-        </member>
-        <member name="P:PowerLmsServer.Managers.OrganizationManager.Id2Merchants">
-            <summary>
-            
-            </summary>
-        </member>
-        <member name="P:PowerLmsServer.Managers.OrganizationManager.Id2Orgs">
-            <summary>
-            
-            </summary>
-        </member>
-        <member name="M:PowerLmsServer.Managers.OrganizationManager.GetAncestors(System.Guid)">
-            <summary>
-            获取直接间接所属所有机构/商户Id。
-            </summary>
-            <param name="id"></param>
-            <returns></returns>
         </member>
         <member name="M:PowerLmsServer.Managers.OrganizationManager.LoadOrgsFromMerchId(System.Guid,PowerLmsServer.EfData.PowerLmsUserDbContext@)">
             <summary>
@@ -814,21 +746,20 @@
             <summary>
             按指定商户Id获取或加载所有下属机构信息。
             </summary>
-            <param name="merchId"></param>
-            <returns></returns>
+            <param name="merchantId"></param>
+            <returns>没有找到指定商户则返回空字典。</returns>
+        </member>
+        <member name="M:PowerLmsServer.Managers.OrganizationManager.GetCurrentOrgsFromUser(PowerLms.Data.Account)">
+            <summary>
+            获取当前的登录机构及所有子机构。
+            </summary>
+            <param name="user"></param>
+            <returns>如果没有指定所属当前机构则返回空字典。</returns>
         </member>
         <member name="T:PowerLmsServer.Managers.OrganizationManagerExtensions">
             <summary>
             扩展方法类。
             </summary>
-        </member>
-        <member name="M:PowerLmsServer.Managers.OrganizationManagerExtensions.GetAllOrg(PowerLmsServer.Managers.OrganizationManager,PowerLms.Data.Account)">
-            <summary>
-            获取用户商户内所有机构。
-            </summary>
-            <param name="mng"></param>
-            <param name="user"></param>
-            <returns></returns>
         </member>
         <member name="T:PowerLmsServer.Managers.OwWfManager">
             <summary>
@@ -907,6 +838,11 @@
             
             </summary>
             <returns></returns>
+        </member>
+        <member name="M:PowerLmsServer.Managers.PermissionManager.SetChanges">
+            <summary>
+            指示权限已经发生变化。
+            </summary>
         </member>
         <member name="T:PowerLmsServer.Managers.RoleManager">
             <summary>

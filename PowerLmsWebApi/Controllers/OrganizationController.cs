@@ -19,7 +19,8 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 构造函数。
         /// </summary>
-        public OrganizationController(AccountManager accountManager, IServiceProvider serviceProvider, PowerLmsUserDbContext dbContext, OrganizationManager organizationManager, IMapper mapper, EntityManager entityManager, DataDicManager dataManager)
+        public OrganizationController(AccountManager accountManager, IServiceProvider serviceProvider, PowerLmsUserDbContext dbContext,
+            OrganizationManager organizationManager, IMapper mapper, EntityManager entityManager, DataDicManager dataManager, MerchantManager merchantManager)
         {
             _AccountManager = accountManager;
             _ServiceProvider = serviceProvider;
@@ -28,6 +29,7 @@ namespace PowerLmsWebApi.Controllers
             _Mapper = mapper;
             _EntityManager = entityManager;
             _DataManager = dataManager;
+            _MerchantManager = merchantManager;
         }
 
         readonly AccountManager _AccountManager;
@@ -37,6 +39,8 @@ namespace PowerLmsWebApi.Controllers
         readonly IMapper _Mapper;
         readonly EntityManager _EntityManager;
         readonly DataDicManager _DataManager;
+
+        readonly MerchantManager _MerchantManager;
 
         /// <summary>
         /// 获取组织机构。暂不考虑分页。
@@ -56,7 +60,7 @@ namespace PowerLmsWebApi.Controllers
             if (_DbContext.Merchants.Find(rootId) is PlMerchant merch)   //若指定的是商户
             {
                 if ((context.User.State & 8) == 0 && (context.User.State & 4) == 0) return BadRequest();
-                _OrganizationManager.GetMerchantId(context.User.Id, out var merchId);
+                _MerchantManager.GetMerchantId(context.User.Id, out var merchId);
 
                 var orgs = _DbContext.PlOrganizations.Where(c => c.MerchantId == merchId).ToList();
 
@@ -224,7 +228,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetMerchantIdReturnDto();
-            if (!_OrganizationManager.GetMerchantIdFromOrgId(orgId, out var merchId))
+            if (!_MerchantManager.GetMerchantIdFromOrgId(orgId, out var merchId))
                 return BadRequest();
             result.Result = merchId;
             return result;

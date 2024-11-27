@@ -100,7 +100,7 @@ namespace PowerLmsServer.Managers
                 if (account?.JobNumber is null) return string.Empty;
                 else
                 {
-                    string tmp = new string('0', c.Length - 2);
+                    var tmp = new string('0', c.Length - 2);
                     return account.JobNumber.Value.ToString(tmp);
                 }
             });
@@ -109,7 +109,7 @@ namespace PowerLmsServer.Managers
             {
                 if (!c.Success) return string.Empty;
                 if (c.Length < 1) return string.Empty;
-                string tmp = new string('0', c.Length - 2);
+                var tmp = new string('0', c.Length - 2);
                 return seq.ToString(tmp);
             });
             return str;
@@ -180,7 +180,7 @@ namespace PowerLmsServer.Managers
                 if (account?.JobNumber is null) return string.Empty;
                 else
                 {
-                    string tmp = new string('0', c.Length - 2);
+                    var tmp = new string('0', c.Length - 2);
                     return account.JobNumber.Value.ToString(tmp);
                 }
             });
@@ -189,7 +189,7 @@ namespace PowerLmsServer.Managers
             {
                 if (!c.Success) return string.Empty;
                 if (c.Length < 1) return string.Empty;
-                string tmp = new string('0', c.Length - 2);
+                var tmp = new string('0', c.Length - 2);
                 return seq.ToString(tmp);
             });
             return str;

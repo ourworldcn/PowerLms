@@ -58,7 +58,7 @@ namespace PowerLmsServer.Managers
                 CreateSystemResource(svc);
                 InitializeDataDic(svc);
                 CreateAdmin(svc);
-                SeedData();
+                SeedData(svc);
                 Test(svc);
             }, CancellationToken.None);
             _Logger.LogInformation("Pl服务成功上线");
@@ -70,11 +70,8 @@ namespace PowerLmsServer.Managers
         /// </summary>
         /// <exception cref="NotImplementedException"></exception>
         [Conditional("DEBUG")]
-        private void SeedData()
+        private void SeedData(IServiceProvider svc)
         {
-            using var scope = _ServiceScopeFactory.CreateScope();
-            var svc = scope.ServiceProvider;
-
             var db = svc.GetService<PowerLmsUserDbContext>();
             var org = new PlOrganization
             {
@@ -154,6 +151,7 @@ namespace PowerLmsServer.Managers
             using var file = File.OpenRead(filePath);
             using var workbook = _NpoiManager.GetWorkbookFromStream(file);
 
+            db.TruncateTable("PlPermissions");
             var sheet = workbook.GetSheet(nameof(db.PlPermissions));
             _NpoiManager.WriteToDb(sheet, db, db.PlPermissions);
 

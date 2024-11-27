@@ -23,7 +23,8 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 构造函数。
         /// </summary>
-        public CustomerController(IServiceProvider serviceProvider, AccountManager accountManager, PowerLmsUserDbContext dbContext, EntityManager entityManager, IMapper mapper, OrganizationManager organizationManager)
+        public CustomerController(IServiceProvider serviceProvider, AccountManager accountManager, PowerLmsUserDbContext dbContext, EntityManager entityManager,
+            IMapper mapper, OrganizationManager organizationManager, MerchantManager merchantManager)
         {
             _ServiceProvider = serviceProvider;
             _AccountManager = accountManager;
@@ -31,16 +32,18 @@ namespace PowerLmsWebApi.Controllers
             _EntityManager = entityManager;
             _Mapper = mapper;
             _OrganizationManager = organizationManager;
+            _MerchantManager = merchantManager;
         }
 
-        IServiceProvider _ServiceProvider;
-        AccountManager _AccountManager;
+        readonly IServiceProvider _ServiceProvider;
+        readonly AccountManager _AccountManager;
 
         readonly PowerLmsUserDbContext _DbContext;
-        OrganizationManager _OrganizationManager;
+        readonly OrganizationManager _OrganizationManager;
 
-        EntityManager _EntityManager;
-        IMapper _Mapper;
+        readonly EntityManager _EntityManager;
+        readonly IMapper _Mapper;
+        readonly MerchantManager _MerchantManager;
 
         #region 客户资料本体的
 
@@ -59,9 +62,9 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllCustomerReturnDto();
             Guid[] allOrg = Array.Empty<Guid>();
-            if (_OrganizationManager.GetMerchantId(context.User.Id, out var merId))
+            if (_MerchantManager.GetMerchantId(context.User.Id, out var merId))
             {
-                allOrg = _OrganizationManager.GetAllOrgInRoot(merId.Value).Select(c => c.Id).ToArray();
+                allOrg = _OrganizationManager.GetOrLoadOrgsFromMerchId(merId.Value).Keys.ToArray();
             }
             //var dbSet = _DbContext.PlCustomers.Where(c => c.OrgId.HasValue && allOrg.Contains(c.OrgId.Value));
             var dbSet = _DbContext.PlCustomers.Where(c => c.OrgId == context.User.OrgId);
@@ -141,7 +144,7 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 客户表子表的名字。
         /// </summary>
-        static string[] CustomerChildTableNames = new string[] { "PlCustomerContact", "PlBusinessHeader", "PlTaxInfo", "PlTidan", "CustomerBlacklist", "PlLoadingAddr" };
+        static readonly string[] CustomerChildTableNames = new string[] { "PlCustomerContact", "PlBusinessHeader", "PlTaxInfo", "PlTidan", "CustomerBlacklist", "PlLoadingAddr" };
 
         /// <summary>
         /// 删除指定Id的客户。慎用！
@@ -189,15 +192,15 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllCustomer2ReturnDto();
             Guid[] allOrg = Array.Empty<Guid>();
-            if (_OrganizationManager.GetMerchantId(context.User.Id, out var merId))
+            if (_MerchantManager.GetMerchantId(context.User.Id, out var merId))
             {
-                allOrg = _OrganizationManager.GetAllOrgInRoot(merId.Value).Select(c => c.Id).ToArray();
+                allOrg = _OrganizationManager.GetOrLoadOrgsFromMerchId(merId.Value).Keys.ToArray();
             }
             //var dbSet = _DbContext.PlCustomers.Where(c => c.OrgId.HasValue && allOrg.Contains(c.OrgId.Value));
             var dbSet = _DbContext.PlCustomers.Where(c => c.OrgId == context.User.OrgId);
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
 
-            StringBuilder sb = new StringBuilder("select * from PlCustomers where   ");
+            var sb = new StringBuilder("select * from PlCustomers where   ");
             foreach (var item in conditional.Where(c => c.Key != "IsDesc"))
             {
                 if (!bool.TryParse(item.Value, out var b)) continue;

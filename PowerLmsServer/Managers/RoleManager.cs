@@ -7,6 +7,7 @@ using PowerLmsServer.EfData;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -70,5 +71,16 @@ namespace PowerLmsServer.Managers
             return result;
         }
 
+        /// <summary>
+        /// 按指定用户当前的登录机构加载其所有角色。
+        /// </summary>
+        /// <param name="user"></param>
+        //public ConcurrentDictionary<Guid, PlRole> LoadOrgsFromUser(Account user)
+        //{
+        //    //var key = OwCacheHelper.GetCacheKeyFromId(user.Id, ".CurrentOrgs");
+        //    var merchant = _MerchantManager.GetOrLoadMerchantFromUser(user);
+        //    var orgs = _OrganizationManager.GetOrLoadOrgsFromMerchId(merchant.Id);
+        //    var roles = GetOrLoadRolesFromMerchantId(merchant.Id);
+        //}
     }
 }

@@ -1,8 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Primitives;
 using Org.BouncyCastle.Asn1.X509.Qualified;
+using OW.DDD;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using System;
@@ -83,7 +85,16 @@ namespace PowerLmsServer.Managers
                 using var t = db;
                 return result;
             });
+
             return result;
+        }
+
+        /// <summary>
+        /// 指示权限已经发生变化。
+        /// </summary>
+        public void SetChanges()
+        {
+
         }
     }
 }

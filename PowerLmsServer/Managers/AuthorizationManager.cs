@@ -21,14 +21,17 @@ namespace PowerLmsServer.Managers
         /// <summary>
         /// 构造函数。
         /// </summary>
-        public AuthorizationManager(PowerLmsUserDbContext dbContext, IMemoryCache cache)
+        public AuthorizationManager(PowerLmsUserDbContext dbContext, IMemoryCache cache, PermissionManager permissionManager)
         {
             _DbContext = dbContext;
             _Cache = cache;
+            _PermissionManager = permissionManager;
         }
 
+        readonly PermissionManager _PermissionManager;
         readonly PowerLmsUserDbContext _DbContext;
-        IMemoryCache _Cache;
+        readonly IMemoryCache _Cache;
+
         /// <summary>
         /// 缓存项的前缀。
         /// </summary>
