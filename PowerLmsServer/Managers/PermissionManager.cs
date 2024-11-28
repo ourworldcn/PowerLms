@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Primitives;
+using NPOI.SS.Formula.PTG;
 using Org.BouncyCastle.Asn1.X509.Qualified;
 using OW.DDD;
 using PowerLms.Data;
@@ -10,6 +11,7 @@ using PowerLmsServer.EfData;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -25,14 +27,16 @@ namespace PowerLmsServer.Managers
         /// <summary>
         /// 构造函数。
         /// </summary>
-        public PermissionManager(IMemoryCache cache, IDbContextFactory<PowerLmsUserDbContext> dbContextFactory)
+        public PermissionManager(IMemoryCache cache, IDbContextFactory<PowerLmsUserDbContext> dbContextFactory, RoleManager roleManager)
         {
             _Cache = cache;
             _DbContextFactory = dbContextFactory;
+            _RoleManager = roleManager;
         }
 
         readonly IMemoryCache _Cache;
         readonly IDbContextFactory<PowerLmsUserDbContext> _DbContextFactory;
+        readonly RoleManager _RoleManager;
 
         /// <summary>
         /// 缓存中的Key。
@@ -86,6 +90,39 @@ namespace PowerLmsServer.Managers
                 return result;
             });
 
+            return result;
+        }
+
+        /// <summary>
+        /// 获取用户当前有效的权限。
+        /// </summary>
+        /// <param name="user"></param>
+        /// <param name="db"></param>
+        /// <returns></returns>
+        public ConcurrentDictionary<string, PlPermission> LoadCurrentPermissionsFromUser(Account user, ref PowerLmsUserDbContext db)
+        {
+            var roles = _RoleManager.GetOrLoadCurrentRolesFromUser(user);
+            db ??= _DbContextFactory.CreateDbContext();
+            var ids = db.PlRolePermissions.Where(c => roles.Keys.Contains(c.RoleId)).Select(c => c.PermissionId).Distinct().ToArray();
+
+            var allPerm = GetOrLoadPermission();
+            var coll = allPerm.Where(c => ids.Contains(c.Key));
+            return new ConcurrentDictionary<string, PlPermission>(coll);
+        }
+
+        /// <summary>
+        /// 获取或加载用户当前机构下的所有授权。
+        /// </summary>
+        /// <param name="user"></param>
+        /// <returns></returns>
+        public ConcurrentDictionary<string, PlPermission> GetOrLoadCurrentPermissionsFromUser(Account user)
+        {
+            var result = _Cache.GetOrCreate(OwCacheHelper.GetCacheKeyFromId(user.Id, ".CurrentPermissions"), c =>
+            {
+                var db = user.DbContext;
+                var r = LoadCurrentPermissionsFromUser(user, ref db); Debug.Assert(ReferenceEquals(user.DbContext, db));
+                return r;
+            });
             return result;
         }
 

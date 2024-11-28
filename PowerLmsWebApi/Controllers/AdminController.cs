@@ -126,10 +126,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPut]
         public ActionResult<ModifyDataDicCatalogReturnDto> ModifyDataDicCatalog(ModifyDataDicCatalogParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new ModifyDataDicCatalogReturnDto();
             if (!_EntityManager.Modify(model.Items))
             {
@@ -148,10 +150,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpDelete]
         public ActionResult<RemoveDataDicCatalogReturnDto> RemoveDataDicCatalog(RemoveDataDicCatalogParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new RemoveDataDicCatalogReturnDto();
             var id = model.Id;
             var item = _DbContext.DD_DataDicCatalogs.Find(id);
@@ -215,12 +219,14 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         [ProducesResponseType(typeof(ImportDataDicReturnDto), (int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
         public ActionResult<ImportDataDicReturnDto> ImportDataDic(IFormFile formFile, Guid token, Guid rId)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized(OwHelper.GetLastErrorMessage());
+            if (!_AuthorizationManager.HasPermission(context.User, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new ImportDataDicReturnDto();
             var srTask = _DbContext.DD_SystemResources.FindAsync(rId).AsTask();
             var workbook = _NpoiManager.GetWorkbookFromStream(formFile.OpenReadStream());
@@ -414,11 +420,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定的Code已经存在。</response>  
         /// <response code="401">无效令牌。</response>  
-        /// <response code="403">非超管商管。</response>  
+        /// <response code="403">非超管商管或权限不足。</response>  
         [HttpPost]
         public ActionResult<AddDataDicCatalogReturnDto> AddDataDicCatalog(AddDataDicCatalogParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden);
             if (!context.User.IsAdmin())   //若非超管也非商管
             {
                 return base.Forbid("需要管理员权限。");
@@ -462,10 +469,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">在同一类别同一组织机构下指定了重复的Code。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         public ActionResult<AddSimpleDataDicReturnDto> AddSimpleDataDic(AddSimpleDataDicParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new AddSimpleDataDicReturnDto();
             if (_DbContext.DD_SimpleDataDics.Any(c => c.DataDicId == model.Item.DataDicId && c.Code == model.Item.Code))   //若重复
                 return BadRequest("Id重复");
@@ -500,10 +509,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPut]
         public ActionResult<ModifySimpleDataDicReturnDto> ModifySimpleDataDic(ModifySimpleDataDicParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new ModifySimpleDataDicReturnDto();
             if (!_EntityManager.ModifyWithMarkDelete(model.Items))
             {
@@ -528,10 +539,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpDelete]
         public ActionResult<RemoveSimpleDataDicReturnDto> RemoveSimpleDataDic(RemoveSimpleDataDicParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new RemoveSimpleDataDicReturnDto();
             var id = model.Id;
             DbSet<SimpleDataDic> dbSet = _DbContext.DD_SimpleDataDics;
@@ -550,10 +563,13 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         public ActionResult<RestoreSimpleDataDicReturnDto> RestoreSimpleDataDic(RestoreSimpleDataDicParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden);
+
             var result = new RestoreSimpleDataDicReturnDto();
             if (!_EntityManager.Restore<SimpleDataDic>(model.Id))
             {

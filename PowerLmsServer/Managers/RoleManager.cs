@@ -75,12 +75,43 @@ namespace PowerLmsServer.Managers
         /// 按指定用户当前的登录机构加载其所有角色。
         /// </summary>
         /// <param name="user"></param>
-        //public ConcurrentDictionary<Guid, PlRole> LoadOrgsFromUser(Account user)
-        //{
-        //    //var key = OwCacheHelper.GetCacheKeyFromId(user.Id, ".CurrentOrgs");
-        //    var merchant = _MerchantManager.GetOrLoadMerchantFromUser(user);
-        //    var orgs = _OrganizationManager.GetOrLoadOrgsFromMerchId(merchant.Id);
-        //    var roles = GetOrLoadRolesFromMerchantId(merchant.Id);
-        //}
+        /// <param name="db"></param>
+        public ConcurrentDictionary<Guid, PlRole> LoadCurrentRolesFromUser(Account user, ref PowerLmsUserDbContext db)
+        {
+            //var key = OwCacheHelper.GetCacheKeyFromId(user.Id, ".CurrentOrgs");
+            var merchant = _MerchantManager.GetOrLoadMerchantFromUser(user);
+            var orgs = _OrganizationManager.GetCurrentOrgsFromUser(user);   //用户所处所有机构集合
+
+            db ??= _DbContextFactory.CreateDbContext();
+
+            var allRoles = GetOrLoadRolesFromMerchantId(merchant.Id).Values;   //机构下所有角色
+
+            var roles = allRoles.Where(c => c.OrgId.HasValue && orgs.ContainsKey(c.OrgId.Value)).Select(c => c.Id).ToArray();    //可能的角色
+
+            Guid[] roleIds;
+            lock (db)
+                roleIds = db.PlAccountRoles.Where(c => c.UserId == user.Id && roles.Contains(c.RoleId)).Select(c => c.RoleId).Distinct().ToArray();    //真实的角色Id集合
+
+            var coll = GetOrLoadRolesFromMerchantId(merchant.Id).Where(c => roleIds.Contains(c.Key));
+            return new ConcurrentDictionary<Guid, PlRole>(coll);
+        }
+
+        /// <summary>
+        /// 获取用户当前角色。
+        /// </summary>
+        /// <param name="user"></param>
+        /// 
+        /// <returns>所有当前有效角色的字典。</returns>
+        public ConcurrentDictionary<Guid, PlRole> GetOrLoadCurrentRolesFromUser(Account user)
+        {
+            var result = _Cache.GetOrCreate(OwCacheHelper.GetCacheKeyFromId(user.Id, ".CurrentRoles"), c =>
+            {
+                var db = user.DbContext;
+                var r = LoadCurrentRolesFromUser(user, ref db);
+                c.AddExpirationToken(new CancellationChangeToken(user.ExpirationTokenSource.Token));
+                return r;
+            });
+            return result;
+        }
     }
 }

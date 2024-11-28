@@ -73,11 +73,17 @@ namespace PowerLmsServer.Managers
         private void SeedData(IServiceProvider svc)
         {
             var db = svc.GetService<PowerLmsUserDbContext>();
+            var merch = new PlMerchant
+            {
+                Id = Guid.Parse("{073E65D6-EA0F-4D13-9510-3973F5A47526}"),
+                Name = new PlOwnedName { DisplayName = "种子商户", Name = "种子商户", },
+            };
+            db.AddOrUpdate(merch);
             var org = new PlOrganization
             {
                 Id = Guid.Parse("{FB069576-3E3D-46DF-9F13-B7D5FBA84717}"),
                 Name = new PlOwnedName() { DisplayName = "种子机构" },
-                MerchantId = Guid.Parse("{FB069576-3E3D-46DF-9F13-B7D5FBA84717}"),
+                MerchantId = Guid.Parse("{073E65D6-EA0F-4D13-9510-3973F5A47526}"),
                 Otc = 2,
             };
             db.AddOrUpdate(org);

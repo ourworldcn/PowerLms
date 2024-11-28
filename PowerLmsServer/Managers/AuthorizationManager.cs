@@ -5,6 +5,7 @@ using Microsoft.Extensions.Primitives;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -74,14 +75,9 @@ namespace PowerLmsServer.Managers
         /// </summary>
         /// <param name="user"></param>
         /// <returns></returns>
-        public Dictionary<string, PlPermission> GetOrLoadPermission(Account user)
+        public ConcurrentDictionary<string, PlPermission> GetOrLoadPermission(Account user)
         {
-            var result = _Cache.GetOrCreate($"{CachePrefix}{user.IdString}", c =>
-            {
-                c.SlidingExpiration = TimeSpan.FromMinutes(10);
-                return GetPermissionsFromUser(user).AsEnumerable().ToDictionary(c => c.Name);
-            });
-            return result;
+            return _PermissionManager.GetOrLoadCurrentPermissionsFromUser(user);
         }
 
         /// <summary>
