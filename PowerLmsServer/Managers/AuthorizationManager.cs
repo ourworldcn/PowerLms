@@ -102,13 +102,14 @@ namespace PowerLmsServer.Managers
         }
 
         /// <summary>
-        /// 是否拥有指定的一组权限。
+        /// 是否拥有指定的一组权限。对于超管，商管总是返回true。
         /// </summary>
         /// <param name="user"></param>
         /// <param name="pIds"></param>
         /// <returns>拥有指定的所有权限则返回true,否则返回false。</returns>
         public bool HasPermission(Account user, params string[] pIds)
         {
+            if (user.IsAdmin()) return true;
             var dic = GetOrLoadPermission(user);
             return pIds.All(c => dic.ContainsKey(c));
         }

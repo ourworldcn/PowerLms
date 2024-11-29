@@ -8,6 +8,7 @@ using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
 using System.ComponentModel.DataAnnotations;
+using System.Net;
 
 namespace PowerLmsWebApi.Controllers
 {
@@ -39,7 +40,7 @@ namespace PowerLmsWebApi.Controllers
         readonly IMapper _Mapper;
         readonly EntityManager _EntityManager;
         readonly DataDicManager _DataManager;
-
+        readonly AuthorizationManager _AuthorizationManager;
         readonly MerchantManager _MerchantManager;
 
         /// <summary>
@@ -125,10 +126,12 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPut]
         public ActionResult<ModifyOrgReturnDto> ModifyOrg(ModifyOrgParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized(OwHelper.GetLastErrorMessage());
+            if (!_AuthorizationManager.HasPermission(context.User, "B.1")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new ModifyOrgReturnDto();
             var list = new List<PlOrganization>();
             var res = model.Items.Select(c => (_DbContext.PlOrganizations.Find(c.Id), _DbContext.PlOrganizations.Find(c.Id).Children.ToArray())).ToArray();
@@ -400,11 +403,13 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         /// <response code="404">指定Id的客户开户行信息不存在。</response>  
         [HttpPut]
         public ActionResult<ModifyBankInfoReturnDto> ModifyBankInfo(ModifyBankInfoParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.1")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new ModifyBankInfoReturnDto();
             if (!_EntityManager.Modify(new[] { model.BankInfo })) return NotFound();
             _DbContext.SaveChanges();

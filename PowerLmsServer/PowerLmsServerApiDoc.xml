@@ -227,7 +227,7 @@
         </member>
         <member name="M:PowerLmsServer.Managers.AuthorizationManager.HasPermission(PowerLms.Data.Account,System.String[])">
             <summary>
-            是否拥有指定的一组权限。
+            是否拥有指定的一组权限。对于超管，商管总是返回true。
             </summary>
             <param name="user"></param>
             <param name="pIds"></param>

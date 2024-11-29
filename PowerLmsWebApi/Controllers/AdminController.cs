@@ -664,10 +664,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">在同一类别同一组织机构下指定了重复的Code。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         public ActionResult<AddPlPortReturnDto> AddPlPort(AddPlPortParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.6")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new AddPlPortReturnDto();
 
             var dbSet = _DbContext.DD_PlPorts;
@@ -689,10 +691,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPut]
         public ActionResult<ModifyPlPortReturnDto> ModifyPlPort(ModifyPlPortParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.6")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new ModifyPlPortReturnDto();
             if (!_EntityManager.ModifyWithMarkDelete(model.Items))
             {
@@ -715,10 +719,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpDelete]
         public ActionResult<RemovePlPortReturnDto> RemovePlPort(RemovePlPortParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.6")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new RemovePlPortReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.DD_PlPorts;
@@ -737,10 +743,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         public ActionResult<RestorePlPortReturnDto> RestorePlPort(RestorePlPortParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.6")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new RestorePlPortReturnDto();
             if (!_EntityManager.Restore<PlPort>(model.Id))
             {
@@ -821,10 +829,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">在同一类别同一组织机构下指定了重复的Code。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         public ActionResult<AddPlCargoRouteReturnDto> AddPlCargoRoute(AddPlCargoRouteParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.7")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new AddPlCargoRouteReturnDto();
             var dbSet = _DbContext.DD_PlCargoRoutes;
             if (dbSet.Any(c => c.OrgId == model.Item.OrgId && c.Code == model.Item.Code))   //若重复
@@ -845,10 +855,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPut]
         public ActionResult<ModifyPlCargoRouteReturnDto> ModifyPlCargoRoute(ModifyPlCargoRouteParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.7")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new ModifyPlCargoRouteReturnDto();
             if (!_EntityManager.ModifyWithMarkDelete(model.Items))
             {
@@ -871,10 +883,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpDelete]
         public ActionResult<RemovePlCargoRouteReturnDto> RemovePlCargoRoute(RemoveCargoPlRouteParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.7")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new RemovePlCargoRouteReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.DD_PlCargoRoutes;
@@ -893,10 +907,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         public ActionResult<RestorePlCargoRouteReturnDto> RestorePlCargoRoute(RestorePlCargoRouteParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.7")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new RestorePlCargoRouteReturnDto();
             if (!_EntityManager.Restore<PlCargoRoute>(model.Id))
             {
@@ -1002,10 +1018,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">参数错误。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         public ActionResult<AddPlExchangeRateReturnDto> AddPlExchangeRate(AddPlExchangeRateParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.4")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new AddPlExchangeRateReturnDto();
             model.Item.GenerateNewId();
             var id = model.Item.Id;
@@ -1023,10 +1041,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPut]
         public ActionResult<ModifyPlExchangeRateReturnDto> ModifyPlExchangeRate(ModifyPlExchangeRateParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.4")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new ModifyPlExchangeRateReturnDto();
             if (!_EntityManager.Modify(model.Items))
             {
@@ -1102,10 +1122,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">参数错误。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         public ActionResult<AddUnitConversionReturnDto> AddUnitConversion(AddUnitConversionParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.10")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new AddUnitConversionReturnDto();
             model.Item.GenerateNewId();
             var id = model.Item.Id;
@@ -1123,10 +1145,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPut]
         public ActionResult<ModifyUnitConversionReturnDto> ModifyUnitConversion(ModifyUnitConversionParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.10")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new ModifyUnitConversionReturnDto();
             if (!_EntityManager.ModifyWithMarkDelete(model.Items))
             {
@@ -1145,10 +1169,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpDelete]
         public ActionResult<RemoveUnitConversionReturnDto> RemoveUnitConversion(RemoveUnitConversionParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.10")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new RemoveUnitConversionReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.DD_UnitConversions;
@@ -1173,10 +1199,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         public ActionResult<RestoreUnitConversionReturnDto> RestoreUnitConversion(RestoreUnitConversionParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.10")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new RestoreUnitConversionReturnDto();
             if (!_EntityManager.Restore<UnitConversion>(model.Id))
             {
@@ -1257,10 +1285,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">参数错误。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         public ActionResult<AddFeesTypeReturnDto> AddFeesType(AddFeesTypeParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.8")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new AddFeesTypeReturnDto();
             model.Item.GenerateNewId();
             var id = model.Item.Id;
@@ -1278,10 +1308,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPut]
         public ActionResult<ModifyFeesTypeReturnDto> ModifyFeesType(ModifyFeesTypeParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.8")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new ModifyFeesTypeReturnDto();
             if (!_EntityManager.ModifyWithMarkDelete(model.Items))
             {
@@ -1304,10 +1336,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpDelete]
         public ActionResult<RemoveFeesTypeReturnDto> RemoveFeesType(RemoveFeesTypeParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.8")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new RemoveFeesTypeReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.DD_FeesTypes;
@@ -1332,10 +1366,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         public ActionResult<RestoreFeesTypeReturnDto> RestoreFeesType(RestoreFeesTypeParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.8")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new RestoreFeesTypeReturnDto();
             if (!_EntityManager.Restore<FeesType>(model.Id))
             {
@@ -1415,10 +1451,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">参数错误。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         public ActionResult<AddJobNumberRuleReturnDto> AddJobNumberRule(AddJobNumberRuleParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.2")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new AddJobNumberRuleReturnDto();
             model.Item.GenerateNewId();
             var id = model.Item.Id;
@@ -1437,10 +1475,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPut]
         public ActionResult<ModifyJobNumberRuleReturnDto> ModifyJobNumberRule(ModifyJobNumberRuleParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.2")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new ModifyJobNumberRuleReturnDto();
             if (!_EntityManager.ModifyWithMarkDelete(model.Items))
             {
@@ -1465,10 +1505,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpDelete]
         public ActionResult<RemoveJobNumberRuleReturnDto> RemoveJobNumberRule(RemoveJobNumberRuleParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.2")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new RemoveJobNumberRuleReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.DD_JobNumberRules;
@@ -1493,10 +1535,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         public ActionResult<RestoreJobNumberRuleReturnDto> RestoreJobNumberRule(RestoreJobNumberRuleParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.2")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new RestoreJobNumberRuleReturnDto();
             if (!_EntityManager.Restore<JobNumberRule>(model.Id))
             {
@@ -1723,10 +1767,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">参数错误。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         public ActionResult<AddPlCountryReturnDto> AddPlCountry(AddPlCountryParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.5")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new AddPlCountryReturnDto();
             model.Item.GenerateNewId();
             var id = model.Item.Id;
@@ -1744,10 +1790,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPut]
         public ActionResult<ModifyPlCountryReturnDto> ModifyPlCountry(ModifyPlCountryParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.5")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new ModifyPlCountryReturnDto();
             if (!_EntityManager.ModifyWithMarkDelete(model.Items))
             {
@@ -1770,10 +1818,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpDelete]
         public ActionResult<RemovePlCountryReturnDto> RemovePlCountry(RemovePlCountryParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.5")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new RemovePlCountryReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.DD_PlCountrys;
@@ -1798,10 +1848,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         public ActionResult<RestorePlCountryReturnDto> RestorePlCountry(RestorePlCountryParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.5")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new RestorePlCountryReturnDto();
             if (!_EntityManager.Restore<PlCountry>(model.Id))
             {
@@ -1876,10 +1928,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">参数错误。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         public ActionResult<AddPlCurrencyReturnDto> AddPlCurrency(AddPlCurrencyParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.3")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new AddPlCurrencyReturnDto();
             model.Item.GenerateNewId();
             var id = model.Item.Id;
@@ -1897,10 +1951,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPut]
         public ActionResult<ModifyPlCurrencyReturnDto> ModifyPlCurrency(ModifyPlCurrencyParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.3")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new ModifyPlCurrencyReturnDto();
             if (!_EntityManager.ModifyWithMarkDelete(model.Items))
             {
@@ -1923,10 +1979,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpDelete]
         public ActionResult<RemovePlCurrencyReturnDto> RemovePlCurrency(RemovePlCurrencyParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.3")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new RemovePlCurrencyReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.DD_PlCurrencys;
@@ -1951,10 +2009,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         public ActionResult<RestorePlCurrencyReturnDto> RestorePlCurrency(RestorePlCurrencyParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.3")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new RestorePlCurrencyReturnDto();
             if (!_EntityManager.Restore<PlCurrency>(model.Id))
             {
@@ -2035,10 +2095,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">参数错误。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         public ActionResult<AddShippingContainersKindReturnDto> AddShippingContainersKind(AddShippingContainersKindParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.9")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new AddShippingContainersKindReturnDto();
             model.Item.GenerateNewId();
             var id = model.Item.Id;
@@ -2056,10 +2118,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPut]
         public ActionResult<ModifyShippingContainersKindReturnDto> ModifyShippingContainersKind(ModifyShippingContainersKindParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.9")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new ModifyShippingContainersKindReturnDto();
             if (!_EntityManager.ModifyWithMarkDelete(model.Items))
             {
@@ -2082,10 +2146,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpDelete]
         public ActionResult<RemoveShippingContainersKindReturnDto> RemoveShippingContainersKind(RemoveShippingContainersKindParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.9")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new RemoveShippingContainersKindReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.DD_ShippingContainersKinds;
@@ -2110,10 +2176,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         public ActionResult<RestoreShippingContainersKindReturnDto> RestoreShippingContainersKind(RestoreShippingContainersKindParamsDto model)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "B.9")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new RestoreShippingContainersKindReturnDto();
             if (!_EntityManager.Restore<ShippingContainersKind>(model.Id))
             {
