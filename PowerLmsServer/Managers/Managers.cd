@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ClassDiagram MajorVersion="1" MinorVersion="1">
-  <Class Name="PowerLmsServer.Managers.AccountManager" Collapsed="true">
-    <Position X="14" Y="0.5" Width="1.5" />
+  <Class Name="PowerLmsServer.Managers.AccountManager">
+    <Position X="12.25" Y="0.5" Width="2" />
     <TypeIdentifier>
       <HashCode>AACAAAAAIgEAAAQECIAAAgAACAAAARAAAgAAQAAAARI=</HashCode>
       <FileName>Managers\AccountManager.cs</FileName>
@@ -29,7 +29,7 @@
     </TypeIdentifier>
   </Class>
   <Class Name="PowerLmsServer.Managers.OrganizationManager">
-    <Position X="10.75" Y="4" Width="2.25" />
+    <Position X="10" Y="4.25" Width="2.25" />
     <TypeIdentifier>
       <HashCode>AIAAACAAAAAAAAAAAAAAAAAAAIAAAQAEAAAAAAAEAAA=</HashCode>
       <FileName>Managers\OrganizationManager.cs</FileName>
@@ -46,7 +46,7 @@
     </TypeIdentifier>
   </Class>
   <Class Name="PowerLmsServer.Managers.RoleManager">
-    <Position X="7.25" Y="4.5" Width="2" />
+    <Position X="7.25" Y="4.25" Width="2" />
     <TypeIdentifier>
       <HashCode>AAAAAAEAAAAAAAAAAAAAIAAAAIAAQQAEAABAAIAAAAA=</HashCode>
       <FileName>Managers\RoleManager.cs</FileName>

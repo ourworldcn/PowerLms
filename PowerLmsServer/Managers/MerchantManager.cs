@@ -57,6 +57,7 @@ namespace PowerLmsServer.Managers
         {
             merch.DbContext = dbContext;
             merch.ExpirationTokenSource = new CancellationTokenSource();
+            
         }
 
         /// <summary>

@@ -18,6 +18,7 @@ using OW.Data;
 using System.Data;
 using System.Linq.Expressions;
 using System.Reflection;
+using Microsoft.Extensions.Primitives;
 
 namespace PowerLmsServer.Managers
 {
@@ -221,13 +222,34 @@ namespace PowerLmsServer.Managers
         [Conditional("DEBUG")]
         private void Test(IServiceProvider svc)
         {
-            var pm = svc.GetRequiredService<PermissionManager>();
-            var dic = pm.GetOrLoadPermission();
-            foreach (var kvp in dic)
+            var cache = svc.GetRequiredService<IMemoryCache>();
+            CancellationTokenSource s;
+            for (int i = 0; i < 1_000_000; i++)
             {
-                var tmp = kvp.Value.Parent?.Parent;
+                s = new CancellationTokenSource();
             }
-            ;
+            var cts = new CancellationTokenSource();
+            var cct = new CancellationChangeToken(cts.Token);
+            cct.RegisterChangeCallback(c =>
+            {
+                ;
+            }, null);
+            using (var entry = cache.CreateEntry("111"))
+            {
+                entry.AddExpirationToken(cct);
+                entry.RegisterPostEvictionCallback((key, v, r, s) =>
+                {
+                    if (s is CancellationTokenSource tmp)
+                    {
+                        if (!tmp.IsCancellationRequested) tmp.Cancel();
+                    }
+                }, cts);
+                entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(1);
+                entry.SetValue(new object());
+            }
+            var obj1 = cache.Get("111");
+            cts.Cancel();
+            var obj2 = cache.Get("111");
         }
 
         private void CreateDb()
