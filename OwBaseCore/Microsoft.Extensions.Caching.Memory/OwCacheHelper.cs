@@ -78,7 +78,7 @@ namespace Microsoft.Extensions.Caching.Memory
     /// 包装缓存项的类。
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public class OwCacheItem<T> where T : class
+    public class OwCacheItem<T>
     {
         /// <summary>
         /// 构造函数。
