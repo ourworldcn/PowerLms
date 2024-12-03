@@ -33,7 +33,7 @@ namespace PowerLmsServer.Managers
         /// <param name="logger"></param>
         /// <param name="serviceScopeFactory"></param>
         /// <param name="npoiManager"></param>
-        public InitializerService(ILogger<InitializerService> logger, IServiceScopeFactory serviceScopeFactory, NpoiManager npoiManager)
+        public InitializerService(ILogger<InitializerService> logger, IServiceScopeFactory serviceScopeFactory, NpoiManager npoiManager) : base()
         {
             _Logger = logger;
             _ServiceScopeFactory = serviceScopeFactory;
@@ -223,11 +223,7 @@ namespace PowerLmsServer.Managers
         private void Test(IServiceProvider svc)
         {
             var cache = svc.GetRequiredService<IMemoryCache>();
-            CancellationTokenSource s;
-            for (int i = 0; i < 1_000_000; i++)
-            {
-                s = new CancellationTokenSource();
-            }
+
             var cts = new CancellationTokenSource();
             var cct = new CancellationChangeToken(cts.Token);
             cct.RegisterChangeCallback(c =>

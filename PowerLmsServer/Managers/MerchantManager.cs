@@ -57,7 +57,18 @@ namespace PowerLmsServer.Managers
         {
             merch.DbContext = dbContext;
             merch.ExpirationTokenSource = new CancellationTokenSource();
-            
+
+        }
+
+        /// <summary>
+        /// 获取缓存的商户对象。
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        public PlMerchant GetMerchantFromId(Guid id)
+        {
+            var result = _Cache.Get<PlMerchant>(OwCacheHelper.GetCacheKeyFromId<PlMerchant>(id));
+            return result;
         }
 
         /// <summary>
@@ -89,6 +100,21 @@ namespace PowerLmsServer.Managers
                 user.MerchantId = merchId;
             }
             return GetOrLoadMerchantFromId(merchId.Value);
+        }
+
+        /// <summary>
+        /// 指出商户已经变化。
+        /// </summary>
+        /// <param name="merchId"></param>
+        /// <returns></returns>
+        public bool SetChange(Guid merchId)
+        {
+            if (GetMerchantFromId(merchId) is PlMerchant merch)
+            {
+                merch.ExpirationTokenSource?.Cancel();
+                return true;
+            }
+            else return false;
         }
 
         /// <summary>

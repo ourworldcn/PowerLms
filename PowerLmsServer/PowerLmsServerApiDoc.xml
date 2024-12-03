@@ -53,18 +53,11 @@
             <param name="evidence"></param>
             <returns></returns>
         </member>
-        <member name="M:PowerLmsServer.Managers.AccountManager.GetCacheKeyFromUserId(System.Guid)">
+        <member name="M:PowerLmsServer.Managers.AccountManager.GetAccount(System.Guid)">
             <summary>
-            获取用户对象的键。
+            从缓存中获取用户对象。
             </summary>
             <param name="id"></param>
-            <returns></returns>
-        </member>
-        <member name="M:PowerLmsServer.Managers.AccountManager.GetUserIdFromCacheKey(System.String)">
-            <summary>
-            获取键值对应的用户Id。
-            </summary>
-            <param name="key"></param>
             <returns></returns>
         </member>
         <member name="M:PowerLmsServer.Managers.AccountManager.GetOrLoadAccount(System.Guid)">
@@ -79,6 +72,13 @@
             设置缓存中的数据(新缓存项)。若有已有项不会自动调用过期事件。
             </summary>
             <param name="user"></param>
+        </member>
+        <member name="M:PowerLmsServer.Managers.AccountManager.SetChange(System.Guid)">
+            <summary>
+            
+            </summary>
+            <param name="userId"></param>
+            <returns></returns>
         </member>
         <member name="M:PowerLmsServer.Managers.AccountManager.LoadAccountFromEvidence(System.Collections.Generic.IDictionary{System.String,System.String})">
             <summary>
@@ -584,6 +584,13 @@
             <param name="merch"></param>
             <param name="dbContext"></param>
         </member>
+        <member name="M:PowerLmsServer.Managers.MerchantManager.GetMerchantFromId(System.Guid)">
+            <summary>
+            获取缓存的商户对象。
+            </summary>
+            <param name="id"></param>
+            <returns></returns>
+        </member>
         <member name="M:PowerLmsServer.Managers.MerchantManager.GetOrLoadMerchantFromId(System.Guid)">
             <summary>
             加载或获取缓存的商户对象。
@@ -597,6 +604,13 @@
             </summary>
             <param name="user"></param>
             <returns>对于不属于商户的账号返回null。</returns>
+        </member>
+        <member name="M:PowerLmsServer.Managers.MerchantManager.SetChange(System.Guid)">
+            <summary>
+            指出商户已经变化。
+            </summary>
+            <param name="merchId"></param>
+            <returns></returns>
         </member>
         <member name="M:PowerLmsServer.Managers.MerchantManager.GetMerchantId(System.Guid,System.Nullable{System.Guid}@)">
             <summary>
@@ -704,26 +718,6 @@
             <param name="cell"></param>
             <param name="val"></param>
         </member>
-        <member name="T:PowerLmsServer.Managers.MerchantInfo">
-            <summary>
-            商户信息。
-            </summary>
-        </member>
-        <member name="M:PowerLmsServer.Managers.MerchantInfo.#ctor">
-            <summary>
-            构造函数。
-            </summary>
-        </member>
-        <member name="P:PowerLmsServer.Managers.MerchantInfo.Merchant">
-            <summary>
-            商户对象。
-            </summary>
-        </member>
-        <member name="P:PowerLmsServer.Managers.MerchantInfo.Orgs">
-            <summary>
-            所有机构信息。
-            </summary>
-        </member>
         <member name="T:PowerLmsServer.Managers.OrganizationManager">
             <summary>
             组织机构管理器。
@@ -734,13 +728,25 @@
             构造函数。
             </summary>
         </member>
-        <member name="M:PowerLmsServer.Managers.OrganizationManager.LoadOrgsFromMerchId(System.Guid,PowerLmsServer.EfData.PowerLmsUserDbContext@)">
+        <member name="M:PowerLmsServer.Managers.OrganizationManager.LoadOrgsFromMerchantId(System.Guid,PowerLmsServer.EfData.PowerLmsUserDbContext@)">
             <summary>
             加载指定商户下所有机构对象。
             </summary>
             <param name="merchId"></param>
             <param name="dbContext">使用的数据库上下文，null则自动从池中取一个新上下文,调用者负责处置对象。</param>
             <returns></returns>
+        </member>
+        <member name="M:PowerLmsServer.Managers.OrganizationManager.OrgsLoaded(System.Collections.Concurrent.ConcurrentDictionary{System.Guid,PowerLms.Data.PlOrganization})">
+            <summary>
+            加载后调用。
+            </summary>
+            <param name="orgs"></param>
+        </member>
+        <member name="M:PowerLmsServer.Managers.OrganizationManager.EnParent(System.Collections.Generic.IEnumerable{PowerLms.Data.PlOrganization})">
+            <summary>
+            确保parent属性被读入。
+            </summary>
+            <param name="orgs"></param>
         </member>
         <member name="M:PowerLmsServer.Managers.OrganizationManager.GetOrLoadOrgsFromMerchId(System.Guid)">
             <summary>
@@ -903,48 +909,6 @@
             <summary>
             
             </summary>
-        </member>
-        <member name="T:PowerLmsServer.OwCacheHelper">
-            <summary>
-            
-            </summary>
-        </member>
-        <member name="F:PowerLmsServer.OwCacheHelper.IdKeyLength">
-            <summary>
-            Id在缓存键值中的长度。
-            </summary>
-        </member>
-        <member name="M:PowerLmsServer.OwCacheHelper.GetIdFromCacheKey(System.String,System.String)">
-            <summary>
-            根据缓存的键值和后缀获取其Id。
-            </summary>
-            <param name="key"></param>
-            <param name="suffix">为null则不会验证后缀是否合法。</param>
-            <returns>获取id,如果不合法的后缀或格式则返回null。</returns>
-        </member>
-        <member name="M:PowerLmsServer.OwCacheHelper.GetIdFromCacheKey``1(System.String,System.String)">
-            <summary>
-            根据缓存的键值和后缀获取其Id。
-            </summary>
-            <param name="key"></param>
-            <param name="suffix">为null则不会验证后缀是否合法。</param>
-            <returns>获取id,如果不合法的后缀或格式则返回null。</returns>
-        </member>
-        <member name="M:PowerLmsServer.OwCacheHelper.GetCacheKeyFromId(System.Guid,System.String)">
-            <summary>
-            根据指定Id和前缀获取其用于缓存的键值。
-            </summary>
-            <param name="id"></param>
-            <param name="suffix">后缀</param>
-            <returns></returns>
-        </member>
-        <member name="M:PowerLmsServer.OwCacheHelper.GetCacheKeyFromId``1(System.Guid,System.String)">
-            <summary>
-            根据指定Id和前缀获取其用于缓存的键值。
-            </summary>
-            <param name="id"></param>
-            <param name="suffix"></param>
-            <returns></returns>
         </member>
     </members>
 </doc>

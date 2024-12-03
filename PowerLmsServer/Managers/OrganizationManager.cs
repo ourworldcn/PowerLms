@@ -9,6 +9,7 @@ using PowerLmsServer.EfData;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -16,30 +17,6 @@ using System.Threading.Tasks;
 
 namespace PowerLmsServer.Managers
 {
-    /// <summary>
-    /// 商户信息。
-    /// </summary>
-    public class MerchantInfo
-    {
-        /// <summary>
-        /// 构造函数。
-        /// </summary>
-        public MerchantInfo()
-        {
-
-        }
-
-        /// <summary>
-        /// 商户对象。
-        /// </summary>
-        public PlMerchant Merchant { get; set; }
-
-        /// <summary>
-        /// 所有机构信息。
-        /// </summary>
-        public ConcurrentDictionary<Guid, PlOrganization> Orgs { get; set; } = new ConcurrentDictionary<Guid, PlOrganization>();
-    }
-
     /// <summary>
     /// 组织机构管理器。
     /// </summary>
@@ -68,19 +45,42 @@ namespace PowerLmsServer.Managers
         /// <param name="merchId"></param>
         /// <param name="dbContext">使用的数据库上下文，null则自动从池中取一个新上下文,调用者负责处置对象。</param>
         /// <returns></returns>
-        public ConcurrentDictionary<Guid, PlOrganization> LoadOrgsFromMerchId(Guid merchId, ref PowerLmsUserDbContext dbContext)
+        public ConcurrentDictionary<Guid, PlOrganization> LoadOrgsFromMerchantId(Guid merchId, ref PowerLmsUserDbContext dbContext)
         {
             dbContext ??= _DbContextFactory.CreateDbContext();
             IDictionary<Guid, PlOrganization> tmp;
+            ConcurrentDictionary<Guid, PlOrganization> result;
             lock (dbContext)
             {
                 var orgs = dbContext.PlOrganizations.Where(c => c.MerchantId == merchId).Include(c => c.Parent).Include(c => c.Children).AsEnumerable();
                 tmp = orgs.SelectMany(c => OwHelper.GetAllSubItemsOfTree(new PlOrganization[] { c }, d => d.Children))
                     .ToDictionary(c => c.Id, c => c);
+                result = new ConcurrentDictionary<Guid, PlOrganization>(tmp);
+                OrgsLoaded(result);
             }
-            var result = new ConcurrentDictionary<Guid, PlOrganization>(tmp);
             return result;
         }
+
+        /// <summary>
+        /// 加载后调用。
+        /// </summary>
+        /// <param name="orgs"></param>
+        public void OrgsLoaded(ConcurrentDictionary<Guid, PlOrganization> orgs)
+        {
+            var merchId = orgs.Values.First(c => c.MerchantId is not null).MerchantId.Value;
+            var merch = _MerchantManager.GetOrLoadMerchantFromId(merchId);
+            EnParent(orgs.Values);
+        }
+
+        /// <summary>
+        /// 确保parent属性被读入。
+        /// </summary>
+        /// <param name="orgs"></param>
+        [MethodImpl(MethodImplOptions.NoOptimization)]
+        private static void EnParent(IEnumerable<PlOrganization> orgs) => orgs.ForEach(c =>
+        {
+            var tmp = c.Parent;
+        });
 
         /// <summary>
         /// 按指定商户Id获取或加载所有下属机构信息。
@@ -92,9 +92,9 @@ namespace PowerLmsServer.Managers
             var result = _Cache.GetOrCreate(OwCacheHelper.GetCacheKeyFromId(merchantId, ".Orgs"), c =>
             {
                 var merch = _MerchantManager.GetOrLoadMerchantFromId(OwCacheHelper.GetIdFromCacheKey(c.Key as string, ".Orgs").Value);
-                PowerLmsUserDbContext db = merch.DbContext;
+                var db = merch.DbContext;
                 c.AddExpirationToken(new CancellationChangeToken(merch.ExpirationTokenSource.Token));
-                return LoadOrgsFromMerchId(OwCacheHelper.GetIdFromCacheKey(c.Key as string, ".Orgs").Value, ref db);
+                return LoadOrgsFromMerchantId(OwCacheHelper.GetIdFromCacheKey(c.Key as string, ".Orgs").Value, ref db);
             });
             return result;
         }

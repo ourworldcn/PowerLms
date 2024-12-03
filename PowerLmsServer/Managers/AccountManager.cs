@@ -84,12 +84,12 @@ namespace PowerLmsServer.Managers
         {
             Account user;
             if (_Token2Key.TryGetValue(token, out var key))    //若找到token
-                user = GetOrLoadAccount(GetUserIdFromCacheKey(key));
+                user = GetOrLoadAccount(OwCacheHelper.GetIdFromCacheKey(key).Value);
             else
             {
                 user = LoadAccountFromToken(token);
                 if (user is null) goto lbErr;
-                if (_Token2Key.TryAdd(user.Token ??= Guid.NewGuid(), GetCacheKeyFromUserId(user.Id)))
+                if (_Token2Key.TryAdd(user.Token ??= Guid.NewGuid(), OwCacheHelper.GetCacheKeyFromId(user.Id)))
                 {
                     user.ExpirationTokenSource.Token.Register(c =>
                     {
@@ -130,34 +130,13 @@ namespace PowerLmsServer.Managers
         }
 
         /// <summary>
-        /// 获取用户对象的键。
+        /// 从缓存中获取用户对象。
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        public string GetCacheKeyFromUserId(Guid id)
+        public Account GetAccount(Guid id)
         {
-            return $"Account.{id}";
-        }
-
-        /// <summary>
-        /// 获取键值对应的用户Id。
-        /// </summary>
-        /// <param name="key"></param>
-        /// <returns></returns>
-        public Guid GetUserIdFromCacheKey(string key)
-        {
-            var ary = key.Split('.');
-            if (ary.Length != 2)
-            {
-                OwHelper.SetLastErrorAndMessage(400, "格式错误");
-                return Guid.Empty;
-            }
-            if (!Guid.TryParse(ary[1], out var id))
-            {
-                OwHelper.SetLastErrorAndMessage(400, "格式错误");
-                return Guid.Empty;
-            }
-            return id;
+            return _MemoryCache.Get<Account>(OwCacheHelper.GetCacheKeyFromId(id, $".{nameof(Account)}"));
         }
 
         /// <summary>
@@ -167,14 +146,16 @@ namespace PowerLmsServer.Managers
         /// <returns>返回用户对象，没有找到则返回null。</returns>
         public Account GetOrLoadAccount(Guid id)
         {
-            var result = _MemoryCache.GetOrCreate(GetCacheKeyFromUserId(id), entry =>
+            var result = _MemoryCache.GetOrCreate(OwCacheHelper.GetCacheKeyFromId(id, $".{nameof(Account)}"), entry =>
             {
-                var user = LoadAccountFromId(GetUserIdFromCacheKey(entry.Key as string));
+                var user = LoadAccountFromId(OwCacheHelper.GetIdFromCacheKey(entry.Key as string).Value);
                 entry.SetSlidingExpiration(TimeSpan.FromMinutes(15));
-                var ct = new CancellationTokenSource();
-                user.ExpirationTokenSource = ct;
-                entry.AddExpirationToken(new CancellationChangeToken(ct.Token));
-
+                entry.RegisterPostEvictionCallback((k, v, r, s) =>
+                {
+                    if ((s as Account)?.ExpirationTokenSource is CancellationTokenSource cts)
+                        if (!cts.IsCancellationRequested)
+                            cts.Cancel();
+                }, entry.Value);
                 return user;
             });
             return result;
@@ -186,7 +167,7 @@ namespace PowerLmsServer.Managers
         /// <param name="user"></param>
         public void SetAccount(Account user)
         {
-            var key = GetCacheKeyFromUserId(user.Id);
+            var key = OwCacheHelper.GetCacheKeyFromId(user.Id, $".{nameof(Account)}");
 
             var cts = user.ExpirationTokenSource;
             var ct = cts.Token;
@@ -195,6 +176,21 @@ namespace PowerLmsServer.Managers
                 .AddExpirationToken(new CancellationChangeToken(ct));
 
             _MemoryCache.Set(key, user, entryOptions);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="userId"></param>
+        /// <returns></returns>
+        public bool SetChange(Guid userId)
+        {
+            if (GetAccount(userId) is Account user)
+            {
+                user.ExpirationTokenSource?.Cancel();
+                return true;
+            }
+            else return false;
         }
 
         #region 加载用户对象及相关

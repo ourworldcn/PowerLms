@@ -31,9 +31,9 @@ namespace PowerLmsServer.Managers
             _DbContextFactory = dbContextFactory;
         }
 
-        MerchantManager _MerchantManager;
-        OrganizationManager _OrganizationManager;
-        IMemoryCache _Cache;
+        readonly MerchantManager _MerchantManager;
+        readonly OrganizationManager _OrganizationManager;
+        readonly IMemoryCache _Cache;
         readonly IDbContextFactory<PowerLmsUserDbContext> _DbContextFactory;
 
         /// <summary>
