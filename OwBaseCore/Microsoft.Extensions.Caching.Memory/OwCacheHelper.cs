@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Primitives;
 using System;
+using System.Linq;
 using System.Threading;
 
 namespace Microsoft.Extensions.Caching.Memory
@@ -102,6 +103,21 @@ namespace Microsoft.Extensions.Caching.Memory
         /// 该项的变化令牌。
         /// </summary>
         public IChangeToken ChangeToken { get; set; }
+
+        /// <summary>
+        /// 设置<see cref="ChangeToken"/>属性。
+        /// </summary>
+        /// <param name="cancellations"></param>
+        public void SetCancellations(params CancellationTokenSource[] cancellations)
+        {
+            if(cancellations.Length==1)
+            {
+                ChangeToken = new CancellationChangeToken(cancellations[0].Token);
+                return;
+            }
+            var changeToken = new CompositeChangeToken(cancellations.Select(c => new CancellationChangeToken(c.Token)).OfType<IChangeToken>().ToArray());
+            ChangeToken = changeToken;
+        }
     }
 }
 
