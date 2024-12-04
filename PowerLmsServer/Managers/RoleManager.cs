@@ -64,11 +64,17 @@ namespace PowerLmsServer.Managers
             var result = _Cache.GetOrCreate(OwCacheHelper.GetCacheKeyFromId(merchId, ".Roles"), entry =>
             {
                 var merch = _MerchantManager.GetOrLoadMerchantFromId(merchId);
-                entry.AddExpirationToken(new CancellationChangeToken(merch.ExpirationTokenSource.Token));
                 var db = merch.DbContext;
-                return LoadRolesFromMerchantId(merchId, ref db);
+                var r = new OwCacheItem<ConcurrentDictionary<Guid, PlRole>>
+                {
+                    Data = LoadRolesFromMerchantId(merchId, ref db),
+                    CancellationTokenSource = new CancellationTokenSource(),
+                };
+                r.SetCancellations(r.CancellationTokenSource, merch.ExpirationTokenSource);
+                entry.AddExpirationToken(r.ChangeToken);
+                return r;
             });
-            return result;
+            return result.Data;
         }
 
         /// <summary>

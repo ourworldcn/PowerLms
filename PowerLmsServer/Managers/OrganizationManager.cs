@@ -93,12 +93,32 @@ namespace PowerLmsServer.Managers
             {
                 var merch = _MerchantManager.GetOrLoadMerchantFromId(OwCacheHelper.GetIdFromCacheKey(c.Key as string, ".Orgs").Value);
                 var db = merch.DbContext;
-                c.AddExpirationToken(new CancellationChangeToken(merch.ExpirationTokenSource.Token));
-                return LoadOrgsFromMerchantId(OwCacheHelper.GetIdFromCacheKey(c.Key as string, ".Orgs").Value, ref db);
+                var r = new OwCacheItem<ConcurrentDictionary<Guid, PlOrganization>>
+                {
+                    Data = LoadOrgsFromMerchantId(OwCacheHelper.GetIdFromCacheKey(c.Key as string, ".Orgs").Value, ref db),
+                    CancellationTokenSource = new CancellationTokenSource(),
+                };
+                r.SetCancellations(r.CancellationTokenSource, merch.ExpirationTokenSource);
+                c.AddExpirationToken(r.ChangeToken);
+                return r;
             });
-            return result;
+            return result.Data;
         }
 
+        /// <summary>
+        /// 使指定商户下所有机构缓存失效。
+        /// </summary>
+        /// <param name="merchantId"></param>
+        /// <returns></returns>
+        public bool SetOrgsChange(Guid merchantId)
+        {
+            if (_Cache.Get(OwCacheHelper.GetCacheKeyFromId(merchantId, ".Orgs")) is OwCacheItem<ConcurrentDictionary<Guid, PlOrganization>> orgs)
+            {
+                orgs.CancellationTokenSource.Cancel();
+                return true;
+            }
+            return false;
+        }
         #endregion 机构缓存及相关
 
         /// <summary>

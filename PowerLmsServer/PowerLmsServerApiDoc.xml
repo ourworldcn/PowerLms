@@ -755,6 +755,13 @@
             <param name="merchantId"></param>
             <returns>没有找到指定商户则返回空字典。</returns>
         </member>
+        <member name="M:PowerLmsServer.Managers.OrganizationManager.SetOrgsChange(System.Guid)">
+            <summary>
+            使指定商户下所有机构缓存失效。
+            </summary>
+            <param name="merchantId"></param>
+            <returns></returns>
+        </member>
         <member name="M:PowerLmsServer.Managers.OrganizationManager.GetCurrentOrgsFromUser(PowerLms.Data.Account)">
             <summary>
             获取当前的登录机构及所有子机构。

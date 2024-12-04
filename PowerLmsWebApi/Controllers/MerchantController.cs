@@ -56,7 +56,7 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetAllMerchantReturnDto> GetAllMerchant([FromQuery]PagingParamsDtoBase model,
+        public ActionResult<GetAllMerchantReturnDto> GetAllMerchant([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
@@ -188,84 +188,32 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.SaveChanges();
             return result;
         }
-    }
 
-    /// <summary>
-    /// 标记删除商户功能的参数封装类。
-    /// </summary>
-    public class RemoveMerchantParamsDto : RemoveParamsDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 标记删除商户功能的返回值封装类。
-    /// </summary>
-    public class RemoveMerchantReturnDto : RemoveReturnDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 初始化商户的功能参数封装类。
-    /// </summary>
-    public class InitializeMerchantParamsDto : TokenDtoBase
-    {
         /// <summary>
-        /// 初始化商户的Id。
+        /// 获取指定商户/机构下（含自身和子机构）的所有用户对象。
         /// </summary>
-        public Guid Id { get; set; }
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">至少一个Id不是商户也非机构Id -或- 存在重复Id。</response>  
+        [HttpGet]
+        public ActionResult<GetUsersByOrgIdsReturnDto> GetUsersByOrgIds([FromQuery] GetUsersByOrgIdsParamsDto model)
+        {
+            var result = new GetUsersByOrgIdsReturnDto();
+            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var merchIds = _DbContext.Merchants.Where(c => model.OrgOrMerchantIds.Contains(c.Id)).Select(c => c.Id).Distinct().ToArray(); //选出商户Id
+            var orgIds = _DbContext.PlOrganizations.Where(c => model.OrgOrMerchantIds.Contains(c.Id)).Select(c => c.Id).Distinct().ToArray(); //选出机构Id
+            if (merchIds.Length + orgIds.Length != model.OrgOrMerchantIds.Count) return BadRequest("至少一个Id不是商户也非机构Id -或- 存在重复Id。");
+            var addOrgIds = _DbContext.PlOrganizations.Where(c => merchIds.Contains(c.MerchantId.Value)).Distinct().Select(c => c.Id).ToList(); //商户直属的机构Id
+            addOrgIds.AddRange(orgIds); //合成所有机构Id
+            var orgs = _DbContext.PlOrganizations.Where(c => addOrgIds.Contains(c.Id)).ToArray();
+            var allOrgIds = OwHelper.GetAllSubItemsOfTree(orgs, c => c.Children).Select(c => c.Id).Concat(merchIds).Distinct().ToArray();    //所有机构Id
+            var userIds = _DbContext.AccountPlOrganizations.Where(c => allOrgIds.Contains(c.OrgId)).Select(c => c.UserId).Distinct().ToArray(); //所有用户Id
+            var users = _DbContext.Accounts.Where(c => userIds.Contains(c.Id));
+            result.Result.AddRange(users);
+            return result;
+        }
     }
 
-    /// <summary>
-    /// 初始化商户的功能返回值封装类。
-    /// </summary>
-    public class InitializeMerchantReturnDto : ReturnDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 获取所有商户功能的返回值封装类。
-    /// </summary>
-    public class GetAllMerchantReturnDto : PagingReturnDtoBase<PlMerchant>
-    {
-    }
-
-    /// <summary>
-    /// 增加新商户功能参数封装类。
-    /// </summary>
-    public class AddMerchantParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 新商户信息。其中Id可以是任何值，返回时会指定新值。
-        /// </summary>
-        public PlMerchant Merchant { get; set; }
-    }
-
-    /// <summary>
-    /// 增加新商户功能返回值封装类。
-    /// </summary>
-    public class AddMerchantReturnDto : ReturnDtoBase
-    {
-        /// <summary>
-        /// 如果成功添加，这里返回新商户的Id。
-        /// </summary>
-        public Guid Id { get; set; }
-    }
-
-    /// <summary>
-    /// 修改商户信息功能参数封装类。
-    /// </summary>
-    public class ModifyMerchantParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 商户数据。
-        /// </summary>
-        public PlMerchant Merchant { get; set; }
-    }
-
-    /// <summary>
-    /// 修改商户信息功能返回值封装类。
-    /// </summary>
-    public class ModifyMerchantReturnDto : ReturnDtoBase
-    {
-    }
 }
