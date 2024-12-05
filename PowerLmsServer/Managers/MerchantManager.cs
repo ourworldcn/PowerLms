@@ -38,7 +38,7 @@ namespace PowerLmsServer.Managers
         /// <param name="merchId"></param>
         /// <param name="dbContext">传递null，则用池自动获取一个数据库上下文。</param>
         /// <returns>没有找到则返回null。</returns>
-        public PlMerchant LoadMerchantFromId(Guid merchId, ref PowerLmsUserDbContext dbContext)
+        public PlMerchant LoadMerchantById(Guid merchId, ref PowerLmsUserDbContext dbContext)
         {
             dbContext ??= _DbContextFactory.CreateDbContext();
             PlMerchant result;
@@ -65,7 +65,7 @@ namespace PowerLmsServer.Managers
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        public PlMerchant GetMerchantFromId(Guid id)
+        public PlMerchant GetMerchantById(Guid id)
         {
             var result = _Cache.Get<PlMerchant>(OwCacheHelper.GetCacheKeyFromId<PlMerchant>(id));
             return result;
@@ -76,12 +76,12 @@ namespace PowerLmsServer.Managers
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        public PlMerchant GetOrLoadMerchantFromId(Guid id)
+        public PlMerchant GetOrLoadMerchantById(Guid id)
         {
             var result = _Cache.GetOrCreate(OwCacheHelper.GetCacheKeyFromId<PlMerchant>(id), c =>
             {
                 PowerLmsUserDbContext db = null;
-                return LoadMerchantFromId(OwCacheHelper.GetIdFromCacheKey<PlMerchant>(c.Key as string).Value, ref db);
+                return LoadMerchantById(OwCacheHelper.GetIdFromCacheKey<PlMerchant>(c.Key as string).Value, ref db);
             });
             return result;
         }
@@ -91,7 +91,7 @@ namespace PowerLmsServer.Managers
         /// </summary>
         /// <param name="user"></param>
         /// <returns>对于不属于商户的账号返回null。</returns>
-        public PlMerchant GetOrLoadMerchantFromUser(Account user)
+        public PlMerchant GetOrLoadMerchantByUser(Account user)
         {
             var merchId = user.MerchantId;
             if (merchId is null)
@@ -99,7 +99,7 @@ namespace PowerLmsServer.Managers
                 if (!GetMerchantId(user.Id, out merchId)) return null;
                 user.MerchantId = merchId;
             }
-            return GetOrLoadMerchantFromId(merchId.Value);
+            return GetOrLoadMerchantById(merchId.Value);
         }
 
         /// <summary>
@@ -109,7 +109,7 @@ namespace PowerLmsServer.Managers
         /// <returns></returns>
         public bool SetChange(Guid merchId)
         {
-            if (GetMerchantFromId(merchId) is PlMerchant merch)
+            if (GetMerchantById(merchId) is PlMerchant merch)
             {
                 merch.ExpirationTokenSource?.Cancel();
                 return true;
@@ -143,16 +143,16 @@ namespace PowerLmsServer.Managers
                 MerchantId = merch.Id;
                 return true;
             }
-            return GetMerchantIdFromOrgId(org.Id, out MerchantId);
+            return GetMerchantIdByOrgId(org.Id, out MerchantId);
         }
 
         /// <summary>
-        /// 取指定组织机构Id所属的商户Id。
+        /// 从数据库中取指定组织机构Id所属的商户Id。
         /// </summary>
         /// <param name="orgId">机构Id。</param>
         /// <param name="MerchantId"></param>
         /// <returns>true则找到了商户Id，false没有找到。</returns>
-        public bool GetMerchantIdFromOrgId(Guid orgId, out Guid? MerchantId)
+        public bool GetMerchantIdByOrgId(Guid orgId, out Guid? MerchantId)
         {
             var org = _DbContext.PlOrganizations.Find(orgId);   //找到组织机构对象
             if (org == null)

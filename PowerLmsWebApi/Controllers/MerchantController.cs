@@ -201,6 +201,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetUsersByOrgIdsReturnDto> GetUsersByOrgIds([FromQuery] GetUsersByOrgIdsParamsDto model)
         {
             var result = new GetUsersByOrgIdsReturnDto();
+            
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var merchIds = _DbContext.Merchants.Where(c => model.OrgOrMerchantIds.Contains(c.Id)).Select(c => c.Id).Distinct().ToArray(); //选出商户Id
             var orgIds = _DbContext.PlOrganizations.Where(c => model.OrgOrMerchantIds.Contains(c.Id)).Select(c => c.Id).Distinct().ToArray(); //选出机构Id
@@ -214,6 +215,8 @@ namespace PowerLmsWebApi.Controllers
             result.Result.AddRange(users);
             return result;
         }
+
+
     }
 
 }

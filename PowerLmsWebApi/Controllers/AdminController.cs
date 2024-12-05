@@ -1001,7 +1001,7 @@ namespace PowerLmsWebApi.Controllers
 
             if (!_MerchantManager.GetMerchantId(context.User.Id, out var merchId))
                 return result;
-            var org = _OrganizationManager.GetOrLoadOrgsFromMerchId(merchId.Value)[context.User.OrgId.Value];
+            var org = _OrganizationManager.GetOrLoadOrgsByMerchId(merchId.Value)[context.User.OrgId.Value];
             var curr = _DbContext.DD_PlCurrencys.Find(org.BaseCurrencyId.Value); if (curr is null) return result;
 
             coll = coll.Where(c => c.SCurrency == curr.Code);

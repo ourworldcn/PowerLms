@@ -96,7 +96,7 @@ namespace PowerLmsWebApi.Controllers
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             if (_AccountManager.IsMerchantAdmin(context.User) && _MerchantManager.GetMerchantId(context.User.Id, out var merchantId))
             {
-                var orgs = _OrganizationManager.GetOrLoadOrgsFromMerchId(merchantId.Value);
+                var orgs = _OrganizationManager.GetOrLoadOrgsByMerchId(merchantId.Value);
                 var tmp = orgs.Keys;    //所有机构Id
                 if (merchantId.HasValue) tmp = tmp.Append(merchantId.Value).ToArray();
                 var userIds = _DbContext.AccountPlOrganizations.Where(c => tmp.Contains(c.OrgId)).Select(c => c.UserId).Distinct().ToArray();
@@ -233,7 +233,7 @@ namespace PowerLmsWebApi.Controllers
                         else //商管
                         {
                             if (!_MerchantManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("商管数据结构损坏——无法找到其所属商户");
-                            if (!orgIds.All(c => _MerchantManager.GetMerchantIdFromOrgId(c, out var mId) && mId == merchId)) return BadRequest("商户管理员仅可以设置商户和其下属的机构id。");
+                            if (!orgIds.All(c => _MerchantManager.GetMerchantIdByOrgId(c, out var mId) && mId == merchId)) return BadRequest("商户管理员仅可以设置商户和其下属的机构id。");
                         }
                 }
             }

@@ -231,7 +231,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetMerchantIdReturnDto();
-            if (!_MerchantManager.GetMerchantIdFromOrgId(orgId, out var merchId))
+            if (!_MerchantManager.GetMerchantIdByOrgId(orgId, out var merchId))
                 return BadRequest();
             result.Result = merchId;
             return result;

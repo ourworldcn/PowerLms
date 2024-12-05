@@ -45,7 +45,7 @@ namespace PowerLmsServer.Managers
         /// <param name="merchId"></param>
         /// <param name="dbContext">使用的数据库上下文，null则自动从池中取一个新上下文,调用者负责处置对象。</param>
         /// <returns></returns>
-        public ConcurrentDictionary<Guid, PlOrganization> LoadOrgsFromMerchantId(Guid merchId, ref PowerLmsUserDbContext dbContext)
+        public ConcurrentDictionary<Guid, PlOrganization> LoadOrgsByMerchantId(Guid merchId, ref PowerLmsUserDbContext dbContext)
         {
             dbContext ??= _DbContextFactory.CreateDbContext();
             IDictionary<Guid, PlOrganization> tmp;
@@ -68,7 +68,7 @@ namespace PowerLmsServer.Managers
         public void OrgsLoaded(ConcurrentDictionary<Guid, PlOrganization> orgs)
         {
             var merchId = orgs.Values.First(c => c.MerchantId is not null).MerchantId.Value;
-            var merch = _MerchantManager.GetOrLoadMerchantFromId(merchId);
+            var merch = _MerchantManager.GetOrLoadMerchantById(merchId);
             EnParent(orgs.Values);
         }
 
@@ -87,18 +87,17 @@ namespace PowerLmsServer.Managers
         /// </summary>
         /// <param name="merchantId"></param>
         /// <returns>没有找到指定商户则返回空字典。</returns>
-        public ConcurrentDictionary<Guid, PlOrganization> GetOrLoadOrgsFromMerchId(Guid merchantId)
+        public ConcurrentDictionary<Guid, PlOrganization> GetOrLoadOrgsByMerchId(Guid merchantId)
         {
             var result = _Cache.GetOrCreate(OwCacheHelper.GetCacheKeyFromId(merchantId, ".Orgs"), c =>
             {
-                var merch = _MerchantManager.GetOrLoadMerchantFromId(OwCacheHelper.GetIdFromCacheKey(c.Key as string, ".Orgs").Value);
+                var merch = _MerchantManager.GetOrLoadMerchantById(OwCacheHelper.GetIdFromCacheKey(c.Key as string, ".Orgs").Value);
                 var db = merch.DbContext;
                 var r = new OwCacheItem<ConcurrentDictionary<Guid, PlOrganization>>
                 {
-                    Data = LoadOrgsFromMerchantId(OwCacheHelper.GetIdFromCacheKey(c.Key as string, ".Orgs").Value, ref db),
-                    CancellationTokenSource = new CancellationTokenSource(),
+                    Data = LoadOrgsByMerchantId(OwCacheHelper.GetIdFromCacheKey(c.Key as string, ".Orgs").Value, ref db),
                 };
-                r.SetCancellations(r.CancellationTokenSource, merch.ExpirationTokenSource);
+                r.SetCancellations(new CancellationTokenSource(), merch.ExpirationTokenSource);
                 c.AddExpirationToken(r.ChangeToken);
                 return r;
             });
@@ -126,15 +125,31 @@ namespace PowerLmsServer.Managers
         /// </summary>
         /// <param name="user"></param>
         /// <returns>如果没有指定所属当前机构则返回空字典。</returns>
-        public ConcurrentDictionary<Guid, PlOrganization> GetCurrentOrgsFromUser(Account user)
+        public ConcurrentDictionary<Guid, PlOrganization> GetCurrentOrgsByUser(Account user)
         {
             if (user.OrgId is null) return new ConcurrentDictionary<Guid, PlOrganization>();
-            if (_MerchantManager.GetOrLoadMerchantFromUser(user) is not PlMerchant merchant) return new ConcurrentDictionary<Guid, PlOrganization>();
-            var orgs = GetOrLoadOrgsFromMerchId(merchant.Id);   //所有机构
+            if (_MerchantManager.GetOrLoadMerchantByUser(user) is not PlMerchant merchant) return new ConcurrentDictionary<Guid, PlOrganization>();
+            var orgs = GetOrLoadOrgsByMerchId(merchant.Id);   //所有机构
 
             var currentOrg = orgs[user.OrgId.Value];
             var result = OwHelper.GetAllSubItemsOfTree(currentOrg, c => c.Children).ToDictionary(c => c.Id);
             return new ConcurrentDictionary<Guid, PlOrganization>(result);
+        }
+
+        /// <summary>
+        /// 获取用户当前登录到的公司。
+        /// </summary>
+        /// <param name="user"></param>
+        /// <returns>返回登录的公司，该对象不可更改。</returns>
+        public PlOrganization GetCurrentCompanyByUser(Account user)
+        {
+            if (user.OrgId is null) return null;
+            if (_MerchantManager.GetOrLoadMerchantByUser(user) is not PlMerchant merch) return null;
+            if (GetOrLoadOrgsByMerchId(merch.Id) is not ConcurrentDictionary<Guid, PlOrganization> orgs) return null;
+            if (!orgs.TryGetValue(user.OrgId.Value, out var org)) return null;
+            PlOrganization tmp;
+            for (tmp = org; tmp is not null && tmp.Otc != 2; tmp = tmp.Parent) ;
+            return tmp;
         }
     }
 

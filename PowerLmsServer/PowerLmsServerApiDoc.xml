@@ -569,7 +569,7 @@
             构造函数。
             </summary>
         </member>
-        <member name="M:PowerLmsServer.Managers.MerchantManager.LoadMerchantFromId(System.Guid,PowerLmsServer.EfData.PowerLmsUserDbContext@)">
+        <member name="M:PowerLmsServer.Managers.MerchantManager.LoadMerchantById(System.Guid,PowerLmsServer.EfData.PowerLmsUserDbContext@)">
             <summary>
             根据指定Id加载商户对象。
             </summary>
@@ -584,21 +584,21 @@
             <param name="merch"></param>
             <param name="dbContext"></param>
         </member>
-        <member name="M:PowerLmsServer.Managers.MerchantManager.GetMerchantFromId(System.Guid)">
+        <member name="M:PowerLmsServer.Managers.MerchantManager.GetMerchantById(System.Guid)">
             <summary>
             获取缓存的商户对象。
             </summary>
             <param name="id"></param>
             <returns></returns>
         </member>
-        <member name="M:PowerLmsServer.Managers.MerchantManager.GetOrLoadMerchantFromId(System.Guid)">
+        <member name="M:PowerLmsServer.Managers.MerchantManager.GetOrLoadMerchantById(System.Guid)">
             <summary>
             加载或获取缓存的商户对象。
             </summary>
             <param name="id"></param>
             <returns></returns>
         </member>
-        <member name="M:PowerLmsServer.Managers.MerchantManager.GetOrLoadMerchantFromUser(PowerLms.Data.Account)">
+        <member name="M:PowerLmsServer.Managers.MerchantManager.GetOrLoadMerchantByUser(PowerLms.Data.Account)">
             <summary>
             从指定的用户对象获取其商户信息。
             </summary>
@@ -620,9 +620,9 @@
             <param name="MerchantId"></param>
             <returns>true指定账户所属商户Id,如果不属于任何商户则返回null。false 没有找到指定的用户Id。</returns>
         </member>
-        <member name="M:PowerLmsServer.Managers.MerchantManager.GetMerchantIdFromOrgId(System.Guid,System.Nullable{System.Guid}@)">
+        <member name="M:PowerLmsServer.Managers.MerchantManager.GetMerchantIdByOrgId(System.Guid,System.Nullable{System.Guid}@)">
             <summary>
-            取指定组织机构Id所属的商户Id。
+            从数据库中取指定组织机构Id所属的商户Id。
             </summary>
             <param name="orgId">机构Id。</param>
             <param name="MerchantId"></param>
@@ -728,7 +728,7 @@
             构造函数。
             </summary>
         </member>
-        <member name="M:PowerLmsServer.Managers.OrganizationManager.LoadOrgsFromMerchantId(System.Guid,PowerLmsServer.EfData.PowerLmsUserDbContext@)">
+        <member name="M:PowerLmsServer.Managers.OrganizationManager.LoadOrgsByMerchantId(System.Guid,PowerLmsServer.EfData.PowerLmsUserDbContext@)">
             <summary>
             加载指定商户下所有机构对象。
             </summary>
@@ -748,7 +748,7 @@
             </summary>
             <param name="orgs"></param>
         </member>
-        <member name="M:PowerLmsServer.Managers.OrganizationManager.GetOrLoadOrgsFromMerchId(System.Guid)">
+        <member name="M:PowerLmsServer.Managers.OrganizationManager.GetOrLoadOrgsByMerchId(System.Guid)">
             <summary>
             按指定商户Id获取或加载所有下属机构信息。
             </summary>
@@ -762,12 +762,19 @@
             <param name="merchantId"></param>
             <returns></returns>
         </member>
-        <member name="M:PowerLmsServer.Managers.OrganizationManager.GetCurrentOrgsFromUser(PowerLms.Data.Account)">
+        <member name="M:PowerLmsServer.Managers.OrganizationManager.GetCurrentOrgsByUser(PowerLms.Data.Account)">
             <summary>
             获取当前的登录机构及所有子机构。
             </summary>
             <param name="user"></param>
             <returns>如果没有指定所属当前机构则返回空字典。</returns>
+        </member>
+        <member name="M:PowerLmsServer.Managers.OrganizationManager.GetCurrentCompanyByUser(PowerLms.Data.Account)">
+            <summary>
+            获取用户当前登录到的公司。
+            </summary>
+            <param name="user"></param>
+            <returns>返回登录的公司，该对象不可更改。</returns>
         </member>
         <member name="T:PowerLmsServer.Managers.OrganizationManagerExtensions">
             <summary>
@@ -882,29 +889,36 @@
             构造函数。
             </summary>
         </member>
-        <member name="M:PowerLmsServer.Managers.RoleManager.LoadRolesFromMerchantId(System.Guid,PowerLmsServer.EfData.PowerLmsUserDbContext@)">
+        <member name="M:PowerLmsServer.Managers.RoleManager.LoadRolesByMerchantId(System.Guid,PowerLmsServer.EfData.PowerLmsUserDbContext@)">
             <summary>
-            
+            从数据库调入指定商户下的所有角色。
             </summary>
             <param name="merchId"></param>
             <param name="dbContext"></param>
             <returns></returns>
         </member>
-        <member name="M:PowerLmsServer.Managers.RoleManager.GetOrLoadRolesFromMerchantId(System.Guid)">
+        <member name="M:PowerLmsServer.Managers.RoleManager.GetOrLoadRolesByMerchantId(System.Guid)">
             <summary>
-            获取商户下所有角色的字典。
+            获取或加载商户下所有角色的字典。
             </summary>
             <param name="merchId"></param>
             <returns></returns>
         </member>
-        <member name="M:PowerLmsServer.Managers.RoleManager.LoadCurrentRolesFromUser(PowerLms.Data.Account,PowerLmsServer.EfData.PowerLmsUserDbContext@)">
+        <member name="M:PowerLmsServer.Managers.RoleManager.SetRolesChange(System.Guid)">
+            <summary>
+            使指定商户下所有角色缓存失效。
+            </summary>
+            <param name="merchantId"></param>
+            <returns></returns>
+        </member>
+        <member name="M:PowerLmsServer.Managers.RoleManager.LoadCurrentRolesByUser(PowerLms.Data.Account,PowerLmsServer.EfData.PowerLmsUserDbContext@)">
             <summary>
             按指定用户当前的登录机构加载其所有角色。
             </summary>
             <param name="user"></param>
             <param name="db"></param>
         </member>
-        <member name="M:PowerLmsServer.Managers.RoleManager.GetOrLoadCurrentRolesFromUser(PowerLms.Data.Account)">
+        <member name="M:PowerLmsServer.Managers.RoleManager.GetOrLoadCurrentRolesByUser(PowerLms.Data.Account)">
             <summary>
             获取用户当前角色。
             </summary>

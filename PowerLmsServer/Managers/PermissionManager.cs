@@ -101,7 +101,7 @@ namespace PowerLmsServer.Managers
         /// <returns></returns>
         public ConcurrentDictionary<string, PlPermission> LoadCurrentPermissionsFromUser(Account user, ref PowerLmsUserDbContext db)
         {
-            var roles = _RoleManager.GetOrLoadCurrentRolesFromUser(user);
+            var roles = _RoleManager.GetOrLoadCurrentRolesByUser(user);
             db ??= _DbContextFactory.CreateDbContext();
             var ids = db.PlRolePermissions.Where(c => roles.Keys.Contains(c.RoleId)).Select(c => c.PermissionId).Distinct().ToArray();
 
