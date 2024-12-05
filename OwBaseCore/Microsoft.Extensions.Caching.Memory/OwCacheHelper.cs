@@ -105,17 +105,25 @@ namespace Microsoft.Extensions.Caching.Memory
         public IChangeToken ChangeToken { get; set; }
 
         /// <summary>
+        /// 记录其它信息
+        /// </summary>
+        public object Tag { get; set; }
+
+        /// <summary>
         /// 设置<see cref="ChangeToken"/>属性。
         /// </summary>
+        /// <param name="cancellation">设置<see cref="CancellationTokenSource"/>属性。</param>
         /// <param name="cancellations"></param>
-        public void SetCancellations(params CancellationTokenSource[] cancellations)
+        public void SetCancellations(CancellationTokenSource cancellation, params CancellationTokenSource[] cancellations)
         {
-            if(cancellations.Length==1)
+            CancellationTokenSource = cancellation;
+            if (cancellations.Length == 0)
             {
-                ChangeToken = new CancellationChangeToken(cancellations[0].Token);
+                ChangeToken = new CancellationChangeToken(CancellationTokenSource.Token);
                 return;
             }
-            var changeToken = new CompositeChangeToken(cancellations.Select(c => new CancellationChangeToken(c.Token)).OfType<IChangeToken>().ToArray());
+            var changeToken = new CompositeChangeToken(cancellations.Select(c => new CancellationChangeToken(c.Token))
+                .Prepend(new CancellationChangeToken(CancellationTokenSource.Token)).OfType<IChangeToken>().ToArray());
             ChangeToken = changeToken;
         }
     }
