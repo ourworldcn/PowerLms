@@ -95,6 +95,11 @@ namespace Microsoft.Extensions.Caching.Memory
         public T Data { get; set; }
 
         /// <summary>
+        /// 记录其它信息
+        /// </summary>
+        public object Tag { get; set; }
+
+        /// <summary>
         /// 使该项被逐出的取消对象。
         /// </summary>
         public CancellationTokenSource CancellationTokenSource { get; set; }
@@ -103,11 +108,6 @@ namespace Microsoft.Extensions.Caching.Memory
         /// 该项的变化令牌。
         /// </summary>
         public IChangeToken ChangeToken { get; set; }
-
-        /// <summary>
-        /// 记录其它信息
-        /// </summary>
-        public object Tag { get; set; }
 
         /// <summary>
         /// 设置<see cref="ChangeToken"/>属性。
@@ -126,6 +126,29 @@ namespace Microsoft.Extensions.Caching.Memory
                 .Prepend(new CancellationChangeToken(CancellationTokenSource.Token)).OfType<IChangeToken>().ToArray());
             ChangeToken = changeToken;
         }
+
+        /// <summary>
+        /// 设置<see cref="ChangeToken"/>属性。
+        /// </summary>
+        /// <param name="cancellation">设置<see cref="CancellationTokenSource"/>属性。</param>
+        /// <param name="changeToken"></param>
+        public void SetCancellations(CancellationTokenSource cancellation, params IChangeToken[] changeToken)
+        {
+            CancellationTokenSource = cancellation;
+            if (changeToken.Length == 0)
+            {
+                ChangeToken = new CancellationChangeToken(CancellationTokenSource.Token);
+                return;
+            }
+            var r = new CompositeChangeToken(changeToken.Prepend(new CancellationChangeToken(CancellationTokenSource.Token)).OfType<IChangeToken>().ToArray());
+            ChangeToken = r;
+        }
+
+    }
+
+    public class OwCacheItemBase<T>
+    {
+
     }
 }
 
