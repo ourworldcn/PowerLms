@@ -17,14 +17,14 @@
   <Class Name="PowerLmsServer.Managers.MerchantManager">
     <Position X="7.5" Y="0.5" Width="2.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAABAgACAAACAAAAYBAAQBAAAAAAAAQAAE=</HashCode>
+      <HashCode>AAAAAAAAAAAACMAACAAAAAAAAYBCAQAAAAAAAAAQAAA=</HashCode>
       <FileName>Managers\MerchantManager.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="PowerLmsServer.Managers.OrganizationManager">
     <Position X="10" Y="4.25" Width="2.25" />
     <TypeIdentifier>
-      <HashCode>AIAAACAAAAAAAAAAAAAAAAAAAIAAAQAEAAAAAAAEAAA=</HashCode>
+      <HashCode>AAABAAAAAAAAAIAkAAAAAAAACIAAAYAEAAAAAAAAAAA=</HashCode>
       <FileName>Managers\OrganizationManager.cs</FileName>
     </TypeIdentifier>
     <ShowAsAssociation>
@@ -41,7 +41,7 @@
   <Class Name="PowerLmsServer.Managers.RoleManager">
     <Position X="7.25" Y="4.25" Width="2" />
     <TypeIdentifier>
-      <HashCode>AAAAAAEAAAAAAAAAAAAAIAAAAIAAQQAEAABAAIAAAAA=</HashCode>
+      <HashCode>AAAAAAAAAQBAAAAAAAAAIAAAAMAAAQAUAAAAAAAgAAA=</HashCode>
       <FileName>Managers\RoleManager.cs</FileName>
     </TypeIdentifier>
     <ShowAsAssociation>
@@ -62,7 +62,7 @@
   <Class Name="PowerLmsServer.Managers.PermissionManager">
     <Position X="4" Y="3.75" Width="1.75" />
     <TypeIdentifier>
-      <HashCode>AAgIAAAgAAAAAACAAAAAAAAAAIBAAQAAAAEhAAAAAAA=</HashCode>
+      <HashCode>AAgIAAAAAAAAAACAAAAAAAAAAIBAAQAAAAEhAAAAAAA=</HashCode>
       <FileName>Managers\PermissionManager.cs</FileName>
     </TypeIdentifier>
     <ShowAsAssociation>

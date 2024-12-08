@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Primitives;
+using NPOI.HSSF.Record;
 using NPOI.SS.Formula.PTG;
 using Org.BouncyCastle.Asn1.X509.Qualified;
 using OW.DDD;
@@ -104,7 +105,7 @@ namespace PowerLmsServer.Managers
             var roles = _RoleManager.GetOrLoadCurrentRolesByUser(user);
             db ??= _DbContextFactory.CreateDbContext();
             var ids = db.PlRolePermissions.Where(c => roles.Keys.Contains(c.RoleId)).Select(c => c.PermissionId).Distinct().ToArray();
-
+            
             var allPerm = GetOrLoadPermission();
             var coll = allPerm.Where(c => ids.Contains(c.Key));
             return new ConcurrentDictionary<string, PlPermission>(coll);
@@ -129,7 +130,7 @@ namespace PowerLmsServer.Managers
         /// <summary>
         /// 指示权限已经发生变化。
         /// </summary>
-        public void SetChanges()
+        public void SetChange()
         {
 
         }

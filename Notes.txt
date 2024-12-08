@@ -88,4 +88,7 @@ DocBill.ClearAmount DocBill.Amount是否回写✓
 
 241130
 确定权限规则：角色属于公司。✓
-增加接口。按机构id,获取其机构和下属机构的所有员工
+增加接口。按机构id,获取其机构和下属机构的所有员工✓
+
+241208
+GetCurrentOrgExchangeRate

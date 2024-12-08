@@ -874,7 +874,7 @@
             <param name="user"></param>
             <returns></returns>
         </member>
-        <member name="M:PowerLmsServer.Managers.PermissionManager.SetChanges">
+        <member name="M:PowerLmsServer.Managers.PermissionManager.SetChange">
             <summary>
             指示权限已经发生变化。
             </summary>
