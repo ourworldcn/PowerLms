@@ -90,6 +90,7 @@ namespace PowerLms.Data
         /// 本位币汇率,默认从汇率表调取,机构本位币
         /// </summary>
         [Comment("本位币汇率,默认从汇率表调取,机构本位币")]
+        [Precision(18, 4)]
         public decimal ExchangeRate { get; set; }
 
         /// <summary>
