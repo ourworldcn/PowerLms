@@ -96,7 +96,7 @@ namespace PowerLmsWebApi.Controllers
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             if (_AccountManager.IsMerchantAdmin(context.User) && _MerchantManager.GetMerchantId(context.User.Id, out var merchantId))
             {
-                var orgs = _OrganizationManager.GetOrLoadOrgsByMerchId(merchantId.Value);
+                var orgs = _OrganizationManager.GetOrLoadOrgsByMerchantId(merchantId.Value);
                 var tmp = orgs.Keys;    //所有机构Id
                 if (merchantId.HasValue) tmp = tmp.Append(merchantId.Value).ToArray();
                 var userIds = _DbContext.AccountPlOrganizations.Where(c => tmp.Contains(c.OrgId)).Select(c => c.UserId).Distinct().ToArray();

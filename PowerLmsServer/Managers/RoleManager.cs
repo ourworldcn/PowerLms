@@ -3,6 +3,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Primitives;
 using NPOI.SS.Formula.Functions;
+using NPOI.Util;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using System;
@@ -51,7 +52,7 @@ namespace PowerLmsServer.Managers
         /// <returns></returns>
         public ConcurrentDictionary<Guid, PlRole> LoadRolesByMerchantId(Guid merchId, ref PowerLmsUserDbContext dbContext)
         {
-            var dic = _OrganizationManager.GetOrLoadOrgsByMerchId(merchId);
+            var dic = _OrganizationManager.GetOrLoadOrgsByMerchantId(merchId);
             var orgIds = dic.Keys;
             dbContext ??= _DbContextFactory.CreateDbContext();
             lock (dbContext)
@@ -106,27 +107,18 @@ namespace PowerLmsServer.Managers
         public ConcurrentDictionary<Guid, PlRole> LoadCurrentRolesByUser(Account user, ref PowerLmsUserDbContext db)
         {
             //var key = OwCacheHelper.GetCacheKeyFromId(user.Id, ".CurrentOrgs");
+
             var merchant = _MerchantManager.GetOrLoadMerchantByUser(user);
-            var orgs = _OrganizationManager.GetCurrentOrgsByUser(user);   //用户所处所有机构集合
-
-            db ??= _DbContextFactory.CreateDbContext();
-            var allRoles = GetOrLoadRolesByMerchantId(merchant.Id).Values;   //机构下所有角色
-
-            var roles = allRoles.Where(c => c.OrgId.HasValue && orgs.ContainsKey(c.OrgId.Value)).Select(c => c.Id).ToArray();    //可能的角色
-
-            Guid[] roleIds;
-            lock (db)
-                roleIds = db.PlAccountRoles.Where(c => c.UserId == user.Id && roles.Contains(c.RoleId)).Select(c => c.RoleId).Distinct().ToArray();    //真实的角色Id集合
-
-            var coll = GetOrLoadRolesByMerchantId(merchant.Id).Where(c => roleIds.Contains(c.Key));
-            return new ConcurrentDictionary<Guid, PlRole>(coll);
+            var orgs = _OrganizationManager.GetOrLoadCurrentOrgsByUser(user);   //用户所处所有机构集合
+            var allRoles = GetOrLoadRolesByMerchantId(merchant.Id).Values;   //商户下所有角色
+            var coll = allRoles.Where(c => c.OrgId.HasValue && orgs.ContainsKey(c.OrgId.Value));
+            return new ConcurrentDictionary<Guid, PlRole>(coll.ToDictionary(c => c.Id));
         }
 
         /// <summary>
         /// 获取用户当前角色。
         /// </summary>
         /// <param name="user"></param>
-        /// 
         /// <returns>所有当前有效角色的字典。</returns>
         public ConcurrentDictionary<Guid, PlRole> GetOrLoadCurrentRolesByUser(Account user)
         {

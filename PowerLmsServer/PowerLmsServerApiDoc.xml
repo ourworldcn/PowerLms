@@ -748,7 +748,7 @@
             </summary>
             <param name="orgs"></param>
         </member>
-        <member name="M:PowerLmsServer.Managers.OrganizationManager.GetOrLoadOrgsByMerchId(System.Guid)">
+        <member name="M:PowerLmsServer.Managers.OrganizationManager.GetOrLoadOrgsByMerchantId(System.Guid)">
             <summary>
             按指定商户Id获取或加载所有下属机构信息。
             </summary>
@@ -762,9 +762,9 @@
             <param name="merchantId"></param>
             <returns></returns>
         </member>
-        <member name="M:PowerLmsServer.Managers.OrganizationManager.GetCurrentOrgsByUser(PowerLms.Data.Account)">
+        <member name="M:PowerLmsServer.Managers.OrganizationManager.GetOrLoadCurrentOrgsByUser(PowerLms.Data.Account)">
             <summary>
-            获取当前的登录机构及所有子机构。
+            获取当前的登录公司及所有子机构。
             </summary>
             <param name="user"></param>
             <returns>如果没有指定所属当前机构则返回空字典。</returns>
@@ -774,7 +774,7 @@
             获取用户当前登录到的公司。
             </summary>
             <param name="user"></param>
-            <returns>返回登录的公司，该对象不可更改。</returns>
+            <returns>返回登录的公司，该对象不可更改。没有登录到机构时会返回null。</returns>
         </member>
         <member name="T:PowerLmsServer.Managers.OrganizationManagerExtensions">
             <summary>
@@ -874,10 +874,11 @@
             <param name="user"></param>
             <returns></returns>
         </member>
-        <member name="M:PowerLmsServer.Managers.PermissionManager.SetChange">
+        <member name="M:PowerLmsServer.Managers.PermissionManager.SetChange(System.Guid)">
             <summary>
             指示权限已经发生变化。
             </summary>
+            <param name="merchantId">商户Id。</param>
         </member>
         <member name="T:PowerLmsServer.Managers.RoleManager">
             <summary>
@@ -923,7 +924,6 @@
             获取用户当前角色。
             </summary>
             <param name="user"></param>
-            
             <returns>所有当前有效角色的字典。</returns>
         </member>
         <member name="T:PowerLmsServer.Managers.SystemResourceManager">

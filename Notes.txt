@@ -91,4 +91,10 @@ DocBill.ClearAmount DocBill.Amount是否回写✓
 增加接口。按机构id,获取其机构和下属机构的所有员工✓
 
 241208
-GetCurrentOrgExchangeRate
+2024.12.08，基础字典，汇率时修改最频繁的，每周都会重新维护一遍（重要性）
+1.角色绑定到机构（公司），前端角色编辑界面和角色列表增加公司字段
+2.机构信息，本位币guid改为币种code，前端机构详细信息编辑同步更改
+3.获取当前登录用户所在机构的本位币汇率，修复用于费用用计算的接口GetCurrentOrgExchangeRate，前端检查汇率编辑和新增时字段保存不全的问题
+4.后端缓存完善，修复接口/api/Account/SetUserInfo和GetAllPermissionsInCurrentUser获得的登录用户的权限项
+5.后端功能绑定权限，前端界面显示权限绑定
+6.前端打印插件

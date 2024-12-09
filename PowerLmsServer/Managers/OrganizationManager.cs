@@ -9,6 +9,7 @@ using PowerLmsServer.EfData;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -87,7 +88,7 @@ namespace PowerLmsServer.Managers
         /// </summary>
         /// <param name="merchantId"></param>
         /// <returns>没有找到指定商户则返回空字典。</returns>
-        public ConcurrentDictionary<Guid, PlOrganization> GetOrLoadOrgsByMerchId(Guid merchantId)
+        public ConcurrentDictionary<Guid, PlOrganization> GetOrLoadOrgsByMerchantId(Guid merchantId)
         {
             var result = _Cache.GetOrCreate(OwCacheHelper.GetCacheKeyFromId(merchantId, ".Orgs"), c =>
             {
@@ -121,31 +122,26 @@ namespace PowerLmsServer.Managers
         #endregion 机构缓存及相关
 
         /// <summary>
-        /// 获取当前的登录机构及所有子机构。
+        /// 获取当前的登录公司及所有子机构。
         /// </summary>
         /// <param name="user"></param>
         /// <returns>如果没有指定所属当前机构则返回空字典。</returns>
-        public ConcurrentDictionary<Guid, PlOrganization> GetCurrentOrgsByUser(Account user)
+        public ConcurrentDictionary<Guid, PlOrganization> GetOrLoadCurrentOrgsByUser(Account user)
         {
-            if (user.OrgId is null) return new ConcurrentDictionary<Guid, PlOrganization>();
-            if (_MerchantManager.GetOrLoadMerchantByUser(user) is not PlMerchant merchant) return new ConcurrentDictionary<Guid, PlOrganization>();
-            var orgs = GetOrLoadOrgsByMerchId(merchant.Id);   //所有机构
-
-            var currentOrg = orgs[user.OrgId.Value];
-            var result = OwHelper.GetAllSubItemsOfTree(currentOrg, c => c.Children).ToDictionary(c => c.Id);
-            return new ConcurrentDictionary<Guid, PlOrganization>(result);
+            if (GetCurrentCompanyByUser(user) is not PlOrganization root) return new ConcurrentDictionary<Guid, PlOrganization>();
+            return new ConcurrentDictionary<Guid, PlOrganization>(OwHelper.GetAllSubItemsOfTree(root, c => c.Children).ToDictionary(c=>c.Id));
         }
 
         /// <summary>
         /// 获取用户当前登录到的公司。
         /// </summary>
         /// <param name="user"></param>
-        /// <returns>返回登录的公司，该对象不可更改。</returns>
+        /// <returns>返回登录的公司，该对象不可更改。没有登录到机构时会返回null。</returns>
         public PlOrganization GetCurrentCompanyByUser(Account user)
         {
             if (user.OrgId is null) return null;
             if (_MerchantManager.GetOrLoadMerchantByUser(user) is not PlMerchant merch) return null;
-            if (GetOrLoadOrgsByMerchId(merch.Id) is not ConcurrentDictionary<Guid, PlOrganization> orgs) return null;
+            if (GetOrLoadOrgsByMerchantId(merch.Id) is not ConcurrentDictionary<Guid, PlOrganization> orgs) return null;
             if (!orgs.TryGetValue(user.OrgId.Value, out var org)) return null;
             PlOrganization tmp;
             for (tmp = org; tmp is not null && tmp.Otc != 2; tmp = tmp.Parent) ;

@@ -130,7 +130,8 @@ namespace PowerLmsServer.Managers
         /// <summary>
         /// 指示权限已经发生变化。
         /// </summary>
-        public void SetChange()
+        /// <param name="merchantId">商户Id。</param>
+        public void SetChange(Guid merchantId)
         {
 
         }
