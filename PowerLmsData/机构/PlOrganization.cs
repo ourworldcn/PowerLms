@@ -92,6 +92,13 @@ namespace PowerLms.Data
         public Guid? BaseCurrencyId { get; set; }
 
         /// <summary>
+        /// 本位币编码。
+        /// </summary>
+        [Comment("本位币编码")]
+        [Unicode(false), MaxLength(4)]
+        public string BaseCurrencyCode { get; set; }
+
+        /// <summary>
         /// 海关编码。
         /// </summary>
         [Comment("海关编码。")]

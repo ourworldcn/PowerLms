@@ -979,7 +979,7 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// 扩展获取汇率。返回当前用户登录机构的本币为本币，且符合条件的所有汇率对象。
+        /// 扩展获取汇率。返回当前用户登录机构的汇率，且符合条件的所有汇率对象。
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
