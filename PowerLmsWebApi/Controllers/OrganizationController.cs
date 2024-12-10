@@ -61,7 +61,7 @@ namespace PowerLmsWebApi.Controllers
             if (_DbContext.Merchants.Find(rootId) is PlMerchant merch)   //若指定的是商户
             {
                 if ((context.User.State & 8) == 0 && (context.User.State & 4) == 0) return BadRequest();
-                _MerchantManager.GetMerchantId(context.User.Id, out var merchId);
+                _MerchantManager.GetMerchantIdByUserId(context.User.Id, out var merchId);
 
                 var orgs = _DbContext.PlOrganizations.Where(c => c.MerchantId == merchId).ToList();
 

@@ -69,7 +69,7 @@ namespace PowerLmsServer.Managers
         public void OrgsLoaded(ConcurrentDictionary<Guid, PlOrganization> orgs)
         {
             var merchId = orgs.Values.First(c => c.MerchantId is not null).MerchantId.Value;
-            var merch = _MerchantManager.GetOrLoadMerchantById(merchId);
+            var merch = _MerchantManager.GetOrLoadMerchantCacheItemById(merchId);
             EnParent(orgs.Values);
         }
 
@@ -88,48 +88,55 @@ namespace PowerLmsServer.Managers
         /// </summary>
         /// <param name="merchantId"></param>
         /// <returns>没有找到指定商户则返回空字典。</returns>
-        public ConcurrentDictionary<Guid, PlOrganization> GetOrLoadOrgsByMerchantId(Guid merchantId)
+        public OwCacheItem<ConcurrentDictionary<Guid, PlOrganization>> GetOrLoadOrgsCacheItemByMerchantId(Guid merchantId)
         {
             var result = _Cache.GetOrCreate(OwCacheHelper.GetCacheKeyFromId(merchantId, ".Orgs"), c =>
             {
-                var merch = _MerchantManager.GetOrLoadMerchantById(OwCacheHelper.GetIdFromCacheKey(c.Key as string, ".Orgs").Value);
-                var db = merch.DbContext;
+                var merch = _MerchantManager.GetOrLoadMerchantCacheItemById(OwCacheHelper.GetIdFromCacheKey(c.Key as string, ".Orgs").Value);
+                var db = merch.Data.DbContext;
                 var r = new OwCacheItem<ConcurrentDictionary<Guid, PlOrganization>>
                 {
                     Data = LoadOrgsByMerchantId(OwCacheHelper.GetIdFromCacheKey(c.Key as string, ".Orgs").Value, ref db),
                 };
-                r.SetCancellations(new CancellationTokenSource(), merch.ExpirationTokenSource);
+                r.SetCancellations(new CancellationTokenSource(), merch.Data.ExpirationTokenSource);
                 c.AddExpirationToken(r.ChangeToken);
                 return r;
             });
-            return result.Data;
+            return result;
         }
 
-        /// <summary>
-        /// 使指定商户下所有机构缓存失效。
-        /// </summary>
-        /// <param name="merchantId"></param>
-        /// <returns></returns>
-        public bool SetOrgsChange(Guid merchantId)
-        {
-            if (_Cache.Get(OwCacheHelper.GetCacheKeyFromId(merchantId, ".Orgs")) is OwCacheItem<ConcurrentDictionary<Guid, PlOrganization>> orgs)
-            {
-                orgs.CancellationTokenSource.Cancel();
-                return true;
-            }
-            return false;
-        }
         #endregion 机构缓存及相关
+
+        /// <summary>
+        /// 获取当前的登录公司及所有子机构
+        /// </summary>
+        /// <param name="user"></param>
+        /// <returns>如果没有指定所属当前机构则返回空字典。</returns>
+        public ConcurrentDictionary<Guid, PlOrganization> LoadCurrentOrgsByUser(Account user)
+        {
+            if (GetCurrentCompanyByUser(user) is not PlOrganization root) return new ConcurrentDictionary<Guid, PlOrganization>();
+            return new ConcurrentDictionary<Guid, PlOrganization>(OwHelper.GetAllSubItemsOfTree(root, c => c.Children).ToDictionary(c => c.Id));
+        }
 
         /// <summary>
         /// 获取当前的登录公司及所有子机构。
         /// </summary>
         /// <param name="user"></param>
         /// <returns>如果没有指定所属当前机构则返回空字典。</returns>
-        public ConcurrentDictionary<Guid, PlOrganization> GetOrLoadCurrentOrgsByUser(Account user)
+        public OwCacheItem<ConcurrentDictionary<Guid, PlOrganization>> GetOrLoadCurrentOrgsCacheItemByUser(Account user)
         {
-            if (GetCurrentCompanyByUser(user) is not PlOrganization root) return new ConcurrentDictionary<Guid, PlOrganization>();
-            return new ConcurrentDictionary<Guid, PlOrganization>(OwHelper.GetAllSubItemsOfTree(root, c => c.Children).ToDictionary(c=>c.Id));
+            var result = _Cache.GetOrCreate(OwCacheHelper.GetCacheKeyFromId(user.Id, ".CurrentOrgs"), c =>
+            {
+                var r = new OwCacheItem<ConcurrentDictionary<Guid, PlOrganization>>
+                {
+                    Data = LoadCurrentOrgsByUser(user),
+                };
+                var merch = _MerchantManager.GetOrLoadMerchantCacheItemByUser(user);
+                var orgs = GetOrLoadOrgsCacheItemByMerchantId(merch.Data.Id);
+                r.SetCancellations(new CancellationTokenSource(), new CancellationChangeToken(user.ExpirationTokenSource.Token), orgs.ChangeToken);
+                return r;
+            });
+            return result;
         }
 
         /// <summary>
@@ -140,19 +147,12 @@ namespace PowerLmsServer.Managers
         public PlOrganization GetCurrentCompanyByUser(Account user)
         {
             if (user.OrgId is null) return null;
-            if (_MerchantManager.GetOrLoadMerchantByUser(user) is not PlMerchant merch) return null;
-            if (GetOrLoadOrgsByMerchantId(merch.Id) is not ConcurrentDictionary<Guid, PlOrganization> orgs) return null;
-            if (!orgs.TryGetValue(user.OrgId.Value, out var org)) return null;
+            if (_MerchantManager.GetOrLoadMerchantCacheItemByUser(user) is not OwCacheItem<PlMerchant> merch) return null;
+            if (GetOrLoadOrgsCacheItemByMerchantId(merch.Data.Id) is not OwCacheItem<ConcurrentDictionary<Guid, PlOrganization>> orgs) return null;
+            if (!orgs.Data.TryGetValue(user.OrgId.Value, out var org)) return null;
             PlOrganization tmp;
             for (tmp = org; tmp is not null && tmp.Otc != 2; tmp = tmp.Parent) ;
             return tmp;
         }
-    }
-
-    /// <summary>
-    /// 扩展方法类。
-    /// </summary>
-    public static class OrganizationManagerExtensions
-    {
     }
 }

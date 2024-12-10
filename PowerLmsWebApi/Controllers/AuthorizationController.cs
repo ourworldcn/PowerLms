@@ -113,7 +113,7 @@ namespace PowerLmsWebApi.Controllers
             model.Item.GenerateNewId();
             if (!model.Item.OrgId.HasValue)
             {
-                if (_MerchantManager.GetMerchantId(context.User.Id, out var mId))
+                if (_MerchantManager.GetMerchantIdByUserId(context.User.Id, out var mId))
                     model.Item.OrgId = mId;
             }
             model.Item.CreateBy ??= context.User.Id;

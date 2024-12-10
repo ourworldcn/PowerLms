@@ -62,9 +62,9 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllCustomerReturnDto();
             Guid[] allOrg = Array.Empty<Guid>();
-            if (_MerchantManager.GetMerchantId(context.User.Id, out var merId))
+            if (_MerchantManager.GetMerchantIdByUserId(context.User.Id, out var merId))
             {
-                allOrg = _OrganizationManager.GetOrLoadOrgsByMerchantId(merId.Value).Keys.ToArray();
+                allOrg = _OrganizationManager.GetOrLoadOrgsCacheItemByMerchantId(merId.Value).Data.Keys.ToArray();
             }
             //var dbSet = _DbContext.PlCustomers.Where(c => c.OrgId.HasValue && allOrg.Contains(c.OrgId.Value));
             var dbSet = _DbContext.PlCustomers.Where(c => c.OrgId == context.User.OrgId);
@@ -192,9 +192,9 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllCustomer2ReturnDto();
             Guid[] allOrg = Array.Empty<Guid>();
-            if (_MerchantManager.GetMerchantId(context.User.Id, out var merId))
+            if (_MerchantManager.GetMerchantIdByUserId(context.User.Id, out var merId))
             {
-                allOrg = _OrganizationManager.GetOrLoadOrgsByMerchantId(merId.Value).Keys.ToArray();
+                allOrg = _OrganizationManager.GetOrLoadOrgsCacheItemByMerchantId(merId.Value).Data.Keys.ToArray();
             }
             //var dbSet = _DbContext.PlCustomers.Where(c => c.OrgId.HasValue && allOrg.Contains(c.OrgId.Value));
             var dbSet = _DbContext.PlCustomers.Where(c => c.OrgId == context.User.OrgId);

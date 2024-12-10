@@ -3,6 +3,7 @@
  * */
 using AutoMapper;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NPOI.OpenXmlFormats.Dml.Diagram;
@@ -34,8 +35,10 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="captchaManager"></param>
         /// <param name="authorizationManager"></param>
         /// <param name="merchantManager"></param>
-        public AccountController(PowerLmsUserDbContext dbContext, AccountManager accountManager, IServiceProvider serviceProvider, IMapper mapper, EntityManager entityManager,
-            OrganizationManager organizationManager, CaptchaManager captchaManager, AuthorizationManager authorizationManager, MerchantManager merchantManager)
+        /// <param name="roleManager"></param>
+        public AccountController(PowerLmsUserDbContext dbContext, AccountManager accountManager, IServiceProvider serviceProvider, IMapper mapper,
+            EntityManager entityManager, OrganizationManager organizationManager, CaptchaManager captchaManager, AuthorizationManager authorizationManager,
+            MerchantManager merchantManager, RoleManager roleManager)
         {
             _DbContext = dbContext;
             _AccountManager = accountManager;
@@ -46,6 +49,7 @@ namespace PowerLmsWebApi.Controllers
             _CaptchaManager = captchaManager;
             _AuthorizationManager = authorizationManager;
             _MerchantManager = merchantManager;
+            _RoleManager = roleManager;
         }
 
         readonly IServiceProvider _ServiceProvider;
@@ -57,6 +61,7 @@ namespace PowerLmsWebApi.Controllers
         readonly OrganizationManager _OrganizationManager;
         readonly CaptchaManager _CaptchaManager;
         readonly MerchantManager _MerchantManager;
+        readonly RoleManager _RoleManager;
 
 #if DEBUG
         /*
@@ -94,10 +99,10 @@ namespace PowerLmsWebApi.Controllers
             var result = new GetAllAccountReturnDto();
             var dbSet = _DbContext.Accounts;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-            if (_AccountManager.IsMerchantAdmin(context.User) && _MerchantManager.GetMerchantId(context.User.Id, out var merchantId))
+            if (_AccountManager.IsMerchantAdmin(context.User) && _MerchantManager.GetMerchantIdByUserId(context.User.Id, out var merchantId))
             {
-                var orgs = _OrganizationManager.GetOrLoadOrgsByMerchantId(merchantId.Value);
-                var tmp = orgs.Keys;    //所有机构Id
+                var orgs = _OrganizationManager.GetOrLoadOrgsCacheItemByMerchantId(merchantId.Value);
+                var tmp = orgs.Data.Keys;    //所有机构Id
                 if (merchantId.HasValue) tmp = tmp.Append(merchantId.Value).ToArray();
                 var userIds = _DbContext.AccountPlOrganizations.Where(c => tmp.Contains(c.OrgId)).Select(c => c.UserId).Distinct().ToArray();
                 coll = coll.Where(c => userIds.Contains(c.Id));
@@ -194,7 +199,7 @@ namespace PowerLmsWebApi.Controllers
             var orgIds = _DbContext.AccountPlOrganizations.Where(c => c.UserId == user.Id).Select(c => c.OrgId);
             result.Orgs.AddRange(_DbContext.PlOrganizations.Where(c => orgIds.Contains(c.Id)));
             result.User = user;
-            if (_MerchantManager.GetMerchantId(user.Id, out var merchId)) //若找到商户Id
+            if (_MerchantManager.GetMerchantIdByUserId(user.Id, out var merchId)) //若找到商户Id
             {
                 result.MerchantId = merchId;
                 if (result.User.IsMerchantAdmin)
@@ -232,7 +237,7 @@ namespace PowerLmsWebApi.Controllers
                             return BadRequest("仅超管和商管才可创建用户。");
                         else //商管
                         {
-                            if (!_MerchantManager.GetMerchantId(context.User.Id, out var merchId)) return BadRequest("商管数据结构损坏——无法找到其所属商户");
+                            if (!_MerchantManager.GetMerchantIdByUserId(context.User.Id, out var merchId)) return BadRequest("商管数据结构损坏——无法找到其所属商户");
                             if (!orgIds.All(c => _MerchantManager.GetMerchantIdByOrgId(c, out var mId) && mId == merchId)) return BadRequest("商户管理员仅可以设置商户和其下属的机构id。");
                         }
                 }
@@ -451,12 +456,18 @@ namespace PowerLmsWebApi.Controllers
             var count = _DbContext.PlOrganizations.Count(c => ids.Contains(c.Id));
             if (count != ids.Count) return BadRequest($"{nameof(model.OrgIds)}中至少有一个组织机构不存在。");
 
+            _MerchantManager.GetMerchantIdByUserId(model.UserId, out var merchId);  //获取商户Id
+
+            var orgs = merchId.HasValue ? _OrganizationManager.GetOrLoadOrgsCacheItemByMerchantId(merchId.Value) : null;
+
             var removes = _DbContext.AccountPlOrganizations.Where(c => c.UserId == model.UserId && !ids.Contains(c.OrgId));
             _DbContext.AccountPlOrganizations.RemoveRange(removes);
 
             var adds = ids.Except(_DbContext.AccountPlOrganizations.Where(c => c.UserId == model.UserId).Select(c => c.OrgId).AsEnumerable()).ToArray();
             _DbContext.AccountPlOrganizations.AddRange(adds.Select(c => new AccountPlOrganization { OrgId = c, UserId = model.UserId }));
             _DbContext.SaveChanges();
+
+            orgs?.CancellationTokenSource.Cancel();
             return result;
         }
 
@@ -481,12 +492,17 @@ namespace PowerLmsWebApi.Controllers
             var count = _DbContext.PlRoles.Count(c => ids.Contains(c.Id));
             if (count != ids.Count) return BadRequest($"{nameof(model.RoleIds)}中至少有一个组织角色不存在。");
 
+            if (_AccountManager.GetOrLoadAccount(model.UserId) is not Account account) return BadRequest($"{nameof(model.UserId)}指定用户不存在。");
+            var rls = _RoleManager.GetOrLoadCurrentRolesCacheItemByUser(account);
+
             var removes = _DbContext.PlAccountRoles.Where(c => c.UserId == model.UserId && !ids.Contains(c.RoleId));
             _DbContext.PlAccountRoles.RemoveRange(removes);
 
             var adds = ids.Except(_DbContext.PlAccountRoles.Where(c => c.UserId == model.UserId).Select(c => c.RoleId).AsEnumerable()).ToArray();
             _DbContext.PlAccountRoles.AddRange(adds.Select(c => new AccountRole { RoleId = c, UserId = model.UserId }));
             _DbContext.SaveChanges();
+
+            rls?.CancellationTokenSource?.Cancel();
             return result;
         }
 

@@ -75,7 +75,7 @@ namespace PowerLmsServer.Managers
         }
 
         /// <summary>
-        /// 
+        /// 获取或加载所有权限对象。
         /// </summary>
         /// <returns></returns>
         public ConcurrentDictionary<string, PlPermission> GetOrLoadPermission()
@@ -83,15 +83,19 @@ namespace PowerLmsServer.Managers
             var result = _Cache.GetOrCreate(PermissionsCacheKey, entry =>
             {
                 var db = _DbContextFactory.CreateDbContext();
+                var r = LoadPermission(ref db);
                 var cts = new CancellationTokenSource();
-                var ct = cts.Token;
-                entry.AddExpirationToken(new CancellationChangeToken(ct));
-                var result = LoadPermission(ref db);
+                var item = new OwCacheItem<ConcurrentDictionary<string, PlPermission>>()
+                {
+                    Data = r,
+                    CancellationTokenSource = cts,
+                };
+                entry.AddExpirationToken(new CancellationChangeToken(cts.Token));
                 using var t = db;
-                return result;
+                return item;
             });
 
-            return result;
+            return result.Data;
         }
 
         /// <summary>
@@ -100,12 +104,13 @@ namespace PowerLmsServer.Managers
         /// <param name="user"></param>
         /// <param name="db"></param>
         /// <returns></returns>
-        public ConcurrentDictionary<string, PlPermission> LoadCurrentPermissionsFromUser(Account user, ref PowerLmsUserDbContext db)
+        public ConcurrentDictionary<string, PlPermission> LoadCurrentPermissionsByUser(Account user, ref PowerLmsUserDbContext db)
         {
-            var roles = _RoleManager.GetOrLoadCurrentRolesByUser(user);
+            var roles = _RoleManager.GetOrLoadCurrentRolesCacheItemByUser(user);
+
             db ??= _DbContextFactory.CreateDbContext();
-            var ids = db.PlRolePermissions.Where(c => roles.Keys.Contains(c.RoleId)).Select(c => c.PermissionId).Distinct().ToArray();
-            
+            var ids = db.PlRolePermissions.Where(c => roles.Data.Keys.Contains(c.RoleId)).Select(c => c.PermissionId).Distinct().AsEnumerable().ToHashSet();
+
             var allPerm = GetOrLoadPermission();
             var coll = allPerm.Where(c => ids.Contains(c.Key));
             return new ConcurrentDictionary<string, PlPermission>(coll);
@@ -116,24 +121,35 @@ namespace PowerLmsServer.Managers
         /// </summary>
         /// <param name="user"></param>
         /// <returns></returns>
-        public ConcurrentDictionary<string, PlPermission> GetOrLoadCurrentPermissionsFromUser(Account user)
+        public ConcurrentDictionary<string, PlPermission> GetOrLoadCurrentPermissionsByUser(Account user)
         {
             var result = _Cache.GetOrCreate(OwCacheHelper.GetCacheKeyFromId(user.Id, ".CurrentPermissions"), c =>
             {
                 var db = user.DbContext;
-                var r = LoadCurrentPermissionsFromUser(user, ref db); Debug.Assert(ReferenceEquals(user.DbContext, db));
-                return r;
+                var r = LoadCurrentPermissionsByUser(user, ref db); Debug.Assert(ReferenceEquals(user.DbContext, db));
+                using var t = db;
+
+                var item = new OwCacheItem<ConcurrentDictionary<string, PlPermission>>()
+                {
+                    Data = r,
+                };
+                item.SetCancellations(new CancellationTokenSource(), user.ExpirationTokenSource);
+                return item;
             });
-            return result;
+            return result.Data;
         }
 
         /// <summary>
         /// 指示权限已经发生变化。
         /// </summary>
-        /// <param name="merchantId">商户Id。</param>
-        public void SetChange(Guid merchantId)
+        /// <param name="userId">用户Id。</param>
+        /// <returns>true 设置了变化信号，false未加载相关数据。</returns>
+        public bool SetChange(Guid userId)
         {
-
+            if (_Cache.Get(OwCacheHelper.GetCacheKeyFromId(userId, ".CurrentPermissions")) is not OwCacheItem<ConcurrentDictionary<string, PlPermission>> ci)
+                return false;
+            ci.CancellationTokenSource.Cancel();
+            return true;
         }
     }
 }

@@ -77,7 +77,7 @@ namespace PowerLmsServer.Managers
         /// <returns></returns>
         public ConcurrentDictionary<string, PlPermission> GetOrLoadPermission(Account user)
         {
-            return _PermissionManager.GetOrLoadCurrentPermissionsFromUser(user);
+            return _PermissionManager.GetOrLoadCurrentPermissionsByUser(user);
         }
 
         /// <summary>
