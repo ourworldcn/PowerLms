@@ -126,7 +126,7 @@ namespace PowerLmsServer.Managers
             {
                 MerchantId = null;
                 return false;
-            };
+            }
             return GetMerchantIdByOrgId(userOrg.OrgId, out MerchantId);
         }
 
@@ -141,6 +141,11 @@ namespace PowerLmsServer.Managers
             var org = _DbContext.PlOrganizations.Find(orgId);   //找到组织机构对象
             if (org == null)
             {
+                if(_DbContext.Merchants.Find(orgId) is PlMerchant merch)
+                {
+                    MerchantId = merch.Id;
+                    return true;
+                }
                 MerchantId = null;
                 return false;
             }
