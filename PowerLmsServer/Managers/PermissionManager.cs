@@ -75,10 +75,20 @@ namespace PowerLmsServer.Managers
         }
 
         /// <summary>
+        /// 获取所有权限的缓存项。
+        /// </summary>
+        /// <returns></returns>
+        public OwCacheItem<ConcurrentDictionary<string, PlPermission>> GetPermission()
+        {
+            var result = _Cache.Get<OwCacheItem<ConcurrentDictionary<string, PlPermission>>>(PermissionsCacheKey);
+            return result;
+        }
+
+        /// <summary>
         /// 获取或加载所有权限对象。
         /// </summary>
         /// <returns></returns>
-        public ConcurrentDictionary<string, PlPermission> GetOrLoadPermission()
+        public OwCacheItem<ConcurrentDictionary<string, PlPermission>> GetOrLoadPermission()
         {
             var result = _Cache.GetOrCreate(PermissionsCacheKey, entry =>
             {
@@ -95,7 +105,7 @@ namespace PowerLmsServer.Managers
                 return item;
             });
 
-            return result.Data;
+            return result;
         }
 
         /// <summary>
@@ -106,14 +116,25 @@ namespace PowerLmsServer.Managers
         /// <returns></returns>
         public ConcurrentDictionary<string, PlPermission> LoadCurrentPermissionsByUser(Account user, ref PowerLmsUserDbContext db)
         {
-            var roles = _RoleManager.GetOrLoadCurrentRolesCacheItemByUser(user);
+            var roles = _RoleManager.GetOrLoadCurrentRolesCacheItemByUser(user);    //用户所属的所有角色
 
             db ??= _DbContextFactory.CreateDbContext();
             var ids = db.PlRolePermissions.Where(c => roles.Data.Keys.Contains(c.RoleId)).Select(c => c.PermissionId).Distinct().AsEnumerable().ToHashSet();
 
             var allPerm = GetOrLoadPermission();
-            var coll = allPerm.Where(c => ids.Contains(c.Key));
+            var coll = allPerm.Data.Where(c => ids.Contains(c.Key));
             return new ConcurrentDictionary<string, PlPermission>(coll);
+        }
+
+        /// <summary>
+        /// 获取指定角色的当前权限缓存项。
+        /// </summary>
+        /// <param name="userId"></param>
+        /// <returns>指定角色的当前权限缓存项，没有则返回null</returns>
+        public OwCacheItem<ConcurrentDictionary<string, PlPermission>> GetCurrentPermissions(Guid userId)
+        {
+            var result = _Cache.Get<OwCacheItem<ConcurrentDictionary<string, PlPermission>>>(OwCacheHelper.GetCacheKeyFromId(userId, ".CurrentPermissions"));
+            return result;
         }
 
         /// <summary>
@@ -121,7 +142,7 @@ namespace PowerLmsServer.Managers
         /// </summary>
         /// <param name="user"></param>
         /// <returns></returns>
-        public ConcurrentDictionary<string, PlPermission> GetOrLoadCurrentPermissionsByUser(Account user)
+        public OwCacheItem<ConcurrentDictionary<string, PlPermission>> GetOrLoadCurrentPermissionsByUser(Account user)
         {
             var result = _Cache.GetOrCreate(OwCacheHelper.GetCacheKeyFromId(user.Id, ".CurrentPermissions"), c =>
             {
@@ -133,23 +154,13 @@ namespace PowerLmsServer.Managers
                 {
                     Data = r,
                 };
-                item.SetCancellations(new CancellationTokenSource(), user.ExpirationTokenSource);
+                var pers = GetOrLoadPermission();
+                var roles = _RoleManager.GetOrLoadCurrentRolesCacheItemByUser(user);
+                item.SetCancellations(new CancellationTokenSource(), roles.ChangeToken, pers.ChangeToken);
                 return item;
             });
-            return result.Data;
+            return result;
         }
 
-        /// <summary>
-        /// 指示权限已经发生变化。
-        /// </summary>
-        /// <param name="userId">用户Id。</param>
-        /// <returns>true 设置了变化信号，false未加载相关数据。</returns>
-        public bool SetChange(Guid userId)
-        {
-            if (_Cache.Get(OwCacheHelper.GetCacheKeyFromId(userId, ".CurrentPermissions")) is not OwCacheItem<ConcurrentDictionary<string, PlPermission>> ci)
-                return false;
-            ci.CancellationTokenSource.Cancel();
-            return true;
-        }
     }
 }

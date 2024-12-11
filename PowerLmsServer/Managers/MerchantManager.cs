@@ -63,6 +63,17 @@ namespace PowerLmsServer.Managers
         }
 
         /// <summary>
+        /// 获取指定id的商户对象缓存。
+        /// </summary>
+        /// <param name="merchantId"></param>
+        /// <returns>商户对象，若没有找到，则返回null。</returns>
+        public OwCacheItem<PlMerchant> GetMerchantCacheItemById(Guid merchantId)
+        {
+            var result = _Cache.Get<OwCacheItem<PlMerchant>>(OwCacheHelper.GetCacheKeyFromId<PlMerchant>(merchantId));
+            return result;
+        }
+
+        /// <summary>
         /// 加载或获取缓存的商户对象。
         /// </summary>
         /// <param name="merchantId"></param>

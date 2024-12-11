@@ -84,6 +84,17 @@ namespace PowerLmsServer.Managers
         });
 
         /// <summary>
+        /// 获取指定商户的所有机构。
+        /// </summary>
+        /// <param name="merchantId"></param>
+        /// <returns>指定商户的所有机构的缓存项，如果没找到则返回null。</returns>
+        public OwCacheItem<ConcurrentDictionary<Guid, PlOrganization>> GetOrgsCacheItemByMerchantId(Guid merchantId)
+        {
+            var result = _Cache.Get<OwCacheItem<ConcurrentDictionary<Guid, PlOrganization>>>(OwCacheHelper.GetCacheKeyFromId(merchantId, ".Orgs"));
+            return result;
+        }
+
+        /// <summary>
         /// 按指定商户Id获取或加载所有下属机构信息。
         /// </summary>
         /// <param name="merchantId"></param>

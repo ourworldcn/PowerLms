@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NPOI.OpenXmlFormats.Dml.Diagram;
+using NPOI.OpenXmlFormats.Wordprocessing;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
@@ -354,6 +355,7 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.AccountPlOrganizations.RemoveRange(_DbContext.AccountPlOrganizations.Where(c => c.UserId == id));
             _DbContext.PlAccountRoles.RemoveRange(_DbContext.PlAccountRoles.Where(c => c.UserId == id));
             _DbContext.SaveChanges();
+            
             return result;
         }
 
@@ -361,25 +363,31 @@ namespace PowerLmsWebApi.Controllers
         /// 登陆后设置用的一些必要信息，如当前组织机构等信息，这个接口可能会逐步增加参数中属性。
         /// </summary>
         /// <param name="model"></param>
+        /// <param name="permissionManager"></param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。</response>  
         /// <response code="400">指定的组织机构Id错误，可能不是公司。</response>  
         [HttpPut]
-        public ActionResult<SetUserInfoReturnDto> SetUserInfo(SetUserInfoParams model)
+        public ActionResult<SetUserInfoReturnDto> SetUserInfo(SetUserInfoParams model, [FromServices] PermissionManager permissionManager)
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new SetUserInfoReturnDto();
-            if (!_DbContext.AccountPlOrganizations.Any(c => c.UserId == context.User.Id && c.OrgId == model.CurrentOrgId)) return BadRequest("错误的当前组织机构Id。");
-            if (_DbContext.PlOrganizations.Find(model.CurrentOrgId) is not PlOrganization currentOrg)   //若没有找到指定机构
-                return BadRequest("错误的当前组织机构Id。");
-            context.User.OrgId = model.CurrentOrgId;
-            if (currentOrg.Otc != 2)
-                return BadRequest("错误的当前组织机构Id——不是公司。");
+
+            if (context.User.OrgId != model.CurrentOrgId)
+            {
+                if (!_MerchantManager.GetMerchantIdByOrgId(model.CurrentOrgId, out var merchantId)) return BadRequest("错误的当前组织机构Id。");
+                var orgs = _OrganizationManager.GetOrLoadOrgsCacheItemByMerchantId(merchantId.Value);
+                if (!orgs.Data.TryGetValue(model.CurrentOrgId, out var currentOrg)) return BadRequest("错误的当前组织机构Id。");
+                if (currentOrg.Otc != 2)
+                    return BadRequest("错误的当前组织机构Id——不是公司。");
+                context.User.OrgId = model.CurrentOrgId;
+                _AccountManager.SetChange(context.User.Id);
+            }
             context.User.CurrentLanguageTag = model.LanguageTag;
             context.Nop();
             context.SaveChanges();
 
-            result.Permissions.AddRange(_AuthorizationManager.LoadPermission(context.User).Values);
+            result.Permissions.AddRange(permissionManager.GetOrLoadCurrentPermissionsByUser(context.User).Data.Values);
             return result;
         }
 
@@ -458,7 +466,7 @@ namespace PowerLmsWebApi.Controllers
 
             _MerchantManager.GetMerchantIdByUserId(model.UserId, out var merchId);  //获取商户Id
 
-            var orgs = merchId.HasValue ? _OrganizationManager.GetOrLoadOrgsCacheItemByMerchantId(merchId.Value) : null;
+            var orgs = merchId.HasValue ? _OrganizationManager.GetOrgsCacheItemByMerchantId(merchId.Value) : null;
 
             var removes = _DbContext.AccountPlOrganizations.Where(c => c.UserId == model.UserId && !ids.Contains(c.OrgId));
             _DbContext.AccountPlOrganizations.RemoveRange(removes);
@@ -493,7 +501,7 @@ namespace PowerLmsWebApi.Controllers
             if (count != ids.Count) return BadRequest($"{nameof(model.RoleIds)}中至少有一个组织角色不存在。");
 
             if (_AccountManager.GetOrLoadAccount(model.UserId) is not Account account) return BadRequest($"{nameof(model.UserId)}指定用户不存在。");
-            var rls = _RoleManager.GetOrLoadCurrentRolesCacheItemByUser(account);
+            var rls = _RoleManager.GetCurrentRolesCacheItem(account);
 
             var removes = _DbContext.PlAccountRoles.Where(c => c.UserId == model.UserId && !ids.Contains(c.RoleId));
             _DbContext.PlAccountRoles.RemoveRange(removes);

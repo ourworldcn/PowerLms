@@ -24,7 +24,8 @@ namespace PowerLmsWebApi.Controllers
         /// 构造函数。
         /// </summary>
         public AuthorizationController(IServiceProvider serviceProvider, AccountManager accountManager, PowerLmsUserDbContext dbContext, EntityManager entityManager,
-            IMapper mapper, AuthorizationManager authorizationManager, OrganizationManager organizationManager, MerchantManager merchantManager)
+            IMapper mapper, AuthorizationManager authorizationManager, OrganizationManager organizationManager, MerchantManager merchantManager,
+            PermissionManager permissionManager, RoleManager roleManager)
         {
             _ServiceProvider = serviceProvider;
             _AccountManager = accountManager;
@@ -34,6 +35,8 @@ namespace PowerLmsWebApi.Controllers
             _AuthorizationManager = authorizationManager;
             _OrganizationManager = organizationManager;
             _MerchantManager = merchantManager;
+            _PermissionManager = permissionManager;
+            _RoleManager = roleManager;
         }
 
         readonly IServiceProvider _ServiceProvider;
@@ -44,6 +47,8 @@ namespace PowerLmsWebApi.Controllers
         readonly AuthorizationManager _AuthorizationManager;
         readonly OrganizationManager _OrganizationManager;
         readonly MerchantManager _MerchantManager;
+        readonly PermissionManager _PermissionManager;
+        readonly RoleManager _RoleManager;
 
         #region 角色的CRUD
 
@@ -122,9 +127,12 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.SaveChanges();
             result.Id = model.Item.Id;
 
-            var userIds = _DbContext.PlAccountRoles.Where(c => model.Item.Id == c.RoleId).Select(c => c.UserId).ToArray();
-            foreach (var id in userIds)
-                _AuthorizationManager.SetChange(id);
+
+            if (model.Item.OrgId.HasValue)
+            {
+                if (_MerchantManager.GetMerchantIdByOrgId(model.Item.OrgId.Value, out var merchId))
+                    _RoleManager.GetRolesCacheItemByMerchantId(merchId.Value)?.CancellationTokenSource.Cancel();
+            }
             return result;
         }
 
@@ -164,10 +172,14 @@ namespace PowerLmsWebApi.Controllers
             var dbSet = _DbContext.PlRoles;
             var item = dbSet.Find(id);
             if (item is null) return BadRequest();
+            Guid? merchantId = null;
+            if (item.OrgId.HasValue)
+                _MerchantManager.GetMerchantIdByOrgId(item.OrgId.Value, out merchantId);
             _EntityManager.Remove(item);
             _DbContext.SaveChanges();
-            foreach (var userId in userIds)
-                _AuthorizationManager.SetChange(userId);
+
+            if (merchantId.HasValue)
+                _OrganizationManager.GetOrgsCacheItemByMerchantId(merchantId.Value)?.CancellationTokenSource.Cancel();
             return result;
         }
         #endregion 角色的CRUD
@@ -224,6 +236,7 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.PlPermissions.Add(model.PlPermission);
             _DbContext.SaveChanges();
             result.Id = model.PlPermission.Name;
+            _PermissionManager.GetPermission()?.CancellationTokenSource.Cancel();
             return result;
         }
 
@@ -260,6 +273,7 @@ namespace PowerLmsWebApi.Controllers
             }
 
             _DbContext.SaveChanges();
+            _PermissionManager.GetPermission()?.CancellationTokenSource.Cancel();
             return result;
         }
 
@@ -282,6 +296,7 @@ namespace PowerLmsWebApi.Controllers
             if (item is null) return BadRequest();
             _EntityManager.Remove(item);
             _DbContext.SaveChanges();
+            _PermissionManager.GetPermission()?.CancellationTokenSource.Cancel();
             return result;
         }
         #endregion 权限的CRUD
@@ -335,7 +350,8 @@ namespace PowerLmsWebApi.Controllers
             //model.AccountRole.GenerateNewId();
             _DbContext.PlAccountRoles.Add(model.AccountRole);
             _DbContext.SaveChanges();
-            _AuthorizationManager.SetChange(model.AccountRole.UserId);
+
+            _RoleManager.GetCurrentRolesCacheItem(model.AccountRole.UserId)?.CancellationTokenSource.Cancel();
             return result;
         }
 
@@ -358,7 +374,7 @@ namespace PowerLmsWebApi.Controllers
             if (item is null) return BadRequest();
             _EntityManager.Remove(item);
             _DbContext.SaveChanges();
-            _AuthorizationManager.SetChange(model.UserId);
+            _RoleManager.GetCurrentRolesCacheItem(model.UserId)?.CancellationTokenSource.Cancel();
             return result;
         }
         #endregion 用户-角色关系的CRUD
@@ -408,13 +424,13 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddRolePermissionReturnDto();
-            //model.RolePermission.GenerateNewId();
+
             _DbContext.PlRolePermissions.Add(model.RolePermission);
             _DbContext.SaveChanges();
-            //result.Id = model.RolePermission.Id;
+
             var userIds = _DbContext.PlAccountRoles.Where(c => model.RolePermission.RoleId == c.RoleId).Select(c => c.UserId).ToArray();
-            foreach (var id in userIds)
-                _AuthorizationManager.SetChange(id);
+
+            userIds.ForEach(c => _PermissionManager.GetCurrentPermissions(c)?.CancellationTokenSource.Cancel());
             return result;
         }
 
@@ -438,8 +454,7 @@ namespace PowerLmsWebApi.Controllers
             _EntityManager.Remove(item);
             _DbContext.SaveChanges();
             var userIds = _DbContext.PlAccountRoles.Where(c => model.RoleId == c.RoleId).Select(c => c.UserId).ToArray();
-            foreach (var id in userIds)
-                _AuthorizationManager.SetChange(id);
+            userIds.ForEach(c => _PermissionManager.GetCurrentPermissions(c)?.CancellationTokenSource.Cancel());
             return result;
         }
         #endregion 角色-权限关系的CRUD
@@ -470,8 +485,8 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.PlAccountRoles.AddRange(adds.Select(c => new AccountRole { RoleId = model.RoleId, UserId = c }));
             _DbContext.SaveChanges();
 
-            foreach (var id in model.UserIds)
-                _AuthorizationManager.SetChange(id);
+            model.UserIds.ForEach(c => _PermissionManager.GetCurrentPermissions(c)?.CancellationTokenSource.Cancel());
+
             return result;
         }
 
@@ -503,8 +518,7 @@ namespace PowerLmsWebApi.Controllers
             setRela.AddRange(adds.Select(c => new RolePermission { RoleId = model.RoleId, PermissionId = c, CreateBy = context.User.Id }));
             _DbContext.SaveChanges();
             var userIds = _DbContext.PlAccountRoles.Where(c => model.RoleId == c.RoleId).Select(c => c.UserId).ToArray();
-            foreach (var id in userIds)
-                _AuthorizationManager.SetChange(id);
+            userIds.ForEach(c => _PermissionManager.GetCurrentPermissions(c)?.CancellationTokenSource.Cancel());
             return result;
         }
 
@@ -521,283 +535,10 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPermissionsInCurrentUserReturnDto();
-            result.Permissions.AddRange(_AuthorizationManager.GetOrLoadPermission(context.User).Values);
+            result.Permissions.AddRange(_PermissionManager.GetOrLoadCurrentPermissionsByUser(context.User).Data.Values);
             return result;
         }
     }
 
-    /// <summary>
-    /// 设置角色的许可权限功能的参数封装类。
-    /// </summary>
-    public class SetPermissionsParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 角色的Id。
-        /// </summary>
-        public Guid RoleId { get; set; }
-
-        /// <summary>
-        /// 所属许可的Id的集合。未在此集合指定的与角色的关系均被删除。
-        /// </summary>
-        public List<string> PermissionIds { get; set; } = new List<string>();
-    }
-
-    /// <summary>
-    /// 设置角色的许可权限功能的返回值封装类。
-    /// </summary>
-    public class SetPermissionsReturnDto : ReturnDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 设置角色的所属用户功能的参数封装类。
-    /// </summary>
-    public class SetUsersParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 角色的Id。
-        /// </summary>
-        public Guid RoleId { get; set; }
-
-        /// <summary>
-        /// 所属用户的Id的集合。未在此集合指定的与用户的关系均被删除。
-        /// </summary>
-        public List<Guid> UserIds { get; set; } = new List<Guid>();
-    }
-
-    /// <summary>
-    /// 设置角色的所属用户功能的返回值封装类。
-    /// </summary>
-    public class SetUsersReturnDto : ReturnDtoBase
-    {
-    }
-
-    #region 角色-权限关系
-    /// <summary>
-    /// 标记删除角色-权限关系功能的参数封装类。
-    /// </summary>
-    public class RemoveRolePermissionParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 角色Id。
-        /// </summary>
-        public Guid RoleId { get; set; }
-
-        /// <summary>
-        /// 权限的Id。
-        /// </summary>
-        public string PermissionId { get; set; }
-    }
-
-    /// <summary>
-    /// 标记删除角色-权限关系功能的返回值封装类。
-    /// </summary>
-    public class RemoveRolePermissionReturnDto : RemoveReturnDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 获取所有角色-权限关系功能的返回值封装类。
-    /// </summary>
-    public class GetAllRolePermissionReturnDto : PagingReturnDtoBase<RolePermission>
-    {
-    }
-
-    /// <summary>
-    /// 增加新角色-权限关系功能参数封装类。
-    /// </summary>
-    public class AddRolePermissionParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 新角色-权限关系信息。其中Id可以是任何值，返回时会指定新值。
-        /// </summary>
-        public RolePermission RolePermission { get; set; }
-    }
-
-    /// <summary>
-    /// 增加新角色-权限关系功能返回值封装类。
-    /// </summary>
-    public class AddRolePermissionReturnDto : ReturnDtoBase
-    {
-        /// <summary>
-        /// 如果成功添加，这里返回新角色-权限关系的Id。
-        /// </summary>
-        public Guid Id { get; set; }
-    }
-
-    #endregion 角色-权限关系
-
-    #region 用户-角色关系
-    /// <summary>
-    /// 标记删除用户-角色关系功能的参数封装类。
-    /// </summary>
-    public class RemoveAccountRoleParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 用户Id。
-        /// </summary>
-        public Guid UserId { get; set; }
-
-        /// <summary>
-        /// 角色Id。
-        /// </summary>
-        public Guid RoleId { get; set; }
-    }
-
-    /// <summary>
-    /// 标记删除用户-角色关系功能的返回值封装类。
-    /// </summary>
-    public class RemoveAccountRoleReturnDto : RemoveReturnDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 获取所有用户-角色关系功能的返回值封装类。
-    /// </summary>
-    public class GetAllAccountRoleReturnDto : PagingReturnDtoBase<AccountRole>
-    {
-    }
-
-    /// <summary>
-    /// 增加新用户-角色关系功能参数封装类。
-    /// </summary>
-    public class AddAccountRoleParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 新用户-角色关系信息。其中Id可以是任何值，返回时会指定新值。
-        /// </summary>
-        public AccountRole AccountRole { get; set; }
-    }
-
-    /// <summary>
-    /// 增加新用户-角色关系功能返回值封装类。
-    /// </summary>
-    public class AddAccountRoleReturnDto : ReturnDtoBase
-    {
-        /// <summary>
-        /// 如果成功添加，这里返回新用户-角色关系的Id。
-        /// </summary>
-        public Guid Id { get; set; }
-    }
-
-    #endregion 用户-角色关系
-
-    #region 权限
-    /// <summary>
-    /// 标记删除权限功能的参数封装类。
-    /// </summary>
-    public class RemovePlPermissionParamsDto : RemoveParamsDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 标记删除权限功能的返回值封装类。
-    /// </summary>
-    public class RemovePlPermissionReturnDto : RemoveReturnDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 获取所有权限功能的返回值封装类。
-    /// </summary>
-    public class GetAllPlPermissionReturnDto : PagingReturnDtoBase<PlPermission>
-    {
-    }
-
-    /// <summary>
-    /// 增加新权限功能参数封装类。
-    /// </summary>
-    public class AddPlPermissionParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 新权限信息。其中Id可以是任何值，返回时会指定新值。
-        /// </summary>
-        public PlPermission PlPermission { get; set; }
-    }
-
-    /// <summary>
-    /// 增加新权限功能返回值封装类。
-    /// </summary>
-    public class AddPlPermissionReturnDto : ReturnDtoBase
-    {
-        /// <summary>
-        /// 如果成功添加，这里返回新权限的Id。
-        /// </summary>
-        public string Id { get; set; }
-    }
-
-    /// <summary>
-    /// 修改权限信息功能参数封装类。
-    /// </summary>
-    public class ModifyPlPermissionParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 权限数据。
-        /// </summary>
-        public PlPermission Item { get; set; }
-    }
-
-    /// <summary>
-    /// 修改权限信息功能返回值封装类。
-    /// </summary>
-    public class ModifyPlPermissionReturnDto : ReturnDtoBase
-    {
-    }
-    #endregion 权限
-
-    #region 角色
-    /// <summary>
-    /// 标记删除角色功能的参数封装类。
-    /// </summary>
-    public class RemovePlRoleParamsDto : RemoveParamsDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 标记删除角色功能的返回值封装类。
-    /// </summary>
-    public class RemovePlRoleReturnDto : RemoveReturnDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 获取所有角色功能的返回值封装类。
-    /// </summary>
-    public class GetAllPlRoleReturnDto : PagingReturnDtoBase<PlRole>
-    {
-    }
-
-    /// <summary>
-    /// 增加新角色功能参数封装类。省略PlRole.OrgId自动填充为调用者所在商户Id。
-    /// </summary>
-    public class AddPlRoleParamsDto : AddParamsDtoBase<PlRole>
-    {
-    }
-
-    /// <summary>
-    /// 增加新角色功能返回值封装类。
-    /// </summary>
-    public class AddPlRoleReturnDto : AddReturnDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 修改角色信息功能参数封装类。
-    /// </summary>
-    public class ModifyPlRoleParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 角色数据。
-        /// </summary>
-        public PlRole PlRole { get; set; }
-    }
-
-    /// <summary>
-    /// 修改角色信息功能返回值封装类。
-    /// </summary>
-    public class ModifyPlRoleReturnDto : ReturnDtoBase
-    {
-    }
-    #endregion 角色
 
 }

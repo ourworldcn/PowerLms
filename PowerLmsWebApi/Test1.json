@@ -1,86 +1,108 @@
-[
-  {
-    "DisplayName": "账号",
-    "Id": "dc58d091-623a-4d7d-b9e5-b645e87d4e79",
-    "Gid": "910101001",
-    "PropertiesString": "{\"TypeGuid\":\"60DE10B7-8CC6-4D51-B356-691ECBB77C03\",\"lv\":0}",
-    "Remark": ""
+{
+  "Genus": [ "cj_kaifu2" ],
+  "TypeGuid": "48CD339A-3B21-4DA7-9B0A-2B914B3DD42C",
+  "stk": -1,
+  "Count0Reserved": true,
+  "ptid": "04AB4C60-9E5B-43A8-894F-3477655371BE",
+  "Count": 0,
+  "Achievement": {
+    "Period": {
+      "Start": "2023-05-30T03:03:28.385Z",
+      "End": null,
+      "PeriodString": "99y",
+      "ValidPeriodString": "99y"
+    },
+    "Ins": [
+      {
+        "Conditional": [
+          {
+            "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
+            "Genus": [],
+            "TId": "A1414D6E-C3A1-44C3-BBBD-E8B4357A8796",
+            "MinCount": 0,
+            "NumberCondition": {
+              "PropertyName": "Count",
+              "MinValue": 15,
+              "MaxValue": 29,
+              "Subtrahend": 0,
+              "Modulus": 15,
+              "MinRemainder": 0,
+              "MaxRemainder": 14
+            },
+            "GeneralConditional": [],
+            "GroupMask": 1
+          }
+        ],
+        "Count": 0,
+        "Genus": []
+      }
+    ],
+    "Exp2LvSequence": [ 2, 5, 7, 10, 15, 18, 20, 25, 30 ],
+    "Outs": [
+      [
+        {
+          "ParentTId": "9c559895-9a2c-43a7-b793-e879a600487c",
+          "TId": "d6766804-236b-45a4-b57d-9d0b611708bb",
+          "Count": 3
+        }
+      ],
+      [
+        {
+          "ParentTId": "9c559895-9a2c-43a7-b793-e879a600487c",
+          "TId": "acca7c0a-fdd5-4343-a6ec-e6c7f5c91e1c",
+          "Count": 2
+        }
+      ],
+      [
+        {
+          "ParentTId": "9c559895-9a2c-43a7-b793-e879a600487c",
+          "TId": "d6766804-236b-45a4-b57d-9d0b611708bb",
+          "Count": 5
+        }
+      ],
+      [
+        {
+          "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
+          "TId": "a45b3421-3688-43c5-b8f5-429db7621f69",
+          "Count": 5000
+        }
+      ],
+      [
+        {
+          "ParentTId": "9c559895-9a2c-43a7-b793-e879a600487c",
+          "TId": "ec8d0858-38a3-4057-9de4-0bb0a629ee30",
+          "Count": 5
+        }
+      ],
+      [
+        {
+          "ParentTId": "9c559895-9a2c-43a7-b793-e879a600487c",
+          "TId": "d6766804-236b-45a4-b57d-9d0b611708bb",
+          "Count": 10
+        }
+      ],
+      [
+        {
+          "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
+          "TId": "c9575f24-a33d-49ba-b130-29b6ff4d62c7",
+          "Count": 30
+        }
+      ],
+      [
+        {
+          "ParentTId": "9c559895-9a2c-43a7-b793-e879a600487c",
+          "TId": "9EBDC71E-F2AD-4F1C-82B9-88955FE15B4B",
+          "Count": 2
+        }
+      ],
+      [
+        {
+          "ParentTId": "9c559895-9a2c-43a7-b793-e879a600487c",
+          "TId": "2e877976-2d3d-4e7e-8851-07163216319a",
+          "Count": 2
+        }
+      ]
+    ]
   },
-  {
-    "DisplayName": "角色",
-    "Id": "07664462-df05-4ba7-886d-b431bb88aa1c",
-    "Gid": "911101001",
-    "PropertiesString": "{\"TypeGuid\":\"941917CC-E91C-46D7-9F53-A98C3EB4F92E\",\"lv\":0,\"TIdsOfCreate\":[\"18084905-2C57-4B4C-B302-4B8230740FBD\",\"3b163a62-6591-4a93-a385-cf079b20f589\",\"29b7e726-387f-409d-a6ac-ad8670a814f0\",\"4d125986-4a3f-4294-bf54-a70853d719c1\",\"3d141082-0deb-4f59-ac5d-a80e43657ccc\",\"fe312261-2233-4c35-aaf4-bd698e328baf\",\"af7b7b9b-a881-4cbe-bca5-111f7babd73a\",\"14d0e372-909b-485f-b8cb-07c9231b10ff\",\"e6edab87-0034-4f45-8040-1f0d565ccf58\",\"9c559895-9a2c-43a7-b793-e879a600487c\",\"123a5ad1-d4f0-4cd9-9abc-d440419d9e0d\",\"04AB4C60-9E5B-43A8-894F-3477655371BE\",\"f1abe4b7-372b-45b2-a9da-eb6930e95cb9\",\"f5022e9f-13da-4a2d-b1b9-d57fc07de232\",\"B39A6FEA-CA36-4C96-975C-59D326EFD7D1\",\"3F38C631-1694-41F5-BA70-7D25900D4D96\"],\"atk\":[20],\"def\":[100],\"pow\":[350],\"crit\":100,\"crit_pct\":0}",
-    "Remark": ""
-  },
-  {
-    "DisplayName": "邮件槽占位符",
-    "Id": "CE00523E-9060-4D74-96C7-C7D3D57CE650",
-    "Gid": "",
-    "PropertiesString": "{}",
-    "Remark": ""
-  },
-  {
-    "DisplayName": "邮件",
-    "Id": "E7229A9E-23A4-42EF-8ABB-FAEF0E16F683",
-    "Gid": "",
-    "PropertiesString": "{\"TypeGuid\":\"0465A794-42E7-4B14-AE8B-2BF282FAA0BE\",\"Count\":1,\"stk\":-1,\"Count0Reserved\":false}",
-    "Remark": ""
-  },
-  {
-    "DisplayName": "成就/任务槽",
-    "Id": "04AB4C60-9E5B-43A8-894F-3477655371BE",
-    "Gid": "",
-    "PropertiesString": "{\"cap\":-1,\"TypeGuid\":\"57EB05BD-B8BE-47D5-ADFE-C8C2E8888E38\",\"SubTypeGuid\":\"48CD339A-3B21-4DA7-9B0A-2B914B3DD42C\",\"TIdsOfCreate\":[]}",
-    "Remark": ""
-  },
-  {
-    "DisplayName": "t78占位符",
-    "Id": "7A7A7058-CB88-4D54-80E9-22241774CF51",
-    "Gid": "",
-    "PropertiesString": "{\"TypeGuid\":\"F3F9B16B-499E-4228-AEC0-FFA5B9F18E9B\",\"Count\":1}",
-    "Remark": ""
-  },
-  {
-    "DisplayName": "7日签到标志",
-    "Id": "46542DE4-B8B8-4735-936C-856273B650F7",
-    "Gid": "110201002",
-    "PropertiesString": "{\"TypeGuid\":\"F3F9B16B-499E-4228-AEC0-FFA5B9F18E9B\",\"Count\":0,\"stk\":-1,\"Count0Reserved\":true,\"ptid\":\"123a5ad1-d4f0-4cd9-9abc-d440419d9e0d\"}",
-    "Remark": ""
-  },
-  {
-    "DisplayName": "累计签到标志",
-    "Id": "4527471A-FD91-4899-910C-DE7056AD67A1",
-    "Gid": "110201003",
-    "PropertiesString": "{\"TypeGuid\":\"F3F9B16B-499E-4228-AEC0-FFA5B9F18E9B\",\"Count\":0,\"stk\":-1,\"Count0Reserved\":true,\"ptid\":\"123a5ad1-d4f0-4cd9-9abc-d440419d9e0d\"}",
-    "Remark": ""
-  },
-  {
-    "DisplayName": "7日签到第1天 第一组",
-    "Id": "f00fbec7-7465-4344-8443-6b4b43260b3c",
-    "Gid": "180101001",
-    "PropertiesString": "{\"Genus\":[\"gs_qiandao\"],\"ShoppingItem\":{\"Period\":{\"Start\":\"2023-05-09T00:00:00.000Z\",\"End\":null,\"PeriodString\":\"1d\",\"ValidPeriodString\":\"1d\"},\"GroupNumber\":1,\"Ins\":[{\"Conditional\":[{\"ParentTId\":\"123a5ad1-d4f0-4cd9-9abc-d440419d9e0d\",\"Genus\":[],\"TId\":\"46542DE4-B8B8-4735-936C-856273B650F7\",\"MinCount\":0,\"NumberCondition\":{\"PropertyName\":\"Count\",\"MinValue\":0,\"MaxValue\":null,\"Subtrahend\":0,\"Modulus\":42,\"MinRemainder\":0,\"MaxRemainder\":6},\"GeneralConditional\":[],\"GroupMask\":3}],\"Count\":0},{\"Conditional\":[{\"ParentTId\":null,\"Genus\":[],\"TId\":\"289a5c18-086b-4fe5-8b76-53699c841cb7\",\"MinCount\":1,\"GroupMask\":1}],\"Count\":1}],\"Outs\":[{\"ParentTId\":null,\"TId\":\"ad9fa99b-1831-4154-a0ac-661d0facf606\",\"Count\":1}],\"MaxCount\":2},\"adPlacementIdDic\":{\"Korea\":null,\"Canada\":null,\"Feishu\":\"b65ae42ef982dc\",\"Pilipinas\":\"b6579671ea72ce\",\"Southeast\":\"b668b4ecd1ae16\",\"Southeast_iOS\":\"b668b4e9f70d79\"},\"adScenarioIdDic\":{\"Southeast\":\"f668bac56a9b73\",\"Southeast_iOS\":\"f668b831ba546f\"}}",
-    "Remark": ""
-  },
-  {
-    "DisplayName": "7日签到第1天 第一组条件序列",
-    "Id": "289a5c18-086b-4fe5-8b76-53699c841cb7",
-    "Gid": "190201004",
-    "PropertiesString": "{\"SequenceOut\":{\"Conditions\":[{\"ParentTId\":null,\"Genus\":[],\"TId\":\"07664462-df05-4ba7-886d-b431bb88aa1c\",\"MinCount\":null,\"GeneralConditional\":[],\"GroupMask\":1}],\"GetIndexExpression\":{\"op\":\"GetBuyedCount\",\"args\":[\"f00fbec7-7465-4344-8443-6b4b43260b3c\"]},\"Outs\":{\"ParentTIds\":[\"123a5ad1-d4f0-4cd9-9abc-d440419d9e0d\"],\"TIds\":[\"1de88b53-e5bf-4a60-9dfb-90284b94bdab\"],\"Counts\":[0,0]}}}",
-    "Remark": ""
-  },
-  {
-    "DisplayName": "7日签到第1天 第一组产出序列",
-    "Id": "ad9fa99b-1831-4154-a0ac-661d0facf606",
-    "Gid": "190201005",
-    "PropertiesString": "{\"SequenceOut\":{\"Conditions\":[{\"ParentTId\":null,\"Genus\":[],\"TId\":\"07664462-df05-4ba7-886d-b431bb88aa1c\",\"MinCount\":null,\"GeneralConditional\":[],\"GroupMask\":1}],\"GetIndexExpression\":{\"op\":\"GetBuyedCount\",\"args\":[\"f00fbec7-7465-4344-8443-6b4b43260b3c\"]},\"Outs\":{\"ParentTIds\":[\"123a5ad1-d4f0-4cd9-9abc-d440419d9e0d\",\"9c559895-9a2c-43a7-b793-e879a600487c\"],\"TIds\":[\"a45b3421-3688-43c5-b8f5-429db7621f69\",\"9c79a55a-106f-4f32-9d44-484d86a665fd\"],\"Counts\":[5000,2]}}}",
-    "Remark": ""
-  },
-  {
-    "DisplayName": "7日签到第2天 第一组",
-    "Id": "75137bd7-882d-4580-b011-e92e8a36fbd5",
-    "Gid": "180101002",
-    "PropertiesString": "{\"Genus\":[\"gs_qiandao\"],\"ShoppingItem\":{\"Period\":{\"Start\":\"2023-05-09T00:00:00.000Z\",\"End\":null,\"PeriodString\":\"1d\",\"ValidPeriodString\":\"1d\"},\"GroupNumber\":1,\"Ins\":[{\"Conditional\":[{\"ParentTId\":\"123a5ad1-d4f0-4cd9-9abc-d440419d9e0d\",\"Genus\":[],\"TId\":\"46542DE4-B8B8-4735-936C-856273B650F7\",\"MinCount\":0,\"NumberCondition\":{\"PropertyName\":\"Count\",\"MinValue\":0,\"MaxValue\":null,\"Subtrahend\":0,\"Modulus\":42,\"MinRemainder\":1,\"MaxRemainder\":6},\"GeneralConditional\":[],\"GroupMask\":3}],\"Count\":0},{\"Conditional\":[{\"ParentTId\":null,\"Genus\":[],\"TId\":\"80310684-f1e7-4b4d-b772-18e6070dd269\",\"MinCount\":1,\"GroupMask\":1}],\"Count\":1}],\"Outs\":[{\"ParentTId\":null,\"TId\":\"d120854a-601a-48cf-b6d6-f6bbec7e8227\",\"Count\":1}],\"MaxCount\":2},\"adPlacementIdDic\":{\"Korea\":null,\"Canada\":null,\"Feishu\":\"b65ae42ef982dc\",\"Pilipinas\":\"b6579671ea72ce\",\"Southeast\":\"b668b4ecd1ae16\",\"Southeast_iOS\":\"b668b4e9f70d79\"},\"adScenarioIdDic\":{\"Southeast\":\"f668bac56a9b73\",\"Southeast_iOS\":\"f668b831ba546f\"}}",
-    "Remark": ""
-  }
-]
+  "name_txt": 50006
+}

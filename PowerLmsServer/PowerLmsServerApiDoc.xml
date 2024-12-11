@@ -185,46 +185,6 @@
             缓存项的前缀。
             </summary>
         </member>
-        <member name="M:PowerLmsServer.Managers.AuthorizationManager.GetPermissionsFromUser(PowerLms.Data.Account)">
-            <summary>
-            获取所有指定用户Id的权限。会考虑其当前所属机构。
-            </summary>
-            <param name="account"></param>
-        </member>
-        <member name="M:PowerLmsServer.Managers.AuthorizationManager.GetPermissionsFromRoleIds(System.Linq.IQueryable{System.Guid})">
-            <summary>
-            用角色Id集合获取所有的权限集合。
-            </summary>
-            <param name="roleIds">一组角色Id。</param>
-            <returns></returns>
-        </member>
-        <member name="M:PowerLmsServer.Managers.AuthorizationManager.GetRolesFromUserId(PowerLms.Data.Account)">
-            <summary>
-            获取指定用户的所有所属角色。会考虑其当前所属机构。
-            </summary>
-            <param name="account"></param>
-            <returns></returns>
-        </member>
-        <member name="M:PowerLmsServer.Managers.AuthorizationManager.GetOrLoadPermission(PowerLms.Data.Account)">
-            <summary>
-            加载或获取指定用户的所有权限缓存项。
-            </summary>
-            <param name="user"></param>
-            <returns></returns>
-        </member>
-        <member name="M:PowerLmsServer.Managers.AuthorizationManager.LoadPermission(PowerLms.Data.Account)">
-            <summary>
-            加载数据库中许可对象。
-            </summary>
-            <param name="user"></param>
-            <returns></returns>
-        </member>
-        <member name="M:PowerLmsServer.Managers.AuthorizationManager.SetChange(System.Guid)">
-            <summary>
-            指出指定用户的权限缓存已经无效。
-            </summary>
-            <param name="userId"></param>
-        </member>
         <member name="M:PowerLmsServer.Managers.AuthorizationManager.HasPermission(PowerLms.Data.Account,System.String[])">
             <summary>
             是否拥有指定的一组权限。对于超管，商管总是返回true。
@@ -584,6 +544,13 @@
             <param name="merch"></param>
             <param name="dbContext"></param>
         </member>
+        <member name="M:PowerLmsServer.Managers.MerchantManager.GetMerchantCacheItemById(System.Guid)">
+            <summary>
+            获取指定id的商户对象缓存。
+            </summary>
+            <param name="merchantId"></param>
+            <returns>商户对象，若没有找到，则返回null。</returns>
+        </member>
         <member name="M:PowerLmsServer.Managers.MerchantManager.GetOrLoadMerchantCacheItemById(System.Guid)">
             <summary>
             加载或获取缓存的商户对象。
@@ -734,6 +701,13 @@
             </summary>
             <param name="orgs"></param>
         </member>
+        <member name="M:PowerLmsServer.Managers.OrganizationManager.GetOrgsCacheItemByMerchantId(System.Guid)">
+            <summary>
+            获取指定商户的所有机构。
+            </summary>
+            <param name="merchantId"></param>
+            <returns>指定商户的所有机构的缓存项，如果没找到则返回null。</returns>
+        </member>
         <member name="M:PowerLmsServer.Managers.OrganizationManager.GetOrLoadOrgsCacheItemByMerchantId(System.Guid)">
             <summary>
             按指定商户Id获取或加载所有下属机构信息。
@@ -834,6 +808,12 @@
             </summary>
             <param name="dic"></param>
         </member>
+        <member name="M:PowerLmsServer.Managers.PermissionManager.GetPermission">
+            <summary>
+            获取所有权限的缓存项。
+            </summary>
+            <returns></returns>
+        </member>
         <member name="M:PowerLmsServer.Managers.PermissionManager.GetOrLoadPermission">
             <summary>
             获取或加载所有权限对象。
@@ -848,19 +828,19 @@
             <param name="db"></param>
             <returns></returns>
         </member>
+        <member name="M:PowerLmsServer.Managers.PermissionManager.GetCurrentPermissions(System.Guid)">
+            <summary>
+            获取指定角色的当前权限缓存项。
+            </summary>
+            <param name="userId"></param>
+            <returns>指定角色的当前权限缓存项，没有则返回null</returns>
+        </member>
         <member name="M:PowerLmsServer.Managers.PermissionManager.GetOrLoadCurrentPermissionsByUser(PowerLms.Data.Account)">
             <summary>
             获取或加载用户当前机构下的所有授权。
             </summary>
             <param name="user"></param>
             <returns></returns>
-        </member>
-        <member name="M:PowerLmsServer.Managers.PermissionManager.SetChange(System.Guid)">
-            <summary>
-            指示权限已经发生变化。
-            </summary>
-            <param name="userId">用户Id。</param>
-            <returns>true 设置了变化信号，false未加载相关数据。</returns>
         </member>
         <member name="T:PowerLmsServer.Managers.RoleManager">
             <summary>
@@ -880,6 +860,13 @@
             <param name="dbContext"></param>
             <returns></returns>
         </member>
+        <member name="M:PowerLmsServer.Managers.RoleManager.GetRolesCacheItemByMerchantId(System.Guid)">
+            <summary>
+            获取指定商户下所有角色的缓存项。
+            </summary>
+            <param name="merchId"></param>
+            <returns>指定商户下所有角色的缓存项，如果没找到则返回null。</returns>
+        </member>
         <member name="M:PowerLmsServer.Managers.RoleManager.GetOrLoadRolesCacheItemByMerchantId(System.Guid)">
             <summary>
             获取或加载商户下所有角色的字典。
@@ -893,6 +880,20 @@
             </summary>
             <param name="user"></param>
             <param name="db"></param>
+        </member>
+        <member name="M:PowerLmsServer.Managers.RoleManager.GetCurrentRolesCacheItem(PowerLms.Data.Account)">
+            <summary>
+            返回指定用户当前登录公司的所有组织机构。
+            </summary>
+            <param name="user"></param>
+            <returns>用户当前登录公司的所有组织机构缓存项，如果没找到则返回null。</returns>
+        </member>
+        <member name="M:PowerLmsServer.Managers.RoleManager.GetCurrentRolesCacheItem(System.Guid)">
+            <summary>
+            返回指定用户当前登录公司的所有组织机构。
+            </summary>
+            <param name="userId"></param>
+            <returns>用户当前登录公司的所有组织机构缓存项，如果没找到则返回null。</returns>
         </member>
         <member name="M:PowerLmsServer.Managers.RoleManager.GetOrLoadCurrentRolesCacheItemByUser(PowerLms.Data.Account)">
             <summary>

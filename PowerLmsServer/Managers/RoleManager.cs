@@ -60,6 +60,17 @@ namespace PowerLmsServer.Managers
         }
 
         /// <summary>
+        /// 获取指定商户下所有角色的缓存项。
+        /// </summary>
+        /// <param name="merchId"></param>
+        /// <returns>指定商户下所有角色的缓存项，如果没找到则返回null。</returns>
+        public OwCacheItem<ConcurrentDictionary<Guid, PlRole>> GetRolesCacheItemByMerchantId(Guid merchId)
+        {
+            var result = _Cache.Get<OwCacheItem<ConcurrentDictionary<Guid, PlRole>>>(OwCacheHelper.GetCacheKeyFromId(merchId, ".Roles"));
+            return result;
+        }
+
+        /// <summary>
         /// 获取或加载商户下所有角色的字典。
         /// </summary>
         /// <param name="merchId"></param>
@@ -94,6 +105,27 @@ namespace PowerLmsServer.Managers
             var allRoles = GetOrLoadRolesCacheItemByMerchantId(merchant.Data.Id);   //商户下所有角色
             var coll = allRoles.Data.Where(c => c.Value.OrgId.HasValue && orgs.Data.ContainsKey(c.Value.OrgId.Value));
             return new ConcurrentDictionary<Guid, PlRole>(coll);
+        }
+
+        /// <summary>
+        /// 返回指定用户当前登录公司的所有组织机构。
+        /// </summary>
+        /// <param name="user"></param>
+        /// <returns>用户当前登录公司的所有组织机构缓存项，如果没找到则返回null。</returns>
+        public OwCacheItem<ConcurrentDictionary<Guid, PlRole>> GetCurrentRolesCacheItem(Account user)
+        {
+            return GetCurrentRolesCacheItem(user.Id);
+        }
+
+        /// <summary>
+        /// 返回指定用户当前登录公司的所有组织机构。
+        /// </summary>
+        /// <param name="userId"></param>
+        /// <returns>用户当前登录公司的所有组织机构缓存项，如果没找到则返回null。</returns>
+        public OwCacheItem<ConcurrentDictionary<Guid, PlRole>> GetCurrentRolesCacheItem(Guid userId)
+        {
+            var result = _Cache.Get<OwCacheItem<ConcurrentDictionary<Guid, PlRole>>>(OwCacheHelper.GetCacheKeyFromId(userId, ".CurrentRoles"));
+            return result;
         }
 
         /// <summary>
