@@ -62,7 +62,7 @@ namespace PowerLmsServer.Managers
                 SeedData(svc);
                 Test(svc);
             }, CancellationToken.None);
-            _Logger.LogInformation("Pl服务成功上线");
+            _Logger.LogInformation("Plms服务成功上线");
             return task;
         }
 

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.Internal;
+using Microsoft.Extensions.Caching.Memory;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
@@ -47,43 +48,54 @@ namespace PowerLmsWebApi.Controllers
         /// 获取组织机构。暂不考虑分页。
         /// </summary>
         /// <param name="token"></param>
-        /// <param name="rootId">根组织机构的Id。或商户的Id。省略或为null时，对商管将返回该商户下多个组织机构。</param>
-        /// <param name="includeChildren">是否包含子机构。</param>
+        /// <param name="rootId">根组织机构的Id。或商户的Id。省略或为null时，对商管将返回该商户下多个组织机构;对一般用户会自动给出当前登录公司及其下属所有机构。
+        /// 强行指定的Id，可以获取其省略时的子集，但不能获取到更多数据。</param>
+        /// <param name="includeChildren">是否包含子机构。废弃，一定要包含子机构。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
-        /// <response code="400">用户身份错误。通常是非管理员试图获取所有组织机构信息，未来权限定义可能更改这个要求。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpGet]
         public ActionResult<GetOrgReturnDto> GetOrg(Guid token, Guid? rootId, bool includeChildren)
         {
             var result = new GetOrgReturnDto();
             if (_AccountManager.GetOrLoadAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (_DbContext.Merchants.Find(rootId) is PlMerchant merch)   //若指定的是商户
+            if (!rootId.HasValue && !context.User.IsAdmin()) return StatusCode((int)HttpStatusCode.Forbidden, "只有商管可以获取全商户的机构");
+            if (context.User.IsSuperAdmin)   //若是超管
             {
-                if ((context.User.State & 8) == 0 && (context.User.State & 4) == 0) return BadRequest();
-                _MerchantManager.GetMerchantIdByUserId(context.User.Id, out var merchId);
-
-                var orgs = _DbContext.PlOrganizations.Where(c => c.MerchantId == merchId).ToList();
-
-                if (!includeChildren)
-                {
-                    orgs.ForEach(c =>
-                    {
-                        _DbContext.Entry(c).State = EntityState.Detached;
-                        c.Children.Clear();
-                    });
-                }
-                result.Result.AddRange(orgs);
+                return BadRequest("超管不能获取具体商户的机构");
             }
-            else //指定了机构
+            if (_MerchantManager.GetOrLoadMerchantCacheItemByUser(context.User) is not OwCacheItem<PlMerchant> merch)    //若找不到商户
+                return BadRequest("找不到用户所属的商户");
+            var orgs = _OrganizationManager.GetOrLoadOrgsCacheItemByMerchantId(merch.Data.Id);  //获取其所有机构
+            if (rootId.HasValue) //若指定了根机构
             {
-                var root = _DbContext.PlOrganizations.Find(rootId);  //获取商户
-                if (!includeChildren)
+                if (!orgs.Data.TryGetValue(rootId.Value, out var org)) return BadRequest($"找不到指定的机构，Id={rootId}");
+                if (context.User.IsMerchantAdmin)    //若是商管
                 {
-                    _DbContext.Entry(root).State = EntityState.Detached;
-                    root.Children.Clear();
+                    result.Result.Add(org);
                 }
-                result.Result.Add(root);
+                else //非商管
+                {
+                    var currCo = _OrganizationManager.GetCurrentCompanyByUser(context.User);
+                    if (currCo is null) return BadRequest("当前用户未登录到一个机构。");
+                    if (OwHelper.GetAllSubItemsOfTree(currCo, c => c.Children).FirstOrDefault(c => c.Id == rootId.Value) is not PlOrganization currOrg)
+                        return StatusCode((int)HttpStatusCode.Forbidden, "用户只能获取当前登录公司及其子机构");
+                    result.Result.Add(currOrg);
+                }
+            }
+            else //若没有指定根
+            {
+                if (context.User.IsMerchantAdmin)    //若是商管
+                {
+                    result.Result.AddRange(orgs.Data.Values.Where(c => c.Parent is null));
+                }
+                else //非商管
+                {
+                    var currCo = _OrganizationManager.GetCurrentCompanyByUser(context.User);
+                    if (currCo is null) return BadRequest("当前用户未登录到一个机构。");
+                    result.Result.Add(currCo);
+                }
             }
             return result;
         }
@@ -120,7 +132,7 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// 修改组织机构。不能修改父子关系。请使用 AddOrgRelation 和 RemoveOrgRelation修改。
+        /// 修改已有组织机构。不能修改父子关系。请使用 AddOrgRelation 和 RemoveOrgRelation修改。
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
@@ -134,7 +146,17 @@ namespace PowerLmsWebApi.Controllers
             if (!_AuthorizationManager.HasPermission(context.User, "B.1")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new ModifyOrgReturnDto();
             var list = new List<PlOrganization>();
-            var res = model.Items.Select(c => (_DbContext.PlOrganizations.Find(c.Id), _DbContext.PlOrganizations.Find(c.Id).Children.ToArray())).ToArray();
+            List<(PlOrganization, IEnumerable<PlOrganization>)> restore = new List<(PlOrganization, IEnumerable<PlOrganization>)>();
+            var ids = model.Items.Select(c => c.Id).ToArray();
+            _DbContext.PlOrganizations.Where(c => ids.Contains(c.Id)).Load();
+            foreach (var item in model.Items)
+            {
+                if (_DbContext.PlOrganizations.Find(item.Id) is PlOrganization org)
+                    restore.Add((item, item.Children.ToArray()));
+                else
+                    return BadRequest($"指定的机构中至少一个不存在，Id={item.Id}");
+            }
+
             if (!_EntityManager.Modify(model.Items, list)) return NotFound();
 
             //list.ForEach(tmp =>
@@ -143,12 +165,19 @@ namespace PowerLmsWebApi.Controllers
             //    entity.Navigation(nameof(PlOrganization.Children)).IsModified = false;
             //    entity.Collection(c => c.Children).IsModified = false;
             //});
-            res.ForEach(c =>
+            try
             {
-                c.Item1.Children.Clear();
-                c.Item1.Children.AddRange(c.Item2);
-            });
-            _DbContext.SaveChanges();
+                restore.ForEach(c =>
+                {
+                    c.Item1.Children.Clear();
+                    c.Item1.Children.AddRange(c.Item2);
+                });
+                _DbContext.SaveChanges();
+            }
+            catch (Exception err)
+            {
+                return BadRequest(err.Message);
+            }
             return result;
         }
 
@@ -442,242 +471,4 @@ namespace PowerLmsWebApi.Controllers
 
     }
 
-    /// <summary>
-    /// 删除机构父子关系的功能参数封装类。
-    /// </summary>
-    public class RemoveOrgRelationParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 父Id。
-        /// </summary>
-        public Guid ParentId { get; set; }
-
-        /// <summary>
-        /// 子Id。
-        /// </summary>
-        public Guid ChildId { get; set; }
-    }
-
-    /// <summary>
-    /// 删除机构父子关系的功能返回值封装类。
-    /// </summary>
-    public class RemoveOrgRelationReturnDto : ReturnDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 增加机构父子关系的功能参数封装类。
-    /// </summary>
-    public class AddOrgRelationParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 父Id。
-        /// </summary>
-        public Guid ParentId { get; set; }
-
-        /// <summary>
-        /// 子Id。
-        /// </summary>
-        public Guid ChildId { get; set; }
-    }
-
-    /// <summary>
-    /// 增加机构父子关系的功能返回值封装类。
-    /// </summary>
-    public class AddOrgRelationReturnDto : ReturnDtoBase
-    {
-    }
-
-    #region 开户行信息
-    /// <summary>
-    /// 标记删除开户行信息功能的参数封装类。
-    /// </summary>
-    public class RemoveBankInfoParamsDto : RemoveParamsDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 标记删除开户行信息功能的返回值封装类。
-    /// </summary>
-    public class RemoveBankInfoReturnDto : RemoveReturnDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 获取所有开户行信息功能的返回值封装类。
-    /// </summary>
-    public class GetAllBankInfoReturnDto : PagingReturnDtoBase<BankInfo>
-    {
-    }
-
-    /// <summary>
-    /// 增加新开户行信息功能参数封装类。
-    /// </summary>
-    public class AddBankInfoParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 新开户行信息信息。其中Id可以是任何值，返回时会指定新值。
-        /// </summary>
-        public BankInfo BankInfo { get; set; }
-    }
-
-    /// <summary>
-    /// 增加新开户行信息功能返回值封装类。
-    /// </summary>
-    public class AddBankInfoReturnDto : ReturnDtoBase
-    {
-        /// <summary>
-        /// 如果成功添加，这里返回新开户行信息的Id。
-        /// </summary>
-        public Guid Id { get; set; }
-    }
-
-    /// <summary>
-    /// 修改开户行信息信息功能参数封装类。
-    /// </summary>
-    public class ModifyBankInfoParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 开户行信息数据。
-        /// </summary>
-        public BankInfo BankInfo { get; set; }
-    }
-
-    /// <summary>
-    /// 修改开户行信息信息功能返回值封装类。
-    /// </summary>
-    public class ModifyBankInfoReturnDto : ReturnDtoBase
-    {
-    }
-    #endregion 开户行信息
-
-    /// <summary>
-    /// 初始化机构的功能参数封装类。
-    /// </summary>
-    public class CopyDataDicParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 初始化机构的Id。
-        /// </summary>
-        public Guid Id { get; set; }
-    }
-
-    /// <summary>
-    /// 初始化机构的功能返回值封装类。
-    /// </summary>
-    public class CopyDataDicReturnDto : ReturnDtoBase
-    {
-    }
-
-    #region 用户和商户/组织机构的所属关系的CRUD
-    /// <summary>
-    /// 获取用户和商户/组织机构的所属关系返回值封装类。
-    /// </summary>
-    public class GetAllAccountPlOrganizationReturnDto : PagingReturnDtoBase<AccountPlOrganization>
-    {
-    }
-
-    /// <summary>
-    /// 删除用户和商户/组织机构的所属关系的功能参数封装类。
-    /// </summary>
-    public class RemoveAccountPlOrganizationParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 用户的Id。
-        /// </summary>
-        public Guid UserId { get; set; }
-
-        /// <summary>
-        /// 商户/组织机构的Id。
-        /// </summary>
-        public Guid OrgId { get; set; }
-    }
-
-    /// <summary>
-    /// 删除用户和商户/组织机构的所属关系的功能返回值封装类。
-    /// </summary>
-    public class RemoveAccountPlOrganizationReturnDto : RemoveReturnDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 增加用户和商户/组织机构的所属关系的功能参数封装类，
-    /// </summary>
-    public class AddAccountPlOrganizationParamsDto : AddParamsDtoBase<AccountPlOrganization>
-    {
-    }
-
-    /// <summary>
-    /// 增加用户和商户/组织机构的所属关系的功能返回值封装类。
-    /// </summary>
-    public class AddAccountPlOrganizationReturnDto : ReturnDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 获取用户和商户/组织机构的所属关系功能的返回值封装类。
-    /// </summary>
-    public class GetAllAccountReturnDto : PagingReturnDtoBase<Account>
-    {
-    }
-
-    #endregion 用户和商户/组织机构的所属关系的CRUD
-
-    /// <summary>
-    /// 通过组织机构Id获取所属的商户Id的功能返回值封装类。
-    /// </summary>
-    public class GetMerchantIdReturnDto : ReturnDtoBase
-    {
-        /// <summary>
-        /// 商户Id。注意，理论上允许组织机构不属于任何商户，则此处返回null。
-        /// </summary>
-        public Guid? Result { get; set; }
-    }
-
-    /// <summary>
-    /// 删除组织机构的功能参数封装类。
-    /// </summary>
-    public class RemoveOrgParamsDto : RemoveParamsDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 删除组织机构的功能返回值封装类。
-    /// </summary>
-    public class RemoveOrgReturnDto : RemoveReturnDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 增加一个组织机构的功能参数封装类。
-    /// </summary>
-    public class AddOrgParamsDto : AddParamsDtoBase<PlOrganization>
-    {
-        /// <summary>
-        /// 是否给新加入的机构复制一份完整的数据字典。
-        /// </summary>
-        public bool IsCopyDataDic { get; set; }
-    }
-
-    /// <summary>
-    /// 增加一个组织机构的功能返回值封装类。
-    /// </summary>
-    public class AddOrgReturnDto : AddReturnDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 修改组织机构功能的参数封装类。
-    /// </summary>
-    public class ModifyOrgParamsDto : ModifyParamsDtoBase<PlOrganization>
-    {
-
-    }
-
-    /// <summary>
-    /// 修改组织机构功能的返回值封装类。
-    /// </summary>
-    public class ModifyOrgReturnDto : ModifyReturnDtoBase
-    {
-    }
 }
