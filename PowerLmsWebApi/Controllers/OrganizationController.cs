@@ -22,7 +22,7 @@ namespace PowerLmsWebApi.Controllers
         /// 构造函数。
         /// </summary>
         public OrganizationController(AccountManager accountManager, IServiceProvider serviceProvider, PowerLmsUserDbContext dbContext,
-            OrganizationManager organizationManager, IMapper mapper, EntityManager entityManager, DataDicManager dataManager, MerchantManager merchantManager)
+            OrganizationManager organizationManager, IMapper mapper, EntityManager entityManager, DataDicManager dataManager, MerchantManager merchantManager, AuthorizationManager authorizationManager)
         {
             _AccountManager = accountManager;
             _ServiceProvider = serviceProvider;
@@ -32,6 +32,7 @@ namespace PowerLmsWebApi.Controllers
             _EntityManager = entityManager;
             _DataManager = dataManager;
             _MerchantManager = merchantManager;
+            _AuthorizationManager = authorizationManager;
         }
 
         readonly AccountManager _AccountManager;
@@ -176,6 +177,16 @@ namespace PowerLmsWebApi.Controllers
                     c.Item1.Children.AddRange(c.Item2);
                 });
                 _DbContext.SaveChanges();
+                var merchIds = restore.Select(c =>
+                 {
+                     _MerchantManager.GetMerchantIdByOrgId(c.Item1.Id, out var r);
+                     return r;
+                 }).Distinct().ToArray();
+                foreach (var item in merchIds)
+                {
+                    if (!item.HasValue) continue;
+                    _MerchantManager.GetMerchantCacheItemById(item.Value)?.CancellationTokenSource.Cancel();
+                }
             }
             catch (Exception err)
             {
