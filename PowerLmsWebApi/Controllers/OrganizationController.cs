@@ -70,10 +70,13 @@ namespace PowerLmsWebApi.Controllers
             var orgs = _OrganizationManager.GetOrLoadOrgsCacheItemByMerchantId(merch.Data.Id);  //获取其所有机构
             if (rootId.HasValue) //若指定了根机构
             {
-                if (!orgs.Data.TryGetValue(rootId.Value, out var org)) return BadRequest($"找不到指定的机构，Id={rootId}");
+                if (!orgs.Data.TryGetValue(rootId.Value, out var org) && rootId.Value != merch.Data.Id) return BadRequest($"找不到指定的机构，Id={rootId}");
                 if (context.User.IsMerchantAdmin)    //若是商管
                 {
-                    result.Result.Add(org);
+                    if (org is not null)
+                        result.Result.Add(org);
+                    else
+                        result.Result.AddRange(orgs.Data.Values.Where(c => c.ParentId is null));
                 }
                 else //非商管
                 {
