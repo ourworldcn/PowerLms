@@ -22,7 +22,7 @@ namespace PowerLmsWebApi.Controllers
         /// 构造函数。
         /// </summary>
         public OrganizationController(AccountManager accountManager, IServiceProvider serviceProvider, PowerLmsUserDbContext dbContext,
-            OrganizationManager organizationManager, IMapper mapper, EntityManager entityManager, DataDicManager dataManager, MerchantManager merchantManager)
+            OrganizationManager organizationManager, IMapper mapper, EntityManager entityManager, DataDicManager dataManager, MerchantManager merchantManager, AuthorizationManager authorizationManager)
         {
             _AccountManager = accountManager;
             _ServiceProvider = serviceProvider;
@@ -32,6 +32,7 @@ namespace PowerLmsWebApi.Controllers
             _EntityManager = entityManager;
             _DataManager = dataManager;
             _MerchantManager = merchantManager;
+            _AuthorizationManager = authorizationManager;
         }
 
         readonly AccountManager _AccountManager;
@@ -70,10 +71,13 @@ namespace PowerLmsWebApi.Controllers
             var orgs = _OrganizationManager.GetOrLoadOrgsCacheItemByMerchantId(merch.Data.Id);  //获取其所有机构
             if (rootId.HasValue) //若指定了根机构
             {
-                if (!orgs.Data.TryGetValue(rootId.Value, out var org)) return BadRequest($"找不到指定的机构，Id={rootId}");
+                if (!orgs.Data.TryGetValue(rootId.Value, out var org) && rootId.Value != merch.Data.Id) return BadRequest($"找不到指定的机构，Id={rootId}");
                 if (context.User.IsMerchantAdmin)    //若是商管
                 {
-                    result.Result.Add(org);
+                    if (org is not null)
+                        result.Result.Add(org);
+                    else
+                        result.Result.AddRange(orgs.Data.Values.Where(c => c.ParentId is null));
                 }
                 else //非商管
                 {
@@ -173,6 +177,16 @@ namespace PowerLmsWebApi.Controllers
                     c.Item1.Children.AddRange(c.Item2);
                 });
                 _DbContext.SaveChanges();
+                var merchIds = restore.Select(c =>
+                 {
+                     _MerchantManager.GetMerchantIdByOrgId(c.Item1.Id, out var r);
+                     return r;
+                 }).Distinct().ToArray();
+                foreach (var item in merchIds)
+                {
+                    if (!item.HasValue) continue;
+                    _MerchantManager.GetMerchantCacheItemById(item.Value)?.CancellationTokenSource.Cancel();
+                }
             }
             catch (Exception err)
             {
