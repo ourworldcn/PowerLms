@@ -149,8 +149,20 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyPlRoleReturnDto();
+            var newOrgId = model.PlRole.OrgId;
+            var oldRole = _DbContext.PlRoles.Find(model.PlRole.Id);
+            var oldOrgId = oldRole.OrgId;
+
             if (!_EntityManager.Modify(new[] { model.PlRole })) return NotFound();
+            var newRole = _DbContext.PlRoles.Find(model.PlRole.Id);
+            newRole.OrgId = newOrgId;
+
             _DbContext.SaveChanges();
+
+            if (oldOrgId.HasValue && _MerchantManager.GetMerchantIdByRoleId(oldOrgId.Value, out var oldMerchId))
+                _MerchantManager.GetMerchantCacheItemById(oldMerchId.Value)?.CancellationTokenSource.Cancel();
+            if (newOrgId.HasValue && _MerchantManager.GetMerchantIdByRoleId(newOrgId.Value, out var newMerchId))
+                _MerchantManager.GetMerchantCacheItemById(newMerchId.Value)?.CancellationTokenSource.Cancel();
             return result;
         }
 

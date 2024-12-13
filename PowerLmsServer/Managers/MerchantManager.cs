@@ -134,31 +134,47 @@ namespace PowerLmsServer.Managers
         /// 从数据库中取指定组织机构Id所属的商户Id。
         /// </summary>
         /// <param name="orgId">机构Id。</param>
-        /// <param name="MerchantId"></param>
+        /// <param name="merchantId"></param>
         /// <returns>true则找到了商户Id，false没有找到。</returns>
-        public bool GetMerchantIdByOrgId(Guid orgId, out Guid? MerchantId)
+        public bool GetMerchantIdByOrgId(Guid orgId, out Guid? merchantId)
         {
             var org = _DbContext.PlOrganizations.Find(orgId);   //找到组织机构对象
             if (org == null)
             {
-                if(_DbContext.Merchants.Find(orgId) is PlMerchant merch)
+                if (_DbContext.Merchants.Find(orgId) is PlMerchant merch)
                 {
-                    MerchantId = merch.Id;
+                    merchantId = merch.Id;
                     return true;
                 }
-                MerchantId = null;
+                merchantId = null;
                 return false;
             }
             for (; org is not null; org = org.Parent)
             {
                 if (org.ParentId is null)
                 {
-                    MerchantId = org.MerchantId;
+                    merchantId = org.MerchantId;
                     return true;
                 }
             }
-            MerchantId = null;
+            merchantId = null;
             return false;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="roleId"></param>
+        /// <param name="merchantId"></param>
+        /// <returns></returns>
+        public bool GetMerchantIdByRoleId(Guid roleId, out Guid? merchantId)
+        {
+            if (_DbContext.PlRoles.Find(roleId) is not PlRole role || !role.OrgId.HasValue)
+            {
+                merchantId = null;
+                return false;
+            }
+            return GetMerchantIdByOrgId(role.OrgId.Value, out merchantId);
         }
     }
 }
