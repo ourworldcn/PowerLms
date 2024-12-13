@@ -62,7 +62,7 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllCustomerReturnDto();
             Guid[] allOrg = Array.Empty<Guid>();
-            if (_MerchantManager.GetMerchantIdByUserId(context.User.Id, out var merId))
+            if (_MerchantManager.GetIdByUserId(context.User.Id, out var merId))
             {
                 allOrg = _OrganizationManager.GetOrLoadOrgsCacheItemByMerchantId(merId.Value).Data.Keys.ToArray();
             }
@@ -192,7 +192,7 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllCustomer2ReturnDto();
             Guid[] allOrg = Array.Empty<Guid>();
-            if (_MerchantManager.GetMerchantIdByUserId(context.User.Id, out var merId))
+            if (_MerchantManager.GetIdByUserId(context.User.Id, out var merId))
             {
                 allOrg = _OrganizationManager.GetOrLoadOrgsCacheItemByMerchantId(merId.Value).Data.Keys.ToArray();
             }

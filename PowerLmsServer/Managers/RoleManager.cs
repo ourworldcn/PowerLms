@@ -71,15 +71,15 @@ namespace PowerLmsServer.Managers
         }
 
         /// <summary>
-        /// 获取或加载商户下所有角色的字典。
+        /// 获取或加载商户下所有角色的缓存项。
         /// </summary>
-        /// <param name="merchId"></param>
+        /// <param name="merchId">商户Id。</param>
         /// <returns></returns>
         public OwCacheItem<ConcurrentDictionary<Guid, PlRole>> GetOrLoadRolesCacheItemByMerchantId(Guid merchId)
         {
             var result = _Cache.GetOrCreate(OwCacheHelper.GetCacheKeyFromId(merchId, ".Roles"), entry =>
             {
-                var merchCi = _MerchantManager.GetOrLoadMerchantCacheItemById(merchId);
+                var merchCi = _MerchantManager.GetOrLoadCacheItemById(merchId);
                 var orgCi = _OrganizationManager.GetOrLoadOrgsCacheItemByMerchantId(merchCi.Data.Id);
                 var db = merchCi.Data.DbContext;
                 var r = new OwCacheItem<ConcurrentDictionary<Guid, PlRole>>
@@ -101,17 +101,17 @@ namespace PowerLmsServer.Managers
         public ConcurrentDictionary<Guid, PlRole> LoadCurrentRolesByUser(Account user, ref PowerLmsUserDbContext db)
         {
             var orgs = _OrganizationManager.GetOrLoadCurrentOrgsCacheItemByUser(user);   //用户所处所有机构集合
-            var merchant = _MerchantManager.GetOrLoadMerchantCacheItemByUser(user);
+            var merchant = _MerchantManager.GetOrLoadCacheItemByUser(user);
             var allRoles = GetOrLoadRolesCacheItemByMerchantId(merchant.Data.Id);   //商户下所有角色
             var coll = allRoles.Data.Where(c => c.Value.OrgId.HasValue && orgs.Data.ContainsKey(c.Value.OrgId.Value));
             return new ConcurrentDictionary<Guid, PlRole>(coll);
         }
 
         /// <summary>
-        /// 返回指定用户当前登录公司的所有组织机构。
+        /// 返回指定用户当前登录公司的所有角色。
         /// </summary>
         /// <param name="user"></param>
-        /// <returns>用户当前登录公司的所有组织机构缓存项，如果没找到则返回null。</returns>
+        /// <returns>用户当前登录公司的所有角色缓存项，如果没找到则返回null。</returns>
         public OwCacheItem<ConcurrentDictionary<Guid, PlRole>> GetCurrentRolesCacheItem(Account user)
         {
             return GetCurrentRolesCacheItem(user.Id);

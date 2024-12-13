@@ -40,13 +40,13 @@ namespace PowerLmsServer.Managers
         /// <param name="merchId"></param>
         /// <param name="dbContext">传递null，则用池自动获取一个数据库上下文。</param>
         /// <returns>没有找到则返回null。</returns>
-        public PlMerchant LoadMerchantById(Guid merchId, ref PowerLmsUserDbContext dbContext)
+        public PlMerchant LoadById(Guid merchId, ref PowerLmsUserDbContext dbContext)
         {
             dbContext ??= _DbContextFactory.CreateDbContext();
             PlMerchant result;
             lock (dbContext)
                 result = dbContext.Merchants.FirstOrDefault(c => c.Id == merchId);
-            MerchantLoaded(result, dbContext);
+            Loaded(result, dbContext);
             return result;
         }
 
@@ -55,7 +55,7 @@ namespace PowerLmsServer.Managers
         /// </summary>
         /// <param name="merch"></param>
         /// <param name="dbContext"></param>
-        private void MerchantLoaded(PlMerchant merch, PowerLmsUserDbContext dbContext)
+        private void Loaded(PlMerchant merch, PowerLmsUserDbContext dbContext)
         {
             merch.DbContext = dbContext;
             merch.ExpirationTokenSource = new CancellationTokenSource();
@@ -67,7 +67,7 @@ namespace PowerLmsServer.Managers
         /// </summary>
         /// <param name="merchantId"></param>
         /// <returns>商户对象，若没有找到，则返回null。</returns>
-        public OwCacheItem<PlMerchant> GetMerchantCacheItemById(Guid merchantId)
+        public OwCacheItem<PlMerchant> GetCacheItemById(Guid merchantId)
         {
             var result = _Cache.Get<OwCacheItem<PlMerchant>>(OwCacheHelper.GetCacheKeyFromId<PlMerchant>(merchantId));
             return result;
@@ -78,12 +78,12 @@ namespace PowerLmsServer.Managers
         /// </summary>
         /// <param name="merchantId"></param>
         /// <returns></returns>
-        public OwCacheItem<PlMerchant> GetOrLoadMerchantCacheItemById(Guid merchantId)
+        public OwCacheItem<PlMerchant> GetOrLoadCacheItemById(Guid merchantId)
         {
             var result = _Cache.GetOrCreate(OwCacheHelper.GetCacheKeyFromId<PlMerchant>(merchantId), c =>
             {
                 PowerLmsUserDbContext db = null;
-                var r = LoadMerchantById(OwCacheHelper.GetIdFromCacheKey<PlMerchant>(c.Key as string).Value, ref db);
+                var r = LoadById(OwCacheHelper.GetIdFromCacheKey<PlMerchant>(c.Key as string).Value, ref db);
                 var item = new OwCacheItem<PlMerchant>()
                 {
                     Data = r,
@@ -102,15 +102,15 @@ namespace PowerLmsServer.Managers
         /// </summary>
         /// <param name="user"></param>
         /// <returns>对于不属于商户的账号返回null。</returns>
-        public OwCacheItem<PlMerchant> GetOrLoadMerchantCacheItemByUser(Account user)
+        public OwCacheItem<PlMerchant> GetOrLoadCacheItemByUser(Account user)
         {
             var merchId = user.MerchantId;
             if (merchId is null)    //若未缓存商户Id
             {
-                if (!GetMerchantIdByUserId(user.Id, out merchId)) return null;
+                if (!GetIdByUserId(user.Id, out merchId)) return null;
                 user.MerchantId = merchId;
             }
-            return GetOrLoadMerchantCacheItemById(merchId.Value);
+            return GetOrLoadCacheItemById(merchId.Value);
         }
 
         /// <summary>
@@ -119,7 +119,7 @@ namespace PowerLmsServer.Managers
         /// <param name="userId"></param>
         /// <param name="MerchantId"></param>
         /// <returns>true指定账户所属商户Id,如果不属于任何商户则返回null。false 没有找到指定的用户Id。</returns>
-        public bool GetMerchantIdByUserId(Guid userId, out Guid? MerchantId)
+        public bool GetIdByUserId(Guid userId, out Guid? MerchantId)
         {
             var userOrg = _DbContext.AccountPlOrganizations.AsNoTracking().FirstOrDefault(c => c.UserId == userId);    //随机找到一个所属的组织机构
             if (userOrg == null)
@@ -127,7 +127,7 @@ namespace PowerLmsServer.Managers
                 MerchantId = null;
                 return false;
             }
-            return GetMerchantIdByOrgId(userOrg.OrgId, out MerchantId);
+            return GetIdByOrgId(userOrg.OrgId, out MerchantId);
         }
 
         /// <summary>
@@ -136,7 +136,7 @@ namespace PowerLmsServer.Managers
         /// <param name="orgId">机构Id。</param>
         /// <param name="merchantId"></param>
         /// <returns>true则找到了商户Id，false没有找到。</returns>
-        public bool GetMerchantIdByOrgId(Guid orgId, out Guid? merchantId)
+        public bool GetIdByOrgId(Guid orgId, out Guid? merchantId)
         {
             var org = _DbContext.PlOrganizations.Find(orgId);   //找到组织机构对象
             if (org == null)
@@ -167,14 +167,14 @@ namespace PowerLmsServer.Managers
         /// <param name="roleId"></param>
         /// <param name="merchantId"></param>
         /// <returns></returns>
-        public bool GetMerchantIdByRoleId(Guid roleId, out Guid? merchantId)
+        public bool GetIdByRoleId(Guid roleId, out Guid? merchantId)
         {
             if (_DbContext.PlRoles.Find(roleId) is not PlRole role || !role.OrgId.HasValue)
             {
                 merchantId = null;
                 return false;
             }
-            return GetMerchantIdByOrgId(role.OrgId.Value, out merchantId);
+            return GetIdByOrgId(role.OrgId.Value, out merchantId);
         }
     }
 }

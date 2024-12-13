@@ -100,7 +100,7 @@ namespace PowerLmsWebApi.Controllers
             var result = new GetAllAccountReturnDto();
             var dbSet = _DbContext.Accounts;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-            if (_AccountManager.IsMerchantAdmin(context.User) && _MerchantManager.GetMerchantIdByUserId(context.User.Id, out var merchantId))
+            if (_AccountManager.IsMerchantAdmin(context.User) && _MerchantManager.GetIdByUserId(context.User.Id, out var merchantId))
             {
                 var orgs = _OrganizationManager.GetOrLoadOrgsCacheItemByMerchantId(merchantId.Value);
                 var tmp = orgs.Data.Keys;    //所有机构Id
@@ -200,7 +200,7 @@ namespace PowerLmsWebApi.Controllers
             var orgIds = _DbContext.AccountPlOrganizations.Where(c => c.UserId == user.Id).Select(c => c.OrgId);
             result.Orgs.AddRange(_DbContext.PlOrganizations.Where(c => orgIds.Contains(c.Id)));
             result.User = user;
-            if (_MerchantManager.GetMerchantIdByUserId(user.Id, out var merchId)) //若找到商户Id
+            if (_MerchantManager.GetIdByUserId(user.Id, out var merchId)) //若找到商户Id
             {
                 result.MerchantId = merchId;
                 if (result.User.IsMerchantAdmin)
@@ -238,8 +238,8 @@ namespace PowerLmsWebApi.Controllers
                             return BadRequest("仅超管和商管才可创建用户。");
                         else //商管
                         {
-                            if (!_MerchantManager.GetMerchantIdByUserId(context.User.Id, out var merchId)) return BadRequest("商管数据结构损坏——无法找到其所属商户");
-                            if (!orgIds.All(c => _MerchantManager.GetMerchantIdByOrgId(c, out var mId) && mId == merchId)) return BadRequest("商户管理员仅可以设置商户和其下属的机构id。");
+                            if (!_MerchantManager.GetIdByUserId(context.User.Id, out var merchId)) return BadRequest("商管数据结构损坏——无法找到其所属商户");
+                            if (!orgIds.All(c => _MerchantManager.GetIdByOrgId(c, out var mId) && mId == merchId)) return BadRequest("商户管理员仅可以设置商户和其下属的机构id。");
                         }
                 }
             }
@@ -375,7 +375,7 @@ namespace PowerLmsWebApi.Controllers
 
             if (context.User.OrgId != model.CurrentOrgId)
             {
-                if (!_MerchantManager.GetMerchantIdByOrgId(model.CurrentOrgId, out var merchantId)) return BadRequest("错误的当前组织机构Id。");
+                if (!_MerchantManager.GetIdByOrgId(model.CurrentOrgId, out var merchantId)) return BadRequest("错误的当前组织机构Id。");
                 var orgs = _OrganizationManager.GetOrLoadOrgsCacheItemByMerchantId(merchantId.Value);
                 if (!orgs.Data.TryGetValue(model.CurrentOrgId, out var currentOrg)) return BadRequest("错误的当前组织机构Id。");
                 if (currentOrg.Otc != 2)
@@ -464,7 +464,7 @@ namespace PowerLmsWebApi.Controllers
             var count = _DbContext.PlOrganizations.Count(c => ids.Contains(c.Id));
             if (count != ids.Count) return BadRequest($"{nameof(model.OrgIds)}中至少有一个组织机构不存在。");
 
-            _MerchantManager.GetMerchantIdByUserId(model.UserId, out var merchId);  //获取商户Id
+            _MerchantManager.GetIdByUserId(model.UserId, out var merchId);  //获取商户Id
 
             var orgs = merchId.HasValue ? _OrganizationManager.GetOrgsCacheItemByMerchantId(merchId.Value) : null;
 

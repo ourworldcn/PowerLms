@@ -69,7 +69,7 @@ namespace PowerLmsServer.Managers
         public void OrgsLoaded(ConcurrentDictionary<Guid, PlOrganization> orgs)
         {
             var merchId = orgs.Values.First(c => c.MerchantId is not null).MerchantId.Value;
-            var merch = _MerchantManager.GetOrLoadMerchantCacheItemById(merchId);
+            var merch = _MerchantManager.GetOrLoadCacheItemById(merchId);
             EnParent(orgs.Values);
         }
 
@@ -103,7 +103,7 @@ namespace PowerLmsServer.Managers
         {
             var result = _Cache.GetOrCreate(OwCacheHelper.GetCacheKeyFromId(merchantId, ".Orgs"), c =>
             {
-                var merch = _MerchantManager.GetOrLoadMerchantCacheItemById(OwCacheHelper.GetIdFromCacheKey(c.Key as string, ".Orgs").Value);
+                var merch = _MerchantManager.GetOrLoadCacheItemById(OwCacheHelper.GetIdFromCacheKey(c.Key as string, ".Orgs").Value);
                 var db = merch.Data.DbContext;
                 var r = new OwCacheItem<ConcurrentDictionary<Guid, PlOrganization>>
                 {
@@ -142,7 +142,7 @@ namespace PowerLmsServer.Managers
                 {
                     Data = LoadCurrentOrgsByUser(user),
                 };
-                var merch = _MerchantManager.GetOrLoadMerchantCacheItemByUser(user);
+                var merch = _MerchantManager.GetOrLoadCacheItemByUser(user);
                 var orgs = GetOrLoadOrgsCacheItemByMerchantId(merch.Data.Id);
                 r.SetCancellations(new CancellationTokenSource(), new CancellationChangeToken(user.ExpirationTokenSource.Token), orgs.ChangeToken);
                 return r;
@@ -158,7 +158,7 @@ namespace PowerLmsServer.Managers
         public PlOrganization GetCurrentCompanyByUser(Account user)
         {
             if (user.OrgId is null) return null;
-            if (_MerchantManager.GetOrLoadMerchantCacheItemByUser(user) is not OwCacheItem<PlMerchant> merch) return null;
+            if (_MerchantManager.GetOrLoadCacheItemByUser(user) is not OwCacheItem<PlMerchant> merch) return null;
             if (GetOrLoadOrgsCacheItemByMerchantId(merch.Data.Id) is not OwCacheItem<ConcurrentDictionary<Guid, PlOrganization>> orgs) return null;
             if (!orgs.Data.TryGetValue(user.OrgId.Value, out var org)) return null;
             PlOrganization tmp;

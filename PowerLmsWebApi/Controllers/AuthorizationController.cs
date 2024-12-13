@@ -118,7 +118,7 @@ namespace PowerLmsWebApi.Controllers
             model.Item.GenerateNewId();
             if (!model.Item.OrgId.HasValue)
             {
-                if (_MerchantManager.GetMerchantIdByUserId(context.User.Id, out var mId))
+                if (_MerchantManager.GetIdByUserId(context.User.Id, out var mId))
                     model.Item.OrgId = mId;
             }
             model.Item.CreateBy ??= context.User.Id;
@@ -130,7 +130,7 @@ namespace PowerLmsWebApi.Controllers
 
             if (model.Item.OrgId.HasValue)
             {
-                if (_MerchantManager.GetMerchantIdByOrgId(model.Item.OrgId.Value, out var merchId))
+                if (_MerchantManager.GetIdByOrgId(model.Item.OrgId.Value, out var merchId))
                     _RoleManager.GetRolesCacheItemByMerchantId(merchId.Value)?.CancellationTokenSource.Cancel();
             }
             return result;
@@ -159,10 +159,10 @@ namespace PowerLmsWebApi.Controllers
 
             _DbContext.SaveChanges();
 
-            if (oldOrgId.HasValue && _MerchantManager.GetMerchantIdByRoleId(oldOrgId.Value, out var oldMerchId))
-                _MerchantManager.GetMerchantCacheItemById(oldMerchId.Value)?.CancellationTokenSource.Cancel();
-            if (newOrgId.HasValue && _MerchantManager.GetMerchantIdByRoleId(newOrgId.Value, out var newMerchId))
-                _MerchantManager.GetMerchantCacheItemById(newMerchId.Value)?.CancellationTokenSource.Cancel();
+            if (oldOrgId.HasValue && _MerchantManager.GetIdByRoleId(oldOrgId.Value, out var oldMerchId))
+                _MerchantManager.GetCacheItemById(oldMerchId.Value)?.CancellationTokenSource.Cancel();
+            if (newOrgId.HasValue && _MerchantManager.GetIdByRoleId(newOrgId.Value, out var newMerchId))
+                _MerchantManager.GetCacheItemById(newMerchId.Value)?.CancellationTokenSource.Cancel();
             return result;
         }
 
@@ -186,7 +186,7 @@ namespace PowerLmsWebApi.Controllers
             if (item is null) return BadRequest();
             Guid? merchantId = null;
             if (item.OrgId.HasValue)
-                _MerchantManager.GetMerchantIdByOrgId(item.OrgId.Value, out merchantId);
+                _MerchantManager.GetIdByOrgId(item.OrgId.Value, out merchantId);
             _EntityManager.Remove(item);
             _DbContext.SaveChanges();
 
