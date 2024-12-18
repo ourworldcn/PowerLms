@@ -109,6 +109,17 @@ namespace PowerLmsServer.Managers
         }
 
         /// <summary>
+        /// 获取指定角色的当前权限缓存项。
+        /// </summary>
+        /// <param name="userId"></param>
+        /// <returns>指定角色的当前权限缓存项，没有则返回null</returns>
+        public OwCacheItem<ConcurrentDictionary<string, PlPermission>> GetCurrentPermissions(Guid userId)
+        {
+            var result = _Cache.Get<OwCacheItem<ConcurrentDictionary<string, PlPermission>>>(OwCacheHelper.GetCacheKeyFromId(userId, ".CurrentPermissions"));
+            return result;
+        }
+
+        /// <summary>
         /// 获取用户当前有效的权限。
         /// </summary>
         /// <param name="user"></param>
@@ -124,17 +135,6 @@ namespace PowerLmsServer.Managers
             var allPerm = GetOrLoadPermission();
             var coll = allPerm.Data.Where(c => ids.Contains(c.Key));
             return new ConcurrentDictionary<string, PlPermission>(coll);
-        }
-
-        /// <summary>
-        /// 获取指定角色的当前权限缓存项。
-        /// </summary>
-        /// <param name="userId"></param>
-        /// <returns>指定角色的当前权限缓存项，没有则返回null</returns>
-        public OwCacheItem<ConcurrentDictionary<string, PlPermission>> GetCurrentPermissions(Guid userId)
-        {
-            var result = _Cache.Get<OwCacheItem<ConcurrentDictionary<string, PlPermission>>>(OwCacheHelper.GetCacheKeyFromId(userId, ".CurrentPermissions"));
-            return result;
         }
 
         /// <summary>

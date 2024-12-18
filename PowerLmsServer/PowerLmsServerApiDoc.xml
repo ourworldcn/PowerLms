@@ -725,14 +725,14 @@
         </member>
         <member name="M:PowerLmsServer.Managers.OrganizationManager.LoadCurrentOrgsByUser(PowerLms.Data.Account)">
             <summary>
-            获取当前的登录公司及所有子机构
+            获取当前的登录公司及子机构但排除下属公司。
             </summary>
             <param name="user"></param>
             <returns>如果没有指定所属当前机构则返回空字典。</returns>
         </member>
         <member name="M:PowerLmsServer.Managers.OrganizationManager.GetOrLoadCurrentOrgsCacheItemByUser(PowerLms.Data.Account)">
             <summary>
-            获取当前的登录公司及所有子机构。
+            获取当前的登录公司及子机构但排除下属公司。
             </summary>
             <param name="user"></param>
             <returns>如果没有指定所属当前机构则返回空字典。</returns>
@@ -828,6 +828,13 @@
             </summary>
             <returns></returns>
         </member>
+        <member name="M:PowerLmsServer.Managers.PermissionManager.GetCurrentPermissions(System.Guid)">
+            <summary>
+            获取指定角色的当前权限缓存项。
+            </summary>
+            <param name="userId"></param>
+            <returns>指定角色的当前权限缓存项，没有则返回null</returns>
+        </member>
         <member name="M:PowerLmsServer.Managers.PermissionManager.LoadCurrentPermissionsByUser(PowerLms.Data.Account,PowerLmsServer.EfData.PowerLmsUserDbContext@)">
             <summary>
             获取用户当前有效的权限。
@@ -835,13 +842,6 @@
             <param name="user"></param>
             <param name="db"></param>
             <returns></returns>
-        </member>
-        <member name="M:PowerLmsServer.Managers.PermissionManager.GetCurrentPermissions(System.Guid)">
-            <summary>
-            获取指定角色的当前权限缓存项。
-            </summary>
-            <param name="userId"></param>
-            <returns>指定角色的当前权限缓存项，没有则返回null</returns>
         </member>
         <member name="M:PowerLmsServer.Managers.PermissionManager.GetOrLoadCurrentPermissionsByUser(PowerLms.Data.Account)">
             <summary>
@@ -882,13 +882,6 @@
             <param name="merchId">商户Id。</param>
             <returns></returns>
         </member>
-        <member name="M:PowerLmsServer.Managers.RoleManager.LoadCurrentRolesByUser(PowerLms.Data.Account,PowerLmsServer.EfData.PowerLmsUserDbContext@)">
-            <summary>
-            按指定用户当前的登录机构加载其所有角色。
-            </summary>
-            <param name="user"></param>
-            <param name="db"></param>
-        </member>
         <member name="M:PowerLmsServer.Managers.RoleManager.GetCurrentRolesCacheItem(PowerLms.Data.Account)">
             <summary>
             返回指定用户当前登录公司的所有角色。
@@ -903,9 +896,16 @@
             <param name="userId"></param>
             <returns>用户当前登录公司的所有组织机构缓存项，如果没找到则返回null。</returns>
         </member>
+        <member name="M:PowerLmsServer.Managers.RoleManager.LoadCurrentRolesByUser(PowerLms.Data.Account,PowerLmsServer.EfData.PowerLmsUserDbContext@)">
+            <summary>
+            按指定用户当前的登录机构加载其所有角色。
+            </summary>
+            <param name="user"></param>
+            <param name="db"></param>
+        </member>
         <member name="M:PowerLmsServer.Managers.RoleManager.GetOrLoadCurrentRolesCacheItemByUser(PowerLms.Data.Account)">
             <summary>
-            获取用户当前登录公司的所有角色。
+            获取用户当前登录的所有角色。
             </summary>
             <param name="user"></param>
             <returns>所有当前有效角色的字典。未登录到公司则返回空字典。</returns>

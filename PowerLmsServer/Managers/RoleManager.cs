@@ -7,6 +7,7 @@ using NPOI.Util;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -94,20 +95,6 @@ namespace PowerLmsServer.Managers
         }
 
         /// <summary>
-        /// 按指定用户当前的登录机构加载其所有角色。
-        /// </summary>
-        /// <param name="user"></param>
-        /// <param name="db"></param>
-        public ConcurrentDictionary<Guid, PlRole> LoadCurrentRolesByUser(Account user, ref PowerLmsUserDbContext db)
-        {
-            var orgs = _OrganizationManager.GetOrLoadCurrentOrgsCacheItemByUser(user);   //用户所处所有机构集合
-            var merchant = _MerchantManager.GetOrLoadCacheItemByUser(user);
-            var allRoles = GetOrLoadRolesCacheItemByMerchantId(merchant.Data.Id);   //商户下所有角色
-            var coll = allRoles.Data.Where(c => c.Value.OrgId.HasValue && orgs.Data.ContainsKey(c.Value.OrgId.Value));
-            return new ConcurrentDictionary<Guid, PlRole>(coll);
-        }
-
-        /// <summary>
         /// 返回指定用户当前登录公司的所有角色。
         /// </summary>
         /// <param name="user"></param>
@@ -129,7 +116,28 @@ namespace PowerLmsServer.Managers
         }
 
         /// <summary>
-        /// 获取用户当前登录公司的所有角色。
+        /// 按指定用户当前的登录机构加载其所有角色。
+        /// </summary>
+        /// <param name="user"></param>
+        /// <param name="db"></param>
+        public ConcurrentDictionary<Guid, PlRole> LoadCurrentRolesByUser(Account user, ref PowerLmsUserDbContext db)
+        {
+            var orgs = _OrganizationManager.GetOrLoadCurrentOrgsCacheItemByUser(user);   //用户登录的有效机构集合
+            var merchant = _MerchantManager.GetOrLoadCacheItemByUser(user);
+            var allRoles = GetOrLoadRolesCacheItemByMerchantId(merchant.Data.Id);   //商户下所有角色
+
+            db ??= _DbContextFactory.CreateDbContext();
+            HashSet<Guid> hsRoleIds;
+            lock (db)
+                hsRoleIds = db.PlAccountRoles.Where(c => c.UserId == user.Id).Select(c => c.RoleId).ToHashSet(); //所有直属角色Id集合
+            var coll = allRoles.Data.Where(c => c.Value.OrgId.HasValue && hsRoleIds.Contains(c.Key)   //直属角色
+                && orgs.Data.ContainsKey(c.Value.OrgId.Value));    //属于有效机构
+
+            return new ConcurrentDictionary<Guid, PlRole>(coll);
+        }
+
+        /// <summary>
+        /// 获取用户当前登录的所有角色。
         /// </summary>
         /// <param name="user"></param>
         /// <returns>所有当前有效角色的字典。未登录到公司则返回空字典。</returns>

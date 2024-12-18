@@ -119,18 +119,28 @@ namespace PowerLmsServer.Managers
         #endregion 机构缓存及相关
 
         /// <summary>
-        /// 获取当前的登录公司及所有子机构
+        /// 获取当前的登录公司及子机构但排除下属公司。
         /// </summary>
         /// <param name="user"></param>
         /// <returns>如果没有指定所属当前机构则返回空字典。</returns>
         public ConcurrentDictionary<Guid, PlOrganization> LoadCurrentOrgsByUser(Account user)
         {
             if (GetCurrentCompanyByUser(user) is not PlOrganization root) return new ConcurrentDictionary<Guid, PlOrganization>();
-            return new ConcurrentDictionary<Guid, PlOrganization>(OwHelper.GetAllSubItemsOfTree(root, c => c.Children).ToDictionary(c => c.Id));
+            var result = new ConcurrentDictionary<Guid, PlOrganization>(OwHelper.GetAllSubItemsOfTree(root, c => c.Children).ToDictionary(c => c.Id));
+            List<Guid> ids = new List<Guid>();  //需要排除的下属子公司及其机构
+            foreach (var child in root.Children)
+            {
+                if (child.Otc == 2 && child != root) //若应当排除
+                {
+                    ids.AddRange(OwHelper.GetAllSubItemsOfTree(child, c => c.Children).Select(c => c.Id));
+                }
+            }
+            ids.ForEach(c => result.TryRemove(c, out _));
+            return result;
         }
 
         /// <summary>
-        /// 获取当前的登录公司及所有子机构。
+        /// 获取当前的登录公司及子机构但排除下属公司。
         /// </summary>
         /// <param name="user"></param>
         /// <returns>如果没有指定所属当前机构则返回空字典。</returns>
