@@ -190,8 +190,13 @@ namespace PowerLmsWebApi.Controllers
                 default:
                     return BadRequest($"不认识的EvidenceType类型:{model.EvidenceType}");
             }
-            if (user is null) return BadRequest();
-            if (!user.IsPwd(model.Pwd)) return BadRequest();
+            if (user is null) return BadRequest("用户名或密码不正确。");
+            if (!user.IsPwd(model.Pwd)) return BadRequest("用户名或密码不正确。");
+            //找到合法用户
+            if (_AccountManager.GetAccount(user.Id) is Account oldUser)
+            {
+                _AccountManager.SetChange(user.Id);
+            }
             result.Token = Guid.NewGuid();
             user.LastModifyDateTimeUtc = OwHelper.WorldNow;
             user.Token = result.Token;
@@ -200,6 +205,7 @@ namespace PowerLmsWebApi.Controllers
             var orgIds = _DbContext.AccountPlOrganizations.Where(c => c.UserId == user.Id).Select(c => c.OrgId);
             result.Orgs.AddRange(_DbContext.PlOrganizations.Where(c => orgIds.Contains(c.Id)));
             result.User = user;
+            //_AccountManager.SetAccount(user);
             if (_MerchantManager.GetIdByUserId(user.Id, out var merchId)) //若找到商户Id
             {
                 result.MerchantId = merchId;
@@ -355,7 +361,7 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.AccountPlOrganizations.RemoveRange(_DbContext.AccountPlOrganizations.Where(c => c.UserId == id));
             _DbContext.PlAccountRoles.RemoveRange(_DbContext.PlAccountRoles.Where(c => c.UserId == id));
             _DbContext.SaveChanges();
-            
+
             return result;
         }
 

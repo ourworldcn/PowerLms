@@ -1,261 +1,284 @@
 {
-  "Genus": [ "cj_changqi", "goto_shop_chouka" ],
-  "TypeGuid": "48CD339A-3B21-4DA7-9B0A-2B914B3DD42C",
-  "stk": -1,
-  "Count0Reserved": true,
-  "ptid": "04AB4C60-9E5B-43A8-894F-3477655371BE",
-  "Count": 0,
-  "Achievement": {
-    "Period": {
-      "Start": "2023-05-30T03:03:28.385Z",
-      "End": null,
-      "PeriodString": "99y",
-      "ValidPeriodString": "99y"
+  "permissions": [
+    {
+      "displayName": "币种",
+      "shortName": null,
+      "name": "B.3",
+      "parentId": "B",
+      "children": []
     },
-    "Ins": [],
-    "Exp2LvSequence": [ 3, 8, 13, 18, 25, 35, 45, 55, 65, 75, 85, 95, 105, 115, 125, 135, 145, 155, 165, 175 ],
-    "Outs": [
-      [
+    {
+      "displayName": "客户投诉",
+      "shortName": null,
+      "name": "C.4",
+      "parentId": "C",
+      "children": [
         {
-          "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-          "TId": "c9575f24-a33d-49ba-b130-29b6ff4d62c7",
-          "Count": 10
+          "displayName": "创建客户投诉",
+          "shortName": null,
+          "name": "C.4.1",
+          "parentId": "C.4",
+          "children": []
         },
         {
-          "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-          "TId": "a84bcbd1-9541-4907-99df-59b19559ae9f",
-          "Count": 20
-        }
-      ],
-      [
-        {
-          "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-          "TId": "c9575f24-a33d-49ba-b130-29b6ff4d62c7",
-          "Count": 10
+          "displayName": "查看客户投诉",
+          "shortName": null,
+          "name": "C.4.2",
+          "parentId": "C.4",
+          "children": []
         },
         {
-          "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-          "TId": "a84bcbd1-9541-4907-99df-59b19559ae9f",
-          "Count": 20
-        }
-      ],
-      [
-        {
-          "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-          "TId": "c9575f24-a33d-49ba-b130-29b6ff4d62c7",
-          "Count": 10
+          "displayName": "编辑客户投诉",
+          "shortName": null,
+          "name": "C.4.3",
+          "parentId": "C.4",
+          "children": []
         },
         {
-          "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-          "TId": "a84bcbd1-9541-4907-99df-59b19559ae9f",
-          "Count": 20
-        }
-      ],
-      [
-        {
-          "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-          "TId": "c9575f24-a33d-49ba-b130-29b6ff4d62c7",
-          "Count": 20
-        },
-        {
-          "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-          "TId": "a84bcbd1-9541-4907-99df-59b19559ae9f",
-          "Count": 40
-        }
-      ],
-      [
-        {
-          "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-          "TId": "c9575f24-a33d-49ba-b130-29b6ff4d62c7",
-          "Count": 20
-        },
-        {
-          "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-          "TId": "a84bcbd1-9541-4907-99df-59b19559ae9f",
-          "Count": 40
-        }
-      ],
-      [
-        {
-          "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-          "TId": "c9575f24-a33d-49ba-b130-29b6ff4d62c7",
-          "Count": 30
-        },
-        {
-          "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-          "TId": "a84bcbd1-9541-4907-99df-59b19559ae9f",
-          "Count": 60
-        }
-      ],
-      [
-        {
-          "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-          "TId": "c9575f24-a33d-49ba-b130-29b6ff4d62c7",
-          "Count": 30
-        },
-        {
-          "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-          "TId": "a84bcbd1-9541-4907-99df-59b19559ae9f",
-          "Count": 60
-        }
-      ],
-      [
-        {
-          "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-          "TId": "c9575f24-a33d-49ba-b130-29b6ff4d62c7",
-          "Count": 30
-        },
-        {
-          "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-          "TId": "a84bcbd1-9541-4907-99df-59b19559ae9f",
-          "Count": 60
-        }
-      ],
-      [
-        {
-          "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-          "TId": "c9575f24-a33d-49ba-b130-29b6ff4d62c7",
-          "Count": 30
-        },
-        {
-          "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-          "TId": "a84bcbd1-9541-4907-99df-59b19559ae9f",
-          "Count": 60
-        }
-      ],
-      [
-        {
-          "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-          "TId": "c9575f24-a33d-49ba-b130-29b6ff4d62c7",
-          "Count": 30
-        },
-        {
-          "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-          "TId": "a84bcbd1-9541-4907-99df-59b19559ae9f",
-          "Count": 60
-        }
-      ],
-      [
-        {
-          "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-          "TId": "c9575f24-a33d-49ba-b130-29b6ff4d62c7",
-          "Count": 30
-        },
-        {
-          "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-          "TId": "a84bcbd1-9541-4907-99df-59b19559ae9f",
-          "Count": 60
-        }
-      ],
-      [
-        {
-          "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-          "TId": "c9575f24-a33d-49ba-b130-29b6ff4d62c7",
-          "Count": 40
-        },
-        {
-          "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-          "TId": "a84bcbd1-9541-4907-99df-59b19559ae9f",
-          "Count": 80
-        }
-      ],
-      [
-        {
-          "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-          "TId": "c9575f24-a33d-49ba-b130-29b6ff4d62c7",
-          "Count": 40
-        },
-        {
-          "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-          "TId": "a84bcbd1-9541-4907-99df-59b19559ae9f",
-          "Count": 80
-        }
-      ],
-      [
-        {
-          "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-          "TId": "c9575f24-a33d-49ba-b130-29b6ff4d62c7",
-          "Count": 40
-        },
-        {
-          "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-          "TId": "a84bcbd1-9541-4907-99df-59b19559ae9f",
-          "Count": 80
-        }
-      ],
-      [
-        {
-          "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-          "TId": "c9575f24-a33d-49ba-b130-29b6ff4d62c7",
-          "Count": 40
-        },
-        {
-          "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-          "TId": "a84bcbd1-9541-4907-99df-59b19559ae9f",
-          "Count": 80
-        }
-      ],
-      [
-        {
-          "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-          "TId": "c9575f24-a33d-49ba-b130-29b6ff4d62c7",
-          "Count": 40
-        },
-        {
-          "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-          "TId": "a84bcbd1-9541-4907-99df-59b19559ae9f",
-          "Count": 80
-        }
-      ],
-      [
-        {
-          "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-          "TId": "c9575f24-a33d-49ba-b130-29b6ff4d62c7",
-          "Count": 50
-        },
-        {
-          "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-          "TId": "a84bcbd1-9541-4907-99df-59b19559ae9f",
-          "Count": 100
-        }
-      ],
-      [
-        {
-          "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-          "TId": "c9575f24-a33d-49ba-b130-29b6ff4d62c7",
-          "Count": 50
-        },
-        {
-          "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-          "TId": "a84bcbd1-9541-4907-99df-59b19559ae9f",
-          "Count": 100
-        }
-      ],
-      [
-        {
-          "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-          "TId": "c9575f24-a33d-49ba-b130-29b6ff4d62c7",
-          "Count": 50
-        },
-        {
-          "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-          "TId": "a84bcbd1-9541-4907-99df-59b19559ae9f",
-          "Count": 100
-        }
-      ],
-      [
-        {
-          "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-          "TId": "c9575f24-a33d-49ba-b130-29b6ff4d62c7",
-          "Count": 50
-        },
-        {
-          "ParentTId": "123a5ad1-d4f0-4cd9-9abc-d440419d9e0d",
-          "TId": "a84bcbd1-9541-4907-99df-59b19559ae9f",
-          "Count": 100
+          "displayName": "删除客户投诉",
+          "shortName": null,
+          "name": "C.4.4",
+          "parentId": "C.4",
+          "children": []
         }
       ]
-    ]
-  },
-  "name_txt": 30011
+    },
+    {
+      "displayName": "数据字典",
+      "shortName": null,
+      "name": "B.0",
+      "parentId": "B",
+      "children": []
+    },
+    {
+      "displayName": "客户资料管理",
+      "shortName": null,
+      "name": "C.1",
+      "parentId": "C",
+      "children": [
+        {
+          "displayName": "创建货主资料",
+          "shortName": null,
+          "name": "C.1.1",
+          "parentId": "C.1",
+          "children": []
+        },
+        {
+          "displayName": "查看货主资料",
+          "shortName": null,
+          "name": "C.1.2",
+          "parentId": "C.1",
+          "children": []
+        },
+        {
+          "displayName": "编辑货主资料",
+          "shortName": null,
+          "name": "C.1.3",
+          "parentId": "C.1",
+          "children": []
+        },
+        {
+          "displayName": "删除货主资料",
+          "shortName": null,
+          "name": "C.1.4",
+          "parentId": "C.1",
+          "children": []
+        },
+        {
+          "displayName": "指派业务员",
+          "shortName": null,
+          "name": "C.1.5",
+          "parentId": "C.1",
+          "children": []
+        },
+        {
+          "displayName": "客户资料输出到Excel",
+          "shortName": null,
+          "name": "C.1.6",
+          "parentId": "C.1",
+          "children": []
+        },
+        {
+          "displayName": "客户资料打印",
+          "shortName": null,
+          "name": "C.1.7",
+          "parentId": "C.1",
+          "children": []
+        }
+      ]
+    },
+    {
+      "displayName": "工作号规则",
+      "shortName": null,
+      "name": "B.2",
+      "parentId": "B",
+      "children": []
+    },
+    {
+      "displayName": "汇率",
+      "shortName": null,
+      "name": "B.4",
+      "parentId": "B",
+      "children": []
+    },
+    {
+      "displayName": "其他编码规则",
+      "shortName": null,
+      "name": "B.10",
+      "parentId": "B",
+      "children": []
+    },
+    {
+      "displayName": "市场计划管理",
+      "shortName": null,
+      "name": "C.3",
+      "parentId": "C",
+      "children": [
+        {
+          "displayName": "创建市场计划",
+          "shortName": null,
+          "name": "C.3.1",
+          "parentId": "C.3",
+          "children": []
+        },
+        {
+          "displayName": "查看市场计划",
+          "shortName": null,
+          "name": "C.3.2",
+          "parentId": "C.3",
+          "children": []
+        },
+        {
+          "displayName": "编辑市场计划",
+          "shortName": null,
+          "name": "C.3.3",
+          "parentId": "C.3",
+          "children": []
+        },
+        {
+          "displayName": "删除市场计划",
+          "shortName": null,
+          "name": "C.3.4",
+          "parentId": "C.3",
+          "children": []
+        },
+        {
+          "displayName": "审核市场计划",
+          "shortName": null,
+          "name": "C.3.5",
+          "parentId": "C.3",
+          "children": []
+        },
+        {
+          "displayName": "实施市场计划",
+          "shortName": null,
+          "name": "C.3.6",
+          "parentId": "C.3",
+          "children": []
+        },
+        {
+          "displayName": "失效市场计划",
+          "shortName": null,
+          "name": "C.3.7",
+          "parentId": "C.3",
+          "children": []
+        }
+      ]
+    },
+    {
+      "displayName": "基础数据",
+      "shortName": null,
+      "name": "B",
+      "parentId": "root",
+      "children": [
+        {
+          "displayName": "数据字典",
+          "shortName": null,
+          "name": "B.0",
+          "parentId": "B",
+          "children": []
+        },
+        {
+          "displayName": "本公司信息",
+          "shortName": null,
+          "name": "B.1",
+          "parentId": "B",
+          "children": []
+        },
+        {
+          "displayName": "其他编码规则",
+          "shortName": null,
+          "name": "B.10",
+          "parentId": "B",
+          "children": []
+        },
+        {
+          "displayName": "工作号规则",
+          "shortName": null,
+          "name": "B.2",
+          "parentId": "B",
+          "children": []
+        },
+        {
+          "displayName": "币种",
+          "shortName": null,
+          "name": "B.3",
+          "parentId": "B",
+          "children": []
+        },
+        {
+          "displayName": "汇率",
+          "shortName": null,
+          "name": "B.4",
+          "parentId": "B",
+          "children": []
+        },
+        {
+          "displayName": "国家",
+          "shortName": null,
+          "name": "B.5",
+          "parentId": "B",
+          "children": []
+        },
+        {
+          "displayName": "港口",
+          "shortName": null,
+          "name": "B.6",
+          "parentId": "B",
+          "children": []
+        },
+        {
+          "displayName": "航线",
+          "shortName": null,
+          "name": "B.7",
+          "parentId": "B",
+          "children": []
+        },
+        {
+          "displayName": "费用种类",
+          "shortName": null,
+          "name": "B.8",
+          "parentId": "B",
+          "children": []
+        },
+        {
+          "displayName": "箱型",
+          "shortName": null,
+          "name": "B.9",
+          "parentId": "B",
+          "children": []
+        }
+      ]
+    },
+    {
+      "displayName": "本公司信息",
+      "shortName": null,
+      "name": "B.1",
+      "parentId": "B",
+      "children": []
+    }
+  ],
+  "hasError": false,
+  "errorCode": 0,
+  "debugMessage": null
 }

@@ -173,7 +173,12 @@ namespace PowerLmsServer.Managers
             var ct = cts.Token;
             var entryOptions = new MemoryCacheEntryOptions()
                 .SetSlidingExpiration(TimeSpan.FromMinutes(15))
-                .AddExpirationToken(new CancellationChangeToken(ct));
+                .AddExpirationToken(new CancellationChangeToken(ct))
+                .RegisterPostEvictionCallback((k, v, r, s) =>
+                {
+                    if (s is Guid token)
+                        _Token2Key.TryRemove(token, out _);
+                }, user.Token.GetValueOrDefault());
 
             _MemoryCache.Set(key, user, entryOptions);
         }
