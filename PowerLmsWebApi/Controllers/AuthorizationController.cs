@@ -445,7 +445,7 @@ namespace PowerLmsWebApi.Controllers
 
             var userIds = _DbContext.PlAccountRoles.Where(c => model.RolePermission.RoleId == c.RoleId).Select(c => c.UserId).ToArray();
 
-            userIds.ForEach(c => _PermissionManager.GetCurrentPermissions(c)?.CancellationTokenSource.Cancel());
+            userIds.ForEach(userId => _RoleManager.GetCurrentRolesCacheItem(userId)?.CancellationTokenSource.Cancel());
             return result;
         }
 
@@ -533,7 +533,7 @@ namespace PowerLmsWebApi.Controllers
             setRela.AddRange(adds.Select(c => new RolePermission { RoleId = model.RoleId, PermissionId = c, CreateBy = context.User.Id }));
             _DbContext.SaveChanges();
             var userIds = _DbContext.PlAccountRoles.Where(c => model.RoleId == c.RoleId).Select(c => c.UserId).ToArray();
-            userIds.ForEach(c => _PermissionManager.GetCurrentPermissions(c)?.CancellationTokenSource.Cancel());
+            userIds.ForEach(userId => _PermissionManager.GetCurrentPermissions(userId)?.CancellationTokenSource.Cancel());
             return result;
         }
 
