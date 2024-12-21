@@ -150,7 +150,9 @@ namespace PowerLmsServer.Managers
                 {
                     Data = LoadCurrentRolesByUser(user, ref db),
                 };
-                r.SetCancellations(new CancellationTokenSource(), user.ExpirationTokenSource);
+                var merch = _MerchantManager.GetOrLoadCacheItemByUser(user);
+                var roles = GetRolesCacheItemByMerchantId(merch.Data.Id);
+                r.SetCancellations(new CancellationTokenSource(), user.ExpirationTokenSource);  //TODO 级联变化令牌
                 c.AddExpirationToken(r.ChangeToken);
                 return r;
             });
