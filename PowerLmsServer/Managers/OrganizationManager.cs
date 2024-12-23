@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Primitives;
+using NPOI.OpenXmlFormats.Shared;
 using NPOI.SS.Formula.Atp;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
@@ -27,16 +28,18 @@ namespace PowerLmsServer.Managers
         /// <summary>
         /// 构造函数。
         /// </summary>
-        public OrganizationManager(IMemoryCache cache, IDbContextFactory<PowerLmsUserDbContext> dbContextFactory, MerchantManager merchantManager)
+        public OrganizationManager(IMemoryCache cache, IDbContextFactory<PowerLmsUserDbContext> dbContextFactory, MerchantManager merchantManager, AccountManager accountManager)
         {
             _Cache = cache;
             _DbContextFactory = dbContextFactory;
             _MerchantManager = merchantManager;
+            _AccountManager = accountManager;
         }
 
         readonly IMemoryCache _Cache;
         readonly IDbContextFactory<PowerLmsUserDbContext> _DbContextFactory;
         readonly MerchantManager _MerchantManager;
+        readonly AccountManager _AccountManager;
 
         #region 机构缓存及相关
 
@@ -154,7 +157,9 @@ namespace PowerLmsServer.Managers
                 };
                 var merch = _MerchantManager.GetOrLoadCacheItemByUser(user);
                 var orgs = GetOrLoadOrgsCacheItemByMerchantId(merch.Data.Id);
-                r.SetCancellations(new CancellationTokenSource(), new CancellationChangeToken(user.ExpirationTokenSource.Token), orgs.ChangeToken);
+                var userCi = _AccountManager.GetOrLoadById(user.Id);
+                if (userCi is null) return null;
+                r.SetCancellations(new CancellationTokenSource(), userCi.ChangeToken, orgs.ChangeToken);
                 return r;
             });
             return result;

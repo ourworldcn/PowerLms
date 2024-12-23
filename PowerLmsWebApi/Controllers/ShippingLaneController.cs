@@ -51,7 +51,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<AddShippingLaneReturnDto> AddShippingLane(AddShippingLaneParamsDto model)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddShippingLaneReturnDto();
             model.Item.GenerateNewId();
 
@@ -80,7 +80,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetAllShippingLaneReturnDto> GetAllShippingLane([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllShippingLaneReturnDto();
             var dbSet = _DbContext.ShippingLanes.Where(c => c.OrgId == context.User.OrgId);
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
@@ -101,7 +101,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<ModifyShippingLaneReturnDto> ModifyShippingLane(ModifyShippingLaneParamsDto model)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyShippingLaneReturnDto();
             if (!_EntityManager.Modify(model.Items)) return NotFound();
             foreach (var item in model.Items)
@@ -124,7 +124,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpDelete]
         public ActionResult<RemoveShippingLaneReturnDto> RemoveShippingLane(RemoveShippingLanePatamsDto model)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveShippingLaneReturnDto();
 
             var dbSet = _DbContext.ShippingLanes;
@@ -144,7 +144,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<ImportShippingLaneReturnDto> ImportShippingLane(IFormFile file, Guid token)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ImportShippingLaneReturnDto();
             var workbook = _NpoiManager.GetWorkbookFromStream(file.OpenReadStream());
             var sheet = workbook.GetSheetAt(0);

@@ -52,7 +52,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetAllPlIsDocReturnDto> GetAllPlIsDoc([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlIsDocReturnDto();
 
             var dbSet = _DbContext.PlIsDocs;
@@ -73,7 +73,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<AddPlIsDocReturnDto> AddPlIsDoc(AddPlIsDocParamsDto model)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddPlIsDocReturnDto();
             var entity = model.PlIsDoc;
             entity.GenerateNewId();
@@ -96,7 +96,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<ModifyPlIsDocReturnDto> ModifyPlIsDoc(ModifyPlIsDocParamsDto model)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyPlIsDocReturnDto();
             if (!_EntityManager.Modify(new[] { model.PlIsDoc })) return NotFound();
             _DbContext.SaveChanges();
@@ -115,7 +115,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpDelete]
         public ActionResult<RemovePlIsDocReturnDto> RemovePlIsDoc(RemovePlIsDocParamsDto model)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemovePlIsDocReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.PlIsDocs;
@@ -143,7 +143,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetAllPlEsDocReturnDto> GetAllPlEsDoc([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlEsDocReturnDto();
 
             var dbSet = _DbContext.PlEsDocs;
@@ -164,7 +164,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<AddPlEsDocReturnDto> AddPlEsDoc(AddPlEsDocParamsDto model)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddPlEsDocReturnDto();
             var entity = model.PlEsDoc;
             entity.GenerateNewId();
@@ -187,7 +187,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<ModifyPlEsDocReturnDto> ModifyPlEsDoc(ModifyPlEsDocParamsDto model)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyPlEsDocReturnDto();
             if (!_EntityManager.Modify(new[] { model.PlEsDoc })) return NotFound();
             _DbContext.SaveChanges();
@@ -206,7 +206,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpDelete]
         public ActionResult<RemovePlEsDocReturnDto> RemovePlEsDoc(RemovePlEsDocParamsDto model)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemovePlEsDocReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.PlEsDocs;
@@ -234,7 +234,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetAllContainerKindCountReturnDto> GetAllContainerKindCount([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllContainerKindCountReturnDto();
 
             var dbSet = _DbContext.ContainerKindCounts;
@@ -255,7 +255,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<AddContainerKindCountReturnDto> AddContainerKindCount(AddContainerKindCountParamsDto model)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddContainerKindCountReturnDto();
             var entity = model.ContainerKindCount;
             entity.GenerateNewId();
@@ -276,7 +276,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<ModifyContainerKindCountReturnDto> ModifyContainerKindCount(ModifyContainerKindCountParamsDto model)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyContainerKindCountReturnDto();
             if (!_EntityManager.Modify(new[] { model.ContainerKindCount })) return NotFound();
             _DbContext.SaveChanges();
@@ -295,7 +295,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpDelete]
         public ActionResult<RemoveContainerKindCountReturnDto> RemoveContainerKindCount(RemoveContainerKindCountParamsDto model)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveContainerKindCountReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.ContainerKindCounts;
@@ -317,7 +317,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<SetContainerKindCountReturnDto> SetContainerKindCount(SetContainerKindCountParamsDto model)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new SetContainerKindCountReturnDto();
             EfHelper.NormalizeChildren(model.Items, model.ParentId);
             List<ContainerKindCount> list = new List<ContainerKindCount>();

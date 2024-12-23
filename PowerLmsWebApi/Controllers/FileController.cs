@@ -63,7 +63,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetAllCustomerFileListReturnDto> GetAllCustomerFileList([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllCustomerFileListReturnDto();
 
             var dbSet = _DbContext.PlFileInfos;
@@ -104,7 +104,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpGet]
         public ActionResult DownloadCustomerFile(Guid token, Guid fileId)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var info = _DbContext.PlFileInfos.Find(fileId);
             if (info == null) return NotFound();
             var path = Path.Combine(AppContext.BaseDirectory, "Files", info.FilePath);
@@ -123,7 +123,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<UploadCustomerFileReturnDto> UploadCustomerFile(IFormFile file, [FromForm] UploadCustomerFileParamsDto model)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new UploadCustomerFileReturnDto();
             if (file is null)
             {
@@ -163,7 +163,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpDelete]
         public ActionResult<RemoveFileReturnDto> RemoveFile(RemoveFileParamsDto model)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveFileReturnDto();
             var item = _DbContext.PlFileInfos.Find(model.Id);
             if (item is null) return NotFound(model.Id);
@@ -186,7 +186,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<AddFileReturnDto> AddFile([FromForm] AddFileParamsDto model)
         {
             var result = new AddFileReturnDto();
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var fileInfo = new PlFileInfo
             {
                 DisplayName = model.DisplayName,
@@ -222,7 +222,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpGet]
         public ActionResult GetFile([FromQuery] GetFileParamsDto model)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var info = _DbContext.PlFileInfos.Find(model.FileId);
             if (info == null) return NotFound();
             var path = Path.Combine(AppContext.BaseDirectory, "Files", info.FilePath);
@@ -242,7 +242,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetAllFileInfoReturnDto> GetAllFileInfo([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllFileInfoReturnDto();
 
             var dbSet = _DbContext.PlFileInfos;

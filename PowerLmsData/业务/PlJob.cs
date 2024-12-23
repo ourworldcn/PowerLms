@@ -7,6 +7,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace PowerLms.Data
@@ -338,6 +339,21 @@ goodssize	尺寸	string100	字符串表达
         [Comment("尺寸,字符串表达.")]
         [MaxLength(128)]
         public string GoodsSize { get; set; }
+
+        /// <summary>
+        /// 备注。
+        /// </summary>
+        [Comment("备注")]
+        [JsonPropertyName("备注")]
+        public string Remark { get; set; }
+
+        /// <summary>
+        /// 利润说明。
+        /// </summary>
+        [Comment("利润说明")]
+        [JsonPropertyName("利润说明")]
+        public string ProfitBriefing { get; set; }
+
     }
 
     /// <summary>

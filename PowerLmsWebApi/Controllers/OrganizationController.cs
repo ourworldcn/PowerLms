@@ -60,7 +60,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetOrgReturnDto> GetOrg(Guid token, Guid? rootId, bool includeChildren)
         {
             var result = new GetOrgReturnDto();
-            if (_AccountManager.GetOrLoadAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
             if (!rootId.HasValue && !context.User.IsAdmin()) return StatusCode((int)HttpStatusCode.Forbidden, "只有商管可以获取全商户的机构");
             if (context.User.IsSuperAdmin)   //若是超管
             {
@@ -114,7 +114,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<AddOrgReturnDto> AddOrg(AddOrgParamsDto model)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddOrgReturnDto();
             model.Item.GenerateNewId();
             var id = model.Item.Id;
@@ -146,7 +146,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<ModifyOrgReturnDto> ModifyOrg(ModifyOrgParamsDto model)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized(OwHelper.GetLastErrorMessage());
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized(OwHelper.GetLastErrorMessage());
             if (!_AuthorizationManager.HasPermission(context.User, "B.1")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new ModifyOrgReturnDto();
             var list = new List<PlOrganization>();
@@ -249,7 +249,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpDelete]
         public ActionResult<RemoveOrgReturnDto> RemoveOrg(RemoveOrgParamsDto model)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveOrgReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.PlOrganizations;
@@ -272,7 +272,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpGet]
         public ActionResult<GetMerchantIdReturnDto> GetMerchantId(Guid token, Guid orgId)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetMerchantIdReturnDto();
             if (!_MerchantManager.GetIdByOrgId(orgId, out var merchId))
                 return BadRequest();
@@ -295,7 +295,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetAllAccountPlOrganizationReturnDto> GetAllAccountPlOrganization([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllAccountPlOrganizationReturnDto();
 
             var dbSet = _DbContext.AccountPlOrganizations;
@@ -327,7 +327,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<AddAccountPlOrganizationReturnDto> AddAccountPlOrganization(AddAccountPlOrganizationParamsDto model)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddAccountPlOrganizationReturnDto();
             _DbContext.AccountPlOrganizations.Add(model.Item);
             _DbContext.SaveChanges();
@@ -345,7 +345,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpDelete]
         public ActionResult<RemoveAccountPlOrganizationReturnDto> RemoveAccountPlOrganization(RemoveAccountPlOrganizationParamsDto model)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveAccountPlOrganizationReturnDto();
             DbSet<AccountPlOrganization> dbSet = _DbContext.AccountPlOrganizations;
             var item = dbSet.Find(model.UserId, model.OrgId);
@@ -368,7 +368,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<CopyDataDicReturnDto> CopyDataDic(CopyDataDicParamsDto model)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new CopyDataDicReturnDto();
             var merch = _DbContext.PlOrganizations.Find(model.Id);
             if (merch == null) return NotFound();
@@ -399,7 +399,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetAllBankInfoReturnDto> GetAllBankInfo([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllBankInfoReturnDto();
 
             var dbSet = _DbContext.BankInfos;
@@ -430,7 +430,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<AddBankInfoReturnDto> AddBankInfo(AddBankInfoParamsDto model)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddBankInfoReturnDto();
             model.BankInfo.GenerateNewId();
             _DbContext.BankInfos.Add(model.BankInfo);
@@ -451,7 +451,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<ModifyBankInfoReturnDto> ModifyBankInfo(ModifyBankInfoParamsDto model)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             if (!_AuthorizationManager.HasPermission(context.User, "B.1")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new ModifyBankInfoReturnDto();
             if (!_EntityManager.Modify(new[] { model.BankInfo })) return NotFound();
@@ -470,7 +470,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpDelete]
         public ActionResult<RemoveBankInfoReturnDto> RemoveBankInfo(RemoveBankInfoParamsDto model)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveBankInfoReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.BankInfos;

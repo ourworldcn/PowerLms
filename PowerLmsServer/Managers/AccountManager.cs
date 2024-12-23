@@ -1,9 +1,13 @@
 ﻿using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Internal;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.ObjectPool;
 using Microsoft.Extensions.Primitives;
 using NPOI.POIFS.FileSystem;
+using NPOI.SS.Formula.Functions;
 using OW;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
@@ -12,6 +16,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using static System.Formats.Asn1.AsnWriter;
@@ -44,7 +49,59 @@ namespace PowerLmsServer.Managers
         readonly IMemoryCache _MemoryCache;
         readonly IDbContextFactory<PowerLmsUserDbContext> _DbContextFactory;
 
-        readonly ConcurrentDictionary<Guid, string> _Token2Key = new() { };
+
+        /// <summary>
+        /// 将令牌转换为用户Key的字典的缓存项的key。
+        /// </summary>
+        const string Token2KeyCacheKey = $"097E641E-03D5-45CE-A911-B4A1C7D2392B.Token2Key";
+
+        /// <summary>
+        /// 令牌到缓存键的映射字典。
+        /// 键是令牌，值对象Id的字符串。
+        /// </summary>
+        ConcurrentDictionary<Guid, string> Token2KeyDic
+        {
+            get
+            {
+                return _MemoryCache.GetOrCreate(Token2KeyCacheKey, c =>
+                {
+                    return new ConcurrentDictionary<Guid, string>();
+                });
+            }
+        }
+
+        /// <summary>
+        /// 按指定令牌获取Id。
+        /// </summary>
+        /// <param name="token"></param>
+        /// <param name="db">检索用的数据库上下文。可以是null，在必要时会自动获取一个新的上下文。</param>
+        /// <returns>指定令牌对象的Id，如果没有找到则返回null。</returns>
+        public Guid? GetOrLoadIdByToken(Guid token, ref PowerLmsUserDbContext db)
+        {
+            if (!Token2KeyDic.TryGetValue(token, out var key))  //若缓存中没有指定Token
+            {
+                db ??= _DbContextFactory.CreateDbContext();
+                if (db.Accounts.FirstOrDefault(c => c.Token == token) is Account user)
+                    return user.Id;
+                else
+                    return null;
+            }
+            else if (Guid.TryParse(key, out var id))
+                return id;
+            return null;
+
+        }
+
+        /// <summary>
+        /// 锁定，避免出现临界争用错误。
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="timeout"></param>
+        /// <returns></returns>
+        public DisposeHelper<string> Lock(string key, TimeSpan timeout)
+        {
+            return DisposeHelper.Create(SingletonLocker.TryEnter, SingletonLocker.Exit, key, timeout);
+        }
 
         /// <summary>
         /// 创建一个新账号。
@@ -80,33 +137,52 @@ namespace PowerLmsServer.Managers
         /// <param name="token">登录令牌。</param>
         /// <param name="scope">范围服务容器。</param>
         /// <returns>上下文对象，可能是null如果出错。</returns>
-        public OwContext GetOrLoadAccountFromToken(Guid token, IServiceProvider scope)
+        public OwContext GetOrLoadContextByToken(Guid token, IServiceProvider scope)
         {
-            Account user;
-            if (_Token2Key.TryGetValue(token, out var key))    //若找到token
-                user = GetOrLoadAccount(OwCacheHelper.GetIdFromCacheKey(key).Value);
-            else
-            {
-                user = LoadAccountFromToken(token);
-                if (user is null) goto lbErr;
-                if (_Token2Key.TryAdd(user.Token ??= Guid.NewGuid(), OwCacheHelper.GetCacheKeyFromId(user.Id)))
-                {
-                    user.ExpirationTokenSource.Token.Register(c =>
-                    {
-                        var u = (Guid)c;
-                        _Token2Key.TryRemove(u, out _);
-                    }, token);
-                    SetAccount(user);
-                }
-            }
+            var ci = GetOrLoadByToken(token);
+            if (ci is null) goto lbErr;
+
             var context = scope.GetRequiredService<OwContext>();
             context.Token = token;
-            context.User = user;
-            //_Token2Key[token] = user.Id.ToString();
+            context.User = ci.Data;
             return context;
         lbErr:
             OwHelper.SetLastError(315);
             return null;
+        }
+
+        #region 加载用户对象及相关
+
+        /// <summary>
+        /// 按指定令牌获取缓存项。
+        /// </summary>
+        /// <param name="token"></param>
+        /// <returns>指定令牌的缓存项，没有找到则返回null。</returns>
+        public OwCacheItem<Account> GetByToken(Guid token)
+        {
+            if (!Token2KeyDic.TryGetValue(token, out var key))  //若缓存中没有指定Token
+            {
+                var db = _DbContextFactory.CreateDbContext();
+                var user = db.Accounts.FirstOrDefault(c => c.Token == token);
+                if (user is null) return null;  //若数据库中没有指定Token
+                key = user.IdString;
+            }
+            if (!Guid.TryParse(key, out var id)) return null;
+            return _MemoryCache.Get<OwCacheItem<Account>>(OwCacheHelper.GetCacheKeyFromId<Account>(id));
+        }
+
+        /// <summary>
+        /// 按指定令牌获取用户缓存项
+        /// </summary>
+        /// <param name="token"></param>
+        /// <returns>指定用户的缓存项，没找到则返回null。</returns>
+        public OwCacheItem<Account> GetOrLoadByToken(Guid token)
+        {
+            PowerLmsUserDbContext db = null;
+            var id = GetOrLoadIdByToken(token, ref db);
+            using var dw = db;
+            if (id is null) return null;
+            return GetOrLoadById(id.Value);
         }
 
         /// <summary>
@@ -130,82 +206,11 @@ namespace PowerLmsServer.Managers
         }
 
         /// <summary>
-        /// 从缓存中获取用户对象。
-        /// </summary>
-        /// <param name="id"></param>
-        /// <returns></returns>
-        public Account GetAccount(Guid id)
-        {
-            return _MemoryCache.Get<Account>(OwCacheHelper.GetCacheKeyFromId(id, $".{nameof(Account)}"));
-        }
-
-        /// <summary>
-        /// 获取缓存中的用户对象或加载。
-        /// </summary>
-        /// <param name="id"></param>
-        /// <returns>返回用户对象，没有找到则返回null。</returns>
-        public Account GetOrLoadAccount(Guid id)
-        {
-            var result = _MemoryCache.GetOrCreate(OwCacheHelper.GetCacheKeyFromId(id, $".{nameof(Account)}"), entry =>
-            {
-                var user = LoadAccountFromId(OwCacheHelper.GetIdFromCacheKey(entry.Key as string).Value);
-                entry.SetSlidingExpiration(TimeSpan.FromMinutes(15));
-                entry.RegisterPostEvictionCallback((k, v, r, s) =>
-                {
-                    if ((s as Account)?.ExpirationTokenSource is CancellationTokenSource cts)
-                        if (!cts.IsCancellationRequested)
-                            cts.Cancel();
-                }, entry.Value);
-                return user;
-            });
-            return result;
-        }
-
-        /// <summary>
-        /// 设置缓存中的数据(新缓存项)。若有已有项不会自动调用过期事件。
-        /// </summary>
-        /// <param name="user"></param>
-        public void SetAccount(Account user)
-        {
-            var key = OwCacheHelper.GetCacheKeyFromId(user.Id, $".{nameof(Account)}");
-
-            var cts = user.ExpirationTokenSource;
-            var ct = cts.Token;
-            var entryOptions = new MemoryCacheEntryOptions()
-                .SetSlidingExpiration(TimeSpan.FromMinutes(15))
-                .AddExpirationToken(new CancellationChangeToken(ct))
-                .RegisterPostEvictionCallback((k, v, r, s) =>
-                {
-                    if (s is Guid token)
-                        _Token2Key.TryRemove(token, out _);
-                }, user.Token.GetValueOrDefault());
-
-            _MemoryCache.Set(key, user, entryOptions);
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="userId"></param>
-        /// <returns></returns>
-        public bool SetChange(Guid userId)
-        {
-            if (GetAccount(userId) is Account user)
-            {
-                user.ExpirationTokenSource?.Cancel();
-                return true;
-            }
-            else return false;
-        }
-
-        #region 加载用户对象及相关
-
-        /// <summary>
         /// 按证据获取用户缓存或加载。
         /// </summary>
         /// <param name="evidence"></param>
         /// <returns></returns>
-        public Account LoadAccountFromEvidence(IDictionary<string, string> evidence)
+        public Account LoadByEvidence(IDictionary<string, string> evidence)
         {
             Account user = null;
             PowerLmsUserDbContext db;
@@ -229,13 +234,48 @@ namespace PowerLmsServer.Managers
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        public Account LoadAccountFromId(Guid id)
+        public virtual Account LoadById(Guid id)
         {
             var db = _DbContextFactory.CreateDbContext();
-            if (db.Accounts.FirstOrDefault(c => c.Id == id) is not Account user)
-                return null;
+            Account user;
+            lock (db)
+                if (db.Accounts.FirstOrDefault(c => c.Id == id) is not Account tmp)
+                    return null;
+                else
+                    user = tmp;
             Loaded(user, db);
             return user;
+        }
+
+        /// <summary>
+        /// 从缓存中获取用户对象。
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns>指定id的缓存项，没有找到则返回null。</returns>
+        public OwCacheItem<Account> GetById(Guid id)
+        {
+            return _MemoryCache.Get<OwCacheItem<Account>>(OwCacheHelper.GetCacheKeyFromId<Account>(id));
+        }
+
+        /// <summary>
+        /// 获取缓存中的用户对象或加载。
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns>返回用户对象，没有找到则返回null。</returns>
+        public virtual OwCacheItem<Account> GetOrLoadById(Guid id)
+        {
+            using var dw = Lock(id.ToString(), Timeout.InfiniteTimeSpan);
+
+            var result = _MemoryCache.GetOrCreate(OwCacheHelper.GetCacheKeyFromId<Account>(id), entry =>
+            {
+                var user = LoadById(OwCacheHelper.GetIdFromCacheKey(entry.Key as string).Value);
+                SetEntry(entry);
+                var r = new OwCacheItem<Account> { Data = user };
+                r.SetCancellations(new CancellationTokenSource());
+                return r;
+            });
+            SetCacheItem(result);
+            return result;
         }
 
         /// <summary>
@@ -243,13 +283,54 @@ namespace PowerLmsServer.Managers
         /// </summary>
         /// <param name="token"></param>
         /// <returns></returns>
-        public Account LoadAccountFromToken(Guid token)
+        public Account LoadByToken(Guid token)
         {
             var db = _DbContextFactory.CreateDbContext();
             if (db.Accounts.FirstOrDefault(c => c.Token == token) is not Account user)
                 return null;
             Loaded(user, db);
             return user;
+        }
+
+        /// <summary>
+        /// 进入缓存项的设置。
+        /// </summary>
+        /// <param name="entry"></param>
+        protected ICacheEntry SetEntry(ICacheEntry entry)
+        {
+            return entry.SetSlidingExpiration(TimeSpan.FromMinutes(15))   //15分钟不用则逐出
+                .RegisterPostEvictionCallback((k, v, r, s) =>  //逐出后清理
+                {
+                    if (v is OwCacheItem<Account> ci)
+                    {
+                        var key = ci.Data.IdString;
+                        if (SingletonLocker.TryEnter(key, Timeout.InfiniteTimeSpan))
+                        {
+                            try
+                            {
+
+                            }
+                            finally
+                            {
+                                SingletonLocker.Exit(key);
+                            }
+                        }
+                        if (!ci.CancellationTokenSource.IsCancellationRequested)
+                            ci.CancellationTokenSource.Cancel();
+                        ci.Data.DbContext?.Dispose();
+                        if (ci.Data.Token.HasValue) //若需要取消Token映射
+                            Token2KeyDic.TryRemove(ci.Data.Token.Value, out _);
+                    }
+                });
+        }
+
+        /// <summary>
+        /// 第一次写入了缓存项后调用。
+        /// </summary>
+        /// <param name="cacheItem"></param>
+        protected void SetCacheItem(OwCacheItem<Account> cacheItem)
+        {
+            Token2KeyDic.AddOrUpdate(cacheItem.Data.Token.Value, cacheItem.Data.IdString, (key, ov) => cacheItem.Data.IdString);
         }
 
         /// <summary>
@@ -260,12 +341,6 @@ namespace PowerLmsServer.Managers
         public void Loaded(Account user, PowerLmsUserDbContext db)
         {
             user.DbContext = db;
-            user.ExpirationTokenSource = new CancellationTokenSource();
-            user.ExpirationTokenSource.Token.Register(c =>
-            {
-                var u = c as Account;
-                u.DbContext?.Dispose();
-            }, user);
         }
 
         #endregion 加载用户对象及相关

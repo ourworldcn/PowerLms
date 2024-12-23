@@ -134,16 +134,6 @@ namespace PowerLms.Data
         public ConcurrentDictionary<string, object> RuntimeProperties { get => _RuntimeProperties; }
 
         /// <summary>
-        /// 获取或设置缓存超期的取消令牌。
-        /// </summary>
-        [NotMapped, JsonIgnore]
-        public CancellationTokenSource ExpirationTokenSource
-        {
-            get => RuntimeProperties.GetValueOrDefault(nameof(ExpirationTokenSource), null) as CancellationTokenSource;
-            set => RuntimeProperties[nameof(ExpirationTokenSource)] = value;
-        }
-
-        /// <summary>
         /// 获取或设置存储使用的数据库上下文。
         /// </summary>
         [NotMapped, JsonIgnore]

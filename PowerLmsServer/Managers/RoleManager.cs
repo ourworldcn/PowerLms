@@ -29,18 +29,20 @@ namespace PowerLmsServer.Managers
         /// <summary>
         /// 构造函数。
         /// </summary>
-        public RoleManager(MerchantManager merchantManager, OrganizationManager organizationManager, IMemoryCache cache, IDbContextFactory<PowerLmsUserDbContext> dbContextFactory)
+        public RoleManager(MerchantManager merchantManager, OrganizationManager organizationManager, IMemoryCache cache, IDbContextFactory<PowerLmsUserDbContext> dbContextFactory, AccountManager accountManager)
         {
             _MerchantManager = merchantManager;
             _OrganizationManager = organizationManager;
             _Cache = cache;
             _DbContextFactory = dbContextFactory;
+            _AccountManager = accountManager;
         }
 
         readonly MerchantManager _MerchantManager;
         readonly OrganizationManager _OrganizationManager;
         readonly IMemoryCache _Cache;
         readonly IDbContextFactory<PowerLmsUserDbContext> _DbContextFactory;
+        readonly AccountManager _AccountManager;
 
         /// <summary>
         /// 从数据库调入指定商户下的所有角色。
@@ -152,7 +154,9 @@ namespace PowerLmsServer.Managers
                 };
                 var merch = _MerchantManager.GetOrLoadCacheItemByUser(user);
                 var roles = GetRolesCacheItemByMerchantId(merch.Data.Id);
-                r.SetCancellations(new CancellationTokenSource(), user.ExpirationTokenSource);  //TODO 级联变化令牌
+                var userCi = _AccountManager.GetOrLoadById(user.Id);
+                if (userCi is null) return null;
+                r.SetCancellations(new CancellationTokenSource(), userCi.ChangeToken, roles.ChangeToken);
                 c.AddExpirationToken(r.ChangeToken);
                 return r;
             });

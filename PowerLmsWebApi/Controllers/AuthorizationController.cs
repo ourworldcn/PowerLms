@@ -76,7 +76,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetAllPlRoleReturnDto> GetAllPlRole([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlRoleReturnDto();
             var dbSet = _DbContext.PlRoles;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
@@ -116,7 +116,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<AddPlRoleReturnDto> AddPlRole(AddPlRoleParamsDto model)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddPlRoleReturnDto();
             model.Item.GenerateNewId();
             if (!model.Item.OrgId.HasValue)
@@ -150,7 +150,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<ModifyPlRoleReturnDto> ModifyPlRole(ModifyPlRoleParamsDto model)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyPlRoleReturnDto();
             var newOrgId = model.PlRole.OrgId;
             var oldRole = _DbContext.PlRoles.Find(model.PlRole.Id);
@@ -180,7 +180,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpDelete]
         public ActionResult<RemovePlRoleReturnDto> RemovePlRole(RemovePlRoleParamsDto model)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemovePlRoleReturnDto();
             var userIds = _DbContext.PlAccountRoles.Where(c => model.Id == c.RoleId).Select(c => c.UserId).ToArray();
             var id = model.Id;
@@ -213,7 +213,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetAllPlPermissionReturnDto> GetAllPlPermission([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlPermissionReturnDto();
             var dbSet = _DbContext.PlPermissions;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsQueryable();
@@ -245,7 +245,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<AddPlPermissionReturnDto> AddPlPermission(AddPlPermissionParamsDto model)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddPlPermissionReturnDto();
             //model.PlPermission.GenerateNewId();
             _DbContext.PlPermissions.Add(model.PlPermission);
@@ -266,7 +266,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<ModifyPlPermissionReturnDto> ModifyPlPermission(ModifyPlPermissionParamsDto model)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyPlPermissionReturnDto();
             var dbSet = _DbContext.PlPermissions;
             var tmp = dbSet.Find(model.Item.Name);
@@ -303,7 +303,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpDelete]
         public ActionResult<RemovePlPermissionReturnDto> RemovePlPermission(RemovePlPermissionParamsDto model)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemovePlPermissionReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.PlPermissions;
@@ -330,7 +330,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetAllAccountRoleReturnDto> GetAllAccountRole([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllAccountRoleReturnDto();
             var dbSet = _DbContext.PlAccountRoles;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
@@ -360,7 +360,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<AddAccountRoleReturnDto> AddAccountRole(AddAccountRoleParamsDto model)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddAccountRoleReturnDto();
             //model.AccountRole.GenerateNewId();
             _DbContext.PlAccountRoles.Add(model.AccountRole);
@@ -381,7 +381,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpDelete]
         public ActionResult<RemoveAccountRoleReturnDto> RemoveAccountRole(RemoveAccountRoleParamsDto model)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveAccountRoleReturnDto();
 
             var dbSet = _DbContext.PlAccountRoles;
@@ -408,7 +408,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetAllRolePermissionReturnDto> GetAllRolePermission([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllRolePermissionReturnDto();
             var dbSet = _DbContext.PlRolePermissions;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
@@ -437,7 +437,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<AddRolePermissionReturnDto> AddRolePermission(AddRolePermissionParamsDto model)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddRolePermissionReturnDto();
 
             _DbContext.PlRolePermissions.Add(model.RolePermission);
@@ -460,7 +460,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpDelete]
         public ActionResult<RemoveRolePermissionReturnDto> RemoveRolePermission(RemoveRolePermissionParamsDto model)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveRolePermissionReturnDto();
 
             var dbSet = _DbContext.PlRolePermissions;
@@ -485,7 +485,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<SetUsersReturnDto> SetUsers(SetUsersParamsDto model)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new SetUsersReturnDto();
             var ids = new HashSet<Guid>(model.UserIds);
             if (ids.Count != model.UserIds.Count) return BadRequest($"{nameof(model.UserIds)}中有重复键值。");
@@ -516,7 +516,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<SetPermissionsReturnDto> SetPermissions(SetPermissionsParamsDto model)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new SetPermissionsReturnDto();
 
             var ids = new HashSet<string>(model.PermissionIds);
@@ -533,7 +533,7 @@ namespace PowerLmsWebApi.Controllers
             setRela.AddRange(adds.Select(c => new RolePermission { RoleId = model.RoleId, PermissionId = c, CreateBy = context.User.Id }));
             _DbContext.SaveChanges();
             var userIds = _DbContext.PlAccountRoles.Where(c => model.RoleId == c.RoleId).Select(c => c.UserId).ToArray();
-            userIds.ForEach(userId => _AccountManager.GetAccount(userId)?.ExpirationTokenSource?.Cancel());
+            userIds.ForEach(userId => _AccountManager.GetById(userId)?.CancellationTokenSource?.Cancel());
             return result;
         }
 
@@ -548,7 +548,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpGet]
         public ActionResult<GetAllPermissionsInCurrentUserReturnDto> GetAllPermissionsInCurrentUser([FromQuery] GetAllPermissionsInCurrentUserParamsDto model)
         {
-            if (_AccountManager.GetOrLoadAccountFromToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPermissionsInCurrentUserReturnDto();
             result.Permissions.AddRange(_PermissionManager.GetOrLoadCurrentPermissionsByUser(context.User).Data.Values);
             return result;
