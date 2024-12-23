@@ -109,6 +109,13 @@ namespace Microsoft.Extensions.Caching.Memory
         /// </summary>
         public IChangeToken ChangeToken { get; set; }
 
+        public void SetCancellations(CancellationTokenSource cancellation)
+        {
+            CancellationTokenSource = cancellation;
+            ChangeToken = new CancellationChangeToken(CancellationTokenSource.Token);
+
+        }
+
         /// <summary>
         /// 设置<see cref="ChangeToken"/>属性。
         /// </summary>
