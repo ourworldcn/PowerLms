@@ -533,7 +533,7 @@ namespace PowerLmsWebApi.Controllers
             setRela.AddRange(adds.Select(c => new RolePermission { RoleId = model.RoleId, PermissionId = c, CreateBy = context.User.Id }));
             _DbContext.SaveChanges();
             var userIds = _DbContext.PlAccountRoles.Where(c => model.RoleId == c.RoleId).Select(c => c.UserId).ToArray();
-            userIds.ForEach(userId => _AccountManager.GetById(userId)?.CancellationTokenSource?.Cancel());
+            userIds.ForEach(userId => _AccountManager.GetCacheItemById(userId)?.CancellationTokenSource?.Cancel());
             return result;
         }
 

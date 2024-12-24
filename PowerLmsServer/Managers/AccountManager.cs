@@ -59,7 +59,7 @@ namespace PowerLmsServer.Managers
         /// 令牌到缓存键的映射字典。
         /// 键是令牌，值对象Id的字符串。
         /// </summary>
-        ConcurrentDictionary<Guid, string> Token2KeyDic
+        public ConcurrentDictionary<Guid, string> Token2KeyDic
         {
             get
             {
@@ -153,8 +153,11 @@ namespace PowerLmsServer.Managers
 
         #region 加载用户对象及相关
 
+        #region 用令牌获取账号
+
+        #endregion
         /// <summary>
-        /// 按指定令牌获取缓存项。
+        /// 在缓存中按指定令牌获取缓存项。不会试图读取数据库。
         /// </summary>
         /// <param name="token"></param>
         /// <returns>指定令牌的缓存项，没有找到则返回null。</returns>
@@ -162,13 +165,24 @@ namespace PowerLmsServer.Managers
         {
             if (!Token2KeyDic.TryGetValue(token, out var key))  //若缓存中没有指定Token
             {
-                var db = _DbContextFactory.CreateDbContext();
-                var user = db.Accounts.FirstOrDefault(c => c.Token == token);
-                if (user is null) return null;  //若数据库中没有指定Token
-                key = user.IdString;
+                return null;
             }
             if (!Guid.TryParse(key, out var id)) return null;
             return _MemoryCache.Get<OwCacheItem<Account>>(OwCacheHelper.GetCacheKeyFromId<Account>(id));
+        }
+
+        /// <summary>
+        /// 加载用户对象。
+        /// </summary>
+        /// <param name="token"></param>
+        /// <returns></returns>
+        public Account LoadByToken(Guid token)
+        {
+            var db = _DbContextFactory.CreateDbContext();
+            if (db.Accounts.FirstOrDefault(c => c.Token == token) is not Account user)
+                return null;
+            Loaded(user, db);
+            return user;
         }
 
         /// <summary>
@@ -182,7 +196,7 @@ namespace PowerLmsServer.Managers
             var id = GetOrLoadIdByToken(token, ref db);
             using var dw = db;
             if (id is null) return null;
-            return GetOrLoadById(id.Value);
+            return GetOrLoadCacheItemById(id.Value);
         }
 
         /// <summary>
@@ -229,6 +243,8 @@ namespace PowerLmsServer.Managers
             return null;
         }
 
+        #region 用Id获取账号及相关
+
         /// <summary>
         /// 加载用户对象。
         /// </summary>
@@ -240,7 +256,10 @@ namespace PowerLmsServer.Managers
             Account user;
             lock (db)
                 if (db.Accounts.FirstOrDefault(c => c.Id == id) is not Account tmp)
+                {
+                    using var dw = db;
                     return null;
+                }
                 else
                     user = tmp;
             Loaded(user, db);
@@ -252,7 +271,7 @@ namespace PowerLmsServer.Managers
         /// </summary>
         /// <param name="id"></param>
         /// <returns>指定id的缓存项，没有找到则返回null。</returns>
-        public OwCacheItem<Account> GetById(Guid id)
+        public virtual OwCacheItem<Account> GetCacheItemById(Guid id)
         {
             return _MemoryCache.Get<OwCacheItem<Account>>(OwCacheHelper.GetCacheKeyFromId<Account>(id));
         }
@@ -262,7 +281,7 @@ namespace PowerLmsServer.Managers
         /// </summary>
         /// <param name="id"></param>
         /// <returns>返回用户对象，没有找到则返回null。</returns>
-        public virtual OwCacheItem<Account> GetOrLoadById(Guid id)
+        public virtual OwCacheItem<Account> GetOrLoadCacheItemById(Guid id)
         {
             using var dw = Lock(id.ToString(), Timeout.InfiniteTimeSpan);
 
@@ -278,19 +297,7 @@ namespace PowerLmsServer.Managers
             return result;
         }
 
-        /// <summary>
-        /// 加载用户对象。
-        /// </summary>
-        /// <param name="token"></param>
-        /// <returns></returns>
-        public Account LoadByToken(Guid token)
-        {
-            var db = _DbContextFactory.CreateDbContext();
-            if (db.Accounts.FirstOrDefault(c => c.Token == token) is not Account user)
-                return null;
-            Loaded(user, db);
-            return user;
-        }
+        #endregion 用Id获取账号及相关
 
         /// <summary>
         /// 进入缓存项的设置。
@@ -304,20 +311,20 @@ namespace PowerLmsServer.Managers
                     if (v is OwCacheItem<Account> ci)
                     {
                         var key = ci.Data.IdString;
-                        if (SingletonLocker.TryEnter(key, Timeout.InfiniteTimeSpan))
-                        {
-                            try
-                            {
+                        //if (SingletonLocker.TryEnter(key, Timeout.InfiniteTimeSpan))
+                        //{
+                        //    try
+                        //    {
 
-                            }
-                            finally
-                            {
-                                SingletonLocker.Exit(key);
-                            }
-                        }
+                        //    }
+                        //    finally
+                        //    {
+                        //        SingletonLocker.Exit(key);
+                        //    }
+                        //}
+                        using var dw = ci.Data?.DbContext;
                         if (!ci.CancellationTokenSource.IsCancellationRequested)
                             ci.CancellationTokenSource.Cancel();
-                        ci.Data.DbContext?.Dispose();
                         if (ci.Data.Token.HasValue) //若需要取消Token映射
                             Token2KeyDic.TryRemove(ci.Data.Token.Value, out _);
                     }

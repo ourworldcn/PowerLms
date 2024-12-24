@@ -104,16 +104,15 @@ namespace PowerLmsServer.Managers
         /// <returns>没有找到指定商户则返回空字典。</returns>
         public OwCacheItem<ConcurrentDictionary<Guid, PlOrganization>> GetOrLoadOrgsCacheItemByMerchantId(Guid merchantId)
         {
-            var result = _Cache.GetOrCreate(OwCacheHelper.GetCacheKeyFromId(merchantId, ".Orgs"), c =>
+            var result = _Cache.GetOrCreate(OwCacheHelper.GetCacheKeyFromId(merchantId, ".Orgs"), entry =>
             {
-                var merch = _MerchantManager.GetOrLoadCacheItemById(OwCacheHelper.GetIdFromCacheKey(c.Key as string, ".Orgs").Value);
+                var merch = _MerchantManager.GetOrLoadCacheItemById(OwCacheHelper.GetIdFromCacheKey(entry.Key as string, ".Orgs").Value);
                 var db = merch.Data.DbContext;
                 var r = new OwCacheItem<ConcurrentDictionary<Guid, PlOrganization>>
                 {
-                    Data = LoadOrgsByMerchantId(OwCacheHelper.GetIdFromCacheKey(c.Key as string, ".Orgs").Value, ref db),
-                };
-                r.SetCancellations(new CancellationTokenSource(), merch.Data.ExpirationTokenSource);
-                c.AddExpirationToken(r.ChangeToken);
+                    Data = LoadOrgsByMerchantId(OwCacheHelper.GetIdFromCacheKey(entry.Key as string, ".Orgs").Value, ref db),
+                }.SetCancellations(new CancellationTokenSource(), merch.ChangeToken);
+                entry.AddExpirationToken(r.ChangeToken);
                 return r;
             });
             return result;
@@ -130,7 +129,7 @@ namespace PowerLmsServer.Managers
         {
             if (GetCurrentCompanyByUser(user) is not PlOrganization root) return new ConcurrentDictionary<Guid, PlOrganization>();
             var result = new ConcurrentDictionary<Guid, PlOrganization>(OwHelper.GetAllSubItemsOfTree(root, c => c.Children).ToDictionary(c => c.Id));
-            List<Guid> ids = new List<Guid>();  //需要排除的下属子公司及其机构
+            var ids = new List<Guid>();  //需要排除的下属子公司及其机构
             foreach (var child in root.Children)
             {
                 if (child.Otc == 2 && child != root) //若应当排除
@@ -149,7 +148,7 @@ namespace PowerLmsServer.Managers
         /// <returns>如果没有指定所属当前机构则返回空字典。</returns>
         public OwCacheItem<ConcurrentDictionary<Guid, PlOrganization>> GetOrLoadCurrentOrgsCacheItemByUser(Account user)
         {
-            var result = _Cache.GetOrCreate(OwCacheHelper.GetCacheKeyFromId(user.Id, ".CurrentOrgs"), c =>
+            var result = _Cache.GetOrCreate(OwCacheHelper.GetCacheKeyFromId(user.Id, ".CurrentOrgs"), entry =>
             {
                 var r = new OwCacheItem<ConcurrentDictionary<Guid, PlOrganization>>
                 {
@@ -157,9 +156,10 @@ namespace PowerLmsServer.Managers
                 };
                 var merch = _MerchantManager.GetOrLoadCacheItemByUser(user);
                 var orgs = GetOrLoadOrgsCacheItemByMerchantId(merch.Data.Id);
-                var userCi = _AccountManager.GetOrLoadById(user.Id);
+                var userCi = _AccountManager.GetOrLoadCacheItemById(user.Id);
                 if (userCi is null) return null;
                 r.SetCancellations(new CancellationTokenSource(), userCi.ChangeToken, orgs.ChangeToken);
+                entry.AddExpirationToken(r.ChangeToken);
                 return r;
             });
             return result;

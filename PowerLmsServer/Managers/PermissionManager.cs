@@ -14,6 +14,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -44,6 +45,8 @@ namespace PowerLmsServer.Managers
         /// </summary>
         public static readonly string PermissionsCacheKey = typeof(PlPermission).GUID.ToString() + ".Permissions";
 
+        #region 所有权限对象及相关
+
         /// <summary>
         /// 加载数据库中许可对象。
         /// </summary>
@@ -65,6 +68,7 @@ namespace PowerLmsServer.Managers
         /// 
         /// </summary>
         /// <param name="dic"></param>
+        //[MethodImpl(MethodImplOptions.NoOptimization)]
         public void PermissionLoaded(IDictionary<string, PlPermission> dic)
         {
             //foreach (var kvp in dic)
@@ -93,20 +97,19 @@ namespace PowerLmsServer.Managers
             var result = _Cache.GetOrCreate(PermissionsCacheKey, entry =>
             {
                 var db = _DbContextFactory.CreateDbContext();
-                var r = LoadPermission(ref db);
-                var cts = new CancellationTokenSource();
                 var item = new OwCacheItem<ConcurrentDictionary<string, PlPermission>>()
                 {
-                    Data = r,
-                    CancellationTokenSource = cts,
-                };
-                entry.AddExpirationToken(new CancellationChangeToken(cts.Token));
+                    Data = LoadPermission(ref db),
+                }.SetCancellations(new CancellationTokenSource());
+                entry.AddExpirationToken(item.ChangeToken);
                 using var t = db;
                 return item;
             });
 
             return result;
         }
+
+        #endregion 所有权限对象及相关
 
         /// <summary>
         /// 获取指定角色的当前权限缓存项。
@@ -144,19 +147,18 @@ namespace PowerLmsServer.Managers
         /// <returns></returns>
         public OwCacheItem<ConcurrentDictionary<string, PlPermission>> GetOrLoadCurrentPermissionsByUser(Account user)
         {
-            var result = _Cache.GetOrCreate(OwCacheHelper.GetCacheKeyFromId(user.Id, ".CurrentPermissions"), c =>
+            var result = _Cache.GetOrCreate(OwCacheHelper.GetCacheKeyFromId(user.Id, ".CurrentPermissions"), entry =>
             {
                 var db = user.DbContext;
-                var r = LoadCurrentPermissionsByUser(user, ref db); Debug.Assert(ReferenceEquals(user.DbContext, db));
-                using var t = db;
 
                 var item = new OwCacheItem<ConcurrentDictionary<string, PlPermission>>()
                 {
-                    Data = r,
+                    Data = LoadCurrentPermissionsByUser(user, ref db),
                 };
                 var pers = GetOrLoadPermission();
                 var roles = _RoleManager.GetOrLoadCurrentRolesCacheItemByUser(user);
                 item.SetCancellations(new CancellationTokenSource(), roles.ChangeToken, pers.ChangeToken);
+                entry.AddExpirationToken(item.ChangeToken);
                 return item;
             });
             return result;

@@ -50,7 +50,7 @@ namespace PowerLmsServer.Managers
         /// <param name="merchId"></param>
         /// <param name="dbContext"></param>
         /// <returns></returns>
-        public ConcurrentDictionary<Guid, PlRole> LoadRolesByMerchantId(Guid merchId, ref PowerLmsUserDbContext dbContext)
+        public ConcurrentDictionary<Guid, PlRole> LoadByMerchantId(Guid merchId, ref PowerLmsUserDbContext dbContext)
         {
             var dic = _OrganizationManager.GetOrLoadOrgsCacheItemByMerchantId(merchId);
             var orgIds = dic.Data.Keys;
@@ -87,9 +87,8 @@ namespace PowerLmsServer.Managers
                 var db = merchCi.Data.DbContext;
                 var r = new OwCacheItem<ConcurrentDictionary<Guid, PlRole>>
                 {
-                    Data = LoadRolesByMerchantId(merchId, ref db),
-                };
-                r.SetCancellations(new CancellationTokenSource(), merchCi.ChangeToken, orgCi.ChangeToken);
+                    Data = LoadByMerchantId(merchId, ref db),
+                }.SetCancellations(new CancellationTokenSource(), merchCi.ChangeToken, orgCi.ChangeToken);
                 entry.AddExpirationToken(r.ChangeToken);
                 return r;
             });
@@ -145,19 +144,18 @@ namespace PowerLmsServer.Managers
         /// <returns>所有当前有效角色的字典。未登录到公司则返回空字典。</returns>
         public OwCacheItem<ConcurrentDictionary<Guid, PlRole>> GetOrLoadCurrentRolesCacheItemByUser(Account user)
         {
-            var result = _Cache.GetOrCreate(OwCacheHelper.GetCacheKeyFromId(user.Id, ".CurrentRoles"), c =>
+            var result = _Cache.GetOrCreate(OwCacheHelper.GetCacheKeyFromId(user.Id, ".CurrentRoles"), entry =>
             {
                 var db = user.DbContext;
                 var r = new OwCacheItem<ConcurrentDictionary<Guid, PlRole>>
                 {
                     Data = LoadCurrentRolesByUser(user, ref db),
                 };
+                var orgs = _OrganizationManager.GetOrLoadCurrentOrgsCacheItemByUser(user);
                 var merch = _MerchantManager.GetOrLoadCacheItemByUser(user);
-                var roles = GetRolesCacheItemByMerchantId(merch.Data.Id);
-                var userCi = _AccountManager.GetOrLoadById(user.Id);
-                if (userCi is null) return null;
-                r.SetCancellations(new CancellationTokenSource(), userCi.ChangeToken, roles.ChangeToken);
-                c.AddExpirationToken(r.ChangeToken);
+                var roles = GetOrLoadRolesCacheItemByMerchantId(merch.Data.Id);
+                r.SetCancellations(new CancellationTokenSource(), orgs.ChangeToken, roles.ChangeToken);
+                entry.AddExpirationToken(r.ChangeToken);
                 return r;
             });
             return result;

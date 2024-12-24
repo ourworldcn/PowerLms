@@ -75,10 +75,17 @@
         </member>
         <member name="M:PowerLmsServer.Managers.AccountManager.GetByToken(System.Guid)">
             <summary>
-            按指定令牌获取缓存项。
+            在缓存中按指定令牌获取缓存项。不会试图读取数据库。
             </summary>
             <param name="token"></param>
             <returns>指定令牌的缓存项，没有找到则返回null。</returns>
+        </member>
+        <member name="M:PowerLmsServer.Managers.AccountManager.LoadByToken(System.Guid)">
+            <summary>
+            加载用户对象。
+            </summary>
+            <param name="token"></param>
+            <returns></returns>
         </member>
         <member name="M:PowerLmsServer.Managers.AccountManager.GetOrLoadByToken(System.Guid)">
             <summary>
@@ -108,26 +115,19 @@
             <param name="id"></param>
             <returns></returns>
         </member>
-        <member name="M:PowerLmsServer.Managers.AccountManager.GetById(System.Guid)">
+        <member name="M:PowerLmsServer.Managers.AccountManager.GetCacheItemById(System.Guid)">
             <summary>
             从缓存中获取用户对象。
             </summary>
             <param name="id"></param>
             <returns>指定id的缓存项，没有找到则返回null。</returns>
         </member>
-        <member name="M:PowerLmsServer.Managers.AccountManager.GetOrLoadById(System.Guid)">
+        <member name="M:PowerLmsServer.Managers.AccountManager.GetOrLoadCacheItemById(System.Guid)">
             <summary>
             获取缓存中的用户对象或加载。
             </summary>
             <param name="id"></param>
             <returns>返回用户对象，没有找到则返回null。</returns>
-        </member>
-        <member name="M:PowerLmsServer.Managers.AccountManager.LoadByToken(System.Guid)">
-            <summary>
-            加载用户对象。
-            </summary>
-            <param name="token"></param>
-            <returns></returns>
         </member>
         <member name="M:PowerLmsServer.Managers.AccountManager.SetEntry(Microsoft.Extensions.Caching.Memory.ICacheEntry)">
             <summary>
@@ -900,7 +900,7 @@
             构造函数。
             </summary>
         </member>
-        <member name="M:PowerLmsServer.Managers.RoleManager.LoadRolesByMerchantId(System.Guid,PowerLmsServer.EfData.PowerLmsUserDbContext@)">
+        <member name="M:PowerLmsServer.Managers.RoleManager.LoadByMerchantId(System.Guid,PowerLmsServer.EfData.PowerLmsUserDbContext@)">
             <summary>
             从数据库调入指定商户下的所有角色。
             </summary>

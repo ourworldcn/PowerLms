@@ -194,7 +194,7 @@ namespace PowerLmsWebApi.Controllers
             if (user is null) return BadRequest("用户名或密码不正确。");
             if (!user.IsPwd(model.Pwd)) return BadRequest("用户名或密码不正确。");
             //找到合法用户
-            if (_AccountManager.GetById(user.Id) is OwCacheItem<Account> oldUserCi)
+            if (_AccountManager.GetCacheItemById(user.Id) is OwCacheItem<Account> oldUserCi)
             {
                 oldUserCi.CancellationTokenSource?.Cancel();
             }
@@ -507,7 +507,7 @@ namespace PowerLmsWebApi.Controllers
             var count = _DbContext.PlRoles.Count(c => ids.Contains(c.Id));
             if (count != ids.Count) return BadRequest($"{nameof(model.RoleIds)}中至少有一个组织角色不存在。");
 
-            if (_AccountManager.GetOrLoadById(model.UserId) is not OwCacheItem<Account> account) return BadRequest($"{nameof(model.UserId)}指定用户不存在。");
+            if (_AccountManager.GetOrLoadCacheItemById(model.UserId) is not OwCacheItem<Account> account) return BadRequest($"{nameof(model.UserId)}指定用户不存在。");
             var rls = _RoleManager.GetCurrentRolesCacheItem(account.Data);
 
             var removes = _DbContext.PlAccountRoles.Where(c => c.UserId == model.UserId && !ids.Contains(c.RoleId));

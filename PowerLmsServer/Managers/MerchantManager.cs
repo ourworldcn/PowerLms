@@ -34,6 +34,8 @@ namespace PowerLmsServer.Managers
         readonly IDbContextFactory<PowerLmsUserDbContext> _DbContextFactory;
         readonly PowerLmsUserDbContext _DbContext;
 
+        #region 缓存商户信息及相关
+
         /// <summary>
         /// 根据指定Id加载商户对象。
         /// </summary>
@@ -58,8 +60,6 @@ namespace PowerLmsServer.Managers
         private void Loaded(PlMerchant merch, PowerLmsUserDbContext dbContext)
         {
             merch.DbContext = dbContext;
-            merch.ExpirationTokenSource = new CancellationTokenSource();
-
         }
 
         /// <summary>
@@ -87,15 +87,14 @@ namespace PowerLmsServer.Managers
                 var item = new OwCacheItem<PlMerchant>()
                 {
                     Data = r,
-                    CancellationTokenSource = new CancellationTokenSource(),
-                    Tag = db,
                 };
-                item.ChangeToken = new CancellationChangeToken(item.CancellationTokenSource.Token);
-                c.AddExpirationToken(item.ChangeToken);
+                item.SetCancellations(new CancellationTokenSource());
                 return item;
             });
             return result;
         }
+
+        #endregion 缓存商户信息及相关
 
         /// <summary>
         /// 从指定的用户对象获取其商户信息。
