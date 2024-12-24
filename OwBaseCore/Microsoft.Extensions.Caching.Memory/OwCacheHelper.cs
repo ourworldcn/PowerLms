@@ -109,11 +109,15 @@ namespace Microsoft.Extensions.Caching.Memory
         /// </summary>
         public IChangeToken ChangeToken { get; set; }
 
-        public void SetCancellations(CancellationTokenSource cancellation)
+        /// <summary>
+        /// 设置主动失效的取消令牌，和以此令牌为基础的变化令牌。
+        /// </summary>
+        /// <param name="cancellation"></param>
+        public OwCacheItem<T> SetCancellations(CancellationTokenSource cancellation)
         {
             CancellationTokenSource = cancellation;
             ChangeToken = new CancellationChangeToken(CancellationTokenSource.Token);
-
+            return this;
         }
 
         /// <summary>
@@ -121,17 +125,18 @@ namespace Microsoft.Extensions.Caching.Memory
         /// </summary>
         /// <param name="cancellation">设置<see cref="CancellationTokenSource"/>属性。</param>
         /// <param name="cancellations"></param>
-        public void SetCancellations(CancellationTokenSource cancellation, params CancellationTokenSource[] cancellations)
+        public OwCacheItem<T> SetCancellations(CancellationTokenSource cancellation, params CancellationTokenSource[] cancellations)
         {
             CancellationTokenSource = cancellation;
             if (cancellations.Length == 0)
             {
                 ChangeToken = new CancellationChangeToken(CancellationTokenSource.Token);
-                return;
+                return this;
             }
             var changeToken = new CompositeChangeToken(cancellations.Select(c => new CancellationChangeToken(c.Token))
                 .Prepend(new CancellationChangeToken(CancellationTokenSource.Token)).OfType<IChangeToken>().ToArray());
             ChangeToken = changeToken;
+            return this;
         }
 
         /// <summary>
@@ -139,16 +144,17 @@ namespace Microsoft.Extensions.Caching.Memory
         /// </summary>
         /// <param name="cancellation">设置<see cref="CancellationTokenSource"/>属性。</param>
         /// <param name="changeToken"></param>
-        public void SetCancellations(CancellationTokenSource cancellation, params IChangeToken[] changeToken)
+        public OwCacheItem<T> SetCancellations(CancellationTokenSource cancellation, params IChangeToken[] changeToken)
         {
             CancellationTokenSource = cancellation;
             if (changeToken.Length == 0)
             {
                 ChangeToken = new CancellationChangeToken(CancellationTokenSource.Token);
-                return;
+                return this;
             }
             var r = new CompositeChangeToken(changeToken.Prepend(new CancellationChangeToken(CancellationTokenSource.Token)).OfType<IChangeToken>().ToArray());
             ChangeToken = r;
+            return this;
         }
 
     }
