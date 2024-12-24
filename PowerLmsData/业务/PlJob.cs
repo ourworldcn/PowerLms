@@ -344,14 +344,12 @@ goodssize	尺寸	string100	字符串表达
         /// 备注。
         /// </summary>
         [Comment("备注")]
-        [JsonPropertyName("备注")]
         public string Remark { get; set; }
 
         /// <summary>
         /// 利润说明。
         /// </summary>
         [Comment("利润说明")]
-        [JsonPropertyName("利润说明")]
         public string ProfitBriefing { get; set; }
 
     }
