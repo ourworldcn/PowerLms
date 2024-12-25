@@ -11,6 +11,7 @@ using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
+using System.Net;
 using System.Text;
 
 namespace PowerLmsWebApi.Controllers
@@ -24,7 +25,7 @@ namespace PowerLmsWebApi.Controllers
         /// 构造函数。
         /// </summary>
         public CustomerController(IServiceProvider serviceProvider, AccountManager accountManager, PowerLmsUserDbContext dbContext, EntityManager entityManager,
-            IMapper mapper, OrganizationManager organizationManager, MerchantManager merchantManager)
+            IMapper mapper, OrganizationManager organizationManager, MerchantManager merchantManager, AuthorizationManager authorizationManager)
         {
             _ServiceProvider = serviceProvider;
             _AccountManager = accountManager;
@@ -33,6 +34,7 @@ namespace PowerLmsWebApi.Controllers
             _Mapper = mapper;
             _OrganizationManager = organizationManager;
             _MerchantManager = merchantManager;
+            _AuthorizationManager = authorizationManager;
         }
 
         readonly IServiceProvider _ServiceProvider;
@@ -44,6 +46,7 @@ namespace PowerLmsWebApi.Controllers
         readonly EntityManager _EntityManager;
         readonly IMapper _Mapper;
         readonly MerchantManager _MerchantManager;
+        readonly AuthorizationManager _AuthorizationManager;
 
         #region 客户资料本体的
 
@@ -55,11 +58,13 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpGet]
         public ActionResult<GetAllCustomerReturnDto> GetAllCustomer([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "C.1.2")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new GetAllCustomerReturnDto();
             Guid[] allOrg = Array.Empty<Guid>();
             if (_MerchantManager.GetIdByUserId(context.User.Id, out var merId))
@@ -104,10 +109,13 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         public ActionResult<AddCustomerReturnDto> AddCustomer(AddCustomerParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "C.1.1")) return StatusCode((int)HttpStatusCode.Forbidden);
+
             var result = new AddCustomerReturnDto();
             model.Customer.GenerateNewId();
 
@@ -128,10 +136,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">指定Id的客户不存在。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPut]
         public ActionResult<ModifyCustomerReturnDto> ModifyCustomer(ModifyCustomerParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "C.1.3")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new ModifyCustomerReturnDto();
             if (!_EntityManager.Modify(model.Items)) return NotFound();
             foreach (var item in model.Items)
@@ -155,10 +165,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">指定Id的客户不存在。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpDelete]
         public ActionResult<RemoveCustomerReturnDto> RemoveCustomer(RemoveCustomerParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "C.1.4")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new RemoveCustomerReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.PlCustomers.Where(c => c.OrgId == context.User.OrgId);
@@ -186,11 +198,13 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="model"></param>
         /// <param name="conditional">支持多个bool类型的或查询。使用字段名作为key,true或false为值。</param>
         /// <returns></returns>
+        /// <response code="403">权限不足。</response>  
         [HttpGet]
         public ActionResult<GetAllCustomer2ReturnDto> GetAllCustomer2([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "C.1.2")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new GetAllCustomer2ReturnDto();
             Guid[] allOrg = Array.Empty<Guid>();
             if (_MerchantManager.GetIdByUserId(context.User.Id, out var merId))
@@ -370,10 +384,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">在同一类别同一组织机构下指定了重复的Code。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         public ActionResult<AddPlBusinessHeaderReturnDto> AddPlBusinessHeader(AddPlBusinessHeaderParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "C.1.5")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new AddPlBusinessHeaderReturnDto();
             _DbContext.PlCustomerBusinessHeaders.Add(model.Item);
             _DbContext.SaveChanges();
@@ -388,10 +404,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpDelete]
         public ActionResult<RemovePlBusinessHeaderReturnDto> RemovePlBusinessHeader(RemovePlBusinessHeaderParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "C.1.5")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new RemovePlBusinessHeaderReturnDto();
             DbSet<PlBusinessHeader> dbSet = _DbContext.PlCustomerBusinessHeaders;
             var item = dbSet.Find(model.CustomerId, model.UserId, model.OrderTypeId);

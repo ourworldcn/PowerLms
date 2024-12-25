@@ -11,6 +11,14 @@ namespace PowerLms.Data
     public class ShippingLane : GuidKeyObjectBase, IMarkDelete, ICreatorInfo
     {
         /// <summary>
+        /// 构造函数。
+        /// </summary>
+        public ShippingLane()
+        {
+            
+        }
+
+        /// <summary>
         /// <inheritdoc/>
         /// </summary>
         [Comment("是否已标记为删除。false(默认)未标记为删除，true标记为删除。")]

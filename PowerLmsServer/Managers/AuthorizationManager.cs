@@ -51,9 +51,26 @@ namespace PowerLmsServer.Managers
             {
                 return true;
             }
-            return true;
-            //var dic = GetOrLoadPermission(user);
-            //return pIds.All(c => dic.ContainsKey(c));
+            var ci = _PermissionManager.GetOrLoadCurrentPermissionsByUser(user);
+            return pIds.All(c => ci.Data.ContainsKey(c));
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="user"></param>
+        /// <param name="orgId"></param>
+        /// <param name="pIds"></param>
+        /// <returns></returns>
+        public bool HasPermission(Account user, Guid orgId, params string[] pIds)
+        {
+            if (user.IsSuperAdmin) return true;
+            if (user.IsMerchantAdmin)
+            {
+                return true;
+            }
+            var ci = _PermissionManager.GetOrLoadCurrentPermissionsByUser(user);
+            return pIds.All(c => ci.Data.ContainsKey(c));
         }
     }
 }

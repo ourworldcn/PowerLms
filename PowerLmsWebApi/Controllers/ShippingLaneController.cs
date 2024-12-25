@@ -10,18 +10,19 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using System.Text.Json;
+using System.Net;
 
 namespace PowerLmsWebApi.Controllers
 {
     /// <summary>
-    /// 航线管理控制器。
+    /// 运价管理控制器。
     /// </summary>
     public class ShippingLaneController : PlControllerBase
     {
         /// <summary>
         /// 构造函数。
         /// </summary>
-        public ShippingLaneController(IServiceProvider serviceProvider, AccountManager accountManager, PowerLmsUserDbContext dbContext, OrganizationManager organizationManager, EntityManager entityManager, IMapper mapper, NpoiManager npoiManager)
+        public ShippingLaneController(IServiceProvider serviceProvider, AccountManager accountManager, PowerLmsUserDbContext dbContext, OrganizationManager organizationManager, EntityManager entityManager, IMapper mapper, NpoiManager npoiManager, AuthorizationManager authorizationManager)
         {
             _ServiceProvider = serviceProvider;
             _AccountManager = accountManager;
@@ -30,6 +31,7 @@ namespace PowerLmsWebApi.Controllers
             _EntityManager = entityManager;
             _Mapper = mapper;
             _NpoiManager = npoiManager;
+            _AuthorizationManager = authorizationManager;
         }
         IServiceProvider _ServiceProvider;
         AccountManager _AccountManager;
@@ -40,7 +42,7 @@ namespace PowerLmsWebApi.Controllers
         EntityManager _EntityManager;
         IMapper _Mapper;
         private readonly NpoiManager _NpoiManager;
-
+        readonly AuthorizationManager _AuthorizationManager;
         /// <summary>
         /// 增加新航线费用。
         /// </summary>
@@ -48,10 +50,12 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         public ActionResult<AddShippingLaneReturnDto> AddShippingLane(AddShippingLaneParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "A.1.1")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new AddShippingLaneReturnDto();
             model.Item.GenerateNewId();
 
@@ -98,10 +102,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">指定Id的航线费用不存在。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPut]
         public ActionResult<ModifyShippingLaneReturnDto> ModifyShippingLane(ModifyShippingLaneParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "A.1.3")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new ModifyShippingLaneReturnDto();
             if (!_EntityManager.Modify(model.Items)) return NotFound();
             foreach (var item in model.Items)
@@ -121,10 +127,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">指定Id中，至少有一个不存在相应实体。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpDelete]
         public ActionResult<RemoveShippingLaneReturnDto> RemoveShippingLane(RemoveShippingLanePatamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "A.1.2")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new RemoveShippingLaneReturnDto();
 
             var dbSet = _DbContext.ShippingLanes;
@@ -141,10 +149,12 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="file"></param>
         /// <param name="token"></param>
         /// <returns></returns>
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         public ActionResult<ImportShippingLaneReturnDto> ImportShippingLane(IFormFile file, Guid token)
         {
             if (_AccountManager.GetOrLoadContextByToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.HasPermission(context.User, "A.1.4")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new ImportShippingLaneReturnDto();
             var workbook = _NpoiManager.GetWorkbookFromStream(file.OpenReadStream());
             var sheet = workbook.GetSheetAt(0);

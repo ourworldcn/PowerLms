@@ -176,11 +176,7 @@ namespace PowerLms.Data
         /// </summary>
         [Comment("提送货日期")]
         public DateTime? DeliveryDate { get; set; }
-        /*salesman	业务员	用户id
-serviceman	客服	用户id
-Businessmanager	业务负责人	用户id
-AirlineMan	航线负责人	用户id
-*/
+        
         /// <summary>
         /// 业务员Id。
         /// </summary>

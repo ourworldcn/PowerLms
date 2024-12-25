@@ -8,6 +8,7 @@ using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
+using System.Net;
 
 namespace PowerLmsWebApi.Controllers
 {
@@ -20,7 +21,7 @@ namespace PowerLmsWebApi.Controllers
         /// 构造函数。Debit 和credit。
         /// </summary>
         public FinancialController(AccountManager accountManager, IServiceProvider serviceProvider, EntityManager entityManager,
-            PowerLmsUserDbContext dbContext, ILogger<FinancialController> logger, IMapper mapper, OwWfManager wfManager)
+            PowerLmsUserDbContext dbContext, ILogger<FinancialController> logger, IMapper mapper, OwWfManager wfManager, AuthorizationManager authorizationManager)
         {
             _AccountManager = accountManager;
             _ServiceProvider = serviceProvider;
@@ -29,6 +30,7 @@ namespace PowerLmsWebApi.Controllers
             _Logger = logger;
             _Mapper = mapper;
             _WfManager = wfManager;
+            _AuthorizationManager = authorizationManager;
         }
 
         private AccountManager _AccountManager;
@@ -38,6 +40,7 @@ namespace PowerLmsWebApi.Controllers
         readonly ILogger<FinancialController> _Logger;
         readonly IMapper _Mapper;
         readonly OwWfManager _WfManager;
+        readonly AuthorizationManager _AuthorizationManager;
 
         #region 业务费用申请单
 
@@ -343,6 +346,7 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         public ActionResult<AddDocFeeRequisitionItemReturnDto> AddDocFeeRequisitionItem(AddDocFeeRequisitionItemParamsDto model)
         {
@@ -351,6 +355,7 @@ namespace PowerLmsWebApi.Controllers
                 _Logger.LogWarning("无效的令牌{token}", model.Token);
                 return Unauthorized();
             }
+
             var result = new AddDocFeeRequisitionItemReturnDto();
             var entity = model.DocFeeRequisitionItem;
             entity.GenerateNewId();

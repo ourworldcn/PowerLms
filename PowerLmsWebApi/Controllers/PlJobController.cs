@@ -21,7 +21,7 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 构造函数。
         /// </summary>
-        public PlJobController(AccountManager accountManager, IServiceProvider serviceProvider, PowerLmsUserDbContext dbContext, OrganizationManager organizationManager, IMapper mapper, EntityManager entityManager, DataDicManager dataManager, ILogger<PlJobController> logger, JobManager jobManager)
+        public PlJobController(AccountManager accountManager, IServiceProvider serviceProvider, PowerLmsUserDbContext dbContext, OrganizationManager organizationManager, IMapper mapper, EntityManager entityManager, DataDicManager dataManager, ILogger<PlJobController> logger, JobManager jobManager, AuthorizationManager authorizationManager)
         {
             _AccountManager = accountManager;
             _ServiceProvider = serviceProvider;
@@ -32,6 +32,7 @@ namespace PowerLmsWebApi.Controllers
             _DataManager = dataManager;
             _Logger = logger;
             _JobManager = jobManager;
+            _AuthorizationManager = authorizationManager;
         }
 
         readonly AccountManager _AccountManager;
@@ -43,6 +44,7 @@ namespace PowerLmsWebApi.Controllers
         readonly DataDicManager _DataManager;
         readonly ILogger<PlJobController> _Logger;
         JobManager _JobManager;
+        readonly AuthorizationManager _AuthorizationManager;
 
         #region 业务总表
 
@@ -112,6 +114,11 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyPlJobReturnDto();
+            if (_DbContext.PlJobs.Find(model.PlJob.Id) is not PlJob ov) return NotFound();
+            if (ov.SalesId != model.PlJob.SalesId)
+            {
+
+            }
             if (!_EntityManager.Modify(new[] { model.PlJob })) return NotFound();
             //忽略不可更改字段
             var entity = _DbContext.Entry(model.PlJob);
@@ -233,6 +240,13 @@ namespace PowerLmsWebApi.Controllers
             }
             var result = new AuditJobAndDocFeeReturnDto();
             if (_DbContext.PlJobs.Find(model.JobId) is not PlJob job) return NotFound($"未找到指定的任务 ，Id={model.JobId}");
+
+            if (job.JobTypeId == Guid.Parse("7D4123A5-BF7C-4960-80DA-7D1C112F6949"))
+            {
+                if (model.IsAudit && !_AuthorizationManager.HasPermission(context.User, "D0.6.7")) return StatusCode((int)HttpStatusCode.Forbidden);
+                if (!model.IsAudit && !_AuthorizationManager.HasPermission(context.User, "D0.6.10")) return StatusCode((int)HttpStatusCode.Forbidden);
+
+            }
             var now = OwHelper.WorldNow;
             if (model.IsAudit)   //若审核
             {
@@ -443,7 +457,7 @@ namespace PowerLmsWebApi.Controllers
         #region 业务单的费用单
 
         /// <summary>
-        /// 审核单笔费用。
+        /// 审核或取消审核单笔费用。
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
@@ -451,15 +465,24 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="400">费用已被审核 -或- 所属任务已不可更改。</response>  
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">找不到指定Id的费用。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         public ActionResult<AuditDocFeeReturnDto> AuditDocFee(AuditDocFeeParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+
             var result = new AuditDocFeeReturnDto();
             if (_DbContext.DocFees.Find(model.FeeId) is not DocFee fee) return NotFound();
             if (_DbContext.PlJobs.Find(fee.JobId) is not PlJob job) return NotFound();
+
+            if (job.JobTypeId == Guid.Parse("7D4123A5-BF7C-4960-80DA-7D1C112F6949"))
+            {
+                if (model.IsAudit && !_AuthorizationManager.HasPermission(context.User, "D0.6.7")) return StatusCode((int)HttpStatusCode.Forbidden);
+                if (!model.IsAudit && !_AuthorizationManager.HasPermission(context.User, "D0.6.10")) return StatusCode((int)HttpStatusCode.Forbidden);
+
+            }
             if (job.JobState > 4) return BadRequest("所属任务已经不可更改。");
-            if(model.IsAudit)
+            if (model.IsAudit)
             {
                 fee.AuditDateTime = OwHelper.WorldNow;
                 fee.AuditOperatorId = context.User.Id;
@@ -467,7 +490,7 @@ namespace PowerLmsWebApi.Controllers
             }
             else
             {
-                fee.AuditDateTime =null;
+                fee.AuditDateTime = null;
                 fee.AuditOperatorId = null;
             }
             _DbContext.SaveChanges();
@@ -482,11 +505,13 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpGet]
         public ActionResult<GetAllDocFeeReturnDto> GetAllDocFee([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            //if (!_AuthorizationManager.HasPermission(context.User, "D0.6.2")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new GetAllDocFeeReturnDto();
 
             var dbSet = _DbContext.DocFees;
@@ -532,7 +557,6 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetDocFeeReturnDto> GetDocFee([FromQuery] GetDocFeeParamsDto model, [FromQuery] Dictionary<string, string> conditional = null)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-
             string[] entityNames = new string[] { nameof(DocFee), nameof(DocBill), nameof(PlJob) };
             var result = new GetDocFeeReturnDto();
 
@@ -569,10 +593,16 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         public ActionResult<AddDocFeeReturnDto> AddDocFee(AddDocFeeParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+
+            if (_DbContext.PlJobs.Find(model.DocFee.JobId) is not PlJob job) return NotFound($"没有找到业务Id={model.DocFee.JobId}");
+            if (job.JobTypeId == Guid.Parse("7D4123A5-BF7C-4960-80DA-7D1C112F6949"))
+                if (!_AuthorizationManager.HasPermission(context.User, "D0.6.1")) return StatusCode((int)HttpStatusCode.Forbidden);
+
             var result = new AddDocFeeReturnDto();
             var entity = model.DocFee;
             entity.GenerateNewId();
@@ -591,10 +621,15 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">指定Id的业务单的费用单不存在。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPut]
         public ActionResult<ModifyDocFeeReturnDto> ModifyDocFee(ModifyDocFeeParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_DbContext.PlJobs.Find(model.DocFee.JobId) is not PlJob job) return NotFound($"没有找到业务Id={model.DocFee.JobId}");
+            if (job.JobTypeId == Guid.Parse("7D4123A5-BF7C-4960-80DA-7D1C112F6949"))
+                if (!_AuthorizationManager.HasPermission(context.User, "D0.6.3")) return StatusCode((int)HttpStatusCode.Forbidden);
+
             var result = new ModifyDocFeeReturnDto();
             if (!_EntityManager.Modify(new[] { model.DocFee })) return NotFound();
             var entity = _DbContext.Entry(model.DocFee);
@@ -614,10 +649,15 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="400">未找到指定的业务，或该业务不在初始创建状态——无法删除。</response>  
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">指定Id的业务单的费用单不存在。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpDelete]
         public ActionResult<RemoveDocFeeReturnDto> RemoveDocFee(RemoveDocFeeParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_DbContext.DocFees.Find(model.Id) is not DocFee docFee) return NotFound($"没有找到费用Id={model.Id}");
+            if (_DbContext.PlJobs.Find(docFee.JobId) is not PlJob job) return NotFound($"没有找到业务Id={docFee.JobId}");
+            if (job.JobTypeId == Guid.Parse("7D4123A5-BF7C-4960-80DA-7D1C112F6949"))
+                if (!_AuthorizationManager.HasPermission(context.User, "D0.6.4")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new RemoveDocFeeReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.DocFees;
@@ -931,7 +971,7 @@ namespace PowerLmsWebApi.Controllers
         public Guid FeeId { get; set; }
 
         /// <summary>
-        /// 
+        /// 审核标志，true审核完成，false取消审核完成。
         /// </summary>
         public bool IsAudit { get; set; }
     }

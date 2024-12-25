@@ -233,6 +233,15 @@
             <param name="pIds"></param>
             <returns>拥有指定的所有权限则返回true,否则返回false。</returns>
         </member>
+        <member name="M:PowerLmsServer.Managers.AuthorizationManager.HasPermission(PowerLms.Data.Account,System.Guid,System.String[])">
+            <summary>
+            
+            </summary>
+            <param name="user"></param>
+            <param name="orgId"></param>
+            <param name="pIds"></param>
+            <returns></returns>
+        </member>
         <member name="T:PowerLmsServer.Managers.CaptchaManager">
             <summary>
             验证码管理器。
