@@ -18,6 +18,7 @@ using System.Text;
 using Microsoft.Extensions.ObjectPool;
 using System.Text.RegularExpressions;
 using AutoMapper.Internal.Mappers;
+using PowerLmsServer;
 
 namespace PowerLmsWebApi.Controllers
 {
@@ -131,7 +132,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<ModifyDataDicCatalogReturnDto> ModifyDataDicCatalog(ModifyDataDicCatalogParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand(out var err, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ModifyDataDicCatalogReturnDto();
             if (!_EntityManager.Modify(model.Items))
             {
@@ -155,7 +156,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<RemoveDataDicCatalogReturnDto> RemoveDataDicCatalog(RemoveDataDicCatalogParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("B.0")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new RemoveDataDicCatalogReturnDto();
             var id = model.Id;
             var item = _DbContext.DD_DataDicCatalogs.Find(id);
@@ -179,7 +180,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<CopySimpleDataDicReturnDto> CopySimpleDataDic(CopySimpleDataDicParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("B.0")) return StatusCode((int)HttpStatusCode.Forbidden);
 
             var result = new CopySimpleDataDicReturnDto();
             //var merch = _DbContext.Merchants.Find(model.SrcOrgId);
@@ -226,7 +227,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<ImportDataDicReturnDto> ImportDataDic(IFormFile formFile, Guid token, Guid rId)
         {
             if (_AccountManager.GetOrLoadContextByToken(token, _ServiceProvider) is not OwContext context) return Unauthorized(OwHelper.GetLastErrorMessage());
-            if (!_AuthorizationManager.HasPermission(context.User, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("B.0")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new ImportDataDicReturnDto();
             var srTask = _DbContext.DD_SystemResources.FindAsync(rId).AsTask();
             var workbook = _NpoiManager.GetWorkbookFromStream(formFile.OpenReadStream());
@@ -425,7 +426,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<AddDataDicCatalogReturnDto> AddDataDicCatalog(AddDataDicCatalogParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("B.0")) return StatusCode((int)HttpStatusCode.Forbidden);
             if (!context.User.IsAdmin())   //若非超管也非商管
             {
                 return base.Forbid("需要管理员权限。");
@@ -474,7 +475,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<AddSimpleDataDicReturnDto> AddSimpleDataDic(AddSimpleDataDicParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("B.0")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new AddSimpleDataDicReturnDto();
             if (_DbContext.DD_SimpleDataDics.Any(c => c.DataDicId == model.Item.DataDicId && c.Code == model.Item.Code))   //若重复
                 return BadRequest("Id重复");
@@ -514,7 +515,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<ModifySimpleDataDicReturnDto> ModifySimpleDataDic(ModifySimpleDataDicParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("B.0")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new ModifySimpleDataDicReturnDto();
             if (!_EntityManager.ModifyWithMarkDelete(model.Items))
             {
@@ -544,7 +545,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<RemoveSimpleDataDicReturnDto> RemoveSimpleDataDic(RemoveSimpleDataDicParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("B.0")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new RemoveSimpleDataDicReturnDto();
             var id = model.Id;
             DbSet<SimpleDataDic> dbSet = _DbContext.DD_SimpleDataDics;
@@ -568,7 +569,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<RestoreSimpleDataDicReturnDto> RestoreSimpleDataDic(RestoreSimpleDataDicParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("B.0")) return StatusCode((int)HttpStatusCode.Forbidden);
 
             var result = new RestoreSimpleDataDicReturnDto();
             if (!_EntityManager.Restore<SimpleDataDic>(model.Id))
@@ -669,7 +670,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<AddPlPortReturnDto> AddPlPort(AddPlPortParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "B.6")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("B.6")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new AddPlPortReturnDto();
 
             var dbSet = _DbContext.DD_PlPorts;
@@ -696,7 +697,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<ModifyPlPortReturnDto> ModifyPlPort(ModifyPlPortParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "B.6")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("B.6")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new ModifyPlPortReturnDto();
             if (!_EntityManager.ModifyWithMarkDelete(model.Items))
             {
@@ -724,7 +725,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<RemovePlPortReturnDto> RemovePlPort(RemovePlPortParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "B.6")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("B.6")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new RemovePlPortReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.DD_PlPorts;
@@ -748,7 +749,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<RestorePlPortReturnDto> RestorePlPort(RestorePlPortParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "B.6")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("B.6")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new RestorePlPortReturnDto();
             if (!_EntityManager.Restore<PlPort>(model.Id))
             {
@@ -834,7 +835,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<AddPlCargoRouteReturnDto> AddPlCargoRoute(AddPlCargoRouteParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "B.7")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("B.7")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new AddPlCargoRouteReturnDto();
             var dbSet = _DbContext.DD_PlCargoRoutes;
             if (dbSet.Any(c => c.OrgId == model.Item.OrgId && c.Code == model.Item.Code))   //若重复
@@ -860,7 +861,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<ModifyPlCargoRouteReturnDto> ModifyPlCargoRoute(ModifyPlCargoRouteParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "B.7")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("B.7")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new ModifyPlCargoRouteReturnDto();
             if (!_EntityManager.ModifyWithMarkDelete(model.Items))
             {
@@ -888,7 +889,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<RemovePlCargoRouteReturnDto> RemovePlCargoRoute(RemoveCargoPlRouteParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "B.7")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("B.7")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new RemovePlCargoRouteReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.DD_PlCargoRoutes;
@@ -912,7 +913,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<RestorePlCargoRouteReturnDto> RestorePlCargoRoute(RestorePlCargoRouteParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "B.7")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("B.7")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new RestorePlCargoRouteReturnDto();
             if (!_EntityManager.Restore<PlCargoRoute>(model.Id))
             {
@@ -1003,7 +1004,7 @@ namespace PowerLmsWebApi.Controllers
                 return result;
             if (_OrganizationManager.GetOrLoadOrgsCacheItemByMerchantId(merchId.Value).Data[context.User.OrgId.Value] is not PlOrganization org)
                 return BadRequest($"找不到指定的登录公司Id={merchId}");
-            if(string.IsNullOrWhiteSpace( org.BaseCurrencyCode)) BadRequest($"公司本币设置错误，本币代码为:{org.BaseCurrencyCode}");
+            if (string.IsNullOrWhiteSpace(org.BaseCurrencyCode)) BadRequest($"公司本币设置错误，本币代码为:{org.BaseCurrencyCode}");
             //var curr = _DbContext.DD_PlCurrencys.Find(org.BaseCurrencyId.Value); if (curr is null) return result;
 
             coll = coll.Where(c => c.DCurrency == org.BaseCurrencyCode);
@@ -1025,7 +1026,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<AddPlExchangeRateReturnDto> AddPlExchangeRate(AddPlExchangeRateParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "B.4")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("B.4")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new AddPlExchangeRateReturnDto();
             model.Item.GenerateNewId();
             var id = model.Item.Id;
@@ -1048,7 +1049,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<ModifyPlExchangeRateReturnDto> ModifyPlExchangeRate(ModifyPlExchangeRateParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "B.4")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("B.4")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new ModifyPlExchangeRateReturnDto();
             if (!_EntityManager.Modify(model.Items))
             {
@@ -1129,7 +1130,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<AddUnitConversionReturnDto> AddUnitConversion(AddUnitConversionParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "B.10")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("B.10")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new AddUnitConversionReturnDto();
             model.Item.GenerateNewId();
             var id = model.Item.Id;
@@ -1152,7 +1153,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<ModifyUnitConversionReturnDto> ModifyUnitConversion(ModifyUnitConversionParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "B.10")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("B.10")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new ModifyUnitConversionReturnDto();
             if (!_EntityManager.ModifyWithMarkDelete(model.Items))
             {
@@ -1176,7 +1177,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<RemoveUnitConversionReturnDto> RemoveUnitConversion(RemoveUnitConversionParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "B.10")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("B.10")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new RemoveUnitConversionReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.DD_UnitConversions;
@@ -1206,7 +1207,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<RestoreUnitConversionReturnDto> RestoreUnitConversion(RestoreUnitConversionParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "B.10")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("B.10")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new RestoreUnitConversionReturnDto();
             if (!_EntityManager.Restore<UnitConversion>(model.Id))
             {
@@ -1292,7 +1293,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<AddFeesTypeReturnDto> AddFeesType(AddFeesTypeParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "B.8")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("B.8")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new AddFeesTypeReturnDto();
             model.Item.GenerateNewId();
             var id = model.Item.Id;
@@ -1315,7 +1316,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<ModifyFeesTypeReturnDto> ModifyFeesType(ModifyFeesTypeParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "B.8")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("B.8")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new ModifyFeesTypeReturnDto();
             if (!_EntityManager.ModifyWithMarkDelete(model.Items))
             {
@@ -1343,7 +1344,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<RemoveFeesTypeReturnDto> RemoveFeesType(RemoveFeesTypeParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "B.8")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("B.8")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new RemoveFeesTypeReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.DD_FeesTypes;
@@ -1373,7 +1374,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<RestoreFeesTypeReturnDto> RestoreFeesType(RestoreFeesTypeParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "B.8")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("B.8")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new RestoreFeesTypeReturnDto();
             if (!_EntityManager.Restore<FeesType>(model.Id))
             {
@@ -1458,7 +1459,11 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<AddJobNumberRuleReturnDto> AddJobNumberRule(AddJobNumberRuleParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "B.2")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("B.2")) return StatusCode((int)HttpStatusCode.Forbidden);
+
+            if (model.Item.BusinessTypeId == ProjectContent.AeId)    //若是空运出口业务
+                if (!_AuthorizationManager.Demand(out var err, "D0.1.1.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+
             var result = new AddJobNumberRuleReturnDto();
             model.Item.GenerateNewId();
             var id = model.Item.Id;
@@ -1482,7 +1487,12 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<ModifyJobNumberRuleReturnDto> ModifyJobNumberRule(ModifyJobNumberRuleParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "B.2")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (model.Items.Any()) return BadRequest($"{nameof(model.Items)} 为空集合。");
+
+            if (!_AuthorizationManager.Demand("B.2")) return StatusCode((int)HttpStatusCode.Forbidden);
+
+            if (model.Items.Any(c => c.BusinessTypeId == ProjectContent.AeId))    //若是空运出口业务
+                if (!_AuthorizationManager.Demand(out var err, "D0.1.1.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ModifyJobNumberRuleReturnDto();
             if (!_EntityManager.ModifyWithMarkDelete(model.Items))
             {
@@ -1512,12 +1522,16 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<RemoveJobNumberRuleReturnDto> RemoveJobNumberRule(RemoveJobNumberRuleParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "B.2")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("B.2")) return StatusCode((int)HttpStatusCode.Forbidden);
+
             var result = new RemoveJobNumberRuleReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.DD_JobNumberRules;
             var item = dbSet.Find(id);
             if (item is null) return BadRequest();
+
+            if (item.BusinessTypeId == ProjectContent.AeId)    //若是空运出口业务
+                if (!_AuthorizationManager.Demand(out var err, "D0.1.1.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             _EntityManager.Remove(item);
             _DbContext.SaveChanges();
             //if (item.DataDicType == 1) //若是简单字典
@@ -1542,7 +1556,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<RestoreJobNumberRuleReturnDto> RestoreJobNumberRule(RestoreJobNumberRuleParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "B.2")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("B.2")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new RestoreJobNumberRuleReturnDto();
             if (!_EntityManager.Restore<JobNumberRule>(model.Id))
             {
@@ -1774,7 +1788,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<AddPlCountryReturnDto> AddPlCountry(AddPlCountryParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "B.5")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("B.5")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new AddPlCountryReturnDto();
             model.Item.GenerateNewId();
             var id = model.Item.Id;
@@ -1797,7 +1811,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<ModifyPlCountryReturnDto> ModifyPlCountry(ModifyPlCountryParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "B.5")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("B.5")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new ModifyPlCountryReturnDto();
             if (!_EntityManager.ModifyWithMarkDelete(model.Items))
             {
@@ -1825,7 +1839,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<RemovePlCountryReturnDto> RemovePlCountry(RemovePlCountryParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "B.5")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("B.5")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new RemovePlCountryReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.DD_PlCountrys;
@@ -1855,7 +1869,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<RestorePlCountryReturnDto> RestorePlCountry(RestorePlCountryParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "B.5")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("B.5")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new RestorePlCountryReturnDto();
             if (!_EntityManager.Restore<PlCountry>(model.Id))
             {
@@ -1935,7 +1949,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<AddPlCurrencyReturnDto> AddPlCurrency(AddPlCurrencyParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "B.3")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("B.3")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new AddPlCurrencyReturnDto();
             model.Item.GenerateNewId();
             var id = model.Item.Id;
@@ -1958,7 +1972,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<ModifyPlCurrencyReturnDto> ModifyPlCurrency(ModifyPlCurrencyParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "B.3")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("B.3")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new ModifyPlCurrencyReturnDto();
             if (!_EntityManager.ModifyWithMarkDelete(model.Items))
             {
@@ -1986,7 +2000,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<RemovePlCurrencyReturnDto> RemovePlCurrency(RemovePlCurrencyParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "B.3")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("B.3")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new RemovePlCurrencyReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.DD_PlCurrencys;
@@ -2016,7 +2030,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<RestorePlCurrencyReturnDto> RestorePlCurrency(RestorePlCurrencyParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "B.3")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("B.3")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new RestorePlCurrencyReturnDto();
             if (!_EntityManager.Restore<PlCurrency>(model.Id))
             {
@@ -2102,7 +2116,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<AddShippingContainersKindReturnDto> AddShippingContainersKind(AddShippingContainersKindParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "B.9")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("B.9")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new AddShippingContainersKindReturnDto();
             model.Item.GenerateNewId();
             var id = model.Item.Id;
@@ -2125,7 +2139,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<ModifyShippingContainersKindReturnDto> ModifyShippingContainersKind(ModifyShippingContainersKindParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "B.9")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("B.9")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new ModifyShippingContainersKindReturnDto();
             if (!_EntityManager.ModifyWithMarkDelete(model.Items))
             {
@@ -2153,7 +2167,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<RemoveShippingContainersKindReturnDto> RemoveShippingContainersKind(RemoveShippingContainersKindParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "B.9")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("B.9")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new RemoveShippingContainersKindReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.DD_ShippingContainersKinds;
@@ -2183,7 +2197,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<RestoreShippingContainersKindReturnDto> RestoreShippingContainersKind(RestoreShippingContainersKindParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "B.9")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("B.9")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new RestoreShippingContainersKindReturnDto();
             if (!_EntityManager.Restore<ShippingContainersKind>(model.Id))
             {

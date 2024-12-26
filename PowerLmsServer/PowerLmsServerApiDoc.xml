@@ -215,7 +215,7 @@
             权限管理器。
             </summary>
         </member>
-        <member name="M:PowerLmsServer.Managers.AuthorizationManager.#ctor(PowerLmsServer.EfData.PowerLmsUserDbContext,Microsoft.Extensions.Caching.Memory.IMemoryCache,PowerLmsServer.Managers.PermissionManager)">
+        <member name="M:PowerLmsServer.Managers.AuthorizationManager.#ctor(PowerLmsServer.EfData.PowerLmsUserDbContext,Microsoft.Extensions.Caching.Memory.IMemoryCache,PowerLmsServer.Managers.PermissionManager,PowerLmsServer.Managers.OwContext)">
             <summary>
             构造函数。
             </summary>
@@ -225,21 +225,19 @@
             缓存项的前缀。
             </summary>
         </member>
-        <member name="M:PowerLmsServer.Managers.AuthorizationManager.HasPermission(PowerLms.Data.Account,System.String[])">
+        <member name="M:PowerLmsServer.Managers.AuthorizationManager.Demand(System.String[])">
             <summary>
             是否拥有指定的一组权限。对于超管，商管总是返回true。
             </summary>
-            <param name="user"></param>
             <param name="pIds"></param>
             <returns>拥有指定的所有权限则返回true,否则返回false。</returns>
         </member>
-        <member name="M:PowerLmsServer.Managers.AuthorizationManager.HasPermission(PowerLms.Data.Account,System.Guid,System.String[])">
+        <member name="M:PowerLmsServer.Managers.AuthorizationManager.Demand(System.String@,System.String[])">
             <summary>
-            
+            测试是否拥有指定的权限
             </summary>
-            <param name="user"></param>
-            <param name="orgId"></param>
             <param name="pIds"></param>
+            <param name="err"></param>
             <returns></returns>
         </member>
         <member name="T:PowerLmsServer.Managers.CaptchaManager">
@@ -962,6 +960,16 @@
         <member name="T:PowerLmsServer.Managers.SystemResourceManager">
             <summary>
             
+            </summary>
+        </member>
+        <member name="T:PowerLmsServer.ProjectContent">
+            <summary>
+            封装一些项目内用常量或只读数据。
+            </summary>
+        </member>
+        <member name="F:PowerLmsServer.ProjectContent.AeId">
+            <summary>
+            air export(空运出口)业务类型Id。
             </summary>
         </member>
     </members>

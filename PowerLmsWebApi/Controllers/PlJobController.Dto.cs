@@ -131,4 +131,414 @@ namespace PowerLmsWebApi.Controllers
 
     #endregion 业务总表
 
+    /// <summary>
+    /// 按复杂的多表条件返回费用功能的返回值封装类。
+    /// </summary>
+    public class GetDocFeeReturnDto
+    {
+        /// <summary>
+        /// 集合元素的最大总数量。
+        /// </summary>
+        public int Total { get; set; }
+
+        /// <summary>
+        /// 返回的集合。
+        /// </summary>
+        public List<DocFee> Result { get; set; } = new List<DocFee>();
+    }
+
+    /// <summary>
+    /// 按复杂的多表条件返回费用功能的参数封装类。
+    /// </summary>
+    public class GetDocFeeParamsDto : PagingParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 审核单笔费用功能参数封装类。
+    /// </summary>
+    public class AuditDocFeeParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 要审核的费用Id。
+        /// </summary>
+        public Guid FeeId { get; set; }
+
+        /// <summary>
+        /// 审核标志，true审核完成，false取消审核完成。
+        /// </summary>
+        public bool IsAudit { get; set; }
+    }
+
+    /// <summary>
+    /// 审核单笔费用功能返回值封装类。
+    /// </summary>
+    public class AuditDocFeeReturnDto : ReturnDtoBase
+    {
+    }
+
+    #region 业务单的账单
+    /// <summary>
+    /// 标记删除业务单的账单功能的参数封装类。
+    /// </summary>
+    public class RemoveDocBillParamsDto : RemoveParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 标记删除业务单的账单功能的返回值封装类。
+    /// </summary>
+    public class RemoveDocBillReturnDto : RemoveReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 根据业务Id，获取相关账单对象功能的参数封装类。
+    /// </summary>
+    public class GetDocBillsByJobIdParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 业务Id的集合。
+        /// </summary>
+        public List<Guid> Ids { get; set; } = new List<Guid>();
+    }
+
+    /// <summary>
+    /// 根据业务Id，获取相关账单对象功能的返回值封装类。
+    /// </summary>
+    public class GetDocBillsByJobIdReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 根据业务Id，获取相关账单对象功能的返回值内的元素类型。
+        /// </summary>
+        public class GetDocBillsByJobIdItemDto
+        {
+            /// <summary>
+            /// 业务Id。
+            /// </summary>
+            public Guid JobId { get; set; }
+
+            /// <summary>
+            /// 相关的账单。
+            /// </summary>
+            public List<DocBill> Bills { get; set; } = new List<DocBill>();
+        }
+
+        /// <summary>
+        /// 返回的账单。
+        /// </summary>
+        public List<GetDocBillsByJobIdItemDto> Result { get; set; } = new List<GetDocBillsByJobIdItemDto>();
+    }
+
+    /// <summary>
+    /// 获取所有业务单的账单功能的返回值封装类。
+    /// </summary>
+    public class GetAllDocBillReturnDto : PagingReturnDtoBase<DocBill>
+    {
+    }
+
+    /// <summary>
+    /// 增加新业务单的账单功能参数封装类。
+    /// </summary>
+    public class AddDocBillParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 新业务单的账单信息。其中Id可以是任何值，返回时会指定新值。
+        /// </summary>
+        public DocBill DocBill { get; set; }
+
+        /// <summary>
+        /// 绑定的费用Id集合。
+        /// </summary>
+        public List<Guid> FeeIds { get; set; } = new List<Guid>();
+    }
+
+    /// <summary>
+    /// 增加新业务单的账单功能返回值封装类。
+    /// </summary>
+    public class AddDocBillReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 如果成功添加，这里返回新业务单的账单的Id。
+        /// </summary>
+        public Guid Id { get; set; }
+    }
+
+    /// <summary>
+    /// 修改业务单的账单信息功能参数封装类。
+    /// </summary>
+    public class ModifyDocBillParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 业务单的账单数据。
+        /// </summary>
+        public DocBill DocBill { get; set; }
+
+        /// <summary>
+        /// 账单绑定的费用Id集合，不在该集合的费用对象将不再绑定到账单上。
+        /// </summary>
+        public List<Guid> FeeIds { get; set; } = new List<Guid>();
+    }
+
+    /// <summary>
+    /// 修改业务单的账单信息功能返回值封装类。
+    /// </summary>
+    public class ModifyDocBillReturnDto : ReturnDtoBase
+    {
+    }
+    #endregion 业务单的账单
+
+    #region 业务单的费用单
+    /// <summary>
+    /// 标记删除业务单的费用单功能的参数封装类。
+    /// </summary>
+    public class RemoveDocFeeParamsDto : RemoveParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 标记删除业务单的费用单功能的返回值封装类。
+    /// </summary>
+    public class RemoveDocFeeReturnDto : RemoveReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 获取所有业务单的费用单功能的返回值封装类。
+    /// </summary>
+    public class GetAllDocFeeReturnDto : PagingReturnDtoBase<DocFee>
+    {
+    }
+
+    /// <summary>
+    /// 增加新业务单的费用单功能参数封装类。
+    /// </summary>
+    public class AddDocFeeParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 新业务单的费用单信息。其中Id可以是任何值，返回时会指定新值。
+        /// </summary>
+        public DocFee DocFee { get; set; }
+    }
+
+    /// <summary>
+    /// 增加新业务单的费用单功能返回值封装类。
+    /// </summary>
+    public class AddDocFeeReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 如果成功添加，这里返回新业务单的费用单的Id。
+        /// </summary>
+        public Guid Id { get; set; }
+    }
+
+    /// <summary>
+    /// 修改业务单的费用单信息功能参数封装类。
+    /// </summary>
+    public class ModifyDocFeeParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 业务单的费用单数据。
+        /// </summary>
+        public DocFee DocFee { get; set; }
+    }
+
+    /// <summary>
+    /// 修改业务单的费用单信息功能返回值封装类。
+    /// </summary>
+    public class ModifyDocFeeReturnDto : ReturnDtoBase
+    {
+    }
+    #endregion 业务单的费用单
+
+    #region 货场出重单
+    /// <summary>
+    /// 标记删除货场出重单功能的参数封装类。
+    /// </summary>
+    public class RemoveHuochangChuchongParamsDto : RemoveParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 标记删除货场出重单功能的返回值封装类。
+    /// </summary>
+    public class RemoveHuochangChuchongReturnDto : RemoveReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 获取所有货场出重单功能的返回值封装类。
+    /// </summary>
+    public class GetAllHuochangChuchongReturnDto : PagingReturnDtoBase<HuochangChuchong>
+    {
+    }
+
+    /// <summary>
+    /// 增加新货场出重单功能参数封装类。
+    /// </summary>
+    public class AddHuochangChuchongParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 新货场出重单信息。其中Id可以是任何值，返回时会指定新值。
+        /// </summary>
+        public HuochangChuchong HuochangChuchong { get; set; }
+    }
+
+    /// <summary>
+    /// 增加新货场出重单功能返回值封装类。
+    /// </summary>
+    public class AddHuochangChuchongReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 如果成功添加，这里返回新货场出重单的Id。
+        /// </summary>
+        public Guid Id { get; set; }
+    }
+
+    /// <summary>
+    /// 修改货场出重单信息功能参数封装类。
+    /// </summary>
+    public class ModifyHuochangChuchongParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 货场出重单数据。
+        /// </summary>
+        public HuochangChuchong HuochangChuchong { get; set; }
+    }
+
+    /// <summary>
+    /// 修改货场出重单信息功能返回值封装类。
+    /// </summary>
+    public class ModifyHuochangChuchongReturnDto : ReturnDtoBase
+    {
+    }
+    #endregion 货场出重单
+
+    #region 空运出口单
+    /// <summary>
+    /// 标记删除空运出口单功能的参数封装类。
+    /// </summary>
+    public class RemovePlEaDocParamsDto : RemoveParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 标记删除空运出口单功能的返回值封装类。
+    /// </summary>
+    public class RemovePlEaDocReturnDto : RemoveReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 获取所有空运出口单功能的返回值封装类。
+    /// </summary>
+    public class GetAllPlEaDocReturnDto : PagingReturnDtoBase<PlEaDoc>
+    {
+    }
+
+    /// <summary>
+    /// 增加新空运出口单功能参数封装类。
+    /// </summary>
+    public class AddPlEaDocParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 新空运出口单信息。其中Id可以是任何值，返回时会指定新值。
+        /// </summary>
+        public PlEaDoc PlEaDoc { get; set; }
+    }
+
+    /// <summary>
+    /// 增加新空运出口单功能返回值封装类。
+    /// </summary>
+    public class AddPlEaDocReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 如果成功添加，这里返回新空运出口单的Id。
+        /// </summary>
+        public Guid Id { get; set; }
+    }
+
+    /// <summary>
+    /// 修改空运出口单信息功能参数封装类。
+    /// </summary>
+    public class ModifyPlEaDocParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 空运出口单数据。
+        /// </summary>
+        public PlEaDoc PlEaDoc { get; set; }
+    }
+
+    /// <summary>
+    /// 修改空运出口单信息功能返回值封装类。
+    /// </summary>
+    public class ModifyPlEaDocReturnDto : ReturnDtoBase
+    {
+    }
+    #endregion 空运出口单
+
+    #region 空运进口单相关
+
+    /// <summary>
+    /// 标记删除空运进口单功能的参数封装类。
+    /// </summary>
+    public class RemovePlIaDocParamsDto : RemoveParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 标记删除空运进口单功能的返回值封装类。
+    /// </summary>
+    public class RemovePlIaDocReturnDto : RemoveReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 获取所有空运进口单功能的返回值封装类。
+    /// </summary>
+    public class GetAllPlIaDocReturnDto : PagingReturnDtoBase<PlIaDoc>
+    {
+    }
+
+    /// <summary>
+    /// 增加新空运进口单功能参数封装类。
+    /// </summary>
+    public class AddPlIaDocParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 新空运进口单信息。其中Id可以是任何值，返回时会指定新值。
+        /// </summary>
+        public PlIaDoc PlIaDoc { get; set; }
+    }
+
+    /// <summary>
+    /// 增加新空运进口单功能返回值封装类。
+    /// </summary>
+    public class AddPlIaDocReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 如果成功添加，这里返回新空运进口单的Id。
+        /// </summary>
+        public Guid Id { get; set; }
+    }
+
+    /// <summary>
+    /// 修改空运进口单信息功能参数封装类。
+    /// </summary>
+    public class ModifyPlIaDocParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 空运进口单数据。
+        /// </summary>
+        public PlIaDoc PlIaDoc { get; set; }
+    }
+
+    /// <summary>
+    /// 修改空运进口单信息功能返回值封装类。
+    /// </summary>
+    public class ModifyPlIaDocReturnDto : ReturnDtoBase
+    {
+    }
+    #endregion  空运进口单相关
+
 }

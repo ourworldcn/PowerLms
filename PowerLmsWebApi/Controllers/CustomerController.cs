@@ -64,7 +64,7 @@ namespace PowerLmsWebApi.Controllers
             [FromQuery] Dictionary<string, string> conditional = null)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "C.1.2")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("C.1.2")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new GetAllCustomerReturnDto();
             Guid[] allOrg = Array.Empty<Guid>();
             if (_MerchantManager.GetIdByUserId(context.User.Id, out var merId))
@@ -114,7 +114,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<AddCustomerReturnDto> AddCustomer(AddCustomerParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "C.1.1")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("C.1.1")) return StatusCode((int)HttpStatusCode.Forbidden);
 
             var result = new AddCustomerReturnDto();
             model.Customer.GenerateNewId();
@@ -141,7 +141,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<ModifyCustomerReturnDto> ModifyCustomer(ModifyCustomerParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "C.1.3")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("C.1.3")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new ModifyCustomerReturnDto();
             if (!_EntityManager.Modify(model.Items)) return NotFound();
             foreach (var item in model.Items)
@@ -151,11 +151,6 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.SaveChanges();
             return result;
         }
-
-        /// <summary>
-        /// 客户表子表的名字。
-        /// </summary>
-        static readonly string[] CustomerChildTableNames = new string[] { "PlCustomerContact", "PlBusinessHeader", "PlTaxInfo", "PlTidan", "CustomerBlacklist", "PlLoadingAddr" };
 
         /// <summary>
         /// 删除指定Id的客户。慎用！
@@ -169,8 +164,14 @@ namespace PowerLmsWebApi.Controllers
         [HttpDelete]
         public ActionResult<RemoveCustomerReturnDto> RemoveCustomer(RemoveCustomerParamsDto model)
         {
+            // 客户表子表的名字。
+            string[] CustomerChildTableNames = new string[] { $"{nameof(PowerLmsUserDbContext.PlCustomerContacts)}",
+            $"{nameof( PowerLmsUserDbContext.PlCustomerBusinessHeaders)}", $"{nameof(PowerLmsUserDbContext.PlCustomerTaxInfos)}",
+            $"{nameof(PowerLmsUserDbContext.PlCustomerTidans)}", $"{nameof(PowerLmsUserDbContext.CustomerBlacklists)}",
+            $"{nameof(PowerLmsUserDbContext.PlCustomerLoadingAddrs)}" };
+
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "C.1.4")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("C.1.4")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new RemoveCustomerReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.PlCustomers.Where(c => c.OrgId == context.User.OrgId);
@@ -204,7 +205,7 @@ namespace PowerLmsWebApi.Controllers
             [FromQuery] Dictionary<string, string> conditional = null)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "C.1.2")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("C.1.2")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new GetAllCustomer2ReturnDto();
             Guid[] allOrg = Array.Empty<Guid>();
             if (_MerchantManager.GetIdByUserId(context.User.Id, out var merId))
@@ -389,7 +390,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<AddPlBusinessHeaderReturnDto> AddPlBusinessHeader(AddPlBusinessHeaderParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "C.1.5")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("C.1.5")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new AddPlBusinessHeaderReturnDto();
             _DbContext.PlCustomerBusinessHeaders.Add(model.Item);
             _DbContext.SaveChanges();
@@ -409,7 +410,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<RemovePlBusinessHeaderReturnDto> RemovePlBusinessHeader(RemovePlBusinessHeaderParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.HasPermission(context.User, "C.1.5")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (!_AuthorizationManager.Demand("C.1.5")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new RemovePlBusinessHeaderReturnDto();
             DbSet<PlBusinessHeader> dbSet = _DbContext.PlCustomerBusinessHeaders;
             var item = dbSet.Find(model.CustomerId, model.UserId, model.OrderTypeId);
@@ -530,11 +531,13 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpGet]
         public ActionResult<GetAllPlTidanReturnDto> GetAllPlTidan([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.Demand(out var err, "D0.1.5.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new GetAllPlTidanReturnDto();
 
             var dbSet = _DbContext.PlCustomerTidans;
@@ -562,10 +565,12 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         public ActionResult<AddPlTidanReturnDto> AddPlTidan(AddPlTidanParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.Demand(out var err, "D0.1.5.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new AddPlTidanReturnDto();
             model.PlTidan.GenerateNewId();
             _DbContext.PlCustomerTidans.Add(model.PlTidan);
@@ -582,10 +587,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">指定Id的客户提单不存在。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPut]
         public ActionResult<ModifyPlTidanReturnDto> ModifyPlTidan(ModifyPlTidanParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.Demand(out var err, "D0.1.5.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ModifyPlTidanReturnDto();
             if (!_EntityManager.Modify(new[] { model.PlTidan })) return NotFound();
             _DbContext.SaveChanges();
@@ -600,10 +607,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">指定Id的客户提单不存在。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpDelete]
         public ActionResult<RemovePlTidanReturnDto> RemovePlTidan(RemovePlTidanParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (!_AuthorizationManager.Demand(out var err, "D0.1.5.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new RemovePlTidanReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.PlCustomerTaxInfos;

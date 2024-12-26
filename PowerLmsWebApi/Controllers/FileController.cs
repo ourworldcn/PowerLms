@@ -8,6 +8,7 @@ using Microsoft.VisualStudio.Web.CodeGeneration;
 using NuGet.Common;
 using NuGet.Protocol.Plugins;
 using PowerLms.Data;
+using PowerLmsServer;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
@@ -15,6 +16,7 @@ using SixLabors.ImageSharp.Metadata;
 using System.ComponentModel.DataAnnotations;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Net;
 using System.Net.Mime;
 using System.Text;
 using System.Text.Unicode;
@@ -30,13 +32,14 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 构造函数。
         /// </summary>
-        public FileController(IServiceProvider serviceProvider, IMapper mapper, AccountManager accountManager, PowerLmsUserDbContext dbContext, EntityManager entityManager)
+        public FileController(IServiceProvider serviceProvider, IMapper mapper, AccountManager accountManager, PowerLmsUserDbContext dbContext, EntityManager entityManager, AuthorizationManager authorizationManager)
         {
             _Mapper = mapper;
             _AccountManager = accountManager;
             _DbContext = dbContext;
             _ServiceProvider = serviceProvider;
             _EntityManager = entityManager;
+            _AuthorizationManager = authorizationManager;
         }
 
         readonly PowerLmsUserDbContext _DbContext;
@@ -44,6 +47,7 @@ namespace PowerLmsWebApi.Controllers
         readonly IServiceProvider _ServiceProvider;
         EntityManager _EntityManager;
         IMapper _Mapper;
+        readonly private AuthorizationManager _AuthorizationManager;
 
         /// <summary>
         /// 存储文件的根目录。
@@ -160,13 +164,19 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">指定Id的文件不存在。</response>  
         /// <response code="500">其他错误，并发导致数据变化不能完成操作。</response>
+        /// <response code="403">权限不足。</response>  
         [HttpDelete]
         public ActionResult<RemoveFileReturnDto> RemoveFile(RemoveFileParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+
             var result = new RemoveFileReturnDto();
             var item = _DbContext.PlFileInfos.Find(model.Id);
             if (item is null) return NotFound(model.Id);
+
+            if (item.ParentId.HasValue && _DbContext.PlJobs.Find(item.ParentId.Value) is PlJob job && job.JobTypeId == ProjectContent.AeId)
+                if (!_AuthorizationManager.Demand(out var err, "D0.8.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+
             var path = Path.Combine(AppContext.BaseDirectory, "Files", item.FilePath);
             if (!System.IO.File.Exists(path)) return NotFound(path);
             Task.Run(() => System.IO.File.Delete(path));
@@ -182,10 +192,14 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         public ActionResult<AddFileReturnDto> AddFile([FromForm] AddFileParamsDto model)
         {
             var result = new AddFileReturnDto();
+            if (_DbContext.PlJobs.Find(model.ParentId) is PlJob job && job.JobTypeId == ProjectContent.AeId)
+                if (!_AuthorizationManager.Demand(out var err, "D0.8.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var fileInfo = new PlFileInfo
             {
@@ -219,12 +233,17 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">指定Id的文件不存在。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpGet]
         public ActionResult GetFile([FromQuery] GetFileParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var info = _DbContext.PlFileInfos.Find(model.FileId);
             if (info == null) return NotFound();
+
+            if (info.ParentId.HasValue && _DbContext.PlJobs.Find(info.ParentId.Value) is PlJob job && job.JobTypeId == ProjectContent.AeId)
+                if (!_AuthorizationManager.Demand(out var err, "D0.8.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+
             var path = Path.Combine(AppContext.BaseDirectory, "Files", info.FilePath);
             var stream = new FileStream(path, FileMode.Open);
             return File(stream, "application/octet-stream", info.FileName);

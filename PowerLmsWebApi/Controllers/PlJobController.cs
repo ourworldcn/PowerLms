@@ -1,13 +1,16 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.EntityFrameworkCore;
 using NPOI.SS.Formula.Functions;
 using PowerLms.Data;
+using PowerLmsServer;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
 using System.Net;
+using System.Security.Policy;
 using System.Threading.Tasks.Dataflow;
 using static PowerLmsWebApi.Controllers.GetDocBillsByJobIdReturnDto;
 
@@ -79,6 +82,7 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         public ActionResult<AddPlJobReturnDto> AddPlJob(AddPlJobParamsDto model)
         {
@@ -87,6 +91,8 @@ namespace PowerLmsWebApi.Controllers
                 _Logger.LogWarning("无效的令牌{token}", model.Token);
                 return Unauthorized();
             }
+            if (model.PlJob.JobTypeId == ProjectContent.AeId)    //若是空运出口业务
+                if (!_AuthorizationManager.Demand("D0.1.1.2")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new AddPlJobReturnDto();
             var entity = model.PlJob;
             entity.GenerateNewId();
@@ -109,12 +115,20 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">指定Id的业务总表不存在。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPut]
         public ActionResult<ModifyPlJobReturnDto> ModifyPlJob(ModifyPlJobParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyPlJobReturnDto();
             if (_DbContext.PlJobs.Find(model.PlJob.Id) is not PlJob ov) return NotFound();
+            if (model.PlJob.JobTypeId == ProjectContent.AeId)    //若是空运出口业务
+            {
+                if (model.PlJob.OperatorId != ov.OperatorId)    //若试图更换操作员
+                    if (!_AuthorizationManager.Demand("D0.1.1.10")) return StatusCode((int)HttpStatusCode.Forbidden);
+
+                if (!_AuthorizationManager.Demand("D0.1.1.3")) return StatusCode((int)HttpStatusCode.Forbidden);
+            }
             if (ov.SalesId != model.PlJob.SalesId)
             {
 
@@ -126,7 +140,7 @@ namespace PowerLmsWebApi.Controllers
             entity.Property(c => c.AuditOperatorId).IsModified = false;
             entity.Property(c => c.AuditDateTime).IsModified = false;
             model.PlJob.OperatingDateTime = OwHelper.WorldNow;
-            model.PlJob.OperatorId = context.User.Id;
+            //model.PlJob.OperatorId = context.User.Id;
             _DbContext.SaveChanges();
             return result;
         }
@@ -140,6 +154,7 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="400">未找到指定的业务，或该业务不在初始创建状态——无法删除。</response>  
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">指定Id的业务总表不存在。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpDelete]
         public ActionResult<RemovePlJobReturnDto> RemovePlJob(RemovePlJobParamsDto model)
         {
@@ -148,6 +163,8 @@ namespace PowerLmsWebApi.Controllers
             var id = model.Id;
             var dbSet = _DbContext.PlJobs;
             var item = dbSet.Find(id);
+            if (item.JobTypeId == ProjectContent.AeId)    //若是空运出口业务
+                if (!_AuthorizationManager.Demand(out var err, "D0.1.1.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             if (item.JobState > 0) return BadRequest("业务已经开始，无法删除。");
             if (item is null) return BadRequest();
             _EntityManager.Remove(item);
@@ -164,6 +181,7 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">未找到指定的业务对象(Job) -或- 没有找到对应的业务单据。</response>  
         /// <response code="400">切换业务状态非法。或其它参数非法</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         public ActionResult<ChangeStateReturnDto> ChangeState(ChangeStateParamsDto model)
         {
@@ -184,6 +202,28 @@ namespace PowerLmsWebApi.Controllers
             else if (_DbContext.PlEaDocs.FirstOrDefault(c => c.JobId == model.JobId) is PlEaDoc eaDoc)   //若存在空运出口单
             {
                 plBusinessDoc = eaDoc;
+                if (model.JobState.HasValue)
+                    switch (model.JobState.Value)
+                    {
+                        case 16:
+                            if (!_AuthorizationManager.Demand(out var err, "D0.1.1.7")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                            break;
+                        default:
+                            if (job.JobState == 16)
+                                if (!_AuthorizationManager.Demand(out err, "D0.1.1.11")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                            break;
+                    }
+                if (model.OperateState.HasValue)
+                    switch (model.OperateState.Value)
+                    {
+                        case 128:
+                            if (!_AuthorizationManager.Demand(out var err, "D0.1.1.8")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                            break;
+                        default:
+                            if (eaDoc.Status == 128)    //若试图取消通知
+                                if (!_AuthorizationManager.Demand(out err, "D0.1.1.12")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                            break;
+                    }
             }
             else if (_DbContext.PlIsDocs.FirstOrDefault(c => c.JobId == model.JobId) is PlIsDoc isDoc)   //若存在海运进口单
             {
@@ -241,10 +281,10 @@ namespace PowerLmsWebApi.Controllers
             var result = new AuditJobAndDocFeeReturnDto();
             if (_DbContext.PlJobs.Find(model.JobId) is not PlJob job) return NotFound($"未找到指定的任务 ，Id={model.JobId}");
 
-            if (job.JobTypeId == Guid.Parse("7D4123A5-BF7C-4960-80DA-7D1C112F6949"))
+            if (job.JobTypeId == ProjectContent.AeId)
             {
-                if (model.IsAudit && !_AuthorizationManager.HasPermission(context.User, "D0.6.7")) return StatusCode((int)HttpStatusCode.Forbidden);
-                if (!model.IsAudit && !_AuthorizationManager.HasPermission(context.User, "D0.6.10")) return StatusCode((int)HttpStatusCode.Forbidden);
+                if (model.IsAudit && !_AuthorizationManager.Demand("D0.6.7")) return StatusCode((int)HttpStatusCode.Forbidden);
+                if (!model.IsAudit && !_AuthorizationManager.Demand("D0.6.10")) return StatusCode((int)HttpStatusCode.Forbidden);
 
             }
             var now = OwHelper.WorldNow;
@@ -475,10 +515,10 @@ namespace PowerLmsWebApi.Controllers
             if (_DbContext.DocFees.Find(model.FeeId) is not DocFee fee) return NotFound();
             if (_DbContext.PlJobs.Find(fee.JobId) is not PlJob job) return NotFound();
 
-            if (job.JobTypeId == Guid.Parse("7D4123A5-BF7C-4960-80DA-7D1C112F6949"))
+            if (job.JobTypeId == ProjectContent.AeId)
             {
-                if (model.IsAudit && !_AuthorizationManager.HasPermission(context.User, "D0.6.7")) return StatusCode((int)HttpStatusCode.Forbidden);
-                if (!model.IsAudit && !_AuthorizationManager.HasPermission(context.User, "D0.6.10")) return StatusCode((int)HttpStatusCode.Forbidden);
+                if (model.IsAudit && !_AuthorizationManager.Demand("D0.6.7")) return StatusCode((int)HttpStatusCode.Forbidden);
+                if (!model.IsAudit && !_AuthorizationManager.Demand("D0.6.10")) return StatusCode((int)HttpStatusCode.Forbidden);
 
             }
             if (job.JobState > 4) return BadRequest("所属任务已经不可更改。");
@@ -600,8 +640,8 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
 
             if (_DbContext.PlJobs.Find(model.DocFee.JobId) is not PlJob job) return NotFound($"没有找到业务Id={model.DocFee.JobId}");
-            if (job.JobTypeId == Guid.Parse("7D4123A5-BF7C-4960-80DA-7D1C112F6949"))
-                if (!_AuthorizationManager.HasPermission(context.User, "D0.6.1")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (job.JobTypeId == ProjectContent.AeId)
+                if (!_AuthorizationManager.Demand("D0.6.1")) return StatusCode((int)HttpStatusCode.Forbidden);
 
             var result = new AddDocFeeReturnDto();
             var entity = model.DocFee;
@@ -627,8 +667,8 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             if (_DbContext.PlJobs.Find(model.DocFee.JobId) is not PlJob job) return NotFound($"没有找到业务Id={model.DocFee.JobId}");
-            if (job.JobTypeId == Guid.Parse("7D4123A5-BF7C-4960-80DA-7D1C112F6949"))
-                if (!_AuthorizationManager.HasPermission(context.User, "D0.6.3")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (job.JobTypeId == ProjectContent.AeId)
+                if (!_AuthorizationManager.Demand("D0.6.3")) return StatusCode((int)HttpStatusCode.Forbidden);
 
             var result = new ModifyDocFeeReturnDto();
             if (!_EntityManager.Modify(new[] { model.DocFee })) return NotFound();
@@ -656,8 +696,8 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             if (_DbContext.DocFees.Find(model.Id) is not DocFee docFee) return NotFound($"没有找到费用Id={model.Id}");
             if (_DbContext.PlJobs.Find(docFee.JobId) is not PlJob job) return NotFound($"没有找到业务Id={docFee.JobId}");
-            if (job.JobTypeId == Guid.Parse("7D4123A5-BF7C-4960-80DA-7D1C112F6949"))
-                if (!_AuthorizationManager.HasPermission(context.User, "D0.6.4")) return StatusCode((int)HttpStatusCode.Forbidden);
+            if (job.JobTypeId == ProjectContent.AeId)
+                if (!_AuthorizationManager.Demand("D0.6.4")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new RemoveDocFeeReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.DocFees;
@@ -719,6 +759,19 @@ namespace PowerLmsWebApi.Controllers
             return result;
         }
 
+        private IEnumerable<PlJob> GetJobsFromFeeIds(IEnumerable<Guid> feeIds)
+        {
+            var jobIds = _DbContext.DocFees.Where(c => feeIds.Contains(c.Id)).Select(c => c.JobId).Distinct().ToArray();
+            var jobs = _DbContext.PlJobs.Where(c => jobIds.Contains(c.Id));
+            return jobs;
+        }
+
+        private IEnumerable<PlJob> GetJobsFromBillIds(IEnumerable<Guid> billIds)
+        {
+            var feeIds = _DbContext.DocFees.Where(c => billIds.Contains(c.BillId.Value)).Select(c => c.Id).Distinct().ToArray();
+            return GetJobsFromFeeIds(feeIds);
+        }
+
         /// <summary>
         /// 增加新业务单的账单。
         /// </summary>
@@ -727,6 +780,7 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">至少一个费用Id不存在。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         public ActionResult<AddDocBillReturnDto> AddDocBill(AddDocBillParamsDto model)
         {
@@ -734,6 +788,10 @@ namespace PowerLmsWebApi.Controllers
             var result = new AddDocBillReturnDto();
             var entity = model.DocBill;
             entity.GenerateNewId();
+
+            if (GetJobsFromFeeIds(model.FeeIds).Any(c => c.JobTypeId == ProjectContent.AeId))
+                if (!_AuthorizationManager.Demand(out var err, "D0.7.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+
             if (entity is ICreatorInfo creatorInfo)
             {
                 creatorInfo.CreateBy = context.User.Id;
@@ -762,10 +820,12 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="400">至少一个费用Id不存在。</response>  
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">指定Id的业务单的账单不存在。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPut]
         public ActionResult<ModifyDocBillReturnDto> ModifyDocBill(ModifyDocBillParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+
             var result = new ModifyDocBillReturnDto();
             if (!_EntityManager.Modify(new[] { model.DocBill })) return NotFound();
             //处理费用对象
@@ -775,6 +835,10 @@ namespace PowerLmsWebApi.Controllers
                 return BadRequest("至少一个费用Id不存在。");
             }
             var oldFee = _DbContext.DocFees.Where(c => c.BillId == model.DocBill.Id).ToArray();    //旧费用对象
+            var jobs = GetJobsFromFeeIds(oldFee.Select(c => c.Id)); //相关业务对象
+            if (jobs.Any(c => c.JobTypeId == ProjectContent.AeId))   //若有空运出口业务
+                if (!_AuthorizationManager.Demand(out var err, "D0.7.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+
             oldFee.ForEach(c => c.BillId = null);
 
             collFees.ForEach(c => c.BillId = model.DocBill.Id);
@@ -796,6 +860,10 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveDocBillReturnDto();
+            var jobs = GetJobsFromBillIds(new Guid[] { model.Id });
+            if (jobs.Any(c => c.JobTypeId == ProjectContent.AeId))   //若有空运出口业务
+                if (!_AuthorizationManager.Demand(out var err, "D0.7.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+
             var id = model.Id;
             var dbSet = _DbContext.DocBills;
             var item = dbSet.Find(id);
@@ -821,9 +889,10 @@ namespace PowerLmsWebApi.Controllers
             var result = new GetDocBillsByJobIdReturnDto();
             var collJob = _DbContext.PlJobs.Where(c => model.Ids.Contains(c.Id));
             if (collJob.Count() != model.Ids.Count) return NotFound();
+            var allowAe = _AuthorizationManager.Demand(out var err, "D0.7.2");
 
             var coll = from job in _DbContext.PlJobs
-                       where model.Ids.Contains(job.Id)
+                       where model.Ids.Contains(job.Id) && (allowAe || job.JobTypeId != ProjectContent.AeId)
 
                        join fee in _DbContext.DocFees
                        on job.Id equals fee.JobId
@@ -834,11 +903,11 @@ namespace PowerLmsWebApi.Controllers
                        select new { job.Id, bill };
             var r = coll.ToArray().GroupBy(c => c.Id, c => c.bill);
             var collDto = r.Select(c =>
-             {
-                 var r = new GetDocBillsByJobIdItemDto { JobId = c.Key };
-                 r.Bills.AddRange(c);
-                 return r;
-             });
+            {
+                var r = new GetDocBillsByJobIdItemDto { JobId = c.Key };
+                r.Bills.AddRange(c);
+                return r;
+            });
             result.Result.AddRange(collDto);
             return result;
         }
@@ -937,413 +1006,4 @@ namespace PowerLmsWebApi.Controllers
         #endregion  空运进口单相关
 
     }
-    /// <summary>
-    /// 按复杂的多表条件返回费用功能的返回值封装类。
-    /// </summary>
-    public class GetDocFeeReturnDto
-    {
-        /// <summary>
-        /// 集合元素的最大总数量。
-        /// </summary>
-        public int Total { get; set; }
-
-        /// <summary>
-        /// 返回的集合。
-        /// </summary>
-        public List<DocFee> Result { get; set; } = new List<DocFee>();
-    }
-
-    /// <summary>
-    /// 按复杂的多表条件返回费用功能的参数封装类。
-    /// </summary>
-    public class GetDocFeeParamsDto : PagingParamsDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 审核单笔费用功能参数封装类。
-    /// </summary>
-    public class AuditDocFeeParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 要审核的费用Id。
-        /// </summary>
-        public Guid FeeId { get; set; }
-
-        /// <summary>
-        /// 审核标志，true审核完成，false取消审核完成。
-        /// </summary>
-        public bool IsAudit { get; set; }
-    }
-
-    /// <summary>
-    /// 审核单笔费用功能返回值封装类。
-    /// </summary>
-    public class AuditDocFeeReturnDto : ReturnDtoBase
-    {
-    }
-
-    #region 业务单的账单
-    /// <summary>
-    /// 标记删除业务单的账单功能的参数封装类。
-    /// </summary>
-    public class RemoveDocBillParamsDto : RemoveParamsDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 标记删除业务单的账单功能的返回值封装类。
-    /// </summary>
-    public class RemoveDocBillReturnDto : RemoveReturnDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 根据业务Id，获取相关账单对象功能的参数封装类。
-    /// </summary>
-    public class GetDocBillsByJobIdParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 业务Id的集合。
-        /// </summary>
-        public List<Guid> Ids { get; set; } = new List<Guid>();
-    }
-
-    /// <summary>
-    /// 根据业务Id，获取相关账单对象功能的返回值封装类。
-    /// </summary>
-    public class GetDocBillsByJobIdReturnDto : ReturnDtoBase
-    {
-        /// <summary>
-        /// 根据业务Id，获取相关账单对象功能的返回值内的元素类型。
-        /// </summary>
-        public class GetDocBillsByJobIdItemDto
-        {
-            /// <summary>
-            /// 业务Id。
-            /// </summary>
-            public Guid JobId { get; set; }
-
-            /// <summary>
-            /// 相关的账单。
-            /// </summary>
-            public List<DocBill> Bills { get; set; } = new List<DocBill>();
-        }
-
-        /// <summary>
-        /// 返回的账单。
-        /// </summary>
-        public List<GetDocBillsByJobIdItemDto> Result { get; set; } = new List<GetDocBillsByJobIdItemDto>();
-    }
-
-    /// <summary>
-    /// 获取所有业务单的账单功能的返回值封装类。
-    /// </summary>
-    public class GetAllDocBillReturnDto : PagingReturnDtoBase<DocBill>
-    {
-    }
-
-    /// <summary>
-    /// 增加新业务单的账单功能参数封装类。
-    /// </summary>
-    public class AddDocBillParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 新业务单的账单信息。其中Id可以是任何值，返回时会指定新值。
-        /// </summary>
-        public DocBill DocBill { get; set; }
-
-        /// <summary>
-        /// 绑定的费用Id集合。
-        /// </summary>
-        public List<Guid> FeeIds { get; set; } = new List<Guid>();
-    }
-
-    /// <summary>
-    /// 增加新业务单的账单功能返回值封装类。
-    /// </summary>
-    public class AddDocBillReturnDto : ReturnDtoBase
-    {
-        /// <summary>
-        /// 如果成功添加，这里返回新业务单的账单的Id。
-        /// </summary>
-        public Guid Id { get; set; }
-    }
-
-    /// <summary>
-    /// 修改业务单的账单信息功能参数封装类。
-    /// </summary>
-    public class ModifyDocBillParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 业务单的账单数据。
-        /// </summary>
-        public DocBill DocBill { get; set; }
-
-        /// <summary>
-        /// 账单绑定的费用Id集合，不在该集合的费用对象将不再绑定到账单上。
-        /// </summary>
-        public List<Guid> FeeIds { get; set; } = new List<Guid>();
-    }
-
-    /// <summary>
-    /// 修改业务单的账单信息功能返回值封装类。
-    /// </summary>
-    public class ModifyDocBillReturnDto : ReturnDtoBase
-    {
-    }
-    #endregion 业务单的账单
-
-    #region 业务单的费用单
-    /// <summary>
-    /// 标记删除业务单的费用单功能的参数封装类。
-    /// </summary>
-    public class RemoveDocFeeParamsDto : RemoveParamsDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 标记删除业务单的费用单功能的返回值封装类。
-    /// </summary>
-    public class RemoveDocFeeReturnDto : RemoveReturnDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 获取所有业务单的费用单功能的返回值封装类。
-    /// </summary>
-    public class GetAllDocFeeReturnDto : PagingReturnDtoBase<DocFee>
-    {
-    }
-
-    /// <summary>
-    /// 增加新业务单的费用单功能参数封装类。
-    /// </summary>
-    public class AddDocFeeParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 新业务单的费用单信息。其中Id可以是任何值，返回时会指定新值。
-        /// </summary>
-        public DocFee DocFee { get; set; }
-    }
-
-    /// <summary>
-    /// 增加新业务单的费用单功能返回值封装类。
-    /// </summary>
-    public class AddDocFeeReturnDto : ReturnDtoBase
-    {
-        /// <summary>
-        /// 如果成功添加，这里返回新业务单的费用单的Id。
-        /// </summary>
-        public Guid Id { get; set; }
-    }
-
-    /// <summary>
-    /// 修改业务单的费用单信息功能参数封装类。
-    /// </summary>
-    public class ModifyDocFeeParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 业务单的费用单数据。
-        /// </summary>
-        public DocFee DocFee { get; set; }
-    }
-
-    /// <summary>
-    /// 修改业务单的费用单信息功能返回值封装类。
-    /// </summary>
-    public class ModifyDocFeeReturnDto : ReturnDtoBase
-    {
-    }
-    #endregion 业务单的费用单
-
-    #region 货场出重单
-    /// <summary>
-    /// 标记删除货场出重单功能的参数封装类。
-    /// </summary>
-    public class RemoveHuochangChuchongParamsDto : RemoveParamsDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 标记删除货场出重单功能的返回值封装类。
-    /// </summary>
-    public class RemoveHuochangChuchongReturnDto : RemoveReturnDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 获取所有货场出重单功能的返回值封装类。
-    /// </summary>
-    public class GetAllHuochangChuchongReturnDto : PagingReturnDtoBase<HuochangChuchong>
-    {
-    }
-
-    /// <summary>
-    /// 增加新货场出重单功能参数封装类。
-    /// </summary>
-    public class AddHuochangChuchongParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 新货场出重单信息。其中Id可以是任何值，返回时会指定新值。
-        /// </summary>
-        public HuochangChuchong HuochangChuchong { get; set; }
-    }
-
-    /// <summary>
-    /// 增加新货场出重单功能返回值封装类。
-    /// </summary>
-    public class AddHuochangChuchongReturnDto : ReturnDtoBase
-    {
-        /// <summary>
-        /// 如果成功添加，这里返回新货场出重单的Id。
-        /// </summary>
-        public Guid Id { get; set; }
-    }
-
-    /// <summary>
-    /// 修改货场出重单信息功能参数封装类。
-    /// </summary>
-    public class ModifyHuochangChuchongParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 货场出重单数据。
-        /// </summary>
-        public HuochangChuchong HuochangChuchong { get; set; }
-    }
-
-    /// <summary>
-    /// 修改货场出重单信息功能返回值封装类。
-    /// </summary>
-    public class ModifyHuochangChuchongReturnDto : ReturnDtoBase
-    {
-    }
-    #endregion 货场出重单
-
-    #region 空运出口单
-    /// <summary>
-    /// 标记删除空运出口单功能的参数封装类。
-    /// </summary>
-    public class RemovePlEaDocParamsDto : RemoveParamsDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 标记删除空运出口单功能的返回值封装类。
-    /// </summary>
-    public class RemovePlEaDocReturnDto : RemoveReturnDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 获取所有空运出口单功能的返回值封装类。
-    /// </summary>
-    public class GetAllPlEaDocReturnDto : PagingReturnDtoBase<PlEaDoc>
-    {
-    }
-
-    /// <summary>
-    /// 增加新空运出口单功能参数封装类。
-    /// </summary>
-    public class AddPlEaDocParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 新空运出口单信息。其中Id可以是任何值，返回时会指定新值。
-        /// </summary>
-        public PlEaDoc PlEaDoc { get; set; }
-    }
-
-    /// <summary>
-    /// 增加新空运出口单功能返回值封装类。
-    /// </summary>
-    public class AddPlEaDocReturnDto : ReturnDtoBase
-    {
-        /// <summary>
-        /// 如果成功添加，这里返回新空运出口单的Id。
-        /// </summary>
-        public Guid Id { get; set; }
-    }
-
-    /// <summary>
-    /// 修改空运出口单信息功能参数封装类。
-    /// </summary>
-    public class ModifyPlEaDocParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 空运出口单数据。
-        /// </summary>
-        public PlEaDoc PlEaDoc { get; set; }
-    }
-
-    /// <summary>
-    /// 修改空运出口单信息功能返回值封装类。
-    /// </summary>
-    public class ModifyPlEaDocReturnDto : ReturnDtoBase
-    {
-    }
-    #endregion 空运出口单
-
-    #region 空运进口单相关
-
-    /// <summary>
-    /// 标记删除空运进口单功能的参数封装类。
-    /// </summary>
-    public class RemovePlIaDocParamsDto : RemoveParamsDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 标记删除空运进口单功能的返回值封装类。
-    /// </summary>
-    public class RemovePlIaDocReturnDto : RemoveReturnDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 获取所有空运进口单功能的返回值封装类。
-    /// </summary>
-    public class GetAllPlIaDocReturnDto : PagingReturnDtoBase<PlIaDoc>
-    {
-    }
-
-    /// <summary>
-    /// 增加新空运进口单功能参数封装类。
-    /// </summary>
-    public class AddPlIaDocParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 新空运进口单信息。其中Id可以是任何值，返回时会指定新值。
-        /// </summary>
-        public PlIaDoc PlIaDoc { get; set; }
-    }
-
-    /// <summary>
-    /// 增加新空运进口单功能返回值封装类。
-    /// </summary>
-    public class AddPlIaDocReturnDto : ReturnDtoBase
-    {
-        /// <summary>
-        /// 如果成功添加，这里返回新空运进口单的Id。
-        /// </summary>
-        public Guid Id { get; set; }
-    }
-
-    /// <summary>
-    /// 修改空运进口单信息功能参数封装类。
-    /// </summary>
-    public class ModifyPlIaDocParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 空运进口单数据。
-        /// </summary>
-        public PlIaDoc PlIaDoc { get; set; }
-    }
-
-    /// <summary>
-    /// 修改空运进口单信息功能返回值封装类。
-    /// </summary>
-    public class ModifyPlIaDocReturnDto : ReturnDtoBase
-    {
-    }
-    #endregion  空运进口单相关
 }
