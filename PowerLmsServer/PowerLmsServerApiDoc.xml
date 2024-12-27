@@ -972,5 +972,20 @@
             air export(空运出口)业务类型Id。
             </summary>
         </member>
+        <member name="F:PowerLmsServer.ProjectContent.AiId">
+            <summary>
+            air import (空运进口)业务类型Id。
+            </summary>
+        </member>
+        <member name="F:PowerLmsServer.ProjectContent.SeId">
+            <summary>
+            sea export (海运出口)业务类型Id。
+            </summary>
+        </member>
+        <member name="F:PowerLmsServer.ProjectContent.SiId">
+            <summary>
+            sea import (海运进口)业务类型Id。
+            </summary>
+        </member>
     </members>
 </doc>

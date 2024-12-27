@@ -47,8 +47,13 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             if (_DbContext.DD_JobNumberRules.Find(model.RuleId) is not JobNumberRule jnr) return BadRequest($"指定的规则不存在，Id={model.RuleId}");
+            string err;
             if (jnr.BusinessTypeId == ProjectContent.AeId)    //若是空运出口业务
-                if (!_AuthorizationManager.Demand("D0.1.1.2")) return StatusCode((int)HttpStatusCode.Forbidden);
+            {
+                if (!_AuthorizationManager.Demand(out err, "D0.1.1.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            else if (jnr.BusinessTypeId == ProjectContent.AiId)    //若是空运进口业务
+                if (!_AuthorizationManager.Demand(out err, "D1.1.1.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
 
             var result = new GeneratedJobNumberReturnDto();
             using var dw = DisposeHelper.Create((key, timeout) => SingletonLocker.TryEnter(key, timeout), key => SingletonLocker.Exit(key), model.RuleId.ToString(), TimeSpan.FromSeconds(2)); //锁定该规则

@@ -2,10 +2,13 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using NPOI.SS.Formula.Functions;
 using PowerLms.Data;
+using PowerLmsServer;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
+using System.Net;
 
 namespace PowerLmsWebApi.Controllers
 {
@@ -19,7 +22,7 @@ namespace PowerLmsWebApi.Controllers
         private PowerLmsUserDbContext _DbContext;
         private EntityManager _EntityManager;
         private IMapper _Mapper;
-
+        readonly AuthorizationManager _AuthorizationManager;
         /// <summary>
         /// 狗构造函数。
         /// </summary>
@@ -28,14 +31,16 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="dbContext"></param>
         /// <param name="entityManager"></param>
         /// <param name="mapper"></param>
+        /// <param name="authorizationManager"></param>
         public PlSeaborneController(AccountManager accountManager, IServiceProvider serviceProvider, PowerLmsUserDbContext dbContext,
-            EntityManager entityManager, IMapper mapper)
+            EntityManager entityManager, IMapper mapper, AuthorizationManager authorizationManager)
         {
             _AccountManager = accountManager;
             _ServiceProvider = serviceProvider;
             _DbContext = dbContext;
             _EntityManager = entityManager;
             _Mapper = mapper;
+            _AuthorizationManager = authorizationManager;
         }
 
         #region 海运进口单相关
@@ -161,10 +166,14 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         public ActionResult<AddPlEsDocReturnDto> AddPlEsDoc(AddPlEsDocParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            string err;
+            if (!_AuthorizationManager.Demand(out err, "D2.1.1.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            
             var result = new AddPlEsDocReturnDto();
             var entity = model.PlEsDoc;
             entity.GenerateNewId();
@@ -184,10 +193,13 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">指定Id的海运出口单不存在。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPut]
         public ActionResult<ModifyPlEsDocReturnDto> ModifyPlEsDoc(ModifyPlEsDocParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            string err;
+            if (!_AuthorizationManager.Demand(out err, "D2.1.1.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ModifyPlEsDocReturnDto();
             if (!_EntityManager.Modify(new[] { model.PlEsDoc })) return NotFound();
             _DbContext.SaveChanges();
@@ -203,10 +215,13 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="400">未找到指定的业务，或该业务不在初始创建状态——无法删除。</response>  
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">指定Id的海运出口单不存在。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpDelete]
         public ActionResult<RemovePlEsDocReturnDto> RemovePlEsDoc(RemovePlEsDocParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            string err;
+            if (!_AuthorizationManager.Demand(out err, "D2.1.1.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new RemovePlEsDocReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.PlEsDocs;

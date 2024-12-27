@@ -91,8 +91,19 @@ namespace PowerLmsWebApi.Controllers
                 _Logger.LogWarning("无效的令牌{token}", model.Token);
                 return Unauthorized();
             }
+            string err;
             if (model.PlJob.JobTypeId == ProjectContent.AeId)    //若是空运出口业务
-                if (!_AuthorizationManager.Demand("D0.1.1.2")) return StatusCode((int)HttpStatusCode.Forbidden);
+            {
+                if (!_AuthorizationManager.Demand(out err, "D0.1.1.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            else if (model.PlJob.JobTypeId == ProjectContent.AiId)    //若是空运进口业务
+            {
+                if (!_AuthorizationManager.Demand(out err, "D1.1.1.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            else if (model.PlJob.JobTypeId == ProjectContent.SeId)    //若是海运出口业务
+            {
+                if (!_AuthorizationManager.Demand(out err, "D2.1.1.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
             var result = new AddPlJobReturnDto();
             var entity = model.PlJob;
             entity.GenerateNewId();
@@ -122,12 +133,24 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyPlJobReturnDto();
             if (_DbContext.PlJobs.Find(model.PlJob.Id) is not PlJob ov) return NotFound();
+            string err; //权限报错字符串
             if (model.PlJob.JobTypeId == ProjectContent.AeId)    //若是空运出口业务
             {
                 if (model.PlJob.OperatorId != ov.OperatorId)    //若试图更换操作员
-                    if (!_AuthorizationManager.Demand("D0.1.1.10")) return StatusCode((int)HttpStatusCode.Forbidden);
+                    if (!_AuthorizationManager.Demand(out err, "D0.1.1.10")) return StatusCode((int)HttpStatusCode.Forbidden, err);
 
-                if (!_AuthorizationManager.Demand("D0.1.1.3")) return StatusCode((int)HttpStatusCode.Forbidden);
+                if (!_AuthorizationManager.Demand(out err, "D0.1.1.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            else if (model.PlJob.JobTypeId == ProjectContent.AiId)    //若是空运进口业务
+            {
+                if (model.PlJob.OperatorId != ov.OperatorId)    //若试图更换操作员
+                    if (!_AuthorizationManager.Demand(out err, "D1.1.1.10")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+
+                if (!_AuthorizationManager.Demand(out err, "D1.1.1.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            else if (model.PlJob.JobTypeId == ProjectContent.SeId)    //若是海运出口业务
+            {
+                if (!_AuthorizationManager.Demand(out err, "D2.1.1.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             }
             if (ov.SalesId != model.PlJob.SalesId)
             {
@@ -139,7 +162,7 @@ namespace PowerLmsWebApi.Controllers
             entity.Property(c => c.JobState).IsModified = false;
             entity.Property(c => c.AuditOperatorId).IsModified = false;
             entity.Property(c => c.AuditDateTime).IsModified = false;
-            model.PlJob.OperatingDateTime = OwHelper.WorldNow;
+            //model.PlJob.OperatingDateTime = OwHelper.WorldNow;
             //model.PlJob.OperatorId = context.User.Id;
             _DbContext.SaveChanges();
             return result;
@@ -163,8 +186,19 @@ namespace PowerLmsWebApi.Controllers
             var id = model.Id;
             var dbSet = _DbContext.PlJobs;
             var item = dbSet.Find(id);
+            string err;
             if (item.JobTypeId == ProjectContent.AeId)    //若是空运出口业务
-                if (!_AuthorizationManager.Demand(out var err, "D0.1.1.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            {
+                if (!_AuthorizationManager.Demand(out err, "D0.1.1.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            else if (item.JobTypeId == ProjectContent.AiId)    //若是空运进口业务
+            {
+                if (!_AuthorizationManager.Demand(out err, "D1.1.1.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            else if (item.JobTypeId == ProjectContent.SeId)    //若是海运出口业务
+            {
+                if (!_AuthorizationManager.Demand(out err, "D2.1.1.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
             if (item.JobState > 0) return BadRequest("业务已经开始，无法删除。");
             if (item is null) return BadRequest();
             _EntityManager.Remove(item);
@@ -195,9 +229,33 @@ namespace PowerLmsWebApi.Controllers
             if (job is null) return NotFound($"找不到指定的业务对象，Id={model.JobId}");
             IPlBusinessDoc plBusinessDoc = null;
             var now = OwHelper.WorldNow;
+            string err;
             if (_DbContext.PlIaDocs.FirstOrDefault(c => c.JobId == model.JobId) is PlIaDoc iaDoc)   //若存在空运进口单
             {
                 plBusinessDoc = iaDoc;
+                if (model.JobState.HasValue)
+                    switch (model.JobState.Value)
+                    {
+                        case 16:
+                            if (!_AuthorizationManager.Demand(out err, "D1.1.1.7")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                            break;
+                        default:
+                            if (job.JobState == 16)
+                                if (!_AuthorizationManager.Demand(out err, "D1.1.1.11")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                            break;
+                    }
+                //iaDoc.Status;
+                if (model.OperateState.HasValue)
+                    switch (model.OperateState.Value)
+                    {
+                        case 128:
+                            if (!_AuthorizationManager.Demand(out err, "D1.1.1.8")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                            break;
+                        default:
+                            if (iaDoc.Status == 128)    //若试图取消通知
+                                if (!_AuthorizationManager.Demand(out err, "D1.1.1.12")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                            break;
+                    }
             }
             else if (_DbContext.PlEaDocs.FirstOrDefault(c => c.JobId == model.JobId) is PlEaDoc eaDoc)   //若存在空运出口单
             {
@@ -206,7 +264,7 @@ namespace PowerLmsWebApi.Controllers
                     switch (model.JobState.Value)
                     {
                         case 16:
-                            if (!_AuthorizationManager.Demand(out var err, "D0.1.1.7")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                            if (!_AuthorizationManager.Demand(out err, "D0.1.1.7")) return StatusCode((int)HttpStatusCode.Forbidden, err);
                             break;
                         default:
                             if (job.JobState == 16)
@@ -217,7 +275,7 @@ namespace PowerLmsWebApi.Controllers
                     switch (model.OperateState.Value)
                     {
                         case 128:
-                            if (!_AuthorizationManager.Demand(out var err, "D0.1.1.8")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                            if (!_AuthorizationManager.Demand(out err, "D0.1.1.8")) return StatusCode((int)HttpStatusCode.Forbidden, err);
                             break;
                         default:
                             if (eaDoc.Status == 128)    //若试图取消通知
@@ -232,6 +290,28 @@ namespace PowerLmsWebApi.Controllers
             else if (_DbContext.PlEsDocs.FirstOrDefault(c => c.JobId == model.JobId) is PlEsDoc esDoc)   //若存在海运出口单
             {
                 plBusinessDoc = esDoc;
+                if (model.JobState.HasValue)
+                    switch (model.JobState.Value)
+                    {
+                        case 16:
+                            if (!_AuthorizationManager.Demand(out err, "D2.1.1.7")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                            break;
+                        default:
+                            if (job.JobState == 16)
+                                if (!_AuthorizationManager.Demand(out err, "D2.1.1.11")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                            break;
+                    }
+                if (model.OperateState.HasValue)
+                    switch (model.OperateState.Value)
+                    {
+                        case 128:
+                            if (!_AuthorizationManager.Demand(out err, "D2.1.1.8")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                            break;
+                        default:
+                            if (esDoc.Status == 128)    //若试图取消通知
+                                if (!_AuthorizationManager.Demand(out err, "D2.1.1.12")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                            break;
+                    }
             }
             else
             {
@@ -257,7 +337,6 @@ namespace PowerLmsWebApi.Controllers
             result.JobState = job.JobState;
             _DbContext.SaveChanges();
             return result;
-
         }
 
         /// <summary>
@@ -280,12 +359,16 @@ namespace PowerLmsWebApi.Controllers
             }
             var result = new AuditJobAndDocFeeReturnDto();
             if (_DbContext.PlJobs.Find(model.JobId) is not PlJob job) return NotFound($"未找到指定的任务 ，Id={model.JobId}");
-
+            string err;
             if (job.JobTypeId == ProjectContent.AeId)
             {
-                if (model.IsAudit && !_AuthorizationManager.Demand("D0.6.7")) return StatusCode((int)HttpStatusCode.Forbidden);
-                if (!model.IsAudit && !_AuthorizationManager.Demand("D0.6.10")) return StatusCode((int)HttpStatusCode.Forbidden);
-
+                if (model.IsAudit && !_AuthorizationManager.Demand(out err, "D0.6.7")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!model.IsAudit && !_AuthorizationManager.Demand(out err, "D0.6.10")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            else if (job.JobTypeId == ProjectContent.AiId)
+            {
+                if (model.IsAudit && !_AuthorizationManager.Demand(out err, "D1.6.7")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!model.IsAudit && !_AuthorizationManager.Demand(out err, "D1.6.10")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             }
             var now = OwHelper.WorldNow;
             if (model.IsAudit)   //若审核
@@ -336,10 +419,13 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         public ActionResult<AddPlEaDocReturnDto> AddPlEaDoc(AddPlEaDocParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            string err;
+            if (!_AuthorizationManager.Demand(out err, "D0.1.1.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new AddPlEaDocReturnDto();
             var entity = model.PlEaDoc;
             entity.GenerateNewId();
@@ -359,11 +445,17 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">指定Id的空运出口单不存在。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPut]
         public ActionResult<ModifyPlEaDocReturnDto> ModifyPlEaDoc(ModifyPlEaDocParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyPlEaDocReturnDto();
+            var doc = _DbContext.PlEaDocs.Find(model.PlEaDoc.Id);
+            if (doc == null) return NotFound("指定Id的空运出口单不存在");
+            string err;
+            if (!_AuthorizationManager.Demand(out err, "D0.1.1.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+
             if (!_EntityManager.Modify(new[] { model.PlEaDoc })) return NotFound();
             _DbContext.SaveChanges();
             return result;
@@ -640,8 +732,13 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
 
             if (_DbContext.PlJobs.Find(model.DocFee.JobId) is not PlJob job) return NotFound($"没有找到业务Id={model.DocFee.JobId}");
+            string err;
             if (job.JobTypeId == ProjectContent.AeId)
-                if (!_AuthorizationManager.Demand("D0.6.1")) return StatusCode((int)HttpStatusCode.Forbidden);
+            {
+                if (!_AuthorizationManager.Demand(out err, "D0.6.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            else if (job.JobTypeId == ProjectContent.AiId)    //若是空运进口业务
+                if (!_AuthorizationManager.Demand(out err, "D1.6.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
 
             var result = new AddDocFeeReturnDto();
             var entity = model.DocFee;
@@ -667,8 +764,15 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             if (_DbContext.PlJobs.Find(model.DocFee.JobId) is not PlJob job) return NotFound($"没有找到业务Id={model.DocFee.JobId}");
+            string err;
             if (job.JobTypeId == ProjectContent.AeId)
-                if (!_AuthorizationManager.Demand("D0.6.3")) return StatusCode((int)HttpStatusCode.Forbidden);
+            {
+                if (!_AuthorizationManager.Demand(out err, "D0.6.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            else if (job.JobTypeId == ProjectContent.AiId)
+            {
+                if (!_AuthorizationManager.Demand(out err, "D1.6.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
 
             var result = new ModifyDocFeeReturnDto();
             if (!_EntityManager.Modify(new[] { model.DocFee })) return NotFound();
@@ -696,8 +800,15 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             if (_DbContext.DocFees.Find(model.Id) is not DocFee docFee) return NotFound($"没有找到费用Id={model.Id}");
             if (_DbContext.PlJobs.Find(docFee.JobId) is not PlJob job) return NotFound($"没有找到业务Id={docFee.JobId}");
+            string err;
             if (job.JobTypeId == ProjectContent.AeId)
-                if (!_AuthorizationManager.Demand("D0.6.4")) return StatusCode((int)HttpStatusCode.Forbidden);
+            {
+                if (!_AuthorizationManager.Demand(out err, "D0.6.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            else if (job.JobTypeId == ProjectContent.AiId)
+            {
+                if (!_AuthorizationManager.Demand(out err, "D1.6.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
             var result = new RemoveDocFeeReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.DocFees;
@@ -789,8 +900,19 @@ namespace PowerLmsWebApi.Controllers
             var entity = model.DocBill;
             entity.GenerateNewId();
 
-            if (GetJobsFromFeeIds(model.FeeIds).Any(c => c.JobTypeId == ProjectContent.AeId))
-                if (!_AuthorizationManager.Demand(out var err, "D0.7.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            string err;
+            var collPerm = GetJobsFromFeeIds(model.FeeIds);
+            if (collPerm.Any())
+            {
+                if (collPerm.Any(c => c.JobTypeId == ProjectContent.AeId))
+                {
+                    if (!_AuthorizationManager.Demand(out err, "D0.7.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                }
+                if (collPerm.Any(c => c.JobTypeId == ProjectContent.AiId))
+                {
+                    if (!_AuthorizationManager.Demand(out err, "D1.7.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                }
+            }
 
             if (entity is ICreatorInfo creatorInfo)
             {
@@ -836,8 +958,18 @@ namespace PowerLmsWebApi.Controllers
             }
             var oldFee = _DbContext.DocFees.Where(c => c.BillId == model.DocBill.Id).ToArray();    //旧费用对象
             var jobs = GetJobsFromFeeIds(oldFee.Select(c => c.Id)); //相关业务对象
-            if (jobs.Any(c => c.JobTypeId == ProjectContent.AeId))   //若有空运出口业务
-                if (!_AuthorizationManager.Demand(out var err, "D0.7.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            string err;
+            if (jobs.Any())
+            {
+                if (jobs.Any(c => c.JobTypeId == ProjectContent.AeId))   //若有空运出口业务
+                {
+                    if (!_AuthorizationManager.Demand(out err, "D0.7.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                }
+                if (jobs.Any(c => c.JobTypeId == ProjectContent.AiId))   //若有空运进口业务
+                {
+                    if (!_AuthorizationManager.Demand(out err, "D1.7.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                }
+            }
 
             oldFee.ForEach(c => c.BillId = null);
 
@@ -855,14 +987,18 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="400">未找到指定的业务，或该业务不在初始创建状态——无法删除。</response>  
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">指定Id的业务单的账单不存在。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpDelete]
         public ActionResult<RemoveDocBillReturnDto> RemoveDocBill(RemoveDocBillParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveDocBillReturnDto();
             var jobs = GetJobsFromBillIds(new Guid[] { model.Id });
+            string err;
             if (jobs.Any(c => c.JobTypeId == ProjectContent.AeId))   //若有空运出口业务
-                if (!_AuthorizationManager.Demand(out var err, "D0.7.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!_AuthorizationManager.Demand(out err, "D0.7.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (jobs.Any(c => c.JobTypeId == ProjectContent.AeId))   //若有空运进口业务
+                if (!_AuthorizationManager.Demand(out err, "D1.7.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
 
             var id = model.Id;
             var dbSet = _DbContext.DocBills;
@@ -889,10 +1025,12 @@ namespace PowerLmsWebApi.Controllers
             var result = new GetDocBillsByJobIdReturnDto();
             var collJob = _DbContext.PlJobs.Where(c => model.Ids.Contains(c.Id));
             if (collJob.Count() != model.Ids.Count) return NotFound();
-            var allowAe = _AuthorizationManager.Demand(out var err, "D0.7.2");
+            string err;
+            var allowAe = _AuthorizationManager.Demand(out err, "D0.7.2");
+            var allowAi = _AuthorizationManager.Demand(out err, "D1.7.2");
 
             var coll = from job in _DbContext.PlJobs
-                       where model.Ids.Contains(job.Id) && (allowAe || job.JobTypeId != ProjectContent.AeId)
+                       where model.Ids.Contains(job.Id) && (allowAe || job.JobTypeId != ProjectContent.AeId) && (allowAi || job.JobTypeId != ProjectContent.AiId)
 
                        join fee in _DbContext.DocFees
                        on job.Id equals fee.JobId
@@ -946,10 +1084,13 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         public ActionResult<AddPlIaDocReturnDto> AddPlIaDoc(AddPlIaDocParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            string err;
+            if (!_AuthorizationManager.Demand(out err, "D1.1.1.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new AddPlIaDocReturnDto();
             var entity = model.PlIaDoc;
             entity.GenerateNewId();
@@ -969,11 +1110,16 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">指定Id的空运进口单不存在。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPut]
         public ActionResult<ModifyPlIaDocReturnDto> ModifyPlIaDoc(ModifyPlIaDocParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyPlIaDocReturnDto();
+            var doc = _DbContext.PlIaDocs.Find(model.PlIaDoc.Id);
+            if (doc == null) return NotFound("指定Id的空运进口单不存在");
+            string err;
+            if (!_AuthorizationManager.Demand(out err, "D1.1.1.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             if (!_EntityManager.Modify(new[] { model.PlIaDoc })) return NotFound();
             _DbContext.SaveChanges();
             return result;

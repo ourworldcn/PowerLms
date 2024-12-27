@@ -173,9 +173,16 @@ namespace PowerLmsWebApi.Controllers
             var result = new RemoveFileReturnDto();
             var item = _DbContext.PlFileInfos.Find(model.Id);
             if (item is null) return NotFound(model.Id);
-
-            if (item.ParentId.HasValue && _DbContext.PlJobs.Find(item.ParentId.Value) is PlJob job && job.JobTypeId == ProjectContent.AeId)
-                if (!_AuthorizationManager.Demand(out var err, "D0.8.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            string err;
+            if (item.ParentId.HasValue && _DbContext.PlJobs.Find(item.ParentId.Value) is PlJob job)
+                if (job.JobTypeId == ProjectContent.AeId)
+                {
+                    if (!_AuthorizationManager.Demand(out err, "D0.8.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                }
+                else if (job.JobTypeId == ProjectContent.AiId)
+                {
+                    if (!_AuthorizationManager.Demand(out err, "D1.8.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                }
 
             var path = Path.Combine(AppContext.BaseDirectory, "Files", item.FilePath);
             if (!System.IO.File.Exists(path)) return NotFound(path);
@@ -197,8 +204,15 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<AddFileReturnDto> AddFile([FromForm] AddFileParamsDto model)
         {
             var result = new AddFileReturnDto();
-            if (_DbContext.PlJobs.Find(model.ParentId) is PlJob job && job.JobTypeId == ProjectContent.AeId)
-                if (!_AuthorizationManager.Demand(out var err, "D0.8.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (_DbContext.PlJobs.Find(model.ParentId) is PlJob job)
+                if (job.JobTypeId == ProjectContent.AeId)
+                {
+                    if (!_AuthorizationManager.Demand(out var err, "D0.8.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                }
+                else if (job.JobTypeId == ProjectContent.AiId)
+                {
+                    if (!_AuthorizationManager.Demand(out var err, "D1.8.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                }
 
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var fileInfo = new PlFileInfo
@@ -240,9 +254,16 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var info = _DbContext.PlFileInfos.Find(model.FileId);
             if (info == null) return NotFound();
-
-            if (info.ParentId.HasValue && _DbContext.PlJobs.Find(info.ParentId.Value) is PlJob job && job.JobTypeId == ProjectContent.AeId)
-                if (!_AuthorizationManager.Demand(out var err, "D0.8.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            string err;
+            if (info.ParentId.HasValue && _DbContext.PlJobs.Find(info.ParentId.Value) is PlJob job)
+                if (job.JobTypeId == ProjectContent.AeId)
+                {
+                    if (!_AuthorizationManager.Demand(out err, "D0.8.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                }
+                else if (job.JobTypeId == ProjectContent.AiId)
+                {
+                    if (!_AuthorizationManager.Demand(out err, "D1.8.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                }
 
             var path = Path.Combine(AppContext.BaseDirectory, "Files", info.FilePath);
             var stream = new FileStream(path, FileMode.Open);

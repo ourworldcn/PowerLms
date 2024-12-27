@@ -1460,9 +1460,13 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             if (!_AuthorizationManager.Demand("B.2")) return StatusCode((int)HttpStatusCode.Forbidden);
-
+            string err;
             if (model.Item.BusinessTypeId == ProjectContent.AeId)    //若是空运出口业务
-                if (!_AuthorizationManager.Demand(out var err, "D0.1.1.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            {
+                if (!_AuthorizationManager.Demand(out err, "D0.1.1.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            else if (model.Item.BusinessTypeId == ProjectContent.AiId)    //若是空运进口业务
+                if (!_AuthorizationManager.Demand(out err, "D1.1.1.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
 
             var result = new AddJobNumberRuleReturnDto();
             model.Item.GenerateNewId();
@@ -1529,9 +1533,13 @@ namespace PowerLmsWebApi.Controllers
             var dbSet = _DbContext.DD_JobNumberRules;
             var item = dbSet.Find(id);
             if (item is null) return BadRequest();
-
+            string err;
             if (item.BusinessTypeId == ProjectContent.AeId)    //若是空运出口业务
-                if (!_AuthorizationManager.Demand(out var err, "D0.1.1.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            {
+                if (!_AuthorizationManager.Demand(out err, "D0.1.1.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            else if (item.BusinessTypeId == ProjectContent.AiId)    //若是空运进口业务
+                if (!_AuthorizationManager.Demand(out err, "D1.1.1.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             _EntityManager.Remove(item);
             _DbContext.SaveChanges();
             //if (item.DataDicType == 1) //若是简单字典
