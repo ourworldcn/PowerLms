@@ -537,7 +537,7 @@ namespace PowerLmsWebApi.Controllers
             [FromQuery] Dictionary<string, string> conditional = null)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.Demand(out var err, "D0.1.5.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            //if (!_AuthorizationManager.Demand(out var err, "D0.1.5.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new GetAllPlTidanReturnDto();
 
             var dbSet = _DbContext.PlCustomerTidans;
@@ -570,7 +570,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<AddPlTidanReturnDto> AddPlTidan(AddPlTidanParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.Demand(out var err, "D0.1.5.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            //if (!_AuthorizationManager.Demand(out var err, "D0.1.5.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new AddPlTidanReturnDto();
             model.PlTidan.GenerateNewId();
             _DbContext.PlCustomerTidans.Add(model.PlTidan);
@@ -592,7 +592,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<ModifyPlTidanReturnDto> ModifyPlTidan(ModifyPlTidanParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.Demand(out var err, "D0.1.5.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            //if (!_AuthorizationManager.Demand(out var err, "D0.1.5.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ModifyPlTidanReturnDto();
             if (!_EntityManager.Modify(new[] { model.PlTidan })) return NotFound();
             _DbContext.SaveChanges();
@@ -612,7 +612,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<RemovePlTidanReturnDto> RemovePlTidan(RemovePlTidanParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.Demand(out var err, "D0.1.5.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            //if (!_AuthorizationManager.Demand(out var err, "D0.1.5.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new RemovePlTidanReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.PlCustomerTaxInfos;
