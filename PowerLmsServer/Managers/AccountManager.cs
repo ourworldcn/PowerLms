@@ -204,7 +204,7 @@ namespace PowerLmsServer.Managers
         /// </summary>
         /// <param name="evidence"></param>
         /// <returns></returns>
-        public Account GetOrLoadAccountFromEvidence(IDictionary<string, string> evidence)
+        public Account GetOrLoadAccountByEvidence(IDictionary<string, string> evidence)
         {
             Account user = null;
             if (evidence.TryGetValue(nameof(Account.LoginName), out var loginName) && evidence.TryGetValue("Pwd", out var pwd))   //用户登录名登录

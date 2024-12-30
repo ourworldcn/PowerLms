@@ -253,6 +253,10 @@ namespace PowerLmsWebApi.Dto
     /// </summary>
     public class ResetPwdParamsDto : TokenDtoBase
     {
+        /// <summary>
+        /// 要重置密码的账号的登录名。
+        /// </summary>
+        public string LoginName { get; set; }
     }
 
     /// <summary>
@@ -260,6 +264,10 @@ namespace PowerLmsWebApi.Dto
     /// </summary>
     public class ResetPwdReturnDto
     {
+        /// <summary>
+        /// 密码。
+        /// </summary>
+        public string Pwd { get; set; }
     }
 
     /// <summary>

@@ -32,7 +32,7 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 构造函数。
         /// </summary>
-        public FileController(IServiceProvider serviceProvider, IMapper mapper, AccountManager accountManager, PowerLmsUserDbContext dbContext, EntityManager entityManager, AuthorizationManager authorizationManager)
+        public FileController(IServiceProvider serviceProvider, IMapper mapper, AccountManager accountManager, PowerLmsUserDbContext dbContext, EntityManager entityManager, AuthorizationManager authorizationManager, OwFileManager fileManager)
         {
             _Mapper = mapper;
             _AccountManager = accountManager;
@@ -40,6 +40,7 @@ namespace PowerLmsWebApi.Controllers
             _ServiceProvider = serviceProvider;
             _EntityManager = entityManager;
             _AuthorizationManager = authorizationManager;
+            _FileManager = fileManager;
         }
 
         readonly PowerLmsUserDbContext _DbContext;
@@ -48,6 +49,7 @@ namespace PowerLmsWebApi.Controllers
         EntityManager _EntityManager;
         IMapper _Mapper;
         readonly private AuthorizationManager _AuthorizationManager;
+        readonly OwFileManager _FileManager;
 
         /// <summary>
         /// 存储文件的根目录。
@@ -140,10 +142,12 @@ namespace PowerLmsWebApi.Controllers
                 ParentId = model.ParentId,
                 FileName = file.FileName,   //从 Content-Disposition 标头获取文件名。
             };
+
             info.FilePath = $"Customer\\{info.Id}.bin";
             _DbContext.Add(info);
+
             var stream = file.OpenReadStream();
-            var path = Path.Combine(AppContext.BaseDirectory, "Files", info.FilePath);
+            var path = Path.Combine(_FileManager.GetDirectory(), info.FilePath);
             var dir = Path.GetDirectoryName(path);
             Directory.CreateDirectory(dir);
             using var destStream = new FileStream(path, FileMode.Create);
@@ -162,7 +166,8 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
-        /// <response code="404">指定Id的文件不存在。</response>  
+        /// <response code="404">指定Id的文件描述符不存在。</response>  
+        /// <response code="410">指定Id的文件描述符已经无效，此时将删除描述符。</response>  
         /// <response code="500">其他错误，并发导致数据变化不能完成操作。</response>
         /// <response code="403">权限不足。</response>  
         [HttpDelete]
@@ -184,11 +189,14 @@ namespace PowerLmsWebApi.Controllers
                     if (!_AuthorizationManager.Demand(out err, "D1.8.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
                 }
 
-            var path = Path.Combine(AppContext.BaseDirectory, "Files", item.FilePath);
-            if (!System.IO.File.Exists(path)) return NotFound(path);
-            Task.Run(() => System.IO.File.Delete(path));
+            var path = Path.Combine(_FileManager.GetDirectory(), item.FilePath);
             _EntityManager.Remove(item);
-            _DbContext.SaveChanges();
+            _DbContext.SaveChangesAsync();
+            if (!System.IO.File.Exists(path))   //若此文件已不存在
+            {
+                return StatusCode((int)HttpStatusCode.Gone, $"指定文件已经不存在,{path}");
+            }
+            Task.Run(() => System.IO.File.Delete(path));
             return result;
         }
 

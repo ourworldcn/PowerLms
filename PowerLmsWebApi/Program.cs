@@ -78,6 +78,8 @@ internal class Program
         var services = builder.Services;
         services.AddMemoryCache();
 
+        services.AddOptions().Configure<OwFileManagerOptions>(builder.Configuration.GetSection("OwFileManagerOptions"));
+
         //ÆôÓÃ¿çÓò
         services.AddCors(cors =>
         {

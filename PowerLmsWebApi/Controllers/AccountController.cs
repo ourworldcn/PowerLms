@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using NPOI.OpenXmlFormats.Dml.Diagram;
 using NPOI.OpenXmlFormats.Wordprocessing;
+using NPOI.SS.Formula.Functions;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
@@ -438,18 +439,38 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// 重置密码。暂未实现。
+        /// 重置密码。只有超管或商管可以使用此功能。
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。</response>  
         /// <response code="401">无效令牌。</response>  
-        /// <response code="404">暂未实现。</response>  
+        /// <response code="404">超管试图重置一般账号的密码。或指定登录名的账号不存在。</response>  
+        /// <response code="403">权限不足，只有超管和商管可以使用此功能，且不能越级重置。</response>  
         [HttpPost]
         public ActionResult<ResetPwdReturnDto> ResetPwd(ResetPwdParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            return base.NotFound();
+            if (!context.User.IsAdmin()) return StatusCode((int)HttpStatusCode.Forbidden, "只有超管或商管可以使用此功能");
+            if (_DbContext.Accounts.FirstOrDefault(c => c.LoginName == model.LoginName) is not Account tmpUser)
+                return BadRequest("指定登录名的账号不存在。");
+            var userCi = _AccountManager.GetOrLoadCacheItemById(tmpUser.Id);
+            if (context.User.IsSuperAdmin && !userCi.Data.IsMerchantAdmin) return BadRequest("超管不能重置普通用户的密码。");
+            else if (!context.User.IsSuperAdmin && userCi.Data.IsAdmin()) return BadRequest("商管智能重置普通用户的密码。");
+
+            var result = new ResetPwdReturnDto { };
+            //生成密码
+            Span<char> span = stackalloc char[8];
+            for (int i = span.Length - 1; i >= 0; i--)
+            {
+                span[i] = (char)OwHelper.Random.Next('0', 'z' + 1);
+            }
+            result.Pwd = new string(span);
+
+            userCi.Data.SetPwd(result.Pwd);
+            lock (userCi.Data.DbContext)
+                userCi.Data.DbContext.SaveChanges();
+            return result;
         }
 
         /// <summary>

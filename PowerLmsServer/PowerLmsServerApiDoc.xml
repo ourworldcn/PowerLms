@@ -94,7 +94,7 @@
             <param name="token"></param>
             <returns>指定用户的缓存项，没找到则返回null。</returns>
         </member>
-        <member name="M:PowerLmsServer.Managers.AccountManager.GetOrLoadAccountFromEvidence(System.Collections.Generic.IDictionary{System.String,System.String})">
+        <member name="M:PowerLmsServer.Managers.AccountManager.GetOrLoadAccountByEvidence(System.Collections.Generic.IDictionary{System.String,System.String})">
             <summary>
             按证据获取用户缓存或加载。
             </summary>
@@ -790,6 +790,48 @@
             </summary>
             <param name="user"></param>
             <returns>返回登录的公司，该对象不可更改。没有登录到机构时会返回null。</returns>
+        </member>
+        <member name="T:PowerLmsServer.Managers.OwFileManager">
+            <summary>
+            文件管理器。
+            </summary>
+        </member>
+        <member name="M:PowerLmsServer.Managers.OwFileManager.#ctor(Microsoft.Extensions.Options.IOptions{PowerLmsServer.Managers.OwFileManagerOptions})">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.Managers.OwFileManager.Options">
+            <summary>
+            配置信息。
+            </summary>
+        </member>
+        <member name="M:PowerLmsServer.Managers.OwFileManager.GetDirectory">
+            <summary>
+            
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="T:PowerLmsServer.Managers.OwFileManagerOptions">
+            <summary>
+            <see cref="T:PowerLmsServer.Managers.OwFileManager"/>类的配置类。
+            </summary>
+        </member>
+        <member name="M:PowerLmsServer.Managers.OwFileManagerOptions.#ctor">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.Managers.OwFileManagerOptions.Value">
+            <summary>
+            <inheritdoc/>
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.Managers.OwFileManagerOptions.FilePath">
+            <summary>
+            存储文件的根路径。
+            没有根符号\(入 Files)，则使用基于运行时代码基础路径.有跟符号但没有盘符(如:\Files)则使用同一个驱动器作为盘符。可以指定全路径，如C:\Files
+            </summary>
         </member>
         <member name="T:PowerLmsServer.Managers.OwWfManager">
             <summary>

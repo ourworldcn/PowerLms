@@ -226,26 +226,12 @@ namespace PowerLmsServer.Managers
 
             var cts = new CancellationTokenSource();
             var cct = new CancellationChangeToken(cts.Token);
-            cct.RegisterChangeCallback(c =>
+            Span<char> span = stackalloc char[8];
+            for (int i = 0; i < 8; i++)
             {
-                ;
-            }, null);
-            using (var entry = cache.CreateEntry("111"))
-            {
-                entry.AddExpirationToken(cct);
-                entry.RegisterPostEvictionCallback((key, v, r, s) =>
-                {
-                    if (s is CancellationTokenSource tmp)
-                    {
-                        if (!tmp.IsCancellationRequested) tmp.Cancel();
-                    }
-                }, cts);
-                entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(1);
-                entry.SetValue(new object());
+                span[i] = (char)OwHelper.Random.Next('0', 'z' + 1);
             }
-            var obj1 = cache.Get("111");
-            cts.Cancel();
-            var obj2 = cache.Get("111");
+            string str=new string(span);
         }
 
         private void CreateDb()
