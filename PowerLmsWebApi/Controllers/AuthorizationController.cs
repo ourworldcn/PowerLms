@@ -522,9 +522,6 @@ namespace PowerLmsWebApi.Controllers
             var ids = new HashSet<string>(model.PermissionIds);
             if (ids.Count != model.PermissionIds.Count) return BadRequest($"{nameof(model.PermissionIds)}中有重复键值。");
 
-            var count = _DbContext.PlPermissions.Count(c => ids.Contains(c.Name));
-            if (count != ids.Count) return BadRequest($"{nameof(model.PermissionIds)}中至少有一个许可的Id不存在。");
-
             var setRela = _DbContext.PlRolePermissions;
             var removes = setRela.Where(c => c.RoleId == model.RoleId && !ids.Contains(c.PermissionId));
             setRela.RemoveRange(removes);

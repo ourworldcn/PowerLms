@@ -79,6 +79,9 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<AddPlIsDocReturnDto> AddPlIsDoc(AddPlIsDocParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            string err;
+            if (!_AuthorizationManager.Demand(out err, "D3.1.1.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+
             var result = new AddPlIsDocReturnDto();
             var entity = model.PlIsDoc;
             entity.GenerateNewId();
@@ -102,6 +105,8 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<ModifyPlIsDocReturnDto> ModifyPlIsDoc(ModifyPlIsDocParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            string err;
+            if (!_AuthorizationManager.Demand(out err, "D3.1.1.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ModifyPlIsDocReturnDto();
             if (!_EntityManager.Modify(new[] { model.PlIsDoc })) return NotFound();
             _DbContext.SaveChanges();
@@ -121,6 +126,8 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<RemovePlIsDocReturnDto> RemovePlIsDoc(RemovePlIsDocParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            string err;
+            if (!_AuthorizationManager.Demand(out err, "D3.1.1.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new RemovePlIsDocReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.PlIsDocs;
@@ -173,7 +180,7 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             string err;
             if (!_AuthorizationManager.Demand(out err, "D2.1.1.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-            
+
             var result = new AddPlEsDocReturnDto();
             var entity = model.PlEsDoc;
             entity.GenerateNewId();

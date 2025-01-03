@@ -188,6 +188,14 @@ namespace PowerLmsWebApi.Controllers
                 {
                     if (!_AuthorizationManager.Demand(out err, "D1.8.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
                 }
+                else if (job.JobTypeId == ProjectContent.SeId)
+                {
+                    if (!_AuthorizationManager.Demand(out err, "D2.8.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                }
+                else if (job.JobTypeId == ProjectContent.SiId)
+                {
+                    if (!_AuthorizationManager.Demand(out err, "D3.8.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                }
 
             var path = Path.Combine(_FileManager.GetDirectory(), item.FilePath);
             _EntityManager.Remove(item);
@@ -220,6 +228,14 @@ namespace PowerLmsWebApi.Controllers
                 else if (job.JobTypeId == ProjectContent.AiId)
                 {
                     if (!_AuthorizationManager.Demand(out var err, "D1.8.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                }
+                else if (job.JobTypeId == ProjectContent.SeId)
+                {
+                    if (!_AuthorizationManager.Demand(out var err, "D2.8.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                }
+                else if (job.JobTypeId == ProjectContent.SiId)
+                {
+                    if (!_AuthorizationManager.Demand(out var err, "D3.8.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
                 }
 
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
@@ -271,6 +287,14 @@ namespace PowerLmsWebApi.Controllers
                 else if (job.JobTypeId == ProjectContent.AiId)
                 {
                     if (!_AuthorizationManager.Demand(out err, "D1.8.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                }
+                else if (job.JobTypeId == ProjectContent.SeId)
+                {
+                    if (!_AuthorizationManager.Demand(out err, "D2.8.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                }
+                else if (job.JobTypeId == ProjectContent.SiId)
+                {
+                    if (!_AuthorizationManager.Demand(out err, "D3.8.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
                 }
 
             var path = Path.Combine(AppContext.BaseDirectory, "Files", info.FilePath);
