@@ -108,6 +108,7 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">没有找到指定文件。</response>  
         [HttpGet]
+        [Obsolete("未来将删除此接口，请使用 GetFile 替代。")]
         public ActionResult DownloadCustomerFile(Guid token, Guid fileId)
         {
             if (_AccountManager.GetOrLoadContextByToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
@@ -127,6 +128,7 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpPost]
+        [Obsolete("未来将删除此接口，请使用 AddFile替代。")]
         public ActionResult<UploadCustomerFileReturnDto> UploadCustomerFile(IFormFile file, [FromForm] UploadCustomerFileParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
@@ -166,10 +168,10 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         /// <response code="404">指定Id的文件描述符不存在。</response>  
         /// <response code="410">指定Id的文件描述符已经无效，此时将删除描述符。</response>  
         /// <response code="500">其他错误，并发导致数据变化不能完成操作。</response>
-        /// <response code="403">权限不足。</response>  
         [HttpDelete]
         public ActionResult<RemoveFileReturnDto> RemoveFile(RemoveFileParamsDto model)
         {
@@ -199,7 +201,7 @@ namespace PowerLmsWebApi.Controllers
 
             var path = Path.Combine(_FileManager.GetDirectory(), item.FilePath);
             _EntityManager.Remove(item);
-            _DbContext.SaveChangesAsync();
+            _DbContext.SaveChanges();
             if (!System.IO.File.Exists(path))   //若此文件已不存在
             {
                 return StatusCode((int)HttpStatusCode.Gone, $"指定文件已经不存在,{path}");
