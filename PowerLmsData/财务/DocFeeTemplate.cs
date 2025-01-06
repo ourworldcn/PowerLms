@@ -23,10 +23,10 @@ namespace PowerLms.Data
         public string Code { get; set; }
 
         /// <summary>
-        /// 业务种类。
+        /// 业务种类id
         /// </summary>
-        [MaxLength(64)]
-        public string Kind { get; set; }
+        [Comment("业务种类id")]
+        public Guid? JobTypeId { get; set; }
 
         /// <summary>
         /// 业务说明。

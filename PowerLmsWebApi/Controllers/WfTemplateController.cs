@@ -2,10 +2,12 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using NPOI.SS.Formula.Functions;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
+using System.Net;
 using System.Text.Json.Serialization;
 
 namespace PowerLmsWebApi.Controllers
@@ -18,13 +20,14 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 构造函数。
         /// </summary>
-        public WfTemplateController(AccountManager accountManager, IServiceProvider serviceProvider, PowerLmsUserDbContext dbContext, EntityManager entityManager, IMapper mapper)
+        public WfTemplateController(AccountManager accountManager, IServiceProvider serviceProvider, PowerLmsUserDbContext dbContext, EntityManager entityManager, IMapper mapper, AuthorizationManager authorizationManager)
         {
             _AccountManager = accountManager;
             _ServiceProvider = serviceProvider;
             _DbContext = dbContext;
             _EntityManager = entityManager;
             _Mapper = mapper;
+            _AuthorizationManager = authorizationManager;
         }
 
         private AccountManager _AccountManager;
@@ -32,6 +35,7 @@ namespace PowerLmsWebApi.Controllers
         private PowerLmsUserDbContext _DbContext;
         private EntityManager _EntityManager;
         private IMapper _Mapper;
+        AuthorizationManager _AuthorizationManager;
 
         #region 模板表相关
 
@@ -42,10 +46,16 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         public ActionResult<AddWorkflowTemplateReturnDto> AddWfTemplate(AddWorkflowTemplateParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            #region 权限判定
+            string err;
+            if (!_AuthorizationManager.Demand(out err, "E.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            #endregion 权限判定
+
             var result = new AddWorkflowTemplateReturnDto();
             model.Item.GenerateNewId();
 
@@ -101,12 +111,17 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         /// <response code="404">指定Id的工作流模板节点不存在。</response>  
         [HttpPut]
         public ActionResult<ModifyWorkflowTemplateReturnDto> ModifyWfTemplate(ModifyWorkflowTemplateParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyWorkflowTemplateReturnDto();
+            #region 权限判定
+            string err;
+            if (!_AuthorizationManager.Demand(out err, "E.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            #endregion 权限判定
             if (!_EntityManager.Modify(model.Items)) return NotFound();
             //foreach (var item in model.Items)
             //{
@@ -124,12 +139,18 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         /// <response code="404">指定Id中，至少有一个不存在相应实体。</response>  
         [HttpDelete]
         public ActionResult<RemoveWorkflowTemplateReturnDto> RemoveWfTemplate(RemoveWorkflowTemplatePatamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveWorkflowTemplateReturnDto();
+
+            #region 权限判定
+            string err;
+            if (!_AuthorizationManager.Demand(out err, "E.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            #endregion 权限判定
 
             var dbSet = _DbContext.WfTemplates;
             var items = dbSet.Where(c => model.Ids.Contains(c.Id)).ToArray();
@@ -149,6 +170,7 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         /// <response code="404">未找到指定的前向节点或后向节点，NextId可以省略视同为null，但如果指定则必须是一个已存在节点的Id。</response>  
         [HttpPost]
         public ActionResult<AddWfTemplateNodeReturnDto> AddWfTemplateNode(AddWfTemplateNodeParamsDto model)
@@ -156,6 +178,10 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddWfTemplateNodeReturnDto();
 
+            #region 权限判定
+            string err;
+            if (!_AuthorizationManager.Demand(out err, "E.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            #endregion 权限判定
             if (model.Item.NextId is not null)
             {
                 var nextNode = _DbContext.WfTemplateNodes.Find(model.Item.NextId.Value);
@@ -229,12 +255,17 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         /// <response code="404">指定Id的工作流模板节点或NextId指定节点不存在。NextId可以省略视同为null，但如果指定则必须是一个已存在节点的Id。</response>  
         [HttpPut]
         public ActionResult<ModifyWfTemplateNodeReturnDto> ModifyWfTemplateNode(ModifyWfTemplateNodeParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyWfTemplateNodeReturnDto();
+            #region 权限判定
+            string err;
+            if (!_AuthorizationManager.Demand(out err, "E.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            #endregion 权限判定
             var ids = model.Items.Where(c => c.NextId is not null).Select(c => c.NextId);
             var nextNodeCount = _DbContext.WfTemplateNodes.Count(c => ids.Contains(c.Id));
             if (nextNodeCount != ids.Count()) return NotFound();
@@ -255,12 +286,17 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         /// <response code="404">指定Id中，至少有一个不存在相应实体。</response>  
         [HttpDelete]
         public ActionResult<RemoveWfTemplateNodeReturnDto> RemoveWfTemplateNode(RemoveWfTemplateNodePatamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveWfTemplateNodeReturnDto();
+            #region 权限判定
+            string err;
+            if (!_AuthorizationManager.Demand(out err, "E.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            #endregion 权限判定
             var dbSet = _DbContext.WfTemplateNodes;
 
             var items = dbSet.Where(c => model.Ids.Contains(c.Id)).ToArray();
@@ -322,11 +358,16 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         public ActionResult<AddWfTemplateNodeItemReturnDto> AddWfTemplateNodeItem(AddWfTemplateNodeItemParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddWfTemplateNodeItemReturnDto();
+            #region 权限判定
+            string err;
+            if (!_AuthorizationManager.Demand(out err, "E.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            #endregion 权限判定
             model.Item.GenerateNewId();
 
             _DbContext.WfTemplateNodeItems.Add(model.Item);
@@ -377,12 +418,17 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         /// <response code="404">指定Id的工作流模板节点详细不存在。</response>  
         [HttpPut]
         public ActionResult<ModifyWfTemplateNodeItemReturnDto> ModifyWfTemplateNodeItem(ModifyWfTemplateNodeItemParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyWfTemplateNodeItemReturnDto();
+            #region 权限判定
+            string err;
+            if (!_AuthorizationManager.Demand(out err, "E.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            #endregion 权限判定
             if (!_EntityManager.Modify(model.Items)) return NotFound();
             //foreach (var item in model.Items)
             //{
@@ -400,12 +446,17 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         /// <response code="404">指定Id中，至少有一个不存在相应实体。</response>  
         [HttpDelete]
         public ActionResult<RemoveWfTemplateNodeItemReturnDto> RemoveWfTemplateNodeItem(RemoveWfTemplateNodeItemPatamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveWfTemplateNodeItemReturnDto();
+            #region 权限判定
+            string err;
+            if (!_AuthorizationManager.Demand(out err, "E.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            #endregion 权限判定
 
             var dbSet = _DbContext.WfTemplateNodeItems;
             var items = dbSet.Where(c => model.Ids.Contains(c.Id)).ToArray();
@@ -423,12 +474,17 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         /// <response code="404">指定Id的业务费用流程模板节点不存在。</response>  
         [HttpPut]
         public ActionResult<SetWfTemplateNodeItemReturnDto> SetWfTemplateNodeItem(SetWfTemplateNodeItemParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new SetWfTemplateNodeItemReturnDto();
+            #region 权限判定
+            string err;
+            if (!_AuthorizationManager.Demand(out err, "E.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            #endregion 权限判定
             var parent = _DbContext.WfTemplateNodes.FirstOrDefault(c => c.Id == model.ParentId);
             if (parent is null) return NotFound();
             var aryIds = model.Items.Select(c => c.Id).ToArray();   //指定的Id

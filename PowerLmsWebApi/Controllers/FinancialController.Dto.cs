@@ -662,7 +662,7 @@ namespace PowerLmsWebApi.Dto
     public class SetDocFeeTemplateItemParamsDto : TokenDtoBase
     {
         /// <summary>
-        /// 申请单的Id。
+        /// 费用方案的Id。
         /// </summary>
         public Guid FrId { get; set; }
 

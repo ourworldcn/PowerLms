@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using NPOI.SS.Formula.Functions;
 using NuGet.Packaging;
 using PowerLms.Data;
+using PowerLmsServer;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
@@ -505,6 +506,7 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         public ActionResult<AddPlInvoicesReturnDto> AddPlInvoices(AddPlInvoicesParamsDto model)
         {
@@ -513,6 +515,9 @@ namespace PowerLmsWebApi.Controllers
                 _Logger.LogWarning("无效的令牌{token}", model.Token);
                 return Unauthorized();
             }
+            string err;
+            if (!_AuthorizationManager.Demand(out err, "F.3.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+
             var result = new AddPlInvoicesReturnDto();
             var entity = model.PlInvoices;
             entity.GenerateNewId();
@@ -533,11 +538,14 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         /// <response code="404">指定Id的结算单不存在。</response>  
         [HttpPut]
         public ActionResult<ModifyPlInvoicesReturnDto> ModifyPlInvoices(ModifyPlInvoicesParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            string err;
+            if (!_AuthorizationManager.Demand(out err, "F.3.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ModifyPlInvoicesReturnDto();
             if (!_EntityManager.Modify(new[] { model.PlInvoices })) return NotFound();
             //忽略不可更改字段
@@ -553,12 +561,15 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         /// <response code="404">指定Id的结算单不存在。</response>  
         [HttpDelete]
         public ActionResult<RemovePlInvoicesReturnDto> RemovePlInvoices(RemovePlInvoicesParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemovePlInvoicesReturnDto();
+            string err;
+            if (!_AuthorizationManager.Demand(out err, "F.3.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var id = model.Id;
             var dbSet = _DbContext.PlInvoicess;
             var item = dbSet.Find(id);
@@ -585,12 +596,15 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">至少有一个结算单已被确认或至少有一个结算单是自己创建的。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         /// <response code="404">指定Id的结算单不存在。</response>  
         [HttpPost]
         public ActionResult<ConfirmPlInvoicesReturnDto> ConfirmPlInvoices(ConfirmPlInvoicesParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ConfirmPlInvoicesReturnDto();
+            string err;
+            if (!_AuthorizationManager.Demand(out err, "F.3.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var coll = _DbContext.PlInvoicess.Where(c => model.Ids.Contains(c.Id)).ToArray();
             if (coll.Length != model.Ids.Count) return BadRequest("至少有一个id不存在对应的结算单");
             //if (coll.Any(c => c.ConfirmDateTime is not null)) return BadRequest("至少有一个结算单已被确认");
@@ -706,6 +720,7 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         public ActionResult<AddPlInvoicesItemReturnDto> AddPlInvoicesItem(AddPlInvoicesItemParamsDto model)
         {
@@ -714,6 +729,8 @@ namespace PowerLmsWebApi.Controllers
                 _Logger.LogWarning("无效的令牌{token}", model.Token);
                 return Unauthorized();
             }
+            string err;
+            if (!_AuthorizationManager.Demand(out err, "F.3.1") && !_AuthorizationManager.Demand(out err, "F.3.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new AddPlInvoicesItemReturnDto();
             var entity = model.PlInvoicesItem;
             entity.GenerateNewId();
@@ -732,12 +749,15 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         /// <response code="404">指定Id的结算单明细不存在。</response>  
         [HttpPut]
         public ActionResult<ModifyPlInvoicesItemReturnDto> ModifyPlInvoicesItem(ModifyPlInvoicesItemParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyPlInvoicesItemReturnDto();
+            string err;
+            if (!_AuthorizationManager.Demand(out err, "F.3.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             if (!_EntityManager.Modify(new[] { model.PlInvoicesItem })) return NotFound();
             //忽略不可更改字段
             var entity = _DbContext.Entry(model.PlInvoicesItem);
@@ -752,11 +772,14 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         /// <response code="404">指定Id的结算单明细不存在。</response>  
         [HttpDelete]
         public ActionResult<RemovePlInvoicesItemReturnDto> RemovePlInvoicesItem(RemovePlInvoicesItemParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            string err;
+            if (!_AuthorizationManager.Demand(out err, "F.3.2") && !_AuthorizationManager.Demand(out err, "F.3.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new RemovePlInvoicesItemReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.PlInvoicesItems;
@@ -844,6 +867,7 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         public ActionResult<AddDocFeeTemplateReturnDto> AddDocFeeTemplate(AddDocFeeTemplateParamsDto model)
         {
@@ -852,6 +876,28 @@ namespace PowerLmsWebApi.Controllers
                 _Logger.LogWarning("无效的令牌{token}", model.Token);
                 return Unauthorized();
             }
+
+            #region 权限判定
+            string err;
+            var docFeeTT = model.DocFeeTemplate;
+            if (docFeeTT.JobTypeId == ProjectContent.AeId)    //若是空运出口业务
+            {
+                if (!_AuthorizationManager.Demand(out err, "D20.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            else if (docFeeTT.JobTypeId == ProjectContent.AiId)    //若是空运进口业务
+            {
+                if (!_AuthorizationManager.Demand(out err, "D20.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            else if (docFeeTT.JobTypeId == ProjectContent.SeId)    //若是海运出口业务
+            {
+                if (!_AuthorizationManager.Demand(out err, "D20.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            else if (docFeeTT.JobTypeId == ProjectContent.SiId)    //若是海运进口业务
+            {
+                if (!_AuthorizationManager.Demand(out err, "D20.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            #endregion 权限判定
+
             var result = new AddDocFeeTemplateReturnDto();
             var entity = model.DocFeeTemplate;
             entity.GenerateNewId();
@@ -872,12 +918,33 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         /// <response code="404">指定Id的费用方案不存在。</response>  
         [HttpPut]
         public ActionResult<ModifyDocFeeTemplateReturnDto> ModifyDocFeeTemplate(ModifyDocFeeTemplateParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyDocFeeTemplateReturnDto();
+            #region 权限判定
+            string err;
+            var docFeeTT = model.DocFeeTemplate;
+            if (docFeeTT.JobTypeId == ProjectContent.AeId)    //若是空运出口业务
+            {
+                if (!_AuthorizationManager.Demand(out err, "D20.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            else if (docFeeTT.JobTypeId == ProjectContent.AiId)    //若是空运进口业务
+            {
+                if (!_AuthorizationManager.Demand(out err, "D20.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            else if (docFeeTT.JobTypeId == ProjectContent.SeId)    //若是海运出口业务
+            {
+                if (!_AuthorizationManager.Demand(out err, "D20.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            else if (docFeeTT.JobTypeId == ProjectContent.SiId)    //若是海运进口业务
+            {
+                if (!_AuthorizationManager.Demand(out err, "D20.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            #endregion 权限判定
             if (!_EntityManager.Modify(new[] { model.DocFeeTemplate })) return NotFound();
             //忽略不可更改字段
             var entity = _DbContext.Entry(model.DocFeeTemplate);
@@ -892,6 +959,7 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         /// <response code="404">指定Id的费用方案不存在。</response>  
         [HttpDelete]
         public ActionResult<RemoveDocFeeTemplateReturnDto> RemoveDocFeeTemplate(RemoveDocFeeTemplateParamsDto model)
@@ -900,8 +968,27 @@ namespace PowerLmsWebApi.Controllers
             var result = new RemoveDocFeeTemplateReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.DocFeeTemplates;
-            var item = dbSet.Find(id);
-            if (item is null) return BadRequest();
+            if (dbSet.Find(id) is not DocFeeTemplate item) return BadRequest();
+            #region 权限判定
+            string err;
+            var docFeeTT = item;
+            if (docFeeTT.JobTypeId == ProjectContent.AeId)    //若是空运出口业务
+            {
+                if (!_AuthorizationManager.Demand(out err, "D20.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            else if (docFeeTT.JobTypeId == ProjectContent.AiId)    //若是空运进口业务
+            {
+                if (!_AuthorizationManager.Demand(out err, "D20.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            else if (docFeeTT.JobTypeId == ProjectContent.SeId)    //若是海运出口业务
+            {
+                if (!_AuthorizationManager.Demand(out err, "D20.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            else if (docFeeTT.JobTypeId == ProjectContent.SiId)    //若是海运进口业务
+            {
+                if (!_AuthorizationManager.Demand(out err, "D20.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            #endregion 权限判定
             var children = _DbContext.DocFeeTemplateItems.Where(c => c.ParentId == item.Id).ToArray();
             _EntityManager.Remove(item);
             if (children.Length > 0) _DbContext.RemoveRange(children);
@@ -930,11 +1017,11 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定Id的费用方案不存在。</response>  
         [HttpGet]
         public ActionResult<GetAllDocFeeTemplateItemReturnDto> GetAllDocFeeTemplateItem([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllDocFeeTemplateItemReturnDto();
             var dbSet = _DbContext.DocFeeTemplateItems;
@@ -952,6 +1039,7 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="model"></param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="403">权限不足。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpPost]
         public ActionResult<AddDocFeeTemplateItemReturnDto> AddDocFeeTemplateItem(AddDocFeeTemplateItemParamsDto model)
@@ -963,6 +1051,32 @@ namespace PowerLmsWebApi.Controllers
             }
             var result = new AddDocFeeTemplateItemReturnDto();
             var entity = model.DocFeeTemplateItem;
+
+            var id = model.DocFeeTemplateItem.ParentId;
+            if (id is null) return BadRequest();
+            var dbSet = _DbContext.DocFeeTemplates;
+            if (dbSet.Find(id.Value) is not DocFeeTemplate item) return BadRequest();
+            #region 权限判定
+            string err;
+            var docFeeTT = item;
+            if (docFeeTT.JobTypeId == ProjectContent.AeId)    //若是空运出口业务
+            {
+                if (!_AuthorizationManager.Demand(out err, "D20.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            else if (docFeeTT.JobTypeId == ProjectContent.AiId)    //若是空运进口业务
+            {
+                if (!_AuthorizationManager.Demand(out err, "D20.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            else if (docFeeTT.JobTypeId == ProjectContent.SeId)    //若是海运出口业务
+            {
+                if (!_AuthorizationManager.Demand(out err, "D20.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            else if (docFeeTT.JobTypeId == ProjectContent.SiId)    //若是海运进口业务
+            {
+                if (!_AuthorizationManager.Demand(out err, "D20.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            #endregion 权限判定
+
             entity.GenerateNewId();
             _DbContext.DocFeeTemplateItems.Add(model.DocFeeTemplateItem);
 
@@ -978,6 +1092,7 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="model"></param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="403">权限不足。</response>  
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">指定Id的费用方案明细不存在。</response>
         [HttpPut]
@@ -985,6 +1100,31 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyDocFeeTemplateItemReturnDto();
+            var id = model.DocFeeTemplateItem.ParentId;
+            if (id is null) return BadRequest();
+            var dbSet = _DbContext.DocFeeTemplates;
+            if (dbSet.Find(id.Value) is not DocFeeTemplate item) return BadRequest();
+            #region 权限判定
+            string err;
+            var docFeeTT = item;
+            if (docFeeTT.JobTypeId == ProjectContent.AeId)    //若是空运出口业务
+            {
+                if (!_AuthorizationManager.Demand(out err, "D20.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            else if (docFeeTT.JobTypeId == ProjectContent.AiId)    //若是空运进口业务
+            {
+                if (!_AuthorizationManager.Demand(out err, "D20.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            else if (docFeeTT.JobTypeId == ProjectContent.SeId)    //若是海运出口业务
+            {
+                if (!_AuthorizationManager.Demand(out err, "D20.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            else if (docFeeTT.JobTypeId == ProjectContent.SiId)    //若是海运进口业务
+            {
+                if (!_AuthorizationManager.Demand(out err, "D20.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            #endregion 权限判定
+
             if (!_EntityManager.Modify(new[] { model.DocFeeTemplateItem })) return NotFound();
             //忽略不可更改字段
             var entity = _DbContext.Entry(model.DocFeeTemplateItem);
@@ -998,6 +1138,7 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="model"></param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="403">权限不足。</response>  
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">指定Id的费用方案明细不存在。</response>  
         [HttpDelete]
@@ -1009,19 +1150,46 @@ namespace PowerLmsWebApi.Controllers
             var dbSet = _DbContext.DocFeeTemplateItems;
             var item = dbSet.Find(id);
             if (item is null) return BadRequest();
+
+            var idTT = item.ParentId;
+            if (idTT is null) return BadRequest();
+
+            if (_DbContext.DocFeeTemplates.Find(idTT.Value) is not DocFeeTemplate tt) return BadRequest();
+            #region 权限判定
+            string err;
+            var docFeeTT = tt;
+            if (docFeeTT.JobTypeId == ProjectContent.AeId)    //若是空运出口业务
+            {
+                if (!_AuthorizationManager.Demand(out err, "D20.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            else if (docFeeTT.JobTypeId == ProjectContent.AiId)    //若是空运进口业务
+            {
+                if (!_AuthorizationManager.Demand(out err, "D20.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            else if (docFeeTT.JobTypeId == ProjectContent.SeId)    //若是海运出口业务
+            {
+                if (!_AuthorizationManager.Demand(out err, "D20.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            else if (docFeeTT.JobTypeId == ProjectContent.SiId)    //若是海运进口业务
+            {
+                if (!_AuthorizationManager.Demand(out err, "D20.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            #endregion 权限判定
+
             _EntityManager.Remove(item);
             _DbContext.SaveChanges();
             return result;
         }
 
         /// <summary>
-        /// 设置指定的申请单下所有明细。
+        /// 设置指定的费用方案下所有明细。
         /// 指定存在id的明细则更新，Id全0或不存在的Id到自动添加，原有未指定的明细将被删除。
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         /// <response code="404">指定Id的业务费用申请单不存在。</response>  
         [HttpPut]
         public ActionResult<SetDocFeeTemplateItemReturnDto> SetDocFeeTemplateItem(SetDocFeeTemplateItemParamsDto model)
@@ -1030,6 +1198,29 @@ namespace PowerLmsWebApi.Controllers
             var result = new SetDocFeeTemplateItemReturnDto();
             var fr = _DbContext.DocFeeRequisitions.Find(model.FrId);
             if (fr is null) return NotFound();
+
+            var idTT = model.FrId;
+            if (_DbContext.DocFeeTemplates.Find(idTT) is not DocFeeTemplate tt) return BadRequest();
+            #region 权限判定
+            string err;
+            var docFeeTT = tt;
+            if (docFeeTT.JobTypeId == ProjectContent.AeId)    //若是空运出口业务
+            {
+                if (!_AuthorizationManager.Demand(out err, "D20.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            else if (docFeeTT.JobTypeId == ProjectContent.AiId)    //若是空运进口业务
+            {
+                if (!_AuthorizationManager.Demand(out err, "D20.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            else if (docFeeTT.JobTypeId == ProjectContent.SeId)    //若是海运出口业务
+            {
+                if (!_AuthorizationManager.Demand(out err, "D20.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            else if (docFeeTT.JobTypeId == ProjectContent.SiId)    //若是海运进口业务
+            {
+                if (!_AuthorizationManager.Demand(out err, "D20.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            #endregion 权限判定
             var aryIds = model.Items.Select(c => c.Id).ToArray();   //指定的Id
             var existsIds = _DbContext.DocFeeTemplateItems.Where(c => c.ParentId == fr.Id).Select(c => c.Id).ToArray();    //已经存在的Id
             //更改
