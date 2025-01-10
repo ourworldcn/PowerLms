@@ -243,7 +243,7 @@ namespace PowerLmsWebApi.Controllers
         /// 获取全部客户联系人。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">查询的条件。支持 displayname，Id,CustomerId。不区分大小写。</param>
+        /// <param name="conditional">查询的条件。已支持通用查询——除个别涉及敏感信息字段外，所有实体字段都可作为条件。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
@@ -255,21 +255,8 @@ namespace PowerLmsWebApi.Controllers
             var result = new GetAllCustomerContactReturnDto();
             var dbSet = _DbContext.PlCustomerContacts;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-            foreach (var item in conditional)
-                if (string.Equals(item.Key, "Id", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (Guid.TryParse(item.Value, out var id))
-                        coll = coll.Where(c => c.Id == id);
-                }
-                else if (string.Equals(item.Key, "displayname", StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.DisplayName.Contains(item.Value));
-                }
-                else if (string.Equals(item.Key, "CustomerId", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (Guid.TryParse(item.Value, out var id))
-                        coll = coll.Where(c => c.CustomerId == id);
-                }
+            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
@@ -341,7 +328,7 @@ namespace PowerLmsWebApi.Controllers
         /// 获取业务负责人的所属关系。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">查询的条件。支持 CustomerId,AccountId,OrderTypeId</param>
+        /// <param name="conditional">查询的条件。已支持通用查询——除个别涉及敏感信息字段外，所有实体字段都可作为条件。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定类别Id无效。</response>  
@@ -356,22 +343,7 @@ namespace PowerLmsWebApi.Controllers
 
             var dbSet = _DbContext.PlCustomerBusinessHeaders;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-            foreach (var item in conditional)
-                if (string.Equals(item.Key, "CustomerId", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (Guid.TryParse(item.Value, out var customerId))
-                        coll = coll.Where(c => c.CustomerId == customerId);
-                }
-                else if (string.Equals(item.Key, "accountId", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (Guid.TryParse(item.Value, out var accountId))
-                        coll = coll.Where(c => c.UserId == accountId);
-                }
-                else if (string.Equals(item.Key, "OrderTypeId", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (Guid.TryParse(item.Value, out var orderTypeId))
-                        coll = coll.Where(c => c.OrderTypeId == orderTypeId);
-                }
+            coll = EfHelper.GenerateWhereAnd(coll, conditional);
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
@@ -428,7 +400,7 @@ namespace PowerLmsWebApi.Controllers
         /// 获取全部客户开票信息。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">查询的条件。支持 CustomerId，Id,Number。不区分大小写。</param>
+        /// <param name="conditional">查询的条件。已支持通用查询——除个别涉及敏感信息字段外，所有实体字段都可作为条件。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
@@ -441,21 +413,7 @@ namespace PowerLmsWebApi.Controllers
 
             var dbSet = _DbContext.PlCustomerTaxInfos;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-            foreach (var item in conditional)
-                if (string.Equals(item.Key, "Id", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (Guid.TryParse(item.Value, out var id))
-                        coll = coll.Where(c => c.Id == id);
-                }
-                else if (string.Equals(item.Key, "CustomerId", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (Guid.TryParse(item.Value, out var id))
-                        coll = coll.Where(c => c.CustomerId == id);
-                }
-                else if (string.Equals(item.Key, "Number", StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.Number.Contains(item.Value));
-                }
+            coll = EfHelper.GenerateWhereAnd(coll, conditional);
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
@@ -527,7 +485,7 @@ namespace PowerLmsWebApi.Controllers
         /// 获取全部客户提单。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">查询的条件。支持 CustomerId，Id。不区分大小写。</param>
+        /// <param name="conditional">查询的条件。已支持通用查询——除个别涉及敏感信息字段外，所有实体字段都可作为条件。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
@@ -542,17 +500,7 @@ namespace PowerLmsWebApi.Controllers
 
             var dbSet = _DbContext.PlCustomerTidans;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-            foreach (var item in conditional)
-                if (string.Equals(item.Key, "Id", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (Guid.TryParse(item.Value, out var id))
-                        coll = coll.Where(c => c.Id == id);
-                }
-                else if (string.Equals(item.Key, "CustomerId", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (Guid.TryParse(item.Value, out var id))
-                        coll = coll.Where(c => c.CustomerId == id);
-                }
+            coll = EfHelper.GenerateWhereAnd(coll, conditional);
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
@@ -630,7 +578,7 @@ namespace PowerLmsWebApi.Controllers
         /// 获取全部客户黑名单。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">查询的条件。支持 CustomerId，Id,Kind,IsSystem("true" "false" 字符串)。不区分大小写。</param>
+        /// <param name="conditional">查询的条件。已支持通用查询——除个别涉及敏感信息字段外，所有实体字段都可作为条件。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
@@ -642,25 +590,8 @@ namespace PowerLmsWebApi.Controllers
             var result = new GetAllCustomerBlacklistReturnDto();
             var dbSet = _DbContext.CustomerBlacklists;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-            foreach (var item in conditional)
-                if (string.Equals(item.Key, "Id", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (Guid.TryParse(item.Value, out var id))
-                        coll = coll.Where(c => c.Id == id);
-                }
-                else if (string.Equals(item.Key, "CustomerId", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (Guid.TryParse(item.Value, out var id))
-                        coll = coll.Where(c => c.CustomerId == id);
-                }
-                else if (string.Equals(item.Key, "Kind", StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.Kind == int.Parse(item.Value));
-                }
-                else if (string.Equals(item.Key, "IsSystem", StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.IsSystem == bool.Parse(item.Value));
-                }
+
+            coll = EfHelper.GenerateWhereAnd(coll, conditional);
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
@@ -686,9 +617,9 @@ namespace PowerLmsWebApi.Controllers
             var entity = _DbContext.CustomerBlacklists.Add(model.CustomerBlacklist);
             if (entity.Entity.Kind != 1 && entity.Entity.Kind != 2) return BadRequest("Kind 应该是 1或2");
             if (entity.Entity.Kind == 1)
-                customer.BillingInfo.IsCEBlack = true;
+                customer.BillingInfo_IsCEBlack = true;
             else if (entity.Entity.Kind == 2)
-                customer.BillingInfo.IsBlack = true;
+                customer.BillingInfo_IsBlack = true;
             _DbContext.SaveChanges();
             result.Id = model.CustomerBlacklist.Id;
             return result;
@@ -729,9 +660,9 @@ namespace PowerLmsWebApi.Controllers
             };
             result.Result = dbSet.Add(newItem).Entity;
             if (item.Kind == 3)
-                customer.BillingInfo.IsCEBlack = false;
+                customer.BillingInfo_IsCEBlack = false;
             else if (item.Kind == 4)
-                customer.BillingInfo.IsBlack = false;
+                customer.BillingInfo_IsBlack = false;
             _DbContext.SaveChanges();
             return result;
         }
@@ -744,7 +675,7 @@ namespace PowerLmsWebApi.Controllers
         /// 获取全部客户装货地址。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">查询的条件。支持 CustomerId，Id，Tel。不区分大小写。</param>
+        /// <param name="conditional">查询的条件。已支持通用查询——除个别涉及敏感信息字段外，所有实体字段都可作为条件。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
@@ -757,21 +688,7 @@ namespace PowerLmsWebApi.Controllers
 
             var dbSet = _DbContext.PlCustomerLoadingAddrs;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-            foreach (var item in conditional)
-                if (string.Equals(item.Key, "Id", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (Guid.TryParse(item.Value, out var id))
-                        coll = coll.Where(c => c.Id == id);
-                }
-                else if (string.Equals(item.Key, "CustomerId", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (Guid.TryParse(item.Value, out var id))
-                        coll = coll.Where(c => c.CustomerId == id);
-                }
-                else if (string.Equals(item.Key, "Number", StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.Tel.Contains(item.Value));
-                }
+            coll = EfHelper.GenerateWhereAnd(coll, conditional);
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
@@ -838,451 +755,5 @@ namespace PowerLmsWebApi.Controllers
         #endregion 客户上的装货地址操作
 
     }
-
-    #region 装货地址
-    /// <summary>
-    /// 标记删除装货地址功能的参数封装类。
-    /// </summary>
-    public class RemovePlLoadingAddrParamsDto : RemoveParamsDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 标记删除装货地址功能的返回值封装类。
-    /// </summary>
-    public class RemovePlLoadingAddrReturnDto : RemoveReturnDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 获取所有装货地址功能的返回值封装类。
-    /// </summary>
-    public class GetAllPlLoadingAddrReturnDto : PagingReturnDtoBase<PlLoadingAddr>
-    {
-    }
-
-    /// <summary>
-    /// 增加新装货地址功能参数封装类。
-    /// </summary>
-    public class AddPlLoadingAddrParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 新装货地址信息。其中Id可以是任何值，返回时会指定新值。
-        /// </summary>
-        public PlLoadingAddr PlLoadingAddr { get; set; }
-    }
-
-    /// <summary>
-    /// 增加新装货地址功能返回值封装类。
-    /// </summary>
-    public class AddPlLoadingAddrReturnDto : ReturnDtoBase
-    {
-        /// <summary>
-        /// 如果成功添加，这里返回新装货地址的Id。
-        /// </summary>
-        public Guid Id { get; set; }
-    }
-
-    /// <summary>
-    /// 修改装货地址信息功能参数封装类。
-    /// </summary>
-    public class ModifyPlLoadingAddrParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 装货地址数据。
-        /// </summary>
-        public PlLoadingAddr PlLoadingAddr { get; set; }
-    }
-
-    /// <summary>
-    /// 修改装货地址信息功能返回值封装类。
-    /// </summary>
-    public class ModifyPlLoadingAddrReturnDto : ReturnDtoBase
-    {
-    }
-    #endregion 装货地址
-
-    #region 黑名单
-    /// <summary>
-    /// 获取所有黑名单功能的返回值封装类。
-    /// </summary>
-    public class GetAllCustomerBlacklistReturnDto : PagingReturnDtoBase<CustomerBlacklist>
-    {
-    }
-
-    /// <summary>
-    /// 增加新黑名单功能参数封装类。
-    /// </summary>
-    public class AddCustomerBlacklistParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 新黑名单信息。其中Id可以是任何值，返回时会指定新值。
-        /// </summary>
-        public CustomerBlacklist CustomerBlacklist { get; set; }
-    }
-
-    /// <summary>
-    /// 增加新黑名单功能返回值封装类。
-    /// </summary>
-    public class AddCustomerBlacklistReturnDto : ReturnDtoBase
-    {
-        /// <summary>
-        /// 如果成功添加，这里返回新黑名单的Id。
-        /// </summary>
-        public Guid Id { get; set; }
-    }
-
-    /// <summary>
-    /// 删除黑名单功能参数封装类。
-    /// </summary>
-    public class RemoveCustomerBlacklistParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 指定的是客户Id(CustomerId)。
-        /// </summary>
-        public Guid CustomerId { get; set; }
-
-        /// <summary>
-        /// 删除的类型。3=移除超额，4=移除超期。
-        /// </summary>
-        [Range(3, 4)]
-        public byte Kind { get; set; }
-
-        /// <summary>
-        /// 删除实体的注释。
-        /// </summary>
-        public string Remark { get; set; }
-
-    }
-
-    /// <summary>
-    /// 删除新黑名单功能返回值封装类。
-    /// </summary>
-    public class RemoveCustomerBlacklistReturnDto
-    {
-        /// <summary>
-        /// 新增的"冲红"实体。
-        /// </summary>
-        public CustomerBlacklist Result { get; set; }
-    }
-
-    #endregion 黑名单
-
-    #region 提单
-    /// <summary>
-    /// 标记删除提单功能的参数封装类。
-    /// </summary>
-    public class RemovePlTidanParamsDto : RemoveParamsDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 标记删除提单功能的返回值封装类。
-    /// </summary>
-    public class RemovePlTidanReturnDto : RemoveReturnDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 获取所有提单功能的返回值封装类。
-    /// </summary>
-    public class GetAllPlTidanReturnDto : PagingReturnDtoBase<PlTidan>
-    {
-    }
-
-    /// <summary>
-    /// 增加新提单功能参数封装类。
-    /// </summary>
-    public class AddPlTidanParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 新提单信息。其中Id可以是任何值，返回时会指定新值。
-        /// </summary>
-        public PlTidan PlTidan { get; set; }
-    }
-
-    /// <summary>
-    /// 增加新提单功能返回值封装类。
-    /// </summary>
-    public class AddPlTidanReturnDto : ReturnDtoBase
-    {
-        /// <summary>
-        /// 如果成功添加，这里返回新提单的Id。
-        /// </summary>
-        public Guid Id { get; set; }
-    }
-
-    /// <summary>
-    /// 修改提单信息功能参数封装类。
-    /// </summary>
-    public class ModifyPlTidanParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 提单数据。
-        /// </summary>
-        public PlTidan PlTidan { get; set; }
-    }
-
-    /// <summary>
-    /// 修改提单信息功能返回值封装类。
-    /// </summary>
-    public class ModifyPlTidanReturnDto : ReturnDtoBase
-    {
-    }
-    #endregion 提单
-
-    #region 开票信息
-    /// <summary>
-    /// 标记删除开票信息功能的参数封装类。
-    /// </summary>
-    public class RemovePlTaxInfoParamsDto : RemoveParamsDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 标记删除开票信息功能的返回值封装类。
-    /// </summary>
-    public class RemovePlTaxInfoReturnDto : RemoveReturnDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 获取所有开票信息功能的返回值封装类。
-    /// </summary>
-    public class GetAllPlTaxInfoReturnDto : PagingReturnDtoBase<PlTaxInfo>
-    {
-    }
-
-    /// <summary>
-    /// 增加新开票信息功能参数封装类。
-    /// </summary>
-    public class AddPlTaxInfoParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 新开票信息信息。其中Id可以是任何值，返回时会指定新值。
-        /// </summary>
-        public PlTaxInfo PlTaxInfo { get; set; }
-    }
-
-    /// <summary>
-    /// 增加新开票信息功能返回值封装类。
-    /// </summary>
-    public class AddPlTaxInfoReturnDto : ReturnDtoBase
-    {
-        /// <summary>
-        /// 如果成功添加，这里返回新开票信息的Id。
-        /// </summary>
-        public Guid Id { get; set; }
-    }
-
-    /// <summary>
-    /// 修改开票信息信息功能参数封装类。
-    /// </summary>
-    public class ModifyPlTaxInfoParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 开票信息数据。
-        /// </summary>
-        public PlTaxInfo PlTaxInfo { get; set; }
-    }
-
-    /// <summary>
-    /// 修改开票信息信息功能返回值封装类。
-    /// </summary>
-    public class ModifyPlTaxInfoReturnDto : ReturnDtoBase
-    {
-    }
-    #endregion 开票信息
-
-    #region 业务负责人的所属关系的CRUD
-    /// <summary>
-    /// 获取业务负责人的所属关系返回值封装类。
-    /// </summary>
-    public class GetAllPlBusinessHeaderReturnDto : PagingReturnDtoBase<PlBusinessHeader>
-    {
-    }
-
-    /// <summary>
-    /// 删除业务负责人的所属关系的功能参数封装类。
-    /// </summary>
-    public class RemovePlBusinessHeaderParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 用户的Id。
-        /// </summary>
-        public Guid UserId { get; set; }
-
-        /// <summary>
-        /// 商户/组织机构的Id。
-        /// </summary>
-        public Guid CustomerId { get; set; }
-
-        /// <summary>
-        /// 负责的业务Id。连接业务种类字典。
-        /// </summary>
-        public Guid OrderTypeId { get; set; }
-
-    }
-
-    /// <summary>
-    /// 删除业务负责人的所属关系的功能返回值封装类。
-    /// </summary>
-    public class RemovePlBusinessHeaderReturnDto : RemoveReturnDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 增加业务负责人的所属关系的功能参数封装类，
-    /// </summary>
-    public class AddPlBusinessHeaderParamsDto : AddParamsDtoBase<PlBusinessHeader>
-    {
-    }
-
-    /// <summary>
-    /// 增加业务负责人的所属关系的功能返回值封装类。
-    /// </summary>
-    public class AddPlBusinessHeaderReturnDto : ReturnDtoBase
-    {
-    }
-
-    #endregion 业务负责人的所属关系的CRUD
-
-    #region 客户本体
-
-    /// <summary>
-    /// 查询的参数封装类。
-    /// </summary>
-    public class GetAllCustomer2ParamsDto : PagingParamsDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 查询的返回值封装类。
-    /// </summary>
-    public class GetAllCustomer2ReturnDto : PagingReturnDtoBase<PlCustomer>
-    {
-    }
-
-    /// <summary>
-    /// 标记删除客户功能的参数封装类。
-    /// </summary>
-    public class RemoveCustomerParamsDto : RemoveParamsDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 标记删除客户功能的返回值封装类。
-    /// </summary>
-    public class RemoveCustomerReturnDto : RemoveReturnDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 获取所有客户功能的返回值封装类。
-    /// </summary>
-    public class GetAllCustomerReturnDto : PagingReturnDtoBase<PlCustomer>
-    {
-    }
-
-    /// <summary>
-    /// 增加新客户功能参数封装类。
-    /// </summary>
-    public class AddCustomerParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 新客户信息。其中Id可以是任何值，返回时会指定新值。
-        /// </summary>
-        public PlCustomer Customer { get; set; }
-    }
-
-    /// <summary>
-    /// 增加新客户功能返回值封装类。
-    /// </summary>
-    public class AddCustomerReturnDto : ReturnDtoBase
-    {
-        /// <summary>
-        /// 如果成功添加，这里返回新客户的Id。
-        /// </summary>
-        public Guid Id { get; set; }
-    }
-
-    /// <summary>
-    /// 修改客户信息功能参数封装类。
-    /// </summary>
-    public class ModifyCustomerParamsDto : ModifyParamsDtoBase<PlCustomer>
-    {
-
-    }
-
-    /// <summary>
-    /// 修改客户信息功能返回值封装类。
-    /// </summary>
-    public class ModifyCustomerReturnDto : ReturnDtoBase
-    {
-    }
-    #endregion 客户本体
-
-    #region 联系人
-    /// <summary>
-    /// 标记删除联系人功能的参数封装类。
-    /// </summary>
-    public class RemoveCustomerContactParamsDto : RemoveParamsDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 标记删除联系人功能的返回值封装类。
-    /// </summary>
-    public class RemoveCustomerContactReturnDto : RemoveReturnDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 获取所有联系人功能的返回值封装类。
-    /// </summary>
-    public class GetAllCustomerContactReturnDto : PagingReturnDtoBase<PlCustomerContact>
-    {
-    }
-
-    /// <summary>
-    /// 增加新联系人功能参数封装类。
-    /// </summary>
-    public class AddCustomerContactParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 新联系人信息。其中Id可以是任何值，返回时会指定新值。
-        /// </summary>
-        public PlCustomerContact CustomerContact { get; set; }
-    }
-
-    /// <summary>
-    /// 增加新联系人功能返回值封装类。
-    /// </summary>
-    public class AddCustomerContactReturnDto : ReturnDtoBase
-    {
-        /// <summary>
-        /// 如果成功添加，这里返回新联系人的Id。
-        /// </summary>
-        public Guid Id { get; set; }
-    }
-
-    /// <summary>
-    /// 修改联系人信息功能参数封装类。
-    /// </summary>
-    public class ModifyCustomerContactParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 联系人数据。
-        /// </summary>
-        public PlCustomerContact CustomerContact { get; set; }
-    }
-
-    /// <summary>
-    /// 修改联系人信息功能返回值封装类。
-    /// </summary>
-    public class ModifyCustomerContactReturnDto : ReturnDtoBase
-    {
-    }
-    #endregion 联系人
 
 }
