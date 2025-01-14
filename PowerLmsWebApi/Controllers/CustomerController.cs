@@ -64,7 +64,8 @@ namespace PowerLmsWebApi.Controllers
             [FromQuery] Dictionary<string, string> conditional = null)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.Demand("C.1.2")) return StatusCode((int)HttpStatusCode.Forbidden);
+            string err;
+            if (!_AuthorizationManager.Demand(out err, "C.1.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new GetAllCustomerReturnDto();
             Guid[] allOrg = Array.Empty<Guid>();
             if (_MerchantManager.GetIdByUserId(context.User.Id, out var merId))
@@ -114,7 +115,8 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<AddCustomerReturnDto> AddCustomer(AddCustomerParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.Demand("C.1.1")) return StatusCode((int)HttpStatusCode.Forbidden);
+            string err;
+            if (!_AuthorizationManager.Demand(out err, "C.1.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
 
             var result = new AddCustomerReturnDto();
             model.Customer.GenerateNewId();
@@ -141,7 +143,8 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<ModifyCustomerReturnDto> ModifyCustomer(ModifyCustomerParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.Demand("C.1.3")) return StatusCode((int)HttpStatusCode.Forbidden);
+            string err;
+            if (!_AuthorizationManager.Demand(out err, "C.1.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ModifyCustomerReturnDto();
             if (!_EntityManager.Modify(model.Items)) return NotFound();
             foreach (var item in model.Items)
@@ -171,7 +174,8 @@ namespace PowerLmsWebApi.Controllers
             $"{nameof(PowerLmsUserDbContext.PlCustomerLoadingAddrs)}" };
 
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.Demand("C.1.4")) return StatusCode((int)HttpStatusCode.Forbidden);
+            string err;
+            if (!_AuthorizationManager.Demand(out err, "C.1.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new RemoveCustomerReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.PlCustomers.Where(c => c.OrgId == context.User.OrgId);
@@ -205,7 +209,8 @@ namespace PowerLmsWebApi.Controllers
             [FromQuery] Dictionary<string, string> conditional = null)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.Demand("C.1.2")) return StatusCode((int)HttpStatusCode.Forbidden);
+            string err;
+            if (!_AuthorizationManager.Demand(out err, "C.1.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new GetAllCustomer2ReturnDto();
             Guid[] allOrg = Array.Empty<Guid>();
             if (_MerchantManager.GetIdByUserId(context.User.Id, out var merId))
@@ -362,7 +367,8 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<AddPlBusinessHeaderReturnDto> AddPlBusinessHeader(AddPlBusinessHeaderParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.Demand("C.1.5")) return StatusCode((int)HttpStatusCode.Forbidden);
+            string err;
+            if (!_AuthorizationManager.Demand(out err, "C.1.5")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new AddPlBusinessHeaderReturnDto();
             _DbContext.PlCustomerBusinessHeaders.Add(model.Item);
             _DbContext.SaveChanges();
@@ -382,7 +388,8 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<RemovePlBusinessHeaderReturnDto> RemovePlBusinessHeader(RemovePlBusinessHeaderParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.Demand("C.1.5")) return StatusCode((int)HttpStatusCode.Forbidden);
+            string err;
+            if (!_AuthorizationManager.Demand(out err, "C.1.5")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new RemovePlBusinessHeaderReturnDto();
             DbSet<PlBusinessHeader> dbSet = _DbContext.PlCustomerBusinessHeaders;
             var item = dbSet.Find(model.CustomerId, model.UserId, model.OrderTypeId);

@@ -147,7 +147,8 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<ModifyOrgReturnDto> ModifyOrg(ModifyOrgParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized(OwHelper.GetLastErrorMessage());
-            if (!_AuthorizationManager.Demand("B.1")) return StatusCode((int)HttpStatusCode.Forbidden);
+            string err;
+            if (!_AuthorizationManager.Demand(out err, "B.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ModifyOrgReturnDto();
             var list = new List<PlOrganization>();
             List<(PlOrganization, IEnumerable<PlOrganization>)> restore = new List<(PlOrganization, IEnumerable<PlOrganization>)>();
@@ -188,9 +189,9 @@ namespace PowerLmsWebApi.Controllers
                     _MerchantManager.GetCacheItemById(item.Value)?.CancellationTokenSource.Cancel();
                 }
             }
-            catch (Exception err)
+            catch (Exception excp)
             {
-                return BadRequest(err.Message);
+                return BadRequest(excp.Message);
             }
             return result;
         }
@@ -452,7 +453,8 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<ModifyBankInfoReturnDto> ModifyBankInfo(ModifyBankInfoParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.Demand("B.1")) return StatusCode((int)HttpStatusCode.Forbidden);
+            string err;
+            if (!_AuthorizationManager.Demand(out err, "B.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ModifyBankInfoReturnDto();
             if (!_EntityManager.Modify(new[] { model.BankInfo })) return NotFound();
             _DbContext.SaveChanges();

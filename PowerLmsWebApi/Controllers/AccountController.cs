@@ -452,8 +452,8 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             if (!context.User.IsAdmin()) return StatusCode((int)HttpStatusCode.Forbidden, "只有超管或商管可以使用此功能");
-            if (_DbContext.Accounts.FirstOrDefault(c => c.LoginName == model.LoginName) is not Account tmpUser)
-                return BadRequest("指定登录名的账号不存在。");
+            if (_DbContext.Accounts.FirstOrDefault(c => c.Id == model.Id) is not Account tmpUser)
+                return BadRequest("指定账号不存在。");
             var userCi = _AccountManager.GetOrLoadCacheItemById(tmpUser.Id);
             if (context.User.IsSuperAdmin && !userCi.Data.IsMerchantAdmin) return BadRequest("超管不能重置普通用户的密码。");
             else if (!context.User.IsSuperAdmin && userCi.Data.IsAdmin()) return BadRequest("商管智能重置普通用户的密码。");

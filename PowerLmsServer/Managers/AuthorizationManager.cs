@@ -71,7 +71,10 @@ namespace PowerLmsServer.Managers
             var firstNo = pIds.FirstOrDefault(c => !ci.Data.ContainsKey(c));
             if (firstNo != null)
             {
-                err = firstNo;
+                if (_PermissionManager.GetOrLoadPermission().Data.TryGetValue(firstNo, out var perm))
+                    err = $"缺少权限：{perm.Name}({perm.DisplayName})";
+                else
+                    err = $"试图断言一个不存在的权限项：{firstNo}";
                 return false;
             }
             return true;

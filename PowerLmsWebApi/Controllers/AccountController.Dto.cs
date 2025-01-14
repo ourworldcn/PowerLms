@@ -254,9 +254,9 @@ namespace PowerLmsWebApi.Dto
     public class ResetPwdParamsDto : TokenDtoBase
     {
         /// <summary>
-        /// 要重置密码的账号的登录名。
+        /// 要重置密码的账号的唯一Id。
         /// </summary>
-        public string LoginName { get; set; }
+        public Guid Id { get; set; }
     }
 
     /// <summary>
