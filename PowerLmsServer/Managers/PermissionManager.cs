@@ -133,7 +133,9 @@ namespace PowerLmsServer.Managers
             var roles = _RoleManager.GetOrLoadCurrentRolesCacheItemByUser(user);    //用户所属的所有角色
 
             db ??= _DbContextFactory.CreateDbContext();
-            var ids = db.PlRolePermissions.Where(c => roles.Data.Keys.Contains(c.RoleId)).Select(c => c.PermissionId).Distinct().AsEnumerable().ToHashSet();
+            HashSet<string> ids = new HashSet<string>();
+            lock (db)
+                ids = db.PlRolePermissions.Where(c => roles.Data.Keys.Contains(c.RoleId)).Select(c => c.PermissionId).Distinct().AsEnumerable().ToHashSet();
 
             var allPerm = GetOrLoadPermission();
             var coll = allPerm.Data.Where(c => ids.Contains(c.Key));
