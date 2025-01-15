@@ -93,8 +93,29 @@ namespace System
         /// <summary>
         /// 游戏内使用的时间与Utc时间的偏移量。
         /// </summary>
-        public static TimeSpan Offset { get => _Offset; set => _Offset = value; }
+        public static TimeSpan Offset
+        {
+            get => _Offset;
+            set
+            {
+                if (_Offset != value)
+                {
+                    _Offset = value;
+                    OnChanged(new PropertyChangedEventArgs(nameof(Offset)));
+                    OnChanged(new PropertyChangedEventArgs(nameof(WorldNow)));
+                }
+            }
+        }
 
+        /// <summary>
+        /// 当属性发生变化后引发的事件。
+        /// </summary>
+        public static event PropertyChangedEventHandler Changed;
+
+        static void OnChanged(PropertyChangedEventArgs e)
+        {
+            Changed?.Invoke(null, e);
+        }
         /// <summary>
         /// 应用内使用的时间。
         /// </summary>
