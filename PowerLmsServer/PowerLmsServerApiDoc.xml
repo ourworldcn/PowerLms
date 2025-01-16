@@ -1029,5 +1029,35 @@
             sea import (海运进口)业务类型Id。
             </summary>
         </member>
+        <member name="F:PowerLmsServer.ProjectContent.JeId">
+            <summary>
+            land export(陆地出口)类型Id。
+            </summary>
+        </member>
+        <member name="F:PowerLmsServer.ProjectContent.JiId">
+            <summary>
+            land import(陆地进口)类型Id。
+            </summary>
+        </member>
+        <member name="F:PowerLmsServer.ProjectContent.ReId">
+            <summary>
+            railway export(铁路出口)类型Id。
+            </summary>
+        </member>
+        <member name="F:PowerLmsServer.ProjectContent.RiId">
+            <summary>
+            railway import(铁路进口)类型Id。
+            </summary>
+        </member>
+        <member name="F:PowerLmsServer.ProjectContent.OtId">
+            <summary>
+            international business(贸易业务)类型Id。
+            </summary>
+        </member>
+        <member name="F:PowerLmsServer.ProjectContent.WhId">
+            <summary>
+            warehousing and Storage(仓储业务)类型Id。
+            </summary>
+        </member>
     </members>
 </doc>

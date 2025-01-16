@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.EntityFrameworkCore;
 using NPOI.SS.Formula.Functions;
+using NPOI.SS.UserModel;
 using PowerLms.Data;
 using PowerLmsServer;
 using PowerLmsServer.EfData;
@@ -65,16 +66,56 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlJobReturnDto();
-
             var dbSet = _DbContext.PlJobs.Where(c => c.OrgId == context.User.OrgId);
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
+
             coll = EfHelper.GenerateWhereAnd(coll, conditional);
 
-            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
+            #region 权限判定
+            string err;
+            var d0Func = GetFunc("D0.1.1.1", ProjectContent.AeId);
+            var d1Func = GetFunc("D1.1.1.1", ProjectContent.AiId);
+            var d2Func = GetFunc("D2.1.1.1", ProjectContent.SeId);
+            var d3Func = GetFunc("D3.1.1.1", ProjectContent.SiId);
+            var d4Func = GetFunc("D4.1.1.1", ProjectContent.JeId);
+            var d5Func = GetFunc("D5.1.1.1", ProjectContent.JiId);
+            var d6Func = GetFunc("D6.1.1.1", ProjectContent.ReId);
+            var d7Func = GetFunc("D7.1.1.1", ProjectContent.RiId);
+            var d8Func = GetFunc("D8.1.1.1", ProjectContent.OtId);
+            var d9Func = GetFunc("D9.1.1.1", ProjectContent.WhId);
+            var r = coll.AsEnumerable() //设计备注：如果结果集小则没问题；如果结果集大虽然这导致巨大内存消耗，但在此问题规模下，用内存替换cpu消耗是合理的置换代价
+                .Where(c => d0Func(c) || d1Func(c) || d2Func(c) || d3Func(c) || d4Func(c)
+                || d5Func(c) || d6Func(c) || d7Func(c) || d8Func(c) || d9Func(c));
+            #endregion 权限判定
+
+            var prb = _EntityManager.GetAll(r.AsQueryable(), model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
-        }
 
+            //获取判断函数的本地函数。
+            Func<PlJob, bool> GetFunc(string prefix, Guid typeId)
+            {
+                Func<PlJob, bool> result;
+                if (_AuthorizationManager.Demand(out err, $"{prefix}.3"))    //公司级别权限
+                {
+                    result = c => c.JobTypeId == typeId;
+                }
+                else if (_AuthorizationManager.Demand(out err, $"{prefix}.2"))   //同组级别权限
+                {
+                    var orgs = _OrganizationManager.GetOrLoadCurrentOrgsCacheItemByUser(context.User);
+                    var orgIds = orgs.Data.Select(c => c.Key).ToArray();    //所有机构Id集合
+                    var userIds = _DbContext.AccountPlOrganizations.Where(c => orgIds.Contains(c.OrgId)).Select(c => c.UserId).Distinct().ToHashSet();   //所有相关人Id集合
+                    result = c => c.JobTypeId == typeId && c.OperatorId != null && userIds.Contains(c.OperatorId.Value);
+                }
+                else if (_AuthorizationManager.Demand(out err, $"{prefix}.1"))   //本人级别权限
+                {
+                    result = c => c.JobTypeId == typeId && c.OperatorId == context.User.Id;
+                }
+                else //此类无权限
+                    result = c => false;
+                return result;
+            }
+        }
         /// <summary>
         /// 增加新业务总表。
         /// </summary>

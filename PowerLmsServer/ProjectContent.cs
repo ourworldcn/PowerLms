@@ -31,5 +31,34 @@ namespace PowerLmsServer
         /// </summary>
         public static readonly Guid SiId = Guid.Parse("D061F777-5B2B-4D22-A982-E883B0AE89A8");
 
+        /// <summary>
+        /// land export(陆地出口)类型Id。
+        /// </summary>
+        public static readonly Guid JeId = Guid.Parse("F0E8FCE0-2BC6-4EA5-8AF7-F025EFD0AF62");
+
+        /// <summary>
+        /// land import(陆地进口)类型Id。
+        /// </summary>
+        public static readonly Guid JiId = Guid.Parse("90BA6C07-476D-4A64-9C75-09655EAE177A");
+
+        /// <summary>
+        /// railway export(铁路出口)类型Id。
+        /// </summary>
+        public static readonly Guid ReId = Guid.Parse("56875097-8334-4F66-B386-C526F199B77B");
+
+        /// <summary>
+        /// railway import(铁路进口)类型Id。
+        /// </summary>
+        public static readonly Guid RiId = Guid.Parse("614A7BE3-AC2C-4223-A8AC-17C27B02A650");
+
+        /// <summary>
+        /// international business(贸易业务)类型Id。
+        /// </summary>
+        public static readonly Guid OtId = Guid.Parse("C69DCF32-1869-4FFF-8D0C-CC5855B880D2");
+
+        /// <summary>
+        /// warehousing and Storage(仓储业务)类型Id。
+        /// </summary>
+        public static readonly Guid WhId = Guid.Parse("D60B9F6B-70C8-4EAC-9776-08AF7DB4DFCD");
     }
 }
