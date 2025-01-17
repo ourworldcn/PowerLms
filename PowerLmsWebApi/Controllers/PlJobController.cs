@@ -73,48 +73,52 @@ namespace PowerLmsWebApi.Controllers
 
             #region 权限判定
             string err;
-            var d0Func = GetFunc("D0.1.1.1", ProjectContent.AeId);
-            var d1Func = GetFunc("D1.1.1.1", ProjectContent.AiId);
-            var d2Func = GetFunc("D2.1.1.1", ProjectContent.SeId);
-            var d3Func = GetFunc("D3.1.1.1", ProjectContent.SiId);
-            var d4Func = GetFunc("D4.1.1.1", ProjectContent.JeId);
-            var d5Func = GetFunc("D5.1.1.1", ProjectContent.JiId);
-            var d6Func = GetFunc("D6.1.1.1", ProjectContent.ReId);
-            var d7Func = GetFunc("D7.1.1.1", ProjectContent.RiId);
-            var d8Func = GetFunc("D8.1.1.1", ProjectContent.OtId);
-            var d9Func = GetFunc("D9.1.1.1", ProjectContent.WhId);
-            var r = coll.AsEnumerable() //设计备注：如果结果集小则没问题；如果结果集大虽然这导致巨大内存消耗，但在此问题规模下，用内存替换cpu消耗是合理的置换代价
-                .Where(c => d0Func(c) || d1Func(c) || d2Func(c) || d3Func(c) || d4Func(c)
-                || d5Func(c) || d6Func(c) || d7Func(c) || d8Func(c) || d9Func(c));
+            var r = coll.AsEnumerable();    //设计备注：如果结果集小则没问题；如果结果集大虽然这导致巨大内存消耗，但在此问题规模下，用内存替换cpu消耗是合理的置换代价
+            if (!_AuthorizationManager.Demand(out err, "F.2"))  //若无通用查看权限
+            {
+                var orgs = _OrganizationManager.GetOrLoadCurrentOrgsCacheItemByUser(context.User);
+                var orgIds = orgs.Data.Select(c => c.Key).ToArray();    //所有机构Id集合
+                var userIds = _DbContext.AccountPlOrganizations.Where(c => orgIds.Contains(c.OrgId)).Select(c => c.UserId).Distinct().ToHashSet();   //所有相关人Id集合
+                var d0Func = GetFunc("D0.1.1.1", ProjectContent.AeId);
+                var d1Func = GetFunc("D1.1.1.1", ProjectContent.AiId);
+                var d2Func = GetFunc("D2.1.1.1", ProjectContent.SeId);
+                var d3Func = GetFunc("D3.1.1.1", ProjectContent.SiId);
+                var d4Func = GetFunc("D4.1.1.1", ProjectContent.JeId);
+                var d5Func = GetFunc("D5.1.1.1", ProjectContent.JiId);
+                var d6Func = GetFunc("D6.1.1.1", ProjectContent.ReId);
+                var d7Func = GetFunc("D7.1.1.1", ProjectContent.RiId);
+                var d8Func = GetFunc("D8.1.1.1", ProjectContent.OtId);
+                var d9Func = GetFunc("D9.1.1.1", ProjectContent.WhId);
+                r = r.Where(c => d0Func(c) || d1Func(c) || d2Func(c) || d3Func(c) || d4Func(c)
+                   || d5Func(c) || d6Func(c) || d7Func(c) || d8Func(c) || d9Func(c));
+                #region 获取判断函数的本地函数。
+                Func<PlJob, bool> GetFunc(string prefix, Guid typeId)
+                {
+                    Func<PlJob, bool> result;
+                    if (_AuthorizationManager.Demand(out err, $"{prefix}.3"))    //公司级别权限
+                    {
+                        result = c => c.JobTypeId == typeId;
+                    }
+                    else if (_AuthorizationManager.Demand(out err, $"{prefix}.2"))   //同组级别权限
+                    {
+                        result = c => c.JobTypeId == typeId && c.OperatorId != null && userIds.Contains(c.OperatorId.Value);
+                    }
+                    else if (_AuthorizationManager.Demand(out err, $"{prefix}.1"))   //本人级别权限
+                    {
+                        result = c => c.JobTypeId == typeId && c.OperatorId == context.User.Id;
+                    }
+                    else //此类无权限
+                        result = c => false;
+                    return result;
+                }
+                #endregion 获取判断函数的本地函数。
+            }
             #endregion 权限判定
 
             var prb = _EntityManager.GetAll(r.AsQueryable(), model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
 
-            //获取判断函数的本地函数。
-            Func<PlJob, bool> GetFunc(string prefix, Guid typeId)
-            {
-                Func<PlJob, bool> result;
-                if (_AuthorizationManager.Demand(out err, $"{prefix}.3"))    //公司级别权限
-                {
-                    result = c => c.JobTypeId == typeId;
-                }
-                else if (_AuthorizationManager.Demand(out err, $"{prefix}.2"))   //同组级别权限
-                {
-                    var orgs = _OrganizationManager.GetOrLoadCurrentOrgsCacheItemByUser(context.User);
-                    var orgIds = orgs.Data.Select(c => c.Key).ToArray();    //所有机构Id集合
-                    var userIds = _DbContext.AccountPlOrganizations.Where(c => orgIds.Contains(c.OrgId)).Select(c => c.UserId).Distinct().ToHashSet();   //所有相关人Id集合
-                    result = c => c.JobTypeId == typeId && c.OperatorId != null && userIds.Contains(c.OperatorId.Value);
-                }
-                else if (_AuthorizationManager.Demand(out err, $"{prefix}.1"))   //本人级别权限
-                {
-                    result = c => c.JobTypeId == typeId && c.OperatorId == context.User.Id;
-                }
-                else //此类无权限
-                    result = c => false;
-                return result;
-            }
         }
         /// <summary>
         /// 增加新业务总表。
@@ -766,14 +770,6 @@ namespace PowerLmsWebApi.Controllers
             //if (!_AuthorizationManager.HasPermission(context.User, "D0.6.2")) return StatusCode((int)HttpStatusCode.Forbidden);
             var result = new GetAllDocFeeReturnDto();
 
-            #region 验证权限
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "F.2.4.2"))
-            {
-
-            }
-            #endregion 验证权限
-
             var dbSet = _DbContext.DocFees;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             foreach (var item in conditional)
@@ -799,9 +795,56 @@ namespace PowerLmsWebApi.Controllers
                     else if (Guid.TryParse(item.Value, out var b))
                         coll = coll.Where(c => c.BillId == b);
                 }
-            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
+            #region 验证权限
+            string err;
+            var r = coll.AsEnumerable();
+            if (!_AuthorizationManager.Demand(out err, "F.2.4.2"))  //若无通用查看权限
+            {
+                var orgs = _OrganizationManager.GetOrLoadCurrentOrgsCacheItemByUser(context.User);
+                var orgIds = orgs.Data.Select(c => c.Key).ToArray();    //所有机构Id集合
+                var userIds = _DbContext.AccountPlOrganizations.Where(c => orgIds.Contains(c.OrgId)).Select(c => c.UserId).Distinct().ToHashSet();   //所有相关人Id集合
+                var jobIds = r.Select(c => c.JobId).Distinct().ToHashSet();
+                var jobDic = _DbContext.PlJobs.Where(c => jobIds.Contains(c.Id)).AsEnumerable().ToDictionary(c => c.Id);
+                var d0Func = GetFunc("D0.6.2", ProjectContent.AeId);
+                var d1Func = GetFunc("D1.6.2", ProjectContent.AiId);
+                var d2Func = GetFunc("D2.6.2", ProjectContent.SeId);
+                var d3Func = GetFunc("D3.6.2", ProjectContent.SiId);
+                var d4Func = GetFunc("D4.6.2", ProjectContent.JeId);
+                var d5Func = GetFunc("D5.6.2", ProjectContent.JiId);
+                var d6Func = GetFunc("D6.6.2", ProjectContent.ReId);
+                var d7Func = GetFunc("D7.6.2", ProjectContent.RiId);
+                var d8Func = GetFunc("D8.6.2", ProjectContent.OtId);
+                var d9Func = GetFunc("D9.6.2", ProjectContent.WhId);
+                r = r.Where(c => d0Func(c) || d1Func(c) || d2Func(c) || d3Func(c) || d4Func(c)
+                   || d5Func(c) || d6Func(c) || d7Func(c) || d8Func(c) || d9Func(c));
+                #region 获取判断函数的本地函数
+                Func<DocFee, bool> GetFunc(string prefix, Guid typeId)
+                {
+                    Func<DocFee, bool> result;
+                    if (_AuthorizationManager.Demand(out err, $"{prefix}.3"))    //公司级别权限
+                    {
+                        result = c => jobDic[c.JobId.Value].JobTypeId == typeId;
+                    }
+                    else if (_AuthorizationManager.Demand(out err, $"{prefix}.2"))   //同组级别权限
+                    {
+                        result = c => jobDic[c.JobId.Value].JobTypeId == typeId && jobDic[c.JobId.Value].OperatorId != null
+                            && userIds.Contains(jobDic[c.JobId.Value].OperatorId.Value);
+                    }
+                    else if (_AuthorizationManager.Demand(out err, $"{prefix}.1"))   //本人级别权限
+                    {
+                        result = c => jobDic[c.JobId.Value].JobTypeId == typeId && jobDic[c.JobId.Value].OperatorId == context.User.Id;
+                    }
+                    else //此类无权限
+                        result = c => false;
+                    return result;
+                }
+                #endregion 获取判断函数的本地函数
+            }
+            #endregion 验证权限
+            var prb = _EntityManager.GetAll(r.AsQueryable(), model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
+
         }
 
         /// <summary>
@@ -842,7 +885,53 @@ namespace PowerLmsWebApi.Controllers
             collBase = collBase.Skip(model.StartIndex);
             if (model.Count > -1)
                 collBase = collBase.Take(model.Count);
-            result.Result.AddRange(collBase);
+            #region 验证权限
+            string err;
+            var r = collBase.AsEnumerable();
+            if (!_AuthorizationManager.Demand(out err, "F.2.4.2"))  //若无通用查看权限
+            {
+                var orgs = _OrganizationManager.GetOrLoadCurrentOrgsCacheItemByUser(context.User);
+                var orgIds = orgs.Data.Select(c => c.Key).ToArray();    //所有机构Id集合
+                var userIds = _DbContext.AccountPlOrganizations.Where(c => orgIds.Contains(c.OrgId)).Select(c => c.UserId).Distinct().ToHashSet();   //所有相关人Id集合
+                //var jobIds = r.Select(c => c.JobId).Distinct().ToHashSet();
+                var jobDic = _DbContext.PlJobs.Where(c => jobIds.Contains(c.Id)).AsEnumerable().ToDictionary(c => c.Id);
+                var d0Func = GetFunc("D0.6.2", ProjectContent.AeId);
+                var d1Func = GetFunc("D1.6.2", ProjectContent.AiId);
+                var d2Func = GetFunc("D2.6.2", ProjectContent.SeId);
+                var d3Func = GetFunc("D3.6.2", ProjectContent.SiId);
+                var d4Func = GetFunc("D4.6.2", ProjectContent.JeId);
+                var d5Func = GetFunc("D5.6.2", ProjectContent.JiId);
+                var d6Func = GetFunc("D6.6.2", ProjectContent.ReId);
+                var d7Func = GetFunc("D7.6.2", ProjectContent.RiId);
+                var d8Func = GetFunc("D8.6.2", ProjectContent.OtId);
+                var d9Func = GetFunc("D9.6.2", ProjectContent.WhId);
+                r = r.Where(c => d0Func(c) || d1Func(c) || d2Func(c) || d3Func(c) || d4Func(c)
+                   || d5Func(c) || d6Func(c) || d7Func(c) || d8Func(c) || d9Func(c));
+                #region 获取判断函数的本地函数
+                Func<DocFee, bool> GetFunc(string prefix, Guid typeId)
+                {
+                    Func<DocFee, bool> result;
+                    if (_AuthorizationManager.Demand(out err, $"{prefix}.3"))    //公司级别权限
+                    {
+                        result = c => jobDic[c.JobId.Value].JobTypeId == typeId;
+                    }
+                    else if (_AuthorizationManager.Demand(out err, $"{prefix}.2"))   //同组级别权限
+                    {
+                        result = c => jobDic[c.JobId.Value].JobTypeId == typeId && jobDic[c.JobId.Value].OperatorId != null
+                            && userIds.Contains(jobDic[c.JobId.Value].OperatorId.Value);
+                    }
+                    else if (_AuthorizationManager.Demand(out err, $"{prefix}.1"))   //本人级别权限
+                    {
+                        result = c => jobDic[c.JobId.Value].JobTypeId == typeId && jobDic[c.JobId.Value].OperatorId == context.User.Id;
+                    }
+                    else //此类无权限
+                        result = c => false;
+                    return result;
+                }
+                #endregion 获取判断函数的本地函数
+            }
+            #endregion 验证权限
+            result.Result.AddRange(r);
             return result;
         }
 
