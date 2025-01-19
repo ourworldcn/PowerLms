@@ -49,7 +49,7 @@ namespace OW.Data
         static JsonDynamicPropertyBase()
         {
             //增加转换器，主要为压缩数据量，会降低一些可读性
-            //_SerializerOptions.Converters.Add(new OwGuidJsonConverter());
+            _SerializerOptions.Converters.Add(new OwGuidJsonConverter());
         }
 
         /// <summary>
