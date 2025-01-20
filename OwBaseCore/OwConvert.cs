@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Compression;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -218,6 +219,41 @@ namespace System
             }
             else result = default;
             return success;
+        }
+
+        /// <summary>
+        /// 使用指定类型的静态函数 TryParse 转换为指定类型。
+        /// </summary>
+        /// <param name="val"></param>
+        /// <param name="type"></param>
+        /// <param name="result"></param>
+        /// <returns></returns>
+        public static bool TryChangeType(string val, Type type, out object result)
+        {
+            var aryParams = new object[] { val, default };
+            bool r;
+            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))    //若是可空类型
+            {
+                var tType = type.GetGenericArguments()[0];
+                r = (bool)tType.InvokeMember("TryParse", BindingFlags.InvokeMethod | BindingFlags.Static | BindingFlags.Public | BindingFlags.FlattenHierarchy,
+                   null, null, aryParams);
+                if (r)
+                {
+                    var ctor = type.GetConstructor(new Type[] { tType });
+                    var ss = ctor.Invoke(new object[] { aryParams[1] });
+                    result = ss;
+                }
+                else
+                    result = default;
+            }
+            else
+            {
+                r = (bool)type.InvokeMember("TryParse", BindingFlags.InvokeMethod | BindingFlags.Static | BindingFlags.Public | BindingFlags.FlattenHierarchy,
+                   null, null, aryParams);
+                result = r ? aryParams[1] : default;
+                result = r ? aryParams[1] : default;
+            }
+            return r;
         }
         #endregion 试图转换类型
 
