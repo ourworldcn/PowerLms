@@ -11,6 +11,7 @@ using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
 using System.Net;
+using System.Reflection;
 using System.Security.Policy;
 using System.Threading.Tasks.Dataflow;
 using static PowerLmsWebApi.Controllers.GetDocBillsByJobIdReturnDto;
@@ -120,6 +121,7 @@ namespace PowerLmsWebApi.Controllers
             return result;
 
         }
+
         /// <summary>
         /// 增加新业务总表。
         /// </summary>
@@ -490,6 +492,49 @@ namespace PowerLmsWebApi.Controllers
                     return BadRequest(OwHelper.GetLastErrorMessage());
             }
             _DbContext.SaveChanges();
+            return result;
+        }
+
+        /// <summary>
+        /// 复制工作号功能。附带复制实体有：业务单据，费用。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="404">未找到指定的业务对象或业务单据。</response>  
+        [HttpPost]
+        public ActionResult<CopyJobReturnDto> CopyJob(CopyJobParamsDto model)
+        {
+            var result = new CopyJobReturnDto();
+            //处理任务对象本体
+            var srcJob = _DbContext.PlJobs.Find(model.SourceJobId);
+            if (srcJob is null) return NotFound($"没找到指定任务对象，Id={model.SourceJobId}");
+            var destJob = _Mapper.Map<PlJob>(srcJob);
+            destJob.GenerateNewId();    //强制Id不可重
+            var jobType = destJob.GetType();
+            var ttJob = new PlJob(); //模板对象用于复位属性
+            foreach (var pName in model.IgnorePropertyNames.Where(c => !c.Contains('.')))
+            {
+                if (jobType.GetProperty(pName) is PropertyInfo pi && pi.CanWrite && pi.CanRead)
+                    pi.SetValue(destJob, pi.GetValue(ttJob));
+            }
+            //处理业务单对象
+            var tmpDoc = _JobManager.GetBusinessDoc(srcJob.Id, _DbContext);
+            if (tmpDoc is null) return NotFound($"没找到业务单据，DocId={srcJob.Id}");
+            switch (tmpDoc)
+            {
+                case PlEaDoc srcDoc:
+                    break;
+                case PlIaDoc srcDoc:
+                    break;
+                case PlEsDoc srcDoc:
+                    break;
+                case PlIsDoc srcDoc:
+                    break;
+                default:
+                    return BadRequest($"不认识的业务单类型，Type={tmpDoc.GetType()}");
+            }
+            //处理附属费用对象
+            var fees = _DbContext.DocFees.Where(c => c.JobId == srcJob.Id);
             return result;
         }
 
@@ -1432,4 +1477,5 @@ namespace PowerLmsWebApi.Controllers
         #endregion  空运进口单相关
 
     }
+
 }

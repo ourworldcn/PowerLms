@@ -524,7 +524,7 @@
         </member>
         <member name="T:PowerLmsServer.Managers.JobManager">
             <summary>
-            编号生成管理器。
+            工作任务管理器。
             </summary>
         </member>
         <member name="F:PowerLmsServer.Managers.JobManager._JobNumberDecodingTable">
@@ -565,6 +565,14 @@
             <param name="job"></param>
             <param name="context"></param>
             <returns></returns>
+        </member>
+        <member name="M:PowerLmsServer.Managers.JobManager.GetBusinessDoc(System.Guid,Microsoft.EntityFrameworkCore.DbContext)">
+            <summary>
+            用指定的任务Id获取其下属业务对象。
+            </summary>
+            <param name="jobId"></param>
+            <param name="context"></param>
+            <returns>没有找到则返回null。</returns>
         </member>
         <member name="T:PowerLmsServer.Managers.MerchantManager">
             <summary>

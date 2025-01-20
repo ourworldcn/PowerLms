@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.ObjectPool;
+using Microsoft.IdentityModel.Protocols;
 using NPOI.SS.Formula.Functions;
 using Org.BouncyCastle.Asn1.IsisMtt.X509;
 using PowerLms.Data;
@@ -15,7 +16,7 @@ using System.Threading.Tasks;
 namespace PowerLmsServer.Managers
 {
     /// <summary>
-    /// 编号生成管理器。
+    /// 工作任务管理器。
     /// </summary>
     [OwAutoInjection(ServiceLifetime.Singleton)]
     public class JobManager
@@ -34,6 +35,8 @@ namespace PowerLmsServer.Managers
             //{ "<h>","h"},
             { "<hh>","hh"},
         };
+
+        #region 编号相关
 
         /// <summary>
         /// 生成编号。
@@ -194,6 +197,7 @@ namespace PowerLmsServer.Managers
             });
             return str;
         }
+        #endregion 编号相关
 
         #region 任务相关
 
@@ -249,6 +253,22 @@ namespace PowerLmsServer.Managers
             return true;
         }
 
+        /// <summary>
+        /// 用指定的任务Id获取其下属业务对象。
+        /// </summary>
+        /// <param name="jobId"></param>
+        /// <param name="context"></param>
+        /// <returns>没有找到则返回null。</returns>
+        public IPlBusinessDoc GetBusinessDoc(Guid jobId, DbContext context)
+        {
+            if (context.Set<PlEaDoc>().FirstOrDefault(c => c.JobId == jobId) is PlEaDoc ea) return ea;
+            if (context.Set<PlIaDoc>().FirstOrDefault(c => c.JobId == jobId) is PlIaDoc ia) return ia;
+            if (context.Set<PlEsDoc>().FirstOrDefault(c => c.JobId == jobId) is PlEsDoc es) return es;
+            if (context.Set<PlIsDoc>().FirstOrDefault(c => c.JobId == jobId) is PlIsDoc isDoc) return isDoc;
+            //if (context.Set<PlIaDoc>().FirstOrDefault(c => c.JobId == jobId) is PlIaDoc ia) return ia;
+            //if (context.Set<PlIaDoc>().FirstOrDefault(c => c.JobId == jobId) is PlIaDoc ia) return ia;
+            return null;
+        }
         #endregion 任务相关
     }
 }

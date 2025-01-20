@@ -1,0 +1,81 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Class Name="PowerLms.Data.PlJob" Collapsed="true" BaseTypeListCollapsed="true">
+    <Position X="4" Y="2.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>RAhAAKAAEgBABAAEhQEAEDBAUKBECAJEAIAgAFBAwUI=</HashCode>
+      <FileName>业务\PlJob.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" Collapsed="true" />
+  </Class>
+  <Class Name="PowerLms.Data.DocBill" BaseTypeListCollapsed="true">
+    <Position X="11.25" Y="1" Width="3.25" />
+    <TypeIdentifier>
+      <HashCode>BAIQAoAAEkIAAAACgEEAAADIQCAACAAUACAAIQQAgQo=</HashCode>
+      <FileName>业务\DocBill.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" Collapsed="true" />
+  </Class>
+  <Class Name="PowerLms.Data.DocFee">
+    <Position X="6.75" Y="2" Width="3.25" />
+    <TypeIdentifier>
+      <HashCode>YAAQAAAAAkCAAAIUgAAAgACASEAAAAAACAAEAAAAAQA=</HashCode>
+      <FileName>业务\DocFee.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="PowerLms.Data.PlEaDoc" Collapsed="true" BaseTypeListCollapsed="true">
+    <Position X="2.25" Y="1.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>CIASAAAEBQMAMAAAgAAAAAAAQABAAAAACAAAAQAAIEA=</HashCode>
+      <FileName>业务\PlEaDoc.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" Collapsed="true" />
+  </Class>
+  <Class Name="PowerLms.Data.HuochangChuchong" Collapsed="true">
+    <Position X="0.5" Y="1.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>BAAAAAAAEAAAAAAAAAAAAAAABCAACAAAAAAAAAAAAAA=</HashCode>
+      <FileName>业务\PlEaDoc.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="PowerLms.Data.PlEsDoc" BaseTypeListCollapsed="true">
+    <Position X="4" Y="1.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>ACQQIAKMiBEoCAAohICRAIQAYACAzBGgASAAICCCBJA=</HashCode>
+      <FileName>业务\PlEsDoc.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" Collapsed="true" />
+  </Class>
+  <Class Name="PowerLms.Data.PlIaDoc" Collapsed="true" BaseTypeListCollapsed="true">
+    <Position X="0.5" Y="2.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAwIAAEAIAAICAAkAAAABAEUCAAQAAIAIAAAABAAQA=</HashCode>
+      <FileName>业务\PlIaDoc.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" Collapsed="true" />
+  </Class>
+  <Class Name="PowerLms.Data.PlIsDoc" Collapsed="true" BaseTypeListCollapsed="true">
+    <Position X="2.25" Y="2.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>ABDQKAAECAICAAAExgAAAAAAcBAAACEAgAAAAAAABIA=</HashCode>
+      <FileName>业务\PlIsDoc.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" Collapsed="true" />
+  </Class>
+  <Class Name="PowerLms.Data.ContainerKindCount" Collapsed="true" BaseTypeListCollapsed="true">
+    <Position X="0.5" Y="0.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAABAAAAAAAAAAAQAAAAAAAAAAgAAAAAAAAA=</HashCode>
+      <FileName>业务\PlIsDoc.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" Collapsed="true" />
+  </Class>
+  <Interface Name="PowerLms.Data.IPlBusinessDoc" Collapsed="true">
+    <Position X="0.5" Y="4" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAQAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>业务\PlJob.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Font Name="Microsoft YaHei UI" Size="9" />
+</ClassDiagram>

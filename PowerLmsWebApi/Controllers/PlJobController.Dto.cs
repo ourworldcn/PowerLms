@@ -129,6 +129,39 @@ namespace PowerLmsWebApi.Controllers
     {
     }
 
+    /// <summary>
+    /// 复制工作号功能的参数封装类。
+    /// </summary>
+    public class CopyJobParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 要复制的源任务Id。
+        /// </summary>
+        public Guid SourceJobId { get; set; }
+
+        /// <summary>
+        /// 指定忽略的属性名。
+        /// 除 Job对象本体属性外，其它实体的属性要在其属性名前加 实体名 并以.分割，如:PlEsDoc.CargoRouteId。
+        /// </summary>
+        public List<string> IgnorePropertyNames { get; set; } = new List<string>();
+
+        /// <summary>
+        /// 强制指定的新值，键是属性名，值字符串化的属性值。
+        /// 除 Job对象本体属性外，其它实体的属性要在其属性名前加 实体名 并以.分割，如:PlEsDoc.CargoRouteId。
+        /// </summary>
+        public Dictionary<string, string> NewValues { get; set; } = new Dictionary<string, string>();
+    }
+
+    /// <summary>
+    /// 复制工作号功能的返回值封装类。
+    /// </summary>
+    public class CopyJobReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 复制的新任务Id。
+        /// </summary>
+        public Guid Result { get; set; }
+    }
     #endregion 业务总表
 
     /// <summary>

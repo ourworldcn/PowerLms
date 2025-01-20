@@ -19,6 +19,7 @@ using System.Data;
 using System.Linq.Expressions;
 using System.Reflection;
 using Microsoft.Extensions.Primitives;
+using Microsoft.EntityFrameworkCore.Query;
 
 namespace PowerLmsServer.Managers
 {
@@ -222,16 +223,16 @@ namespace PowerLmsServer.Managers
         [Conditional("DEBUG")]
         private void Test(IServiceProvider svc)
         {
-            var cache = svc.GetRequiredService<IMemoryCache>();
-
-            var cts = new CancellationTokenSource();
-            var cct = new CancellationChangeToken(cts.Token);
-            Span<char> span = stackalloc char[8];
-            for (int i = 0; i < 8; i++)
-            {
-                span[i] = (char)OwHelper.Random.Next('0', 'z' + 1);
-            }
-            string str=new string(span);
+            var _Mapper = svc.GetRequiredService<IMapper>();
+            var srcJob = new PlJob() { JobState = 2 };
+            var destJob = _Mapper.Map<PlJob>(srcJob, c =>
+             {
+                 c.Items["Id"] = Guid.NewGuid();
+             });
+            var jobType = destJob.GetType();
+            var i = OwConvert.TryChangeType("{0474a5F4-16E3-45F0-A436-47C9F6783B14}", typeof(Guid?), out var result);
+            if (jobType.GetProperty("CustomId") is PropertyInfo pi)
+                pi.SetValue(destJob, result);
         }
 
         private void CreateDb()
