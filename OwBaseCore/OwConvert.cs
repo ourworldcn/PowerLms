@@ -224,12 +224,18 @@ namespace System
         /// <summary>
         /// 使用指定类型的静态函数 TryParse 转换为指定类型。
         /// </summary>
-        /// <param name="val"></param>
+        /// <param name="val">可以是字符串等基元类型，
+        /// 也可以是任何有类似静态公开方法<see cref="DateTime.TryParse(string?, out DateTime)"/>的类型。</param>
         /// <param name="type"></param>
-        /// <param name="result"></param>
+        /// <param name="result">封装(可能装箱)为Object类型的返回值。</param>
         /// <returns></returns>
         public static bool TryChangeType(string val, Type type, out object result)
         {
+            if (type == typeof(string))
+            {
+                result = val;
+                return true;
+            }
             var aryParams = new object[] { val, default };
             bool r;
             if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))    //若是可空类型
@@ -237,21 +243,31 @@ namespace System
                 var tType = type.GetGenericArguments()[0];
                 r = (bool)tType.InvokeMember("TryParse", BindingFlags.InvokeMethod | BindingFlags.Static | BindingFlags.Public | BindingFlags.FlattenHierarchy,
                    null, null, aryParams);
-                if (r)
+                if (r)  //若成功的转换了类型
                 {
                     var ctor = type.GetConstructor(new Type[] { tType });
                     var ss = ctor.Invoke(new object[] { aryParams[1] });
                     result = ss;
                 }
                 else
+                {
+                    OwHelper.SetLastErrorAndMessage(400, $"无法将字符串 {val} 转换为 {type} 类型。");
                     result = default;
+                }
             }
             else
             {
                 r = (bool)type.InvokeMember("TryParse", BindingFlags.InvokeMethod | BindingFlags.Static | BindingFlags.Public | BindingFlags.FlattenHierarchy,
                    null, null, aryParams);
-                result = r ? aryParams[1] : default;
-                result = r ? aryParams[1] : default;
+                if (r)
+                {
+                    result = aryParams[1];
+                }
+                else
+                {
+                    OwHelper.SetLastErrorAndMessage(400, $"无法将字符串 {val} 转换为 {type} 类型。");
+                    result = default;
+                }
             }
             return r;
         }
