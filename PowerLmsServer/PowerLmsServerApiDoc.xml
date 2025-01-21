@@ -403,6 +403,18 @@
             <param name="older"></param>
             <param name="newer"></param>
         </member>
+        <member name="M:PowerLmsServer.Managers.EntityManager.Copy``1(``0,``0,System.Collections.Generic.IDictionary{System.String,System.String},System.Collections.Generic.IEnumerable{System.String})">
+            <summary>
+            复制对象，并能指定忽略属性和强行设置的新值。
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="src"></param>
+            <param name="dest"></param>
+            <param name="newVals">要设置的新值，不设置新值可以为null或空字典。</param>
+            <param name="ignorePropertyNames">要忽略的属性名集合，不忽略可以为null或空集合。</param>
+            
+            <returns></returns>
+        </member>
         <member name="T:PowerLmsServer.Managers.PagingParamsBase">
             <summary>
             分页/排序要求的基类。

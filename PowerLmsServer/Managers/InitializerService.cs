@@ -224,15 +224,6 @@ namespace PowerLmsServer.Managers
         private void Test(IServiceProvider svc)
         {
             var _Mapper = svc.GetRequiredService<IMapper>();
-            var srcJob = new PlJob() { JobState = 2 };
-            var destJob = _Mapper.Map<PlJob>(srcJob, c =>
-             {
-                 c.Items["Id"] = Guid.NewGuid();
-             });
-            var jobType = destJob.GetType();
-            var i = OwConvert.TryChangeType("{0474a5F4-16E3-45F0-A436-47C9F6783B14}", typeof(Guid?), out var result);
-            if (jobType.GetProperty("CustomId") is PropertyInfo pi)
-                pi.SetValue(destJob, result);
         }
 
         private void CreateDb()

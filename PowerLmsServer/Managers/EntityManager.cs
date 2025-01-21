@@ -9,7 +9,9 @@ using PowerLms.Data;
 using PowerLmsServer.EfData;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel.DataAnnotations;
+using System.Data;
 using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
@@ -189,6 +191,34 @@ namespace PowerLmsServer.Managers
                 //entry.State = EntityState.Modified;
             }
         }
+
+        /// <summary>
+        /// 复制对象，并能指定忽略属性和强行设置的新值。
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="src"></param>
+        /// <param name="dest"></param>
+        /// <param name="newVals">要设置的新值，不设置新值可以为null或空字典。</param>
+        /// <param name="ignorePropertyNames">要忽略的属性名集合，不忽略可以为null或空集合。</param>
+        /// 
+        /// <returns></returns>
+        public bool Copy<T>(T src, T dest, IDictionary<string, string> newVals, IEnumerable<string> ignorePropertyNames)
+        {
+            _Mapper.Map(src, dest, c =>
+            {
+                ignorePropertyNames?.Select(subc => $"-{subc}").ForEach(subc => c.Items.Add(subc, true));
+            });
+            var jobType = typeof(T);
+            if (newVals is not null)
+                foreach (var item in newVals)  //设置新值
+                {
+                    if (jobType.GetProperty(item.Key) is PropertyInfo pi && pi.CanWrite && OwConvert.TryChangeType(item.Value, pi.PropertyType, out var nVal))
+                        pi.SetValue(dest, nVal);
+                }
+            return true;
+        }
+
+
     }
 
     /// <summary>

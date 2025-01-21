@@ -29,13 +29,55 @@ namespace PowerLmsServer.AutoMappper
             CreateMap<PlCustomer, PlCustomer>().IncludeAllDerived();
             CreateMap<PlTaxInfo, PlTaxInfo>().IncludeAllDerived();
 
-            CreateMap<PlJob, PlJob>().IncludeAllDerived();
-            CreateMap<DocFee, DocFee>().IncludeAllDerived();
+            CreateMap<PlJob, PlJob>().IncludeAllDerived()
+                .ForAllMembers(opt =>
+                {
+                    opt.PreCondition((ResolutionContext c) =>
+                    {
+                        return !c.Items.GetBooleanOrDefaut($"-{opt.DestinationMember.Name}");
+                    });
+                });
+            CreateMap<DocFee, DocFee>().IncludeAllDerived()
+                .ForAllMembers(opt =>
+                 {
+                     opt.PreCondition((ResolutionContext c) =>
+                     {
+                         return !c.Items.GetBooleanOrDefaut($"-{opt.DestinationMember.Name}");
+                     });
+                 });
 
-            CreateMap<PlEaDoc, PlEaDoc>().IncludeAllDerived();
-            CreateMap<PlIaDoc, PlIaDoc>().IncludeAllDerived();
-            CreateMap<PlEsDoc, PlEsDoc>().IncludeAllDerived();
-            CreateMap<PlIsDoc, PlIsDoc>().IncludeAllDerived();
+            CreateMap<PlEaDoc, PlEaDoc>().IncludeAllDerived()
+                .ForAllMembers(opt =>
+                {
+                    opt.PreCondition((ResolutionContext c) =>
+                    {
+                        return !c.Items.GetBooleanOrDefaut($"-{opt.DestinationMember.Name}");
+                    });
+                });
+            CreateMap<PlIaDoc, PlIaDoc>().IncludeAllDerived()
+                .ForAllMembers(opt =>
+                {
+                    opt.PreCondition((ResolutionContext c) =>
+                    {
+                        return !c.Items.GetBooleanOrDefaut($"-{opt.DestinationMember.Name}", true);
+                    });
+                });
+            CreateMap<PlEsDoc, PlEsDoc>().IncludeAllDerived()
+                .ForAllMembers(opt =>
+                {
+                    opt.PreCondition((ResolutionContext c) =>
+                    {
+                        return !c.Items.GetBooleanOrDefaut($"-{opt.DestinationMember.Name}");
+                    });
+                });
+            CreateMap<PlIsDoc, PlIsDoc>().IncludeAllDerived()
+                .ForAllMembers(opt =>
+                {
+                    opt.PreCondition((ResolutionContext c) =>
+                    {
+                        return !c.Items.GetBooleanOrDefaut($"-{opt.DestinationMember.Name}");
+                    });
+                });
 
             #region 权限相关
             CreateMap<PlPermission, PlPermission>().IncludeAllDerived();

@@ -496,10 +496,11 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// 复制工作号功能。附带复制实体有：业务单据，费用。
+        /// 复制工作任务功能。附带复制实体有：业务单据，费用。
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
+        /// <response code="400">其他错误，调试性的错误，参见返回字符串说明。</response>  
         /// <response code="404">未找到指定的业务对象或业务单据。</response>  
         [HttpPost]
         public ActionResult<CopyJobReturnDto> CopyJob(CopyJobParamsDto model)
@@ -508,33 +509,109 @@ namespace PowerLmsWebApi.Controllers
             //处理任务对象本体
             var srcJob = _DbContext.PlJobs.Find(model.SourceJobId);
             if (srcJob is null) return NotFound($"没找到指定任务对象，Id={model.SourceJobId}");
-            var destJob = _Mapper.Map<PlJob>(srcJob);
-            destJob.GenerateNewId();    //强制Id不可重
-            var jobType = destJob.GetType();
-            var ttJob = new PlJob(); //模板对象用于复位属性
-            foreach (var pName in model.IgnorePropertyNames.Where(c => !c.Contains('.')))
+            var destJob = new PlJob();
+            if (!_EntityManager.Copy(srcJob, destJob, new Dictionary<string, string>(model.NewValues.Where(c => !c.Key.Contains('.'))),
+                model.IgnorePropertyNames.Where(c => !c.Contains('.'))))
             {
-                if (jobType.GetProperty(pName) is PropertyInfo pi && pi.CanWrite && pi.CanRead)
-                    pi.SetValue(destJob, pi.GetValue(ttJob));
+                return BadRequest($"无法复制新任务对象，Id={model.SourceJobId},错误：{OwHelper.GetLastErrorMessage()}");
             }
+            destJob.GenerateNewId();    //强制Id不可重
             //处理业务单对象
             var tmpDoc = _JobManager.GetBusinessDoc(srcJob.Id, _DbContext);
             if (tmpDoc is null) return NotFound($"没找到业务单据，DocId={srcJob.Id}");
             switch (tmpDoc)
             {
                 case PlEaDoc srcDoc:
+                    {
+                        var destDoc = new PlEaDoc();
+                        var typeName = destDoc.GetType().Name;  //类型名
+                        var nVals = new Dictionary<string, string>(
+                            model.NewValues.Where(c => c.Key.StartsWith($"{typeName}.")).Select(c => new KeyValuePair<string, string>(c.Key[(typeName.Length + 1)..],
+                            c.Value)));
+                        var ignorePNames = model.IgnorePropertyNames.Where(c => c.IndexOf($"{typeName}.") == 0)
+                            .Select(c => c[(typeName.Length + 1)..]);
+                        if (!_EntityManager.Copy(srcDoc, destDoc, nVals, ignorePNames))
+                        {
+                            return BadRequest($"无法复制新任务对象，Id={model.SourceJobId},错误：{OwHelper.GetLastErrorMessage()}");
+                        }
+                        destDoc.GenerateNewId();
+                        destDoc.JobId = destJob.Id;
+                        _DbContext.Add(destDoc);
+                    }
                     break;
                 case PlIaDoc srcDoc:
+                    {
+                        var destDoc = new PlIaDoc();
+                        var typeName = destDoc.GetType().Name;  //类型名
+                        var nVals = new Dictionary<string, string>(
+                            model.NewValues.Where(c => c.Key.StartsWith($"{typeName}.")).Select(c => new KeyValuePair<string, string>(c.Key[(typeName.Length + 1)..],
+                            c.Value)));
+                        var ignorePNames = model.IgnorePropertyNames.Where(c => c.IndexOf($"{typeName}.") == 0)
+                            .Select(c => c[(typeName.Length + 1)..]);
+                        if (!_EntityManager.Copy(srcDoc, destDoc, nVals, ignorePNames))
+                        {
+                            return BadRequest($"无法复制新任务对象，Id={model.SourceJobId},错误：{OwHelper.GetLastErrorMessage()}");
+                        }
+                        destDoc.GenerateNewId();
+                        destDoc.JobId = destJob.Id;
+                        _DbContext.Add(destDoc);
+                    }
                     break;
                 case PlEsDoc srcDoc:
+                    {
+                        var destDoc = new PlEsDoc();
+                        var typeName = destDoc.GetType().Name;  //类型名
+                        var nVals = new Dictionary<string, string>(
+                            model.NewValues.Where(c => c.Key.StartsWith($"{typeName}.")).Select(c => new KeyValuePair<string, string>(c.Key[(typeName.Length + 1)..],
+                            c.Value)));
+                        var ignorePNames = model.IgnorePropertyNames.Where(c => c.IndexOf($"{typeName}.") == 0)
+                            .Select(c => c[(typeName.Length + 1)..]);
+                        if (!_EntityManager.Copy(srcDoc, destDoc, nVals, ignorePNames))
+                        {
+                            return BadRequest($"无法复制新任务对象，Id={model.SourceJobId},错误：{OwHelper.GetLastErrorMessage()}");
+                        }
+                        destDoc.GenerateNewId();
+                        destDoc.JobId = destJob.Id;
+                        _DbContext.Add(destDoc);
+                    }
                     break;
                 case PlIsDoc srcDoc:
+                    {
+                        var destDoc = new PlIsDoc();
+                        var typeName = destDoc.GetType().Name;  //类型名
+                        var nVals = new Dictionary<string, string>(
+                            model.NewValues.Where(c => c.Key.StartsWith($"{typeName}.")).Select(c => new KeyValuePair<string, string>(c.Key[(typeName.Length + 1)..],
+                            c.Value)));
+                        var ignorePNames = model.IgnorePropertyNames.Where(c => c.IndexOf($"{typeName}.") == 0)
+                            .Select(c => c[(typeName.Length + 1)..]);
+                        if (!_EntityManager.Copy(srcDoc, destDoc, nVals, ignorePNames))
+                        {
+                            return BadRequest($"无法复制新任务对象，Id={model.SourceJobId},错误：{OwHelper.GetLastErrorMessage()}");
+                        }
+                        destDoc.GenerateNewId();
+                        destDoc.JobId = destJob.Id;
+                        _DbContext.Add(destDoc);
+                    }
                     break;
                 default:
                     return BadRequest($"不认识的业务单类型，Type={tmpDoc.GetType()}");
             }
             //处理附属费用对象
             var fees = _DbContext.DocFees.Where(c => c.JobId == srcJob.Id);
+            var ignFeeName = nameof(DocFee);
+            var ignFees = model.IgnorePropertyNames.Where(c => c.StartsWith($"{ignFeeName}."))
+                .Select(c => c[(ignFeeName.Length + 1)..]).ToArray();
+            foreach (var item in fees)
+            {
+                var fee = new DocFee();
+                _EntityManager.Copy(item, fee, null, ignFees);
+                fee.GenerateNewId();
+                fee.JobId = destJob.Id;
+                _DbContext.Add(fee);
+            }
+            //后处理
+            _DbContext.Add(destJob);
+            _DbContext.SaveChanges();
             return result;
         }
 
