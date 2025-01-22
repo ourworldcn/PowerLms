@@ -34,7 +34,7 @@ namespace PowerLmsServer.AutoMappper
                 {
                     opt.PreCondition((ResolutionContext c) =>
                     {
-                        return !c.Items.GetBooleanOrDefaut($"-{opt.DestinationMember.Name}");
+                        return !c.TryGetItems(out var items) || !items.GetBooleanOrDefaut($"-{opt.DestinationMember.Name}");
                     });
                 });
             CreateMap<DocFee, DocFee>().IncludeAllDerived()
@@ -42,7 +42,7 @@ namespace PowerLmsServer.AutoMappper
                  {
                      opt.PreCondition((ResolutionContext c) =>
                      {
-                         return !c.Items.GetBooleanOrDefaut($"-{opt.DestinationMember.Name}");
+                         return !c.TryGetItems(out var items) || !items.GetBooleanOrDefaut($"-{opt.DestinationMember.Name}");
                      });
                  });
 
@@ -51,7 +51,7 @@ namespace PowerLmsServer.AutoMappper
                 {
                     opt.PreCondition((ResolutionContext c) =>
                     {
-                        return !c.Items.GetBooleanOrDefaut($"-{opt.DestinationMember.Name}");
+                        return !c.TryGetItems(out var items) || !items.GetBooleanOrDefaut($"-{opt.DestinationMember.Name}");
                     });
                 });
             CreateMap<PlIaDoc, PlIaDoc>().IncludeAllDerived()
@@ -59,7 +59,7 @@ namespace PowerLmsServer.AutoMappper
                 {
                     opt.PreCondition((ResolutionContext c) =>
                     {
-                        return !c.Items.GetBooleanOrDefaut($"-{opt.DestinationMember.Name}", true);
+                        return !c.TryGetItems(out var items) || !items.GetBooleanOrDefaut($"-{opt.DestinationMember.Name}");
                     });
                 });
             CreateMap<PlEsDoc, PlEsDoc>().IncludeAllDerived()
@@ -67,7 +67,7 @@ namespace PowerLmsServer.AutoMappper
                 {
                     opt.PreCondition((ResolutionContext c) =>
                     {
-                        return !c.Items.GetBooleanOrDefaut($"-{opt.DestinationMember.Name}");
+                        return !c.TryGetItems(out var items) || !items.GetBooleanOrDefaut($"-{opt.DestinationMember.Name}");
                     });
                 });
             CreateMap<PlIsDoc, PlIsDoc>().IncludeAllDerived()
@@ -75,7 +75,7 @@ namespace PowerLmsServer.AutoMappper
                 {
                     opt.PreCondition((ResolutionContext c) =>
                     {
-                        return !c.Items.GetBooleanOrDefaut($"-{opt.DestinationMember.Name}");
+                        return !c.TryGetItems(out var items) || !items.GetBooleanOrDefaut($"-{opt.DestinationMember.Name}");
                     });
                 });
 
