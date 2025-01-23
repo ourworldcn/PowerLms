@@ -450,7 +450,7 @@ namespace PowerLmsServer.EfData
     /// <summary>
     /// 数据库上下文的扩展方法。
     /// </summary>
-    public static class OwDbContextExtensions
+    public static class PowerLmsUserDbContextExtensions
     {
     }
 }

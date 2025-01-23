@@ -1,3 +1,4 @@
+using EntityFrameworkCore.Triggered;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
@@ -127,7 +128,10 @@ internal class Program
         //services.AddDbContext<PowerLmsUserDbContext>(options => options.UseLazyLoadingProxies().UseSqlServer(userDbConnectionString).EnableSensitiveDataLogging());
         services.AddDbContextFactory<PowerLmsUserDbContext>(options =>
         {
-            options.UseLazyLoadingProxies().UseSqlServer(userDbConnectionString).EnableSensitiveDataLogging();
+            options.UseLazyLoadingProxies().UseSqlServer(userDbConnectionString).EnableSensitiveDataLogging().UseTriggers(triggerOptions =>
+            {
+
+            });
         });
         #endregion ≈‰÷√ ˝æ›ø‚
 
