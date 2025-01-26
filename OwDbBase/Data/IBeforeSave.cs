@@ -1,5 +1,6 @@
 ﻿
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace OW.Data
 {
@@ -22,4 +23,8 @@ namespace OW.Data
         bool SuppressSave => false;
     }
 
+    public interface IDbContextSaving
+    {
+        void Saving(EntityEntry entity);
+    }
 }
