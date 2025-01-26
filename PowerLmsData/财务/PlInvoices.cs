@@ -1,6 +1,10 @@
 ﻿using EntityFrameworkCore.Triggered;
+using EntityFrameworkCore.Triggered.Lifecycles;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using OW.Data;
+using OW.DDD;
 using PowerLmsServer.EfData;
 using System;
 using System.Collections.Generic;
@@ -50,9 +54,9 @@ namespace PowerLms.Data
         public string Currency { get; set; }
 
         /// <summary>
-        /// 金额。
+        /// 金额。下属结算单明细的合计。
         /// </summary>
-        [Comment("金额。")]
+        [Comment("金额。下属结算单明细的合计。")]
         [Precision(18, 4)]
         public decimal Amount { get; set; }
 
@@ -163,22 +167,23 @@ namespace PowerLms.Data
         {
 
         }
+
         /// <summary>
         /// 结算单id
         /// </summary>
         public Guid? ParentId { get; set; }
 
         /// <summary>
-        /// 本次核销（结算）金额。
+        /// 本次核销（结算）金额（按申请单的币种）。
         /// </summary>
         [Comment("本次核销（结算）金额。")]
         [Precision(18, 4)]
         public decimal Amount { get; set; }
 
         /// <summary>
-        /// 结算汇率
+        /// 结算汇率，用户手工填写。
         /// </summary>
-        [Comment("结算汇率")]
+        [Comment("结算汇率，用户手工填写。")]
         [Precision(18, 4)]
         public decimal ExchangeRate { get; set; }
 
@@ -189,6 +194,10 @@ namespace PowerLms.Data
         public Guid? RequisitionItemId { get; set; }
 
     }
+
+    /// <summary>
+    /// 
+    /// </summary>
     public class PlInvoicesBeforeSaveTrigger : IBeforeSaveTrigger<PlInvoices>
     {
         public PlInvoicesBeforeSaveTrigger(PowerLmsUserDbContext dbContext)
@@ -200,6 +209,8 @@ namespace PowerLms.Data
 
         public Task BeforeSave(ITriggerContext<PlInvoices> context, CancellationToken cancellationToken)
         {
+            dynamic tmp = context.Entity;
+            var loader = tmp.LazyLoader as ILazyLoader;
             switch (context.ChangeType)
             {
                 case ChangeType.Added:

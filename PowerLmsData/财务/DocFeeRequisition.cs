@@ -127,10 +127,10 @@ namespace PowerLms.Data
         public string Currency { get; set; }
 
         /// <summary>
-        /// 金额,所有子项的金额的求和。
+        /// 金额,所有子项的金额的求和（需要换算币种）。
         /// </summary>
-        [Comment("金额,所有子项的金额的求和。")]
-        [Precision(18, 4)]
+        [Comment("金额,所有子项的金额的求和（需要换算币种）。")]
+        [Precision(18, 2)]
         public decimal Amount { get; set; }
 
         /// <summary>
@@ -159,10 +159,10 @@ namespace PowerLms.Data
         public Guid? FeeId { get; set; }
 
         /// <summary>
-        /// 本次申请金额。
+        /// 本次申请金额。与对应费用的币种一致。
         /// </summary>
         [Comment("本次申请金额")]
-        [Precision(18, 4)]
+        [Precision(18, 2)]
         public decimal Amount { get; set; }
 
         ///// <summary>

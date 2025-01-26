@@ -124,6 +124,26 @@ namespace PowerLmsServer.Managers
                 rolePermission = new RolePermission { RoleId = role.Id, PermissionId = "D0.1.1.10" };
                 db.Add(rolePermission);
             }
+            //费用结算单
+            var inv = new PlInvoices
+            {
+                Id = Guid.Parse("{AAE637AE-88B9-45F6-8925-4A9EF1B75F88}")
+            };
+            var tmp = db.PlInvoicess.Find(inv.Id);
+            tmp.Currency = "CNY";
+            var ss = db.PlInvoicess.Where(c => c.Id == inv.Id).FirstOrDefault();
+            db.AddOrUpdate(inv);
+            db.AddOrUpdate(new PlInvoicesItem
+            {
+                Id = Guid.Parse("{916FD192-EE2A-4557-BFA1-C66A91C74118}"),
+                ParentId = inv.Id,
+            });
+            db.AddOrUpdate(new PlInvoicesItem
+            {
+                Id = Guid.Parse("{AD6339C7-015E-482F-A8A1-29BB9E595750}"),
+                ParentId = inv.Id,
+            });
+            //
             db.SaveChanges();
         }
 

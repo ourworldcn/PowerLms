@@ -52,10 +52,10 @@ namespace PowerLms.Data
         public Guid? InscribeId { get; set; }
 
         /// <summary>
-        /// 金额。
+        /// 金额。冗余字段，所属费用的合计。
         /// </summary>
-        [Comment("金额")]
-        [Precision(18, 4)]
+        [Comment("金额。冗余字段，所属费用的合计。")]
+        [Precision(18, 2)]
         public decimal Amount { get; set; }
 
         /// <summary>

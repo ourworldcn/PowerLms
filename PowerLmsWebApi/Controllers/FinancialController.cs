@@ -365,10 +365,6 @@ namespace PowerLmsWebApi.Controllers
             //计算合计
             var parent = _DbContext.DocFeeRequisitions.Find(model.DocFeeRequisitionItem.ParentId);
             if (parent is null) return BadRequest("没有找到 指定的 ParentId 实体");
-            var collSum = _DbContext.DocFeeRequisitionItems.Where(c => c.ParentId == model.DocFeeRequisitionItem.ParentId && c.Id != model.DocFeeRequisitionItem.Id);
-            var amount = collSum.Sum(c => c.Amount) + model.DocFeeRequisitionItem.Amount;
-            parent.Amount = amount;
-
             _DbContext.SaveChanges();
 
             result.Id = model.DocFeeRequisitionItem.Id;
@@ -394,9 +390,6 @@ namespace PowerLmsWebApi.Controllers
             //计算合计
             var parent = _DbContext.DocFeeRequisitions.Find(model.DocFeeRequisitionItem.ParentId);
             if (parent is null) return BadRequest("没有找到 指定的 ParentId 实体");
-            var collSum = _DbContext.DocFeeRequisitionItems.Where(c => c.ParentId == model.DocFeeRequisitionItem.ParentId && c.Id != model.DocFeeRequisitionItem.Id);
-            var amount = collSum.Sum(c => c.Amount) + model.DocFeeRequisitionItem.Amount;
-            parent.Amount = amount;
             _DbContext.SaveChanges();
             return result;
         }
@@ -422,9 +415,6 @@ namespace PowerLmsWebApi.Controllers
             //计算合计
             var parent = _DbContext.DocFeeRequisitions.Find(item.ParentId);
             if (parent is null) return BadRequest("没有找到 指定的 ParentId 实体");
-            var collSum = _DbContext.DocFeeRequisitionItems.Where(c => c.ParentId == item.ParentId && c.Id != item.Id);
-            var amount = collSum.Sum(c => c.Amount);
-            parent.Amount = amount;
             _DbContext.SaveChanges();
             return result;
         }
