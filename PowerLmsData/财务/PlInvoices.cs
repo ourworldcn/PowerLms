@@ -1,8 +1,7 @@
-﻿using EntityFrameworkCore.Triggered;
-using EntityFrameworkCore.Triggered.Lifecycles;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.Extensions.DependencyInjection;
 using OW.Data;
 using OW.DDD;
 using PowerLmsServer.EfData;
@@ -198,77 +197,24 @@ namespace PowerLms.Data
     /// <summary>
     /// 
     /// </summary>
-    public class PlInvoicesBeforeSaveTrigger : IBeforeSaveTrigger<PlInvoices>
+    [OwAutoInjection(ServiceLifetime.Singleton,ServiceType = typeof(IDbContextSaving<PlInvoices>))]
+    public class PlInvoicesOwEfTriggers : IDbContextSaving<PlInvoices>
     {
-        public PlInvoicesBeforeSaveTrigger(PowerLmsUserDbContext dbContext)
+        public void Saving(IEnumerable<EntityEntry> entity, Dictionary<object, object> states)
         {
-            _DbContext = dbContext;
-        }
-
-        readonly PowerLmsUserDbContext _DbContext;
-
-        public Task BeforeSave(ITriggerContext<PlInvoices> context, CancellationToken cancellationToken)
-        {
-            dynamic tmp = context.Entity;
-            var loader = tmp.LazyLoader as ILazyLoader;
-            switch (context.ChangeType)
-            {
-                case ChangeType.Added:
-                    var coll = _DbContext.PlInvoicesItems.Where(c => c.ParentId == context.Entity.Id).AsEnumerable();
-                    context.Entity.Amount = coll.Sum(c => Math.Round(c.Amount * c.ExchangeRate, 4, MidpointRounding.AwayFromZero));
-                    break;
-                case ChangeType.Modified:
-                    break;
-                case ChangeType.Deleted:
-                    break;
-                default:
-                    break;
-            }
-            return Task.CompletedTask;
+            
         }
     }
 
     /// <summary>
-    /// 回写申请单金额字段。
+    /// 
     /// </summary>
-    public class PlInvoicesItemBeforeSaveTrigger : IBeforeSaveTrigger<PlInvoicesItem>
+    [OwAutoInjection(ServiceLifetime.Singleton,ServiceType = typeof(IAfterDbContextSaving<PlInvoices>))]
+    public class PlInvoicesAfterOwEfTriggers : IAfterDbContextSaving<PlInvoices>
     {
-        public PlInvoicesItemBeforeSaveTrigger(PowerLmsUserDbContext dbContext)
+        public void Saving(Dictionary<object, object> states)
         {
-            _DbContext = dbContext;
-        }
-
-        readonly PowerLmsUserDbContext _DbContext;
-
-        public Task BeforeSave(ITriggerContext<PlInvoicesItem> context, CancellationToken cancellationToken)
-        {
-            switch (context.ChangeType)
-            {
-                case ChangeType.Added:
-                    {
-                        if (context.Entity.ParentId.HasValue && _DbContext.PlInvoicess.Find(context.Entity.ParentId.Value) is PlInvoices np)
-                            np.Amount += Math.Round(context.Entity.Amount * context.Entity.ExchangeRate, 4, MidpointRounding.AwayFromZero);
-                    }
-                    break;
-                case ChangeType.Modified:
-                    {
-                        if (context.UnmodifiedEntity.ParentId.HasValue && _DbContext.PlInvoicess.Find(context.UnmodifiedEntity.ParentId.Value) is PlInvoices op)
-                            op.Amount -= Math.Round(context.UnmodifiedEntity.Amount * context.UnmodifiedEntity.ExchangeRate, 4, MidpointRounding.AwayFromZero);
-                        if (context.Entity.ParentId.HasValue && _DbContext.PlInvoicess.Find(context.Entity.ParentId.Value) is PlInvoices np)
-                            np.Amount += Math.Round(context.Entity.Amount * context.Entity.ExchangeRate, 4, MidpointRounding.AwayFromZero);
-                    }
-                    break;
-                case ChangeType.Deleted:
-                    {
-                        if (context.Entity.ParentId.HasValue && _DbContext.PlInvoicess.Find(context.Entity.ParentId.Value) is PlInvoices np)
-                            np.Amount -= +Math.Round(context.Entity.Amount * context.Entity.ExchangeRate, 4, MidpointRounding.AwayFromZero);
-                    }
-                    break;
-                default:
-                    break;
-            }
-            return Task.CompletedTask;
+            
         }
     }
-
 }

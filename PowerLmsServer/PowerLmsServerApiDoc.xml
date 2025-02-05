@@ -493,13 +493,14 @@
             初始化服务。
             </summary>
         </member>
-        <member name="M:PowerLmsServer.Managers.InitializerService.#ctor(Microsoft.Extensions.Logging.ILogger{PowerLmsServer.Managers.InitializerService},Microsoft.Extensions.DependencyInjection.IServiceScopeFactory,PowerLmsServer.Managers.NpoiManager)">
+        <member name="M:PowerLmsServer.Managers.InitializerService.#ctor(Microsoft.Extensions.Logging.ILogger{PowerLmsServer.Managers.InitializerService},Microsoft.Extensions.DependencyInjection.IServiceScopeFactory,PowerLmsServer.Managers.NpoiManager,System.IServiceProvider)">
             <summary>
             构造函数。
             </summary>
             <param name="logger"></param>
             <param name="serviceScopeFactory"></param>
             <param name="npoiManager"></param>
+            <param name="serviceProvider"></param>
         </member>
         <member name="M:PowerLmsServer.Managers.InitializerService.ExecuteAsync(System.Threading.CancellationToken)">
             <summary>
@@ -851,6 +852,36 @@
             <summary>
             存储文件的根路径。
             没有根符号\(入 Files)，则使用基于运行时代码基础路径.有跟符号但没有盘符(如:\Files)则使用同一个驱动器作为盘符。可以指定全路径，如C:\Files
+            </summary>
+        </member>
+        <member name="T:PowerLmsServer.Managers.OwSqlAppLogger">
+            <summary>
+            应用日志服务类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.Managers.OwSqlAppLogger.LoggerStores">
+            <summary>
+            所有源。
+            </summary>
+        </member>
+        <member name="M:PowerLmsServer.Managers.OwSqlAppLogger.#ctor(Microsoft.EntityFrameworkCore.IDbContextFactory{PowerLmsServer.EfData.PowerLmsUserDbContext})">
+            <summary>
+            构造函数。
+            </summary>
+        </member>
+        <member name="M:PowerLmsServer.Managers.OwSqlAppLogger.Define(System.Guid,System.String)">
+            <summary>
+            定义事件源。
+            </summary>
+        </member>
+        <member name="M:PowerLmsServer.Managers.OwSqlAppLogger.Dispose">
+            <summary>
+            释放资源。
+            </summary>
+        </member>
+        <member name="T:PowerLmsServer.Managers.OwSqlAppLoggerFlat">
+            <summary>
+            
             </summary>
         </member>
         <member name="T:PowerLmsServer.Managers.OwWfManager">

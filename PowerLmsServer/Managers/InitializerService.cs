@@ -20,6 +20,9 @@ using System.Linq.Expressions;
 using System.Reflection;
 using Microsoft.Extensions.Primitives;
 using Microsoft.EntityFrameworkCore.Query;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
+using System.Text.Json;
 
 namespace PowerLmsServer.Managers
 {
@@ -34,16 +37,19 @@ namespace PowerLmsServer.Managers
         /// <param name="logger"></param>
         /// <param name="serviceScopeFactory"></param>
         /// <param name="npoiManager"></param>
-        public InitializerService(ILogger<InitializerService> logger, IServiceScopeFactory serviceScopeFactory, NpoiManager npoiManager) : base()
+        /// <param name="serviceProvider"></param>
+        public InitializerService(ILogger<InitializerService> logger, IServiceScopeFactory serviceScopeFactory, NpoiManager npoiManager, IServiceProvider serviceProvider) : base()
         {
             _Logger = logger;
             _ServiceScopeFactory = serviceScopeFactory;
             _NpoiManager = npoiManager;
+            _ServiceProvider = serviceProvider;
         }
 
         readonly ILogger<InitializerService> _Logger;
         readonly IServiceScopeFactory _ServiceScopeFactory;
         readonly NpoiManager _NpoiManager;
+        IServiceProvider _ServiceProvider;
 
         /// <summary>
         /// <inheritdoc/>
@@ -244,6 +250,9 @@ namespace PowerLmsServer.Managers
         private void Test(IServiceProvider svc)
         {
             var _Mapper = svc.GetRequiredService<IMapper>();
+            var str = JsonSerializer.Serialize(new Dictionary<string, string> { { "11", "22" } });
+            var dic = JsonSerializer.Deserialize<Dictionary<string, string>>(str);
+
         }
 
         private void CreateDb()

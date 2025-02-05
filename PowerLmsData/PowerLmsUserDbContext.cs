@@ -46,18 +46,12 @@ namespace PowerLmsServer.EfData
         /// <summary>
         /// 
         /// </summary>
-        public PowerLmsUserDbContext()
-        {
-            Initialize();
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
         /// <param name="options"></param>
-        public PowerLmsUserDbContext(DbContextOptions options) : base(options)
+        /// <param name="serviceProvider"></param>
+        public PowerLmsUserDbContext(DbContextOptions options, IServiceProvider serviceProvider) : base(options)
         {
             //Database.SetInitializer<Context>(new MigrateDatabaseToLatestVersion<Context, ReportingDbMigrationsConfiguration>());
+            _ServiceProvider = serviceProvider;
             Initialize();
         }
 
@@ -66,14 +60,41 @@ namespace PowerLmsServer.EfData
             SavingChanges += PowerLmsUserDbContext_SavingChanges;
         }
 
+        IServiceProvider _ServiceProvider;
+
+        public IServiceProvider ServiceProvider => _ServiceProvider;
+
+        class EntityEntryEqualityComparer : EqualityComparer<EntityEntry>
+        {
+            public override bool Equals(EntityEntry b1, EntityEntry b2)
+            {
+                return b1.Entity.Equals(b2.Entity);
+            }
+
+            public override int GetHashCode(EntityEntry bx)
+            {
+                return bx.Entity.GetHashCode();
+            }
+        }
+
+        
         private void PowerLmsUserDbContext_SavingChanges(object sender, SavingChangesEventArgs e)
         {
             ChangeTracker.DetectChanges();
             var entries = new HashSet<EntityEntry>(ChangeTracker.Entries()   //静态枚举接口，不能反应后续操作
-                .Where(c => c.State == EntityState.Added || c.State == EntityState.Deleted || c.State == EntityState.Modified));
+                .Where(c => c.State == EntityState.Added || c.State == EntityState.Deleted || c.State == EntityState.Modified), new EntityEntryEqualityComparer());
+            var state = new Dictionary<object, object>();
             while (entries.Count > 0)
             {
                 #region 使用服务容器
+                
+                var look = entries.ToLookup(c => c.Metadata.ClrType);
+                foreach (var item in look)
+                {
+                    var serviceType = typeof(IDbContextSaving<>).MakeGenericType(item.Key);
+                    var services = _ServiceProvider.GetServices(serviceType);
+                    //services.ForEach(c => serviceType.InvokeMember("Saving", BindingFlags.InvokeMethod, null, c, new object[] { item.AsEnumerable(), state }));
+                }
                 //foreach (var item in entries)
                 //{
                 //未来正规化。
@@ -112,7 +133,8 @@ namespace PowerLmsServer.EfData
                 #endregion 项目特化操作
                 ChangeTracker.DetectChanges();
                 var tmp = new HashSet<EntityEntry>(ChangeTracker.Entries()   //静态枚举接口，不能反应后续操作
-                    .Where(c => c.State == EntityState.Added || c.State == EntityState.Deleted || c.State == EntityState.Modified));
+                    .Where(c => c.State == EntityState.Added || c.State == EntityState.Deleted || c.State == EntityState.Modified),
+                    new EntityEntryEqualityComparer());
                 tmp.ExceptWith(entries);
                 entries = tmp;
             }
@@ -509,6 +531,18 @@ namespace PowerLmsServer.EfData
 
         #endregion
 
+        #region 应用日志相关
+
+        /// <summary>
+        /// 应用日志源条目。
+        /// </summary>
+        public DbSet<OwAppLoggerStore> OwAppLoggerStores { get; set; }
+
+        /// <summary>
+        /// 应用日志详细信息。
+        /// </summary>
+        public DbSet<OwAppLoggerItemStore> OwAppLoggerItemStores { get; set; }
+        #endregion 应用日志相关
     }
 
     /// <summary>

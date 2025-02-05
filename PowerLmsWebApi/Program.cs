@@ -1,5 +1,3 @@
-using EntityFrameworkCore.Triggered;
-using EntityFrameworkCore.Triggered.Infrastructure;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
@@ -129,14 +127,7 @@ internal class Program
         //services.AddDbContext<PowerLmsUserDbContext>(options => options.UseLazyLoadingProxies().UseSqlServer(userDbConnectionString).EnableSensitiveDataLogging());
         services.AddDbContextFactory<PowerLmsUserDbContext>(options =>
         {
-            options.UseLazyLoadingProxies().UseSqlServer(userDbConnectionString).EnableSensitiveDataLogging().UseTriggers(triggerOptions =>
-                {
-                    //triggerOptions.AddTrigger<PlInvoicesBeforeSaveTrigger>(ServiceLifetime.Transient);
-                    //triggerOptions.AddTrigger<PlInvoicesItemBeforeSaveTrigger>(ServiceLifetime.Transient);
-                    triggerOptions.CascadeBehavior(CascadeBehavior.EntityAndType).MaxCascadeCycles(20);
-                    //triggerOptions.UseApplicationScopedServiceProviderAccessor(c => c.CreateScope().ServiceProvider);
-                    //triggerOptions.AddAssemblyTriggers(); 
-                });
+            options.UseLazyLoadingProxies().UseSqlServer(userDbConnectionString).EnableSensitiveDataLogging().UseOwEfTriggers();
         });
         #endregion ≈‰÷√ ˝æ›ø‚
 
