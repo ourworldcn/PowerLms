@@ -23,8 +23,4 @@ namespace OW.Data
         bool SuppressSave => false;
     }
 
-    public interface IDbContextSaving
-    {
-        void Saving(EntityEntry entity);
-    }
 }
