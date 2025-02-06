@@ -1,6 +1,9 @@
-﻿using EntityFrameworkCore.Triggered;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.Extensions.DependencyInjection;
 using OW.Data;
+using OW.DDD;
 using PowerLmsServer.EfData;
 using System;
 using System.Collections.Generic;
@@ -50,9 +53,9 @@ namespace PowerLms.Data
         public string Currency { get; set; }
 
         /// <summary>
-        /// 金额。
+        /// 金额。下属结算单明细的合计。
         /// </summary>
-        [Comment("金额。")]
+        [Comment("金额。下属结算单明细的合计。")]
         [Precision(18, 4)]
         public decimal Amount { get; set; }
 
@@ -163,22 +166,23 @@ namespace PowerLms.Data
         {
 
         }
+
         /// <summary>
         /// 结算单id
         /// </summary>
         public Guid? ParentId { get; set; }
 
         /// <summary>
-        /// 本次核销（结算）金额。
+        /// 本次核销（结算）金额（按申请单的币种）。
         /// </summary>
         [Comment("本次核销（结算）金额。")]
         [Precision(18, 4)]
         public decimal Amount { get; set; }
 
         /// <summary>
-        /// 结算汇率
+        /// 结算汇率，用户手工填写。
         /// </summary>
-        [Comment("结算汇率")]
+        [Comment("结算汇率，用户手工填写。")]
         [Precision(18, 4)]
         public decimal ExchangeRate { get; set; }
 
@@ -189,75 +193,28 @@ namespace PowerLms.Data
         public Guid? RequisitionItemId { get; set; }
 
     }
-    public class PlInvoicesBeforeSaveTrigger : IBeforeSaveTrigger<PlInvoices>
+
+    /// <summary>
+    /// 
+    /// </summary>
+    [OwAutoInjection(ServiceLifetime.Singleton,ServiceType = typeof(IDbContextSaving<PlInvoices>))]
+    public class PlInvoicesOwEfTriggers : IDbContextSaving<PlInvoices>
     {
-        public PlInvoicesBeforeSaveTrigger(PowerLmsUserDbContext dbContext)
+        public void Saving(IEnumerable<EntityEntry> entity, Dictionary<object, object> states)
         {
-            _DbContext = dbContext;
-        }
-
-        readonly PowerLmsUserDbContext _DbContext;
-
-        public Task BeforeSave(ITriggerContext<PlInvoices> context, CancellationToken cancellationToken)
-        {
-            switch (context.ChangeType)
-            {
-                case ChangeType.Added:
-                    var coll = _DbContext.PlInvoicesItems.Where(c => c.ParentId == context.Entity.Id).AsEnumerable();
-                    context.Entity.Amount = coll.Sum(c => Math.Round(c.Amount * c.ExchangeRate, 4, MidpointRounding.AwayFromZero));
-                    break;
-                case ChangeType.Modified:
-                    break;
-                case ChangeType.Deleted:
-                    break;
-                default:
-                    break;
-            }
-            return Task.CompletedTask;
+            
         }
     }
 
     /// <summary>
-    /// 回写申请单金额字段。
+    /// 
     /// </summary>
-    public class PlInvoicesItemBeforeSaveTrigger : IBeforeSaveTrigger<PlInvoicesItem>
+    [OwAutoInjection(ServiceLifetime.Singleton,ServiceType = typeof(IAfterDbContextSaving<PlInvoices>))]
+    public class PlInvoicesAfterOwEfTriggers : IAfterDbContextSaving<PlInvoices>
     {
-        public PlInvoicesItemBeforeSaveTrigger(PowerLmsUserDbContext dbContext)
+        public void Saving(Dictionary<object, object> states)
         {
-            _DbContext = dbContext;
-        }
-
-        readonly PowerLmsUserDbContext _DbContext;
-
-        public Task BeforeSave(ITriggerContext<PlInvoicesItem> context, CancellationToken cancellationToken)
-        {
-            switch (context.ChangeType)
-            {
-                case ChangeType.Added:
-                    {
-                        if (context.Entity.ParentId.HasValue && _DbContext.PlInvoicess.Find(context.Entity.ParentId.Value) is PlInvoices np)
-                            np.Amount += Math.Round(context.Entity.Amount * context.Entity.ExchangeRate, 4, MidpointRounding.AwayFromZero);
-                    }
-                    break;
-                case ChangeType.Modified:
-                    {
-                        if (context.UnmodifiedEntity.ParentId.HasValue && _DbContext.PlInvoicess.Find(context.UnmodifiedEntity.ParentId.Value) is PlInvoices op)
-                            op.Amount -= Math.Round(context.UnmodifiedEntity.Amount * context.UnmodifiedEntity.ExchangeRate, 4, MidpointRounding.AwayFromZero);
-                        if (context.Entity.ParentId.HasValue && _DbContext.PlInvoicess.Find(context.Entity.ParentId.Value) is PlInvoices np)
-                            np.Amount += Math.Round(context.Entity.Amount * context.Entity.ExchangeRate, 4, MidpointRounding.AwayFromZero);
-                    }
-                    break;
-                case ChangeType.Deleted:
-                    {
-                        if (context.Entity.ParentId.HasValue && _DbContext.PlInvoicess.Find(context.Entity.ParentId.Value) is PlInvoices np)
-                            np.Amount -= +Math.Round(context.Entity.Amount * context.Entity.ExchangeRate, 4, MidpointRounding.AwayFromZero);
-                    }
-                    break;
-                default:
-                    break;
-            }
-            return Task.CompletedTask;
+            
         }
     }
-
 }

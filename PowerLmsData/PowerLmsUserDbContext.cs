@@ -1,5 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.Extensions.DependencyInjection;
+using OW.Data;
+using OW.DDD;
 using PowerLms.Data;
 using System;
 using System.Collections.Generic;
@@ -10,6 +14,7 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Metadata;
 using System.Text;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace PowerLmsServer.EfData
@@ -41,18 +46,98 @@ namespace PowerLmsServer.EfData
         /// <summary>
         /// 
         /// </summary>
-        public PowerLmsUserDbContext()
-        {
-
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
         /// <param name="options"></param>
-        public PowerLmsUserDbContext(DbContextOptions options) : base(options)
+        /// <param name="serviceProvider"></param>
+        public PowerLmsUserDbContext(DbContextOptions options, IServiceProvider serviceProvider) : base(options)
         {
             //Database.SetInitializer<Context>(new MigrateDatabaseToLatestVersion<Context, ReportingDbMigrationsConfiguration>());
+            _ServiceProvider = serviceProvider;
+            Initialize();
+        }
+
+        void Initialize()
+        {
+            SavingChanges += PowerLmsUserDbContext_SavingChanges;
+        }
+
+        IServiceProvider _ServiceProvider;
+
+        public IServiceProvider ServiceProvider => _ServiceProvider;
+
+        class EntityEntryEqualityComparer : EqualityComparer<EntityEntry>
+        {
+            public override bool Equals(EntityEntry b1, EntityEntry b2)
+            {
+                return b1.Entity.Equals(b2.Entity);
+            }
+
+            public override int GetHashCode(EntityEntry bx)
+            {
+                return bx.Entity.GetHashCode();
+            }
+        }
+
+        
+        private void PowerLmsUserDbContext_SavingChanges(object sender, SavingChangesEventArgs e)
+        {
+            ChangeTracker.DetectChanges();
+            var entries = new HashSet<EntityEntry>(ChangeTracker.Entries()   //静态枚举接口，不能反应后续操作
+                .Where(c => c.State == EntityState.Added || c.State == EntityState.Deleted || c.State == EntityState.Modified), new EntityEntryEqualityComparer());
+            var state = new Dictionary<object, object>();
+            while (entries.Count > 0)
+            {
+                #region 使用服务容器
+                
+                var look = entries.ToLookup(c => c.Metadata.ClrType);
+                foreach (var item in look)
+                {
+                    var serviceType = typeof(IDbContextSaving<>).MakeGenericType(item.Key);
+                    var services = _ServiceProvider.GetServices(serviceType);
+                    //services.ForEach(c => serviceType.InvokeMember("Saving", BindingFlags.InvokeMethod, null, c, new object[] { item.AsEnumerable(), state }));
+                }
+                //foreach (var item in entries)
+                //{
+                //未来正规化。
+                //(item as IDbContextSaving)?.Saving(item);
+                //}
+                #endregion 使用服务容器
+
+                #region 项目特化操作
+                var invIds = new HashSet<Guid>();   //变化的结算单Id。
+                var feeIds = new HashSet<Guid>();   //变化的收付款申请单Id。
+                foreach (var entry in entries)  //遍历每个变化的数据
+                {
+                    if (entry.Entity is PlInvoices inv) invIds.Add(inv.Id);
+                    else if (entry.Entity is PlInvoicesItem invItem && invItem.ParentId.HasValue) invIds.Add(invItem.ParentId.Value);
+
+                    if (entry.Entity is DocFeeRequisition dfr) feeIds.Add(dfr.Id);
+                    else if (entry.Entity is DocFeeRequisitionItem dfrItem && dfrItem.ParentId.HasValue) feeIds.Add(dfrItem.ParentId.Value);
+                }
+
+                foreach (var invId in invIds)   //分别计算所有合计金额
+                {
+                    if (PlInvoicess.Find(invId) is PlInvoices inv)
+                    {
+                        inv.Amount = PlInvoicesItems.Where(c => c.ParentId == invId).AsEnumerable().
+                            Sum(c => Math.Round(c.Amount * c.ExchangeRate, 4, MidpointRounding.AwayFromZero));
+                    }
+                }
+                foreach (var feeId in feeIds)   //分别计算所有合计金额
+                {
+                    if (DocFeeRequisitions.Find(feeId) is DocFeeRequisition dfr)
+                    {
+                        dfr.Amount = DocFeeRequisitionItems.Where(c => c.ParentId == feeId).AsEnumerable().
+                            Sum(c => Math.Round(c.Amount, 4, MidpointRounding.AwayFromZero));
+                    }
+                }
+                #endregion 项目特化操作
+                ChangeTracker.DetectChanges();
+                var tmp = new HashSet<EntityEntry>(ChangeTracker.Entries()   //静态枚举接口，不能反应后续操作
+                    .Where(c => c.State == EntityState.Added || c.State == EntityState.Deleted || c.State == EntityState.Modified),
+                    new EntityEntryEqualityComparer());
+                tmp.ExceptWith(entries);
+                entries = tmp;
+            }
         }
 
         #region 方法
@@ -445,6 +530,19 @@ namespace PowerLmsServer.EfData
         public DbSet<OwWfNodeItem> OwWfNodeItems { get; set; }
 
         #endregion
+
+        #region 应用日志相关
+
+        /// <summary>
+        /// 应用日志源条目。
+        /// </summary>
+        public DbSet<OwAppLoggerStore> OwAppLoggerStores { get; set; }
+
+        /// <summary>
+        /// 应用日志详细信息。
+        /// </summary>
+        public DbSet<OwAppLoggerItemStore> OwAppLoggerItemStores { get; set; }
+        #endregion 应用日志相关
     }
 
     /// <summary>
