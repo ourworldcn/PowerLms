@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -90,7 +91,7 @@ namespace OwDbBase
         /// 向内部队列添加数据库操作项
         /// </summary>
         /// <param name="operation">数据库操作项</param>
-        public void EnqueueItem(DbOperation operation)
+        public void AddItem(DbOperation operation)
         {
             if (!_Queue.IsAddingCompleted)
             {
@@ -194,4 +195,34 @@ namespace OwDbBase
         #endregion // IDisposable 实现
     }
 
+    public static class BatchDbWriterExtensions
+    {
+        /// <summary>
+        /// 添加批量写入数据库服务。
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="services"></param>
+        /// <returns></returns>
+        public static IServiceCollection AddBatchDbWriter<T>(this IServiceCollection services) where T : DbContext
+        {
+            services.AddSingleton<IDbContextFactory<DbContext>, Bdh<T>>();
+            services.AddSingleton<BatchDbWriter>();
+            return services;
+        }
+    }
+
+    public class Bdh<T> : IDbContextFactory<DbContext> where T : DbContext
+    {
+        public Bdh(IDbContextFactory<T> contextFactory)
+        {
+            _ContextFactory = contextFactory;
+        }
+
+        IDbContextFactory<T> _ContextFactory;
+
+        public DbContext CreateDbContext()
+        {
+            return _ContextFactory.CreateDbContext();
+        }
+    }
 }
