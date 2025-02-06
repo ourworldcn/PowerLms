@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PowerLmsWebApi.Controllers;
+using PowerLmsWebApi.Dto;
 
 namespace GY02.Controllers
 {
@@ -18,13 +19,20 @@ namespace GY02.Controllers
         }
 
         /// <summary>
-        /// 返回日志项。
+        /// 返回日志项。超管/商管可以调用，商管只能看自己商户的日志。
         /// </summary>
         /// <param name="model"></param>
+        /// <param name="conditional"></param>
         /// <returns></returns>
-        public ActionResult<GetLoggerItemReturnDto> GetLoggerItem(GetLoggerItemParamsDto model)
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定类别Id无效。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
+        [HttpGet]
+        public ActionResult<GetAllAppLogItemReturnDto> GetAllAppLogItem([FromQuery] PagingParamsDtoBase model,
+            [FromQuery] Dictionary<string, string> conditional = null)
         {
-            var result = new GetLoggerItemReturnDto { };
+            var result = new GetAllAppLogItemReturnDto { };
             return result;
         }
 
@@ -93,14 +101,14 @@ namespace GY02.Controllers
     /// <summary>
     /// 返回日志项功能的参数封装类。
     /// </summary>
-    public class GetLoggerItemParamsDto
+    public class GetAllAppLogItemParamsDto
     {
     }
 
     /// <summary>
     /// 返回日志项功能的返回值封装类。
     /// </summary>
-    public class GetLoggerItemReturnDto
+    public class GetAllAppLogItemReturnDto
     {
     }
 

@@ -1,4 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using OW.Data;
 using System;
 using System.Collections.Generic;
@@ -29,6 +31,7 @@ namespace PowerLms.Data
     /// </summary>
     [Index(nameof(ParentId), IsUnique = false)]
     [Index(nameof(CreateUtc), IsUnique = false)]
+    [Index(nameof(MerchantId), nameof(CreateUtc), IsUnique = false)]
     public class OwAppLoggerItemStore : GuidKeyObjectBase
     {
         /// <summary>
@@ -47,11 +50,13 @@ namespace PowerLms.Data
         {
             ParentId = parentId;
         }
-
+        /*    modelBuilder.Entity<Product>()
+        .Property(p => p.TotalValue)
+        .HasComputedColumnSql("[Price] * [Quantity]"*/
         public Guid? ParentId { get; set; }
 
         /// <summary>
-        /// 
+        /// Json字符串，存储参数字典。
         /// </summary>
         public string ParamstersJson { get; set; }
 
@@ -59,6 +64,11 @@ namespace PowerLms.Data
         /// 该日志条目的创建UTC时间。
         /// </summary>
         public DateTime CreateUtc { get; set; } = DateTime.UtcNow;
+
+        /// <summary>
+        /// 所属商户Id。
+        /// </summary>
+        public Guid? MerchantId { get; set; }
 
     }
 
@@ -83,5 +93,39 @@ namespace PowerLms.Data
         /// 该日志条目的创建UTC时间。
         /// </summary>
         public DateTime CreateUtc { get; set; } = DateTime.UtcNow;
+
+        /// <summary>
+        /// 所属商户Id。空则是系统级别日志
+        /// </summary>
+        public Guid? MerchantId { get; set; }
+
+    }
+
+    public static class OwStringExtensions
+    {
+        public static string FormatWith(this string template, IDictionary<string, string> values)
+        {
+            switch (values.Count)
+            {
+                case 0:
+                    return template;
+                case 1:
+                    {
+                        var kvp = values.First();
+                        return template.Replace("{" + kvp.Key + "}", kvp.Value);
+                    }
+                case > 1:
+                    {
+                        var sb = new StringBuilder(template);
+                        foreach (var kvp in values)
+                        {
+                            sb.Replace("{" + kvp.Key + "}", kvp.Value);
+                        }
+                        return sb.ToString();
+                    }
+                default:
+                    return template;
+            }
+        }
     }
 }

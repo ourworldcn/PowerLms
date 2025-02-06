@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
 using OW;
+using OwDbBase;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
@@ -78,7 +79,8 @@ internal class Program
         var services = builder.Services;
         services.AddMemoryCache();
 
-        services.AddOptions().Configure<OwFileManagerOptions>(builder.Configuration.GetSection("OwFileManagerOptions"));
+        services.AddOptions().Configure<OwFileManagerOptions>(builder.Configuration.GetSection("OwFileManagerOptions"))
+            .Configure<BatchDbWriterOptions>(builder.Configuration.GetSection("BatchDbWriterOptions"));
 
         //启用跨域
         services.AddCors(cors =>
@@ -129,7 +131,11 @@ internal class Program
         {
             options.UseLazyLoadingProxies().UseSqlServer(userDbConnectionString).EnableSensitiveDataLogging().UseOwEfTriggers();
         });
+        services.AddSingleton(c => (IDbContextFactory<DbContext>)c.GetService<IDbContextFactory<PowerLmsUserDbContext>>());
+
         #endregion 配置数据库
+
+        services.AddSingleton<BatchDbWriter>();
 
         if (TimeSpan.TryParse(builder.Configuration.GetSection("WorldClockOffset").Value, out var offerset))
             OwHelper.Offset = offerset;  //配置游戏世界的时间。
