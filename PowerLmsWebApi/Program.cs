@@ -131,7 +131,7 @@ internal class Program
         {
             options.UseLazyLoadingProxies().UseSqlServer(userDbConnectionString).EnableSensitiveDataLogging().UseOwEfTriggers();
         });
-        services.AddSingleton(c => (IDbContextFactory<DbContext>)c.GetService<IDbContextFactory<PowerLmsUserDbContext>>());
+        services.AddBatchDbWriter<PowerLmsUserDbContext>();
 
         #endregion ≈‰÷√ ˝æ›ø‚
 

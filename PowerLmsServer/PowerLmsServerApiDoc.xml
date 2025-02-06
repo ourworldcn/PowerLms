@@ -864,7 +864,7 @@
             所有源。
             </summary>
         </member>
-        <member name="M:PowerLmsServer.Managers.OwSqlAppLogger.#ctor(Microsoft.EntityFrameworkCore.IDbContextFactory{PowerLmsServer.EfData.PowerLmsUserDbContext})">
+        <member name="M:PowerLmsServer.Managers.OwSqlAppLogger.#ctor(Microsoft.EntityFrameworkCore.IDbContextFactory{PowerLmsServer.EfData.PowerLmsUserDbContext},OwDbBase.BatchDbWriter)">
             <summary>
             构造函数。
             </summary>

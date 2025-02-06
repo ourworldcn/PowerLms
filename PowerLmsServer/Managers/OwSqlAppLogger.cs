@@ -1,10 +1,12 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using OwDbBase;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -20,6 +22,7 @@ namespace PowerLmsServer.Managers
         readonly IDbContextFactory<PowerLmsUserDbContext> _DbContextFactory;
         PowerLmsUserDbContext _DbContext;
         ConcurrentDictionary<Guid, OwAppLoggerStore> _LoggerStores;
+        BatchDbWriter _BatchDbWriter;
 
         /// <summary>
         /// 所有源。
@@ -33,10 +36,11 @@ namespace PowerLmsServer.Managers
         /// <summary>
         /// 构造函数。
         /// </summary>
-        public OwSqlAppLogger(IDbContextFactory<PowerLmsUserDbContext> dbContextFactory)
+        public OwSqlAppLogger(IDbContextFactory<PowerLmsUserDbContext> dbContextFactory, BatchDbWriter batchDbWriter)
         {
             _DbContextFactory = dbContextFactory;
             _DbContext = _DbContextFactory.CreateDbContext();
+            _BatchDbWriter = batchDbWriter;
             Initializer();
         }
 

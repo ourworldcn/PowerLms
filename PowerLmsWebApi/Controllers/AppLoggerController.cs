@@ -41,6 +41,7 @@ namespace GY02.Controllers
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
+        [HttpPost]
         public ActionResult<AddLoggerItemReturnDto> AddLoggerItem(AddLoggerItemParamsDto model)
         {
             var result = new AddLoggerItemReturnDto();
@@ -52,6 +53,7 @@ namespace GY02.Controllers
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
+        [HttpDelete]
         public ActionResult<RemoveAllLoggerItemReturnDto> RemoveAllLoggerItem(RemoveAllLoggerItemParamsDto model)
         {
             var result = new RemoveAllLoggerItemReturnDto();
@@ -63,6 +65,7 @@ namespace GY02.Controllers
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
+        [HttpGet]
         public ActionResult<ExportLoggerReturnDto> ExportLogger(ExportLoggerParamsDto model)
         {
             var result = new ExportLoggerReturnDto();
