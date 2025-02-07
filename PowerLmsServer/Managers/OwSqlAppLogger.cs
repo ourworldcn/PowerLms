@@ -21,16 +21,16 @@ namespace PowerLmsServer.Managers
     {
         readonly IDbContextFactory<PowerLmsUserDbContext> _DbContextFactory;
         PowerLmsUserDbContext _DbContext;
-        ConcurrentDictionary<Guid, OwAppLoggerStore> _LoggerStores;
+        ConcurrentDictionary<Guid, OwAppLogStore> _LoggerStores;
         BatchDbWriter _BatchDbWriter;
 
         /// <summary>
         /// 所有源。
         /// </summary>
-        public ConcurrentDictionary<Guid, OwAppLoggerStore> LoggerStores => LazyInitializer.EnsureInitialized(ref _LoggerStores, () =>
+        public ConcurrentDictionary<Guid, OwAppLogStore> LoggerStores => LazyInitializer.EnsureInitialized(ref _LoggerStores, () =>
         {
             lock (_DbContext)
-                return new ConcurrentDictionary<Guid, OwAppLoggerStore>(_DbContext.OwAppLoggerStores.AsEnumerable().ToDictionary(c => c.Id));
+                return new ConcurrentDictionary<Guid, OwAppLogStore>(_DbContext.OwAppLogStores.AsEnumerable().ToDictionary(c => c.Id));
         });
 
         /// <summary>
@@ -53,10 +53,10 @@ namespace PowerLmsServer.Managers
         /// </summary>
         public void Define(Guid typeId, string formatString)
         {
-            LoggerStores.AddOrUpdate(typeId, new OwAppLoggerStore { Id = typeId, FormatString = formatString },
+            LoggerStores.AddOrUpdate(typeId, new OwAppLogStore { Id = typeId, FormatString = formatString },
                 (id, ov) =>
                 {
-                    return new OwAppLoggerStore { Id = typeId, FormatString = formatString };
+                    return new OwAppLogStore { Id = typeId, FormatString = formatString };
                 });
         }
 
@@ -66,6 +66,7 @@ namespace PowerLmsServer.Managers
         public void Dispose()
         {
             _DbContext?.Dispose();
+            GC.SuppressFinalize(this);
         }
     }
 

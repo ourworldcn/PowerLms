@@ -220,6 +220,7 @@ namespace PowerLmsWebApi.Controllers
             //model.PlJob.OperatingDateTime = OwHelper.WorldNow;
             //model.PlJob.OperatorId = context.User.Id;
             _DbContext.SaveChanges();
+
             return result;
         }
 

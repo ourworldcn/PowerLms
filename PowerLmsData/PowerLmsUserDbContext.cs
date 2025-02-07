@@ -77,67 +77,12 @@ namespace PowerLmsServer.EfData
             }
         }
 
-        
+
         private void PowerLmsUserDbContext_SavingChanges(object sender, SavingChangesEventArgs e)
         {
-            ChangeTracker.DetectChanges();
-            var entries = new HashSet<EntityEntry>(ChangeTracker.Entries()   //静态枚举接口，不能反应后续操作
-                .Where(c => c.State == EntityState.Added || c.State == EntityState.Deleted || c.State == EntityState.Modified), new EntityEntryEqualityComparer());
-            var state = new Dictionary<object, object>();
-            while (entries.Count > 0)
-            {
-                #region 使用服务容器
-                
-                var look = entries.ToLookup(c => c.Metadata.ClrType);
-                foreach (var item in look)
-                {
-                    var serviceType = typeof(IDbContextSaving<>).MakeGenericType(item.Key);
-                    var services = _ServiceProvider.GetServices(serviceType);
-                    //services.ForEach(c => serviceType.InvokeMember("Saving", BindingFlags.InvokeMethod, null, c, new object[] { item.AsEnumerable(), state }));
-                }
-                //foreach (var item in entries)
-                //{
-                //未来正规化。
-                //(item as IDbContextSaving)?.Saving(item);
-                //}
-                #endregion 使用服务容器
-
-                #region 项目特化操作
-                var invIds = new HashSet<Guid>();   //变化的结算单Id。
-                var feeIds = new HashSet<Guid>();   //变化的收付款申请单Id。
-                foreach (var entry in entries)  //遍历每个变化的数据
-                {
-                    if (entry.Entity is PlInvoices inv) invIds.Add(inv.Id);
-                    else if (entry.Entity is PlInvoicesItem invItem && invItem.ParentId.HasValue) invIds.Add(invItem.ParentId.Value);
-
-                    if (entry.Entity is DocFeeRequisition dfr) feeIds.Add(dfr.Id);
-                    else if (entry.Entity is DocFeeRequisitionItem dfrItem && dfrItem.ParentId.HasValue) feeIds.Add(dfrItem.ParentId.Value);
-                }
-
-                foreach (var invId in invIds)   //分别计算所有合计金额
-                {
-                    if (PlInvoicess.Find(invId) is PlInvoices inv)
-                    {
-                        inv.Amount = PlInvoicesItems.Where(c => c.ParentId == invId).AsEnumerable().
-                            Sum(c => Math.Round(c.Amount * c.ExchangeRate, 4, MidpointRounding.AwayFromZero));
-                    }
-                }
-                foreach (var feeId in feeIds)   //分别计算所有合计金额
-                {
-                    if (DocFeeRequisitions.Find(feeId) is DocFeeRequisition dfr)
-                    {
-                        dfr.Amount = DocFeeRequisitionItems.Where(c => c.ParentId == feeId).AsEnumerable().
-                            Sum(c => Math.Round(c.Amount, 4, MidpointRounding.AwayFromZero));
-                    }
-                }
-                #endregion 项目特化操作
-                ChangeTracker.DetectChanges();
-                var tmp = new HashSet<EntityEntry>(ChangeTracker.Entries()   //静态枚举接口，不能反应后续操作
-                    .Where(c => c.State == EntityState.Added || c.State == EntityState.Deleted || c.State == EntityState.Modified),
-                    new EntityEntryEqualityComparer());
-                tmp.ExceptWith(entries);
-                entries = tmp;
-            }
+            var context = sender as PowerLmsUserDbContext;
+            var svc = context.ServiceProvider.GetService<OwEfTriggers>();
+            svc.ExecuteSavingChanges(context, context.ServiceProvider);
         }
 
         #region 方法
@@ -173,6 +118,13 @@ namespace PowerLmsServer.EfData
             #endregion 权限相关
 
             base.OnModelCreating(modelBuilder);
+
+            #region 应用日志相关
+            // 配置OwAppLogVO视图的映射
+            var owAppLogVOConfig = modelBuilder.Entity<OwAppLogVO>();
+            owAppLogVOConfig.HasKey(v => v.Id); // 配置主键
+            owAppLogVOConfig.ToTable("OwAppLogVO"); // 映射到视图
+            #endregion  //应用日志相关
         }
 
         /// <summary>
@@ -536,12 +488,17 @@ namespace PowerLmsServer.EfData
         /// <summary>
         /// 应用日志源条目。
         /// </summary>
-        public DbSet<OwAppLoggerStore> OwAppLoggerStores { get; set; }
+        public DbSet<OwAppLogStore> OwAppLogStores { get; set; }
 
         /// <summary>
         /// 应用日志详细信息。
         /// </summary>
-        public DbSet<OwAppLoggerItemStore> OwAppLoggerItemStores { get; set; }
+        public DbSet<OwAppLogItemStore> OwAppLogItemStores { get; set; }
+
+        /// <summary>
+        /// 日志的合成视图。
+        /// </summary>
+        public DbSet<OwAppLogVO> OwAppLogVOs { get; set; }
         #endregion 应用日志相关
     }
 
