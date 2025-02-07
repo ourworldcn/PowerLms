@@ -1,14 +1,11 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
-using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace OW.Data
 {
@@ -29,95 +26,153 @@ namespace OW.Data
     }
 
     /// <summary>
-    /// 
+    /// EF Core 触发器类。
     /// </summary>
-    public class OwEfTriggers
+    public class OwEfTriggers : IDisposable
     {
-    }
+        #region 私有字段
+        private readonly IHostApplicationLifetime _HostApplicationLifetime;
+        private bool _Disposed = false;
+        #endregion 私有字段
 
-    public class OwEfTriggersSaveChangesInterceptor : SaveChangesInterceptor
-    {
-        class EntityEntryEqualityComparer : EqualityComparer<EntityEntry>
+        /// <summary>
+        /// 构造函数。
+        /// </summary>
+        public OwEfTriggers(IHostApplicationLifetime hostApplicationLifetime)
         {
-            public override bool Equals(EntityEntry b1, EntityEntry b2)
-            {
-                return b1.Entity.Equals(b2.Entity);
-            }
-
-            public override int GetHashCode(EntityEntry bx)
-            {
-                return bx.Entity.GetHashCode();
-            }
+            _HostApplicationLifetime = hostApplicationLifetime;
+            _HostApplicationLifetime.ApplicationStopping.Register(OnStopping);
         }
 
-        IServiceProvider _ServiceProvider;
-
-        public OwEfTriggersSaveChangesInterceptor()
+        /// <summary>
+        /// 应用程序停止时的处理逻辑。
+        /// </summary>
+        private void OnStopping()
         {
+            // 在应用程序停止时执行的逻辑
         }
 
-        public override InterceptionResult<int> SavingChanges(DbContextEventData eventData, InterceptionResult<int> result)
+        /// <summary>
+        /// 执行保存更改的事件处理逻辑。
+        /// </summary>
+        public void ExecuteSavingChanges(DbContext dbContext, IServiceProvider serviceProvider)
         {
-            return InnerSavingChanges(eventData, result);
-        }
+            dbContext.ChangeTracker.DetectChanges();
 
-        public override ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
-        {
-            return new ValueTask<InterceptionResult<int>>(Task.Run(() => InnerSavingChanges(eventData, result)));
-        }
+            // 获取被更改的实体列表
+            var entities = new HashSet<EntityEntry>(
+                dbContext.ChangeTracker.Entries().Where(c => c.State == EntityState.Added || c.State == EntityState.Modified || c.State == EntityState.Deleted),
+                new EntityEntryEqualityComparer()
+            );
 
-        protected virtual InterceptionResult<int> InnerSavingChanges(DbContextEventData eventData, InterceptionResult<int> result)
-        {
-            var db = eventData.Context;
-            db.ChangeTracker.DetectChanges();
-            var entities = new HashSet<EntityEntry>(db.ChangeTracker.Entries().Where(c => c.State == EntityState.Added || c.State == EntityState.Modified ||
-                c.State == EntityState.Deleted), new EntityEntryEqualityComparer());
             var lastEntities = entities;
-            dynamic dyn = db;
-            IServiceProvider con = dyn.ServiceProvider;
-            HashSet<Type> types = new HashSet<Type>();
-
             var states = new Dictionary<object, object>();
-            for (; entities.Count > 0;)
+            var types = new HashSet<Type>();
+
+            while (entities.Count > 0)
             {
+                // 按实体类型分组
                 var lookup = entities.ToLookup(c => c.Metadata.ClrType);
                 lookup.ForEach(c => types.Add(c.Key));
+
                 foreach (var grp in lookup)
                 {
                     var svcType = typeof(IDbContextSaving<>).MakeGenericType(grp.Key);
-                    var svcs = con.GetServices(svcType);
+                    var svcs = serviceProvider.GetServices(svcType);
+
                     foreach (var svc in svcs)
                     {
-                        svc.GetType().InvokeMember("Saving", BindingFlags.InvokeMethod | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance,
-                            default, svc, new object[] { grp.AsEnumerable(), states });
+                        svc.GetType().InvokeMember(
+                            "Saving",
+                            BindingFlags.InvokeMethod | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance,
+                            null,
+                            svc,
+                            new object[] { grp.AsEnumerable(), states }
+                        );
                     }
                 }
-                lastEntities = entities;
-                db.ChangeTracker.DetectChanges();
-                entities = new HashSet<EntityEntry>(db.ChangeTracker.Entries().Where(c => c.State == EntityState.Added || c.State == EntityState.Modified ||
-                    c.State == EntityState.Deleted), new EntityEntryEqualityComparer());
+
+                dbContext.ChangeTracker.DetectChanges();
+
+                entities = new HashSet<EntityEntry>(
+                    dbContext.ChangeTracker.Entries().Where(c => c.State == EntityState.Added || c.State == EntityState.Modified || c.State == EntityState.Deleted),
+                    new EntityEntryEqualityComparer()
+                );
+
                 entities.ExceptWith(lastEntities);
             }
+
+            // 触发 After Saving 事件
             foreach (var type in types)
             {
                 var svcType = typeof(IAfterDbContextSaving<>).MakeGenericType(type);
-                var svcs = con.GetServices(svcType);
+                var svcs = serviceProvider.GetServices(svcType);
+
                 foreach (var svc in svcs)
                 {
-                    var ss = nameof(IAfterDbContextSaving<OwEfTriggers>.Saving);
-                    svc.GetType().InvokeMember("Saving", BindingFlags.InvokeMethod | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance,
-                        default, svc, new object[] { states });
+                    svc.GetType().InvokeMember(
+                        "Saving",
+                        BindingFlags.InvokeMethod | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance,
+                        null,
+                        svc,
+                        new object[] { states }
+                    );
                 }
             }
-            return result;
         }
+
+        #region IDisposable实现
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_Disposed)
+            {
+                if (disposing)
+                {
+                    // 释放托管资源
+                }
+                // 释放非托管资源
+                _Disposed = true;
+            }
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+        #endregion IDisposable实现
+
+        #region EntityEntryEqualityComparer类
+        /// <summary>
+        /// 用于比较 EntityEntry 的私有类。
+        /// </summary>
+        private class EntityEntryEqualityComparer : IEqualityComparer<EntityEntry>
+        {
+            public bool Equals(EntityEntry x, EntityEntry y)
+            {
+                return x.Entity.Equals(y.Entity);
+            }
+
+            public int GetHashCode(EntityEntry obj)
+            {
+                return obj.Entity.GetHashCode();
+            }
+        }
+        #endregion EntityEntryEqualityComparer类
     }
 
+    /// <summary>
+    /// OwEfTriggers 扩展方法类。
+    /// </summary>
     public static class OwEfTriggersExtensions
     {
-        public static DbContextOptionsBuilder UseOwEfTriggers(this DbContextOptionsBuilder builder)
+        /// <summary>
+        /// 将 OwEfTriggers 添加到 AOC 容器中。
+        /// </summary>
+        public static IServiceCollection AddOwEfTriggers(this IServiceCollection services)
         {
-            return builder.AddInterceptors(new OwEfTriggersSaveChangesInterceptor());
+            services.AddSingleton<OwEfTriggers>();
+            return services;
         }
     }
 }

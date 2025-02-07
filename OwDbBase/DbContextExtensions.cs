@@ -68,14 +68,28 @@ namespace OW.Data
         }
 
         /// <summary>
-        /// 截断表。
+        /// 扩展方法，用于清空指定的数据库表。
         /// </summary>
-        /// <param name="context"></param>
-        /// <param name="tableName"></param>
+        /// <param name="context">数据库上下文实例。</param>
+        /// <param name="tableName">要清空的表名。</param>
         public static void TruncateTable(this DbContext context, string tableName)
         {
-            var sql = $"Truncate Table {tableName}";
-            context.Database.ExecuteSqlRaw(sql, tableName);
+            // 确保表名有效，防止SQL注入
+            if (string.IsNullOrWhiteSpace(tableName))
+            {
+                throw new ArgumentException("无效的表名。", nameof(tableName));
+            }
+
+            // 查询信息架构视图，确保表名存在
+            var tableExists = context.Database
+                .ExecuteSqlRaw($"SELECT CASE WHEN EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '{tableName}') THEN 1 ELSE 0 END");
+
+            if (tableExists == 0)
+            {
+                throw new ArgumentException("无效的表名。", nameof(tableName));
+            }
+            // 执行 TRUNCATE TABLE SQL 命令
+            context.Database.ExecuteSqlRaw($"TRUNCATE TABLE [{tableName}]");
         }
 
     }
