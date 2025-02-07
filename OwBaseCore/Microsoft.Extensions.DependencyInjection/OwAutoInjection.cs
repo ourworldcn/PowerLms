@@ -23,7 +23,7 @@ namespace Microsoft.Extensions.DependencyInjection
     /// <summary>
     /// 自动将类注册为服务的特性。
     /// </summary>
-    [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = true)] // 允许多个特性
+    [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = true)]
     public sealed class OwAutoInjectionAttribute : Attribute
     {
         /// <summary>
@@ -96,9 +96,7 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <returns>任务对象。</returns>
         protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            // 异步调用 AutoCreate 方法，不阻止初始化。
-            _ = Task.Run(() => AutoCreate(_Service, _ServiceTypes), stoppingToken);
-            return Task.CompletedTask;
+            return Task.Run(() => AutoCreate(stoppingToken), stoppingToken);
         }
 
         #endregion 执行后台任务
@@ -108,13 +106,18 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <summary>
         /// 按参数指定的，逐一创建一个实例。
         /// </summary>
-        /// <param name="service">服务提供者。</param>
-        /// <param name="serviceTypes">要创建实例的服务类型集合。</param>
-        private void AutoCreate(IServiceProvider service, IEnumerable<(Type, bool)> serviceTypes)
+        /// <param name="stoppingToken">停止标记。</param>
+        private void AutoCreate(CancellationToken stoppingToken)
         {
-            using var scope = service.CreateScope();
-            foreach (var (type, scoped) in serviceTypes)
+            using var scope = _Service.CreateScope();
+            foreach (var (type, scoped) in _ServiceTypes)
             {
+                if (stoppingToken.IsCancellationRequested)
+                {
+                    _Logger.LogDebug("取消创建服务实例：{ServiceType}", type.FullName);
+                    break;
+                }
+
                 try
                 {
                     if (scoped)
@@ -125,7 +128,7 @@ namespace Microsoft.Extensions.DependencyInjection
                     else
                     {
                         // 在全局范围内创建服务实例。
-                        service.GetService(type);
+                        _Service.GetService(type);
                     }
 
                     _Logger.LogDebug("成功创建服务实例：{ServiceType}", type.FullName);
@@ -200,10 +203,6 @@ namespace Microsoft.Extensions.DependencyInjection
             return services;
         }
 
-        #endregion 扩展方法
-
-        #region 私有方法
-
         private static void RegisterService(IServiceCollection services, Type serviceType, Type implementationType, Func<IServiceProvider, object> implementationFactory, ServiceLifetime lifetime)
         {
             if (implementationFactory == null)
@@ -216,6 +215,6 @@ namespace Microsoft.Extensions.DependencyInjection
             }
         }
 
-        #endregion 私有方法
+        #endregion 扩展方法
     }
 }
