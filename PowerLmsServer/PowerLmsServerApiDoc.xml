@@ -866,23 +866,146 @@
         </member>
         <member name="M:PowerLmsServer.Managers.OwSqlAppLogger.#ctor(Microsoft.EntityFrameworkCore.IDbContextFactory{PowerLmsServer.EfData.PowerLmsUserDbContext},OwDbBase.BatchDbWriter)">
             <summary>
-            构造函数。
+            构造函数，初始化应用日志服务。
+            </summary>
+            <param name="dbContextFactory">数据库上下文工厂。</param>
+            <param name="batchDbWriter">批量数据库写入器。</param>
+        </member>
+        <member name="M:PowerLmsServer.Managers.OwSqlAppLogger.Initializer">
+            <summary>
+            初始化方法。
             </summary>
         </member>
         <member name="M:PowerLmsServer.Managers.OwSqlAppLogger.Define(System.Guid,System.String)">
             <summary>
             定义事件源。
             </summary>
+            <param name="typeId">事件类型 ID。</param>
+            <param name="formatString">格式字符串。</param>
+        </member>
+        <member name="M:PowerLmsServer.Managers.OwSqlAppLogger.WriteLogItem(PowerLms.Data.OwAppLogItemStore)">
+            <summary>
+            写入 OwAppLogItemStore 实体。
+            </summary>
+            <param name="logItem">要写入的 OwAppLogItemStore 实体。</param>
         </member>
         <member name="M:PowerLmsServer.Managers.OwSqlAppLogger.Dispose">
             <summary>
             释放资源。
             </summary>
         </member>
-        <member name="T:PowerLmsServer.Managers.OwSqlAppLoggerFlat">
+        <member name="T:PowerLmsServer.Managers.JobTriggerConstants">
             <summary>
-            
+            包含 JobTrigger 类常量。
             </summary>
+        </member>
+        <member name="F:PowerLmsServer.Managers.JobTriggerConstants.ChangedJobIdsKey">
+            <summary>
+            用于标识已更改的 JobId 的键。
+            </summary>
+        </member>
+        <member name="T:PowerLmsServer.Managers.JobTrigger">
+            <summary>
+            工作任务修改或删除时的触发器。
+            </summary>
+        </member>
+        <member name="M:PowerLmsServer.Managers.JobTrigger.#ctor(Microsoft.Extensions.Logging.ILogger{PowerLmsServer.Managers.JobTrigger},Microsoft.Extensions.Hosting.IHostApplicationLifetime)">
+            <summary>
+            构造函数，初始化日志记录器和应用程序生命周期监测器。
+            </summary>
+            <param name="logger">用于记录日志的记录器。</param>
+            <param name="hostApplicationLifetime">用于监测应用程序生命周期的对象。</param>
+        </member>
+        <member name="M:PowerLmsServer.Managers.JobTrigger.OW#Data#IDbContextSaving{PowerLms#Data#PlJob}#Saving(System.Collections.Generic.IEnumerable{Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry},System.Collections.Generic.Dictionary{System.Object,System.Object})">
+            <summary>
+            保存 PlJob 实体的方法。
+            </summary>
+            <param name="entities">实体集合。</param>
+            <param name="states">状态字典。</param>
+        </member>
+        <member name="M:PowerLmsServer.Managers.JobTrigger.OW#Data#IDbContextSaving{PowerLms#Data#PlIaDoc}#Saving(System.Collections.Generic.IEnumerable{Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry},System.Collections.Generic.Dictionary{System.Object,System.Object})">
+            <summary>
+            保存 PlIaDoc 实体的方法。
+            </summary>
+            <param name="entities">实体集合。</param>
+            <param name="states">状态字典。</param>
+        </member>
+        <member name="M:PowerLmsServer.Managers.JobTrigger.OW#Data#IDbContextSaving{PowerLms#Data#PlIsDoc}#Saving(System.Collections.Generic.IEnumerable{Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry},System.Collections.Generic.Dictionary{System.Object,System.Object})">
+            <summary>
+            保存 PlIsDoc 实体的方法。
+            </summary>
+            <param name="entities">实体集合。</param>
+            <param name="states">状态字典。</param>
+        </member>
+        <member name="M:PowerLmsServer.Managers.JobTrigger.OW#Data#IDbContextSaving{PowerLms#Data#PlEsDoc}#Saving(System.Collections.Generic.IEnumerable{Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry},System.Collections.Generic.Dictionary{System.Object,System.Object})">
+            <summary>
+            保存 PlEsDoc 实体的方法。
+            </summary>
+            <param name="entities">实体集合。</param>
+            <param name="states">状态字典。</param>
+        </member>
+        <member name="M:PowerLmsServer.Managers.JobTrigger.OW#Data#IDbContextSaving{PowerLms#Data#PlEaDoc}#Saving(System.Collections.Generic.IEnumerable{Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry},System.Collections.Generic.Dictionary{System.Object,System.Object})">
+            <summary>
+            保存 PlEaDoc 实体的方法。
+            </summary>
+            <param name="entities">实体集合。</param>
+            <param name="states">状态字典。</param>
+        </member>
+        <member name="M:PowerLmsServer.Managers.JobTrigger.OW#Data#IDbContextSaving{PowerLms#Data#DocFee}#Saving(System.Collections.Generic.IEnumerable{Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry},System.Collections.Generic.Dictionary{System.Object,System.Object})">
+            <summary>
+            保存 DocFee 实体的方法。
+            </summary>
+            <param name="entities">实体集合。</param>
+            <param name="states">状态字典。</param>
+        </member>
+        <member name="M:PowerLmsServer.Managers.JobTrigger.AddJobIdsToStates(System.Collections.Generic.IEnumerable{Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry},System.Collections.Generic.Dictionary{System.Object,System.Object},System.String)">
+            <summary>
+            将 JobId 添加到状态字典中。
+            </summary>
+            <param name="entities">实体集合。</param>
+            <param name="states">状态字典。</param>
+            <param name="entityType">实体类型名称。</param>
+        </member>
+        <member name="M:PowerLmsServer.Managers.JobTrigger.EnsureHashSetInStates(System.Collections.Generic.Dictionary{System.Object,System.Object})">
+            <summary>
+            确保状态字典包含一个 HashSet&lt;Guid&gt;，以存储已更改的 JobId。
+            </summary>
+            <param name="states">状态字典。</param>
+        </member>
+        <member name="M:PowerLmsServer.Managers.JobTrigger.Dispose(System.Boolean)">
+            <summary>
+            释放资源。
+            </summary>
+            <param name="disposing">指示是否释放托管资源。</param>
+        </member>
+        <member name="M:PowerLmsServer.Managers.JobTrigger.Dispose">
+            <summary>
+            实现 IDisposable 接口的方法。
+            </summary>
+        </member>
+        <member name="M:PowerLmsServer.Managers.JobTrigger.OnApplicationStopping">
+            <summary>
+            应用程序停止时的处理逻辑。
+            </summary>
+        </member>
+        <member name="T:PowerLmsServer.Managers.JobTrigger2">
+            <summary>
+            工作任务修改或删除后的触发器。
+            </summary>
+        </member>
+        <member name="M:PowerLmsServer.Managers.JobTrigger2.#ctor(System.IServiceProvider)">
+            <summary>
+            构造函数，初始化服务提供者。
+            </summary>
+            <param name="serviceProvider">服务提供者。</param>
+        </member>
+        <member name="M:PowerLmsServer.Managers.JobTrigger2.Saving(Microsoft.EntityFrameworkCore.DbContext,System.IServiceProvider,System.Collections.Generic.Dictionary{System.Object,System.Object})">
+            <summary>
+            实现 IAfterDbContextSaving 接口的方法，记录每个变化的 Job 的 ID。
+            </summary>
+            <param name="dbContext">当前 DbContext 实例。</param>
+            <param name="serviceProvider">服务提供者。</param>
+            <param name="states">状态字典。</param>
         </member>
         <member name="T:PowerLmsServer.Managers.OwWfManager">
             <summary>
@@ -1109,6 +1232,15 @@
             <summary>
             warehousing and Storage(仓储业务)类型Id。
             </summary>
+        </member>
+        <member name="M:OwSqlAppLoggerExtensions.LogJobChangedOrRemoved(PowerLmsServer.Managers.OwSqlAppLogger,System.IServiceProvider,Microsoft.EntityFrameworkCore.DbContext,System.Collections.Generic.HashSet{System.Guid})">
+            <summary>
+            记录每个变化的 Job 的 ID。
+            </summary>
+            <param name="logger">应用日志服务实例。</param>
+            <param name="serviceProvider">服务提供者。</param>
+            <param name="dbContext">当前 DbContext 实例。</param>
+            <param name="jobIds">变化的工作任务 ID 集合。</param>
         </member>
     </members>
 </doc>

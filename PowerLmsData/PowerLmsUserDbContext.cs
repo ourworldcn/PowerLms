@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.Extensions.DependencyInjection;
 using OW.Data;
@@ -81,8 +82,16 @@ namespace PowerLmsServer.EfData
         private void PowerLmsUserDbContext_SavingChanges(object sender, SavingChangesEventArgs e)
         {
             var context = sender as PowerLmsUserDbContext;
-            var svc = context.ServiceProvider.GetService<OwEfTriggers>();
-            svc.ExecuteSavingChanges(context, context.ServiceProvider);
+            var services = context.ServiceProvider;
+            var checker = services.GetRequiredService<ServiceProviderChecker>();
+            if (checker.IsRootContainer(_ServiceProvider))
+            {
+            }
+            else //非根容器
+            {
+                var svc = context.ServiceProvider.GetService<OwEfTriggers>();   //尽在范围容器内调用
+                svc?.ExecuteSavingChanges(context, context.ServiceProvider);
+            }
         }
 
         #region 方法

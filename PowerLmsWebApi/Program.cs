@@ -95,6 +95,7 @@ internal class Program
             options.EnableForHttps = true;
         });
         //JsonSerializerSettings settings = new JsonSerializerSettings() { DateFormatString=""};
+        services.AddHttpContextAccessor(); // Ìí¼Ó IHttpContextAccessor ·þÎñ
         services.AddControllers().AddJsonOptions(opt =>
         {
             opt.JsonSerializerOptions.Converters.Add(new CustomsJsonConverter());

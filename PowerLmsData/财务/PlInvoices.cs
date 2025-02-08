@@ -197,7 +197,7 @@ namespace PowerLms.Data
     /// <summary>
     /// 
     /// </summary>
-    [OwAutoInjection(ServiceLifetime.Singleton,ServiceType = typeof(IDbContextSaving<PlInvoices>))]
+    [OwAutoInjection(ServiceLifetime.Scoped,ServiceType = typeof(IDbContextSaving<PlInvoices>))]
     public class PlInvoicesOwEfTriggers : IDbContextSaving<PlInvoices>
     {
         public void Saving(IEnumerable<EntityEntry> entity, Dictionary<object, object> states)
@@ -209,12 +209,12 @@ namespace PowerLms.Data
     /// <summary>
     /// 
     /// </summary>
-    [OwAutoInjection(ServiceLifetime.Singleton,ServiceType = typeof(IAfterDbContextSaving<PlInvoices>))]
+    [OwAutoInjection(ServiceLifetime.Scoped, ServiceType = typeof(IAfterDbContextSaving<PlInvoices>))]
     public class PlInvoicesAfterOwEfTriggers : IAfterDbContextSaving<PlInvoices>
     {
-        public void Saving(Dictionary<object, object> states)
+        public void Saving(DbContext dbContext, IServiceProvider serviceProvider, Dictionary<object, object> states)
         {
-            
+            //throw new NotImplementedException();
         }
     }
 }
