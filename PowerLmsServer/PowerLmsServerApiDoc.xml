@@ -904,9 +904,44 @@
             用于标识已更改的 JobId 的键。
             </summary>
         </member>
+        <member name="T:PowerLmsServer.Managers.JobChange">
+            <summary>
+            用于存储 EntityId、操作类型和实体类型名的类。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.Managers.JobChange.EntityId">
+            <summary>
+            实体的 ID。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.Managers.JobChange.Action">
+            <summary>
+            操作类型（新增、修改、删除）。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.Managers.JobChange.EntityType">
+            <summary>
+            实体类型名。
+            </summary>
+        </member>
         <member name="T:PowerLmsServer.Managers.JobTrigger">
             <summary>
             工作任务修改或删除时的触发器。
+            </summary>
+        </member>
+        <member name="F:PowerLmsServer.Managers.JobTrigger._Logger">
+            <summary>
+            日志记录器。
+            </summary>
+        </member>
+        <member name="F:PowerLmsServer.Managers.JobTrigger._HostApplicationLifetime">
+            <summary>
+            应用程序生命周期监测器。
+            </summary>
+        </member>
+        <member name="F:PowerLmsServer.Managers.JobTrigger._Disposed">
+            <summary>
+            指示对象是否已释放。
             </summary>
         </member>
         <member name="M:PowerLmsServer.Managers.JobTrigger.#ctor(Microsoft.Extensions.Logging.ILogger{PowerLmsServer.Managers.JobTrigger},Microsoft.Extensions.Hosting.IHostApplicationLifetime)">
@@ -916,61 +951,37 @@
             <param name="logger">用于记录日志的记录器。</param>
             <param name="hostApplicationLifetime">用于监测应用程序生命周期的对象。</param>
         </member>
-        <member name="M:PowerLmsServer.Managers.JobTrigger.OW#Data#IDbContextSaving{PowerLms#Data#PlJob}#Saving(System.Collections.Generic.IEnumerable{Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry},System.Collections.Generic.Dictionary{System.Object,System.Object})">
+        <member name="M:PowerLmsServer.Managers.JobTrigger.Saving(System.Collections.Generic.IEnumerable{Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry},System.Collections.Generic.Dictionary{System.Object,System.Object})">
             <summary>
-            保存 PlJob 实体的方法。
+            处理实体的增删改操作，并将相应的 JobId 添加到状态字典中。
             </summary>
             <param name="entities">实体集合。</param>
             <param name="states">状态字典。</param>
         </member>
-        <member name="M:PowerLmsServer.Managers.JobTrigger.OW#Data#IDbContextSaving{PowerLms#Data#PlIaDoc}#Saving(System.Collections.Generic.IEnumerable{Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry},System.Collections.Generic.Dictionary{System.Object,System.Object})">
+        <member name="M:PowerLmsServer.Managers.JobTrigger.AddJobIdsToStates(System.Collections.Generic.IEnumerable{Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry},System.Collections.Generic.Dictionary{System.Object,System.Object})">
             <summary>
-            保存 PlIaDoc 实体的方法。
+            将 EntityId 添加到状态字典中。
             </summary>
             <param name="entities">实体集合。</param>
             <param name="states">状态字典。</param>
         </member>
-        <member name="M:PowerLmsServer.Managers.JobTrigger.OW#Data#IDbContextSaving{PowerLms#Data#PlIsDoc}#Saving(System.Collections.Generic.IEnumerable{Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry},System.Collections.Generic.Dictionary{System.Object,System.Object})">
+        <member name="M:PowerLmsServer.Managers.JobTrigger.GetEntityJobId(System.Object)">
             <summary>
-            保存 PlIsDoc 实体的方法。
+            获取实体的 JobId 属性值。
             </summary>
-            <param name="entities">实体集合。</param>
-            <param name="states">状态字典。</param>
-        </member>
-        <member name="M:PowerLmsServer.Managers.JobTrigger.OW#Data#IDbContextSaving{PowerLms#Data#PlEsDoc}#Saving(System.Collections.Generic.IEnumerable{Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry},System.Collections.Generic.Dictionary{System.Object,System.Object})">
-            <summary>
-            保存 PlEsDoc 实体的方法。
-            </summary>
-            <param name="entities">实体集合。</param>
-            <param name="states">状态字典。</param>
-        </member>
-        <member name="M:PowerLmsServer.Managers.JobTrigger.OW#Data#IDbContextSaving{PowerLms#Data#PlEaDoc}#Saving(System.Collections.Generic.IEnumerable{Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry},System.Collections.Generic.Dictionary{System.Object,System.Object})">
-            <summary>
-            保存 PlEaDoc 实体的方法。
-            </summary>
-            <param name="entities">实体集合。</param>
-            <param name="states">状态字典。</param>
-        </member>
-        <member name="M:PowerLmsServer.Managers.JobTrigger.OW#Data#IDbContextSaving{PowerLms#Data#DocFee}#Saving(System.Collections.Generic.IEnumerable{Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry},System.Collections.Generic.Dictionary{System.Object,System.Object})">
-            <summary>
-            保存 DocFee 实体的方法。
-            </summary>
-            <param name="entities">实体集合。</param>
-            <param name="states">状态字典。</param>
-        </member>
-        <member name="M:PowerLmsServer.Managers.JobTrigger.AddJobIdsToStates(System.Collections.Generic.IEnumerable{Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry},System.Collections.Generic.Dictionary{System.Object,System.Object},System.String)">
-            <summary>
-            将 JobId 添加到状态字典中。
-            </summary>
-            <param name="entities">实体集合。</param>
-            <param name="states">状态字典。</param>
-            <param name="entityType">实体类型名称。</param>
+            <param name="entity">实体对象。</param>
+            <returns>实体的 JobId 属性值。</returns>
         </member>
         <member name="M:PowerLmsServer.Managers.JobTrigger.EnsureHashSetInStates(System.Collections.Generic.Dictionary{System.Object,System.Object})">
             <summary>
-            确保状态字典包含一个 HashSet&lt;Guid&gt;，以存储已更改的 JobId。
+            确保状态字典包含一个 HashSet&lt;JobChange&gt;，以存储已更改的 EntityId。
             </summary>
             <param name="states">状态字典。</param>
+        </member>
+        <member name="M:PowerLmsServer.Managers.JobTrigger.OnApplicationStopping">
+            <summary>
+            应用程序停止时的处理逻辑。
+            </summary>
         </member>
         <member name="M:PowerLmsServer.Managers.JobTrigger.Dispose(System.Boolean)">
             <summary>
@@ -981,11 +992,6 @@
         <member name="M:PowerLmsServer.Managers.JobTrigger.Dispose">
             <summary>
             实现 IDisposable 接口的方法。
-            </summary>
-        </member>
-        <member name="M:PowerLmsServer.Managers.JobTrigger.OnApplicationStopping">
-            <summary>
-            应用程序停止时的处理逻辑。
             </summary>
         </member>
         <member name="T:PowerLmsServer.Managers.JobTrigger2">
