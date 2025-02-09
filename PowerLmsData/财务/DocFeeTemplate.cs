@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 namespace PowerLms.Data
 {
     /// <summary>
-    /// 费用方案数据。
+    /// 费用方案数据对象。
     /// </summary>
     [Table("DocFeeTemplates")]
     public class DocFeeTemplate : GuidKeyObjectBase, ICreatorInfo
@@ -51,7 +51,7 @@ namespace PowerLms.Data
     }
 
     /// <summary>
-    /// 费用方案数据详细项。
+    /// 费用方案数据详细项对象。
     /// </summary>
     [Table("DocFeeTemplateItems")]
     public class DocFeeTemplateItem : GuidKeyObjectBase

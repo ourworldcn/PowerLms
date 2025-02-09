@@ -37,4 +37,20 @@ namespace PowerLms.Data
         /// </summary>
         public DateTime CreateDateTime { get; set; }
     }
+
+    /// <summary>
+    /// 业务表单标记。
+    /// </summary>
+    public interface IPlBusinessDoc
+    {
+        /// <summary>
+        /// 所属业务Id。
+        /// </summary>
+        public Guid? JobId { get; set; }
+
+        /// <summary>
+        /// 操作状态。0=初始化单据但尚未操作，128=最后一个状态，此状态下将业务对象状态自动切换为下一个状态。
+        /// </summary>
+        public byte Status { get; set; }
+    }
 }
