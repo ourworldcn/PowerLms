@@ -65,7 +65,7 @@ namespace GY02.Controllers
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             if (context.User.IsMerchantAdmin)
             {
-                var merchantId = _MerchantManager.GetOrLoadCacheItemByUser(context.User).Data.Id;
+                var merchantId = _MerchantManager.GetOrLoadByUser(context.User).Data.Id;
                 coll = coll.Where(c => c.MerchantId == merchantId);
             }
             coll = EfHelper.GenerateWhereAnd(coll, conditional);

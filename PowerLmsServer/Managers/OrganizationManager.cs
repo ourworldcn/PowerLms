@@ -72,7 +72,7 @@ namespace PowerLmsServer.Managers
         public void OrgsLoaded(ConcurrentDictionary<Guid, PlOrganization> orgs)
         {
             var merchId = orgs.Values.First(c => c.MerchantId is not null).MerchantId.Value;
-            var merch = _MerchantManager.GetOrLoadCacheItemById(merchId);
+            var merch = _MerchantManager.GetOrLoadById(merchId);
             EnParent(orgs.Values);
         }
 
@@ -106,7 +106,7 @@ namespace PowerLmsServer.Managers
         {
             var result = _Cache.GetOrCreate(OwCacheHelper.GetCacheKeyFromId(merchantId, ".Orgs"), entry =>
             {
-                var merch = _MerchantManager.GetOrLoadCacheItemById(OwCacheHelper.GetIdFromCacheKey(entry.Key as string, ".Orgs").Value);
+                var merch = _MerchantManager.GetOrLoadById(OwCacheHelper.GetIdFromCacheKey(entry.Key as string, ".Orgs").Value);
                 var db = merch.Data.DbContext;
                 var r = new OwCacheItem<ConcurrentDictionary<Guid, PlOrganization>>
                 {
@@ -154,7 +154,7 @@ namespace PowerLmsServer.Managers
                 {
                     Data = LoadCurrentOrgsByUser(user),
                 };
-                var merch = _MerchantManager.GetOrLoadCacheItemByUser(user);
+                var merch = _MerchantManager.GetOrLoadByUser(user);
                 var orgs = GetOrLoadOrgsCacheItemByMerchantId(merch.Data.Id);
                 var userCi = _AccountManager.GetOrLoadCacheItemById(user.Id);
                 if (userCi is null) return null;
@@ -173,7 +173,7 @@ namespace PowerLmsServer.Managers
         public PlOrganization GetCurrentCompanyByUser(Account user)
         {
             if (user.OrgId is null) return null;
-            if (_MerchantManager.GetOrLoadCacheItemByUser(user) is not OwCacheItem<PlMerchant> merch) return null;
+            if (_MerchantManager.GetOrLoadByUser(user) is not OwCacheItem<PlMerchant> merch) return null;
             if (GetOrLoadOrgsCacheItemByMerchantId(merch.Data.Id) is not OwCacheItem<ConcurrentDictionary<Guid, PlOrganization>> orgs) return null;
             if (!orgs.Data.TryGetValue(user.OrgId.Value, out var org)) return null;
             PlOrganization tmp;

@@ -590,72 +590,86 @@
         <member name="T:PowerLmsServer.Managers.MerchantManager">
             <summary>
             商户功能管理服务。
+            作者: OW
+            修改日期: 2025年2月10日。
+            创建日期: 2025年2月10日。
             </summary>
         </member>
         <member name="M:PowerLmsServer.Managers.MerchantManager.#ctor(Microsoft.Extensions.Caching.Memory.IMemoryCache,Microsoft.EntityFrameworkCore.IDbContextFactory{PowerLmsServer.EfData.PowerLmsUserDbContext},PowerLmsServer.EfData.PowerLmsUserDbContext)">
             <summary>
             构造函数。
             </summary>
+            <param name="memoryCache">内存缓存。</param>
+            <param name="dbContextFactory">数据库上下文工厂。</param>
+            <param name="dbContext">数据库上下文。</param>
         </member>
         <member name="M:PowerLmsServer.Managers.MerchantManager.LoadById(System.Guid,PowerLmsServer.EfData.PowerLmsUserDbContext@)">
             <summary>
             根据指定Id加载商户对象。
             </summary>
-            <param name="merchId"></param>
+            <param name="merchId">商户ID。</param>
             <param name="dbContext">传递null，则用池自动获取一个数据库上下文。</param>
             <returns>没有找到则返回null。</returns>
         </member>
         <member name="M:PowerLmsServer.Managers.MerchantManager.Loaded(PowerLms.Data.PlMerchant,PowerLmsServer.EfData.PowerLmsUserDbContext)">
             <summary>
-            
+            设置商户对象的数据库上下文。
             </summary>
-            <param name="merch"></param>
-            <param name="dbContext"></param>
+            <param name="merch">商户对象。</param>
+            <param name="dbContext">数据库上下文。</param>
         </member>
         <member name="M:PowerLmsServer.Managers.MerchantManager.GetCacheItemById(System.Guid)">
             <summary>
             获取指定id的商户对象缓存。
             </summary>
-            <param name="merchantId"></param>
+            <param name="merchantId">商户ID。</param>
             <returns>商户对象，若没有找到，则返回null。</returns>
         </member>
-        <member name="M:PowerLmsServer.Managers.MerchantManager.GetOrLoadCacheItemById(System.Guid)">
+        <member name="M:PowerLmsServer.Managers.MerchantManager.GetOrLoadById(System.Guid)">
             <summary>
             加载或获取缓存的商户对象。
             </summary>
-            <param name="merchantId"></param>
-            <returns></returns>
+            <param name="merchantId">商户ID。</param>
+            <returns>商户对象缓存项。</returns>
         </member>
-        <member name="M:PowerLmsServer.Managers.MerchantManager.GetOrLoadCacheItemByUser(PowerLms.Data.Account)">
+        <member name="M:PowerLmsServer.Managers.MerchantManager.GetOrLoadByOrgId(System.Guid)">
+            <summary>
+            按 OrgId 获取或加载 PlMerchant 的缓存项。
+            </summary>
+            <param name="orgId">组织ID。</param>
+            <returns>商户对象缓存项。</returns>
+        </member>
+        <member name="M:PowerLmsServer.Managers.MerchantManager.GetOrLoadByUser(PowerLms.Data.Account)">
             <summary>
             从指定的用户对象获取其商户信息。
             </summary>
-            <param name="user"></param>
+            <param name="user">用户对象。</param>
             <returns>对于不属于商户的账号返回null。</returns>
         </member>
         <member name="M:PowerLmsServer.Managers.MerchantManager.GetIdByUserId(System.Guid,System.Nullable{System.Guid}@)">
             <summary>
             获取指定账户所属的商户Id。
             </summary>
-            <param name="userId"></param>
-            <param name="MerchantId"></param>
-            <returns>true指定账户所属商户Id,如果不属于任何商户则返回null。false 没有找到指定的用户Id。</returns>
+            <param name="userId">用户ID。</param>
+            <param name="MerchantId">商户ID。</param>
+            <returns>true指定账户所属商户Id。如果不属于任何商户则返回null。false 没有找到指定的用户Id。</returns>
         </member>
-        <member name="M:PowerLmsServer.Managers.MerchantManager.GetIdByOrgId(System.Guid,System.Nullable{System.Guid}@)">
+        <member name="M:PowerLmsServer.Managers.MerchantManager.TryGetIdByOrgOrMerchantId(System.Guid,System.Nullable{System.Guid}@,PowerLmsServer.EfData.PowerLmsUserDbContext)">
             <summary>
-            从数据库中取指定组织机构Id所属的商户Id。
+            从数据库中取指定组织机构Id或商户Id所属的商户Id。
             </summary>
-            <param name="orgId">机构Id。</param>
-            <param name="merchantId"></param>
-            <returns>true则找到了商户Id，false没有找到。</returns>
+            <param name="id">机构Id或商户Id。</param>
+            <param name="merchantId">商户Id。</param>
+            <param name="dbContext">可选参数，指定使用的数据库上下文。</param>
+            <returns>true则找到了商户Id。false没有找到。</returns>
         </member>
         <member name="M:PowerLmsServer.Managers.MerchantManager.GetIdByRoleId(System.Guid,System.Nullable{System.Guid}@)">
             <summary>
-            
+            根据角色Id获取商户Id。
             </summary>
-            <param name="roleId"></param>
-            <param name="merchantId"></param>
-            <returns></returns>
+            <param name="roleId">角色Id。</param>
+            <param name="merchantId">商户Id。</param>
+            <returns>true则找到了商户Id。false没有找到。</returns>
         </member>
         <member name="T:PowerLmsServer.Managers.MultilingualManager">
             <summary>
@@ -1013,6 +1027,20 @@
             <param name="serviceProvider">服务提供者。</param>
             <param name="states">状态字典。</param>
         </member>
+        <member name="T:PowerLmsServer.Managers.OwSqlAppLoggerExtensions">
+            <summary>
+            提供 OwSqlAppLogger 的扩展方法，用于记录工作任务的变化。
+            </summary>
+        </member>
+        <member name="M:PowerLmsServer.Managers.OwSqlAppLoggerExtensions.LogJobChangedOrRemoved(PowerLmsServer.Managers.OwSqlAppLogger,System.IServiceProvider,Microsoft.EntityFrameworkCore.DbContext,System.Collections.Generic.HashSet{PowerLmsServer.Managers.JobChange})">
+            <summary>
+            记录每个变化的 Job 的详细信息。
+            </summary>
+            <param name="logger">应用日志服务实例。</param>
+            <param name="serviceProvider">服务提供者。</param>
+            <param name="dbContext">当前 DbContext 实例。</param>
+            <param name="jobChanges">变化的工作任务详细信息集合。</param>
+        </member>
         <member name="T:PowerLmsServer.Managers.OwWfManager">
             <summary>
             工作流相关功能管理器。
@@ -1238,15 +1266,6 @@
             <summary>
             warehousing and Storage(仓储业务)类型Id。
             </summary>
-        </member>
-        <member name="M:OwSqlAppLoggerExtensions.LogJobChangedOrRemoved(PowerLmsServer.Managers.OwSqlAppLogger,System.IServiceProvider,Microsoft.EntityFrameworkCore.DbContext,System.Collections.Generic.HashSet{System.Guid})">
-            <summary>
-            记录每个变化的 Job 的 ID。
-            </summary>
-            <param name="logger">应用日志服务实例。</param>
-            <param name="serviceProvider">服务提供者。</param>
-            <param name="dbContext">当前 DbContext 实例。</param>
-            <param name="jobIds">变化的工作任务 ID 集合。</param>
         </member>
     </members>
 </doc>

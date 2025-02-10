@@ -82,7 +82,7 @@ namespace PowerLmsServer.Managers
         {
             var result = _Cache.GetOrCreate(OwCacheHelper.GetCacheKeyFromId(merchId, ".Roles"), entry =>
             {
-                var merchCi = _MerchantManager.GetOrLoadCacheItemById(merchId);
+                var merchCi = _MerchantManager.GetOrLoadById(merchId);
                 var orgCi = _OrganizationManager.GetOrLoadOrgsCacheItemByMerchantId(merchCi.Data.Id);
                 var db = merchCi.Data.DbContext;
                 var r = new OwCacheItem<ConcurrentDictionary<Guid, PlRole>>
@@ -124,7 +124,7 @@ namespace PowerLmsServer.Managers
         public ConcurrentDictionary<Guid, PlRole> LoadCurrentRolesByUser(Account user, ref PowerLmsUserDbContext db)
         {
             var orgs = _OrganizationManager.GetOrLoadCurrentOrgsCacheItemByUser(user);   //用户登录的有效机构集合
-            var merchant = _MerchantManager.GetOrLoadCacheItemByUser(user);
+            var merchant = _MerchantManager.GetOrLoadByUser(user);
             var allRoles = GetOrLoadRolesCacheItemByMerchantId(merchant.Data.Id);   //商户下所有角色
 
             db ??= _DbContextFactory.CreateDbContext();
@@ -152,7 +152,7 @@ namespace PowerLmsServer.Managers
                     Data = LoadCurrentRolesByUser(user, ref db),
                 };
                 var orgs = _OrganizationManager.GetOrLoadCurrentOrgsCacheItemByUser(user);
-                var merch = _MerchantManager.GetOrLoadCacheItemByUser(user);
+                var merch = _MerchantManager.GetOrLoadByUser(user);
                 var roles = GetOrLoadRolesCacheItemByMerchantId(merch.Data.Id);
                 r.SetCancellations(new CancellationTokenSource(), orgs.ChangeToken, roles.ChangeToken);
                 entry.AddExpirationToken(r.ChangeToken);

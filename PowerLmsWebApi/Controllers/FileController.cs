@@ -115,6 +115,7 @@ namespace PowerLmsWebApi.Controllers
             var info = _DbContext.PlFileInfos.Find(fileId);
             if (info == null) return NotFound();
             var path = Path.Combine(AppContext.BaseDirectory, "Files", info.FilePath);
+            if (!System.IO.File.Exists(path)) return NotFound();
             var stream = new FileStream(path, FileMode.Open);
             return File(stream, "application/octet-stream", info.FileName);
         }
@@ -300,6 +301,7 @@ namespace PowerLmsWebApi.Controllers
                 }
 
             var path = Path.Combine(AppContext.BaseDirectory, "Files", info.FilePath);
+            if (!System.IO.File.Exists(path)) return NotFound();
             var stream = new FileStream(path, FileMode.Open);
             return File(stream, "application/octet-stream", info.FileName);
         }

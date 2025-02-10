@@ -1,8 +1,8 @@
 ﻿/*
 文件名称: OwSqlAppLogger.Triggers2.cs
 作者: OW
-创建日期: 5 February 2025
-修改日期: 8 February 2025
+创建日期: 2025年2月5日
+修改日期: 2025年2月8日
 描述: 此文件包含 JobTrigger2 类及其扩展方法。JobTrigger2 类实现了 IAfterDbContextSaving 接口，在工作任务被修改或删除后触发相应的处理逻辑。
 */
 
@@ -15,7 +15,6 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using PowerLmsServer.Managers;
-using static System.Formats.Asn1.AsnWriter;
 
 namespace PowerLmsServer.Managers
 {
@@ -28,7 +27,15 @@ namespace PowerLmsServer.Managers
     [OwAutoInjection(ServiceLifetime.Scoped, ServiceType = typeof(IAfterDbContextSaving<PlEsDoc>))]
     [OwAutoInjection(ServiceLifetime.Scoped, ServiceType = typeof(IAfterDbContextSaving<PlEaDoc>))]
     [OwAutoInjection(ServiceLifetime.Scoped, ServiceType = typeof(IAfterDbContextSaving<DocFee>))]
-    public class JobTrigger2 : IAfterDbContextSaving<PlJob>, IAfterDbContextSaving<PlIaDoc>, IAfterDbContextSaving<PlIsDoc>, IAfterDbContextSaving<PlEsDoc>, IAfterDbContextSaving<PlEaDoc>, IAfterDbContextSaving<DocFee>
+    [OwAutoInjection(ServiceLifetime.Scoped, ServiceType = typeof(IAfterDbContextSaving<DocFeeTemplate>))]
+    public class JobTrigger2 :
+        IAfterDbContextSaving<PlJob>,
+        IAfterDbContextSaving<PlIaDoc>,
+        IAfterDbContextSaving<PlIsDoc>,
+        IAfterDbContextSaving<PlEsDoc>,
+        IAfterDbContextSaving<PlEaDoc>,
+        IAfterDbContextSaving<DocFee>,
+        IAfterDbContextSaving<DocFeeTemplate>
     {
         private readonly IServiceProvider _ServiceProvider;
 
@@ -52,46 +59,58 @@ namespace PowerLmsServer.Managers
         /// <param name="states">状态字典。</param>
         public void Saving(DbContext dbContext, IServiceProvider serviceProvider, Dictionary<object, object> states)
         {
-            if (states.TryGetValue(JobTriggerConstants.ChangedJobIdsKey, out var jobIdObj) && jobIdObj is HashSet<Guid> jobIds)
+            if (states.TryGetValue(JobTriggerConstants.ChangedJobIdsKey, out var jobIdObj) && jobIdObj is HashSet<JobChange> jobChanges)
             {
                 var logger = serviceProvider.GetService<OwSqlAppLogger>();
-                logger.LogJobChangedOrRemoved(serviceProvider, dbContext, jobIds);
+                logger.LogJobChangedOrRemoved(serviceProvider, dbContext, jobChanges);
             }
         }
         #endregion IAfterDbContextSaving 接口实现
     }
-}
 
-public static class OwSqlAppLoggerExtensions
-{
     /// <summary>
-    /// 记录每个变化的 Job 的 ID。
+    /// 提供 OwSqlAppLogger 的扩展方法，用于记录工作任务的变化。
     /// </summary>
-    /// <param name="logger">应用日志服务实例。</param>
-    /// <param name="serviceProvider">服务提供者。</param>
-    /// <param name="dbContext">当前 DbContext 实例。</param>
-    /// <param name="jobIds">变化的工作任务 ID 集合。</param>
-    public static void LogJobChangedOrRemoved(this OwSqlAppLogger logger, IServiceProvider serviceProvider, DbContext dbContext, HashSet<Guid> jobIds)
+    public static class OwSqlAppLoggerExtensions
     {
-        var httpContextAccessor = serviceProvider.GetService<IHttpContextAccessor>();
-        var ipAddress = httpContextAccessor?.HttpContext?.Connection.RemoteIpAddress?.ToString();
-        var context = serviceProvider.GetService<OwContext>();
-
-        foreach (var jobId in jobIds)
+        /// <summary>
+        /// 记录每个变化的 Job 的详细信息。
+        /// </summary>
+        /// <param name="logger">应用日志服务实例。</param>
+        /// <param name="serviceProvider">服务提供者。</param>
+        /// <param name="dbContext">当前 DbContext 实例。</param>
+        /// <param name="jobChanges">变化的工作任务详细信息集合。</param>
+        public static void LogJobChangedOrRemoved(this OwSqlAppLogger logger, IServiceProvider serviceProvider, DbContext dbContext, HashSet<JobChange> jobChanges)
         {
-            var logItem = new OwAppLogItemStore
-            {
-                ParentId = jobId,
-                CreateUtc = DateTime.UtcNow,
-                ParamstersJson = JsonSerializer.Serialize(new Dictionary<string, string>
-                {
-                    { "JobId", jobId.ToString() },
-                    { "IPAddress", ipAddress ?? "Unknown" },
-                    {"UserId",context?.User?.Id.ToString() },
-                })
-            };
+            // 获取 HttpContextAccessor 服务实例，以获取客户端 IP 地址
+            var httpContextAccessor = serviceProvider.GetService<IHttpContextAccessor>();
+            var ipAddress = httpContextAccessor?.HttpContext?.Connection.RemoteIpAddress?.ToString();
 
-            logger.WriteLogItem(logItem);
+            // 获取当前用户的上下文信息
+            var context = serviceProvider.GetService<OwContext>();
+
+            // 遍历所有变化的工作任务详细信息，并记录日志项
+            foreach (var jobChange in jobChanges)
+            {
+                // 创建新的日志项
+                var logItem = new OwAppLogItemStore
+                {
+                    ParentId = null,
+                    CreateUtc = DateTime.UtcNow,
+                    ParamstersJson = JsonSerializer.Serialize(new Dictionary<string, string>
+                {
+                    { "EntityId", jobChange.EntityId.ToString() },
+                    { "Action", jobChange.Action },
+                    { "EntityType", jobChange.EntityType },
+                    { "IPAddress", ipAddress ?? "Unknown" },
+                    { "UserId", context?.User?.Id.ToString() }
+                })
+                };
+
+                // 写入日志项
+                logger.WriteLogItem(logItem);
+            }
         }
     }
 }
+

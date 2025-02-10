@@ -151,7 +151,7 @@ namespace PowerLms.Data
         /// 工作状态。Operating正操作=2，Operated操作完成=4，Checked已审核=8，Closed已完成=16.
         /// </summary>
         [Comment("工作状态。Operating正操作=2，Operated操作完成=4，Checked已审核=8，Closed已完成=16.")]
-        public byte JobState { get; set; }
+        public byte JobState { get; set; } = 2;
 
         /// <summary>
         ///  财务日期。出口默认出港日期，进口默认出库日期。

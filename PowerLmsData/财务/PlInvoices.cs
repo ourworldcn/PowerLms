@@ -191,30 +191,7 @@ namespace PowerLms.Data
         /// </summary>
         [Comment("申请单明细id")]
         public Guid? RequisitionItemId { get; set; }
-
+        
     }
 
-    /// <summary>
-    /// 
-    /// </summary>
-    [OwAutoInjection(ServiceLifetime.Scoped,ServiceType = typeof(IDbContextSaving<PlInvoices>))]
-    public class PlInvoicesOwEfTriggers : IDbContextSaving<PlInvoices>
-    {
-        public void Saving(IEnumerable<EntityEntry> entity, Dictionary<object, object> states)
-        {
-            
-        }
-    }
-
-    /// <summary>
-    /// 
-    /// </summary>
-    [OwAutoInjection(ServiceLifetime.Scoped, ServiceType = typeof(IAfterDbContextSaving<PlInvoices>))]
-    public class PlInvoicesAfterOwEfTriggers : IAfterDbContextSaving<PlInvoices>
-    {
-        public void Saving(DbContext dbContext, IServiceProvider serviceProvider, Dictionary<object, object> states)
-        {
-            //throw new NotImplementedException();
-        }
-    }
 }

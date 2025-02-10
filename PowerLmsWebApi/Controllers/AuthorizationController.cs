@@ -133,7 +133,7 @@ namespace PowerLmsWebApi.Controllers
 
             if (model.Item.OrgId.HasValue)
             {
-                if (_MerchantManager.GetIdByOrgId(model.Item.OrgId.Value, out var merchId))
+                if (_MerchantManager.TryGetIdByOrgOrMerchantId(model.Item.OrgId.Value, out var merchId))
                     _RoleManager.GetRolesCacheItemByMerchantId(merchId.Value)?.CancellationTokenSource.Cancel();
             }
             return result;
@@ -189,7 +189,7 @@ namespace PowerLmsWebApi.Controllers
             if (item is null) return BadRequest();
             Guid? merchantId = null;
             if (item.OrgId.HasValue)
-                _MerchantManager.GetIdByOrgId(item.OrgId.Value, out merchantId);
+                _MerchantManager.TryGetIdByOrgOrMerchantId(item.OrgId.Value, out merchantId);
             _EntityManager.Remove(item);
             _DbContext.SaveChanges();
 

@@ -59,7 +59,8 @@ namespace PowerLms.Data
         /// 兑换率。
         /// </summary>
         [Comment("兑换率")]
-        public float Exchange { get; set; }
+        [Precision(18, 4)]
+        public decimal Exchange { get; set; }
 
         /// <summary>
         /// 生效时点。

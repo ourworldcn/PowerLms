@@ -66,7 +66,7 @@ namespace PowerLmsWebApi.Controllers
             {
                 return BadRequest("超管不能获取具体商户的机构");
             }
-            if (_MerchantManager.GetOrLoadCacheItemByUser(context.User) is not OwCacheItem<PlMerchant> merch)    //若找不到商户
+            if (_MerchantManager.GetOrLoadByUser(context.User) is not OwCacheItem<PlMerchant> merch)    //若找不到商户
                 return BadRequest("找不到用户所属的商户");
             var orgs = _OrganizationManager.GetOrLoadOrgsCacheItemByMerchantId(merch.Data.Id);  //获取其所有机构
             if (rootId.HasValue) //若指定了根机构
@@ -180,7 +180,7 @@ namespace PowerLmsWebApi.Controllers
                 _DbContext.SaveChanges();
                 var merchIds = restore.Select(c =>
                  {
-                     _MerchantManager.GetIdByOrgId(c.Item1.Id, out var r);
+                     _MerchantManager.TryGetIdByOrgOrMerchantId(c.Item1.Id, out var r);
                      return r;
                  }).Distinct().ToArray();
                 foreach (var item in merchIds)
@@ -275,7 +275,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetMerchantIdReturnDto();
-            if (!_MerchantManager.GetIdByOrgId(orgId, out var merchId))
+            if (!_MerchantManager.TryGetIdByOrgOrMerchantId(orgId, out var merchId))
                 return BadRequest();
             result.Result = merchId;
             return result;
