@@ -1018,7 +1018,7 @@ namespace PowerLmsWebApi.Controllers
 
             if (!_MerchantManager.GetIdByUserId(context.User.Id, out var merchId))
                 return result;
-            if (_OrganizationManager.GetOrLoadOrgsCacheItemByMerchantId(merchId.Value).Data[context.User.OrgId.Value] is not PlOrganization org)
+            if (_OrganizationManager.GetOrLoadByMerchantId(merchId.Value).Data[context.User.OrgId.Value] is not PlOrganization org)
                 return BadRequest($"找不到指定的登录公司Id={merchId}");
             if (string.IsNullOrWhiteSpace(org.BaseCurrencyCode)) BadRequest($"公司本币设置错误，本币代码为:{org.BaseCurrencyCode}");
             //var curr = _DbContext.DD_PlCurrencys.Find(org.BaseCurrencyId.Value); if (curr is null) return result;

@@ -51,7 +51,7 @@ namespace PowerLms.Data
         /// <param name="dbContext">数据库上下文。</param>
         /// <param name="jobId">工作唯一标识。</param>
         /// <param name="merchantManager">商户管理器。</param>
-        /// <param name="organizationManager">机构管理器。</param>
+        /// <param name="organizationManager">组织机构管理器。</param>
         /// <returns>本币编码。</returns>
         public static string GetBaseCurrencyCode(this DbContext dbContext, Guid jobId, MerchantManager merchantManager, OrganizationManager organizationManager)
         {
@@ -61,23 +61,18 @@ namespace PowerLms.Data
                 throw new Exception($"Job with Id {jobId} not found.");
             }
 
-            if (merchantManager.TryGetIdByOrgOrMerchantId(job.OrgId.Value, out var merchantId))
+            if (!merchantManager.TryGetIdByOrgOrMerchantId(job.OrgId.Value, out var organizationId))
             {
-                var organization = organizationManager.LoadById(merchantId.Value);
-                while (organization?.ParentId != null)
-                {
-                    organization = organizationManager.LoadById(organization.ParentId.Value);
-                }
-
-                if (organization == null)
-                {
-                    throw new Exception($"Root organization for JobId {jobId} not found.");
-                }
-
-                return organization.BaseCurrencyCode;
+                throw new Exception($"Organization for JobId {jobId} not found.");
             }
 
-            throw new Exception($"Merchant for OrgId {job.OrgId} not found.");
+            var organization = organizationManager.GetOrganizationById(organizationId.Value);
+            if (organization == null)
+            {
+                throw new Exception($"Organization for JobId {jobId} not found.");
+            }
+
+            return organization.BaseCurrencyCode;
         }
     }
 
@@ -111,29 +106,29 @@ namespace PowerLms.Data
         }
 
         /// <summary>
-        /// 在 DocFee 和 DocBill 添加/更改时，将其 ParentId（如果不为空）放在 HashSet 中。
+        /// 在 DocFee 和 DocBill 添加/更改时，将其 BillId（如果不为空）放在 HashSet 中。
         /// </summary>
         /// <param name="entities">当前实体条目集合。</param>
         /// <param name="states">状态字典。</param>
         public void Saving(IEnumerable<EntityEntry> entities, Dictionary<object, object> states)
         {
-            if (!states.TryGetValue(DocTriggerConstants.ChangedDocFeeIdsKey, out var obj) || !(obj is HashSet<Guid> parentIds))
+            if (!states.TryGetValue(DocTriggerConstants.ChangedDocFeeIdsKey, out var obj) || !(obj is HashSet<Guid> billIds))
             {
-                parentIds = new HashSet<Guid>();
-                states[DocTriggerConstants.ChangedDocFeeIdsKey] = parentIds;
+                billIds = new HashSet<Guid>();
+                states[DocTriggerConstants.ChangedDocFeeIdsKey] = billIds;
             }
 
             foreach (var entry in entities)
             {
                 var id = entry.Entity switch
                 {
-                    DocFee df => df.ParentId,
+                    DocFee df => df.BillId,
                     DocBill db when entry.State == EntityState.Added || entry.State == EntityState.Modified => db.Id,
                     _ => null,
                 };
                 if (id.HasValue)
                 {
-                    parentIds.Add(id.Value);
+                    billIds.Add(id.Value);
                 }
             }
         }
@@ -168,19 +163,32 @@ namespace PowerLms.Data
             var merchantManager = serviceProvider.GetRequiredService<MerchantManager>();
             var organizationManager = serviceProvider.GetRequiredService<OrganizationManager>();
 
-            if (states.TryGetValue(DocTriggerConstants.ChangedDocFeeIdsKey, out var obj) && obj is HashSet<Guid> parentIds)
+            if (states.TryGetValue(DocTriggerConstants.ChangedDocFeeIdsKey, out var obj) && obj is HashSet<Guid> billIds)
             {
                 var docBillUpdates = dbContext.Set<DocFee>()
-                    .Where(item => parentIds.Contains(item.ParentId.Value))
-                    .GroupBy(item => item.ParentId)
+                    .Where(item => billIds.Contains(item.BillId.Value))
+                    .GroupBy(item => item.BillId)
                     .Select(group => new
                     {
                         ParentId = group.Key,
                         TotalAmount = group.Sum(item =>
                         {
                             var docBill = dbContext.Set<DocBill>().Find(group.Key);
+                            if (docBill == null)
+                            {
+                                throw new Exception($"DocBill with Id {group.Key} not found.");
+                            }
+
+                            // 获取 baseCurrencyCode
                             var baseCurrencyCode = dbContext.GetBaseCurrencyCode(docBill.JobId.Value, merchantManager, organizationManager);
+                            if (string.IsNullOrEmpty(baseCurrencyCode))
+                            {
+                                throw new Exception($"Base currency code for DocBill with Id {docBill.Id} not found.");
+                            }
+
+                            // 计算汇率
                             var exchangeRate = dbContext.GetExchangeRate(item.Currency, baseCurrencyCode == docBill.Currency ? baseCurrencyCode : docBill.Currency);
+
                             return Math.Round(item.Amount * exchangeRate, 4, MidpointRounding.AwayFromZero);
                         })
                     })

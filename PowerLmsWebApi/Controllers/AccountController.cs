@@ -104,7 +104,7 @@ namespace PowerLmsWebApi.Controllers
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             if (_AccountManager.IsMerchantAdmin(context.User) && _MerchantManager.GetIdByUserId(context.User.Id, out var merchantId))
             {
-                var orgs = _OrganizationManager.GetOrLoadOrgsCacheItemByMerchantId(merchantId.Value);
+                var orgs = _OrganizationManager.GetOrLoadByMerchantId(merchantId.Value);
                 var tmp = orgs.Data.Keys;    //所有机构Id
                 if (merchantId.HasValue) tmp = tmp.Append(merchantId.Value).ToArray();
                 var userIds = _DbContext.AccountPlOrganizations.Where(c => tmp.Contains(c.OrgId)).Select(c => c.UserId).Distinct().ToArray();
@@ -384,7 +384,7 @@ namespace PowerLmsWebApi.Controllers
             if (context.User.OrgId != model.CurrentOrgId)
             {
                 if (!_MerchantManager.TryGetIdByOrgOrMerchantId(model.CurrentOrgId, out var merchantId)) return BadRequest("错误的当前组织机构Id。");
-                var orgs = _OrganizationManager.GetOrLoadOrgsCacheItemByMerchantId(merchantId.Value);
+                var orgs = _OrganizationManager.GetOrLoadByMerchantId(merchantId.Value);
                 if (!orgs.Data.TryGetValue(model.CurrentOrgId, out var currentOrg)) return BadRequest("错误的当前组织机构Id。");
                 if (currentOrg.Otc != 2)
                     return BadRequest("错误的当前组织机构Id——不是公司。");

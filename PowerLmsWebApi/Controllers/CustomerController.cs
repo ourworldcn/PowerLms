@@ -70,7 +70,7 @@ namespace PowerLmsWebApi.Controllers
             Guid[] allOrg = Array.Empty<Guid>();
             if (_MerchantManager.GetIdByUserId(context.User.Id, out var merId))
             {
-                allOrg = _OrganizationManager.GetOrLoadOrgsCacheItemByMerchantId(merId.Value).Data.Keys.ToArray();
+                allOrg = _OrganizationManager.GetOrLoadByMerchantId(merId.Value).Data.Keys.ToArray();
             }
             //var dbSet = _DbContext.PlCustomers.Where(c => c.OrgId.HasValue && allOrg.Contains(c.OrgId.Value));
             var dbSet = _DbContext.PlCustomers.Where(c => c.OrgId == context.User.OrgId);
@@ -215,7 +215,7 @@ namespace PowerLmsWebApi.Controllers
             Guid[] allOrg = Array.Empty<Guid>();
             if (_MerchantManager.GetIdByUserId(context.User.Id, out var merId))
             {
-                allOrg = _OrganizationManager.GetOrLoadOrgsCacheItemByMerchantId(merId.Value).Data.Keys.ToArray();
+                allOrg = _OrganizationManager.GetOrLoadByMerchantId(merId.Value).Data.Keys.ToArray();
             }
             //var dbSet = _DbContext.PlCustomers.Where(c => c.OrgId.HasValue && allOrg.Contains(c.OrgId.Value));
             var dbSet = _DbContext.PlCustomers.Where(c => c.OrgId == context.User.OrgId);

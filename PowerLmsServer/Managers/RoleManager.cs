@@ -52,7 +52,7 @@ namespace PowerLmsServer.Managers
         /// <returns></returns>
         public ConcurrentDictionary<Guid, PlRole> LoadByMerchantId(Guid merchId, ref PowerLmsUserDbContext dbContext)
         {
-            var dic = _OrganizationManager.GetOrLoadOrgsCacheItemByMerchantId(merchId);
+            var dic = _OrganizationManager.GetOrLoadByMerchantId(merchId);
             var orgIds = dic.Data.Keys;
             dbContext ??= _DbContextFactory.CreateDbContext();
             lock (dbContext)
@@ -83,7 +83,7 @@ namespace PowerLmsServer.Managers
             var result = _Cache.GetOrCreate(OwCacheHelper.GetCacheKeyFromId(merchId, ".Roles"), entry =>
             {
                 var merchCi = _MerchantManager.GetOrLoadById(merchId);
-                var orgCi = _OrganizationManager.GetOrLoadOrgsCacheItemByMerchantId(merchCi.Data.Id);
+                var orgCi = _OrganizationManager.GetOrLoadByMerchantId(merchCi.Data.Id);
                 var db = merchCi.Data.DbContext;
                 var r = new OwCacheItem<ConcurrentDictionary<Guid, PlRole>>
                 {

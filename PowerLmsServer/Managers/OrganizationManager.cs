@@ -102,7 +102,7 @@ namespace PowerLmsServer.Managers
         /// </summary>
         /// <param name="merchantId"></param>
         /// <returns>没有找到指定商户则返回空字典。</returns>
-        public OwCacheItem<ConcurrentDictionary<Guid, PlOrganization>> GetOrLoadOrgsCacheItemByMerchantId(Guid merchantId)
+        public OwCacheItem<ConcurrentDictionary<Guid, PlOrganization>> GetOrLoadByMerchantId(Guid merchantId)
         {
             var result = _Cache.GetOrCreate(OwCacheHelper.GetCacheKeyFromId(merchantId, ".Orgs"), entry =>
             {
@@ -155,7 +155,7 @@ namespace PowerLmsServer.Managers
                     Data = LoadCurrentOrgsByUser(user),
                 };
                 var merch = _MerchantManager.GetOrLoadByUser(user);
-                var orgs = GetOrLoadOrgsCacheItemByMerchantId(merch.Data.Id);
+                var orgs = GetOrLoadByMerchantId(merch.Data.Id);
                 var userCi = _AccountManager.GetOrLoadCacheItemById(user.Id);
                 if (userCi is null) return null;
                 r.SetCancellations(new CancellationTokenSource(), userCi.ChangeToken, orgs.ChangeToken);
@@ -174,7 +174,7 @@ namespace PowerLmsServer.Managers
         {
             if (user.OrgId is null) return null;
             if (_MerchantManager.GetOrLoadByUser(user) is not OwCacheItem<PlMerchant> merch) return null;
-            if (GetOrLoadOrgsCacheItemByMerchantId(merch.Data.Id) is not OwCacheItem<ConcurrentDictionary<Guid, PlOrganization>> orgs) return null;
+            if (GetOrLoadByMerchantId(merch.Data.Id) is not OwCacheItem<ConcurrentDictionary<Guid, PlOrganization>> orgs) return null;
             if (!orgs.Data.TryGetValue(user.OrgId.Value, out var org)) return null;
             PlOrganization tmp;
             for (tmp = org; tmp is not null && tmp.Otc != 2; tmp = tmp.Parent) ;

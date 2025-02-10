@@ -68,7 +68,7 @@ namespace PowerLmsWebApi.Controllers
             }
             if (_MerchantManager.GetOrLoadByUser(context.User) is not OwCacheItem<PlMerchant> merch)    //若找不到商户
                 return BadRequest("找不到用户所属的商户");
-            var orgs = _OrganizationManager.GetOrLoadOrgsCacheItemByMerchantId(merch.Data.Id);  //获取其所有机构
+            var orgs = _OrganizationManager.GetOrLoadByMerchantId(merch.Data.Id);  //获取其所有机构
             if (rootId.HasValue) //若指定了根机构
             {
                 if (!orgs.Data.TryGetValue(rootId.Value, out var org) && rootId.Value != merch.Data.Id) return BadRequest($"找不到指定的机构，Id={rootId}");

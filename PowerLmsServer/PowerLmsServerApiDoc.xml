@@ -798,7 +798,7 @@
             <param name="merchantId"></param>
             <returns>指定商户的所有机构的缓存项，如果没找到则返回null。</returns>
         </member>
-        <member name="M:PowerLmsServer.Managers.OrganizationManager.GetOrLoadOrgsCacheItemByMerchantId(System.Guid)">
+        <member name="M:PowerLmsServer.Managers.OrganizationManager.GetOrLoadByMerchantId(System.Guid)">
             <summary>
             按指定商户Id获取或加载所有下属机构信息。
             </summary>
