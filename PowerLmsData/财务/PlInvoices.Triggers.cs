@@ -117,21 +117,15 @@ namespace PowerLms.Data
                 var invoiceUpdates = dbContext.Set<PlInvoicesItem>()
                     .Where(item => parentIds.Contains(item.ParentId.Value))
                     .Select(c => c).AsEnumerable()
-                    .ToLookup(c => new
-                    {
-                        ParentId = c.ParentId.Value,
-                        TotalAmount = c.Sum(item => Math.Round(item.ExchangeRate * item.Amount, 4, MidpointRounding.AwayFromZero))
-                    })
-                    .ToList();
+                    .ToLookup(c => c.ParentId.Value, c => c);
 
                 foreach (var update in invoiceUpdates)
                 {
-                    var invoice = dbContext.Find<PlInvoices>(update.ParentId);
+                    var invoice = dbContext.Find<PlInvoices>(update.Key);
                     if (invoice != null)
                     {
-                        invoice.Amount = update.TotalAmount;
+                        invoice.Amount = update.Sum(c => Math.Round(c.Amount * c.ExchangeRate, 4, MidpointRounding.AwayFromZero));
                         dbContext.Update(invoice);
-                        _Logger.LogDebug("Updated invoice {InvoiceId} with total amount {TotalAmount}.", update.ParentId, update.TotalAmount);
                     }
                 }
             }
