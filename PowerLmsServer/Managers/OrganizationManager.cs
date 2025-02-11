@@ -118,6 +118,22 @@ namespace PowerLmsServer.Managers
             return result;
         }
 
+        /// <summary>
+        /// 按指定组织机构Id获取或加载所有同一商户下的机构信息。
+        /// </summary>
+        /// <param name="orgId">组织机构ID。</param>
+        /// <returns>同一商户下的所有机构的缓存项。</returns>
+        public OwCacheItem<ConcurrentDictionary<Guid, PlOrganization>> GetOrLoadByOrgId(Guid orgId)
+        {
+            // 获取商户ID
+            if (!_MerchantManager.TryGetIdByOrgOrMerchantId(orgId, out var merchantId))
+            {
+                throw new Exception($"Merchant for OrganizationId {orgId} not found.");
+            }
+
+            // 获取或加载同一个商户下的所有机构
+            return GetOrLoadByMerchantId(merchantId.Value);
+        }
         #endregion 机构缓存及相关
 
         /// <summary>

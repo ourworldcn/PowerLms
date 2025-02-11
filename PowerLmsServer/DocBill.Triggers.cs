@@ -1,16 +1,9 @@
-﻿/*
- * DocBill.Triggers.cs 文件
- * 这个文件包含 ExchangeRateService、BaseCurrencyService、DocFeeSavingTrigger、DocBillAmountUpdater 以及 DocTriggerConstants 类。
- * 作者: OW
- * 创建日期: 2025-02-10
- * 修改日期: 2025-02-10
- */
-/*
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OW.Data;
+using PowerLmsServer;
 using PowerLmsServer.Managers;
 using System;
 using System.Collections.Generic;
@@ -19,72 +12,68 @@ using System.Linq;
 namespace PowerLms.Data
 {
     /// <summary>
-    /// 汇率和本币编码服务类，提供获取汇率和本币编码的功能。
+    /// 提供获取汇率和本币编码的服务类，以及定义与文档触发器相关的常量。
     /// </summary>
     public static class CombinedServices
-    {
-        /// <summary>
-        /// 获取汇率。
-        /// </summary>
-        /// <param name="dbContext">数据库上下文。</param>
-        /// <param name="sourceCurrency">源货币代码。</param>
-        /// <param name="targetCurrency">目标货币代码。</param>
-        /// <returns>汇率。</returns>
-        public static decimal GetExchangeRate(this DbContext dbContext, string sourceCurrency, string targetCurrency)
-        {
-            var currentTime = OwHelper.WorldNow;
-
-            var exchangeRate = dbContext.Set<PlExchangeRate>()
-                .Where(r => r.SCurrency == sourceCurrency
-                            && r.DCurrency == targetCurrency
-                            && r.BeginDate <= currentTime
-                            && r.EndData >= currentTime)
-                .OrderByDescending(r => r.EndData)
-                .FirstOrDefault();
-
-            return exchangeRate?.Exchange ?? 1;
-        }
-
-        /// <summary>
-        /// 获取本币编码。
-        /// </summary>
-        /// <param name="dbContext">数据库上下文。</param>
-        /// <param name="jobId">工作唯一标识。</param>
-        /// <param name="merchantManager">商户管理器。</param>
-        /// <param name="organizationManager">组织机构管理器。</param>
-        /// <returns>本币编码。</returns>
-        public static string GetBaseCurrencyCode(this DbContext dbContext, Guid jobId, MerchantManager merchantManager, OrganizationManager organizationManager)
-        {
-            var job = dbContext.Set<PlJob>().Find(jobId);
-            if (job == null)
-            {
-                throw new Exception($"Job with Id {jobId} not found.");
-            }
-
-            if (!merchantManager.TryGetIdByOrgOrMerchantId(job.OrgId.Value, out var organizationId))
-            {
-                throw new Exception($"Organization for JobId {jobId} not found.");
-            }
-
-            var organization = organizationManager.GetOrganizationById(organizationId.Value);
-            if (organization == null)
-            {
-                throw new Exception($"Organization for JobId {jobId} not found.");
-            }
-
-            return organization.BaseCurrencyCode;
-        }
-    }
-
-    /// <summary>
-    /// 定义与文档触发器相关的常量。
-    /// </summary>
-    public static class DocTriggerConstants
     {
         /// <summary>
         /// 已更改文档明细的键。
         /// </summary>
         public const string ChangedDocFeeIdsKey = "ChangedDocFeeIds";
+
+        /// <summary>
+        /// 获取汇率。
+        /// </summary>
+        /// <param name="dbContext">数据库上下文。</param>
+        /// <param name="billId">账单ID。</param>
+        /// <param name="sourceCurrency">源货币代码。</param>
+        /// <param name="targetCurrency">目标货币代码。</param>
+        /// <param name="merchantManager">商户管理器。</param>
+        /// <param name="organizationManager">组织机构管理器。</param>
+        /// <returns>汇率。</returns>
+        public static decimal GetExchangeRate(this DbContext dbContext, Guid billId, string sourceCurrency, string targetCurrency, MerchantManager merchantManager, OrganizationManager organizationManager)
+        {
+            // 获取 DocFee 对象
+            var docFee = dbContext.Set<DocFee>().FirstOrDefault(df => df.BillId == billId);
+            if (docFee == null)
+            {
+                throw new Exception($"DocFee with BillId {billId} not found.");
+            }
+
+            // 获取 PlJob 对象
+            var job = dbContext.Set<PlJob>().Find(docFee.JobId);
+            if (job == null)
+            {
+                throw new Exception($"Job with Id {docFee.JobId} not found.");
+            }
+
+            // 获取机构对象
+            if (!merchantManager.TryGetIdByOrgOrMerchantId(job.OrgId.Value, out var organizationId))
+            {
+                throw new Exception($"Organization for JobId {job.Id} not found.");
+            }
+
+            var orgsCacheItem = organizationManager.GetOrgsCacheItemByMerchantId(organizationId.Value);
+            if (orgsCacheItem == null || !orgsCacheItem.Data.TryGetValue(organizationId.Value, out var organization))
+            {
+                throw new Exception($"Organization with Id {organizationId.Value} not found.");
+            }
+
+            // 获取 baseCurrencyCode
+            var baseCurrencyCode = organization.BaseCurrencyCode;
+
+            // 获取汇率
+            var currentTime = OwHelper.WorldNow;
+            var exchangeRate = dbContext.Set<PlExchangeRate>()
+                .Where(r => r.SCurrency == sourceCurrency
+                            && r.DCurrency == targetCurrency
+                            && r.BeginDate <= currentTime
+                            && r.EndData >= currentTime) // 保留拼写错误
+                .OrderByDescending(r => r.EndData) // 保留拼写错误
+                .FirstOrDefault();
+
+            return exchangeRate?.Exchange ?? 1;
+        }
     }
 
     /// <summary>
@@ -112,10 +101,10 @@ namespace PowerLms.Data
         /// <param name="states">状态字典。</param>
         public void Saving(IEnumerable<EntityEntry> entities, Dictionary<object, object> states)
         {
-            if (!states.TryGetValue(DocTriggerConstants.ChangedDocFeeIdsKey, out var obj) || !(obj is HashSet<Guid> billIds))
+            if (!states.TryGetValue(CombinedServices.ChangedDocFeeIdsKey, out var obj) || obj is not HashSet<Guid> billIds)
             {
                 billIds = new HashSet<Guid>();
-                states[DocTriggerConstants.ChangedDocFeeIdsKey] = billIds;
+                states[CombinedServices.ChangedDocFeeIdsKey] = billIds;
             }
 
             foreach (var entry in entities)
@@ -144,7 +133,7 @@ namespace PowerLms.Data
         private readonly ILogger<DocBillAmountUpdater> _logger;
 
         /// <summary>
-        /// 构造函数，初始化日志记录器和汇率服务。
+        /// 构造函数，初始化日志记录器。
         /// </summary>
         /// <param name="logger">日志记录器。</param>
         public DocBillAmountUpdater(ILogger<DocBillAmountUpdater> logger)
@@ -162,49 +151,18 @@ namespace PowerLms.Data
         {
             var merchantManager = serviceProvider.GetRequiredService<MerchantManager>();
             var organizationManager = serviceProvider.GetRequiredService<OrganizationManager>();
-
-            if (states.TryGetValue(DocTriggerConstants.ChangedDocFeeIdsKey, out var obj) && obj is HashSet<Guid> billIds)
+            if (states.TryGetValue(CombinedServices.ChangedDocFeeIdsKey, out var obj) && obj is HashSet<Guid> billIds)
             {
-                var docBillUpdates = dbContext.Set<DocFee>()
-                    .Where(item => billIds.Contains(item.BillId.Value))
-                    .GroupBy(item => item.BillId)
-                    .Select(group => new
-                    {
-                        ParentId = group.Key,
-                        TotalAmount = group.Sum(item =>
-                        {
-                            var docBill = dbContext.Set<DocBill>().Find(group.Key);
-                            if (docBill == null)
-                            {
-                                throw new Exception($"DocBill with Id {group.Key} not found.");
-                            }
+                var dicBill = dbContext.Set<DocBill>().Where(c => billIds.Contains(c.Id)).AsEnumerable().ToDictionary(c => c.Id); // 加载所有用到的 DocBill 对象
+                var lkupFee = dbContext.Set<DocFee>().Where(c => billIds.Contains(c.BillId.Value)).AsEnumerable().
+                    ToLookup(c => c.BillId.Value); // 加载所有用到的 DocFee 对象
 
-                            // 获取 baseCurrencyCode
-                            var baseCurrencyCode = dbContext.GetBaseCurrencyCode(docBill.JobId.Value, merchantManager, organizationManager);
-                            if (string.IsNullOrEmpty(baseCurrencyCode))
-                            {
-                                throw new Exception($"Base currency code for DocBill with Id {docBill.Id} not found.");
-                            }
-
-                            // 计算汇率
-                            var exchangeRate = dbContext.GetExchangeRate(item.Currency, baseCurrencyCode == docBill.Currency ? baseCurrencyCode : docBill.Currency);
-
-                            return Math.Round(item.Amount * exchangeRate, 4, MidpointRounding.AwayFromZero);
-                        })
-                    })
-                    .ToList();
-
-                foreach (var update in docBillUpdates)
+                foreach (var bill in dicBill.Values)
                 {
-                    var docBill = dbContext.Find<DocBill>(update.ParentId);
-                    if (docBill != null)
-                    {
-                        docBill.Amount = update.TotalAmount;
-                        dbContext.Update(docBill);
-                    }
+                    bill.Amount = lkupFee[bill.Id].Sum(c => Math.Round(c.Amount * c.ExchangeRate, 4, MidpointRounding.AwayFromZero));
+                    dbContext.Update(bill);
                 }
             }
         }
     }
 }
-*/

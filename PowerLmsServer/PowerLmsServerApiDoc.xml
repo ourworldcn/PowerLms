@@ -14,6 +14,68 @@
             构造函数。
             </summary>
         </member>
+        <member name="T:PowerLmsServer.BusinessLogicManager">
+            <summary>
+            提供业务逻辑服务的类。
+            </summary>
+        </member>
+        <member name="M:PowerLmsServer.BusinessLogicManager.#ctor(PowerLmsServer.Managers.OrganizationManager,Microsoft.EntityFrameworkCore.DbContext)">
+            <summary>
+            构造函数，注入所需的服务。
+            </summary>
+            <param name="organizationManager">机构管理器。</param>
+            <param name="dbContext">数据库上下文。</param>
+        </member>
+        <member name="M:PowerLmsServer.BusinessLogicManager.GetEntityBaseCurrencyCode(System.Guid,System.Type)">
+            <summary>
+            获取实体对象的本币码。
+            </summary>
+            <param name="entityId">实体Id。</param>
+            <param name="entityType">实体类型。</param>
+            <returns>实体对象的本币码。</returns>
+            <exception cref="T:System.ArgumentException">当实体类型不支持时抛出。</exception>
+            <exception cref="T:System.InvalidOperationException">当找不到实体或本币码时抛出。</exception>
+        </member>
+        <member name="M:PowerLmsServer.BusinessLogicManager.GetOrganizationBaseCurrencyCode(System.Guid)">
+            <summary>
+            获取组织机构的本币码。
+            </summary>
+            <param name="organizationId">组织机构Id。</param>
+            <returns>组织机构的本币码。</returns>
+            <exception cref="T:System.InvalidOperationException">当找不到组织机构时抛出。</exception>
+        </member>
+        <member name="M:PowerLmsServer.BusinessLogicManager.GetJobBaseCurrencyCode(System.Guid)">
+            <summary>
+            获取工作的本币码。
+            </summary>
+            <param name="jobId">工作Id。</param>
+            <returns>工作的本币码。</returns>
+            <exception cref="T:System.InvalidOperationException">当找不到工作时抛出。</exception>
+        </member>
+        <member name="M:PowerLmsServer.BusinessLogicManager.GetFeeBaseCurrencyCode(System.Guid)">
+            <summary>
+            获取费用的本币码。
+            </summary>
+            <param name="feeId">费用Id。</param>
+            <returns>费用的本币码。</returns>
+            <exception cref="T:System.InvalidOperationException">当找不到费用时抛出。</exception>
+        </member>
+        <member name="M:PowerLmsServer.BusinessLogicManager.GetBillBaseCurrencyCode(System.Guid)">
+            <summary>
+            获取账单的本币码。
+            </summary>
+            <param name="billId">账单Id。</param>
+            <returns>账单的本币码。</returns>
+            <exception cref="T:System.InvalidOperationException">当找不到账单时抛出。</exception>
+        </member>
+        <member name="M:PowerLmsServer.BusinessLogicManager.GetCurrencyCode(System.Guid)">
+            <summary>
+            递归查找本币编码
+            </summary>
+            <param name="orgId">组织机构Id。</param>
+            <returns>本币编码。</returns>
+            <exception cref="T:System.InvalidOperationException">当找不到本币码时抛出异常。</exception>
+        </member>
         <member name="T:PowerLmsServer.Managers.AccountManager">
             <summary>
             账号管理器。
@@ -805,6 +867,13 @@
             <param name="merchantId"></param>
             <returns>没有找到指定商户则返回空字典。</returns>
         </member>
+        <member name="M:PowerLmsServer.Managers.OrganizationManager.GetOrLoadByOrgId(System.Guid)">
+            <summary>
+            按指定组织机构Id获取或加载所有同一商户下的机构信息。
+            </summary>
+            <param name="orgId">组织机构ID。</param>
+            <returns>同一商户下的所有机构的缓存项。</returns>
+        </member>
         <member name="M:PowerLmsServer.Managers.OrganizationManager.LoadCurrentOrgsByUser(PowerLms.Data.Account)">
             <summary>
             获取当前的登录公司及子机构但排除下属公司。
@@ -1266,6 +1335,65 @@
             <summary>
             warehousing and Storage(仓储业务)类型Id。
             </summary>
+        </member>
+        <member name="T:PowerLms.Data.CombinedServices">
+            <summary>
+            提供获取汇率和本币编码的服务类，以及定义与文档触发器相关的常量。
+            </summary>
+        </member>
+        <member name="F:PowerLms.Data.CombinedServices.ChangedDocFeeIdsKey">
+            <summary>
+            已更改文档明细的键。
+            </summary>
+        </member>
+        <member name="M:PowerLms.Data.CombinedServices.GetExchangeRate(Microsoft.EntityFrameworkCore.DbContext,System.Guid,System.String,System.String,PowerLmsServer.Managers.MerchantManager,PowerLmsServer.Managers.OrganizationManager)">
+            <summary>
+            获取汇率。
+            </summary>
+            <param name="dbContext">数据库上下文。</param>
+            <param name="billId">账单ID。</param>
+            <param name="sourceCurrency">源货币代码。</param>
+            <param name="targetCurrency">目标货币代码。</param>
+            <param name="merchantManager">商户管理器。</param>
+            <param name="organizationManager">组织机构管理器。</param>
+            <returns>汇率。</returns>
+        </member>
+        <member name="T:PowerLms.Data.DocFeeSavingTrigger">
+            <summary>
+            在 DocFee 和 DocBill 添加/更改时触发相应处理的类。
+            </summary>
+        </member>
+        <member name="M:PowerLms.Data.DocFeeSavingTrigger.#ctor(Microsoft.Extensions.Logging.ILogger{PowerLms.Data.DocFeeSavingTrigger})">
+            <summary>
+            构造函数，初始化日志记录器。
+            </summary>
+            <param name="logger">日志记录器。</param>
+        </member>
+        <member name="M:PowerLms.Data.DocFeeSavingTrigger.Saving(System.Collections.Generic.IEnumerable{Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry},System.Collections.Generic.Dictionary{System.Object,System.Object})">
+            <summary>
+            在 DocFee 和 DocBill 添加/更改时，将其 BillId（如果不为空）放在 HashSet 中。
+            </summary>
+            <param name="entities">当前实体条目集合。</param>
+            <param name="states">状态字典。</param>
+        </member>
+        <member name="T:PowerLms.Data.DocBillAmountUpdater">
+            <summary>
+            在保存 DocFee 和 DocBill 后，更新父级结算单金额的类。
+            </summary>
+        </member>
+        <member name="M:PowerLms.Data.DocBillAmountUpdater.#ctor(Microsoft.Extensions.Logging.ILogger{PowerLms.Data.DocBillAmountUpdater})">
+            <summary>
+            构造函数，初始化日志记录器。
+            </summary>
+            <param name="logger">日志记录器。</param>
+        </member>
+        <member name="M:PowerLms.Data.DocBillAmountUpdater.Saving(Microsoft.EntityFrameworkCore.DbContext,System.IServiceProvider,System.Collections.Generic.Dictionary{System.Object,System.Object})">
+            <summary>
+            在保存 DocFee 和 DocBill 后，从 HashSet 中获取父结算单的 ID，计算并更新其金额。
+            </summary>
+            <param name="dbContext">当前 DbContext 实例。</param>
+            <param name="serviceProvider">服务提供者。</param>
+            <param name="states">状态字典。</param>
         </member>
     </members>
 </doc>

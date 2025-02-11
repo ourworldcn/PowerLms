@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 namespace PowerLms.Data
 {
     /// <summary>
-    /// 总业务数据类。
+    /// 总业务数据类。也称任务类。
     /// </summary>
     [Index(nameof(OrgId), nameof(JobNo), IsUnique = true)]
     public class PlJob : GuidKeyObjectBase, ICreatorInfo

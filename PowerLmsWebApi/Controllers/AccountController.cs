@@ -224,12 +224,28 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="model"></param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。</response>  
-        /// <response code="400">登录名重复。或其它参数错误。</response>  
+        /// <response code="400">其它参数错误。</response>  
+        /// <response code="409">登录名或手机号或邮箱重复，此时返回文本是字段名如"LoginName"，"EMail"，"Mobile"等等。</response>  
         [HttpPost]
         public ActionResult<CreateAccountReturnDto> CreateAccount(CreateAccountParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new CreateAccountReturnDto();
+            
+            // 检查登录名、邮件、手机号的全局唯一性
+            if (!string.IsNullOrEmpty(model.Item.LoginName) && _DbContext.Accounts.Any(a => a.LoginName == model.Item.LoginName))
+            {
+                return Conflict(nameof(model.Item.LoginName));
+            }
+            if (!string.IsNullOrEmpty(model.Item.EMail) && _DbContext.Accounts.Any(a => a.EMail == model.Item.EMail))
+            {
+                return Conflict(nameof(model.Item.EMail));
+            }
+            if (!string.IsNullOrEmpty(model.Item.Mobile) && _DbContext.Accounts.Any(a => a.Mobile == model.Item.Mobile))
+            {
+                return Conflict(nameof(model.Item.Mobile));
+            }
+
             //检验机构/商户Id合规性
             Guid[] orgIds = null;
             if (model.OrgIds != null)

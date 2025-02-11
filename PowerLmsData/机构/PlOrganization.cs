@@ -95,7 +95,7 @@ namespace PowerLms.Data
         /// 本位币编码。
         /// </summary>
         [Comment("本位币编码")]
-        [Unicode(false), MaxLength(4)]
+        [Unicode(false), MaxLength(4),Required]
         public string BaseCurrencyCode { get; set; }
 
         /// <summary>
