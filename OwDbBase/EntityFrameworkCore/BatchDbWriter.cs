@@ -9,7 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
-namespace OwDbBase
+namespace OW.EntityFrameworkCore
 {
     /// <summary>
     /// 数据库操作类型枚举

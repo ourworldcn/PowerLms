@@ -3,6 +3,7 @@ using OW.DDD;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -23,16 +24,24 @@ namespace OW.Data
             var keyPi = typeof(T).GetProperties().OfType<PropertyInfo>().First(c => c.GetCustomAttribute<KeyAttribute>() is not null);
             var key = keyPi.GetValue(obj);
             var set = dbContext.Set<T>();
-            var existingEntity = dbContext.Set<T>().Find(key);
-            if (existingEntity == null)
+            try
             {
-                set.Add(obj);
-            }
-            else
-            {
-                dbContext.Entry(existingEntity).CurrentValues.SetValues(obj);
-            }
+                var existingEntity = dbContext.Set<T>().Find(key);
+                if (existingEntity == null)
+                {
+                    set.Add(obj);
+                }
+                else
+                {
+                    dbContext.Entry(existingEntity).CurrentValues.SetValues(obj);
+                }
 
+            }
+            catch (Exception err)
+            {
+                Debug.WriteLine(err.Message);
+                throw;
+            }
         }
 
         /// <summary>
@@ -53,11 +62,11 @@ namespace OW.Data
                 {
                     try
                     {
-                        set.Add(entity); 
+                        set.Add(entity);
                     }
                     catch (Exception)
                     {
-                        throw; 
+                        throw;
                     }
                 }
                 else

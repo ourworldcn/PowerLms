@@ -16,7 +16,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
-namespace OW.Data
+namespace OW.EntityFrameworkCore
 {
     /// <summary>
     /// 在保存之前对不同类型引发事件。
