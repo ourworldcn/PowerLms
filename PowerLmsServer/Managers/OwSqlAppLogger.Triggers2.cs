@@ -9,12 +9,12 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
-using OW.Data;
 using PowerLms.Data;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using PowerLmsServer.Managers;
+using OW.EntityFrameworkCore;
 
 namespace PowerLmsServer.Managers
 {

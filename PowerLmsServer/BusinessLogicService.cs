@@ -13,17 +13,20 @@ namespace PowerLmsServer
     public class BusinessLogicManager
     {
         private readonly OrganizationManager _organizationManager;
-        private readonly DbContext _dbContext;
+
+        readonly IDbContextFactory<DbContext> _dbContextFactory;
+        private DbContext _DbContext;
+        private DbContext DbContext => _DbContext ??= _dbContextFactory.CreateDbContext();
 
         /// <summary>
         /// 构造函数，注入所需的服务。
         /// </summary>
         /// <param name="organizationManager">机构管理器。</param>
-        /// <param name="dbContext">数据库上下文。</param>
-        public BusinessLogicManager(OrganizationManager organizationManager, DbContext dbContext)
+        /// <param name="dbContextFactory"></param>
+        public BusinessLogicManager(OrganizationManager organizationManager, IDbContextFactory<DbContext> dbContextFactory)
         {
             _organizationManager = organizationManager;
-            _dbContext = dbContext;
+            _dbContextFactory = dbContextFactory;
         }
 
         #region 本币相关代码
@@ -67,7 +70,7 @@ namespace PowerLmsServer
         /// <exception cref="InvalidOperationException">当找不到组织机构时抛出。</exception>
         private string GetOrganizationBaseCurrencyCode(Guid organizationId)
         {
-            var organization = _dbContext.Set<PlOrganization>().Find(organizationId);
+            var organization = DbContext.Set<PlOrganization>().Find(organizationId);
             if (organization == null)
             {
                 throw new InvalidOperationException($"未找到 Id 为 {organizationId} 的组织机构。");
@@ -83,7 +86,7 @@ namespace PowerLmsServer
         /// <exception cref="InvalidOperationException">当找不到工作时抛出。</exception>
         private string GetJobBaseCurrencyCode(Guid jobId)
         {
-            var job = _dbContext.Set<PlJob>().Find(jobId);
+            var job = DbContext.Set<PlJob>().Find(jobId);
             if (job == null)
             {
                 throw new InvalidOperationException($"未找到 Id 为 {jobId} 的工作。");
@@ -99,7 +102,7 @@ namespace PowerLmsServer
         /// <exception cref="InvalidOperationException">当找不到费用时抛出。</exception>
         private string GetFeeBaseCurrencyCode(Guid feeId)
         {
-            var fee = _dbContext.Set<DocFee>().Find(feeId);
+            var fee = DbContext.Set<DocFee>().Find(feeId);
             if (fee == null)
             {
                 throw new InvalidOperationException($"未找到 Id 为 {feeId} 的费用。");
@@ -115,12 +118,12 @@ namespace PowerLmsServer
         /// <exception cref="InvalidOperationException">当找不到账单时抛出。</exception>
         private string GetBillBaseCurrencyCode(Guid billId)
         {
-            var bill = _dbContext.Set<DocBill>().Find(billId);
+            var bill = DbContext.Set<DocBill>().Find(billId);
             if (bill == null)
             {
                 throw new InvalidOperationException($"未找到 Id 为 {billId} 的账单。");
             }
-            var fee = _dbContext.Set<DocFee>().FirstOrDefault(f => f.BillId == bill.Id);
+            var fee = DbContext.Set<DocFee>().FirstOrDefault(f => f.BillId == bill.Id);
             if (fee == null)
             {
                 throw new InvalidOperationException($"未找到与账单 Id 为 {bill.Id} 关联的费用。");

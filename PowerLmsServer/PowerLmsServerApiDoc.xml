@@ -19,12 +19,12 @@
             提供业务逻辑服务的类。
             </summary>
         </member>
-        <member name="M:PowerLmsServer.BusinessLogicManager.#ctor(PowerLmsServer.Managers.OrganizationManager,Microsoft.EntityFrameworkCore.DbContext)">
+        <member name="M:PowerLmsServer.BusinessLogicManager.#ctor(PowerLmsServer.Managers.OrganizationManager,Microsoft.EntityFrameworkCore.IDbContextFactory{Microsoft.EntityFrameworkCore.DbContext})">
             <summary>
             构造函数，注入所需的服务。
             </summary>
             <param name="organizationManager">机构管理器。</param>
-            <param name="dbContext">数据库上下文。</param>
+            <param name="dbContextFactory"></param>
         </member>
         <member name="M:PowerLmsServer.BusinessLogicManager.GetEntityBaseCurrencyCode(System.Guid,System.Type)">
             <summary>
@@ -947,7 +947,7 @@
             所有源。
             </summary>
         </member>
-        <member name="M:PowerLmsServer.Managers.OwSqlAppLogger.#ctor(Microsoft.EntityFrameworkCore.IDbContextFactory{PowerLmsServer.EfData.PowerLmsUserDbContext},OwDbBase.BatchDbWriter)">
+        <member name="M:PowerLmsServer.Managers.OwSqlAppLogger.#ctor(Microsoft.EntityFrameworkCore.IDbContextFactory{PowerLmsServer.EfData.PowerLmsUserDbContext},OW.EntityFrameworkCore.BatchDbWriter)">
             <summary>
             构造函数，初始化应用日志服务。
             </summary>

@@ -2,7 +2,7 @@
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using OW.Data;
+using OW.EntityFrameworkCore;
 using PowerLmsServer;
 using PowerLmsServer.Managers;
 using System;

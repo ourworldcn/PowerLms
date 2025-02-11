@@ -95,8 +95,8 @@ namespace PowerLms.Data
         /// 本位币编码。
         /// </summary>
         [Comment("本位币编码")]
-        [Unicode(false), MaxLength(4),Required]
-        public string BaseCurrencyCode { get; set; }
+        [Unicode(false), MaxLength(4), Required]
+        public string BaseCurrencyCode { get; set; } = "CNY";
 
         /// <summary>
         /// 海关编码。

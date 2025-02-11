@@ -10,8 +10,8 @@ using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using OW.Data;
 using PowerLms.Data;
+using OW.EntityFrameworkCore;
 
 namespace PowerLms.Data
 {
@@ -116,11 +116,11 @@ namespace PowerLms.Data
             {
                 var invoiceUpdates = dbContext.Set<PlInvoicesItem>()
                     .Where(item => parentIds.Contains(item.ParentId.Value))
-                    .GroupBy(item => item.ParentId)
-                    .Select(group => new
+                    .Select(c => c).AsEnumerable()
+                    .ToLookup(c => new
                     {
-                        ParentId = group.Key,
-                        TotalAmount = group.Sum(item => Math.Round(item.ExchangeRate * item.Amount, 4, MidpointRounding.AwayFromZero))
+                        ParentId = c.ParentId.Value,
+                        TotalAmount = c.Sum(item => Math.Round(item.ExchangeRate * item.Amount, 4, MidpointRounding.AwayFromZero))
                     })
                     .ToList();
 
