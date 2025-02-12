@@ -41,8 +41,9 @@ namespace PowerLms.Data
         /// 在 PlInvoicesItem 和 PlInvoices 添加/更改时，将其 ParentId（如果不为空）放在 HashSet 中。
         /// </summary>
         /// <param name="entities">当前实体条目集合。</param>
+        /// <param name="service"></param>
         /// <param name="states">状态字典。</param>
-        public void Saving(IEnumerable<EntityEntry> entities, Dictionary<object, object> states)
+        public void Saving(IEnumerable<EntityEntry> entities,IServiceProvider service, Dictionary<object, object> states)
         {
             if (!states.TryGetValue(InvoiceTriggerConstants.ChangedInvoiceItemIdsKey, out var obj) || !(obj is HashSet<Guid> parentIds))
             {

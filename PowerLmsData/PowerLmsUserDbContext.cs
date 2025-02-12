@@ -89,7 +89,7 @@ namespace PowerLmsServer.EfData
             }
             else //非根容器
             {
-                var svc = context.ServiceProvider.GetService<OwEfTriggers>();   //尽在范围容器内调用
+                var svc = context.ServiceProvider.GetService<OwEfTriggers<PowerLmsUserDbContext>>();   //尽在范围容器内调用
                 svc?.ExecuteSavingChanges(context, context.ServiceProvider);
             }
         }

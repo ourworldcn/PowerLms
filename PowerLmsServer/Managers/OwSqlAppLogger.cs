@@ -20,7 +20,7 @@ namespace PowerLmsServer.Managers
         private readonly IDbContextFactory<PowerLmsUserDbContext> _DbContextFactory;
         private PowerLmsUserDbContext _DbContext;
         private ConcurrentDictionary<Guid, OwAppLogStore> _LoggerStores;
-        private readonly BatchDbWriter _BatchDbWriter;
+        private readonly BatchDbWriter<PowerLmsUserDbContext> _BatchDbWriter;
 
         /// <summary>
         /// 所有源。
@@ -38,7 +38,7 @@ namespace PowerLmsServer.Managers
         /// </summary>
         /// <param name="dbContextFactory">数据库上下文工厂。</param>
         /// <param name="batchDbWriter">批量数据库写入器。</param>
-        public OwSqlAppLogger(IDbContextFactory<PowerLmsUserDbContext> dbContextFactory, BatchDbWriter batchDbWriter)
+        public OwSqlAppLogger(IDbContextFactory<PowerLmsUserDbContext> dbContextFactory, BatchDbWriter<PowerLmsUserDbContext> batchDbWriter)
         {
             _DbContextFactory = dbContextFactory ?? throw new ArgumentNullException(nameof(dbContextFactory));
             _DbContext = _DbContextFactory.CreateDbContext();

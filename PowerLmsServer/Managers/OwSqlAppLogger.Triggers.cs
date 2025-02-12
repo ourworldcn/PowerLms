@@ -111,8 +111,9 @@ namespace PowerLmsServer.Managers
         /// 处理实体的增删改操作，并将相应的 JobId 添加到状态字典中。
         /// </summary>
         /// <param name="entities">实体集合。</param>
+        /// <param name="service"></param>
         /// <param name="states">状态字典。</param>
-        public void Saving(IEnumerable<EntityEntry> entities, Dictionary<object, object> states)
+        public void Saving(IEnumerable<EntityEntry> entities,IServiceProvider service, Dictionary<object, object> states)
         {
             AddJobIdsToStates(entities, states);
         }

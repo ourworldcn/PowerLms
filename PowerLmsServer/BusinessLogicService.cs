@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using PowerLms.Data;
+using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
 using System;
 
@@ -14,7 +15,7 @@ namespace PowerLmsServer
     {
         private readonly OrganizationManager _organizationManager;
 
-        readonly IDbContextFactory<DbContext> _dbContextFactory;
+        readonly IDbContextFactory<PowerLmsUserDbContext> _dbContextFactory;
         private DbContext _DbContext;
         private DbContext DbContext => _DbContext ??= _dbContextFactory.CreateDbContext();
 
@@ -23,7 +24,7 @@ namespace PowerLmsServer
         /// </summary>
         /// <param name="organizationManager">机构管理器。</param>
         /// <param name="dbContextFactory"></param>
-        public BusinessLogicManager(OrganizationManager organizationManager, IDbContextFactory<DbContext> dbContextFactory)
+        public BusinessLogicManager(OrganizationManager organizationManager, IDbContextFactory<PowerLmsUserDbContext> dbContextFactory)
         {
             _organizationManager = organizationManager;
             _dbContextFactory = dbContextFactory;
