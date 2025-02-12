@@ -18,21 +18,31 @@ using System.Reflection;
 
 namespace OW.EntityFrameworkCore
 {
+    #region 接口 IDbContextSaving
     /// <summary>
     /// 在保存之前对不同类型引发事件。
     /// </summary>
     public interface IDbContextSaving<T> where T : class
     {
-        void Saving(IEnumerable<EntityEntry> entity, Dictionary<object, object> states);
+        /// <summary>
+        /// 在保存之前引发事件。
+        /// </summary>
+        /// <param name="entity">实体条目集合。</param>
+        /// <param name="serviceProvider">服务提供者。</param>
+        /// <param name="states">状态字典。</param>
+        void Saving(IEnumerable<EntityEntry> entity, IServiceProvider serviceProvider, Dictionary<object, object> states);
     }
 
+    #endregion 接口 IDbContextSaving
+
+    #region 接口 IAfterDbContextSaving
     /// <summary>
     /// 在保存之前且所有分类型的事件引发后，引发该事件。
     /// </summary>
     public interface IAfterDbContextSaving<T>
     {
         /// <summary>
-        /// 
+        /// 在保存之前且所有分类型的事件引发后，引发该事件。
         /// </summary>
         /// <param name="dbContext">数据即将被保存的 DbContext 实例。</param>
         /// <param name="serviceProvider">数据上下文所属的服务提供者。</param>
@@ -40,15 +50,18 @@ namespace OW.EntityFrameworkCore
         void Saving(DbContext dbContext, IServiceProvider serviceProvider, Dictionary<object, object> states);
     }
 
+    #endregion 接口 IAfterDbContextSaving
+
+    #region 类 OwEfTriggers
     /// <summary>
     /// EF Core 触发器类。
     /// </summary>
     [OwAutoInjection(ServiceLifetime.Scoped)] // 这个服务必须是范围的
-    public class OwEfTriggers : IDisposable
+    public class OwEfTriggers<TContext> : IDisposable where TContext : DbContext
     {
         #region 私有字段
         private readonly IHostApplicationLifetime _HostApplicationLifetime;
-        private readonly ILogger<OwEfTriggers> _Logger;
+        private readonly ILogger<OwEfTriggers<TContext>> _Logger;
         private bool _Disposed = false;
         #endregion 私有字段
 
@@ -56,12 +69,12 @@ namespace OW.EntityFrameworkCore
         /// <summary>
         /// 构造函数。
         /// </summary>
-        public OwEfTriggers(IHostApplicationLifetime hostApplicationLifetime, ILogger<OwEfTriggers> logger)
+        public OwEfTriggers(IHostApplicationLifetime hostApplicationLifetime, ILogger<OwEfTriggers<TContext>> logger)
         {
             _HostApplicationLifetime = hostApplicationLifetime;
             _Logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _HostApplicationLifetime.ApplicationStopping.Register(OnStopping);
-            _Logger.LogDebug("OwEfTriggers initialized.");
+            _Logger.LogDebug("OwEfTriggers 已初始化。");
         }
         #endregion 构造函数
 
@@ -72,7 +85,7 @@ namespace OW.EntityFrameworkCore
         private void OnStopping()
         {
             // 在应用程序停止时执行的逻辑
-            _Logger.LogDebug("Application is stopping.");
+            _Logger.LogDebug("应用程序正在停止。");
         }
         #endregion OnStopping 方法
 
@@ -80,12 +93,12 @@ namespace OW.EntityFrameworkCore
         /// <summary>
         /// 执行保存更改的事件处理逻辑。
         /// </summary>
-        public void ExecuteSavingChanges(DbContext dbContext, IServiceProvider serviceProvider)
+        public void ExecuteSavingChanges(TContext dbContext, IServiceProvider serviceProvider)
         {
             if (dbContext == null) throw new ArgumentNullException(nameof(dbContext));
             if (serviceProvider == null) throw new ArgumentNullException(nameof(serviceProvider));
 
-            _Logger.LogDebug("Starting ExecuteSavingChanges.");
+            _Logger.LogDebug("开始执行 ExecuteSavingChanges。");
 
             dbContext.ChangeTracker.DetectChanges();
 
@@ -116,12 +129,17 @@ namespace OW.EntityFrameworkCore
                 InvokeAfterSavingMethods(dbContext, serviceProvider, type, states);
             }
 
-            _Logger.LogDebug("Finished ExecuteSavingChanges.");
+            _Logger.LogDebug("完成执行 ExecuteSavingChanges。");
         }
         #endregion ExecuteSavingChanges 方法
 
         #region 帮助方法
-        private HashSet<EntityEntry> GetChangedEntities(DbContext dbContext)
+        /// <summary>
+        /// 获取被更改的实体列表。
+        /// </summary>
+        /// <param name="dbContext">数据即将被保存的 DbContext 实例。</param>
+        /// <returns>被更改的实体列表。</returns>
+        private HashSet<EntityEntry> GetChangedEntities(TContext dbContext)
         {
             return new HashSet<EntityEntry>(
                 dbContext.ChangeTracker.Entries().Where(c => c.State == EntityState.Added || c.State == EntityState.Modified || c.State == EntityState.Deleted),
@@ -129,6 +147,13 @@ namespace OW.EntityFrameworkCore
             );
         }
 
+        /// <summary>
+        /// 调用保存前的事件处理方法。
+        /// </summary>
+        /// <param name="serviceProvider">数据上下文所属的服务提供者。</param>
+        /// <param name="entityType">实体类型。</param>
+        /// <param name="entities">实体条目集合。</param>
+        /// <param name="states">状态字典。</param>
         private void InvokeSavingMethods(IServiceProvider serviceProvider, Type entityType, IEnumerable<EntityEntry> entities, Dictionary<object, object> states)
         {
             var svcType = typeof(IDbContextSaving<>).MakeGenericType(entityType);
@@ -143,17 +168,24 @@ namespace OW.EntityFrameworkCore
                         BindingFlags.InvokeMethod | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance,
                         null,
                         svc,
-                        new object[] { entities, states }
+                        new object[] { entities, serviceProvider, states }
                     );
                 }
                 catch (Exception ex)
                 {
-                    _Logger.LogError(ex, "Error invoking Saving method for entity type {EntityType}.", entityType);
+                    _Logger.LogError(ex, "调用实体类型 {EntityType} 的 Saving 方法时出错。", entityType);
                 }
             }
         }
 
-        private void InvokeAfterSavingMethods(DbContext dbContext, IServiceProvider serviceProvider, Type entityType, Dictionary<object, object> states)
+        /// <summary>
+        /// 调用保存后的事件处理方法。
+        /// </summary>
+        /// <param name="dbContext">数据即将被保存的 DbContext 实例。</param>
+        /// <param name="serviceProvider">数据上下文所属的服务提供者。</param>
+        /// <param name="entityType">实体类型。</param>
+        /// <param name="states">状态字典。</param>
+        private void InvokeAfterSavingMethods(TContext dbContext, IServiceProvider serviceProvider, Type entityType, Dictionary<object, object> states)
         {
             var svcType = typeof(IAfterDbContextSaving<>).MakeGenericType(entityType);
             var svcs = serviceProvider.GetServices(svcType);
@@ -172,7 +204,7 @@ namespace OW.EntityFrameworkCore
                 }
                 catch (Exception ex)
                 {
-                    _Logger.LogError(ex, "Error invoking AfterSaving method for entity type {EntityType}.", entityType);
+                    _Logger.LogError(ex, "调用实体类型 {EntityType} 的 AfterSaving 方法时出错。", entityType);
                 }
             }
         }
@@ -190,13 +222,13 @@ namespace OW.EntityFrameworkCore
                 if (disposing)
                 {
                     // 释放托管资源
-                    _Logger.LogDebug("Releasing managed resources.");
+                    _Logger.LogDebug("释放托管资源。");
                 }
 
                 // 释放非托管资源
 
                 _Disposed = true;
-                _Logger.LogDebug("OwEfTriggers disposed.");
+                _Logger.LogDebug("OwEfTriggers 已释放。");
             }
         }
 
@@ -229,6 +261,9 @@ namespace OW.EntityFrameworkCore
         #endregion EntityEntryEqualityComparer类
     }
 
+    #endregion 类 OwEfTriggers
+
+    #region 扩展方法 OwEfTriggersExtensions
     /// <summary>
     /// OwEfTriggers 扩展方法类。
     /// </summary>
@@ -237,10 +272,11 @@ namespace OW.EntityFrameworkCore
         /// <summary>
         /// 将 OwEfTriggers 添加到 AOC 容器中。
         /// </summary>
-        public static IServiceCollection AddOwEfTriggers(this IServiceCollection services)
+        public static IServiceCollection AddOwEfTriggers<TContext>(this IServiceCollection services) where TContext : DbContext
         {
-            services.AddSingleton<OwEfTriggers>();
+            services.AddScoped<OwEfTriggers<TContext>>();
             return services;
         }
     }
+    #endregion 扩展方法 OwEfTriggersExtensions
 }
