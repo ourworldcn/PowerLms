@@ -1,4 +1,16 @@
-﻿using AutoMapper;
+﻿/*
+ * 1.	构造函数：初始化控制器所需的服务和管理器。
+ * 2.	获取业务负责人的所属关系：通过查询条件获取文件列表。
+ * 3.	下载客户资料：提供下载客户资料的接口（已标记为过时）。
+ * 4.	上传客户资料：提供上传客户资料的接口（已标记为过时）。
+ * 5.	通用文件管理接口：
+    •	删除文件
+    •	上传文件
+    •	下载文件
+    •	获取全部文件信息
+ */
+
+using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
