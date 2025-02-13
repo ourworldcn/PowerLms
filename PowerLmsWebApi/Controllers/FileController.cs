@@ -72,7 +72,7 @@ namespace PowerLmsWebApi.Controllers
         /// 获取业务负责人的所属关系。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">查询的条件。支持 Id,DisplayName,FileName,ParentId。</param>
+        /// <param name="conditional">已支持通用查询。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定类别Id无效。</response>  
@@ -86,25 +86,12 @@ namespace PowerLmsWebApi.Controllers
 
             var dbSet = _DbContext.PlFileInfos;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-            foreach (var item in conditional)
-                if (string.Equals(item.Key, "Id", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (Guid.TryParse(item.Value, out var Id))
-                        coll = coll.Where(c => c.Id == Id);
-                }
-                else if (string.Equals(item.Key, "ParentId", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (Guid.TryParse(item.Value, out var Id))
-                        coll = coll.Where(c => c.ParentId == Id);
-                }
-                else if (string.Equals(item.Key, "DisplayName", StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.DisplayName.Contains(item.Value));
-                }
-                else if (string.Equals(item.Key, "OrderTypeId", StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.FileName.Contains(item.Value));
-                }
+
+            if (conditional != null && conditional.Any())
+            {
+                coll = EfHelper.GenerateWhereAnd(coll, conditional);
+            }
+
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
