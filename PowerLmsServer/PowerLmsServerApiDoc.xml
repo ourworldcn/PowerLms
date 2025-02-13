@@ -823,6 +823,129 @@
             <param name="cell"></param>
             <param name="val"></param>
         </member>
+        <member name="T:PowerLmsServer.Managers.NuoNuoInvoiceService">
+            <summary>
+            诺诺发票服务类，包含获取访问令牌和创建发票的具体实现。
+            </summary>
+        </member>
+        <member name="M:PowerLmsServer.Managers.NuoNuoInvoiceService.#ctor(System.String,System.String,System.String,System.String,System.Net.Http.HttpClient)">
+            <summary>
+            构造函数，初始化服务所需的参数。
+            </summary>
+            <param name="appKey">应用程序密钥。</param>
+            <param name="appSecret">应用程序密钥。</param>
+            <param name="tokenUrl">获取访问令牌的URL。</param>
+            <param name="invoiceUrl">创建发票的URL。</param>
+            <param name="httpClient">HttpClient实例。</param>
+        </member>
+        <member name="M:PowerLmsServer.Managers.NuoNuoInvoiceService.GetAccessTokenAsync">
+            <summary>
+            异步获取访问令牌。
+            </summary>
+            <returns>返回访问令牌。</returns>
+        </member>
+        <member name="M:PowerLmsServer.Managers.NuoNuoInvoiceService.CreateInvoiceAsync(PowerLmsServer.Managers.InvoiceData)">
+            <summary>
+            异步创建发票。
+            </summary>
+            <param name="invoiceData">发票数据。</param>
+            <returns>返回发票创建结果。</returns>
+        </member>
+        <member name="T:PowerLmsServer.Managers.InvoiceItem">
+            <summary>
+            发票项目模型类，定义发票项目的属性。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.Managers.InvoiceItem.ItemName">
+            <summary>
+            项目名称
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.Managers.InvoiceItem.ItemSpec">
+            <summary>
+            项目规格
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.Managers.InvoiceItem.ItemUnit">
+            <summary>
+            项目单位
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.Managers.InvoiceItem.ItemQuantity">
+            <summary>
+            项目数量
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.Managers.InvoiceItem.ItemPrice">
+            <summary>
+            项目单价
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.Managers.InvoiceItem.ItemAmount">
+            <summary>
+            项目金额（数量 * 单价）
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.Managers.InvoiceItem.ItemTaxRate">
+            <summary>
+            项目税率
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.Managers.InvoiceItem.ItemTaxAmount">
+            <summary>
+            项目税额（金额 * 税率）
+            </summary>
+        </member>
+        <member name="T:PowerLmsServer.Managers.InvoiceData">
+            <summary>
+            发票数据模型类，定义发票数据的属性。
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.Managers.InvoiceData.BuyerName">
+            <summary>
+            购买方名称
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.Managers.InvoiceData.BuyerTaxNum">
+            <summary>
+            购买方税号
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.Managers.InvoiceData.BuyerAddress">
+            <summary>
+            购买方地址
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.Managers.InvoiceData.BuyerTel">
+            <summary>
+            购买方电话
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.Managers.InvoiceData.BuyerBankName">
+            <summary>
+            购买方开户行
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.Managers.InvoiceData.BuyerBankAccount">
+            <summary>
+            购买方银行账号
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.Managers.InvoiceData.InvoiceType">
+            <summary>
+            发票类型
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.Managers.InvoiceData.InvoiceDate">
+            <summary>
+            发票日期
+            </summary>
+        </member>
+        <member name="P:PowerLmsServer.Managers.InvoiceData.Items">
+            <summary>
+            发票项目列表
+            </summary>
+        </member>
         <member name="T:PowerLmsServer.Managers.OrganizationManager">
             <summary>
             组织机构管理器。
