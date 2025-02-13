@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using MathNet.Numerics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -880,7 +881,7 @@ namespace PowerLmsWebApi.Controllers
         /// 获取全部业务单的费用单。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">查询的条件。支持 Id，DocId(业务单Id),Io,BillId(绑定的账单Id,"null"是获取未绑定账单的费用)。不区分大小写。</param>
+        /// <param name="conditional">支持通用查询——除个别涉及敏感信息字段外，所有实体字段都可作为条件。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
@@ -895,29 +896,7 @@ namespace PowerLmsWebApi.Controllers
 
             var dbSet = _DbContext.DocFees;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-            foreach (var item in conditional)
-                if (string.Equals(item.Key, "Id", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (Guid.TryParse(item.Value, out var id))
-                        coll = coll.Where(c => c.Id == id);
-                }
-                else if (string.Equals(item.Key, nameof(DocFee.JobId), StringComparison.OrdinalIgnoreCase))
-                {
-                    if (Guid.TryParse(item.Value, out var id))
-                        coll = coll.Where(c => c.JobId == id);
-                }
-                else if (string.Equals(item.Key, nameof(DocFee.IO), StringComparison.OrdinalIgnoreCase))
-                {
-                    if (bool.TryParse(item.Value, out var b))
-                        coll = coll.Where(c => c.IO == b);
-                }
-                else if (string.Equals(item.Key, nameof(DocFee.BillId), StringComparison.OrdinalIgnoreCase))
-                {
-                    if (string.Equals(item.Value, "null", StringComparison.OrdinalIgnoreCase))
-                        coll = coll.Where(c => c.BillId == null);
-                    else if (Guid.TryParse(item.Value, out var b))
-                        coll = coll.Where(c => c.BillId == b);
-                }
+            coll = EfHelper.GenerateWhereAnd(coll, conditional);
             #region 验证权限
             string err;
             var r = coll.AsEnumerable();
@@ -1054,7 +1033,9 @@ namespace PowerLmsWebApi.Controllers
                 #endregion 获取判断函数的本地函数
             }
             #endregion 验证权限
-            result.Result.AddRange(r);
+            var ary = r.ToArray();
+            result.Result.AddRange(ary);
+            result.Total = ary.Length;
             return result;
         }
 
