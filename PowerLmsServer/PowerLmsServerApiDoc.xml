@@ -823,31 +823,30 @@
             <param name="cell"></param>
             <param name="val"></param>
         </member>
-        <member name="T:PowerLmsServer.Managers.NuoNuoInvoiceService">
+        <member name="T:PowerLmsServer.Managers.NuoNuoInvoiceManager">
             <summary>
             诺诺发票服务类，包含获取访问令牌和创建发票的具体实现。
             </summary>
         </member>
-        <member name="M:PowerLmsServer.Managers.NuoNuoInvoiceService.#ctor(System.String,System.String,System.String,System.String,System.Net.Http.HttpClient)">
+        <member name="M:PowerLmsServer.Managers.NuoNuoInvoiceManager.#ctor(System.Net.Http.HttpClient)">
             <summary>
-            构造函数，初始化服务所需的参数。
+            构造函数，初始化HttpClient实例。
             </summary>
-            <param name="appKey">应用程序密钥。</param>
-            <param name="appSecret">应用程序密钥。</param>
-            <param name="tokenUrl">获取访问令牌的URL。</param>
-            <param name="invoiceUrl">创建发票的URL。</param>
             <param name="httpClient">HttpClient实例。</param>
         </member>
-        <member name="M:PowerLmsServer.Managers.NuoNuoInvoiceService.GetAccessTokenAsync">
+        <member name="M:PowerLmsServer.Managers.NuoNuoInvoiceManager.GetAccessTokenAsync(System.String,System.String)">
             <summary>
             异步获取访问令牌。
             </summary>
+            <param name="appKey">应用程序密钥。</param>
+            <param name="appSecret">应用程序密钥。</param>
             <returns>返回访问令牌。</returns>
         </member>
-        <member name="M:PowerLmsServer.Managers.NuoNuoInvoiceService.CreateInvoiceAsync(PowerLmsServer.Managers.InvoiceData)">
+        <member name="M:PowerLmsServer.Managers.NuoNuoInvoiceManager.CreateInvoiceAsync(System.String,PowerLmsServer.Managers.InvoiceData)">
             <summary>
             异步创建发票。
             </summary>
+            <param name="accessToken">访问令牌。</param>
             <param name="invoiceData">发票数据。</param>
             <returns>返回发票创建结果。</returns>
         </member>
@@ -858,42 +857,42 @@
         </member>
         <member name="P:PowerLmsServer.Managers.InvoiceItem.ItemName">
             <summary>
-            项目名称
+            获取或设置货品品名。
             </summary>
         </member>
         <member name="P:PowerLmsServer.Managers.InvoiceItem.ItemSpec">
             <summary>
-            项目规格
+            获取或设置规格型号。
             </summary>
         </member>
         <member name="P:PowerLmsServer.Managers.InvoiceItem.ItemUnit">
             <summary>
-            项目单位
+            获取或设置单位。
             </summary>
         </member>
         <member name="P:PowerLmsServer.Managers.InvoiceItem.ItemQuantity">
             <summary>
-            项目数量
+            获取或设置数量。
             </summary>
         </member>
         <member name="P:PowerLmsServer.Managers.InvoiceItem.ItemPrice">
             <summary>
-            项目单价
+            获取或设置单价。
             </summary>
         </member>
         <member name="P:PowerLmsServer.Managers.InvoiceItem.ItemAmount">
             <summary>
-            项目金额（数量 * 单价）
+            获取金额（数量 * 单价）。
             </summary>
         </member>
         <member name="P:PowerLmsServer.Managers.InvoiceItem.ItemTaxRate">
             <summary>
-            项目税率
+            获取或设置税率。
             </summary>
         </member>
         <member name="P:PowerLmsServer.Managers.InvoiceItem.ItemTaxAmount">
             <summary>
-            项目税额（金额 * 税率）
+            获取税额（金额 * 税率）。
             </summary>
         </member>
         <member name="T:PowerLmsServer.Managers.InvoiceData">
@@ -903,48 +902,59 @@
         </member>
         <member name="P:PowerLmsServer.Managers.InvoiceData.BuyerName">
             <summary>
-            购买方名称
+            获取或设置客户名称。
             </summary>
         </member>
         <member name="P:PowerLmsServer.Managers.InvoiceData.BuyerTaxNum">
             <summary>
-            购买方税号
+            获取或设置客户税号。
             </summary>
         </member>
         <member name="P:PowerLmsServer.Managers.InvoiceData.BuyerAddress">
             <summary>
-            购买方地址
+            获取或设置客户地址。
             </summary>
         </member>
         <member name="P:PowerLmsServer.Managers.InvoiceData.BuyerTel">
             <summary>
-            购买方电话
+            获取或设置客户电话。
             </summary>
         </member>
         <member name="P:PowerLmsServer.Managers.InvoiceData.BuyerBankName">
             <summary>
-            购买方开户行
+            获取或设置客户开户行。
             </summary>
         </member>
         <member name="P:PowerLmsServer.Managers.InvoiceData.BuyerBankAccount">
             <summary>
-            购买方银行账号
+            获取或设置客户银行账号。
             </summary>
         </member>
         <member name="P:PowerLmsServer.Managers.InvoiceData.InvoiceType">
             <summary>
-            发票类型
+            获取或设置发票类型。
             </summary>
         </member>
         <member name="P:PowerLmsServer.Managers.InvoiceData.InvoiceDate">
             <summary>
-            发票日期
+            获取或设置发票日期。
             </summary>
         </member>
         <member name="P:PowerLmsServer.Managers.InvoiceData.Items">
             <summary>
-            发票项目列表
+            获取或设置发票项目列表。
             </summary>
+        </member>
+        <member name="T:PowerLmsServer.Managers.ServiceExtensions">
+            <summary>
+            扩展方法类，包含配置NuoNuoInvoiceManager的依赖注入方法。
+            </summary>
+        </member>
+        <member name="M:PowerLmsServer.Managers.ServiceExtensions.AddNuoNuoInvoiceManager(Microsoft.Extensions.DependencyInjection.IServiceCollection)">
+            <summary>
+            扩展方法，配置NuoNuoInvoiceManager的依赖注入。
+            </summary>
+            <param name="services">IServiceCollection实例。</param>
         </member>
         <member name="T:PowerLmsServer.Managers.OrganizationManager">
             <summary>
