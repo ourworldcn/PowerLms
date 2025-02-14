@@ -59,9 +59,9 @@ namespace PowerLms.Data
         public decimal Amount { get; set; }
 
         /// <summary>
-        /// 币种Id。
+        /// 币种码。
         /// </summary>
-        [Comment("币种Id")]
+        [Comment("币种码")]
         public string CurrTypeId { get; set; }
 
         /// <summary>

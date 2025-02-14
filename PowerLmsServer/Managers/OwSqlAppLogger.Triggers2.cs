@@ -57,7 +57,7 @@ namespace PowerLmsServer.Managers
         /// <param name="dbContext">当前 DbContext 实例。</param>
         /// <param name="serviceProvider">服务提供者。</param>
         /// <param name="states">状态字典。</param>
-        public void Saving(DbContext dbContext, IServiceProvider serviceProvider, Dictionary<object, object> states)
+        public void AfterSaving(DbContext dbContext, IServiceProvider serviceProvider, Dictionary<object, object> states)
         {
             if (states.TryGetValue(JobTriggerConstants.ChangedJobIdsKey, out var jobIdObj) && jobIdObj is HashSet<JobChange> jobChanges)
             {
