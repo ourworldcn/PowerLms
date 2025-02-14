@@ -47,7 +47,7 @@ namespace OW.EntityFrameworkCore
         /// <param name="dbContext">数据即将被保存的 DbContext 实例。</param>
         /// <param name="serviceProvider">数据上下文所属的服务提供者。</param>
         /// <param name="states">状态字典。</param>
-        void Saving(DbContext dbContext, IServiceProvider serviceProvider, Dictionary<object, object> states);
+        void AfterSaving(DbContext dbContext, IServiceProvider serviceProvider, Dictionary<object, object> states);
     }
 
     #endregion 接口 IAfterDbContextSaving
