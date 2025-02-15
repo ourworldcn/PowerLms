@@ -363,3 +363,4 @@ MigrationBackup/
 FodyWeavers.xsd
 /PowerLmsData/PowerLmsDataApiDoc.xml
 /PowerLmsWebApi/PowerLmsWebApiApiDoc.xml
+/PowerLmsServer/PowerLmsServerApiDoc.xml
