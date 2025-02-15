@@ -13,20 +13,19 @@ namespace PowerLmsServer.Managers
     public class BusinessLogicManager
     {
         private readonly OrganizationManager _OrganizationManager;
-        readonly IDbContextFactory<PowerLmsUserDbContext> _DbContextFactory;
+        private DbContext DbContext => _DbContext ??= _ServiceProvider.GetRequiredService<PowerLmsUserDbContext>();
         private DbContext _DbContext;
-
+        IServiceProvider _ServiceProvider;
         /// <summary>
         /// 构造函数，注入所需的服务。
         /// </summary>
         /// <param name="organizationManager">机构管理器。</param>
         /// <param name="dbContextFactory"></param>
         /// <param name="dbContext"></param>
-        public BusinessLogicManager(OrganizationManager organizationManager, IDbContextFactory<PowerLmsUserDbContext> dbContextFactory, DbContext dbContext)
+        public BusinessLogicManager(OrganizationManager organizationManager, IDbContextFactory<PowerLmsUserDbContext> dbContextFactory, DbContext dbContext, IServiceProvider serviceProvider)
         {
             _OrganizationManager = organizationManager;
-            _DbContextFactory = dbContextFactory;
-            _DbContext = dbContext;
+            _ServiceProvider = serviceProvider;
         }
 
         #region 本币相关代码
@@ -70,7 +69,7 @@ namespace PowerLmsServer.Managers
         /// <exception cref="InvalidOperationException">当找不到组织机构时抛出。</exception>
         private string GetOrganizationBaseCurrencyCode(Guid organizationId)
         {
-            var organization = _DbContext.Set<PlOrganization>().Find(organizationId);
+            var organization = DbContext.Set<PlOrganization>().Find(organizationId);
             if (organization == null)
             {
                 throw new InvalidOperationException($"未找到 Id 为 {organizationId} 的组织机构。");
@@ -86,7 +85,7 @@ namespace PowerLmsServer.Managers
         /// <exception cref="InvalidOperationException">当找不到工作时抛出。</exception>
         private string GetJobBaseCurrencyCode(Guid jobId)
         {
-            var job = _DbContext.Set<PlJob>().Find(jobId);
+            var job = DbContext.Set<PlJob>().Find(jobId);
             if (job == null)
             {
                 throw new InvalidOperationException($"未找到 Id 为 {jobId} 的工作。");
@@ -102,7 +101,7 @@ namespace PowerLmsServer.Managers
         /// <exception cref="InvalidOperationException">当找不到费用时抛出。</exception>
         private string GetFeeBaseCurrencyCode(Guid feeId)
         {
-            var fee = _DbContext.Set<DocFee>().Find(feeId);
+            var fee = DbContext.Set<DocFee>().Find(feeId);
             if (fee == null)
             {
                 throw new InvalidOperationException($"未找到 Id 为 {feeId} 的费用。");
@@ -118,12 +117,12 @@ namespace PowerLmsServer.Managers
         /// <exception cref="InvalidOperationException">当找不到账单时抛出。</exception>
         private string GetBillBaseCurrencyCode(Guid billId)
         {
-            var bill = _DbContext.Set<DocBill>().Find(billId);
+            var bill = DbContext.Set<DocBill>().Find(billId);
             if (bill == null)
             {
                 throw new InvalidOperationException($"未找到 Id 为 {billId} 的账单。");
             }
-            var fee = _DbContext.Set<DocFee>().FirstOrDefault(f => f.BillId == bill.Id);
+            var fee = DbContext.Set<DocFee>().FirstOrDefault(f => f.BillId == bill.Id);
             if (fee == null)
             {
                 throw new InvalidOperationException($"未找到与账单 Id 为 {bill.Id} 关联的费用。");
@@ -167,7 +166,7 @@ namespace PowerLmsServer.Managers
         /// <returns></returns>
         public IQueryable<PlExchangeRate> GetRateQuery(Guid orgId, DbContext dbContext = null, DateTime? dateTime = null)
         {
-            dbContext ??= _DbContext;
+            dbContext ??= DbContext;
             dateTime ??= OwHelper.WorldNow;
             var baseColl = dbContext.Set<PlExchangeRate>().Where(c => c.OrgId == orgId && c.BeginDate <= dateTime && c.EndData >= dateTime);
             return baseColl;
@@ -214,8 +213,8 @@ namespace PowerLmsServer.Managers
         /// <returns></returns>
         public Guid? GetJobIdByBillId(Guid billId)
         {
-            var fee = _DbContext.Set<DocFee>().FirstOrDefault(c => c.BillId == billId && c.JobId != null);
-            return (fee?.JobId.HasValue ?? false) ? _DbContext.Set<PlJob>().Find(fee.JobId.Value).Id : null;
+            var fee = DbContext.Set<DocFee>().FirstOrDefault(c => c.BillId == billId && c.JobId != null);
+            return (fee?.JobId.HasValue ?? false) ? DbContext.Set<PlJob>().Find(fee.JobId.Value).Id : null;
         }
 
         /// <summary>
@@ -225,9 +224,9 @@ namespace PowerLmsServer.Managers
         /// <returns></returns>
         public Guid? GetJobIdByInvoiceItemId(Guid invoiceItemId)
         {
-            var coll = from invoiceItem in _DbContext.Set<PlInvoicesItem>().Where(c => c.Id == invoiceItemId)
-                       join requisitionItem in _DbContext.Set<DocFeeRequisitionItem>() on invoiceItem.RequisitionItemId equals requisitionItem.Id
-                       join fee in _DbContext.Set<DocFee>() on requisitionItem.FeeId equals fee.Id
+            var coll = from invoiceItem in DbContext.Set<PlInvoicesItem>().Where(c => c.Id == invoiceItemId)
+                       join requisitionItem in DbContext.Set<DocFeeRequisitionItem>() on invoiceItem.RequisitionItemId equals requisitionItem.Id
+                       join fee in DbContext.Set<DocFee>() on requisitionItem.FeeId equals fee.Id
                        where fee.JobId != null
                        select fee.JobId;
             return coll.FirstOrDefault();
