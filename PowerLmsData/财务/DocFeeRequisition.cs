@@ -28,7 +28,7 @@ namespace PowerLms.Data
         public string FrNo { get; set; }
 
         /// <summary>
-        /// 收付，false支出，true收入。
+        /// 收付，false支出，true收入。自动计算强制改变。0算支出。
         /// </summary>
         [Comment("收付，false支出，true收入。")]
         public bool IO { get; set; }
@@ -142,7 +142,7 @@ namespace PowerLms.Data
     }
 
     /// <summary>
-    /// 业务费用收付款申请单明细项。
+    /// 申请单明细项。
     /// </summary>
     public class DocFeeRequisitionItem : GuidKeyObjectBase
     {
@@ -231,5 +231,29 @@ namespace PowerLms.Data
         //[MaxLength(64)]
         //public string CarrierNo { get; set; }
 
+    }
+
+    public static class DocFeeRequisitionExtensions
+    {
+        /// <summary>
+        /// 获取申请单的费用明细。
+        /// </summary>
+        /// <param name="item"></param>
+        /// <param name="db"></param>
+        /// <returns></returns>
+        public static DocFee GetDocFee(this DocFeeRequisitionItem item, DbContext db)
+        {
+            return item.FeeId is null ? null : db.Set<DocFee>().Find(item.FeeId);
+        }
+
+        public static IQueryable<DocFeeRequisitionItem> GetChildren(this DocFeeRequisition requisition, DbContext db)
+        {
+            return db.Set<DocFeeRequisitionItem>().Where(x => x.ParentId == requisition.Id);
+        }
+
+        public static DocFeeRequisition GetParent(this DocFeeRequisitionItem item, DbContext db)
+        {
+            return item.ParentId is null ? null : db.Set<DocFeeRequisition>().Find(item.ParentId);
+        }
     }
 }

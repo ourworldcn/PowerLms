@@ -56,7 +56,7 @@ namespace PowerLms.Data
         public float Radix { get; set; } = 100;
 
         /// <summary>
-        /// 兑换率。
+        /// 兑换率。源币种金额乘以该值等于宿币种金额。
         /// </summary>
         [Comment("兑换率")]
         [Precision(18, 4)]

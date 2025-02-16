@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using OW.Data;
+using PowerLmsServer.EfData;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -42,9 +43,9 @@ namespace PowerLms.Data
         public Guid? BalanceId { get; set; }
 
         /// <summary>
-        /// 收入或指出，true支持，false为收入。
+        /// 收入或指出，true收入，false为支出。
         /// </summary>
-        [Comment("收入或指出，true支持，false为收入。")]
+        [Comment("收入或指出，true收入，false为支出。")]
         public bool IO { get; set; }
 
         /// <summary>
@@ -80,14 +81,14 @@ namespace PowerLms.Data
         public decimal Amount { get; set; }
 
         /// <summary>
-        /// 币种。标准货币缩写。
+        /// 币种。标准货币缩写。申请或结算时用的原币种。
         /// </summary>
         [MaxLength(4), Unicode(false)]
         [Comment("币种。标准货币缩写。")]
         public string Currency { get; set; }
 
         /// <summary>
-        /// 本位币汇率,默认从汇率表调取,机构本位币
+        /// 本位币汇率,默认从汇率表调取,Amount乘以该属性得到本位币金额。
         /// </summary>
         [Comment("本位币汇率,默认从汇率表调取,机构本位币")]
         [Precision(18, 4)]
@@ -131,5 +132,56 @@ namespace PowerLms.Data
         [Comment("审核人Id，为空则未审核")]
         public Guid? AuditOperatorId { get; set; }
 
+        /// <summary>
+        /// 已经申请的合计金额。计算属性。
+        /// </summary>
+        [Comment("已经申请的合计金额。计算属性。")]
+        [Precision(18, 2)]
+        public decimal TotalRequestedAmount { get; set; }
+
+        /// <summary>
+        /// 已经结算的金额。计算属性。
+        /// </summary>
+        [Comment("已经结算的金额。计算属性。")]
+        [Precision(18, 2)]
+        public decimal TotalSettledAmount { get; set; }
+    }
+
+    public static class DocFeeExtensions
+    {
+        /// <summary>
+        /// 获取相关的 Job 对象。
+        /// </summary>
+        /// <param name="docFee">DocFee 对象</param>
+        /// <param name="context">数据库上下文</param>
+        /// <returns>相关的 Job 对象</returns>
+        public static PlJob GetJob(this DocFee docFee, DbContext context)
+        {
+            return docFee.JobId is null ? null : context.Set<PlJob>().Find(docFee.JobId.Value);
+        }
+
+        /// <summary>
+        /// 获取相关的 Bill 对象。
+        /// </summary>
+        /// <param name="docFee">DocFee 对象</param>
+        /// <param name="context">数据库上下文</param>
+        /// <returns>相关的 Bill 对象</returns>
+        public static DocBill GetBill(this DocFee docFee, DbContext context)
+        {
+            return docFee.BillId is null ? null : context.Set<DocBill>().Find(docFee.BillId.Value);
+        }
+
+        /// <summary>
+        /// 获取相关的 Balance Customer 对象。
+        /// </summary>
+        /// <param name="docFee">DocFee 对象</param>
+        /// <param name="context">数据库上下文</param>
+        /// <returns>相关的 Customer 对象</returns>
+        public static PlCustomer GetBalanceCustomer(this DocFee docFee, DbContext context)
+        {
+            return docFee.BalanceId is null ? null : context.Set<PlCustomer>().Find(docFee.BalanceId.Value);
+        }
     }
 }
+
+

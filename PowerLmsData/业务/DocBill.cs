@@ -251,4 +251,12 @@ namespace PowerLms.Data
         [Comment("合同号")]
         public string ContractNo { get; set; }
     }
+
+    public static class DocBillExtensions
+    {
+        public static IQueryable<DocFee> GetFees(this DocBill bill, DbContext db)
+        {
+            return db.Set<DocFee>().Where(DocFee => DocFee.BillId == bill.Id);
+        }
+    }
 }

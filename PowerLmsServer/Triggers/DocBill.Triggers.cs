@@ -103,7 +103,7 @@ namespace PowerLmsServer.Triggers
                             var orgId = job.OrgId.Value;
                             bill.Amount = lkupFee[bill.Id].Sum(c =>
                             {
-                                var rate = _BusinessLogic.GetRate(job.OrgId.Value, c.Currency, bill.CurrTypeId);
+                                var rate = _BusinessLogic.GetExchageRate(job.OrgId.Value, c.Currency, bill.CurrTypeId);
                                 return Math.Round(c.Amount * rate, 4, MidpointRounding.AwayFromZero);
                             });
                         }

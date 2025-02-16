@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Identity.Client;
 using OW.Data;
 using OW.DDD;
 using PowerLmsServer.EfData;
@@ -46,7 +47,7 @@ namespace PowerLms.Data
         public Guid? BankId { get; set; }
 
         /// <summary>
-        /// 币种。标准货币缩写。
+        /// 币种。标准货币缩写。结算后的币种。
         /// </summary>
         [MaxLength(4), Unicode(false)]
         [Comment("币种。标准货币缩写。")]
@@ -146,7 +147,7 @@ namespace PowerLms.Data
         #endregion ICreatorInfo
 
         /// <summary>
-        /// 收付，false支出，true收入。
+        /// 收付，false支出，true收入。自动计算强制改变，0算支出。。
         /// </summary>
         [Comment("收付，false支出，true收入。")]
         public bool IO { get; set; }
@@ -173,14 +174,14 @@ namespace PowerLms.Data
         public Guid? ParentId { get; set; }
 
         /// <summary>
-        /// 本次核销（结算）金额（按申请单的币种）。
+        /// 本次核销（结算）金额（按申请单的币种）。汇款方汇款的金额（如可能是美元）。
         /// </summary>
         [Comment("本次核销（结算）金额。")]
         [Precision(18, 4)]
         public decimal Amount { get; set; }
 
         /// <summary>
-        /// 结算汇率，用户手工填写。
+        /// 结算汇率，用户手工填写。乘以Amount得到结算金额（结算金额的币种是总单中的PlInvoices.Currency）。
         /// </summary>
         [Comment("结算汇率，用户手工填写。")]
         [Precision(18, 4)]
@@ -191,7 +192,24 @@ namespace PowerLms.Data
         /// </summary>
         [Comment("申请单明细id")]
         public Guid? RequisitionItemId { get; set; }
-        
+
     }
 
+    public static class PlInvoicesExtensions
+    {
+        public static DocFeeRequisitionItem GetRequisitionItem(this PlInvoicesItem invoicesItem, DbContext db)
+        {
+            return invoicesItem.RequisitionItemId is null ? null : db.Set<DocFeeRequisitionItem>().Find(invoicesItem.RequisitionItemId);
+        }
+
+        public static IQueryable<PlInvoicesItem> GetChildren(this PlInvoices invoices, DbContext db)
+        {
+            return db.Set<PlInvoicesItem>().Where(x => x.ParentId == invoices.Id);
+        }
+
+        public static PlInvoices GetParent(this PlInvoicesItem invoicesItem, DbContext db)
+        {
+            return invoicesItem.ParentId is null ? null : db.Set<PlInvoices>().Find(invoicesItem.ParentId);
+        }
+    }
 }
