@@ -104,9 +104,11 @@ namespace PowerLmsServer.Triggers
                 var requisitions = dbContext.Set<DocFeeRequisition>().Where(c => parentIds.Contains(c.Id)).ToArray(); // 加载所有用到的 DocFeeRequisition 对象
                 var lkupRequisitionItem = dbContext.Set<DocFeeRequisitionItem>().Where(c => parentIds.Contains(c.ParentId.Value)).AsEnumerable().ToLookup(c => c.ParentId.Value); // 加载所有用到的 DocFeeRequisitionItem 对象
 
+                var financialManager = serviceProvider.GetRequiredService<FinancialManager>();
+
                 foreach (var requisition in requisitions)
                 {
-                    if (_BusinessLogic.GetRequisitionAmountAndIO(lkupRequisitionItem[requisition.Id], out decimal amount, out bool isOut, dbContext))
+                    if (financialManager.GetRequisitionAmountAndIO(lkupRequisitionItem[requisition.Id], out decimal amount, out bool isOut, dbContext))
                     {
                         requisition.Amount = amount;
                         requisition.IO = isOut;

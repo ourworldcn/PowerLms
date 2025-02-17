@@ -40,7 +40,7 @@ namespace PowerLmsServer.EfData
     }
 
     /// <summary>
-    /// 
+    /// 项目使用的主要数据库上下文。
     /// </summary>
     public class PowerLmsUserDbContext : DbContext
     {

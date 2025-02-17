@@ -86,8 +86,7 @@ namespace PowerLmsServer.Triggers
             if (states.TryGetValue(CombinedServices.ChangedDocFeeIdsKey, out var obj) && obj is HashSet<Guid> billIds)
             {
                 var bills = dbContext.Set<DocBill>().Where(c => billIds.Contains(c.Id)).ToArray(); // 加载所有用到的 DocBill 对象
-                var lkupFee = dbContext.Set<DocFee>().Where(c => billIds.Contains(c.BillId.Value)).AsEnumerable().
-                    ToLookup(c => c.BillId.Value); // 加载所有用到的 DocFee 对象
+                var lkupFee = dbContext.Set<DocFee>().Where(c => billIds.Contains(c.BillId.Value)).AsEnumerable().ToLookup(c => c.BillId.Value); // 加载所有用到的 DocFee 对象
 
                 foreach (var bill in bills)
                 {
@@ -108,6 +107,22 @@ namespace PowerLmsServer.Triggers
                             });
                         }
                     }
+
+                    // 更新 DocFee 的 TotalRequestedAmount 和 TotalSettledAmount 字段
+                    foreach (var fee in lkupFee[bill.Id])
+                    {
+                        fee.TotalRequestedAmount = dbContext.Set<DocFeeRequisitionItem>().Where(r => r.FeeId == fee.Id).
+                            Sum(r => r.Amount);
+
+                        // 计算 TotalSettledAmount
+                        var settledAmount = dbContext.Set<PlInvoicesItem>()
+                            .Where(i => i.RequisitionItemId == fee.Id)
+                            .Sum(i => i.Amount * i.ExchangeRate);
+
+                        fee.TotalSettledAmount = settledAmount;
+                        dbContext.Update(fee);
+                    }
+
                     dbContext.Update(bill);
                 }
             }

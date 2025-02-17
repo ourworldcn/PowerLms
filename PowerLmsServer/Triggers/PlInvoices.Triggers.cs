@@ -37,19 +37,21 @@ namespace PowerLmsServer.Triggers
     public class PlInvoicesItemTriggerHandler : IDbContextSaving<PlInvoicesItem>, IDbContextSaving<PlInvoices>, IAfterDbContextSaving<PlInvoicesItem>, IAfterDbContextSaving<PlInvoices>
     {
         private readonly ILogger<PlInvoicesItemTriggerHandler> _Logger;
+        private readonly FinancialManager _FinancialManager;
         BusinessLogicManager _BusinessLogic;
-        #region 构造函数
+
         /// <summary>
         /// 构造函数，初始化日志记录器。
         /// </summary>
         /// <param name="logger">日志记录器。</param>
         /// <param name="businessLogic"></param>
-        public PlInvoicesItemTriggerHandler(ILogger<PlInvoicesItemTriggerHandler> logger, BusinessLogicManager businessLogic)
+        /// <param name="invoiceManager">结算单管理器。</param>
+        public PlInvoicesItemTriggerHandler(ILogger<PlInvoicesItemTriggerHandler> logger, BusinessLogicManager businessLogic, FinancialManager invoiceManager)
         {
             _Logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _BusinessLogic = businessLogic;
+            _FinancialManager = invoiceManager;
         }
-        #endregion 构造函数
 
         #region Saving 方法
         /// <summary>
@@ -100,24 +102,13 @@ namespace PowerLmsServer.Triggers
 
                 foreach (var invoice in invoices)
                 {
-                    var bcCode = _BusinessLogic.GetEntityBaseCurrencyCode(invoice.Id, typeof(PlInvoices));
-                    //if (bcCode == invoice.Currency)  // 如果本币与父对象的币种相同，则不需要转换
-                    invoice.Amount = lkupInvoiceItem[invoice.Id].Sum(c => Math.Round(c.Amount * c.ExchangeRate, 4, MidpointRounding.AwayFromZero));
-                    //else // 否则，需要转换
-                    //{
-                    //    var jobId = _BusinessLogic.GetJobIdByInvoiceItemId(lkupInvoiceItem[invoice.Id].First().Id);
-                    //    if (jobId is not null)  //若关联了工作，则使用工作的组织机构Id，否则忽略
-                    //    {
-                    //        var job = dbContext.Set<PlJob>().Find(jobId);
-                    //        var orgId = job.OrgId.Value;
-                    //        invoice.Amount = lkupInvoiceItem[invoice.Id].Sum(c =>
-                    //        {
-                    //            var rate = _BusinessLogic.GetRate(orgId, c.Currency, invoice.Currency);
-                    //            return Math.Round(c.Amount * rate, 4, MidpointRounding.AwayFromZero);
-                    //        });
-                    //    }
-                    //}
-                    dbContext.Update(invoice);
+                    var items = lkupInvoiceItem[invoice.Id];
+                    if (_FinancialManager.GetInvoiceAmountAndIO(items, out decimal amount, out bool isOut, dbContext))
+                    {
+                        invoice.Amount = amount;
+                        invoice.IO = isOut;
+                        dbContext.Update(invoice);
+                    }
                 }
             }
         }

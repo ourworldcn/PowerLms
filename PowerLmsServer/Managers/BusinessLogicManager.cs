@@ -10,18 +10,15 @@ namespace PowerLmsServer.Managers
     [OwAutoInjection(ServiceLifetime.Scoped)]
     public class BusinessLogicManager
     {
-        private readonly OrganizationManager _OrganizationManager;
+        private OrganizationManager _OrganizationManager => _ServiceProvider.GetRequiredService<OrganizationManager>();
         private DbContext DbContext => _DbContext ??= _ServiceProvider.GetRequiredService<PowerLmsUserDbContext>();
         private DbContext _DbContext;
-        IServiceProvider _ServiceProvider;
+        private readonly IServiceProvider _ServiceProvider;
 
         /// <summary>构造函数，注入所需的服务。</summary>
-        /// <param name="organizationManager">机构管理器。</param>
-        /// <param name="dbContextFactory"></param>
-        /// <param name="serviceProvider"></param>
-        public BusinessLogicManager(OrganizationManager organizationManager, IDbContextFactory<PowerLmsUserDbContext> dbContextFactory, IServiceProvider serviceProvider)
+        /// <param name="serviceProvider">服务提供者。</param>
+        public BusinessLogicManager(IServiceProvider serviceProvider)
         {
-            _OrganizationManager = organizationManager;
             _ServiceProvider = serviceProvider;
         }
 
@@ -230,61 +227,6 @@ namespace PowerLmsServer.Managers
         }
 
         #endregion 汇率相关代码
-
-        #region 结算单相关代码
-
-        /// <summary>获取结算单的金额和进出口。</summary>
-        /// <param name="items">结算单明细项</param>
-        /// <param name="amount">金额</param>
-        /// <param name="isOut">是否支出</param>
-        /// <param name="db">数据库上下文</param>
-        /// <returns>是否成功</returns>
-        public bool GetInvoiceAmountAndIO(IEnumerable<PlInvoicesItem> items, out decimal amount, out bool isOut, DbContext db = null)
-        {
-            db ??= DbContext;
-            var inner = items.AsEnumerable();
-            if (!inner.Any()) { amount = 0; isOut = false; return true; }
-            if (inner.FirstOrDefault()?.GetParent(db) is not PlInvoices invoices) goto lblErr;
-            var debit = inner.Where(c => c.GetRequisitionItem(db)?.GetDocFee(db)?.IO ?? false).Sum(c => Math.Round(c.Amount * c.ExchangeRate, 4, MidpointRounding.AwayFromZero));
-            var credit = inner.Where(c => !c.GetRequisitionItem(db)?.GetDocFee(db)?.IO ?? false).Sum(c => Math.Round(c.Amount * c.ExchangeRate, 4, MidpointRounding.AwayFromZero));
-            amount = Math.Abs(debit - credit);
-            isOut = debit > credit;
-            return true;
-        lblErr:
-            amount = 0;
-            isOut = false;
-            return false;
-        }
-
-        #endregion 结算单相关代码
-
-        #region 申请单相关代码
-
-        /// <summary>获取申请单的合计金额和借贷方向。</summary>
-        /// <param name="items">申请单明细项</param>
-        /// <param name="amount">金额</param>
-        /// <param name="isOut">是否支出</param>
-        /// <param name="db">数据库上下文</param>
-        /// <returns>是否成功</returns>
-        public bool GetRequisitionAmountAndIO(IEnumerable<DocFeeRequisitionItem> items, out decimal amount, out bool isOut, DbContext db = null)
-        {
-            var inner = items.AsEnumerable();
-            if (!inner.Any()) { amount = 0; isOut = false; return true; }
-            db ??= DbContext;
-            if (inner.FirstOrDefault()?.GetParent(db) is not DocFeeRequisition requisition) goto lblErr;
-            var baseCurrency = GetBaseCurrencyCode(requisition, db);
-            var debit = inner.Where(c => c.GetDocFee(db)?.IO ?? false).Sum(c => Math.Round(c.Amount * GetExchageRate(c, db), 4, MidpointRounding.AwayFromZero));
-            var credit = inner.Where(c => !c.GetDocFee(db)?.IO ?? false).Sum(c => Math.Round(c.Amount * GetExchageRate(c, db), 4, MidpointRounding.AwayFromZero));
-            amount = Math.Abs(debit - credit);
-            isOut = debit > credit;
-            return true;
-        lblErr:
-            amount = 0;
-            isOut = false;
-            return false;
-        }
-
-        #endregion 申请单相关代码
 
         #region 账单相关代码
 
