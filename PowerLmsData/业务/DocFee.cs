@@ -181,6 +181,17 @@ namespace PowerLms.Data
         {
             return docFee.BalanceId is null ? null : context.Set<PlCustomer>().Find(docFee.BalanceId.Value);
         }
+
+        /// <summary>
+        /// 获取相关的 申请 对象。
+        /// </summary>
+        /// <param name="fee"></param>
+        /// <param name="context"></param>
+        /// <returns></returns>
+        public static IQueryable<DocFeeRequisitionItem> GetRequisitionItems(this DocFee fee, DbContext context)
+        {
+            return context.Set<DocFeeRequisitionItem>().Where(x => x.FeeId == fee.Id);
+        }
     }
 }
 

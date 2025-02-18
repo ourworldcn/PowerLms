@@ -108,22 +108,47 @@ namespace PowerLmsServer.Triggers
                         }
                     }
 
-                    // 更新 DocFee 的 TotalRequestedAmount 和 TotalSettledAmount 字段
-                    foreach (var fee in lkupFee[bill.Id])
-                    {
-                        fee.TotalRequestedAmount = dbContext.Set<DocFeeRequisitionItem>().Where(r => r.FeeId == fee.Id).
-                            Sum(r => r.Amount);
-
-                        // 计算 TotalSettledAmount
-                        var settledAmount = dbContext.Set<PlInvoicesItem>()
-                            .Where(i => i.RequisitionItemId == fee.Id)
-                            .Sum(i => i.Amount * i.ExchangeRate);
-
-                        fee.TotalSettledAmount = settledAmount;
-                        dbContext.Update(fee);
-                    }
-
                     dbContext.Update(bill);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    [OwAutoInjection(ServiceLifetime.Scoped, ServiceType = typeof(IDbContextSaving<DocFeeRequisitionItem>))]
+    public class FeeTotalTriggerHandler : IDbContextSaving<DocFeeRequisitionItem>
+    {
+        private readonly ILogger<FeeTotalTriggerHandler> _Logger;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="logger"></param>
+        /// <exception cref="ArgumentNullException"></exception>
+        public FeeTotalTriggerHandler(ILogger<FeeTotalTriggerHandler> logger)
+        {
+            _Logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        }
+
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        /// <param name="entities"></param>
+        /// <param name="service"></param>
+        /// <param name="states"></param>
+        public void Saving(IEnumerable<EntityEntry> entities, IServiceProvider service, Dictionary<object, object> states)
+        {
+            var dbContext = entities.First().Context;
+            var feeIds = new HashSet<Guid>(entities.Select(c => c.Entity).OfType<DocFeeRequisitionItem>().Where(c => c.FeeId.HasValue).Select(c => c.FeeId.Value));
+            foreach (var id in feeIds)
+            {
+                if (dbContext.Set<DocFee>().Find(id) is DocFee fee)
+                {
+                    var rItems = fee.GetRequisitionItems(dbContext).ToArray();
+                    fee.TotalSettledAmount = rItems.Sum(c => c.TotalSettledAmount);
+                    fee.TotalRequestedAmount = rItems.Sum(c => c.Amount);
                 }
             }
         }

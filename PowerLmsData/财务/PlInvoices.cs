@@ -211,5 +211,16 @@ namespace PowerLms.Data
         {
             return invoicesItem.ParentId is null ? null : db.Set<PlInvoices>().Find(invoicesItem.ParentId);
         }
+
+        /// <summary>
+        /// 获取结算单明细的结算金额（宿币种）。
+        /// </summary>
+        /// <param name="invoicesItem"></param>
+        /// <param name="precision"></param>
+        /// <returns></returns>
+        public static decimal GetDAmount(this PlInvoicesItem invoicesItem, int precision = 4)
+        {
+            return Math.Round(invoicesItem.ExchangeRate * invoicesItem.Amount, precision, MidpointRounding.AwayFromZero);
+        }
     }
 }

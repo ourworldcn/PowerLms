@@ -60,18 +60,15 @@ namespace PowerLmsServer.Triggers
 
         #region Saving 方法
         /// <summary>
-        /// 在 DocFeeRequisition 和 DocFeeRequisitionItem 添加/更改时，将其 ParentId（如果不为空）放在 HashSet 中。
+        /// 在 DocFeeRequisition 和 DocFeeRequisitionItem 添加/更改时，将其 ParentId（如果不为空）放在 HashSet 中，并计算父申请单的金额。
         /// </summary>
         /// <param name="entities">当前实体条目集合。</param>
         /// <param name="service">服务提供者。</param>
         /// <param name="states">状态字典。</param>
         public void Saving(IEnumerable<EntityEntry> entities, IServiceProvider service, Dictionary<object, object> states)
         {
-            if (!states.TryGetValue(DocFeeRequisitionTriggerConstants.ChangedRequisitionItemIdsKey, out var obj) || obj is not HashSet<Guid> parentIds)
-            {
-                parentIds = new HashSet<Guid>();
-                states[DocFeeRequisitionTriggerConstants.ChangedRequisitionItemIdsKey] = parentIds;
-            }
+            var dbContext = entities.First().Context;
+            var parentIds = new HashSet<Guid>();
 
             foreach (var entry in entities)
             {
@@ -84,7 +81,22 @@ namespace PowerLmsServer.Triggers
                 if (id.HasValue)
                 {
                     parentIds.Add(id.Value);
-                    _Logger.LogDebug("ParentId {0} added to HashSet.", id.Value);
+                }
+            }
+
+            // 计算并更新父申请单的金额
+            var requisitions = dbContext.Set<DocFeeRequisition>().Where(c => parentIds.Contains(c.Id)).ToArray(); // 加载所有用到的 DocFeeRequisition 对象
+            var lkupRequisitionItem = dbContext.Set<DocFeeRequisitionItem>().Where(c => parentIds.Contains(c.ParentId.Value)).AsEnumerable().ToLookup(c => c.ParentId.Value); // 加载所有用到的 DocFeeRequisitionItem 对象
+
+            var financialManager = service.GetRequiredService<FinancialManager>();
+
+            foreach (var requisition in requisitions)
+            {
+                if (financialManager.GetRequisitionAmountAndIO(lkupRequisitionItem[requisition.Id], out decimal amount, out bool isOut, dbContext))
+                {
+                    requisition.Amount = amount;
+                    requisition.IO = isOut;
+                    dbContext.Update(requisition);
                 }
             }
         }
@@ -99,24 +111,48 @@ namespace PowerLmsServer.Triggers
         /// <param name="states">状态字典。</param>
         public void AfterSaving(DbContext dbContext, IServiceProvider serviceProvider, Dictionary<object, object> states)
         {
-            if (states.TryGetValue(DocFeeRequisitionTriggerConstants.ChangedRequisitionItemIdsKey, out var obj) && obj is HashSet<Guid> parentIds)
+            // AfterSaving 方法内容已移至 Saving 方法，此处可以留空或删除
+        }
+        #endregion AfterSaving 方法
+    }
+
+    /// <summary>
+    /// 更新申请单及申请单明细结算金额。
+    /// </summary>
+    [OwAutoInjection(ServiceLifetime.Scoped, ServiceType = typeof(IDbContextSaving<PlInvoicesItem>))]
+    public class DocFeeRequisitionTotalSettledAmountTriggerHandler : IDbContextSaving<PlInvoicesItem>
+    {
+        /// <summary>
+        /// 更新申请单及申请单明细结算金额。
+        /// </summary>
+        /// <param name="entity"><inheritdoc/></param>
+        /// <param name="serviceProvider"></param>
+        /// <param name="states"></param>
+        public void Saving(IEnumerable<EntityEntry> entity, IServiceProvider serviceProvider, Dictionary<object, object> states)
+        {
+            var db = entity.First().Context;
+            var requisitionItemIds = new HashSet<Guid>(
+                entity.Select(c => c.Entity).OfType<PlInvoicesItem>().Where(c => c.RequisitionItemId.HasValue).Select(c => c.RequisitionItemId.Value));
+            var requisitionIds = new HashSet<Guid>();
+            foreach (var id in requisitionItemIds)
             {
-                var requisitions = dbContext.Set<DocFeeRequisition>().Where(c => parentIds.Contains(c.Id)).ToArray(); // 加载所有用到的 DocFeeRequisition 对象
-                var lkupRequisitionItem = dbContext.Set<DocFeeRequisitionItem>().Where(c => parentIds.Contains(c.ParentId.Value)).AsEnumerable().ToLookup(c => c.ParentId.Value); // 加载所有用到的 DocFeeRequisitionItem 对象
-
-                var financialManager = serviceProvider.GetRequiredService<FinancialManager>();
-
-                foreach (var requisition in requisitions)
+                if (db.Set<DocFeeRequisitionItem>().Find(id) is DocFeeRequisitionItem reqItem)
                 {
-                    if (financialManager.GetRequisitionAmountAndIO(lkupRequisitionItem[requisition.Id], out decimal amount, out bool isOut, dbContext))
-                    {
-                        requisition.Amount = amount;
-                        requisition.IO = isOut;
-                        dbContext.Update(requisition);
-                    }
+                    reqItem.TotalSettledAmount = reqItem.GetInvoicesItems(db).AsEnumerable().Sum(c => c.GetDAmount());
+                    if (reqItem.ParentId is Guid parentId)
+                        requisitionIds.Add(parentId);
+                    db.Update(reqItem);
+                }
+            }
+
+            foreach (var id in requisitionIds)
+            {
+                if (db.Set<DocFeeRequisition>().Find(id) is DocFeeRequisition req)
+                {
+                    req.TotalSettledAmount = req.GetChildren(db).AsEnumerable().Sum(c => c.TotalSettledAmount);
+                    db.Update(req);
                 }
             }
         }
-        #endregion AfterSaving 方法
     }
 }

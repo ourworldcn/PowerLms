@@ -38,13 +38,13 @@ namespace PowerLmsServer.Triggers
     {
         private readonly ILogger<PlInvoicesItemTriggerHandler> _Logger;
         private readonly FinancialManager _FinancialManager;
-        BusinessLogicManager _BusinessLogic;
+        private readonly BusinessLogicManager _BusinessLogic;
 
         /// <summary>
         /// 构造函数，初始化日志记录器。
         /// </summary>
         /// <param name="logger">日志记录器。</param>
-        /// <param name="businessLogic"></param>
+        /// <param name="businessLogic">业务逻辑管理器。</param>
         /// <param name="invoiceManager">结算单管理器。</param>
         public PlInvoicesItemTriggerHandler(ILogger<PlInvoicesItemTriggerHandler> logger, BusinessLogicManager businessLogic, FinancialManager invoiceManager)
         {
@@ -55,18 +55,16 @@ namespace PowerLmsServer.Triggers
 
         #region Saving 方法
         /// <summary>
-        /// 在 PlInvoicesItem 和 PlInvoices 添加/更改时，将其 ParentId（如果不为空）放在 HashSet 中。
+        /// 在 PlInvoicesItem 和 PlInvoices 添加/更改时，将其 ParentId（如果不为空）放在 HashSet 中，并计算父结算单的金额。
         /// </summary>
         /// <param name="entities">当前实体条目集合。</param>
         /// <param name="service">服务提供者。</param>
         /// <param name="states">状态字典。</param>
         public void Saving(IEnumerable<EntityEntry> entities, IServiceProvider service, Dictionary<object, object> states)
         {
-            if (!states.TryGetValue(InvoiceTriggerConstants.ChangedInvoiceItemIdsKey, out var obj) || obj is not HashSet<Guid> parentIds)
-            {
-                parentIds = new HashSet<Guid>();
-                states[InvoiceTriggerConstants.ChangedInvoiceItemIdsKey] = parentIds;
-            }
+            var parentIds = new HashSet<Guid>();
+            var requisitionIds = new HashSet<Guid>();
+            var dbContext = entities.First().Context;
 
             foreach (var entry in entities)
             {
@@ -81,6 +79,26 @@ namespace PowerLmsServer.Triggers
                     parentIds.Add(id.Value);
                     _Logger.LogDebug("ParentId {ParentId} added to HashSet.", id.Value);
                 }
+                if (entry.Entity is PlInvoicesItem item)
+                {
+                    if (item.GetRequisitionItem(dbContext)?.GetParent(dbContext)?.Id is Guid requisitionId)
+                        requisitionIds.Add(requisitionId);
+                }
+            }
+
+            // 计算并更新父结算单的金额
+            var invoices = dbContext.Set<PlInvoices>().Where(c => parentIds.Contains(c.Id)).ToArray(); // 加载所有用到的 PlInvoices 对象
+            var lkupInvoiceItem = dbContext.Set<PlInvoicesItem>().Where(c => parentIds.Contains(c.ParentId.Value)).AsEnumerable().ToLookup(c => c.ParentId.Value); // 加载所有用到的 PlInvoicesItem 对象
+
+            foreach (var invoice in invoices)
+            {
+                var items = lkupInvoiceItem[invoice.Id];
+                if (_FinancialManager.GetInvoiceAmountAndIO(items, out decimal amount, out bool isOut, dbContext))
+                {
+                    invoice.Amount = amount;
+                    invoice.IO = isOut;
+                    dbContext.Update(invoice);
+                }
             }
         }
         #endregion Saving 方法
@@ -94,23 +112,6 @@ namespace PowerLmsServer.Triggers
         /// <param name="states">状态字典。</param>
         public void AfterSaving(DbContext dbContext, IServiceProvider serviceProvider, Dictionary<object, object> states)
         {
-            if (states.TryGetValue(InvoiceTriggerConstants.ChangedInvoiceItemIdsKey, out var obj) && obj is HashSet<Guid> parentIds)
-            {
-                var invoices = dbContext.Set<PlInvoices>().Where(c => parentIds.Contains(c.Id)).ToArray(); // 加载所有用到的 PlInvoices 对象
-                var lkupInvoiceItem = dbContext.Set<PlInvoicesItem>().Where(c => parentIds.Contains(c.ParentId.Value)).AsEnumerable().
-                    ToLookup(c => c.ParentId.Value); // 加载所有用到的 PlInvoicesItem 对象
-
-                foreach (var invoice in invoices)
-                {
-                    var items = lkupInvoiceItem[invoice.Id];
-                    if (_FinancialManager.GetInvoiceAmountAndIO(items, out decimal amount, out bool isOut, dbContext))
-                    {
-                        invoice.Amount = amount;
-                        invoice.IO = isOut;
-                        dbContext.Update(invoice);
-                    }
-                }
-            }
         }
         #endregion AfterSaving 方法
     }

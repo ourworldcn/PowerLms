@@ -139,6 +139,12 @@ namespace PowerLms.Data
         [Comment("备注")]
         public string Remark { get; set; }
 
+        /// <summary>
+        /// 已经结算的金额。计算属性。
+        /// </summary>
+        [Comment("已经结算的金额。计算属性。")]
+        [Precision(18, 2)]
+        public decimal TotalSettledAmount { get; set; }
     }
 
     /// <summary>
@@ -165,6 +171,12 @@ namespace PowerLms.Data
         [Precision(18, 2)]
         public decimal Amount { get; set; }
 
+        /// <summary>
+        /// 已经结算的金额。计算属性。
+        /// </summary>
+        [Comment("已经结算的金额。计算属性。")]
+        [Precision(18, 2)]
+        public decimal TotalSettledAmount { get; set; }
         ///// <summary>
         ///// 费用所属工作号。从源费用或工作号带出显示在明细列表
         ///// </summary>
@@ -254,6 +266,17 @@ namespace PowerLms.Data
         public static DocFeeRequisition GetParent(this DocFeeRequisitionItem item, DbContext db)
         {
             return item.ParentId is null ? null : db.Set<DocFeeRequisition>().Find(item.ParentId);
+        }
+
+        /// <summary>
+        /// 获取相关的 结算 对象。
+        /// </summary>
+        /// <param name="requisitionItem"></param>
+        /// <param name="db"></param>
+        /// <returns></returns>
+        public static IQueryable<PlInvoicesItem> GetInvoicesItems(this DocFeeRequisitionItem requisitionItem, DbContext db)
+        {
+            return db.Set<PlInvoicesItem>().Where(x => x.RequisitionItemId == requisitionItem.Id);
         }
     }
 }
