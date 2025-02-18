@@ -27,7 +27,7 @@ namespace OW.EntityFrameworkCore
         /// <summary>
         /// 在保存之前引发事件。
         /// </summary>
-        /// <param name="entity">实体条目集合。</param>
+        /// <param name="entity">实体条目集合。此集合一定不为空。</param>
         /// <param name="serviceProvider">服务提供者。</param>
         /// <param name="states">状态字典。</param>
         void Saving(IEnumerable<EntityEntry> entity, IServiceProvider serviceProvider, Dictionary<object, object> states);
@@ -164,7 +164,7 @@ namespace OW.EntityFrameworkCore
                 try
                 {
                     svc.GetType().InvokeMember(
-                        "Saving",
+                        nameof(IDbContextSaving<object>.Saving),
                         BindingFlags.InvokeMethod | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance,
                         null,
                         svc,
@@ -195,7 +195,7 @@ namespace OW.EntityFrameworkCore
                 try
                 {
                     svc.GetType().InvokeMember(
-                        "Saving",
+                        nameof(IAfterDbContextSaving<object>.AfterSaving),
                         BindingFlags.InvokeMethod | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance,
                         null,
                         svc,
