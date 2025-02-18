@@ -93,7 +93,7 @@ namespace OW.Data
                 }
 
             var connection = _Connections.GetOrAdd(connectionString, connStr => new SqlConnection(connStr));
-            using var command = new SqlCommand(sqlQuery, connection);
+            var command = new SqlCommand(sqlQuery, connection);
             var dependency = new SqlDependency(command);
             dependency.OnChange += (sender, e) => OnDependencyChange(sender, e, cts, connectionString, sqlQuery);
 
@@ -103,7 +103,7 @@ namespace OW.Data
                 {
                     connection.Open();
                 }
-                using var reader = command.ExecuteReader();
+                var reader = command.ExecuteReader();
                 // 读取数据以触发 SqlDependency
                 while (reader.Read()) { }
             }
