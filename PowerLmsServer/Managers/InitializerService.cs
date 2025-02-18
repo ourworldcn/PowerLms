@@ -252,7 +252,10 @@ namespace PowerLmsServer.Managers
             var _Mapper = svc.GetRequiredService<IMapper>();
             var str = JsonSerializer.Serialize(new Dictionary<string, string> { { "11", "22" } });
             var dic = JsonSerializer.Deserialize<Dictionary<string, string>>(str);
-
+            var db = svc.GetService<PowerLmsUserDbContext>();
+            string query = "SELECT [Id], [BusinessTypeId], [OrgId], [SCurrencyId], [DCurrencyId], [Radix], [Exchange], [BeginDate], [EndData], [IsDelete], [ShortcutName], [DCurrency], [SCurrency] FROM [dbo].[DD_PlExchangeRates]";
+            var dp = svc.GetRequiredService<SqlDependencyManager>();
+            var cts = dp.RegisterSqlDependency(query, db.Database.GetConnectionString());
         }
 
         private void CreateDb()
