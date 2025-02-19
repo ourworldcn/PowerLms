@@ -104,7 +104,7 @@ namespace OW.EntityFrameworkCore
 
             // 获取被更改的实体列表
             var entities = GetChangedEntities(dbContext);
-            var lastEntities = entities;
+            var doneEntities = new HashSet<EntityEntry>(new EntityEntryEqualityComparer()); //记录已经处理过的实体
             var states = new Dictionary<object, object>();
             var types = new HashSet<Type>();
 
@@ -115,12 +115,11 @@ namespace OW.EntityFrameworkCore
                 foreach (var grp in lookup)
                 {
                     types.Add(grp.Key);
-                    InvokeSavingMethods(serviceProvider, grp.Key, grp.AsEnumerable(), states);
+                    InvokeSavingMethods(grp.AsEnumerable(), serviceProvider, states, grp.Key);
                 }
-
-                dbContext.ChangeTracker.DetectChanges();
+                doneEntities.UnionWith(entities);
                 entities = GetChangedEntities(dbContext);
-                entities.ExceptWith(lastEntities);
+                entities.ExceptWith(doneEntities);
             }
 
             // 触发 After Saving 事件
@@ -139,8 +138,10 @@ namespace OW.EntityFrameworkCore
         /// </summary>
         /// <param name="dbContext">数据即将被保存的 DbContext 实例。</param>
         /// <returns>被更改的实体列表。</returns>
-        private HashSet<EntityEntry> GetChangedEntities(TContext dbContext)
+        private static HashSet<EntityEntry> GetChangedEntities(TContext dbContext)
         {
+            if (!dbContext.ChangeTracker.AutoDetectChangesEnabled)
+                dbContext.ChangeTracker.DetectChanges();
             return new HashSet<EntityEntry>(
                 dbContext.ChangeTracker.Entries().Where(c => c.State == EntityState.Added || c.State == EntityState.Modified || c.State == EntityState.Deleted),
                 new EntityEntryEqualityComparer()
@@ -150,11 +151,11 @@ namespace OW.EntityFrameworkCore
         /// <summary>
         /// 调用保存前的事件处理方法。
         /// </summary>
-        /// <param name="serviceProvider">数据上下文所属的服务提供者。</param>
-        /// <param name="entityType">实体类型。</param>
         /// <param name="entities">实体条目集合。</param>
+        /// <param name="serviceProvider">数据上下文所属的服务提供者。</param>
         /// <param name="states">状态字典。</param>
-        private void InvokeSavingMethods(IServiceProvider serviceProvider, Type entityType, IEnumerable<EntityEntry> entities, Dictionary<object, object> states)
+        /// <param name="entityType">实体类型。</param>
+        private void InvokeSavingMethods(IEnumerable<EntityEntry> entities, IServiceProvider serviceProvider, Dictionary<object, object> states, Type entityType)
         {
             var svcType = typeof(IDbContextSaving<>).MakeGenericType(entityType);
             var svcs = serviceProvider.GetServices(svcType);
@@ -173,7 +174,7 @@ namespace OW.EntityFrameworkCore
                 }
                 catch (Exception ex)
                 {
-                    _Logger.LogError(ex, "调用实体类型 {EntityType} 的 Saving 方法时出错。", entityType);
+                    _Logger.LogWarning(ex, "调用实体类型 {EntityType} 的 Saving 方法时出错。", entityType);
                 }
             }
         }
