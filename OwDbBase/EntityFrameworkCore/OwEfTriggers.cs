@@ -31,6 +31,11 @@ namespace OW.EntityFrameworkCore
         /// <param name="serviceProvider">服务提供者。</param>
         /// <param name="states">状态字典。</param>
         void Saving(IEnumerable<EntityEntry> entity, IServiceProvider serviceProvider, Dictionary<object, object> states);
+
+        /// <summary>
+        /// 优先级。值越小，优先级越高。
+        /// </summary>
+        public int Priority => 10000;
     }
 
     #endregion 接口 IDbContextSaving
@@ -159,6 +164,11 @@ namespace OW.EntityFrameworkCore
         {
             var svcType = typeof(IDbContextSaving<>).MakeGenericType(entityType);
             var svcs = serviceProvider.GetServices(svcType);
+            svcs = svcs.OrderBy(c =>
+            {
+                var propertyInfo = c.GetType().GetProperty("Priority");
+                return propertyInfo?.GetValue(c) ?? 10000;
+            });
 
             foreach (var svc in svcs)
             {

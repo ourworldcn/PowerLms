@@ -122,6 +122,58 @@ namespace OW.Data
         }
 
         /// <summary>
+        /// 获取多个条件或关系的表达式。
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="queryable"></param>
+        /// <param name="conditional"></param>
+        /// <returns></returns>
+        public static IQueryable<T> GenerateWhereOr<T>(IQueryable<T> queryable, IDictionary<string, string> conditional) where T : class
+        {
+            if (conditional == null || !conditional.Any())
+                return queryable;
+
+            var type = typeof(T);
+            var para = Expression.Parameter(type);
+            Expression body = null;
+
+            foreach (var item in conditional)
+            {
+                if (type.GetProperty(item.Key, BindingFlags.IgnoreCase | BindingFlags.GetProperty | BindingFlags.Public | BindingFlags.Instance | BindingFlags.FlattenHierarchy) is null) continue;
+                var left = Expression.Property(para, item.Key);
+                var values = item.Value.Split(',');
+                Expression condition;
+
+                if (values.Length == 1)
+                {
+                    var right = Constant(values[0], left.Type);
+                    if (typeof(string) == left.Type) //对字符串则使用模糊查找
+                    {
+                        condition = EfHelper.StringContains(left, Constant(values[0], left.Type));
+                    }
+                    else
+                    {
+                        condition = Expression.Equal(left, Constant(values[0], left.Type));
+                    }
+                }
+                else if (values.Length == 2)
+                {
+                    condition = EfHelper.Between(left, Constant(values[0], left.Type), Constant(values[1], left.Type));
+                }
+                else
+                {
+                    OwHelper.SetLastErrorAndMessage(404, $"不正确的参数格式——{item.Value}。");
+                    return null;
+                }
+
+                body = body == null ? condition : Expression.OrElse(body, condition);
+            }
+
+            var func = Expression.Lambda<Func<T, bool>>(body, para);
+            return queryable.Where(func);
+        }
+
+        /// <summary>
         /// 识别带实体名加.的格式，并生成查询。
         /// </summary>
         /// <typeparam name="T"></typeparam>
