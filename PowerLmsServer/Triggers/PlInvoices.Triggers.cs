@@ -92,12 +92,16 @@ namespace PowerLmsServer.Triggers
 
             foreach (var invoice in invoices)
             {
+                if (dbContext.Entry(invoice).State == EntityState.Deleted)
+                {
+                    continue;
+                }
                 var items = lkupInvoiceItem[invoice.Id];
+
                 if (_FinancialManager.GetInvoiceAmountAndIO(items, out decimal amount, out bool isOut, dbContext))
                 {
                     invoice.Amount = amount;
                     invoice.IO = isOut;
-                    dbContext.Update(invoice);
                 }
             }
         }

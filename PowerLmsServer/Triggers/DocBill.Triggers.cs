@@ -73,7 +73,10 @@ namespace PowerLmsServer.Triggers
 
             foreach (var bill in bills)
             {
-                if (dbContext.Entry(bill).State == EntityState.Deleted) continue;   // 如果账单已被删除，则忽略
+                if (dbContext.Entry(bill).State == EntityState.Deleted)  // 如果账单已被删除，则忽略
+                {
+                    continue;
+                }
                 var bcCode = _BusinessLogic.GetEntityBaseCurrencyCode(bill.Id, typeof(DocBill));
                 if (bcCode == bill.CurrTypeId)  // 如果本币与账单的币种相同，则不需要转换
                     bill.Amount = lkupFee[bill.Id].Sum(c => Math.Round(c.Amount * c.ExchangeRate, 4, MidpointRounding.AwayFromZero));
@@ -91,8 +94,6 @@ namespace PowerLmsServer.Triggers
                         });
                     }
                 }
-
-                dbContext.Update(bill);
             }
         }
     }
@@ -129,6 +130,10 @@ namespace PowerLmsServer.Triggers
             {
                 if (dbContext.Set<DocFee>().Find(id) is DocFee fee)
                 {
+                    if(dbContext.Entry(fee).State == EntityState.Deleted)
+                    {
+                        continue;
+                    }
                     var rItems = fee.GetRequisitionItems(dbContext).ToArray();
                     fee.TotalSettledAmount = rItems.Sum(c => c.TotalSettledAmount);
                     fee.TotalRequestedAmount = rItems.Sum(c => c.Amount);

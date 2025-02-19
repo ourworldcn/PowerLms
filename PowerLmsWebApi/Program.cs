@@ -134,7 +134,7 @@ internal class Program
         });
         services.AddBatchDbWriter<PowerLmsUserDbContext>();
         services.AddOwEfTriggers<PowerLmsUserDbContext>();
-
+        
         #endregion 配置数据库
 
         services.AddSqlDependencyManager(); //添加SqlDependencyManager服务

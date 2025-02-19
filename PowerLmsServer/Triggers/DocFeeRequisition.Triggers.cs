@@ -92,11 +92,14 @@ namespace PowerLmsServer.Triggers
 
             foreach (var requisition in requisitions)
             {
+                if(dbContext.Entry(requisition).State == EntityState.Deleted)
+                {
+                    continue;
+                }
                 if (financialManager.GetRequisitionAmountAndIO(lkupRequisitionItem[requisition.Id], out decimal amount, out bool isOut, dbContext))
                 {
                     requisition.Amount = amount;
                     requisition.IO = isOut;
-                    dbContext.Update(requisition);
                 }
             }
         }
@@ -138,10 +141,13 @@ namespace PowerLmsServer.Triggers
             {
                 if (db.Set<DocFeeRequisitionItem>().Find(id) is DocFeeRequisitionItem reqItem)
                 {
+                    if(db.Entry(reqItem).State == EntityState.Deleted)
+                    {
+                        continue;
+                    }
                     reqItem.TotalSettledAmount = reqItem.GetInvoicesItems(db).AsEnumerable().Sum(c => c.GetDAmount());
                     if (reqItem.ParentId is Guid parentId)
                         requisitionIds.Add(parentId);
-                    db.Update(reqItem);
                 }
             }
 
@@ -149,8 +155,11 @@ namespace PowerLmsServer.Triggers
             {
                 if (db.Set<DocFeeRequisition>().Find(id) is DocFeeRequisition req)
                 {
+                    if (db.Entry(req).State == EntityState.Deleted)
+                    {
+                        continue;
+                    }
                     req.TotalSettledAmount = req.GetChildren(db).AsEnumerable().Sum(c => c.TotalSettledAmount);
-                    db.Update(req);
                 }
             }
         }

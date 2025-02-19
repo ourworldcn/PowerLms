@@ -203,6 +203,8 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="model"></param>
         /// <param name="conditional">支持多个bool类型的或查询。使用字段名作为key,true或false为值。</param>
         /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
         /// <response code="403">权限不足。</response>  
         [HttpGet]
         public ActionResult<GetAllCustomer2ReturnDto> GetAllCustomer2([FromQuery] PagingParamsDtoBase model,
@@ -217,24 +219,10 @@ namespace PowerLmsWebApi.Controllers
             {
                 allOrg = _OrganizationManager.GetOrLoadByMerchantId(merId.Value).Data.Keys.ToArray();
             }
-            //var dbSet = _DbContext.PlCustomers.Where(c => c.OrgId.HasValue && allOrg.Contains(c.OrgId.Value));
             var dbSet = _DbContext.PlCustomers.Where(c => c.OrgId == context.User.OrgId);
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-
-            var sb = new StringBuilder("select * from PlCustomers where   ");
-            foreach (var item in conditional.Where(c => c.Key != "IsDesc"))
-            {
-                if (!bool.TryParse(item.Value, out var b)) continue;
-                if (b)
-                    sb.Append($"{item.Key}=1 or ");
-                else
-                    sb.Append($"{item.Key}=0 or ");
-            }
-            sb.Remove(sb.Length - 3, 3);    //获得条件
-            var collBase = _DbContext.PlCustomers.FromSqlRaw(sb.ToString()).ToArray();
-            //var collR = collBase.Where(c => c.OrgId.HasValue && allOrg.Contains(c.OrgId.Value)).AsQueryable();
-            var collR = collBase.Where(c => c.OrgId == context.User.OrgId).AsQueryable();
-
+            coll = EfHelper.GenerateWhereOr(coll, conditional);
+            var collR = coll.Where(c => c.OrgId == context.User.OrgId).AsQueryable();
             var prb = _EntityManager.GetAll(collR, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;

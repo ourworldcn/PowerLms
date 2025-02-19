@@ -43,9 +43,9 @@ namespace PowerLms.Data
         public Guid? BalanceId { get; set; }
 
         /// <summary>
-        /// 收入或指出，true收入，false为支出。
+        /// 收入或支出，true收入，false为支出。
         /// </summary>
-        [Comment("收入或指出，true收入，false为支出。")]
+        [Comment("收入或支出，true为收入，false为支出。")]
         public bool IO { get; set; }
 
         /// <summary>
@@ -57,7 +57,7 @@ namespace PowerLms.Data
         /// <summary>
         /// 单位,简单字典ContainerType,按票、按重量等
         /// </summary>
-        [Comment("单位,简单字典ContainerType,按票、按重量等")]
+        [Comment("单位，简单字典ContainerType，按票、按重量等")]
         public Guid? ContainerTypeId { get; set; }
 
         /// <summary>
@@ -74,9 +74,9 @@ namespace PowerLms.Data
         public decimal UnitPrice { get; set; }
 
         /// <summary>
-        /// 金额,两位小数、可以为负数.
+        /// 金额，两位小数，可以为负数。
         /// </summary>
-        [Comment("金额,两位小数、可以为负数")]
+        [Comment("金额，两位小数，可以为负数。")]
         [Precision(18, 2)]
         public decimal Amount { get; set; }
 
@@ -88,9 +88,9 @@ namespace PowerLms.Data
         public string Currency { get; set; }
 
         /// <summary>
-        /// 本位币汇率,默认从汇率表调取,Amount乘以该属性得到本位币金额。
+        /// 本位币汇率，默认从汇率表调取，Amount乘以该属性得到本位币金额。
         /// </summary>
-        [Comment("本位币汇率,默认从汇率表调取,机构本位币")]
+        [Comment("本位币汇率，默认从汇率表调取，Amount乘以该属性得到本位币金额。")]
         [Precision(18, 4)]
         public decimal ExchangeRate { get; set; }
 
@@ -107,29 +107,30 @@ namespace PowerLms.Data
         public Guid? CreateBy { get; set; }
 
         /// <summary>
-        /// 创建时间,系统默认，不能更改
+        /// 创建时间，系统默认，不能更改。
         /// </summary>
-        [Comment("新建时间,系统默认，不能更改。")]
+        [Comment("创建时间，系统默认，不能更改。")]
         [Column(TypeName = "datetime2(2)")]
         public DateTime CreateDateTime { get; set; } = OwHelper.WorldNow;
 
         /// <summary>
-        /// 预计结算日期，客户资料中信用日期自动计算出
+        /// 预计结算日期，客户资料中信用日期自动计算出。
         /// </summary>
-        [Comment("预计结算日期，客户资料中信用日期自动计算出")]
+        [Comment("预计结算日期，客户资料中信用日期自动计算出。")]
         [Column(TypeName = "datetime2(2)")]
         public DateTime PreclearDate { get; set; }
 
         /// <summary>
         /// 审核日期，为空则未审核。
         /// </summary>
-        [Comment("审核日期，为空则未审核"), Column(TypeName = "datetime2(2)")]
+        [Comment("审核日期，为空则未审核。")]
+        [Column(TypeName = "datetime2(2)")]
         public DateTime? AuditDateTime { get; set; }
 
         /// <summary>
         /// 审核人Id，为空则未审核。
         /// </summary>
-        [Comment("审核人Id，为空则未审核")]
+        [Comment("审核人Id，为空则未审核。")]
         public Guid? AuditOperatorId { get; set; }
 
         /// <summary>
