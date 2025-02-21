@@ -11,6 +11,7 @@ using System.Data;
 using System.IO;
 using DotNetDBF;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace OW.Data
 {
@@ -126,7 +127,7 @@ namespace OW.Data
                         {
                             recordData[i] = row[i];
                         }
-                        writer.AddRecord(recordData);
+                        writer.WriteRecord(recordData);
                     }
                 }
                 _logger.LogDebug("成功将 DataTable 写入文件。");
@@ -175,6 +176,54 @@ namespace OW.Data
                 NativeDbType.Logical => typeof(bool),
                 _ => throw new ArgumentException("不支持的数据类型"),
             };
+        }
+    }
+
+    public class DotNetDBFManagerTest
+    {
+        public static void Test()
+        {
+            var logger = NullLogger<DotNetDBFManager>.Instance;
+            var dbfManager = new DotNetDBFManager(logger);
+            var filePath = "c:\\test.dbf";
+
+            // 创建样例 DataTable
+            var dataTable = new DataTable();
+            dataTable.Columns.Add("Field1", typeof(string));
+            dataTable.Columns.Add("Field2", typeof(int));
+            dataTable.Columns.Add("Field3", typeof(DateTime));
+
+            var row = dataTable.NewRow();
+            row["Field1"] = "Test";
+            row["Field2"] = 123;
+            row["Field3"] = DateTime.Now;
+            dataTable.Rows.Add(row);
+
+            // 使用 WriteDataTableToDBF 写入文件
+            dbfManager.WriteDataTableToDBF(filePath, dataTable);
+
+            // 使用 ReadDBFToDataTable 读回数据
+            var result = dbfManager.ReadDBFToDataTable(filePath);
+
+            // 输出结果
+            Console.WriteLine("读取的 DataTable:");
+            foreach (DataColumn column in result.Columns)
+            {
+                Console.Write(column.ColumnName + "\t");
+            }
+            Console.WriteLine();
+
+            foreach (DataRow dataRow in result.Rows)
+            {
+                foreach (var item in dataRow.ItemArray)
+                {
+                    Console.Write(item + "\t");
+                }
+                Console.WriteLine();
+            }
+
+            // 删除测试文件
+            File.Delete(filePath);
         }
     }
 }
