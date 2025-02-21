@@ -1,8 +1,8 @@
 /*
  * 文件名：DotNetDBFManager.cs
  * 作者：OW
- * 创建日期：2023年10月25日
- * 修改日期：2023年10月25日
+ * 创建日期：2025年2月21日
+ * 修改日期：2023年2月21日
  * 描述：该文件包含 DotNetDBFManager 类的实现，用于操作 DBF 文件。
  */
 
@@ -10,6 +10,7 @@ using System;
 using System.Data;
 using System.IO;
 using DotNetDBF;
+using Microsoft.Extensions.Logging;
 
 namespace OW.Data
 {
@@ -18,6 +19,17 @@ namespace OW.Data
     /// </summary>
     public class DotNetDBFManager
     {
+        private readonly ILogger<DotNetDBFManager> _logger;
+
+        /// <summary>
+        /// 构造函数，初始化日志记录器。
+        /// </summary>
+        /// <param name="logger">日志记录器。</param>
+        public DotNetDBFManager(ILogger<DotNetDBFManager> logger)
+        {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        }
+
         /// <summary>
         /// 从 DBF 文件读取数据到 DataTable。
         /// </summary>
@@ -26,33 +38,45 @@ namespace OW.Data
         public DataTable ReadDBFToDataTable(string filePath)
         {
             if (string.IsNullOrWhiteSpace(filePath))
+            {
+                _logger.LogDebug("文件路径为空或仅包含空白字符。");
                 throw new ArgumentNullException(nameof(filePath));
+            }
 
             var dataTable = new DataTable();
 
-            using (var stream = File.Open(filePath, FileMode.Open, FileAccess.Read))
-            using (var reader = new DBFReader(stream))
+            try
             {
-                reader.CharEncoding = System.Text.Encoding.UTF8;
-                var fields = reader.Fields;
-
-                // 创建 DataTable 列
-                foreach (var field in fields)
+                using (var stream = File.Open(filePath, FileMode.Open, FileAccess.Read))
+                using (var reader = new DBFReader(stream))
                 {
-                    dataTable.Columns.Add(field.Name, GetFieldTypeFromDBF(field.DataType));
-                }
+                    reader.CharEncoding = System.Text.Encoding.UTF8;
+                    var fields = reader.Fields;
 
-                // 读取数据
-                object[] record;
-                while ((record = reader.NextRecord()) != null)
-                {
-                    var dataRow = dataTable.NewRow();
-                    for (int i = 0; i < fields.Length; i++)
+                    // 创建 DataTable 列
+                    foreach (var field in fields)
                     {
-                        dataRow[fields[i].Name] = record[i];
+                        dataTable.Columns.Add(field.Name, GetFieldTypeFromDBF(field.DataType));
                     }
-                    dataTable.Rows.Add(dataRow);
+
+                    // 读取数据
+                    object[] record;
+                    while ((record = reader.NextRecord()) != null)
+                    {
+                        var dataRow = dataTable.NewRow();
+                        for (int i = 0; i < fields.Length; i++)
+                        {
+                            dataRow[fields[i].Name] = record[i];
+                        }
+                        dataTable.Rows.Add(dataRow);
+                    }
                 }
+                _logger.LogDebug("成功从文件读取数据到 DataTable。");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "读取 DBF 文件时发生错误。");
+                throw;
             }
 
             return dataTable;
@@ -66,36 +90,51 @@ namespace OW.Data
         public void WriteDataTableToDBF(string filePath, DataTable dataTable)
         {
             if (string.IsNullOrWhiteSpace(filePath))
-                throw new ArgumentNullException(nameof(filePath));
-            if (dataTable == null || dataTable.Columns.Count == 0)
-                throw new ArgumentNullException(nameof(dataTable));
-
-            using (var stream = File.Open(filePath, FileMode.Create, FileAccess.Write))
-            using (var writer = new DBFWriter(stream))
             {
-                writer.CharEncoding = System.Text.Encoding.UTF8;
+                _logger.LogDebug("文件路径为空或仅包含空白字符。");
+                throw new ArgumentNullException(nameof(filePath));
+            }
+            if (dataTable == null || dataTable.Columns.Count == 0)
+            {
+                _logger.LogDebug("DataTable 为空或不包含任何列。");
+                throw new ArgumentNullException(nameof(dataTable));
+            }
 
-                // 获取字段信息
-                var fields = new DBFField[dataTable.Columns.Count];
-                for (int i = 0; i < dataTable.Columns.Count; i++)
+            try
+            {
+                using (var stream = File.Open(filePath, FileMode.Create, FileAccess.Write))
+                using (var writer = new DBFWriter(stream))
                 {
-                    var column = dataTable.Columns[i];
-                    var fieldType = GetDBFFieldType(column.DataType);
-                    fields[i] = new DBFField(column.ColumnName, fieldType);
-                }
+                    writer.CharEncoding = System.Text.Encoding.UTF8;
 
-                writer.Fields = fields;
-
-                // 写入数据
-                foreach (DataRow row in dataTable.Rows)
-                {
-                    var recordData = new object[fields.Length];
-                    for (int i = 0; i < fields.Length; i++)
+                    // 获取字段信息
+                    var fields = new DBFField[dataTable.Columns.Count];
+                    for (int i = 0; i < dataTable.Columns.Count; i++)
                     {
-                        recordData[i] = row[i];
+                        var column = dataTable.Columns[i];
+                        var fieldType = GetDBFFieldType(column.DataType);
+                        fields[i] = new DBFField(column.ColumnName, fieldType);
                     }
-                    writer.AddRecord(recordData);
+
+                    writer.Fields = fields;
+
+                    // 写入数据
+                    foreach (DataRow row in dataTable.Rows)
+                    {
+                        var recordData = new object[fields.Length];
+                        for (int i = 0; i < fields.Length; i++)
+                        {
+                            recordData[i] = row[i];
+                        }
+                        writer.AddRecord(recordData);
+                    }
                 }
+                _logger.LogDebug("成功将 DataTable 写入文件。");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "写入 DBF 文件时发生错误。");
+                throw;
             }
         }
 
