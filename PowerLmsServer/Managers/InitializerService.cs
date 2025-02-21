@@ -23,6 +23,9 @@ using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using System.Text.Json;
+using Microsoft.Data.SqlClient;
+using Microsoft.Data.Sql;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
 namespace PowerLmsServer.Managers
 {
@@ -250,12 +253,21 @@ namespace PowerLmsServer.Managers
         private void Test(IServiceProvider svc)
         {
             var _Mapper = svc.GetRequiredService<IMapper>();
-            var str = JsonSerializer.Serialize(new Dictionary<string, string> { { "11", "22" } });
-            var dic = JsonSerializer.Deserialize<Dictionary<string, string>>(str);
+
             var db = svc.GetService<PowerLmsUserDbContext>();
-            string query = "SELECT [Id], [BusinessTypeId], [OrgId], [SCurrencyId], [DCurrencyId], [Radix], [Exchange], [BeginDate], [EndData], [IsDelete], [ShortcutName], [DCurrency], [SCurrency] FROM [dbo].[DD_PlExchangeRates]";
-            var dp = svc.GetRequiredService<SqlDependencyManager>();
-            var cts = dp.RegisterSqlDependency(query, db.Database.GetConnectionString());
+            var b = SqlDependency.Start(db.Database.GetDbConnection().ConnectionString);
+            var conn = new SqlConnection(db.Database.GetDbConnection().ConnectionString);
+            conn.Open();
+            string query = "SELECT [Id],[ParentId],[Name],[Bank],[Account],[CurrencyId] FROM [dbo].[BankInfos]";
+            var comm = new SqlCommand(query, conn); comm.CommandType = CommandType.Text;
+            var dependency = new SqlDependency(comm);
+            SqlNotificationRequest notificationRequest = new SqlNotificationRequest();
+            //command.Notification = notificationRequest;
+            dependency.OnChange += (sender, e) =>
+            {
+                Console.WriteLine("数据库发生变化");
+            };
+            comm.ExecuteReader();
         }
 
         private void CreateDb()

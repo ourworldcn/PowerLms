@@ -29,8 +29,8 @@ namespace PowerLmsServer.Managers
     /// <summary>
     /// 汇率管理器，用于缓存 PlExchangeRate 表。
     /// </summary>
-    [OwAutoInjection(ServiceLifetime.Scoped,ServiceType =typeof(IAfterDbContextSaving<PlExchangeRate>))]
-    [OwAutoInjection(ServiceLifetime.Scoped)]
+    //[OwAutoInjection(ServiceLifetime.Scoped,ServiceType =typeof(IAfterDbContextSaving<PlExchangeRate>))]
+    //[OwAutoInjection(ServiceLifetime.Scoped)]
     public class ExchangeRateManager : IDisposable, IAfterDbContextSaving<PlExchangeRate>
     {
         #region 私有字段
