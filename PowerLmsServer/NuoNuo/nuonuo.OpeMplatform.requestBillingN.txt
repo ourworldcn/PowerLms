@@ -1,0 +1,805 @@
+nuonuo.OpeMplatform.requestBillingNew(诺税通saas请求开具发票接口)
+版本V2.0
+具备诺税通saas资质的企业用户（集团总公司可拿下面公司的税号来开票，但需要先授权）填写发票销方、购方、明细等信息并发起开票请求。
+请求地址
+环境请求地址
+正式环境https://sdk.nuonuo.com/open/v1/services
+沙箱环境https://sandbox.nuonuocs.cn/open/v1/services
+注：请 下载SDK 并完成报文组装后发送接口调用请求，accessToken获取方式请参考 自用型应用创建 和 第三方应用创建 。
+公共请求参数
+消息头
+名称类型是否必须描述
+Content-type String Y MIME类型【消息头】
+X-Nuonuo-Sign String Y签名（编码格式请使用UTF-8）【消息头】
+accessToken String Y授权码【消息头】
+userTax String N授权商户的税号（自用型应用非必填，第三方应用必填）【消息头】
+method String Y请求api对应的方法名称【消息头】
+消息体
+名称类型是否必须描述
+senid String Y唯一标识，由企业自己生成32位随机码【消息体】
+nonce String Y 8位随机正整数【消息体】
+timestamp String Y时间戳(当前时间的秒数)【消息体】
+appkey String Y平台分配给应用的appKey【消息体】
+私有请求参数
+名称类型是否必须示例值最大长度描述- order Object Y请求体
+ buyerName String Y企业名称/个人100购方名称
+ buyerTaxNum String N 33990199999919
+ 8 20购方税号（企业要填，个人可为空；数电
+专票、二手车销售统一发票时必填）
+ buyerTel String N 0571-88888888 50购方电话（购方地址+电话总共不超100字
+符；二手车销售统一发票时必填）
+ buyerAddress String N杭州市80购方地址（购方地址+电话总共不超100字
+符；二手车销售统一发票时必填）
+名称类型是否必须示例值最大长度描述
+ buyerAccount String N中国工商银行 111111
+ 111111 100购方银行开户行及账号
+ salerTaxNum String Y 33990199999919
+ 9 20
+销方税号（使用沙箱环境请求时消息体参
+数salerTaxNum和消息头参数userTax
+填写339902999999789113）
+ salerTel String Y 0571-77777777 20销方电话（在诺税通saas工作台配置过的
+可以不传，以传入的为准）
+ salerAddress String Y 80销方地址（在诺税通saas工作台配置过的
+可以不传，以传入的为准）
+ salerAccount String N 100销方银行开户行及账号(二手车销售统一发
+票时必填)
+ showBankAccountType String N 0 2
+不传默认为0：都不显示；传1：备注仅显
+示销方开户行及账号；传2：备注仅显示购
+方开户行及账号；传3：购销方开户行及账
+号都显示（此字段仅在数电普票和数电专
+票下生效）
+ orderNo String Y 20170105333207
+ 9312313 20订单号（每个企业唯一）
+ invoiceDate String Y 2022-01-13 12:30:
+ 00 20订单时间
+ invoiceCode String N 12冲红时填写的对应蓝票发票代码（红票必
+填 10位或12 位， 11位的时候请左补 0）
+ invoiceNum String N 8冲红时填写的对应蓝票发票号码（红票必
+填，不满8位请左补0）
+ redReason String N 1 1
+冲红原因：1:销货退回;2:开票有误;3:服务中
+止;4:发生销售折让(开具红票时且票种为p,c
+ ,e,f,r需要传--成品油发票除外；不传时默
+认为 1)
+ billInfoNo String N 14030119040084
+ 72 24
+红字信息表编号.专票冲红时此项必填，且
+必须在备注中注明“开具红字增值税专用
+发票信息表编号ZZZZZZZZZZZZZZZ
+ Z”字样，其 中“Z”为开具红字增值税专
+用发票所需要的长度为16位信息表编号
+（建议16位，最长可支持24位）。
+ departmentId String N
+ 9F7E9439CA8B4
+ C60A2FFF3EA32
+ 90B088
+ 32部门门店id（诺诺系统中的id）
+ clerkId String N 32开票员id（诺诺系统中的id）
+ remark String N备注信息230
+冲红时，在备注中注明“对应正数发票代
+码:XXXXXXXXX号码:YYYYYYYY”
+文案，其中“X”为发票代码，“Y”为发
+票号码，可以不填，接口会自动添加该文
+案；机动车发票蓝票时备注只能为空；数
+电票时最长为200字符
+ checker String N王五20复核人（数电电票时若有值，会显示在生
+成的PDF/OFD备注栏中）
+ payee String N李四20收款人（数电电票时若有值，会显示在生
+成的PDF/OFD备注栏中）
+名称类型是否必须示例值最大长度描述
+ clerk String Y张三20开票员（数电票时需要传入和开票登录账
+号对应的开票员姓名）
+ listFlag String N 0 1清单标志：非清单:0；清单:1，默认:0，电
+票固定为0
+ listName String N详见销货清单92
+清单项目名称：对应发票票面项目名称（li
+ stFlag为1时，必填，默认为“详见销货清
+单”）
+ pushMode String N 1 2推送方式：-1,不推送;0,邮箱;1,手机（默认
+）;2,邮箱、手机
+ buyerPhone String Y 15858585858 20购方手机（pushMode为1或2时，此项为
+必填，同时受企业资质是否必填控制）
+ email String Y test@xx.com 50推送邮箱（pushMode为0或2时，此项为
+必填，同时受企业资质是否必填控制）
+ ccPhone String N 18399887766,183
+ 99882211 100
+抄送手机，多个时用英文逗号隔开，最多
+支持5个，必须在phone字段有值时，才支
+持传入
+ ccEmail String N
+ nuonuowang@qq.
+ com,hahaha@qq.
+ com
+ 250
+抄送邮箱，多个时用英文逗号隔开，最多
+支持5个，必须在email字段有值时，才支
+持传入
+ invoiceType String Y 1 1开票类型：1:蓝票;2:红票 （数电票冲红请
+对接数电快捷冲红接口）
+ invoiceLine String N p 2
+发票种类：p,普通发票(电票)(默认);c,普通
+发票(纸票);s,专用发票;e,收购发票(电票);f,
+收购发票(纸质);r,普通发票(卷式);b,增值税
+电子专用发票;j,机动车销售统一发票;u,二手
+车销售统一发票;bs:电子发票(增值税专用
+发票)-即数电专票(电子),pc:电子发票(普通
+发票)-即数电普票(电子),es:数电纸质发票(
+增值税专用发票)-即数电专票(纸质);ec:数
+电纸质发票(普通发票)-即数电普票(纸质)
+ paperInvoiceType String N 12
+数电纸票类型(数电纸票时才需要传)：（票
+种为ec时，默认04；票种为es时，默认为
+1130）; 04 2016版增值税普通发票（二联
+折叠票）, 05 2016版增值税普通发票（五
+联折叠票), 1130 增值税专用发票（中文三
+联无金额限制版）, 1140 增值税专用发票
+（中文四联无金额限制版）, 1160 增值税
+专用发票（中文六联无金额限制版）, 1170 
+增值税专用发票（中文七联无金额限制版
+）
+ specificFactor String N 0 2
+特定要素：0普通发票（默认）、1 成品油 
+、2 稀土（仅支持c、s票种且编码必须为
+稀土产品目录中的商品）、3 建筑服务、4 
+货物运输服务、5 不动产销售、6 不动产
+经营租赁服务、9 旅客运输服务、16 农产
+品收购、31 建安发票 、 32 房地产销售发
+票、33 二手车发票反向开具、 34 电子烟
+、 35 矿产品
+是否强制开具标识：0 否、1 是 （发票种
+类为u，且特定要素为 33-二手车发票反向
+开具时才需要填； 默认为 0；若为1时，则
+ forceFlag String N 0 2
+名称类型是否必须示例值最大长度描述
+不校验卖方自然人身份证号的合规性）
+ proxyInvoiceFlag String N 0 1
+代开标志：0非代开;1代开。代开蓝票时备
+注要求填写文案：代开企业税号:***,代开企
+业名称:***；代开红票时备注要求填写文案
+：对应正数发票代码:***号码:***代开企业
+税号:***代开企业名称:***
+ taxRebateProxy String N 0 1代办退税标记：0否（默认），1是；仅代
+办退税资质企业可传1
+ invoiceDifferenceType String N 02 2
+数电发票差额征税开具方式：01 全额开票
+（暂不支持），02 差额开票；非数电发票
+开具差额时，不传
+ callBackUrl String N http:127.0.0.1/invoi
+ ce/callback/
+回传发票信息地址（开票完成、开票失败
+）
+ extensionNumber String N 0 5分机号（只能为空或者数字）
+ terminalNumber String N 4终端号（开票终端号，只能 为空或数字）
+ machineCode String N 123456789123 12机器编号（12位盘号）
+ vehicleFlag String N 1 1是否机动车类专票 0-否 1-是
+ hiddenBmbbbh String N 0 1
+是否隐藏编码表版本号 0-否 1-是（默认0
+，在企业资质中也配置为是隐藏的时候
+，并且此字段传1的时候代开发票 税率显示
+***）
+ nextInvoiceCode String N 12指定发票代码（票种为c普纸、f收购纸票
+时允许指定卷开具） 非必填
+ nextInvoiceNum String N 8发票起始号码，当指定代码有值时，发票
+起始号码必填
+ invoiceNumEnd String N 8发票终止号码，当指定代码有值时，发票
+终止号码必填
+ surveyAnswerType String N 1
+ 3%、1%税率开具理由（企业为小规模/点
+下户时才需要），对应值：1-开具发票为2
+ 022年3月31日前发生纳税义务的业务； 2-前期已开具相应征收率发票，发生销售折
+让、中止或者退回等情形需要开具红字发
+票，或者开票有误需要重新开具； 3-因为
+实际经营业务需要，放弃享受免征增值税
+政策
+ buyerManagerName String N张三16购买方经办人姓名（数电票特有字段）
+ managerCardType String N 201 40
+经办人证件类型：101-组织机构代码证, 10
+ 2-营业执照, 103-税务登记证, 199-其他
+单位证件, 201-居民身份证, 202-军官证, 
+203-武警警官证, 204-士兵证, 205-军队
+离退休干部证, 206-残疾人证, 207-残疾
+军人证（1-8级）, 208-外国护照, 210-港
+澳居民来往内地通行证, 212-中华人民共和
+国往来港澳通行证, 213-台湾居民来往大陆
+通行证, 214-大陆居民往来台湾通行证, 21
+ 5-外国人居留证, 216-外交官证 299-其
+他个人证件(数电发票特有)
+ managerCardNo String N 20经办人证件号码（数电票特有字段）
+名称类型是否必须示例值最大长度描述
+ bField1 String N 255业务方自定义字段1，本应用只作保存
+ bField2 String N 255业务方自定义字段2，本应用只作保存
+ bField3 String N 255业务方自定义字段3，本应用只作保存
+ naturalPersonFlag String N 0 1
+购买方自然人标志：0-否（默认），1-是
+；仅在开具数电普票(电子)时使用，如受票
+方（发票抬头）为自然人，并要求能将发
+票归集在个人票夹中展示，需提供姓名及
+身份证号（自然人纳税人识别号），此参
+数传入1；如受票方（发票抬头）为个体工
+商户，需提供社会统一信用代码或纳税人
+识别号，此参数传入0
+ certificateType String N 201
+数电农产品收购发票销售方证件类型，数
+电农产品收购必传，对应buyerTaxNum
+字段。103 税务登记证，201 居民身份证
+，208 外国护照，210 港澳居民来往内地
+通行证，213 台湾居民来往大陆通行证，2
+ 15 外国人居留证，219 香港永久性居民身
+份证，220 台湾身份证，221 澳门特别行
+政区永久性居民身份证，233 外国人永久
+居留身份证（外国人永久居留证），299 
+其他个人证件
+ taxNumVerifyFlag String N 1
+对购方税号校验（ 0-不校验 1-校验，仅对
+数电票有效，未传时则取企业配置的值
+；注：若开启校验，当购方税号未能在电
+子税局中找到时 则会开票失败）
+ naturalPersonVerifyFlag String N 1
+对购方名称校验（ 0-不校验 1-校验，仅对
+数电普票（电子）有效，未传时则取企业
+配置的值；若开启校验，当开具非自然人
+标记的数电普票（电子）时，将限制对于
+“购买方名称长度小于等于4位”的发票的
+开具）
+ - invoiceDetail Array Y 100发票明细，支持填写商品明细最大2000行
+（包含折扣行、被折扣行）
+  goodsName String Y电脑90
+商品名称（如invoiceLineProperty =1，
+则此商品行为折扣行，折扣行不允许多行
+折扣，折扣行必须紧邻被折扣行，商品名
+称必须与被折扣行一致）
+  goodsCode String N 10905110300000
+ 00000 19商品编码（商品税收分类编码开发者自行
+填写）
+  selfCode String N 13000542600000
+ 0000 16自行编码（可不填）
+  withTaxFlag String Y 1 1单价含税标志：0:不含税,1:含税
+  price String N 16
+单价（精确到小数点后8位），当单价(pri
+ ce)为空时，数量(num)也必须为空；(pric
+ e)为空时，含税金额(taxIncludedAmou
+ nt)、不含税金额(taxExcludedAmount)
+、税额(tax)都不能为空
+  num String N 16数量（精确到小数点后8位，开具红票时数
+量为负数）
+名称类型是否必须示例值最大长度描述
+  unit String N台20单位
+  specType String N y460 40规格型号
+  tax String N 0.12 16
+税额（精确到小数点后2位），[不含税金
+额] * [税率] = [税额]；税额允许误差为 0.0
+ 6。红票为负。不含税金额、税额、含税金
+额任何一个不传时，会根据传入的单价
+，数量进行计算，可能和实际数值存在误
+差，建议都传入
+  taxRate String Y 0.13 10税率，注：1、纸票清单红票存在为null的
+情况；2、二手车发票税率为null或者0
+  taxExcludedAmount String N 0.88 16
+不含税金额（精确到小数点后2位）。红票
+为负。不含税金额、税额、含税金额任何
+一个不传时，会根据传入的单价，数量进
+行计算，可能和实际数值存在误差，建议
+都传入
+  taxIncludedAmount String N 1 16
+含税金额（精确到小数点后2位），[不含
+税金额] + [税额] = [含税金额]，红票为负
+。不含税金额、税额、含税金额任何一个
+不传时，会根据传入的单价，数量进行计
+算，可能和实际数值存在误差，建议都传
+入
+  invoiceLineProperty String N 0 1发票行性质：0,正常行;1,折扣行;2,被折扣行
+，红票只有正常行
+  favouredPolicyFlag String N 0 2
+优惠政策标识：0,不使用;1,使用; 数电票时
+： 01：简易征收 02：稀土产品 03：免税 
+04：不征税 05：先征后退 06：100%先
+征后退 07：50%先征后退 08：按3%简
+易征收 09：按5%简易征收 10：按5%简
+易征收减按1.5%计征 11：即征即退30% 1
+ 2：即征即退50% 13：即征即退70% 14
+：即征即退100% 15：超税负3%即征即退 
+16：超税负8%即征即退 17：超税负12%
+即征即退 18：超税负6%即征即退
+  favouredPolicyName String N 0 50
+增值税特殊管理（优惠政策名称）,当favo
+ uredPolicyFlag为1时，此项必填 （数电
+票时为空）
+  deduction String N 0 16
+扣除额，差额征收时填写，目前只支持填
+写一项。 注意：当传0、空或字段不传时
+，都表示非差额征税；传0.00才表示差额
+征税：0.00 （数电票暂不支持）
+  zeroRateFlag String N 0 1
+零税率标识：空,非零税率;1,免税;2,不征税;
+ 3,普通零税率；1、当税率为：0%，且增
+值税特殊管理：为“免税”， 零税率标识
+：需传“1” 2、当税率为：0%，且增值
+税特殊管理：为"不征税" 零税率标识：需
+传“2” 3、当税率为：0%，且增值税特
+殊管理：为空 零税率标识：需传“3” 
+（数电票时为空）
+  dField1 String Y 255业务方明细自定义字段1，本应用只作保存
+  dField2 String Y 255业务方明细自定义字段2，本应用只作保存
+名称类型是否必须示例值最大长度描述
+  dField3 String Y 255业务方明细自定义字段3，本应用只作保存
+  dField4 String Y 255业务方明细自定义字段4，本应用只作保存
+  dField5 String Y 255业务方明细自定义字段5，本应用只作保存
+ - vehicleInfo Object N 1机动车销售统一发票才需要传
+  vehicleType String Y轿车40
+车辆类型,同明细中商品名称，开具机动车
+发票时明细有且仅有一行，商品名称为车
+辆类型且不能为空
+  brandModel String Y宝马3系60厂牌型号
+  productOrigin String Y北京32原产地
+  certificate String N WDL0426132635
+ 51 50合格证号
+  importCerNum String N 36进出口证明书号
+  insOddNum String N 32商检单号
+  engineNum String N 10111011111 50发动机号码
+  vehicleCode String Y LHGK432843423
+ 84234 23车辆识别号码/车架号
+  intactCerNum String N 32完税证明号码
+  tonnage String N 2 8吨位
+  maxCapacity String N 5 12限乘人数
+  idNumOrgCode String N 911401003468351
+ 1XD 30
+其他证件号码；该字段为空则为2021新版
+常规机动车发票，此时购方税号必填（个
+人在购方税号中填身份证号）；该字段有
+值，则为2021新版其他证件号码的机动车
+发票（可以录入汉字、大写字母、数字、
+全角括号等，此时购方税号需要为空；注
+：仅用于港澳台、国外等特殊身份/税号开
+机动车票时使用；国内个人身份证号码开
+具请勿传入该字段，需要传入到购方税号
+字段中）
+  manufacturerName String N华晨宝马汽车生产有
+限公司80生产厂家（A9开票服务器类型可支持200
+）
+  taxOfficeName String N杭州税务80主管税务机关名称（A9开票服务器类型必
+填）
+  taxOfficeCode String N 13399000 11主管税务机关代码（A9开票服务器类型必
+填）
+ - secondHandCarInfo Object N 1开具二手车销售统一发票才需要传
+  organizeType String Y 1 1
+开票方类型 1：经营单位 2：拍卖单位 3
+：二手车市场 （只有传1-经营单位时，才
+支持 特定要素为33的 二手车发票反向开具
+）
+  vehicleType String Y轿车40
+车辆类型,同明细中商品名称，开具机动车
+发票时明细有且仅有一行，商品名称为车
+辆类型且不能为空
+名称类型是否必须示例值最大长度描述
+  brandModel String Y宝马3系60厂牌型号
+  vehicleCode String Y LHGK432843423
+ 84234 23车辆识别号码/车架号
+  intactCerNum String N 32完税证明号码
+  licenseNumber String Y浙A12345 20车牌照号
+  registerCertNo String Y 330022123321 20登记证号
+  vehicleManagementN
+ ame String Y杭州80转入地车管所名称
+  sellerName String Y张三80
+卖方单位/个人名称（开票方类型为1时，必
+须与销方名称一致，若反向开具时则为对
+应自然人信息）
+  sellerTaxnum String Y 330100199001010
+ 000 20
+卖方单位代码/身份证号码（开票方类型为1
+时，必须与销方税号一致，若反向开具时
+则为对应自然人信息）
+  sellerAddress String Y杭州文一路888号80
+卖方单位/个人地址（开票方类型为1时，必
+须与销方地址一致，若反向开具时则为对
+应自然人信息）
+  sellerPhone String Y 13888888888 20
+卖方单位/个人电话（开票方类型为1时，必
+须与销方电话一致，若反向开具时则为对
+应自然人信息）
+ - invoiceBuildingInfo Object N
+开具建筑服务特定要素的数电票才需要传
+（specificFactor 为 3时）；注：数电建
+筑服务发票 只能有 一条明细 且 规格型号
+、单位、数量、单价 都不能有值
+  buildingAddress String Y浙江省杭州市西湖区建筑服务发生地（传对应省市区中文名称--需与行政区划名称一致）
+  detailedAddress String N 120详细地址（建筑服务发生地+详细地址 总
+长度最大120字符）
+  landVatItemNo String N 16土地增值税项目编号
+  itemName String Y宇宙城80建筑项目名称
+  crossCityFlag String Y 0 1跨地（市）标志（0-否 1-是）
+ - invoiceGoodsTransport
+ s Array N
+开具货物运输服务特定要素的数电票时才
+需要填（specificFactor = 4时）最多20
+ 00行，至少1行
+  transportTool String Y 1 1运输工具种类：1 铁路运输、2 公路运输、
+3 水路运输、4 航空运输、5 管道运输
+  transportToolNum String Y浙A12345 40运输工具牌号
+  origin String Y上海80起运地
+  destination String Y北京80到达地
+  goodsName String Y零配件80货物运输名称
+实际变量名：invoiceTravellerTranspo
+ rtInfoList 开具旅客运输服务特定要素的数
+ - invoiceTravellerTransp
+ ort Array N
+名称类型是否必须示例值最大长度描述
+电票时才需要填（specificFactor 为 9时
+）最多2000行，可以为空
+  traveller String Y张三20出行人
+  travelDate String Y 2023-01-01出行日期（年-月-日）
+  travellerCardType String Y出行人证件类型（枚举值同经办人身份证
+件类型）
+  travellerCardNo String Y 20出行人证件号码
+  travelPlace String Y 80出行地
+  arrivePlace String Y 80到达地
+  vehicleType String Y 1 2
+交通工具类型（1-飞机 2-火车 3-长途汽
+车 4-公共交通 5-出租车 6-汽车 7-船舶 
+9-其他）
+  vehicleLevel String Y经济舱20
+交通工具等级（当交通工具类型是火车、
+飞机、船舶时必填选择，其他交通工具时
+可选填；当选择火车时必须传"一等座","二
+等座","软席（软座、软卧）","硬席（硬座、
+硬卧）" 其中之一；当选择飞机时必须传"
+公务舱","头等舱","经济舱" 其中之一；当选
+择船舶时必须选择"一等舱","二等舱","三等
+舱" 其中之一）
+ - realPropertyRentInfo Object N
+开具不动产经营租赁服务特定要素的数电
+票才需要传（specificFactor 为 6时
+）；注：此时 商品只能有 一条明细 且 规
+格型号、单位都不能有值
+  realPropertyAddress String Y浙江省杭州市西湖区不动产地址（传对应省市区中文名称--需
+与行政区划名称一致）
+  detailAddress String Y文一西路XXXX号120
+详细地址（不动产地址+详细地址 总长度
+最大120字符，且必须包含 街、路、村、
+乡、镇、道 关键词）
+  rentStartDate String Y 2023-01-01租赁开始日期（不能晚于租赁结束日期）
+  rentEndDate String Y 2023-01-30租赁结束日期（不能早于租赁开始日期）
+  crossCityFlag String Y 0 2跨地（市）标志（0-否 1-是）
+  realPropertyCertificat
+ e String N 40产权证书/不动产权证号
+  unit String Y 2 2
+面积单位（只能选其中一种：1 平方千米、
+2 平方米、3 公顷、4 亩、5 hm、6 k
+ m、7 m）
+ - realPropertySellInfo Object N
+开具不动产销售特定要素的数电票才需要
+传（specificFactor 为 5时）；注：此时 
+商品只能有 一条明细 且 规格型号、单位
+都不能有值
+  realPropertyContract
+ Numbe String N 28实际为：realPropertyContractNumb
+ er；不动产单元代码/网签合同备案编号
+  realPropertyAddress String Y浙江省杭州市西湖区不动产地址（传对应省市区中文名称--需
+与行政区划名称一致）
+名称类型是否必须示例值最大长度描述
+  detailAddress String Y文一西路XXXX号120
+详细地址（不动产地址+详细地址 总长度
+最大120字符，且必须包含 街、路、村、
+乡、镇、道 关键词）
+  crossCityFlag String Y 0 2跨地（市）标志（0-否 1-是）
+  incrementTaxNumber String N 18土地增值税项目编号
+  price String N 20核定计税价格
+  taxAmount String N 20实际成交含税金额（当核定计税价格有值
+时必填）
+  realPropertyCertificat
+ e String N 40产权证书/不动产权证号
+  unit String Y 2 2
+面积单位（只能选其中一种：1 平方千米、
+2 平方米、3 公顷、4 亩、5 hm、6 k
+ m、7 m）
+ - differenceVoucherInfoL
+ ist Array N数电发票差额扣除凭证列表，开具数电差
+额征税-差额开票时，必传
+  detailIndex String N 1序号，从1开始依次增加
+  voucherType String N 01
+凭证类型（01 数电发票、02 增值税专用
+发票、03 增值税普通发票、04 营业税发
+票、05 财政票据、06 法院裁决书、07 契
+税完税凭证、08 其他发票类、09 其他扣
+除凭证）
+  allElectronicInvoiceNu
+ mbe String N 20 allElectronicInvoiceNumber数电票号
+码，当voucherType传01时必传
+  invoiceCode String N 12发票代码，当voucherType传02、03、
+04时必传
+  invoiceNumber String N 8发票号码，当voucherType传02、03、
+04时必传
+  voucherNumber String N 20凭证号码
+  invoiceTime String N 2023-04-13 18开具日期，当voucherType传01、02、
+03、04时必传
+  taxtotal String N 103.14 18凭证金额，必传
+  differenceTaxtotal String N 100.14 18本次扣除金额，不能大于凭证金额，必传
+  remark String N 100备注，当voucherType传08、09时必传
+  voucherSource String N 1凭证来源，必传，1 手工录入、2 勾选录入
+、3 模板录入；同一张发票内保持一致
+ additionalElementName String N测试模版50
+附加模版名称（数电电票特有字段，附加
+模版有值时需要添加附加要素信息列表对
+象，需要先在电子税局平台维护好模版）
+ - additionalElementList Array N 10
+附加要素信息列表（数电电票特有字段
+，附加要素信息可以有多个，有值时需要
+附加模版名称也有值）
+信息名称（数电电票特有字段；需要与电
+子税局中的模版中的附加要素信息名称一
+  elementName String N信息名称200
+名称类型是否必须示例值最大长度描述
+致）
+  elementType String N信息类型20信息类型（数电电票特有字段）
+  elementValue String N信息值200信息值（数电电票特有字段）
+响应参数
+参数类型描述示例值
+invoiceSerialNum String发票流水号17102510461601000165
+请求示例
+JAVA
+ NNOpenSDK sdk = NNOpenSDK.getIntance(); 
+String taxnum = "23***789"; // 授权企业税号 
+String appKey = "Hn***XL"; 
+String appSecret = "F65***65F"; 
+String method = "nuonuo.OpeMplatform.requestBillingNew"; // API方法名 
+String token = "2d484e**************pdui"; // 访问令牌 
+String content = "{ 
+\"order\": { 
+\"terminalNumber\": \"\", 
+\"listFlag\": \"0\", 
+\"naturalPersonFlag\": \"0\", 
+\"pushMode\": \"1\", 
+\"managerCardNo\": \"\", 
+\"invoiceBuildingInfo\": { 
+\"buildingAddress\": \"浙江省杭州市西湖区\", 
+\"crossCityFlag\": \"0\", 
+\"itemName\": \"宇宙城\", 
+\"landVatItemNo\": \"\", 
+\"detailedAddress\": \"\" 
+}, 
+\"departmentId\": \"9F7E9439CA8B4C60A2FFF3EA3290B088\", 
+\"invoiceDifferenceType\": \"02\", 
+\"paperInvoiceType\": \"\", 
+\"checker\": \"王五\", 
+\"invoiceNumEnd\": \"\", 
+\"payee\": \"李四\", 
+\"invoiceTravellerTransport\": [ 
+{ 
+\"travellerCardType\": \"\", 
+\"arrivePlace\": \"\", 
+\"travelDate\": \"2023-01-01\", 
+\"travelPlace\": \"\", 
+\"vehicleLevel\": \"经济舱\", 
+\"travellerCardNo\": \"\", 
+\"traveller\": \"张三\", 
+\"vehicleType\": \"1\" 
+} 
+], 
+\"buyerAddress\": \"杭州市\", 
+\"taxRebateProxy\": \"0\", 
+\"realPropertySellInfo\": { 
+\"realPropertyAddress\": \"浙江省杭州市西湖区\", 
+\"crossCityFlag\": \"0\", 
+\"realPropertyCertificate\": \"\", 
+\"realPropertyContractNumbe\": \"\", 
+\"unit\": \"2\", 
+\"price\": \"\", 
+\"incrementTaxNumber\": \"\", 
+\"detailAddress\": \"文一西路XXXX号\", 
+\"taxAmount\": \"\" 
+}, 
+\"invoiceType\": \"1\", 
+\"showBankAccountType\": \"0\", 
+\"specificFactor\": \"0\", 
+\"orderNo\": \"201701053332079312313\", 
+\"machineCode\": \"123456789123\", 
+\"taxNumVerifyFlag\": \"\", 
+\"vehicleFlag\": \"1\", 
+\"invoiceCode\": \"\", 
+\"buyerPhone\": \"15858585858\", 
+\"surveyAnswerType\": \"\", 
+\"certificateType\": \"201\", 
+\"invoiceDetail\": [ 
+{ 
+\"specType\": \"y460\", 
+\"dField1\": \"\", 
+\"taxExcludedAmount\": \"0.88\", 
+\"invoiceLineProperty\": \"0\", 
+\"favouredPolicyName\": \"0\", 
+\"dField3\": \"\", 
+\"dField2\": \"\", 
+\"dField5\": \"\", 
+\"num\": \"\", 
+\"dField4\": \"\", 
+\"withTaxFlag\": \"1\", 
+\"tax\": \"0.12\", 
+\"favouredPolicyFlag\": \"0\", 
+\"taxRate\": \"0.13\", 
+\"unit\": \"台\", 
+\"deduction\": \"0\", 
+\"price\": \"\", 
+\"zeroRateFlag\": \"0\", 
+\"goodsCode\": \"1090511030000000000\", 
+\"selfCode\": \"130005426000000000\", 
+\"goodsName\": \"电脑\", 
+\"taxIncludedAmount\": \"1\" 
+} 
+], 
+\"buyerTel\": \"0571-88888888\", 
+\"nextInvoiceNum\": \"\", 
+\"clerkId\": \"\", 
+\"remark\": \"备注信息\", 
+\"managerCardType\": \"201\", 
+\"buyerTaxNum\": \"339901999999198\", 
+\"invoiceLine\": \"p\", 
+\"secondHandCarInfo\": { 
+\"organizeType\": \"1\", 
+\"vehicleManagementName\": \"杭州\", 
+\"sellerPhone\": \"13888888888\", 
+\"sellerName\": \"张三\", 
+\"brandModel\": \"宝马3系\", 
+\"vehicleCode\": \"LHGK43284342384234\", 
+\"licenseNumber\": \"浙A12345\", 
+\"registerCertNo\": \"330022123321\", 
+\"sellerAddress\": \"杭州文一路888号\", 
+\"vehicleType\": \"轿车\", 
+\"intactCerNum\": \"\", 
+\"sellerTaxnum\": \"330100199001010000\" 
+}, 
+\"buyerManagerName\": \"张三\", 
+\"redReason\": \"1\", 
+\"email\": \"test@xx.com\", 
+\"naturalPersonVerifyFlag\": \"\", 
+\"salerAccount\": \"\", 
+\"differenceVoucherInfoList\": [ 
+{ 
+\"detailIndex\": \"1\", 
+\"invoiceTime\": \"2023-04-13\", 
+\"voucherType\": \"01\", 
+\"allElectronicInvoiceNumbe\": \"\", 
+\"voucherNumber\": \"\", 
+\"invoiceNumber\": \"\", 
+\"taxtotal\": \"103.14\", 
+\"remark\": \"\", 
+\"invoiceCode\": \"\", 
+\"voucherSource\": \"\", 
+\"differenceTaxtotal\": \"100.14\" 
+} 
+], 
+\"salerTel\": \"0571-77777777\", 
+\"callBackUrl\": \"http:127.0.0.1/invoice/callback/\", 
+\"ccEmail\": \"nuonuowang@qq.com,hahaha@qq.com\", 
+\"additionalElementList\": [ 
+{ 
+\"elementValue\": \"信息值\", 
+\"elementType\": \"信息类型\", 
+\"elementName\": \"信息名称\" 
+} 
+], 
+\"billInfoNo\": \"1403011904008472\", 
+\"vehicleInfo\": { 
+\"taxOfficeCode\": \"13399000\", 
+\"manufacturerName\": \"华晨宝马汽车生产有限公司\", 
+\"importCerNum\": \"\", 
+\"certificate\": \"WDL042613263551\", 
+\"engineNum\": \"10111011111\", 
+\"taxOfficeName\": \"杭州税务\", 
+\"brandModel\": \"宝马3系\", 
+\"productOrigin\": \"北京\", 
+\"vehicleCode\": \"LHGK43284342384234\", 
+\"maxCapacity\": \"5\", 
+\"intactCerNum\": \"\", 
+\"tonnage\": \"2\", 
+\"insOddNum\": \"\", 
+\"idNumOrgCode\": \"9114010034683511XD\", 
+\"vehicleType\": \"轿车\" 
+}, 
+\"buyerName\": \"企业名称/个人\", 
+\"invoiceDate\": \"2022-01-13 12:30:00\", 
+\"invoiceNum\": \"\", 
+\"hiddenBmbbbh\": \"0\", 
+\"salerAddress\": \"\", 
+\"clerk\": \"张三\", 
+\"invoiceGoodsTransports\": [ 
+{ 
+\"origin\": \"上海\", 
+\"transportTool\": \"1\", 
+\"transportToolNum\": \"浙A12345\", 
+\"destination\": \"北京\", 
+\"goodsName\": \"零配件\" 
+} 
+], 
+\"bField1\": \"\", 
+\"buyerAccount\": \"中国工商银行 111111111111\", 
+\"nextInvoiceCode\": \"\", 
+\"extensionNumber\": \"0\", 
+\"bField3\": \"\", 
+\"additionalElementName\": \"测试模版\", 
+\"salerTaxNum\": \"339901999999199\", 
+\"bField2\": \"\", 
+\"forceFlag\": \"0\", 
+\"realPropertyRentInfo\": { 
+\"realPropertyAddress\": \"浙江省杭州市西湖区\", 
+\"crossCityFlag\": \"0\", 
+\"realPropertyCertificate\": \"\", 
+\"unit\": \"2\", 
+\"rentEndDate\": \"2023-01-30\", 
+\"detailAddress\": \"文一西路XXXX号\", 
+\"rentStartDate\": \"2023-01-01\" 
+}, 
+\"listName\": \"详见销货清单\", 
+\"ccPhone\": \"18399887766,18399882211\", 
+\"proxyInvoiceFlag\": \"0\" 
+} 
+}"; 
+String url = "https://sdk.nuonuo.com/open/v1/services"; // SDK请求地址 
+String senid = UUID.randomUUID().toString().replace("-", ""); // 唯一标识，32位随机码，无需修改，保持默认即可 
+String result = sdk.sendPostSyncRequest(url, senid, appKey, appSecret, token, taxnum, method, content); 
+System.out.println(result);
+响应示例
+JSON格式
+{ 
+"code": "E0000", 
+"describe": "开票提交成功", 
+"result": { 
+"invoiceSerialNum": "20160108165823395151" 
+} 
+}
+返回码说明
+公共异常码
+返回码返回描述解决方案
+E0000开票提交成功业务正常进行
+E4000接口调用失败原因：私有请求参数里的必填字段没有传值，或者传的值不对。 解决：参考接口文档，检
+查请求报文中私有请求参数的字段，必填字段都必须传值。
+E9101开票类型错误(1:正票 2:红票)解决：检查invoiceType字段的值，只能是1或者是2。
+E9102发票号码或发票代码不正确检查invoiceCode和invoiceNum参数是否正确
+E9103该发票不能重复冲红开票员核实该发票
+E9104购方邮箱不能超过50位减少email参数输入长度或者换个邮箱
+E9105折扣行的商品名称必须和被折扣行相同检查invoiceLineProperty=1对应行商品名称
+E9106订单编号或流水号不能重复原因:防止重复开票，同一个销方税号下的开票订单号不能重复。 解决：检查orderNo字
+段的值。
+E9107代开标志只能为0和1修改proxyInvoiceFlag参数
+E9108折扣行金额不能大于被折扣行的金额检查invoiceLineProperty=1对应行金额
+E9110折扣行必须紧挨被折扣行之后检查invoiceLineProperty=1对应行与被折扣行位置
+E9111蓝票折扣行商品数量应为负检查invoiceLineProperty=1对应行数量
+E9112折扣行商品税率必须和被折扣行商品税率相同检查invoiceLineProperty=1对应行税率
+E9113红票购方地址与蓝票购方地址不符确认蓝票购方地址并修改红票buyerAddress参数
+E9114蓝票被折扣行商品数量应为正检查invoiceLineProperty=2对应行数量
+E9115红票购方电话与蓝票购方电话不符确认蓝票购方电话并修改红票buyerTel参数
+E9116红票折扣行商品数量应为正检查invoiceLineProperty=1折扣行数量
+E9117红票购方名称与蓝票购方名称不符确认蓝票购方名称并修改红票buyerName参数
+E9118红票购方税号与蓝票购方税号不符确认蓝票购方税号并修改红票buyerTaxNum参数
+E9119红票被折扣行商品数量应为负检查invoiceLineProperty=2折扣行数量
+E9120红票购方银行账号与蓝票购方银行账号不符确认蓝票购方银行账号并修改红票buyerAccount参数
+E9121获取商品编码失败填写商品编码goodsCode
+ E9122商品详情为空填写商品详情再提交请求
+E9123项目单价为空时，含税金额、不含税金额、税额都不能为空检查并填写tax、taxIncludedAmount、taxExcludedAmount
+返回码返回描述解决方案
+E9124含税金额不能超过20位taxIncludedAmount数额太高，可以分多张发票开具
+E9125含税金额只是能数字检查taxIncludedAmoun参数，只保留数字
+E9126不含税金额不能超过20位taxExcludedAmount数额太高，可以分多张发票开具
+E9127不含税金额只能是数字检查taxExcludedAmount参数，只保留数字
+E9128税额不能超过20位tax数额太高，可以分多张发票开具
+E9129税额只是能数字检查tax参数，只保留数字
+E9130（不含税金额+税额）不等于含税金额taxExcludedAmount+tax=taxIncludedAmount，检查数额是否正确
+E9131金额*税率-税额大于0.06,明细行名称:xxx,第x行误差应小于0.06,大于0.06不支持开票
+E9154订单被拆分后大于10张发票
+原因：测试税盘的单张发票限额比较小，且设置了允许拆分发票，请求开票的总金额超过
+单张开票限额会自动拆分成多张发票，且最多拆分10张发票。 解决：把开票的总金额调小
+一点。
+E9138商品编码获取出现异常原因：goodsCode字段没有传。 解决：goodsCode字段传一下商品的税收分类编码。
+沙箱环境的智能匹配接口不稳定，正式环境不传goodsCode会自动匹配商品的简称。
+E9301企业信息备案错误,请联系诺诺网
+原因：请求的销方税号在诺诺平台没有企业资质。 解决：若请求的正式环境，该正式税号
+没有注册企业资质，联系航信同事处理； 若请求的沙箱环境，销方税号应该用沙箱环境的
+测试税号，如339902999999789113
+ E9302身份认证与当前企业税号不相符原因：公参里的taxnum和私参里的salerTaxNum，这两个字段的值不一样。 解决：检
+查这两个字段的值，应该填同一个销方税号。
+E9338该企业无权限调用API开票去开通API开票授权服务
+E9796货物运输服务信息不能为空
+E9797货物运输服务信息不能超过2000条
+E9798运输工具种类传入有误
+E9799运输工具牌号必填且长度不能超过40位
+E9800起运地必填且长度不得超过80位
+E9801到达地必填且长度不得超过80位

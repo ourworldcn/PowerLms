@@ -265,11 +265,18 @@ Carrie	承运人	船公司或航空公司或	二字码
         public string DestinationCode { get; set; }
 
         /// <summary>
-        /// 承运人，船公司或航空公司或，二字码
+        /// 承运人，船公司或航空公司或，二字码。已废弃，使用Guid关联客户表。
         /// </summary>
-        [Comment("承运人，船公司或航空公司或，二字码")]
+        [Comment("承运人，船公司或航空公司或，二字码。已废弃，使用Guid关联客户表。")]
         [MaxLength(4), Unicode(false)]
+        [Obsolete]
         public string CarrieCode { get; set; }
+
+        /// <summary>
+        /// 承运人Id。关联客户表。
+        /// </summary>
+        [Comment("承运人Id。关联客户表。")]
+        public Guid? CarrieId { get; set; }
 
         /*Carriernumber	运输工具号		空运显示为航班号，海运显示为船名、陆运显示为卡车号
 GoodsName	货物名称	string200	
