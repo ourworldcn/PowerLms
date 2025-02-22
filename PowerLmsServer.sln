@@ -9,6 +9,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PowerLmsServer", "PowerLmsS
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "解决方案项", "解决方案项", "{485FC0C8-DBF6-4F3C-9AD3-C57F52100CD2}"
 	ProjectSection(SolutionItems) = preProject
+		C:\Users\zc-home\Documents\WeChat Files\wxid_w9i7a5tuib8822\FileStorage\File\2025-02\1.诺诺开放平台诺税通saas请求开具发票接口接口对接文档【外部用】.pdf = C:\Users\zc-home\Documents\WeChat Files\wxid_w9i7a5tuib8822\FileStorage\File\2025-02\1.诺诺开放平台诺税通saas请求开具发票接口接口对接文档【外部用】.pdf
 		GameTemplate.txt = GameTemplate.txt
 		Notes.txt = Notes.txt
 		云霄用Id表.txt = 云霄用Id表.txt
