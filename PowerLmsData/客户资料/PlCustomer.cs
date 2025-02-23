@@ -548,8 +548,15 @@ namespace PowerLms.Data
         public Guid CustomerId { get; set; }
 
         /// <summary>
+        /// 抬头名称。
+        /// </summary>
+        [Comment("抬头名称")]
+        public string Title { get; set; }
+
+        /// <summary>
         /// 纳税人种类Id。简单字典AddedTaxType。
         /// </summary>
+        [Comment("纳税人种类Id。简单字典AddedTaxType。")]
         public Guid? Type { get; set; }
 
         /// <summary>
