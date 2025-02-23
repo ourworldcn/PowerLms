@@ -1,4 +1,5 @@
-﻿软删除字典。可恢复。
+﻿
+软删除字典。可恢复。
 增加查询的过滤条件。
 Admin/AddDataDic增加字典条目时可选向下传播。
 
@@ -98,3 +99,7 @@ DocBill.ClearAmount DocBill.Amount是否回写✓
 4.后端缓存完善，修复接口/api/Account/SetUserInfo和GetAllPermissionsInCurrentUser获得的登录用户的权限项
 5.后端功能绑定权限，前端界面显示权限绑定
 6.前端打印插件
+
+250223
+日期范围条件，不给则不限制
+GetAllPlJob 接口，操作状态条件不起作用；要支持单据中字段
