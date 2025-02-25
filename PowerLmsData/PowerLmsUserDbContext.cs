@@ -451,6 +451,7 @@ namespace PowerLmsServer.EfData
         /// 费用方案明细项。
         /// </summary>
         public DbSet<DocFeeTemplateItem> DocFeeTemplateItems { get; set; }
+
         #endregion
 
         #region 流程相关
