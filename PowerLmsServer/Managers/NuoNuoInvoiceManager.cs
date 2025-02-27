@@ -18,22 +18,25 @@ namespace PowerLmsServer.Managers
     using System.Net.Http;
     using System.Text;
     using System.Text.Json;
+    using System.Text.Json.Serialization;
     using System.Threading.Tasks;
 
     /// <summary>
     /// 诺诺发票服务类，包含获取访问令牌和创建发票的具体实现。
     /// </summary>
-    public class NuoNuoInvoiceManager
+    public class NuoNuoManager
     {
         private const string TokenUrl = "https://open.nuonuo.com/accessToken";
-        private const string InvoiceUrl = "https://open.nuonuo.com/invoice";
+        private const string InvoiceUrl = "https://sdk.nuonuo.com/open/v1/services";
+        //沙箱环境https://sandbox.nuonuocs.cn/open/v1/services
+
         private readonly HttpClient _httpClient;
 
         /// <summary>
         /// 构造函数，初始化HttpClient实例。
         /// </summary>
         /// <param name="httpClient">HttpClient实例。</param>
-        public NuoNuoInvoiceManager(HttpClient httpClient)
+        public NuoNuoManager(HttpClient httpClient)
         {
             _httpClient = httpClient;
         }
@@ -66,7 +69,7 @@ namespace PowerLmsServer.Managers
         /// <param name="accessToken">访问令牌。</param>
         /// <param name="invoiceData">发票数据。</param>
         /// <returns>返回发票创建结果。</returns>
-        public async Task<string> CreateInvoiceAsync(string accessToken, InvoiceData invoiceData)
+        public async Task<string> CreateInvoiceAsync(string accessToken, NNOrder invoiceData)
         {
             _httpClient.DefaultRequestHeaders.Clear();
             _httpClient.DefaultRequestHeaders.Add("access_token", accessToken);
@@ -83,121 +86,168 @@ namespace PowerLmsServer.Managers
     }
 
     /// <summary>
-    /// 发票项目模型类，定义发票项目的属性。
+    /// 诺税通saas请求开具发票接口请求类。
+    /// 版本V2.0
+    /// 具备诺税通saas资质的企业用户（集团总公司可拿下面公司的税号来开票，但需要先授权）填写发票销方、购方、明细等信息并发起开票请求。
+    /// 请求地址：
+    /// 正式环境：https://sdk.nuonuo.com/open/v1/services
+    /// 沙箱环境：https://sandbox.nuonuocs.cn/open/v1/services
+    /// 注：请下载SDK并完成报文组装后发送接口调用请求，accessToken获取方式请参考自用型应用创建和第三方应用创建。
     /// </summary>
-    public class InvoiceItem
+    public class NuoNuoRequest
     {
         /// <summary>
-        /// 获取或设置货品品名。
+        /// 唯一标识，由企业自己生成32位随机码。
         /// </summary>
-        public string ItemName { get; set; }
+        [JsonPropertyName("senid")]
+        public string Senid { get; set; }
 
         /// <summary>
-        /// 获取或设置规格型号。
+        /// 8位随机正整数。
         /// </summary>
-        public string ItemSpec { get; set; }
+        [JsonPropertyName("nonce")]
+        public int Nonce { get; set; }
 
         /// <summary>
-        /// 获取或设置单位。
+        /// 时间戳(当前时间的秒数)。
         /// </summary>
-        public string ItemUnit { get; set; }
+        [JsonPropertyName("timestamp")]
+        public long Timestamp { get; set; }
 
         /// <summary>
-        /// 获取或设置数量。
+        /// 平台分配给应用的appKey。
         /// </summary>
-        public int ItemQuantity { get; set; }
+        [JsonPropertyName("appkey")]
+        public string AppKey { get; set; }
 
         /// <summary>
-        /// 获取或设置单价。
+        /// 请求api对应的方法名称。
         /// </summary>
-        public decimal ItemPrice { get; set; }
+        [JsonPropertyName("method")]
+        public string Method { get; set; }
 
         /// <summary>
-        /// 获取金额（数量 * 单价）。
+        /// 订单信息。
         /// </summary>
-        public decimal ItemAmount => ItemQuantity * ItemPrice;
-
-        /// <summary>
-        /// 获取或设置税率。
-        /// </summary>
-        public decimal ItemTaxRate { get; set; }
-
-        /// <summary>
-        /// 获取税额（金额 * 税率）。
-        /// </summary>
-        public decimal ItemTaxAmount => ItemAmount * ItemTaxRate;
+        [JsonPropertyName("order")]
+        public NNOrder Order { get; set; }
     }
 
     /// <summary>
-    /// 发票数据模型类，定义发票数据的属性。
+    /// 发票数据。
     /// </summary>
-    public class InvoiceData
+    public class NNOrder
     {
         /// <summary>
-        /// 获取或设置客户名称。
+        /// 购方名称。
         /// </summary>
+        [JsonPropertyName("buyerName")]
         public string BuyerName { get; set; }
 
         /// <summary>
-        /// 获取或设置客户税号。
+        /// 销方税号。
         /// </summary>
-        public string BuyerTaxNum { get; set; }
+        [JsonPropertyName("salerTaxNum")]
+        public string SalerTaxNum { get; set; }
 
         /// <summary>
-        /// 获取或设置客户地址。
+        /// 销方电话。
         /// </summary>
-        public string BuyerAddress { get; set; }
+        [JsonPropertyName("salerTel")]
+        public string SalerTel { get; set; }
 
         /// <summary>
-        /// 获取或设置客户电话。
+        /// 销方地址。
         /// </summary>
-        public string BuyerTel { get; set; }
+        [JsonPropertyName("salerAddress")]
+        public string SalerAddress { get; set; }
 
         /// <summary>
-        /// 获取或设置客户开户行。
+        /// 订单号（每个企业唯一）。
         /// </summary>
-        public string BuyerBankName { get; set; }
+        [JsonPropertyName("orderNo")]
+        public string OrderNo { get; set; }
 
         /// <summary>
-        /// 获取或设置客户银行账号。
+        /// 订单时间。
         /// </summary>
-        public string BuyerBankAccount { get; set; }
-
-        /// <summary>
-        /// 获取或设置发票类型。
-        /// </summary>
-        public string InvoiceType { get; set; }
-
-        /// <summary>
-        /// 获取或设置发票日期。
-        /// </summary>
+        [JsonPropertyName("invoiceDate")]
         public DateTime InvoiceDate { get; set; }
 
         /// <summary>
-        /// 获取或设置发票项目列表。
+        /// 开票类型：1: 蓝票; 2: 红票。
         /// </summary>
-        public List<InvoiceItem> Items { get; set; }
+        [JsonPropertyName("invoiceType")]
+        public int InvoiceType { get; set; }
+
+        /// <summary>
+        /// 发票明细。
+        /// </summary>
+        [JsonPropertyName("invoiceDetail")]
+        public List<NNInvoiceDetail> InvoiceDetail { get; set; }
+
+        /// <summary>
+        /// 购方手机（pushMode为1或2时，此项为必填，同时受企业资质是否必填控制）。
+        /// </summary>
+        [JsonPropertyName("buyerPhone")]
+        public string BuyerPhone { get; set; }
+
+        /// <summary>
+        /// 推送邮箱（pushMode为0或2时，此项为必填，同时受企业资质是否必填控制）。
+        /// </summary>
+        [JsonPropertyName("email")]
+        public string Email { get; set; }
+
+        /// <summary>
+        /// 开票员（数电票时需要传入和开票登录账号对应的开票员姓名）。
+        /// </summary>
+        [JsonPropertyName("clerk")]
+        public string Clerk { get; set; }
     }
 
     /// <summary>
-    /// 扩展方法类，包含配置NuoNuoInvoiceManager的依赖注入方法。
+    /// 发票明细。
     /// </summary>
-    public static class ServiceExtensions
+    public class NNInvoiceDetail
     {
         /// <summary>
-        /// 扩展方法，配置NuoNuoInvoiceManager的依赖注入。
+        /// 商品名称。
+        /// </summary>
+        [JsonPropertyName("goodsName")]
+        public string GoodsName { get; set; }
+
+        /// <summary>
+        /// 单价含税标志：0: 不含税, 1: 含税。
+        /// </summary>
+        [JsonPropertyName("withTaxFlag")]
+        public int WithTaxFlag { get; set; }
+
+        /// <summary>
+        /// 税率。
+        /// </summary>
+        [JsonPropertyName("taxRate")]
+        public decimal TaxRate { get; set; }
+    }
+
+    /// <summary>
+    /// 扩展方法类，包含配置NuoNuoManager的依赖注入方法。
+    /// </summary>
+    public static class NuoNuoManagerExtensions
+    {
+        /// <summary>
+        /// 扩展方法，配置NuoNuoManager的依赖注入。
         /// </summary>
         /// <param name="services">IServiceCollection实例。</param>
-        public static void AddNuoNuoInvoiceManager(this IServiceCollection services)
+        public static void AddNuoNuoManager(this IServiceCollection services)
         {
-            // 注册HttpClient，并为NuoNuoInvoiceManager配置基础地址
-            //services.AddHttpClient<NuoNuoInvoiceManager>(client =>
+            // 注册HttpClient，并为NuoNuoManager配置基础地址
+            //services.AddHttpClient<NuoNuoManager>(client =>
             //{
             //    client.BaseAddress = new Uri("https://open.nuonuo.com");
             //});
 
-            // 注册NuoNuoInvoiceManager服务
-            services.AddSingleton<NuoNuoInvoiceManager>();
+            // 注册NuoNuoManager服务
+            services.AddSingleton<NuoNuoManager>();
         }
     }
 }

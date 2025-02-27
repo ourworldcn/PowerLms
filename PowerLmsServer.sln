@@ -25,6 +25,22 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OwDbBase", "..\..\repos\Bak
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "基础支持", "基础支持", "{7B7A10B0-656B-4E84-80C4-4AE68642DE06}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "NuoNuo", "NuoNuo", "{11C197FC-A072-40CC-AEF7-3B552B1935E3}"
+	ProjectSection(SolutionItems) = preProject
+		诺诺网接口\数电发票\1.诺诺开放平台诺税通saas请求开具发票接口接口对接文档【外部用】.pdf = 诺诺网接口\数电发票\1.诺诺开放平台诺税通saas请求开具发票接口接口对接文档【外部用】.pdf
+		诺诺网接口\数电发票\2.诺诺开放平台诺税通saas开票重试接口接口对接文档【外部用】.pdf = 诺诺网接口\数电发票\2.诺诺开放平台诺税通saas开票重试接口接口对接文档【外部用】.pdf
+		诺诺网接口\数电发票\3.诺诺开放平台诺税通saas发票快捷冲红接口接口对接文档【外部用】.pdf = 诺诺网接口\数电发票\3.诺诺开放平台诺税通saas发票快捷冲红接口接口对接文档【外部用】.pdf
+		诺诺网接口\数电发票\4.诺诺开放平台诺税通saas发票详情查询接口接口对接文档【外部用】.pdf = 诺诺网接口\数电发票\4.诺诺开放平台诺税通saas发票详情查询接口接口对接文档【外部用】.pdf
+		诺诺网接口\数电发票\5.诺诺开放平台诺税通saas发票重新交付接口接口对接文档【外部用】.pdf = 诺诺网接口\数电发票\5.诺诺开放平台诺税通saas发票重新交付接口接口对接文档【外部用】.pdf
+		诺诺网接口\数电发票\【诺诺发票】回传开票结果对接文档V1.1.1.docx = 诺诺网接口\数电发票\【诺诺发票】回传开票结果对接文档V1.1.1.docx
+		诺诺网接口\数电发票\诺诺开放平台诺税通saas红字确认单下载接口接口对接文档【外部用】.pdf = 诺诺网接口\数电发票\诺诺开放平台诺税通saas红字确认单下载接口接口对接文档【外部用】.pdf
+		诺诺网接口\数电发票\诺诺开放平台诺税通saas红字确认单撤销接口接口对接文档【外部用】.pdf = 诺诺网接口\数电发票\诺诺开放平台诺税通saas红字确认单撤销接口接口对接文档【外部用】.pdf
+		诺诺网接口\数电发票\诺诺开放平台诺税通saas红字确认单查询接口接口对接文档【外部用】.pdf = 诺诺网接口\数电发票\诺诺开放平台诺税通saas红字确认单查询接口接口对接文档【外部用】.pdf
+		诺诺网接口\数电发票\诺诺开放平台诺税通saas红字确认单申请接口接口对接文档【外部用】.pdf = 诺诺网接口\数电发票\诺诺开放平台诺税通saas红字确认单申请接口接口对接文档【外部用】.pdf
+		诺诺网接口\数电发票\诺诺开放平台诺税通saas红字确认单确认接口接口对接文档【外部用】.pdf = 诺诺网接口\数电发票\诺诺开放平台诺税通saas红字确认单确认接口接口对接文档【外部用】.pdf
+		诺诺网接口.zip = 诺诺网接口.zip
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -58,6 +74,7 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{53CABA37-1D8F-454B-B5FB-9FF6BE94D3BF} = {7B7A10B0-656B-4E84-80C4-4AE68642DE06}
 		{B28E6557-4D6E-4846-B8CD-9FCBA33F3164} = {7B7A10B0-656B-4E84-80C4-4AE68642DE06}
+		{11C197FC-A072-40CC-AEF7-3B552B1935E3} = {485FC0C8-DBF6-4F3C-9AD3-C57F52100CD2}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {5C76520A-489A-4E63-A407-9AD37BF5AD6C}
