@@ -510,6 +510,25 @@ namespace PowerLmsServer.EfData
         /// </summary>
         public DbSet<OwAppLogVO> OwAppLogVOs { get; set; }
         #endregion 应用日志相关
+
+        #region 税务发票相关
+
+        /// <summary>
+        /// 开票渠道表。
+        /// </summary>
+        public DbSet<TaxInvoiceChannel>  TaxInvoiceChannels { get; set; }
+
+        /// <summary>
+        /// 税务发票信息表。
+        /// </summary>
+        public DbSet<TaxInvoiceInfo>  TaxInvoiceInfos { get; set; }
+
+        /// <summary>
+        /// 税务发票信息明细表。
+        /// </summary>
+        public DbSet<TaxInvoiceInfoItem>  TaxInvoiceInfoItems { get; set; }
+
+        #endregion 税务发票相关
     }
 
     /// <summary>

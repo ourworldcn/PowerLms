@@ -1,0 +1,596 @@
+
+诺诺网 诺诺发票
+回传开票结果对接文档
+
+(版本1.0.8)
+
+
+
+
+
+
+
+
+2022年5月
+
+
+
+回传开票结果接口
+接口描述
+回传开票结果接口
+描述	1、开票完成，可根据该接口定义的形式接收发票数据，内容包括（订单编号、开票时间、发票代码、发票号码、价税合计、下载url地址等）。
+2、企业资质-开票失败是否回调 为“是” 时返回 发票状态 字段，并可以返回开票失败/签章失败的发票
+3、企业资质-开票失败是否回调 为“否” 时返回 不返回发票状态 字段，默认回传开票完成的发票
+版本号	V1.0.1
+请求地址
+环境	请求地址
+生产环境	http://[IP]:[PORT]/invoice/scan
+沙箱坏境	http://[IP]:[PORT]/invoice/scan
+请求方式
+请求方式	同步 HTTP POST
+请求参数格式	FORM
+请求数据编码	UTF-8
+备注	
+请求参数
+名称	类型	是否
+必填	示例值	描述	最大
+长度
+operater	String	Y	callback	必填参数。接口标识：callback	
+orderno	String	Y	123456547983033	订单编号	64
+content	String	Y		开票信息（json字符串格式）	
+content开票信息
+c_status	String	N		发票状态（1：开票完成、2：开票失败、3：开票成功签章失败（电票时））；  注：1、企业资质-开票失败是否回调 为“是” 时返回该字段；        2、（开票失败、开票成功签章失败时 ） content中只返回：发票流水号、发票状态、销方税号、失败原因 四个字段；	1
+c_kprq	Date	Y	1490867741000	开票日期	13
+c_fpdm	String	N	033001600111	发票代码（全电电票时为空，全电纸票时有值）	12 
+c_fphm	String	Y	17314161	发票号码（全电电票时为空，全电纸票时有值）	20
+allElectronicInvoiceNumber	Sting	N	22312000000000183317	全电发票号码（全电发票（电票+纸票）时有值）	20
+c_yfpdm	String	N	033001600111	红票对应的蓝票发票代码（蓝票为全电电票时为空，全电纸票时有值）	12
+c_yfphm	String	N	17314161	红票对应的蓝票发票号码（蓝票为全电电票时为空，全电纸票时有值）	20
+oldEleInvoiceNumber	String	N	22312000000000183316	红票对应的蓝票的全电发票号码（蓝票为全电发票（电票+纸票）时返回）	20
+c_hjse	String	Y	1194.87	价税税额（保留小数点后2位）	20
+c_bhsje	String	Y	203.13	不含税金额（保留小数点后2位）	20
+c_orderno	String	Y	18081620564001000232	订单号	64
+c_fpqqlsh	String	Y	18081620564001000232	发票流水号	20
+c_errorMessage	String	N	客户端不在线	失败原因（只有发票状态c_status 为 2 或 3 时返回）	128
+c_url	String	Y	https://inv.jss.com.cn/group1/M00/A6/4C/wKgHPll_IU-AVELfAACNq5bmzFM769.pdf	发票pdf地址（若同时返回了ofdUrl与pdfUrl，则pdf文件不能做为原始凭证，请用ofd文件做为原始凭证）	255
+c_jpg_url	String	Y	nnfp.jss.com.cn/h6Oj0Dn?p=Kh4Nj	发票详情地址	255
+email	String	Y		购方邮箱	50
+phone	String	Y		购方手机	20
+以下字段需经诺诺配置才可返回
+taxnum	String	N	339901999999142	购方税号	20
+buyername	String	N	诺诺网	购方名称	100
+telephone	String	N	0987-939736	购方电话	20
+address	String	N	杭州西湖	购方地址	100
+bankAccount	String	N	杭州农业银行13766103980009876	购方银行开户行及账号	100
+c_hjje	String	N	100.50	含税金额（保留小数点后2位）	16
+checkCode	String	N	70598593833665063630	校验码	20
+qrCode	String	N		二维码	3000
+machineCode	String	N	661619924643	税控设备号（机器编号）	12
+cipherText	String	N		发票密文	300
+c_invoice_line	String	N	p	发票种类:
+p:普通发票(电子);
+c:普通发票(纸质);
+b:专用发票(电子);
+s:专用发票(纸质);
+e:收购发票(电子);
+f:收购发票(纸质);
+r:普通发票(卷式);
+j:机动车销售统一发票
+u:二手车销售统一发票;
+bs:电子发票(增值税专用发票),
+pc:电子发票(普通发票)
+es:全电纸质发票(增值税专用发票),
+ec:全电纸质发票(普通发票)
+	1
+c_clerk	String	N	张三	开票员	20
+c_payee	String	N	李四	收款人	20
+c_checker	String	N	王五	复核人	20
+c_salerAccount	String	N	杭州农业银行13766103980009876	销方银行账号	100
+c_saletaxnum	String	N	339901999999142	销方税号	20
+c_salerName	String	N	诺诺网	销方名称	100
+c_salerTel	String	N	0987-939736	销方电话	20
+c_salerAddress	String	N	杭州西湖	销方地址	80
+c_remark	String	N	备注：123	备注	230
+productOilFlag	String	N	0	成品油标志:
+0:非成品油;
+1:成品油;	1
+c_qdbz	String	N	0	清单标志：
+0：非清单；
+1：清单；	1
+c_qdxmmc	String	N		清单项目名称	90
+extensionNumber	String	N	1	分机号	5
+terminalNumber	String	N	1	终端号	4
+c_imgUrls	String	N	http://invtest.nntest.cn/group1/M00/02/9D/wKjScV7M1wSAEq-KAAF1iZL8PRo688.jpg,http://invtest.nntest.cn/group1/M00/02/9D/wKjScV7M1wSALKxoAAGucasP_HQ233.jpg	发票jpg图片地址（清单票发票主信息与清单信息以”,”隔开）	255*173
+c_paper_pdf_url	String	N		纸票pdf地址（含底图）	255
+c_ofd_url	String	N		发票ofd地址	255
+c_deptId	String	N		部门id	32
+c_clerkId	String	N		开票员id	32
+vehicleFlag	String	N	0	机动车专票标志:
+0:非机动车;
+1:机动车;	1
+redReason	String	N	1	冲红原因：1:销货退回;2:开票有误;3:服务中止;4:发生销售折让(开具红票时且票种为p,c,e,f,r 可能会返回--成品油发票均不会返回)	1
+specificFactor	String	N	0	发票特定要素：（后续枚举值会有扩展，回传其他信息时返回）
+0-普通 1-成品油发票 3-建筑服务 4-货物运输服务 6-不动产经营租赁服务 9-旅客运输服务 31-建安发票 32-房地产销售发票 33-二手车发票反向开具 34-电子烟 35-矿产品	2
+buyerManagerName	String	N	张三	购买方经办人姓名（全电发票时返回）	16
+managerCardType	String	N	201	经办人证件类型（全电发票时返回）	40
+managerCardNo	String	N	330105200001011100	经办人身份证件号码（全电发票时返回）	20
+additionalElementName	String	N	自定义模版	附加模版名称（全电发票时返回）	50
+additionalElementList	List	N		附加要素信息列表（全电电票时返回）	
+              additionalElementList 对应的附加模版的内容
+elementName	String	N	测试1	信息名称（全电电票时返回）	200
+elementValue	String	N	text	信息类型（全电电票时返回）	200
+elementType	String	N	文本内容	信息值（全电电票时返回）	200
+
+vehicleInfo	List	N		机动车销售统一发票中机动车相关信息（只有票种j 机动车销售统一发票才会返回）	1
+invoiceItems	List	N		发票明细信息（非必须，根据企业资质配置）	
+invoiceItems发票明细信息
+itemName	String	N	大米	商品名称	90
+itemUnit	String	N	吨	单位	22
+itemPrice	String	N	0.01	单价	16
+itemTaxRate	String	N	0.0	税率	10
+itemNum	String	N	1	数量	16
+itemSumAmount	String	N	0.01	金额（
+根据含税标志决定是含税金额还是不含税金额）	16.2
+itemTaxAmount	String	N	0.00	税额	16.2
+itemSpec	String	N	0	规格型号	40
+itemCode	String	N	1010101020000000000	商品编码	19
+itemSelfCode	String	N		自行编码	20
+isIncludeTax	String	N	true	含税标识:
+true:含税;
+false:不含税;	5
+invoiceLineProperty	String	N	0	发票行性质:
+0:正常行;
+1:折扣行;
+2:被扣行;	1
+zeroRateFlag	String	N	3	零税率标识:
+空:非零税率;
+1:免税;
+2:不征税;
+3:普通零税率;
+（全电发票时为空）	1
+favouredPolicyName	String	N		优惠政策名称（增值税特殊管理）
+（全电发票时为空）	50
+favouredPolicyFlag	String	N	0	优惠政策标识:
+0:不使用;
+1:使用;
+全电时：
+01：简易征收
+02：稀土产品
+03：免税
+04：不征税
+05：先征后退
+06：100%先征后退
+07：50%先征后退
+08：按3%简易征收
+09：按5%简易征收
+10：按5%简易征收减按1.5%计征
+11：即征即退30%
+12：即征即退50%
+13：即征即退70%
+14：即征即退100%
+15：超税负3%即征即退
+16：超税负8%即征即退
+17：超税负12%即征即退
+18：超税负6%即征即退	1
+deduction	String	N		扣除额（保留两位小数）	24
+vehicleInfo机动车销售统一发票相关信息
+vehicleType	String	N	轿车	机动车类型	40
+brandModel	String	N	宝马3系	厂牌型号	60
+productOrigin	String	N	北京	原产地	32
+certificate	String	N	WDL042613263551	合格证号	50
+importCerNum	String	N		进出口证明书号	36
+insOddNum	String	N		商检单码	32
+engineNum	String	N		发动机号码	50
+vehicleCode	String	N	LHGK43284342384234	车辆识别号码/机动车号码（车架号）	23
+intactCerNum	String	N		完税证明号码	32
+tonnage	String	N	3	吨位	8
+maxCapacity	String	N	5	限乘人数	12
+taxOfficeCode	String	N	13399000	主管税务机关代码	11
+taxOfficeName	String	N	杭州税务	主管税务机关名称	80
+idNumOrgCode	String	N	9114010034683511XD	身份证号码或组织机构代码（2021新版机动车发票时为空）	20
+manufacturerName	String	N	华晨宝马汽车生产有限公司	生产厂家	200
+secondHandCarInfo 二手车销售统一发票相关信息
+organizeType	String	N	1	开票方类型 1：经营单位 2：拍卖单位 3：二手车市场	1
+vehicleType	String	N	轿车	车辆类型,同明细中商品名称，开具二手车发票时明细有且仅有一行	40
+brandModel	String	N	宝马3系	厂牌型号	60
+vehicleCode	String	N	LHGK43284342384234	车辆识别号码/车架号	23
+intactCerNum	String	N		完税证明号码	32
+licenseNumber	String	N	浙A12345	车牌照号	20
+registerCertNo	String	N	330022123321	登记证号	20
+vehicleManagementName	String	N	杭州	转入地车管所名称	80
+sellerName	String	N	张三	卖方单位/个人名称（开票方类型为1、2时，与销方名称一致）	80
+sellerTaxnum	String	N	330100199001010000	卖方单位代码/身份证号码（开票方类型为1、2时，与销方税号一致）	20
+sellerAddress	String	N	杭州文一路888号	卖方单位/个人地址（开票方类型为1、2时，与销方地址一致）	80
+sellerPhone	String	N	13888888888	卖方单位/个人电话（开票方类型为1、2时，与销方电话一致）	20
+ 二手车销售统一发票相关信息
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+请求示例
+form形式键值对:
+"operater":"callback"
+"content":"{"c_bhsje":"34.18","c_fpdm":"140110940000","c_fphm":"10008058","c_fpqqlsh":"17033017485201000001","c_hjse":"5.81","c_kprq":"1490867741000","c_orderno":"No12xsaxx6","c_url":"http://115.236.64.125/group1/M00/01/78/wKjScFjc2P2AVYf7AABml8lNe1M281.pdf"}"
+"orderno":"123456547983033"
+content内容为json串：
+{
+    "c_bhsje":"34.18",
+    "c_fpdm":"140110940000",
+    "c_fphm":"10008058",
+    "c_fpqqlsh":"17033017485201000001",
+    "c_hjse":"5.81",
+    "c_kprq":"1490867741000",
+    "c_orderno":"No12xsaxx6",
+    "c_url":"http://115.236.64.125/group1/M00/01/78/wKjScFjc2P2AVYf7AABml8lNe1M281.pdf"
+}
+响应参数
+名称	类型	示例值	描述
+status	String	0000	状态编号
+message	String	同步成功	描述信息
+响应示例
+{
+    "status":"0000",
+    "message":"同步成功"
+}
+异常说明
+异常码	异常描述	解决方案
+9999	请求失败	检查接口地址是否正确
+		
+		
+
+回传发票作废结果接口
+1. 接口描述
+回传发票作废结果接口
+描述	1、企业资质-作废结果是否回调 为“是” 时，当作废完成时返回 作废结果
+2、发票作废请求完成，可根据该接口定义的形式接收发票作废状态，内容包括（发票流水号、发票代码、号码、作废时间、作废状态（成功/失败：失败返回失败原因））。
+3、支持A9+开票服务器类型的作废结果回调
+版本号	V1.0.0
+2. 请求地址
+环境	请求地址
+生产环境	http://[IP]:[PORT]/invoice/scan（后台配置与回传开票结果地址相同）
+沙箱坏境	http://[IP]:[PORT]/invoice/scan（后台配置与回传开票结果地址相同）
+3. 请求方式
+请求方式	同步 HTTP POST
+请求参数格式	FORM
+请求数据编码	UTF-8
+备注	
+4. 请求参数
+名称	类型	是否
+必填	示例值	描述	最大
+长度
+operater	String	Y	invoiceInvalid	必填参数。接口标识：invoiceInvalid	
+fpqqlsh	String	Y	123456547983033	发票流水号	64
+content	String	Y		开票信息（json字符串格式）	
+content开票信息
+c_fpdm	String	Y	033001600111	发票代码	12 
+c_fphm	String	Y	17314161	发票号码	8 
+	String	N		全电发票号码（全电纸票时返回）	20
+c_saletaxnum	String	N	339901999999142	销方税号	20
+invalidTime	String	Y	1625475746	作废时间戳	14
+invalidStatus	String	Y	3	作废状态       0:未作废       1:作废中       2:作废失败     3:作废成功	1
+invalidReason	String	N	2	作废原因1:销货退回;2:开票有误;3:服务中止;4:其他（全电纸票时返回）	1
+specificReason	String	N		其他作废原因详情（作废原因为4且为全电纸票时返回）	255
+invalidErrorMessage	String	N	未找到对应发票	失败原因（作废状态为2:作废失败时 才有值）	128
+5. 请求示例
+form形式键值对:
+"operater":"invoiceInvalid"
+"content":"{"c_fpdm":"140110940000","c_fphm":"10008058","invalidTime":"1625475746","invalidStatus":"3"}"
+"fpqqlsh":"123456547983033"
+content内容为json串：
+{
+    "c_fpdm":"140110940000",
+    "c_fphm":"10008058",
+    "invalidTime":"1625475746",
+    "invalidStatus":"3"
+}
+6. 响应参数
+名称	类型	示例值	描述
+status	String	0000	状态编号
+message	String	同步成功	描述信息
+7. 响应示例
+{
+    "status":"0000",
+    "message":"同步成功"
+}
+8. 异常说明
+异常码	异常描述	解决方案
+9999	请求失败	检查接口地址是否正确
+		
+		
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+三、开票申请结果数据回传
+1. 接口描述
+开票申请结果数据回传
+描述	用于扫码开票，C端消费者发起开票请求申请后，返回开票申请结果：申请成功或者失败
+版本号	V1.0.0
+2. 请求地址
+环境	请求地址
+生产环境	http://[IP]:[PORT]/invoice/scan（后台配置与回传开票结果地址相同）
+沙箱坏境	http://[IP]:[PORT]/invoice/scan（后台配置与回传开票结果地址相同）
+3. 请求参数字段说明
+序号	参数	说明
+1	operater	必填参数。接口标识invoiceApply
+2	orderno	必填参数。订单编号
+3	taxNo	非必填参数。企业税号（回调企业非必需）
+4	isSuccess	必填参数。开票申请是否成功标识
+5	invoiceId	非必填参数。发票流水号（开票需审核时，无；一笔订单拆分成多张票的时候，无）
+请求示例：
+{
+	"operater": "invoiceApply",
+	"orderno": "订单号",
+	"taxNo": "企业税号",
+	"isSuccess": true,
+"invoice'I'd":"发票流水号" 
+}
+4. 返回参数示例
+成功：{"status":"0000","message":"同步成功"}
+失败：{"status":"9999","message":"异常信息"}
+5. 返回参数字段说明
+	字段	注释	必填	长度
+1	status	状态码	是	0000:成功9999:失败
+2	message	返回信息	是	成功失败信息
+
+
+
+
+
+
+
+
+
+
+
+四、回传红字信息表申请结果接口
+1、接口描述
+回传红字信息表申请结果接口
+描述	1、红字信息表申请成功后，可根据该接口定义的形式接收红字信息表数据，内容包括（申请编号、信息表编号、销方税号、信息表编号、信息表状态、信息表商品明细等）。
+2、申请红字信息表接口中 callBackUrl 字段有值时才返回，与企业资质中的开票结果回调地址无关
+版本号	V1.0.0
+2、请求地址
+环境	请求地址
+生产环境	http://[IP]:[PORT]/invoice/scan
+沙箱坏境	http://[IP]:[PORT]/invoice/scan
+3、请求方式
+请求方式	同步 HTTP POST
+请求参数格式	JSON
+请求数据编码	UTF-8
+备注	
+4、请求参数
+名称	类型	是否
+必填	示例值	描述	最大
+长度
+operater	String	Y	invoiceRedCallback	必填参数。接口标识：invoiceRedCallback	
+billNo	String	Y	661565671900190416131426	24位申请单号:12位金税盘编号+12位开票时间(YYMMDDHHMMSS)	24
+content	String	Y		信息表内容（Json字符串格式）	
+Content 红字信息表信息
+billInfoNo	String	Y	1403011906000993	信息表编号	24
+billStatus	String	Y	1	信息表状态(0:申请中 1:审核成功 2:审核失败 3:申请成功 4:申请失败 6:撤销中 7:撤销失败 8:已撤销)	1
+billMessage	String	Y	[TZD0000]审核通过	[信息表状态代码]信息表状态描述	
+billType	String	N	0	信息表类型(0:正常 1:逾期 2:机动车类专票信息表（涉及退货和开具错误等，合格证退回）3:机动车类专票信息表（仅涉及销售折让，合格证不退回）)	1
+oriInvoiceCode	String	N	5000181530	对应蓝票代码	12
+oriInvoiceNumber	String	N	73347544	对应蓝票号码	8
+taxType	String	N	1	税种类别(0:营业税 1:增值税)	1
+multTaxRate	String	N	0	多税率标志(0:一票一税率 1:一票多税率)	1
+billTime	String	N	2020-03-26 18:44:08	填开日期	
+sellerTaxNo	String	N	150301199811285326	销方税号	20
+sellerName	String	N	测试税号326	销方名称	100
+buyerTaxNo	String	N	150301199811285326	购方税号	20
+buyerName	String	N	测试税号326	购方名称	100
+taxExcludedAmount	String	N	-0.94	合计金额(不含税)	
+taxAmount	String	N	-0.06	合计税额	
+applyRemark	String	N	0000000100	申请说明（1100000000,购方申请-已抵扣;1010000000,购方申请-未抵扣; 0000000100,销方申请）	10
+pdfUrl	String	N		申请表pdf地址	255
+codeVersion	String	N	32	商品编码版本号	
+businessTaxCode	String	N	0000000000	营业税标志	10
+details	List	N		红字信息表明细信息列表	
+details 红字信息表明细信息列表
+goodsName	String	N	苹果	商品名称	90
+unit	String	N	袋	单位	22
+specType	String	N	规格型号	规格型号	40
+num	String	N	-1	数量	16
+taxExcludedPrice	String	N	0.94	单价(不含税)	16
+taxExcludedAmount	String	N	-0.94	商品金额(不含税)	
+taxAmount	String	N	-0.06	商品税额	
+taxRate	String	N	0.06	税率，注：蓝票发票为清单红票时值有可能会为null。	10
+goodsCode	String	N	4020000000000000000	商品编码	19
+selfCode	String	N		企业自编码	16
+favouredPolicyFlag	String	N	0	优惠政策标识 (0:不使用 1:使用)	1
+favouredPolicyName	String	N		优惠政策内容:即征即退、免税、简易征收等	50
+zeroRateFlag	String	N		零税率标识(空:非零税率 1:免税 2:不征税 3:普通零税率)	1
+goodsCodeAbb
+	String	N	水果	商品编码简称	
+5、请求示例
+{
+  "operater": "invoiceRedCallback",
+  "billNo": "661234567890211111130527",
+  "content": {
+    "codeVersion": "32",
+    "buyerTaxNo": "339901999999539",
+    "taxExcludedAmount": "-0.88",
+    "billType": "0",
+    "billInfoNo": "5001012111111800",
+    "sellerName": "339901999999142",
+    "oriInvoiceNumber": "",
+    "buyerName": "移动测试盘",
+    "billMessage": "[TZD0000]审核通过",
+    "multTaxRate": "",
+    "billTime": "2021-11-11 13:07:43",
+    "sellerTaxNo": "339901999999142",
+    "pdfUrl": "https://invtest.nntest.cn/fp/9N1-Xtdy9TkxYquLKDjjIMLxnyLA5GOrrJxNws6-nsZQ7gaphHCG329KiwNsxD82ExMcPtSDV02HMgjpfNme7A.pdf",
+    "oriInvoiceCode": "",
+    "applyRemark": "1100000000",
+    "billStatus": "1",
+    "details": [
+      {
+        "specType": "",
+        "taxExcludedAmount": -0.88,
+        "favouredPolicyName": "",
+        "num": -0.073746310000000000,
+        "goodsCodeAbb": "软饮料",
+        "favouredPolicyFlag": 0,
+        "taxRate": 0.130000000000000000,
+        "unit": "",
+        "zeroRateFlag": "0",
+        "goodsCode": "1030307010000000000",
+        "taxExcludedPrice": 12.000000000000000000,
+        "taxAmount": -0.12,
+        "selfCode": "",
+        "goodsName": "可乐"
+      }
+    ],
+    "taxAmount": "-0.12",
+    "businessTaxCode": "0000000000",
+    "taxType": "1"
+  }
+}
+
+6、响应参数
+名称	类型	示例值	描述
+status	String	0000	状态编号
+message	String	同步成功	描述信息
+7、响应示例
+{
+    "status":"0000",
+    "message":"同步成功"
+}
+8、异常说明
+异常码	异常描述	解决方案
+9999	请求失败	检查接口地址是否正确
+		
+		
+
+
+
+
+
+
+
+
+
+
+
+
+五、回传红字信息表申请结果接口
+1、接口描述
+回传红字信息表申请结果接口
+描述	1、红字信息表申请成功后，可根据该接口定义的形式接收红字信息表数据，内容包括（申请编号、信息表编号、销方税号、信息表编号、信息表状态、信息表商品明细等）。
+2、申请红字信息表接口中 callBackUrl 字段有值时才返回，与企业资质中的开票结果回调地址无关
+版本号	V1.0.0
+2、请求地址
+环境	请求地址
+生产环境	http://[IP]:[PORT]/invoice/scan
+沙箱坏境	http://[IP]:[PORT]/invoice/scan
+3、请求方式
+请求方式	同步 HTTP POST
+请求参数格式	JSON
+请求数据编码	UTF-8
+备注	
+4、请求参数
+名称	类型	是否
+必填	示例值	描述	最大
+长度
+operater	String	Y	redConfirmCallback	必填参数。接口标识：	
+billId	String	Y	661565671900190416131426	红字确认单申请号	32
+content	String	Y		信息表内容（Json字符串格式）	
+Content 红字确认单信息
+billInfoNo	String	Y	1403011906000993	信息表编号	24
+billStatus	String	Y	1	信息表状态(0:申请中 1:审核成功 2:审核失败 3:申请成功 4:申请失败 6:撤销中 7:撤销失败 8:已撤销)	1
+billMessage	String	Y	[TZD0000]审核通过	[信息表状态代码]信息表状态描述	
+billType	String	N	0	信息表类型(0:正常 1:逾期 2:机动车类专票信息表（涉及退货和开具错误等，合格证退回）3:机动车类专票信息表（仅涉及销售折让，合格证不退回）)	1
+oriInvoiceCode	String	N	5000181530	对应蓝票代码	12
+oriInvoiceNumber	String	N	73347544	对应蓝票号码	8
+taxType	String	N	1	税种类别(0:营业税 1:增值税)	1
+multTaxRate	String	N	0	多税率标志(0:一票一税率 1:一票多税率)	1
+billTime	String	N	2020-03-26 18:44:08	填开日期	
+sellerTaxNo	String	N	150301199811285326	销方税号	20
+sellerName	String	N	测试税号326	销方名称	100
+buyerTaxNo	String	N	150301199811285326	购方税号	20
+buyerName	String	N	测试税号326	购方名称	100
+taxExcludedAmount	String	N	-0.94	合计金额(不含税)	
+taxAmount	String	N	-0.06	合计税额	
+applyRemark	String	N	0000000100	申请说明（1100000000,购方申请-已抵扣;1010000000,购方申请-未抵扣; 0000000100,销方申请）	10
+pdfUrl	String	N		申请表pdf地址	255
+codeVersion	String	N	32	商品编码版本号	
+businessTaxCode	String	N	0000000000	营业税标志	10
+details	List	N		红字信息表明细信息列表	
+details 红字确认单明细信息列表
+goodsName	String	N	苹果	商品名称	90
+unit	String	N	袋	单位	22
+specType	String	N	规格型号	规格型号	40
+num	String	N	-1	数量	16
+taxExcludedPrice	String	N	0.94	单价(不含税)	16
+taxExcludedAmount	String	N	-0.94	商品金额(不含税)	
+taxAmount	String	N	-0.06	商品税额	
+taxRate	String	N	0.06	税率，注：蓝票发票为清单红票时值有可能会为null。	10
+goodsCode	String	N	4020000000000000000	商品编码	19
+selfCode	String	N		企业自编码	16
+favouredPolicyFlag	String	N	0	优惠政策标识 (0:不使用 1:使用)	1
+favouredPolicyName	String	N		优惠政策内容:即征即退、免税、简易征收等	50
+zeroRateFlag	String	N		零税率标识(空:非零税率 1:免税 2:不征税 3:普通零税率)	1
+goodsCodeAbb
+	String	N	水果	商品编码简称	
+5、请求示例
+
+6、响应参数
+名称	类型	示例值	描述
+status	String	0000	状态编号
+message	String	同步成功	描述信息
+7、响应示例
+{
+    "status":"0000",
+    "message":"同步成功"
+}
+8、异常说明
+异常码	异常描述	解决方案
+9999	请求失败	检查接口地址是否正确
+		
+		
+
+
+
+注：回调自动重试相关：
+当回调后第三方未返回接收成功（网路等异常，没有明确返回失败原因或成功）时， 增加自动重试回调机制（增加回调次数 最多3次，每次间隔1分钟） 
+范围：开票结果回调（成功/失败时）、作废回调、红字信息表申请结果回调（成功/失败时） 
+前提：当企业配置可以进行 开票结果回调、作废回调、红字信息表申请结果回调、红字确认单相关回调 时
