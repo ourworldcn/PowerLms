@@ -88,7 +88,7 @@ namespace System
         /// <summary>
         /// 游戏内使用的时间与Utc时间的偏移量。
         /// </summary>
-        static TimeSpan _Offset;
+        static public TimeSpan _Offset;
 
         /// <summary>
         /// 游戏内使用的时间与Utc时间的偏移量。
