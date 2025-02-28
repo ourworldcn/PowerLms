@@ -885,4 +885,179 @@ namespace PowerLmsWebApi.Dto
     }
     #endregion 费用方案
 
+    #region 发票相关
+    /// <summary>
+    /// 获取全部税务发票信息的返回值封装类。
+    /// </summary>
+    public class GetAllTaxInvoiceInfoReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 集合元素的最大总数量。
+        /// </summary>
+        public int Total { get; set; }
+        /// <summary>
+        /// 返回的集合。
+        /// </summary>
+        public List<TaxInvoiceInfo> Result { get; set; } = new();
+    }
+
+    /// <summary>
+    /// 增加新税务发票信息功能参数封装类。
+    /// </summary>
+    public class AddTaxInvoiceInfoParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 新税务发票信息。其中Id可以是任何值，返回时会指定新值。
+        /// </summary>
+        public TaxInvoiceInfo TaxInvoiceInfo { get; set; }
+    }
+
+    /// <summary>
+    /// 增加新税务发票信息功能返回值封装类。
+    /// </summary>
+    public class AddTaxInvoiceInfoReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 如果成功添加，这里返回新税务发票信息的Id。
+        /// </summary>
+        public Guid Id { get; set; }
+    }
+
+    /// <summary>
+    /// 修改税务发票信息功能参数封装类。
+    /// </summary>
+    public class ModifyTaxInvoiceInfoParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 税务发票信息数据。
+        /// </summary>
+        public TaxInvoiceInfo TaxInvoiceInfo { get; set; }
+    }
+
+    /// <summary>
+    /// 修改税务发票信息功能返回值封装类。
+    /// </summary>
+    public class ModifyTaxInvoiceInfoReturnDto : ReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 删除税务发票信息功能参数封装类。
+    /// </summary>
+    public class RemoveTaxInvoiceInfoParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 要删除的税务发票信息的Id。
+        /// </summary>
+        public Guid Id { get; set; }
+    }
+
+    /// <summary>
+    /// 删除税务发票信息功能返回值封装类。
+    /// </summary>
+    public class RemoveTaxInvoiceInfoReturnDto : ReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 获取全部税务发票信息明细的返回值封装类。
+    /// </summary>
+    public class GetAllTaxInvoiceInfoItemReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 集合元素的最大总数量。
+        /// </summary>
+        public int Total { get; set; }
+        /// <summary>
+        /// 返回的集合。
+        /// </summary>
+        public List<TaxInvoiceInfoItem> Result { get; set; } = new();
+    }
+
+    /// <summary>
+    /// 增加新税务发票信息明细功能参数封装类。
+    /// </summary>
+    public class AddTaxInvoiceInfoItemParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 新税务发票信息明细信息。其中Id可以是任何值，返回时会指定新值。
+        /// </summary>
+        public TaxInvoiceInfoItem TaxInvoiceInfoItem { get; set; }
+    }
+
+    /// <summary>
+    /// 增加新税务发票信息明细功能返回值封装类。
+    /// </summary>
+    public class AddTaxInvoiceInfoItemReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 如果成功添加，这里返回新税务发票信息明细的Id。
+        /// </summary>
+        public Guid Id { get; set; }
+    }
+
+    /// <summary>
+    /// 修改税务发票信息明细功能参数封装类。
+    /// </summary>
+    public class ModifyTaxInvoiceInfoItemParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 税务发票信息明细数据。
+        /// </summary>
+        public TaxInvoiceInfoItem TaxInvoiceInfoItem { get; set; }
+    }
+
+    /// <summary>
+    /// 修改税务发票信息明细功能返回值封装类。
+    /// </summary>
+    public class ModifyTaxInvoiceInfoItemReturnDto : ReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 删除税务发票信息明细功能参数封装类。
+    /// </summary>
+    public class RemoveTaxInvoiceInfoItemParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 要删除的税务发票信息明细的Id。
+        /// </summary>
+        public Guid Id { get; set; }
+    }
+
+    /// <summary>
+    /// 删除税务发票信息明细功能返回值封装类。
+    /// </summary>
+    public class RemoveTaxInvoiceInfoItemReturnDto : ReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 设置指定的税务发票信息下所有明细功能的参数封装类。
+    /// </summary>
+    public class SetTaxInvoiceInfoItemParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 税务发票信息的Id。
+        /// </summary>
+        public Guid TaxInvoiceInfoId { get; set; }
+        /// <summary>
+        /// 税务发票信息明细表的集合。
+        /// 指定存在id的明细则更新，Id全0或不存在的Id自动添加，原有未指定的明细将被删除。
+        /// </summary>
+        public List<TaxInvoiceInfoItem> Items { get; set; }
+    }
+
+    /// <summary>
+    /// 设置指定的税务发票信息下所有明细功能的返回值封装类。
+    /// </summary>
+    public class SetTaxInvoiceInfoItemReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 指定税务发票信息下，所有明细的对象。
+        /// </summary>
+        public List<TaxInvoiceInfoItem> Result { get; set; }
+    }
+
+    #endregion 发票相关
 }

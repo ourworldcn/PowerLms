@@ -1237,5 +1237,271 @@ namespace PowerLmsWebApi.Controllers
 
         #endregion 费用方案明细
 
+        #region 发票相关
+        #region 税务发票信息
+
+        /// <summary>
+        /// 获取全部税务发票信息。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="conditional">查询的条件。
+        /// 通用条件写法:所有条件都是字符串，对区间的写法是用逗号分隔（字符串类型暂时不支持区间且都是模糊查询）如"2024-1-1,2024-1-2"。
+        /// 对强制取null的约束，则写"null"。</param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        public ActionResult<GetAllTaxInvoiceInfoReturnDto> GetAllTaxInvoiceInfo([FromQuery] PagingParamsDtoBase model,
+            [FromQuery] Dictionary<string, string> conditional = null)
+        {
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetAllTaxInvoiceInfoReturnDto();
+            var dbSet = _DbContext.TaxInvoiceInfos;
+
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
+            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
+            _Mapper.Map(prb, result);
+            return result;
+        }
+
+        /// <summary>
+        /// 增加新税务发票信息。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
+        [HttpPost]
+        public ActionResult<AddTaxInvoiceInfoReturnDto> AddTaxInvoiceInfo(AddTaxInvoiceInfoParamsDto model)
+        {
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
+            {
+                _Logger.LogWarning("无效的令牌{token}", model.Token);
+                return Unauthorized();
+            }
+            string err;
+            //if (!_AuthorizationManager.Demand(out err, "F.3.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+
+            var result = new AddTaxInvoiceInfoReturnDto();
+            var entity = model.TaxInvoiceInfo;
+            entity.GenerateNewId();
+            //model.TaxInvoiceInfo.CreateBy = context.User.Id;
+            //model.TaxInvoiceInfo.CreateDateTime = OwHelper.WorldNow;
+            _DbContext.TaxInvoiceInfos.Add(model.TaxInvoiceInfo);
+
+            _DbContext.SaveChanges();
+
+            result.Id = model.TaxInvoiceInfo.Id;
+            return result;
+        }
+
+        /// <summary>
+        /// 修改税务发票信息。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
+        /// <response code="404">指定Id的税务发票信息不存在。</response>  
+        [HttpPut]
+        public ActionResult<ModifyTaxInvoiceInfoReturnDto> ModifyTaxInvoiceInfo(ModifyTaxInvoiceInfoParamsDto model)
+        {
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            string err;
+            //if (!_AuthorizationManager.Demand(out err, "F.3.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            var result = new ModifyTaxInvoiceInfoReturnDto();
+            if (!_EntityManager.Modify(new[] { model.TaxInvoiceInfo })) return NotFound();
+            //忽略不可更改字段
+            var entity = _DbContext.Entry(model.TaxInvoiceInfo);
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        /// <summary>
+        /// 删除指定Id的税务发票信息。这会删除所有税务发票信息明细项。慎用！
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
+        /// <response code="404">指定Id的税务发票信息不存在。</response>  
+        [HttpDelete]
+        public ActionResult<RemoveTaxInvoiceInfoReturnDto> RemoveTaxInvoiceInfo(RemoveTaxInvoiceInfoParamsDto model)
+        {
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new RemoveTaxInvoiceInfoReturnDto();
+            string err;
+            //if (!_AuthorizationManager.Demand(out err, "F.3.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            var id = model.Id;
+            var dbSet = _DbContext.TaxInvoiceInfos;
+            var item = dbSet.Find(id);
+            if (item is null) return BadRequest();
+            var children = _DbContext.TaxInvoiceInfoItems.Where(c => c.ParentId == item.Id).ToArray();
+            _EntityManager.Remove(item);
+            if (children.Length > 0) _DbContext.RemoveRange(children);
+            _DbContext.OwSystemLogs.Add(new OwSystemLog
+            {
+                OrgId = context.User.OrgId,
+                ActionId = $"Delete.{nameof(TaxInvoiceInfo)}.{item.Id}",
+                ExtraGuid = context.User.Id,
+                ExtraDecimal = children.Length,
+            });
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        #endregion 税务发票信息
+
+        #region 税务发票信息明细
+
+        /// <summary>
+        /// 获取全部税务发票信息明细。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="conditional">查询的条件。
+        /// 通用条件写法:所有条件都是字符串，对区间的写法是用逗号分隔（字符串类型暂时不支持区间且都是模糊查询）如"2024-1-1,2024-1-2"。
+        /// 对强制取null的约束，则写"null"。</param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        public ActionResult<GetAllTaxInvoiceInfoItemReturnDto> GetAllTaxInvoiceInfoItem([FromQuery] PagingParamsDtoBase model,
+            [FromQuery] Dictionary<string, string> conditional = null)
+        {
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetAllTaxInvoiceInfoItemReturnDto();
+            var dbSet = _DbContext.TaxInvoiceInfoItems;
+
+            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
+            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
+            _Mapper.Map(prb, result);
+            return result;
+        }
+
+        /// <summary>
+        /// 增加新税务发票信息明细。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
+        [HttpPost]
+        public ActionResult<AddTaxInvoiceInfoItemReturnDto> AddTaxInvoiceInfoItem(AddTaxInvoiceInfoItemParamsDto model)
+        {
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
+            {
+                _Logger.LogWarning("无效的令牌{token}", model.Token);
+                return Unauthorized();
+            }
+            string err;
+            //if (!_AuthorizationManager.Demand(out err, "F.3.1") && !_AuthorizationManager.Demand(out err, "F.3.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            var result = new AddTaxInvoiceInfoItemReturnDto();
+            var entity = model.TaxInvoiceInfoItem;
+            entity.GenerateNewId();
+            _DbContext.TaxInvoiceInfoItems.Add(model.TaxInvoiceInfoItem);
+
+            _DbContext.SaveChanges();
+
+            result.Id = model.TaxInvoiceInfoItem.Id;
+            return result;
+        }
+
+        /// <summary>
+        /// 修改税务发票信息明细信息。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
+        /// <response code="404">指定Id的税务发票信息明细不存在。</response>  
+        [HttpPut]
+        public ActionResult<ModifyTaxInvoiceInfoItemReturnDto> ModifyTaxInvoiceInfoItem(ModifyTaxInvoiceInfoItemParamsDto model)
+        {
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new ModifyTaxInvoiceInfoItemReturnDto();
+            string err;
+            //if (!_AuthorizationManager.Demand(out err, "F.3.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_EntityManager.Modify(new[] { model.TaxInvoiceInfoItem })) return NotFound();
+            //忽略不可更改字段
+            var entity = _DbContext.Entry(model.TaxInvoiceInfoItem);
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        /// <summary>
+        /// 删除指定Id的税务发票信息明细。慎用！
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
+        /// <response code="404">指定Id的税务发票信息明细不存在。</response>  
+        [HttpDelete]
+        public ActionResult<RemoveTaxInvoiceInfoItemReturnDto> RemoveTaxInvoiceInfoItem(RemoveTaxInvoiceInfoItemParamsDto model)
+        {
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            string err;
+            //if (!_AuthorizationManager.Demand(out err, "F.3.2") && !_AuthorizationManager.Demand(out err, "F.3.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            var result = new RemoveTaxInvoiceInfoItemReturnDto();
+            var id = model.Id;
+            var dbSet = _DbContext.TaxInvoiceInfoItems;
+            var item = dbSet.Find(id);
+            if (item is null) return BadRequest();
+            _EntityManager.Remove(item);
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        /// <summary>
+        /// 设置指定的税务发票信息下所有明细。
+        /// 指定存在id的明细则更新，Id全0或不存在的Id自动添加，原有未指定的明细将被删除。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="404">指定Id的税务发票信息不存在。</response>  
+        [HttpPut]
+        public ActionResult<SetTaxInvoiceInfoItemReturnDto> SetTaxInvoiceInfoItem(SetTaxInvoiceInfoItemParamsDto model)
+        {
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new SetTaxInvoiceInfoItemReturnDto();
+            var taxInvoiceInfo = _DbContext.TaxInvoiceInfos.Find(model.TaxInvoiceInfoId);
+            if (taxInvoiceInfo is null) return NotFound();
+
+            var aryIds = model.Items.Select(c => c.Id).ToArray();   //指定的Id
+            var existsIds = _DbContext.TaxInvoiceInfoItems.Where(c => c.ParentId == taxInvoiceInfo.Id).Select(c => c.Id).ToArray();    //已经存在的Id
+                                                                                                                                       //更改
+            var modifies = model.Items.Where(c => existsIds.Contains(c.Id));
+            foreach (var item in modifies)
+            {
+                _DbContext.Entry(item).CurrentValues.SetValues(item);
+                _DbContext.Entry(item).State = EntityState.Modified;
+            }
+            //增加
+            var addIds = aryIds.Except(existsIds).ToArray();
+            var adds = model.Items.Where(c => addIds.Contains(c.Id)).ToArray();
+            Array.ForEach(adds, c => c.GenerateNewId());
+            _DbContext.AddRange(adds);
+            //删除
+            var removeIds = existsIds.Except(aryIds).ToArray();
+            _DbContext.RemoveRange(_DbContext.TaxInvoiceInfoItems.Where(c => removeIds.Contains(c.Id)));
+
+            _DbContext.SaveChanges();
+            //后处理
+            result.Result.AddRange(model.Items);
+            return result;
+        }
+        #endregion 税务发票信息明细
+
+        #endregion 发票相关
     }
 }
