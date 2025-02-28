@@ -45,8 +45,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\repos\Bak\OwBaseCore\OwBaseCore.csproj" />
-    <ProjectReference Include="..\..\..\repos\Bak\OwDbBase\OwDbBase.csproj" />
+    <ProjectReference Include="..\..\Bak\OwBaseCore\OwBaseCore.csproj" />
+    <ProjectReference Include="..\..\Bak\OwDbBase\OwDbBase.csproj" />
   </ItemGroup>
 
 </Project>
