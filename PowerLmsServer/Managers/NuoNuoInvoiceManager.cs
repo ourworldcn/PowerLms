@@ -51,16 +51,17 @@ namespace PowerLmsServer.Managers
         {
             var content = new FormUrlEncodedContent(new[]
             {
-            new KeyValuePair<string, string>("appKey", appKey),
-            new KeyValuePair<string, string>("appSecret", appSecret)
-        });
+                    new KeyValuePair<string, string>("client_id", appKey),
+                    new KeyValuePair<string, string>("client_secret", appSecret),
+                    new KeyValuePair<string, string>("grant_type", "client_credentials")
+                });
 
             HttpResponseMessage response = await _httpClient.PostAsync(TokenUrl, content);
             response.EnsureSuccessStatusCode();
 
             string responseBody = await response.Content.ReadAsStringAsync();
-            var json = JsonSerializer.Deserialize<Dictionary<string, string>>(responseBody);
-            return json["access_token"];
+            var json = JsonSerializer.Deserialize<NNAccessTokenResponse>(responseBody);
+            return json.AccessToken;
         }
 
         /// <summary>
@@ -250,4 +251,58 @@ namespace PowerLmsServer.Managers
             services.AddSingleton<NuoNuoManager>();
         }
     }
+
+    /// <summary>
+    /// 访问令牌请求类。
+    /// </summary>
+    public class NNAccessTokenRequest
+    {
+        /// <summary>
+        /// 应用程序密钥。
+        /// </summary>
+        public string ClientId { get; set; }
+
+        /// <summary>
+        /// 应用程序密钥。
+        /// </summary>
+        public string ClientSecret { get; set; }
+
+        /// <summary>
+        /// 授权类型，固定为“client_credentials”。
+        /// </summary>
+        public string GrantType { get; set; } = "client_credentials";
+    }
+
+    /// <summary>
+    /// 访问令牌响应类。
+    /// </summary>
+    public class NNAccessTokenResponse
+    {
+        /// <summary>
+        /// 访问令牌。
+        /// </summary>
+        public string AccessToken { get; set; }
+
+        /// <summary>
+        /// 访问令牌的过期时长，单位为秒。
+        /// </summary>
+        public string ExpiresIn { get; set; }
+    }
+
+    /// <summary>
+    /// 访问令牌错误响应类。
+    /// </summary>
+    public class NNAccessTokenErrorResponse
+    {
+        /// <summary>
+        /// 错误代码。
+        /// </summary>
+        public string Error { get; set; }
+
+        /// <summary>
+        /// 错误描述。
+        /// </summary>
+        public string ErrorDescription { get; set; }
+    }
+
 }

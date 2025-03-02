@@ -597,18 +597,27 @@ namespace PowerLmsWebApi.Controllers
             if (!_AuthorizationManager.Demand(out err, "F.3.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var coll = _DbContext.PlInvoicess.Where(c => model.Ids.Contains(c.Id)).ToArray();
             if (coll.Length != model.Ids.Count) return BadRequest("至少有一个id不存在对应的结算单");
-            //if (coll.Any(c => c.ConfirmDateTime is not null)) return BadRequest("至少有一个结算单已被确认");
-            //if (coll.Any(c => c.CreateBy == context.User.Id)) return BadRequest("至少有一个结算单是自己创建的");
+
             var now = OwHelper.WorldNow;
-            coll.ForEach(c =>
+            foreach (var invoice in coll)
             {
-                c.ConfirmDateTime = now;
-                c.ConfirmId = context.User.Id;
-            });
+                if (model.IsConfirm)
+                {
+                    // 确认结算单
+                    invoice.ConfirmDateTime = now;
+                    invoice.ConfirmId = context.User.Id;
+                }
+                else
+                {
+                    // 取消确认结算单
+                    invoice.ConfirmDateTime = null;
+                    invoice.ConfirmId = null;
+                }
+            }
+
             _DbContext.SaveChanges();
             return result;
         }
-
 
         /// <summary>
         /// 获取结算单明细增强接口功能。

@@ -407,7 +407,7 @@ namespace PowerLmsWebApi.Controllers
             if (model.OperateState.HasValue)    //若指定了表单状态
             {
                 plBusinessDoc.Status = model.OperateState.Value;
-                if ((model.OperateState.Value & 128) != 0 && job.JobState == 2)  //若需要切换业务状态到完成
+                if ((model.OperateState.Value & 128) != 0 && job.JobState <= 2)  //若需要切换业务状态到完成
                     job.JobState = 4;
                 else if (model.OperateState.Value < 128 && job.JobState == 4)  //若需要回退状态
                     job.JobState = 2;

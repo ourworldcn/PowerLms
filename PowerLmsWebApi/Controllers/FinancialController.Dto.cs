@@ -73,6 +73,11 @@ namespace PowerLmsWebApi.Dto
         /// 结算单的Id集合。
         /// </summary>
         public List<Guid> Ids { get; set; }
+
+        /// <summary>
+        /// 是否确认结算单。true 表示确认，false 表示取消确认。
+        /// </summary>
+        public bool IsConfirm { get; set; }
     }
 
     /// <summary>
