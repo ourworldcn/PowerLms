@@ -26,6 +26,8 @@ using System.Text.Json;
 using Microsoft.Data.SqlClient;
 using Microsoft.Data.Sql;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
+using NPOI.SS.Formula.Functions;
+using OW.EntityFrameworkCore;
 
 namespace PowerLmsServer.Managers
 {
@@ -218,6 +220,27 @@ namespace PowerLmsServer.Managers
 
             //sheet = workbook.GetSheet(nameof(db.DD_JobNumberRules));
             //_NpoiManager.WriteToDb(sheet, db, db.DD_JobNumberRules);
+
+            // 增加手工开票和诺诺开票两条数据
+            var manualInvoiceChannel = new TaxInvoiceChannel
+            {
+                Id = Guid.Parse("{A1E637AE-88B9-45F6-8925-4A9EF1B75F88}"),
+                DisplayName = "手工开票",
+                InvoiceChannel = "Manual",
+                InvoiceChannelParams = "{}"
+            };
+            db.AddOrUpdate(manualInvoiceChannel);
+
+            var nuonuoInvoiceChannel = new TaxInvoiceChannel
+            {
+                Id = Guid.Parse("{B2E637AE-88B9-45F6-8925-4A9EF1B75F88}"),
+                DisplayName = "诺诺开票",
+                InvoiceChannel = "Nuonuo",
+                InvoiceChannelParams = "{}"
+            };
+            db.AddOrUpdate(nuonuoInvoiceChannel);
+
+            // 保存所有更改
             db.SaveChanges();
         }
 
@@ -254,20 +277,10 @@ namespace PowerLmsServer.Managers
         {
             var _Mapper = svc.GetRequiredService<IMapper>();
 
-            var db = svc.GetService<PowerLmsUserDbContext>();
-            var b = SqlDependency.Start(db.Database.GetDbConnection().ConnectionString);
-            var conn = new SqlConnection(db.Database.GetDbConnection().ConnectionString);
-            conn.Open();
-            string query = "SELECT [Id],[ParentId],[Name],[Bank],[Account],[CurrencyId] FROM [dbo].[BankInfos]";
-            var comm = new SqlCommand(query, conn); comm.CommandType = CommandType.Text;
-            var dependency = new SqlDependency(comm);
-            SqlNotificationRequest notificationRequest = new SqlNotificationRequest();
-            //command.Notification = notificationRequest;
-            dependency.OnChange += (sender, e) =>
-            {
-                Console.WriteLine("数据库发生变化");
-            };
-            comm.ExecuteReader();
+            var savingInterfaceType = svc.GetService<IDbContextSaving<DocFee>>()?.GetType();
+            var savingInterfaceType1 = svc.GetService<IAfterDbContextSaving<DocFee>>()?.GetType();
+            var method = savingInterfaceType.GetMethod(nameof(IDbContextSaving<object>.Saving));
+            var method1 = savingInterfaceType1.GetMethod(nameof(IAfterDbContextSaving<object>.AfterSaving));
         }
 
         private void CreateDb()

@@ -2,6 +2,7 @@
 using OW.Data;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
 using System.Text.Json.Serialization;
@@ -14,12 +15,6 @@ namespace PowerLms.Data
     /// </summary>
     public class TaxInvoiceChannel : GuidKeyObjectBase
     {
-        /// <summary>
-        /// 所属组织机构的Id。
-        /// </summary>
-        [Comment("所属组织机构的Id。")]
-        public Guid? OrgId { get; set; }
-
         /// <summary>
         /// 显示名称。
         /// </summary>
@@ -39,5 +34,18 @@ namespace PowerLms.Data
         [JsonIgnore]
         [Unicode(false)]
         public string InvoiceChannelParams { get; set; }
+    }
+
+    /// <summary>
+    /// 开票渠道账号表。
+    /// </summary>
+    public class TaxInvoiceChannelAccount : JsonDynamicPropertyBase
+    {
+        /// <summary>
+        /// 渠道Id。关联<see cref="TaxInvoiceChannel"/>。
+        /// </summary>
+        [Comment("渠道Id")]
+        public Guid? ParentlId { get; set; }
+
     }
 }

@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 namespace PowerLmsServer.Managers
 {
     using Microsoft.Extensions.DependencyInjection;
+    using PowerLms.Data;
     using System;
     using System.Collections.Generic;
     using System.Net.Http;
@@ -84,6 +85,38 @@ namespace PowerLmsServer.Managers
             string responseBody = await response.Content.ReadAsStringAsync();
             return responseBody;
         }
+    }
+
+    /// <summary>
+    /// 诺诺开票渠道账户数据类。
+    /// </summary>
+    /// <remarks>此类不是数据库类，仅宿主到<see cref="TaxInvoiceChannelAccount"/>。</remarks>
+    public class NNChannelAccountObject
+    {
+        /// <summary>
+        /// 应用程序密钥。
+        /// </summary>
+        public string AppKey { get; set; }
+
+        /// <summary>
+        /// 应用程序密钥。
+        /// </summary>
+        public string AppSecret { get; set; }
+
+        /// <summary>
+        /// 令牌刷新获取时间点。
+        /// </summary>
+        public DateTime TokenRefreshTime { get; set; }
+
+        /// <summary>
+        /// 令牌有效期。
+        /// </summary>
+        public TimeSpan TokenExpiry { get; set; }
+
+        /// <summary>
+        /// 访问令牌。
+        /// </summary>
+        public string Token { get; set; }
     }
 
     /// <summary>

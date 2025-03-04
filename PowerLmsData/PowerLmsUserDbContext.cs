@@ -104,7 +104,7 @@ namespace PowerLmsServer.EfData
         {
             if (!optionsBuilder.IsConfigured)
             {
-                optionsBuilder.UseSqlServer("Data Source=.;Database=PowerLmsUserDevelopment;Integrated Security=True;Trusted_Connection=True;MultipleActiveResultSets=true;Pooling=True");
+                optionsBuilder.UseSqlServer("Data Source=.;Database=PowerLmsUserDevelopment;Integrated Security=True;Trusted_Connection=True;MultipleActiveResultSets=true;Pooling=True;TrustServerCertificate=True;Application Name=PowerLms;");
                 Trace.WriteLine("OnConfiguring被调用");
             }
             base.OnConfiguring(optionsBuilder);
