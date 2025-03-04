@@ -12,6 +12,10 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
+using System.Buffers;
+using System.Collections.Generic;
 
 namespace OW.EntityFrameworkCore
 {
@@ -23,37 +27,35 @@ namespace OW.EntityFrameworkCore
     {
         #region 字段
 
-        private static bool _IsInitialized = false;
-        private static readonly object _Lock = new object();
         private readonly ILogger<OwDbContext> _Logger;
         private readonly IServiceProvider _ServiceProvider;
 
         private const string _CreateGetRootIdProcedure = @"
-                        CREATE PROCEDURE GetRootId
-                            @TableName NVARCHAR(128),
-                            @IdField NVARCHAR(128),
-                            @ParentIdField NVARCHAR(128)
-                        AS
-                        BEGIN
-                            SET NOCOUNT ON;
+                                CREATE PROCEDURE GetRootId
+                                    @TableName NVARCHAR(128),
+                                    @IdField NVARCHAR(128),
+                                    @ParentIdField NVARCHAR(128)
+                                AS
+                                BEGIN
+                                    SET NOCOUNT ON;
 
-                            DECLARE @RootId UNIQUEIDENTIFIER;
-                            DECLARE @Sql NVARCHAR(MAX);
+                                    DECLARE @RootId UNIQUEIDENTIFIER;
+                                    DECLARE @Sql NVARCHAR(MAX);
 
-                            -- 动态SQL语句
-                            SET @Sql = N'
-                                SELECT @RootId = ' + QUOTENAME(@IdField) + '
-                                FROM ' + QUOTENAME(@TableName) + '
-                                WHERE ' + QUOTENAME(@ParentIdField) + ' IS NULL
-                            ';
+                                    -- 动态SQL语句
+                                    SET @Sql = N'
+                                        SELECT @RootId = ' + QUOTENAME(@IdField) + '
+                                        FROM ' + QUOTENAME(@TableName) + '
+                                        WHERE ' + QUOTENAME(@ParentIdField) + ' IS NULL
+                                    ';
 
-                            -- 获取根组织机构的Id
-                            EXEC sp_executesql @Sql, N'@RootId UNIQUEIDENTIFIER OUTPUT', @RootId OUTPUT;
+                                    -- 获取根组织机构的Id
+                                    EXEC sp_executesql @Sql, N'@RootId UNIQUEIDENTIFIER OUTPUT', @RootId OUTPUT;
 
-                            -- 返回根组织机构的Id
-                            SELECT @RootId AS RootId;
-                        END
-                    ";
+                                    -- 返回根组织机构的Id
+                                    SELECT @RootId AS RootId;
+                                END
+                            ";
 
         #endregion 字段
 
@@ -68,7 +70,9 @@ namespace OW.EntityFrameworkCore
         {
             _ServiceProvider = serviceProvider;
             _Logger = logger;
-            Initialize();
+
+            // 订阅事件
+            SavingChanges += OnSavingChanges;
         }
 
         #endregion 构造函数
@@ -89,16 +93,17 @@ namespace OW.EntityFrameworkCore
         public static void InitializeDatabase(OwDbContext context)
         {
             context.Database.ExecuteSqlRaw(@"
-                            IF NOT EXISTS (SELECT * FROM sys.objects WHERE type = 'P' AND name = 'GetRootId')
-                            BEGIN
-                                EXEC sp_executesql N'" + _CreateGetRootIdProcedure + @"'
-                            END
-                        ");
+                                    IF NOT EXISTS (SELECT * FROM sys.objects WHERE type = 'P' AND name = 'GetRootId')
+                                    BEGIN
+                                        EXEC sp_executesql N'" + _CreateGetRootIdProcedure + @"'
+                                    END
+                                ");
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            InitializeDatabase(this);
         }
 
         /// <summary>
@@ -118,7 +123,7 @@ namespace OW.EntityFrameworkCore
                 var idFieldParameter = new SqlParameter("@IdField", idField);
                 var parentIdFieldParameter = new SqlParameter("@ParentIdField", parentIdField);
 
-                var result = this.Set<RootIdResult>().FromSqlRaw(
+                var result = Set<RootIdResult>().FromSqlRaw(
                     "EXEC GetRootId @TableName, @IdField, @ParentIdField",
                     tableNameParameter,
                     idFieldParameter,
@@ -140,24 +145,72 @@ namespace OW.EntityFrameworkCore
         }
 
         /// <summary>
-        /// 初始化方法，只在第一个 DbContext 实例创建时调用。
+        /// 在保存更改之前触发的事件处理程序。
         /// </summary>
-        private void Initialize()
+        /// <param name="sender">事件的发送者，通常是 DbContext 实例。</param>
+        /// <param name="e">事件参数。</param>
+        private void OnSavingChanges(object sender, SavingChangesEventArgs e)
         {
-            if (!_IsInitialized)
+            var context = (OwDbContext)sender;
+
+            // 用于跟踪已处理的实体条目
+            var processedEntities = new HashSet<EntityEntry>();
+
+            // 定义一个标志，用于控制循环
+            bool hasNewChanges;
+
+            do
             {
-                lock (_Lock)
-                {
-                    if (!_IsInitialized)
+                hasNewChanges = false;
+
+                using (var pooledArray = context.ChangeTracker.Entries()
+                    .Where(e => (e.State == EntityState.Added || e.State == EntityState.Modified || e.State == EntityState.Deleted) && !processedEntities.Contains(e))
+                    .TryToPooledArray())
+                    if (pooledArray.Count > 0)
                     {
-                        _Logger.LogDebug("初始化数据库。");
-                        InitializeDatabase(this);
-                        _IsInitialized = true;
+                        // 按实体类型分组
+                        var groupedEntities = pooledArray.Array
+                            .Take(pooledArray.Count)
+                            .GroupBy(e => e.Entity.GetType());
+
+                        foreach (var group in groupedEntities)
+                        {
+                            var entityType = group.Key;
+                            var savingInterfaceType = typeof(IDbContextSaving<>).MakeGenericType(entityType);
+
+                            var savingServices = _ServiceProvider.GetServices(savingInterfaceType);
+                            foreach (var service in savingServices)
+                            {
+                                var method = savingInterfaceType.GetMethod(nameof(IDbContextSaving<object>.Saving));
+                                method?.Invoke(service, new object[] { group, _ServiceProvider, new Dictionary<object, object>() });
+
+                                // 将已处理的实体条目添加到集合中
+                                foreach (var entityEntry in group)
+                                {
+                                    processedEntities.Add(entityEntry);
+                                }
+                                hasNewChanges = true; // 仅在处理了新的实体时设置为 true
+                            }
+                        }
                     }
+            } while (hasNewChanges);
+
+            // 触发 IAfterDbContextSaving 接口的方法
+            var afterGroupedEntities = processedEntities.GroupBy(e => e.Entity.GetType());
+
+            foreach (var group in afterGroupedEntities)
+            {
+                var entityType = group.Key;
+                var afterSavingInterfaceType = typeof(IAfterDbContextSaving<>).MakeGenericType(entityType);
+
+                var afterSavingServices = _ServiceProvider.GetServices(afterSavingInterfaceType);
+                foreach (var service in afterSavingServices)
+                {
+                    var method = afterSavingInterfaceType.GetMethod(nameof(IAfterDbContextSaving<object>.AfterSaving));
+                    method?.Invoke(service, new object[] { context, _ServiceProvider, new Dictionary<object, object>() });
                 }
             }
         }
-
         #endregion 方法
 
         #region 嵌套类型

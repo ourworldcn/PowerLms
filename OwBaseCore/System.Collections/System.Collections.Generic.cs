@@ -1,4 +1,5 @@
 ﻿
+using System.Buffers;
 using System.Diagnostics;
 using System.Diagnostics.Tracing;
 using System.Linq;
@@ -64,5 +65,74 @@ namespace System.Collections.Generic
         /// <param name="source"></param>
         /// <returns></returns>
         public static int GetNonEnumeratedCountOrCount<T>(this IEnumerable<T> source) => source.TryGetNonEnumeratedCount(out var count) ? count : source.Count();
+
+        /// <summary>
+        /// 尝试从 IEnumerable 获取数组，如果可以直接获取元素数量，则使用数组池获取数组并返回。
+        /// </summary>
+        /// <typeparam name="T">元素类型。</typeparam>
+        /// <param name="source">源集合。</param>
+        /// <returns>包含数组和有效元素数量的 PooledArray 结构。</returns>
+        public static PooledArray<T> TryToPooledArray<T>(this IEnumerable<T> source)
+        {
+            if (source.TryGetNonEnumeratedCount(out int count))
+            {
+                var pool = ArrayPool<T>.Shared;
+                var array = pool.Rent(count);
+
+                if (source is ICollection<T> collection)
+                    collection.CopyTo(array, 0);
+                else
+                {
+                    int index = 0;
+                    foreach (var item in source)
+                    {
+                        array[index++] = item;
+                    }
+                }
+
+                return new PooledArray<T>(array, count, pool);
+            }
+            else
+            {
+                var array = source.ToArray();
+                return new PooledArray<T>(array, array.Length, null);
+            }
+        }
+
+        /// <summary>
+        /// 用于在必要时将池中获取的数据返回到池中的结构。
+        /// </summary>
+        /// <typeparam name="T">元素类型。</typeparam>
+        public ref struct PooledArray<T>
+        {
+            private readonly T[] _array;
+            private readonly int _count;
+            private readonly ArrayPool<T> _pool;
+
+            public PooledArray(T[] array, int count, ArrayPool<T> pool)
+            {
+                _array = array;
+                _count = count;
+                _pool = pool;
+            }
+
+            /// <summary>
+            /// 获取数组。
+            /// </summary>
+            public T[] Array => _array;
+
+            /// <summary>
+            /// 获取有效元素数量。
+            /// </summary>
+            public int Count => _count;
+
+            /// <summary>
+            /// 释放资源，将数组返回到池中（如果适用）。
+            /// </summary>
+            public void Dispose()
+            {
+                _pool?.Return(_array, clearArray: true);
+            }
+        }
     }
 }
