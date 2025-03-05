@@ -18,6 +18,9 @@ namespace PowerLms.Data
     /// </summary>
     public class OwAppLogStore : GuidKeyObjectBase
     {
+        /// <summary>
+        /// 构造函数。
+        /// </summary>
         public OwAppLogStore()
         {
 
@@ -48,14 +51,15 @@ namespace PowerLms.Data
         /// <summary>
         /// 构造函数。
         /// </summary>
-        /// <param name="parentId"></param>
+        /// <param name="parentId">父条目的ID。</param>
         public OwAppLogItemStore(Guid parentId)
         {
             ParentId = parentId;
         }
-        /*    modelBuilder.Entity<Product>()
-        .Property(p => p.TotalValue)
-        .HasComputedColumnSql("[Price] * [Quantity]"*/
+
+        /// <summary>
+        /// 父条目的ID。
+        /// </summary>
         public Guid? ParentId { get; set; }
 
         /// <summary>
@@ -77,9 +81,11 @@ namespace PowerLms.Data
         /// 所属商户Id。
         /// </summary>
         public Guid? MerchantId { get; set; }
-
     }
 
+    /// <summary>
+    /// 应用日志视图对象。
+    /// </summary>
     public class OwAppLogVO : GuidKeyObjectBase
     {
         /// <summary>
@@ -153,37 +159,74 @@ namespace PowerLms.Data
         public DateTime CreateUtc { get; set; } = DateTime.UtcNow;
 
         /// <summary>
+        /// 操作IP地址。
+        /// </summary>
+        public string OperationIp { get; set; }
+
+        /// <summary>
+        /// 操作人ID。
+        /// </summary>
+        public Guid? OperatorId { get; set; }
+
+        /// <summary>
         /// 所属商户Id。空则是系统级别日志
         /// </summary>
         public Guid? MerchantId { get; set; }
-
     }
 
+    /// <summary>
+    /// 提供字符串格式化扩展方法的静态类。
+    /// </summary>
     public static class OwStringExtensions
     {
+        /// <summary>
+        /// 使用指定的键值对集合格式化字符串模板。
+        /// </summary>
+        /// <param name="template">要格式化的字符串模板。</param>
+        /// <param name="values">包含键值对的字典，用于替换模板中的占位符。</param>
+        /// <returns>格式化后的字符串。</returns>
+        /// <example>
+        /// <code>
+        /// var template = "Hello, {Name}! Today is {Day}.";
+        /// var values = new Dictionary&lt;string, string&gt;
+        /// {
+        ///     { "Name", "Alice" },
+        ///     { "Day", "Monday" }
+        /// };
+        /// var result = template.FormatWith(values);
+        /// // result: "Hello, Alice! Today is Monday."
+        /// </code>
+        /// </example>
         public static string FormatWith(this string template, IDictionary<string, string> values)
         {
+            // 根据字典中键值对的数量进行不同的处理
             switch (values.Count)
             {
                 case 0:
+                    // 如果字典为空，直接返回模板字符串
                     return template;
                 case 1:
                     {
+                        // 如果字典中只有一个键值对，直接替换模板中的占位符
                         var kvp = values.First();
                         return template.Replace("{" + kvp.Key + "}", kvp.Value);
                     }
                 case > 1:
                     {
+                        // 如果字典中有多个键值对，使用StringBuilder进行替换
                         var sb = new StringBuilder(template);
                         foreach (var kvp in values)
                         {
+                            // 替换模板中的每个占位符
                             sb.Replace("{" + kvp.Key + "}", kvp.Value);
                         }
                         return sb.ToString();
                     }
                 default:
+                    // 默认情况下，直接返回模板字符串
                     return template;
             }
         }
     }
+
 }
