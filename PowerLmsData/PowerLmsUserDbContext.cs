@@ -129,10 +129,19 @@ namespace PowerLmsServer.EfData
             base.OnModelCreating(modelBuilder);
 
             #region 应用日志相关
-            // 配置OwAppLogVO视图的映射
-            var owAppLogVOConfig = modelBuilder.Entity<OwAppLogVO>();
-            owAppLogVOConfig.HasKey(v => v.Id); // 配置主键
-            owAppLogVOConfig.ToTable("OwAppLogVO"); // 映射到视图
+            modelBuilder.Entity<OwAppLogStore>().HasData(
+                new OwAppLogStore
+                {
+                    Id = GeneralInfoLogEntry.TypeId,
+                    FormatString = "用户:{LoginName}({CompanyName}){OperatorName}成功",
+                    LogLevel = Microsoft.Extensions.Logging.LogLevel.Information,
+                }
+            );
+
+            // 配置OwAppLogView视图的映射
+            modelBuilder.Entity<OwAppLogView>()
+                .HasNoKey()
+                .ToView("OwAppLogView");
             #endregion  //应用日志相关
         }
 
@@ -506,9 +515,10 @@ namespace PowerLmsServer.EfData
         public DbSet<OwAppLogItemStore> OwAppLogItemStores { get; set; }
 
         /// <summary>
-        /// 日志的合成视图。
+        /// 应用日志视图，联合了OwAppLogStore和OwAppLogItemStore的数据。
         /// </summary>
-        public DbSet<OwAppLogVO> OwAppLogVOs { get; set; }
+        public DbSet<OwAppLogView> OwAppLogViews { get; set; }
+
         #endregion 应用日志相关
 
         #region 税务发票相关
@@ -516,17 +526,17 @@ namespace PowerLmsServer.EfData
         /// <summary>
         /// 开票渠道表。
         /// </summary>
-        public DbSet<TaxInvoiceChannel>  TaxInvoiceChannels { get; set; }
+        public DbSet<TaxInvoiceChannel> TaxInvoiceChannels { get; set; }
 
         /// <summary>
         /// 税务发票信息表。
         /// </summary>
-        public DbSet<TaxInvoiceInfo>  TaxInvoiceInfos { get; set; }
+        public DbSet<TaxInvoiceInfo> TaxInvoiceInfos { get; set; }
 
         /// <summary>
         /// 税务发票信息明细表。
         /// </summary>
-        public DbSet<TaxInvoiceInfoItem>  TaxInvoiceInfoItems { get; set; }
+        public DbSet<TaxInvoiceInfoItem> TaxInvoiceInfoItems { get; set; }
 
         #endregion 税务发票相关
     }

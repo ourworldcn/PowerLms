@@ -41,7 +41,7 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="roleManager"></param>
         public AccountController(PowerLmsUserDbContext dbContext, AccountManager accountManager, IServiceProvider serviceProvider, IMapper mapper,
             EntityManager entityManager, OrganizationManager organizationManager, CaptchaManager captchaManager, AuthorizationManager authorizationManager,
-            MerchantManager merchantManager, RoleManager roleManager)
+            MerchantManager merchantManager, RoleManager roleManager, OwSqlAppLogger appLogger)
         {
             _DbContext = dbContext;
             _AccountManager = accountManager;
@@ -53,6 +53,7 @@ namespace PowerLmsWebApi.Controllers
             _AuthorizationManager = authorizationManager;
             _MerchantManager = merchantManager;
             _RoleManager = roleManager;
+            _AppLogger = appLogger;
         }
 
         readonly IServiceProvider _ServiceProvider;
@@ -65,7 +66,7 @@ namespace PowerLmsWebApi.Controllers
         readonly CaptchaManager _CaptchaManager;
         readonly MerchantManager _MerchantManager;
         readonly RoleManager _RoleManager;
-
+        OwSqlAppLogger _AppLogger;
 #if DEBUG
         /*
         /// <summary>
@@ -215,6 +216,8 @@ namespace PowerLmsWebApi.Controllers
                     result.User.OrgId ??= merchId;
             }
             _DbContext.SaveChanges();
+            if (_AccountManager.GetOrLoadContextByToken(result.Token, _ServiceProvider) is OwContext context)
+                _AppLogger.LogGeneralInfo("登录");
             return result;
         }
 
@@ -231,7 +234,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new CreateAccountReturnDto();
-            
+
             // 检查登录名、邮件、手机号的全局唯一性
             if (!string.IsNullOrEmpty(model.Item.LoginName) && _DbContext.Accounts.Any(a => a.LoginName == model.Item.LoginName))
             {

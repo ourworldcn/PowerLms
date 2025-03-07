@@ -82,33 +82,11 @@ namespace PowerLmsServer.Managers
         /// <param name="jobChanges">变化的工作任务详细信息集合。</param>
         public static void LogJobChangedOrRemoved(this OwSqlAppLogger logger, IServiceProvider serviceProvider, DbContext dbContext, HashSet<JobChange> jobChanges)
         {
-            // 获取 HttpContextAccessor 服务实例，以获取客户端 IP 地址
-            var httpContextAccessor = serviceProvider.GetService<IHttpContextAccessor>();
-            var ipAddress = httpContextAccessor?.HttpContext?.Connection.RemoteIpAddress?.ToString();
-
-            // 获取当前用户的上下文信息
-            var context = serviceProvider.GetService<OwContext>();
-
             // 遍历所有变化的工作任务详细信息，并记录日志项
             foreach (var jobChange in jobChanges)
             {
                 // 创建新的日志项
-                var logItem = new OwAppLogItemStore
-                {
-                    ParentId = null,
-                    CreateUtc = DateTime.UtcNow,
-                    ParamstersJson = JsonSerializer.Serialize(new Dictionary<string, string>
-                {
-                    { "EntityId", jobChange.EntityId.ToString() },
-                    { "Action", jobChange.Action },
-                    { "EntityType", jobChange.EntityType },
-                    { "IPAddress", ipAddress ?? "Unknown" },
-                    { "UserId", context?.User?.Id.ToString() }
-                })
-                };
-
-                // 写入日志项
-                logger.WriteLogItem(logItem);
+                logger.LogGeneralInfo($"{jobChange.Action}工作号（Id={jobChange.EntityId}）");
             }
         }
     }

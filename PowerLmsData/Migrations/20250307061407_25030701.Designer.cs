@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PowerLmsServer.EfData;
 
@@ -11,9 +12,10 @@ using PowerLmsServer.EfData;
 namespace PowerLmsData.Migrations
 {
     [DbContext(typeof(PowerLmsUserDbContext))]
-    partial class PowerLmsUserDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250307061407_25030701")]
+    partial class _25030701
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1239,35 +1241,6 @@ namespace PowerLmsData.Migrations
                             FormatString = "用户:{LoginName}({CompanyName}){OperatorName}成功",
                             LogLevel = 2
                         });
-                });
-
-            modelBuilder.Entity("PowerLms.Data.OwAppLogView", b =>
-                {
-                    b.Property<DateTime>("CreateUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<byte[]>("ExtraBytes")
-                        .HasColumnType("varbinary(max)");
-
-                    b.Property<string>("FormatString")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<int>("LogLevel")
-                        .HasColumnType("int");
-
-                    b.Property<Guid?>("MerchantId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("ParamstersJson")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("TypeId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.ToView("OwAppLogView");
                 });
 
             modelBuilder.Entity("PowerLms.Data.OwSystemLog", b =>
