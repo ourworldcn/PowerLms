@@ -127,13 +127,13 @@ namespace PowerLmsServer.EfData
             #endregion 权限相关
 
             base.OnModelCreating(modelBuilder);
-
+            
             #region 应用日志相关
             modelBuilder.Entity<OwAppLogStore>().HasData(
                 new OwAppLogStore
                 {
                     Id = GeneralInfoLogEntry.TypeId,
-                    FormatString = "用户:{LoginName}({CompanyName}){OperatorName}成功",
+                    FormatString = "用户:{LoginName}({CompanyName}){OperationType}成功",
                     LogLevel = Microsoft.Extensions.Logging.LogLevel.Information,
                 }
             );
