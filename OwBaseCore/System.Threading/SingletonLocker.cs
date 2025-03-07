@@ -1,6 +1,4 @@
-﻿
-
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 
@@ -49,7 +47,6 @@ namespace System.Threading
             obj = IsInterned(obj);
             return obj is not null && Monitor.IsEntered(obj);
         }
-
 
         /// <summary>
         /// 锁定字符串在当前应用程序域内的唯一实例。

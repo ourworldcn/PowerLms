@@ -98,7 +98,7 @@ namespace OW.Data
                 throw new ArgumentException("无效的表名。", nameof(tableName));
             }
             // 执行 TRUNCATE TABLE SQL 命令
-            context.Database.ExecuteSqlRaw($"TRUNCATE TABLE [{tableName}]");
+            context.Database.ExecuteSqlRaw($"TRUNCATE TABLE {tableName}");
         }
 
     }
