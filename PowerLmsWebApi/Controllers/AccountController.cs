@@ -453,7 +453,8 @@ namespace PowerLmsWebApi.Controllers
             if (!context.User.IsPwd(model.OldPwd)) return BadRequest();
             context.User.SetPwd(model.NewPwd);
             context.User.State &= 0b_1111_1101;
-            context.SaveChanges();
+            lock (context.User.DbContext)
+                context.User.DbContext.SaveChanges();
             return result;
         }
 
@@ -475,7 +476,7 @@ namespace PowerLmsWebApi.Controllers
                 return BadRequest("指定账号不存在。");
             var userCi = _AccountManager.GetOrLoadCacheItemById(tmpUser.Id);
             if (context.User.IsSuperAdmin && !userCi.Data.IsMerchantAdmin) return BadRequest("超管不能重置普通用户的密码。");
-            else if (!context.User.IsSuperAdmin && userCi.Data.IsAdmin()) return BadRequest("商管智能重置普通用户的密码。");
+            else if (context.User.IsMerchantAdmin && userCi.Data.IsAdmin()) return BadRequest("商管只能重置普通用户的密码。");
 
             var result = new ResetPwdReturnDto { };
             //生成密码
