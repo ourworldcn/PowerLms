@@ -78,7 +78,7 @@ namespace System.Collections.Generic
             {
                 var pool = ArrayPool<T>.Shared;
                 var array = pool.Rent(count);
-
+                var s = array[..^1];
                 if (source is ICollection<T> collection)
                     collection.CopyTo(array, 0);
                 else
@@ -119,17 +119,17 @@ namespace System.Collections.Generic
             /// <summary>
             /// 获取数组。
             /// </summary>
-            public T[] Array => _array;
+            public readonly T[] Array => _array;
 
             /// <summary>
             /// 获取有效元素数量。
             /// </summary>
-            public int Count => _count;
+            public readonly int Count => _count;
 
             /// <summary>
             /// 释放资源，将数组返回到池中（如果适用）。
             /// </summary>
-            public void Dispose()
+            public readonly void Dispose()
             {
                 _pool?.Return(_array, clearArray: true);
             }
