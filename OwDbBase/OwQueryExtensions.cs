@@ -88,13 +88,11 @@ namespace OW.Data
         }
     }
 
+    /// <summary>
+    /// 实体框架帮助类。
+    /// </summary>
     public class EfHelper
     {
-        public static Expression PropertyOrField(Expression property, string value, bool ignoreCase = false)
-        {
-            return Expression.Property(property, value);
-        }
-
         /// <summary>
         /// 获取字符串包含的表达式。
         /// </summary>
@@ -108,17 +106,36 @@ namespace OW.Data
         }
 
         /// <summary>
-        /// 获取介于2者之间的表达式。
+        /// 获取介于范围之间的表达式。如果min或max为null，则只应用另一个限制。
         /// </summary>
-        /// <param name="property"></param>
-        /// <param name="min"></param>
-        /// <param name="max"></param>
-        /// <returns></returns>
+        /// <param name="property">要比较的属性表达式</param>
+        /// <param name="min">最小值表达式，可以为null表示不限制下限</param>
+        /// <param name="max">最大值表达式，可以为null表示不限制上限</param>
+        /// <returns>组合的表达式，如果min和max都为null则返回一个始终为true的表达式</returns>
         public static Expression Between(Expression property, Expression min, Expression max)
         {
-            var l = Expression.GreaterThanOrEqual(property, min);
-            var r = Expression.LessThanOrEqual(property, max);
-            return Expression.AndAlso(l, r);
+            // 如果两个限制都没有，返回始终为true的表达式
+            if (min == null && max == null)
+            {
+                return Expression.Constant(true);
+            }
+
+            // 如果只有最小值限制
+            if (max == null)
+            {
+                return Expression.GreaterThanOrEqual(property, min);
+            }
+
+            // 如果只有最大值限制
+            if (min == null)
+            {
+                return Expression.LessThanOrEqual(property, max);
+            }
+
+            // 同时有最小值和最大值限制
+            var greaterThanOrEqual = Expression.GreaterThanOrEqual(property, min);
+            var lessThanOrEqual = Expression.LessThanOrEqual(property, max);
+            return Expression.AndAlso(greaterThanOrEqual, lessThanOrEqual);
         }
 
         /// <summary>
@@ -149,7 +166,7 @@ namespace OW.Data
                     var right = Constant(values[0], left.Type);
                     if (typeof(string) == left.Type) //对字符串则使用模糊查找
                     {
-                        condition = EfHelper.StringContains(left, Constant(values[0], left.Type));
+                        condition = StringContains(left, Constant(values[0], left.Type));
                     }
                     else
                     {
@@ -158,7 +175,7 @@ namespace OW.Data
                 }
                 else if (values.Length == 2)
                 {
-                    condition = EfHelper.Between(left, Constant(values[0], left.Type), Constant(values[1], left.Type));
+                    condition = Between(left, Constant(values[0], left.Type), Constant(values[1], left.Type));
                 }
                 else
                 {
@@ -221,7 +238,7 @@ namespace OW.Data
         {
             var name = typeof(T).Name;
             var dic = new Dictionary<string, string>(conditional.Where(c => c.Key.StartsWith(name + "."))
-                .Select(c => new KeyValuePair<string, string>(c.Key.Remove(0, name.Length + 1), c.Value)));
+                .Select(c => new KeyValuePair<string, string>(c.Key[(name.Length + 1)..], c.Value)));
             var result = GenerateWhereAnd(queryable, dic);
             return result;
         }
