@@ -258,6 +258,116 @@ namespace PowerLmsServer.Managers
 
         #region 工作任务相关代码
 
+        #region 工作号删除功能
+
+        /// <summary>
+        /// 检查工作号是否可以删除。
+        /// </summary>
+        /// <param name="jobId">工作号Id</param>
+        /// <param name="dbContext">数据库上下文</param>
+        /// <returns>如果可以删除返回true，否则返回false并设置错误信息</returns>
+        public bool CanDeleteJob(Guid jobId, PowerLmsUserDbContext dbContext = null)
+        {
+            dbContext ??= (PowerLmsUserDbContext)DbContext;
+
+            // 检查工作号是否存在
+            var job = dbContext.PlJobs.Find(jobId);
+            if (job == null)
+            {
+                OwHelper.SetLastErrorAndMessage(404, $"未找到Id为{jobId}的工作号");
+                return false;
+            }
+
+            // 检查工作号状态
+            if (job.JobState > 2)
+            {
+                OwHelper.SetLastErrorAndMessage(400, $"工作号状态已超过操作阶段(JobState={job.JobState})，无法删除");
+                return false;
+            }
+
+            // 检查是否存在已审核的费用
+            var hasAuditedFees = dbContext.DocFees
+                .Any(c => c.JobId == jobId && c.AuditOperatorId != null);
+            if (hasAuditedFees)
+            {
+                OwHelper.SetLastErrorAndMessage(400, "工作号下存在已审核的费用，无法删除");
+                return false;
+            }
+
+            // 检查是否存在关联账单的费用
+            var hasBilledFees = dbContext.DocFees
+                .Any(c => c.JobId == jobId && c.BillId != null);
+            if (hasBilledFees)
+            {
+                OwHelper.SetLastErrorAndMessage(400, "工作号下存在已关联账单的费用，无法删除");
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// 删除工作号及其所有关联数据。
+        /// </summary>
+        /// <remarks>如果工作号下存在已审核的费用或已关联账单的费用，则无法删除。</remarks>
+        /// <param name="jobId">工作号Id</param>
+        /// <param name="dbContext">数据库上下文</param>
+        /// <returns>如果删除成功返回true，否则返回false</returns>
+        public bool DeleteJob(Guid jobId, PowerLmsUserDbContext dbContext = null)
+        {
+            dbContext ??= (PowerLmsUserDbContext)DbContext;
+
+            try
+            {
+                // 首先验证是否可以删除
+                if (!CanDeleteJob(jobId, dbContext))
+                {
+                    // CanDeleteJob 方法已设置适当的错误信息，这里不需要再设置
+                    return false;
+                }
+
+                // 获取工作号
+                var job = dbContext.PlJobs.Find(jobId);
+
+                // 删除空运出口单
+                var eaDocs = dbContext.PlEaDocs.Where(c => c.JobId == jobId).ToList();
+                if (eaDocs.Any())
+                    dbContext.PlEaDocs.RemoveRange(eaDocs);
+
+                // 删除空运进口单
+                var iaDocs = dbContext.PlIaDocs.Where(c => c.JobId == jobId).ToList();
+                if (iaDocs.Any())
+                    dbContext.PlIaDocs.RemoveRange(iaDocs);
+
+                // 删除海运出口单
+                var esDocs = dbContext.PlEsDocs.Where(c => c.JobId == jobId).ToList();
+                if (esDocs.Any())
+                    dbContext.PlEsDocs.RemoveRange(esDocs);
+
+                // 删除海运进口单
+                var isDocs = dbContext.PlIsDocs.Where(c => c.JobId == jobId).ToList();
+                if (isDocs.Any())
+                    dbContext.PlIsDocs.RemoveRange(isDocs);
+
+                // 删除费用明细
+                var fees = dbContext.DocFees.Where(c => c.JobId == jobId).ToList();
+                if (fees.Any())
+                    dbContext.DocFees.RemoveRange(fees);
+
+                // 最后删除工作号本身
+                dbContext.PlJobs.Remove(job);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                OwHelper.SetLastErrorAndMessage(500, $"DELETE_JOB_EXCEPTION:{ex.Message}");
+                return false;
+            }
+        }
+
+        #endregion 工作号删除功能
+
         /// <summary>根据账单Id获取工作任务Id。</summary>
         /// <param name="billId">账单Id</param>
         /// <returns>工作任务Id</returns>

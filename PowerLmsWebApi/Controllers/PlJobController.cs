@@ -226,45 +226,72 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// 删除指定Id的业务总表。慎用！
+        /// 删除指定Id的业务总表。
         /// </summary>
-        /// <param name="model"></param>
-        /// <returns></returns>
-        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
-        /// <response code="400">未找到指定的业务，或该业务不在初始创建状态——无法删除。</response>  
+        /// <param name="model">包含要删除的业务ID</param>
+        /// <returns>删除结果</returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode。</response>  
+        /// <response code="400">删除失败，可能原因：
+        /// 工作号状态已超过操作阶段(JobState>2)
+        /// 存在已审核费用
+        /// 存在关联账单的费用</response>  
         /// <response code="401">无效令牌。</response>  
-        /// <response code="404">指定Id的业务总表不存在。</response>  
         /// <response code="403">权限不足。</response>  
+        /// <response code="404">指定Id的业务总表不存在。</response>  
         [HttpDelete]
         public ActionResult<RemovePlJobReturnDto> RemovePlJob(RemovePlJobParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemovePlJobReturnDto();
             var id = model.Id;
-            var dbSet = _DbContext.PlJobs;
-            var item = dbSet.Find(id);
+
+            // 检查是否存在该工作号
+            var item = _DbContext.PlJobs.Find(id);
+            if (item is null) return NotFound($"未找到ID为{id}的工作号");
+
+            // 验证权限
             string err;
-            if (item.JobTypeId == ProjectContent.AeId)    //若是空运出口业务
+            if (item.JobTypeId == ProjectContent.AeId)    // 空运出口业务
             {
                 if (!_AuthorizationManager.Demand(out err, "D0.1.1.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             }
-            else if (item.JobTypeId == ProjectContent.AiId)    //若是空运进口业务
+            else if (item.JobTypeId == ProjectContent.AiId)    // 空运进口业务
             {
                 if (!_AuthorizationManager.Demand(out err, "D1.1.1.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             }
-            else if (item.JobTypeId == ProjectContent.SeId)    //若是海运出口业务
+            else if (item.JobTypeId == ProjectContent.SeId)    // 海运出口业务
             {
                 if (!_AuthorizationManager.Demand(out err, "D2.1.1.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             }
-            else if (item.JobTypeId == ProjectContent.SiId)    //若是海运进口业务
+            else if (item.JobTypeId == ProjectContent.SiId)    // 海运进口业务
             {
                 if (!_AuthorizationManager.Demand(out err, "D3.1.1.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             }
-            if (item.JobState > 0) return BadRequest("业务已经开始，无法删除。");
-            if (item is null) return BadRequest();
-            _EntityManager.Remove(item);
-            _DbContext.SaveChanges();
-            return result;
+
+            // 获取BusinessLogicManager实例进行删除操作
+            var businessLogicManager = _ServiceProvider.GetRequiredService<BusinessLogicManager>();
+
+            try
+            {
+                // 执行删除操作
+                if (!businessLogicManager.DeleteJob(id, _DbContext))
+                {
+                    // 删除失败，返回错误信息
+                    return BadRequest(OwHelper.GetLastErrorMessage());
+                }
+
+                // 保存更改到数据库
+                _DbContext.SaveChanges();
+
+                // 删除成功
+                return result;
+            }
+            catch (Exception ex)
+            {
+                // 捕获并记录任何可能的异常
+                _Logger.LogError(ex, "删除工作号 {JobId} 时发生异常", id);
+                return BadRequest($"删除工作号时发生异常: {ex.Message}");
+            }
         }
 
         /// <summary>
