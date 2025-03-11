@@ -191,7 +191,7 @@ namespace OW.Data
         }
 
         /// <summary>
-        /// 识别带实体名加.的格式，并生成查询。
+        /// 依据条件字典中的条件生成查询表达式。
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="queryable"></param>
@@ -208,30 +208,162 @@ namespace OW.Data
                 var left = Expression.Property(para, item.Key);
                 var values = item.Value.Split(',');
                 Expression body;
+
                 if (values.Length == 1)
                 {
-                    var right = Constant(values[0], left.Type);
-                    if (typeof(string) == left.Type) //对字符串则使用模糊查找
-                    {
-                        body = StringContains(left, Constant(values[0], left.Type));
+                    // 单值查询处理
+                    Expression right;
 
+                    // 检查属性是否为枚举类型
+                    if (IsEnumType(left.Type))
+                    {
+                        right = ParseEnumConstant(values[0], left.Type);
                     }
                     else
-                        body = Expression.Equal(left, Constant(values[0], left.Type));
+                    {
+                        right = Constant(values[0], left.Type);
+                    }
+
+                    if (right == null) // 转换失败
+                        return null;
+
+                    if (typeof(string) == left.Type) // 对字符串则使用模糊查找
+                    {
+                        body = StringContains(left, right);
+                    }
+                    else
+                        body = Expression.Equal(left, right);
                 }
                 else if (values.Length == 2)
                 {
-                    body = Between(left, Constant(values[0], left.Type), Constant(values[1], left.Type));
+                    // 处理第一个值（可能为空字符串）
+                    Expression minExpr = null;
+                    if (!string.IsNullOrEmpty(values[0]))
+                    {
+                        // 检查属性是否为枚举类型
+                        if (IsEnumType(left.Type))
+                        {
+                            minExpr = ParseEnumConstant(values[0], left.Type);
+                        }
+                        else
+                        {
+                            minExpr = Constant(values[0], left.Type);
+                        }
+
+                        if (minExpr == null) // 转换失败
+                            return null;
+                    }
+
+                    // 处理第二个值（可能为空字符串）
+                    Expression maxExpr = null;
+                    if (!string.IsNullOrEmpty(values[1]))
+                    {
+                        // 检查属性是否为枚举类型
+                        if (IsEnumType(left.Type))
+                        {
+                            maxExpr = ParseEnumConstant(values[1], left.Type);
+                        }
+                        else
+                        {
+                            maxExpr = Constant(values[1], left.Type);
+                        }
+
+                        if (maxExpr == null) // 转换失败
+                            return null;
+                    }
+
+                    // 使用Between方法创建表达式
+                    body = Between(left, minExpr, maxExpr);
                 }
                 else
                 {
                     OwHelper.SetLastErrorAndMessage(404, $"不正确的参数格式——{item.Value}。");
                     return null;
                 }
+
                 var func = Expression.Lambda<Func<T, bool>>(body, para);
                 result = result.Where(func);
             }
             return result;
+        }
+
+        /// <summary>
+        /// 检查类型是否为枚举或可空枚举类型
+        /// </summary>
+        /// <param name="type">要检查的类型</param>
+        /// <returns>如果是枚举或可空枚举则返回true，否则返回false</returns>
+        private static bool IsEnumType(Type type)
+        {
+            // 检查是否为直接枚举类型
+            if (type.IsEnum)
+                return true;
+
+            // 检查是否为可空枚举类型
+            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
+            {
+                return type.GetGenericArguments()[0].IsEnum;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// 解析字符串为枚举常量表达式
+        /// </summary>
+        /// <param name="value">要解析的字符串值，可以是数字或枚举名称</param>
+        /// <param name="enumType">目标枚举类型</param>
+        /// <returns>表示枚举值的常量表达式，解析失败则返回null</returns>
+        private static Expression ParseEnumConstant(string value, Type enumType)
+        {
+            // 处理可空类型
+            Type underlyingType = enumType;
+            bool isNullable = false;
+
+            if (enumType.IsGenericType && enumType.GetGenericTypeDefinition() == typeof(Nullable<>))
+            {
+                underlyingType = enumType.GetGenericArguments()[0];
+                isNullable = true;
+            }
+
+            // 处理null值
+            if (string.Equals(value, "null", StringComparison.OrdinalIgnoreCase))
+            {
+                if (isNullable)
+                    return Expression.Constant(null, enumType);
+                else
+                {
+                    OwHelper.SetLastErrorAndMessage(404, $"非可空枚举类型{underlyingType}不能设置为null");
+                    return null;
+                }
+            }
+
+            try
+            {
+                // 先尝试按名称解析
+                if (Enum.TryParse(underlyingType, value, true, out object enumValue))
+                {
+                    return Expression.Constant(enumValue, isNullable ? enumType : underlyingType);
+                }
+
+                // 如果按名称解析失败，尝试按数值解析
+                if (int.TryParse(value, out int intValue))
+                {
+                    if (Enum.IsDefined(underlyingType, intValue))
+                    {
+                        enumValue = Enum.ToObject(underlyingType, intValue);
+                        return Expression.Constant(enumValue, isNullable ? enumType : underlyingType);
+                    }
+                }
+
+                // 解析失败
+                OwHelper.SetLastErrorAndMessage(404, $"无法将值'{value}'解析为枚举类型{underlyingType}");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                OwHelper.SetLastErrorAndMessage(404, $"解析枚举值出错: {ex.Message}");
+                return null;
+            }
         }
 
         public static IQueryable<T> GenerateWhereAndWithEntityName<T>(IQueryable<T> queryable, IDictionary<string, string> conditional) where T : class
