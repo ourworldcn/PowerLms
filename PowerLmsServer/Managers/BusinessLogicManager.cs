@@ -10,10 +10,20 @@ namespace PowerLmsServer.Managers
     [OwAutoInjection(ServiceLifetime.Scoped)]
     public class BusinessLogicManager
     {
-        private OrganizationManager _OrganizationManager => _ServiceProvider.GetRequiredService<OrganizationManager>();
-        private DbContext DbContext => _DbContext ??= _ServiceProvider.GetRequiredService<PowerLmsUserDbContext>();
-        private DbContext _DbContext;
         private readonly IServiceProvider _ServiceProvider;
+        private OrganizationManager _OrganizationManager => _ServiceProvider.GetRequiredService<OrganizationManager>();
+        // 使用后期初始化避免重复解析
+        private DbContext _DbContext;
+        /// <summary>数据库上下文。</summary>
+        private DbContext DbContext => _DbContext ??= _ServiceProvider.GetRequiredService<PowerLmsUserDbContext>();
+
+        AuthorizationManager _AuthorizationManager;
+        /// <summary>权限管理器。</summary>
+        AuthorizationManager AuthorizationManager => _AuthorizationManager ??= _ServiceProvider.GetRequiredService<AuthorizationManager>();
+
+        OwSqlAppLogger _SqlAppLogger;
+        /// <summary>SQL 应用日志服务。</summary>
+        OwSqlAppLogger SqlAppLogger => _SqlAppLogger ??= _ServiceProvider.GetRequiredService<OwSqlAppLogger>();
 
         /// <summary>构造函数，注入所需的服务。</summary>
         /// <param name="serviceProvider">服务提供者。</param>
@@ -44,7 +54,7 @@ namespace PowerLmsServer.Managers
         /// <param name="obj">实体对象</param>
         /// <param name="db">数据库上下文</param>
         /// <returns>组织机构Id</returns>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060:删除未使用的参数", Justification = "<挂起>")]  //未来可能会用到
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060:删除未使用的参数", Justification = "<挂起>")]
         public Guid? GetOrgId(object obj, DbContext db = null)
         {
             if (_ServiceProvider.GetService<OwContext>()?.User?.OrgId is not Guid orgId) return null;
@@ -77,7 +87,8 @@ namespace PowerLmsServer.Managers
         private string GetOrganizationBaseCurrencyCode(Guid organizationId)
         {
             var organization = DbContext.Set<PlOrganization>().Find(organizationId);
-            if (organization == null) throw new InvalidOperationException($"未找到 Id 为 {organizationId} 的组织机构。");
+            if (organization == null)
+                throw new InvalidOperationException($"未找到 Id 为 {organizationId} 的组织机构。");
             return GetCurrencyCode(organization.Id);
         }
 
@@ -125,13 +136,14 @@ namespace PowerLmsServer.Managers
             return GetJobBaseCurrencyCode(fee.JobId.Value);
         }
 
-        /// <summary>递归查找本币编码</summary>
+        /// <summary>递归查找本币编码。</summary>
         /// <param name="orgId">组织机构Id</param>
         /// <returns>本币编码</returns>
         private string GetCurrencyCode(Guid orgId)
         {
             var orgsCacheItem = _OrganizationManager.GetOrLoadByOrgId(orgId);
-            if (orgsCacheItem == null || !orgsCacheItem.Data.TryGetValue(orgId, out var org)) throw new InvalidOperationException($"未找到 Id 为 {orgId} 的组织机构。");
+            if (orgsCacheItem == null || !orgsCacheItem.Data.TryGetValue(orgId, out var org))
+                throw new InvalidOperationException($"未找到 Id 为 {orgId} 的组织机构。");
             if (!string.IsNullOrEmpty(org.BaseCurrencyCode)) return org.BaseCurrencyCode;
             if (org.ParentId.HasValue) return GetCurrencyCode(org.ParentId.Value);
             throw new InvalidOperationException($"未找到 Id 为 {orgId} 的组织机构的本币码。");
@@ -150,7 +162,7 @@ namespace PowerLmsServer.Managers
             return result;
         }
 
-        #endregion 本币相关代码
+        #endregion
 
         #region 汇率相关代码
 
@@ -226,7 +238,7 @@ namespace PowerLmsServer.Managers
             return 0;
         }
 
-        #endregion 汇率相关代码
+        #endregion
 
         #region 账单相关代码
 
@@ -254,109 +266,68 @@ namespace PowerLmsServer.Managers
             return false;
         }
 
-        #endregion 账单相关代码
+        #endregion
 
         #region 工作任务相关代码
 
         #region 工作号删除功能
 
-        /// <summary>
-        /// 检查工作号是否可以删除。
-        /// </summary>
+        /// <summary>检查工作号是否可以删除。</summary>
         /// <param name="jobId">工作号Id</param>
         /// <param name="dbContext">数据库上下文</param>
-        /// <returns>如果可以删除返回true，否则返回false并设置错误信息</returns>
+        /// <returns>可以删除返回true，否则返回false并设置错误信息。</returns>
         public bool CanDeleteJob(Guid jobId, PowerLmsUserDbContext dbContext = null)
         {
             dbContext ??= (PowerLmsUserDbContext)DbContext;
-
-            // 检查工作号是否存在
             var job = dbContext.PlJobs.Find(jobId);
             if (job == null)
             {
                 OwHelper.SetLastErrorAndMessage(404, $"未找到Id为{jobId}的工作号");
                 return false;
             }
-
-            // 检查工作号状态
             if (job.JobState > 2)
             {
                 OwHelper.SetLastErrorAndMessage(400, $"工作号状态已超过操作阶段(JobState={job.JobState})，无法删除");
                 return false;
             }
-
-            // 检查是否存在已审核的费用
-            var hasAuditedFees = dbContext.DocFees
-                .Any(c => c.JobId == jobId && c.AuditOperatorId != null);
+            var hasAuditedFees = dbContext.DocFees.Any(c => c.JobId == jobId && c.AuditOperatorId != null);
             if (hasAuditedFees)
             {
                 OwHelper.SetLastErrorAndMessage(400, "工作号下存在已审核的费用，无法删除");
                 return false;
             }
-
-            // 检查是否存在关联账单的费用
-            var hasBilledFees = dbContext.DocFees
-                .Any(c => c.JobId == jobId && c.BillId != null);
+            var hasBilledFees = dbContext.DocFees.Any(c => c.JobId == jobId && c.BillId != null);
             if (hasBilledFees)
             {
                 OwHelper.SetLastErrorAndMessage(400, "工作号下存在已关联账单的费用，无法删除");
                 return false;
             }
-
             return true;
         }
 
-        /// <summary>
-        /// 删除工作号及其所有关联数据。
-        /// </summary>
-        /// <remarks>如果工作号下存在已审核的费用或已关联账单的费用，则无法删除。</remarks>
+        /// <summary>删除工作号及其所有关联数据。</summary>
+        /// <remarks>如果工作号下存在已审核或已开票费用，则无法删除。</remarks>
         /// <param name="jobId">工作号Id</param>
         /// <param name="dbContext">数据库上下文</param>
-        /// <returns>如果删除成功返回true，否则返回false</returns>
+        /// <returns>删除成功返回true，否则返回false。</returns>
         public bool DeleteJob(Guid jobId, PowerLmsUserDbContext dbContext = null)
         {
             dbContext ??= (PowerLmsUserDbContext)DbContext;
-
             try
             {
-                // 首先验证是否可以删除
-                if (!CanDeleteJob(jobId, dbContext))
-                {
-                    // CanDeleteJob 方法已设置适当的错误信息，这里不需要再设置
-                    return false;
-                }
-
-                // 获取工作号
+                if (!CanDeleteJob(jobId, dbContext)) return false;
                 var job = dbContext.PlJobs.Find(jobId);
-
-                // 删除空运出口单
                 var eaDocs = dbContext.PlEaDocs.Where(c => c.JobId == jobId).ToList();
-                if (eaDocs.Any())
-                    dbContext.PlEaDocs.RemoveRange(eaDocs);
-
-                // 删除空运进口单
+                if (eaDocs.Any()) dbContext.PlEaDocs.RemoveRange(eaDocs);
                 var iaDocs = dbContext.PlIaDocs.Where(c => c.JobId == jobId).ToList();
-                if (iaDocs.Any())
-                    dbContext.PlIaDocs.RemoveRange(iaDocs);
-
-                // 删除海运出口单
+                if (iaDocs.Any()) dbContext.PlIaDocs.RemoveRange(iaDocs);
                 var esDocs = dbContext.PlEsDocs.Where(c => c.JobId == jobId).ToList();
-                if (esDocs.Any())
-                    dbContext.PlEsDocs.RemoveRange(esDocs);
-
-                // 删除海运进口单
+                if (esDocs.Any()) dbContext.PlEsDocs.RemoveRange(esDocs);
                 var isDocs = dbContext.PlIsDocs.Where(c => c.JobId == jobId).ToList();
-                if (isDocs.Any())
-                    dbContext.PlIsDocs.RemoveRange(isDocs);
-
-                // 删除费用明细
+                if (isDocs.Any()) dbContext.PlIsDocs.RemoveRange(isDocs);
                 var fees = dbContext.DocFees.Where(c => c.JobId == jobId).ToList();
-                if (fees.Any())
-                    dbContext.DocFees.RemoveRange(fees);
-
-                // 最后删除工作号本身
+                if (fees.Any()) dbContext.DocFees.RemoveRange(fees);
                 dbContext.PlJobs.Remove(job);
-
                 return true;
             }
             catch (Exception ex)
@@ -366,7 +337,189 @@ namespace PowerLmsServer.Managers
             }
         }
 
-        #endregion 工作号删除功能
+        #endregion
+
+        /// <summary>变更业务状态和操作状态。</summary>
+        /// <param name="jobId">工作号ID</param>
+        /// <param name="jobState">要变更的业务状态(可为null)</param>
+        /// <param name="operateState">要变更的操作状态(可为null)</param>
+        /// <param name="userId">当前用户Id</param>
+        /// <returns>变更结果,包含最新状态;失败返回null。</returns>
+        public (byte JobState, byte OperateState)? ChangeJobAndDocState(Guid jobId, int? jobState, byte? operateState, Guid userId)
+        {
+            var job = DbContext.Set<PlJob>().Find(jobId);
+            if (job is null)
+            {
+                OwHelper.SetLastErrorAndMessage(404, $"找不到指定的业务对象，Id={jobId}");
+                return null;
+            }
+            byte oldJobState = job.JobState;
+            var now = OwHelper.WorldNow;
+            string error;
+            var plBusinessDoc = FindAndChangeBusinessDoc(jobId, job, operateState, jobState, out error);
+            if (plBusinessDoc == null)
+            {
+                OwHelper.SetLastErrorAndMessage(400, error);
+                return null;
+            }
+            byte oldOperateState = plBusinessDoc.Status;
+            try
+            {
+                if (jobState.HasValue)
+                {
+                    var transition = (job.JobState, jobState.Value);
+                    switch (transition)
+                    {
+                        case (4, 8): // 从“操作完成”到“已审核”
+                            if (!AuthorizationManager.Demand(out error, "F.2.8"))
+                            {
+                                OwHelper.SetLastErrorAndMessage(403, error);
+                                return null;
+                            }
+                            job.AuditDateTime = now; job.AuditOperatorId = userId;
+                            var auditFees = DbContext.Set<DocFee>().Where(c => c.JobId == job.Id && !c.AuditDateTime.HasValue).ToList();
+                            foreach (var fee in auditFees)
+                            {
+                                fee.AuditDateTime = now;
+                                fee.AuditOperatorId = userId;
+                            }
+                            SqlAppLogger.LogGeneralInfo($"审核工作号:{job.JobNo}, 状态从{oldJobState}变更为{jobState.Value}, 审核费用数量:{auditFees.Count}");
+                            break;
+                        case (8, 4): // 从“已审核”回到“操作完成”
+                            if (!AuthorizationManager.Demand(out error, "F.2.8"))
+                            {
+                                OwHelper.SetLastErrorAndMessage(403, error);
+                                return null;
+                            }
+                            job.AuditDateTime = null; job.AuditOperatorId = null;
+                            var unauditFees = DbContext.Set<DocFee>().Where(c => c.JobId == job.Id && c.AuditDateTime.HasValue).ToList();
+                            foreach (var fee in unauditFees)
+                            {
+                                fee.AuditDateTime = null;
+                                fee.AuditOperatorId = null;
+                            }
+                            SqlAppLogger.LogGeneralInfo($"取消审核工作号:{job.JobNo}, 状态从{oldJobState}变更为{jobState.Value}, 取消审核费用数量:{unauditFees.Count}");
+                            break;
+                        case (8, 16): // 从“已审核”到“已关闭”
+                            if (!AuthorizationManager.Demand(out error, "F.2.9"))
+                            {
+                                OwHelper.SetLastErrorAndMessage(403, error);
+                                return null;
+                            }
+                            job.CloseDate = now;
+                            SqlAppLogger.LogGeneralInfo($"关闭工作号:{job.JobNo}, 状态从{oldJobState}变更为{jobState.Value}");
+                            break;
+                        case (16, 8): // 从“已关闭”回到“已审核”
+                            if (!AuthorizationManager.Demand(out error, "F.2.9"))
+                            {
+                                OwHelper.SetLastErrorAndMessage(403, error);
+                                return null;
+                            }
+                            job.CloseDate = null;
+                            SqlAppLogger.LogGeneralInfo($"取消关闭工作号:{job.JobNo}, 状态从{oldJobState}变更为{jobState.Value}");
+                            break;
+                        default:
+                            SqlAppLogger.LogGeneralInfo($"变更工作号状态:{job.JobNo}, 状态从{oldJobState}变更为{jobState.Value}");
+                            break;
+                    }
+                    job.JobState = (byte)jobState.Value;
+                }
+                if (operateState.HasValue)
+                {
+                    plBusinessDoc.Status = operateState.Value;
+                    switch (true)
+                    {
+                        case var _ when (operateState.Value & 128) != 0 && job.JobState <= 2:
+                            job.JobState = 4;
+                            SqlAppLogger.LogGeneralInfo($"完成操作:{job.JobNo}, 操作状态从{oldOperateState}变更为{operateState.Value}, 业务状态自动更新为4");
+                            break;
+                        case var _ when operateState.Value < 128 && job.JobState == 4:
+                            job.JobState = 2;
+                            SqlAppLogger.LogGeneralInfo($"取消完成操作:{job.JobNo}, 操作状态从{oldOperateState}变更为{operateState.Value}, 业务状态自动回退为2");
+                            break;
+                        default:
+                            SqlAppLogger.LogGeneralInfo($"变更操作状态:{job.JobNo}, 操作状态从{oldOperateState}变更为{operateState.Value}");
+                            break;
+                    }
+                }
+                DbContext.SaveChanges();
+                return (job.JobState, plBusinessDoc.Status);
+            }
+            catch (Exception ex)
+            {
+                OwHelper.SetLastErrorAndMessage(500, $"执行状态变更时发生异常: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>查找指定工作号的业务单据并验证权限。</summary>
+        /// <param name="jobId">工作号ID</param>
+        /// <param name="job">工作号对象</param>
+        /// <param name="operateState">操作状态(可选)</param>
+        /// <param name="jobState">业务状态(可选)</param>
+        /// <param name="error">错误信息</param>
+        /// <returns>业务单据对象,验证失败返回null</returns>
+        public IPlBusinessDoc FindAndChangeBusinessDoc(Guid jobId, PlJob job, byte? operateState, int? jobState, out string error)
+        {
+            error = null;
+            IPlBusinessDoc businessDoc = null;
+            if (DbContext.Set<PlIaDoc>().FirstOrDefault(c => c.JobId == jobId) is PlIaDoc iaDoc) businessDoc = iaDoc;
+            else if (DbContext.Set<PlEaDoc>().FirstOrDefault(c => c.JobId == jobId) is PlEaDoc eaDoc) businessDoc = eaDoc;
+            else if (DbContext.Set<PlIsDoc>().FirstOrDefault(c => c.JobId == jobId) is PlIsDoc isDoc) businessDoc = isDoc;
+            else if (DbContext.Set<PlEsDoc>().FirstOrDefault(c => c.JobId == jobId) is PlEsDoc esDoc) businessDoc = esDoc;
+            if (businessDoc == null)
+            {
+                error = $"找不到业务单据对象，Id={jobId}";
+                return null;
+            }
+            // 根据业务单据类型确定后续权限前缀
+            if (jobState.HasValue)
+            {
+                var (docType, prefix) = businessDoc switch
+                {
+                    PlIaDoc => ("空运进口单", "D1"),
+                    PlEaDoc => ("空运出口单", "D0"),
+                    PlIsDoc => ("海运进口单", "D3"),
+                    PlEsDoc => ("海运出口单", "D2"),
+                    _ => ("未知单据类型", string.Empty)
+                };
+                var stateTransition = (job.JobState, jobState.Value);
+                switch (stateTransition)
+                {
+                    case var _ when jobState.Value == 16:
+                        if (!AuthorizationManager.Demand(out error, "F.2.9"))
+                        {
+                            if (!AuthorizationManager.Demand(out error, $"{prefix}.1.1.7")) return null;
+                        }
+                        break;
+                    case (16, _):
+                        if (!AuthorizationManager.Demand(out error, $"{prefix}.1.1.11")) return null;
+                        break;
+                }
+            }
+            if (operateState.HasValue)
+            {
+                var prefix = businessDoc switch
+                {
+                    PlIaDoc => "D1",
+                    PlEaDoc => "D0",
+                    PlIsDoc => "D3",
+                    PlEsDoc => "D2",
+                    _ => string.Empty
+                };
+                var currentStatus = businessDoc.Status;
+                switch (true)
+                {
+                    case var _ when operateState.Value == 128:
+                        if (!AuthorizationManager.Demand(out error, $"{prefix}.1.1.8")) return null;
+                        break;
+                    case var _ when currentStatus == 128 && operateState.Value != 128:
+                        if (!AuthorizationManager.Demand(out error, $"{prefix}.1.1.12")) return null;
+                        break;
+                }
+            }
+            return businessDoc;
+        }
 
         /// <summary>根据账单Id获取工作任务Id。</summary>
         /// <param name="billId">账单Id</param>
@@ -389,7 +542,6 @@ namespace PowerLmsServer.Managers
                        select fee.JobId;
             return coll.FirstOrDefault();
         }
-
-        #endregion 工作任务相关代码
+        #endregion
     }
 }

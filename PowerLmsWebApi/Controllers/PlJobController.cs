@@ -27,7 +27,7 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 构造函数。
         /// </summary>
-        public PlJobController(AccountManager accountManager, IServiceProvider serviceProvider, PowerLmsUserDbContext dbContext, OrganizationManager organizationManager, IMapper mapper, EntityManager entityManager, DataDicManager dataManager, ILogger<PlJobController> logger, JobManager jobManager, AuthorizationManager authorizationManager)
+        public PlJobController(AccountManager accountManager, IServiceProvider serviceProvider, PowerLmsUserDbContext dbContext, OrganizationManager organizationManager, IMapper mapper, EntityManager entityManager, DataDicManager dataManager, ILogger<PlJobController> logger, JobManager jobManager, AuthorizationManager authorizationManager, OwSqlAppLogger sqlAppLogger, BusinessLogicManager businessLogic)
         {
             _AccountManager = accountManager;
             _ServiceProvider = serviceProvider;
@@ -39,6 +39,8 @@ namespace PowerLmsWebApi.Controllers
             _Logger = logger;
             _JobManager = jobManager;
             _AuthorizationManager = authorizationManager;
+            _SqlAppLogger = sqlAppLogger;
+            _BusinessLogic = businessLogic;
         }
 
         readonly AccountManager _AccountManager;
@@ -51,6 +53,8 @@ namespace PowerLmsWebApi.Controllers
         readonly ILogger<PlJobController> _Logger;
         JobManager _JobManager;
         readonly AuthorizationManager _AuthorizationManager;
+        private readonly OwSqlAppLogger _SqlAppLogger;
+        readonly BusinessLogicManager _BusinessLogic;
 
         #region 业务总表
 
@@ -295,15 +299,16 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// 切换业务/单据状态功能。
+        /// 切换业务/单据状态功能。支持业务主体状态和操作状态的双向切换。
         /// </summary>
-        /// <param name="model"></param>
-        /// <returns></returns>
-        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
-        /// <response code="401">无效令牌。</response>  
-        /// <response code="404">未找到指定的业务对象(Job) -或- 没有找到对应的业务单据。</response>  
-        /// <response code="400">切换业务状态非法。或其它参数非法</response>  
-        /// <response code="403">权限不足。</response>  
+        /// <param name="model">包含业务ID和要修改的状态参数</param>
+        /// <returns>更新后的业务和操作状态信息</returns>
+        /// <response code="200">操作成功。返回更新后的业务状态和操作状态。</response>
+        /// <response code="400">请求无效。找不到业务单据对象或请求参数不符合规范。</response>
+        /// <response code="401">未授权。提供的Token无效或已过期。</response>
+        /// <response code="403">权限不足。</response>
+        /// <response code="404">未找到。指定ID的业务对象不存在。</response>
+        /// <response code="500">服务器错误。执行状态变更过程中发生异常。</response>
         [HttpPost]
         public ActionResult<ChangeStateReturnDto> ChangeState(ChangeStateParamsDto model)
         {
@@ -312,152 +317,23 @@ namespace PowerLmsWebApi.Controllers
                 _Logger.LogWarning("无效的令牌{token}", model.Token);
                 return Unauthorized();
             }
+
             var result = new ChangeStateReturnDto();
-            var job = _DbContext.PlJobs.Find(model.JobId);
-            if (job is null) return NotFound($"找不到指定的业务对象，Id={model.JobId}");
-            IPlBusinessDoc plBusinessDoc = null;
-            var now = OwHelper.WorldNow;
-            string err;
-            if (_DbContext.PlIaDocs.FirstOrDefault(c => c.JobId == model.JobId) is PlIaDoc iaDoc)   //若存在空运进口单
+
+            var changeResult = _BusinessLogic.ChangeJobAndDocState(
+                model.JobId,
+                model.JobState,
+                model.OperateState,
+                context.User.Id);
+
+            if (changeResult == null)
             {
-                plBusinessDoc = iaDoc;
-                if (model.JobState.HasValue)
-                    switch (model.JobState.Value)
-                    {
-                        case 16:
-                            if (!_AuthorizationManager.Demand(out err, "F.2.9"))
-                                if (!_AuthorizationManager.Demand(out err, "D1.1.1.7")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-                            break;
-                        default:
-                            if (job.JobState == 16)
-                                if (!_AuthorizationManager.Demand(out err, "D1.1.1.11")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-                            break;
-                    }
-                //iaDoc.Status;
-                if (model.OperateState.HasValue)
-                    switch (model.OperateState.Value)
-                    {
-                        case 128:
-                            if (!_AuthorizationManager.Demand(out err, "D1.1.1.8")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-                            break;
-                        default:
-                            if (iaDoc.Status == 128)    //若试图取消通知
-                                if (!_AuthorizationManager.Demand(out err, "D1.1.1.12")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-                            break;
-                    }
+                return BadRequest(OwHelper.GetLastErrorMessage());
             }
-            else if (_DbContext.PlEaDocs.FirstOrDefault(c => c.JobId == model.JobId) is PlEaDoc eaDoc)   //若存在空运出口单
-            {
-                plBusinessDoc = eaDoc;
-                if (model.JobState.HasValue)
-                    switch (model.JobState.Value)
-                    {
-                        case 16:
-                            if (!_AuthorizationManager.Demand(out err, "F.2.9"))
-                                if (!_AuthorizationManager.Demand(out err, "D0.1.1.7")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-                            break;
-                        default:
-                            if (job.JobState == 16)
-                                if (!_AuthorizationManager.Demand(out err, "D0.1.1.11")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-                            break;
-                    }
-                if (model.OperateState.HasValue)
-                    switch (model.OperateState.Value)
-                    {
-                        case 128:
-                            if (!_AuthorizationManager.Demand(out err, "D0.1.1.8")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-                            break;
-                        default:
-                            if (eaDoc.Status == 128)    //若试图取消通知
-                                if (!_AuthorizationManager.Demand(out err, "D0.1.1.12")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-                            break;
-                    }
-            }
-            else if (_DbContext.PlIsDocs.FirstOrDefault(c => c.JobId == model.JobId) is PlIsDoc isDoc)   //若存在海运进口单
-            {
-                plBusinessDoc = isDoc;
-                if (model.JobState.HasValue)
-                    switch (model.JobState.Value)
-                    {
-                        case 16:
-                            if (!_AuthorizationManager.Demand(out err, "F.2.9"))
-                                if (!_AuthorizationManager.Demand(out err, "D3.1.1.7")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-                            break;
-                        default:
-                            if (job.JobState == 16)
-                                if (!_AuthorizationManager.Demand(out err, "D3.1.1.11")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-                            break;
-                    }
-                if (model.OperateState.HasValue)
-                    switch (model.OperateState.Value)
-                    {
-                        case 128:
-                            if (!_AuthorizationManager.Demand(out err, "D3.1.1.8")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-                            break;
-                        default:
-                            if (isDoc.Status == 128)    //若试图取消通知
-                                if (!_AuthorizationManager.Demand(out err, "D3.1.1.12")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-                            break;
-                    }
-            }
-            else if (_DbContext.PlEsDocs.FirstOrDefault(c => c.JobId == model.JobId) is PlEsDoc esDoc)   //若存在海运出口单
-            {
-                plBusinessDoc = esDoc;
-                if (model.JobState.HasValue)
-                    switch (model.JobState.Value)
-                    {
-                        case 16:
-                            if (!_AuthorizationManager.Demand(out err, "F.2.9"))
-                                if (!_AuthorizationManager.Demand(out err, "D2.1.1.7")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-                            break;
-                        default:
-                            if (job.JobState == 16)
-                                if (!_AuthorizationManager.Demand(out err, "D2.1.1.11")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-                            break;
-                    }
-                if (model.OperateState.HasValue)
-                    switch (model.OperateState.Value)
-                    {
-                        case 128:
-                            if (!_AuthorizationManager.Demand(out err, "D2.1.1.8")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-                            break;
-                        default:
-                            if (esDoc.Status == 128)    //若试图取消通知
-                                if (!_AuthorizationManager.Demand(out err, "D2.1.1.12")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-                            break;
-                    }
-            }
-            else
-            {
-                return BadRequest($"找不到业务单据对象，Id={model.JobId}");
-            }
-            if (model.OperateState.HasValue)    //若指定了表单状态
-            {
-                plBusinessDoc.Status = model.OperateState.Value;
-                if ((model.OperateState.Value & 128) != 0 && job.JobState <= 2)  //若需要切换业务状态到完成
-                    job.JobState = 4;
-                else if (model.OperateState.Value < 128 && job.JobState == 4)  //若需要回退状态
-                    job.JobState = 2;
-            }
-            else if (model.JobState.HasValue)
-            {
-                if (job.JobState == 8 && model.JobState.GetValueOrDefault() == 16)   //若关闭
-                {
-                    if (job.JobTypeId == ProjectContent.SiId)
-                        if (!_AuthorizationManager.Demand(out err, "D3.1.1.9")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-                    job.CloseDate = now;
-                }
-                else if (job.JobState == 16 && model.JobState.GetValueOrDefault() == 8)   //若取消关闭
-                {
-                    if (job.JobTypeId == ProjectContent.SiId)
-                        if (!_AuthorizationManager.Demand(out err, "D3.1.1.13")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-                    job.CloseDate = null;
-                }
-                job.JobState = (byte)model.JobState.Value;
-            }
-            result.OperateState = plBusinessDoc.Status;
-            result.JobState = job.JobState;
-            _DbContext.SaveChanges();
+
+            result.JobState = changeResult.Value.JobState;
+            result.OperateState = changeResult.Value.OperateState;
+
             return result;
         }
 
