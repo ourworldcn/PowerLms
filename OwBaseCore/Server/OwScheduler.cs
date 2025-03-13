@@ -3,626 +3,293 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
-using System.Buffers;
-using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Net.Cache;
-using System.Numerics;
-using System.Runtime.InteropServices;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Timers;
 
 namespace OW.Server
 {
-    /// <summary>
-    /// 任务类型。
-    /// </summary>
-    public enum OwTaskType
+    /// <summary>任务状态信息类，提供监控指标</summary>
+    public class OwTaskSchedulerStatus
     {
-        /// <summary>
-        /// 未知类型。
-        /// </summary>
-        Unknow = 0,
+        /// <summary>当前队列长度</summary>
+        public int QueueLength { get; set; }
+        /// <summary>任务执行成功率</summary>
+        public double SuccessRate { get; set; }
+        /// <summary>任务平均执行时间</summary>
+        public TimeSpan AverageExecutionTime { get; set; }
+        /// <summary>已执行任务总数</summary>
+        public int TotalTasksExecuted { get; set; }
+        /// <summary>成功执行任务数</summary>
+        public int SuccessfulTasksExecuted { get; set; }
+        /// <summary>总执行时间(毫秒)</summary>
+        public long TotalExecutionTimeMs { get; set; }
 
-        /// <summary>
-        /// 幂等任务。调用多次与调用一次结果一样。成功执行一次就会自动清除。
-        /// </summary>
-        Idempotent = 1,
-
-        /// <summary>
-        /// 定时任务。
-        /// </summary>
-        Timer = 2,
-
-        /// <summary>
-        /// 长时间运行任务。
-        /// </summary>
-        LongRunning = 4,
+        /// <summary>更新状态的成功率和平均执行时间</summary>
+        public void UpdateStats()
+        {
+            SuccessRate = TotalTasksExecuted > 0 ? (double)SuccessfulTasksExecuted / TotalTasksExecuted : 0;
+            AverageExecutionTime = SuccessfulTasksExecuted > 0 ?
+                TimeSpan.FromMilliseconds(TotalExecutionTimeMs / SuccessfulTasksExecuted) : TimeSpan.Zero;
+        }
     }
 
-    /// <summary>
-    /// 任务项的详细配置类。
-    /// </summary>
+    /// <summary>任务项的详细配置类</summary>
     public class OwSchedulerEntry
     {
-        public OwSchedulerEntry()
-        {
-        }
-
-        public OwTaskType TaskType { get; set; }
-
-        /// <summary>
-        /// 任务的唯一标识对象。
-        /// </summary>
-        public object Key { get; set; }
-
-        /// <summary>
-        /// (键，state)。返回值如果是true则标识成功，否则将在下次扫描时继续执行该任务。
-        /// </summary>
-        public Func<object, object, bool> TaskCallback { get; set; }
-
-        /// <summary>
-        /// 任务回调的第二个参数。
-        /// </summary>
+        /// <summary>任务的类型ID</summary>
+        public string TypeId { get; set; }
+        /// <summary>任务执行函数</summary>
+        public Func<object, bool> TaskCallback { get; set; }
+        /// <summary>传递给执行函数的参数</summary>
         public object State { get; set; }
-
-        /// <summary>
-        /// 调用任务的周期。
-        /// </summary>
-        /// <value>可以是<see cref="Timeout.InfiniteTimeSpan"/>或任何大于0的间隔。</value>
-        public TimeSpan Period { get; set; }
-
-        /// <summary>
-        /// 上次执行的时间点。null表示尚未运行过。
-        /// </summary>
-        public DateTime? LastUtc { get; internal set; }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <exception cref="InvalidOperationException"></exception>
-        public void IsValid()
-        {
-            if (Period == TimeSpan.Zero)
-                throw new InvalidOperationException($"{nameof(Period)}应大于0。");
-        }
-
-        /// <summary>
-        /// 是否到期。
-        /// </summary>
-        /// <param name="now"></param>
-        /// <returns>true已经到期，false未到期。</returns>
-        public bool IsExpired(DateTime now)
-        {
-            if (LastUtc is null)    //若尚未运行
-                return true;
-            if (Period == Timeout.InfiniteTimeSpan)  //若仅运行一次
-                return false;
-            return OwHelper.ComputeTimeout(LastUtc.Value, now) >= Period;
-        }
-
-        /// <summary>
-        /// 增加最后运行时间。
-        /// </summary>
-        /// <param name="now">指定当前时间。</param>
-        public void SetExpired(DateTime now)
-        {
-            if (LastUtc is null)    //若尚未运行过任务
-            {
-                LastUtc = now;
-                return;
-            }
-            else
-                while (LastUtc.Value < now)   //若时间未超过指定时间
-                    LastUtc += Period;
-        }
     }
 
-    /// <summary>
-    /// OwScheduler 服务的配置数据类。
-    /// </summary>
+    /// <summary>任务调度器配置选项</summary>
     public class OwSchedulerOptions : IOptions<OwSchedulerOptions>
     {
-        public OwSchedulerOptions()
-        {
-
-        }
-
-        /// <summary>
-        /// 默认的任务执行频度。
-        /// </summary>
-        /// <value>默认值：1分钟。</value>
-        public TimeSpan Frequency { get; set; } = TimeSpan.FromMinutes(1);
-
-        /// <summary>
-        /// 设置或获取锁定键的回调。应支持递归与<see cref="UnlockCallback"/>配对使用。
-        /// 默认值是<see cref="SingletonLocker.TryEnter(object, TimeSpan)"/>。
-        /// </summary>
-        public Func<object, TimeSpan, bool> LockCallback { get; set; } = SingletonLocker.TryEnter;
-
-        /// <summary>
-        /// 设置或获取释放键的回调。应支持递归与<see cref="LockCallback"/>配对使用。
-        /// 默认值是<see cref="SingletonLocker.Exit(object)"/>。
-        /// </summary>
-        public Action<object> UnlockCallback { get; set; } = SingletonLocker.Exit;
-
-        /// <summary>
-        /// 确定当前线程是否保留指定键上的锁。
-        /// 默认值是<see cref="SingletonLocker.IsEntered(object)"/>
-        /// </summary>
-        public Func<object, bool> IsEnteredCallback { get; set; } = SingletonLocker.IsEntered;
-
-        #region IOptions 接口及相关
-
+        /// <summary>重试间隔，默认1秒</summary>
+        public TimeSpan RetryInterval { get; set; } = TimeSpan.FromSeconds(1);
+        /// <summary>最大重试次数，默认3次</summary>
+        public int MaxRetryCount { get; set; } = 3;
+        /// <summary>获取选项值</summary>
         public OwSchedulerOptions Value => this;
-        #endregion IOptions 接口及相关
     }
 
-    /// <summary>
-    /// 一个用于处理长时间任务的任务计划器。
-    /// 默认它仅用一个线程（不并行），因为假设的场景是一个服务器的IO线程。
-    /// 每个任务会有一个唯一标识key，调用任务会首先锁定key,若不能锁定则会再下次扫描时调用任务。
-    /// 每个任务都有一个object型的key,用于标识任务，但不同类型的任务即使key一样也被认为是不同的任务。
-    /// </summary>
+    /// <summary>单线程任务调度器，按添加顺序执行任务。相同TypeId的任务只保留最新的一个。</summary>
     [OwAutoInjection(ServiceLifetime.Singleton)]
-    public class OwScheduler : BackgroundService
+    public class OwScheduler : IDisposable
     {
-        #region 构造函数及相关
+        private readonly ILogger<OwScheduler> _logger; // 日志记录器
+        private readonly object _syncLock = new(); // 同步锁
+        private readonly OwTaskSchedulerStatus _status = new(); // 调度器状态信息
+        private readonly LinkedList<OwSchedulerEntry> _taskQueue = new(); // 任务队列
+        private readonly Dictionary<string, LinkedListNode<OwSchedulerEntry>> _taskIndex = new(); // 任务索引
+        private readonly CancellationTokenSource _cts = new(); // 用于取消处理线程的标记
+        private readonly Thread _processingThread; // 处理任务的后台线程
+        private bool _disposed; // 是否已释放资源
 
-        /// <summary>
-        /// 构造函数。
-        /// </summary>
-        /// <param name="options"></param>
-        /// <param name="logger"></param>
-        /// <param name="hostApplicationLifetime"></param>
-        public OwScheduler(IOptions<OwSchedulerOptions> options, ILogger<OwScheduler> logger, IHostApplicationLifetime hostApplicationLifetime)
+        /// <summary>初始化任务调度器并启动处理线程</summary>
+        public OwScheduler(ILogger<OwScheduler> logger, IHostApplicationLifetime appLifetime)
         {
-            Options = options.Value;
-            _Logger = logger;
-            _HostApplicationLifetime = hostApplicationLifetime;
-            Initializer();
+            _logger = logger;
+            appLifetime.ApplicationStopping.Register(OnApplicationStopping); // 注册应用程序停止时的回调
+            _processingThread = new Thread(ProcessTasks) { IsBackground = true, Name = "任务调度器线程" };
+            _processingThread.Start();
+            _logger.LogInformation("任务调度器已初始化");
         }
 
-        /// <summary>
-        /// 初始化函数。
-        /// </summary>
-        private void Initializer()
+        /// <summary>在应用程序停止时处理未完成任务</summary>
+        private void OnApplicationStopping()
         {
-            //执行幂等任务的初始化
-            _IdempotentThread = new Thread(IdempotentWorker)
-            {
-                Priority = ThreadPriority.BelowNormal,
-                IsBackground = false,
-                Name = "幂等操作任务执行线程。",
-            };
-            _IdempotentThread.Start();
-            _HostApplicationLifetime.ApplicationStopped.Register(() => _RequestCancel.Cancel());
+            _logger.LogInformation("应用程序正在停止，开始处理剩余任务");
+            ExecuteRemainingTasks();
         }
 
-        #endregion 构造函数及相关
-
-        ILogger<OwScheduler> _Logger;
-
-        private OwSchedulerOptions _Options;
-
-        IHostApplicationLifetime _HostApplicationLifetime;
-
-        /// <summary>
-        /// 配置对象。
-        /// </summary>
-        public OwSchedulerOptions Options { get => _Options ??= new OwSchedulerOptions(); init => _Options = value; }
-
-        CancellationTokenSource _RequestCancel = new CancellationTokenSource();
-
-        /// <summary>
-        /// 任务项。
-        /// </summary>
-        ConcurrentDictionary<object, OwSchedulerEntry> _Items = new ConcurrentDictionary<object, OwSchedulerEntry>();
-
-        /// <summary>
-        /// 优先执行任务的列表。键是锁定项的键，使用此类可避免锁定。
-        /// </summary>
-        ConcurrentDictionary<object, object> _Plans = new ConcurrentDictionary<object, object>();
-
-        /// <summary>
-        /// 记录所有幂等任务的数据结构，(任务的键，任务条目).
-        /// </summary>
-        ConcurrentDictionary<object, OwSchedulerEntry> _IdempotentEntries = new ConcurrentDictionary<object, OwSchedulerEntry>();
-
-        /// <summary>
-        /// 幂等任务的工作线程。
-        /// </summary>
-        Thread _IdempotentThread;
-
-        /// <summary>
-        /// 执行幂等任务的工作函数。
-        /// </summary>
-        public void IdempotentWorker()
+        /// <summary>添加任务到调度队列，相同TypeId的任务会被替换</summary>
+        public bool Enqueue(string typeId, Func<object, bool> callback, object state = null)
         {
-            var cts = CancellationTokenSource.CreateLinkedTokenSource(_RequestCancel.Token);
-            var ct = cts.Token;
-            var list = new List<OwSchedulerEntry>();    //没有成功完成的任务项放在此处
-            while (!ct.IsCancellationRequested)
+            if (string.IsNullOrEmpty(typeId)) throw new ArgumentNullException(nameof(typeId));
+            if (callback == null) throw new ArgumentNullException(nameof(callback));
+            if (_disposed) throw new ObjectDisposedException(nameof(OwScheduler));
+
+            var entry = new OwSchedulerEntry { TypeId = typeId, TaskCallback = callback, State = state };
+
+            lock (_syncLock)
             {
-                foreach (var kvp in _IdempotentEntries)   //扫描循环
+                // 移除同ID的现有任务
+                if (_taskIndex.TryGetValue(typeId, out var existingNode))
                 {
-                    var key = kvp.Key;
-                    if (!Options.LockCallback(key, TimeSpan.Zero)) continue;    //若无法锁定键
-                    using var dw = DisposeHelper.Create(c => Options.UnlockCallback(c), kvp.Key); Debug.Assert(!dw.IsEmpty);
-                    if (!_IdempotentEntries.TryRemove(key, out var entry)) continue;    //若已经并发处置
-                    try
-                    {
-                        if (!entry.TaskCallback(entry.Key, entry.State))    //若任务不成功
-                            list.Add(entry);
-                    }
-                    catch (Exception)
-                    {
-                        list.Add(entry);
-                    }
-                    Thread.Yield();
+                    _taskQueue.Remove(existingNode);
+                    _taskIndex.Remove(typeId);
                 }
-                list.ForEach(c => _IdempotentEntries.TryAdd(c.Key, c)); //加入未正常完成的项
-                ct.WaitHandle.WaitOne(1);
+
+                // 添加新任务到队列尾部
+                var node = _taskQueue.AddLast(entry);
+                _taskIndex[typeId] = node;
+                _status.QueueLength = _taskQueue.Count; // 更新队列长度
+                _logger.LogDebug("已添加任务: {TypeId}", typeId);
+                Monitor.Pulse(_syncLock); // 唤醒处理线程
+                return true;
             }
         }
 
-        /// <summary>
-        /// 运行所有任务。
-        /// </summary>
-        /// <param name="now"></param>
-        void RunAll(DateTime now)
+        /// <summary>检查任务是否在队列中</summary>
+        public bool Contains(string typeId)
         {
-            foreach (var kvp in _Items)
+            lock (_syncLock)
             {
-                using var dw = DisposeHelper.Create(Options.LockCallback, Options.UnlockCallback, kvp.Key, TimeSpan.Zero);
-                if (dw.IsEmpty) //若无法锁定
-                {
-                    Run(kvp.Key);   //安排优先再次运行
-                    continue;
-                }
-                if (!kvp.Value.IsExpired(now))   //若无需运行
-                    continue;
-                if (!RunCore(kvp.Value, out _))
-                {
-                    Run(kvp.Key);   //安排优先再次运行
-                    continue;
-                }
-                //成功运行了任务
-                _Plans.Remove(kvp.Key, out _);
-                Thread.Yield();
+                return _taskIndex.ContainsKey(typeId);
             }
         }
 
-        /// <summary>
-        /// 运行优先执行任务。
-        /// </summary>
-        void RunPlans()
+        /// <summary>获取当前调度器状态</summary>
+        public OwTaskSchedulerStatus GetStatus()
         {
-            foreach (var kvp in _Plans)
+            if (_disposed) throw new ObjectDisposedException(nameof(OwScheduler));
+
+            lock (_syncLock)
             {
-                using var dw = DisposeHelper.Create(Options.LockCallback, Options.UnlockCallback, kvp.Key, TimeSpan.Zero);
-                if (dw.IsEmpty) //若无法锁定
+                _status.QueueLength = _taskQueue.Count; // 确保队列长度是最新的
+                _status.UpdateStats(); // 更新计算的状态值
+                return new OwTaskSchedulerStatus // 返回状态副本
                 {
-                    Run(kvp.Key);   //安排优先再次运行
-                    continue;
-                }
-                if (!_Plans.Remove(kvp.Key, out _)) //若已经变化
-                    continue;
-                var entry = _Items.GetValueOrDefault(kvp.Key);
-                if (entry is null)   //若已变化
-                    continue;
-                if (!RunCore(entry, out _))
-                {
-                    Run(kvp.Key);   //安排优先再次运行
-                    continue;
-                }
-                //成功运行了任务
-                _Plans.Remove(kvp.Key, out _);
-                Thread.Yield();
+                    QueueLength = _status.QueueLength,
+                    SuccessRate = _status.SuccessRate,
+                    AverageExecutionTime = _status.AverageExecutionTime,
+                    TotalTasksExecuted = _status.TotalTasksExecuted,
+                    SuccessfulTasksExecuted = _status.SuccessfulTasksExecuted,
+                    TotalExecutionTimeMs = _status.TotalExecutionTimeMs
+                };
             }
         }
 
-        /// <summary>
-        /// 执行指定键值的任务。
-        /// 非公有函数不会自动对键加锁，若需要则调用者需负责加/解锁。
-        /// </summary>
-        /// <param name="entry"></param>
-        /// <param name="exception">任务函数抛出的异常，可能是null。</param>
-        /// <returns>同步执行时返回任务的返回值。异步执行时返回true。
-        /// 执行函数如果抛出异常，则也会返回false。
-        /// </returns>
-        protected virtual bool RunCore(OwSchedulerEntry entry, out Exception exception)
+        /// <summary>执行单个任务并处理结果</summary>
+        private void ExecuteTask(OwSchedulerEntry task)
         {
-            Debug.Assert(Options.IsEnteredCallback(entry.Key));
-            var now = OwHelper.WorldNow;
-            bool b;
+            _logger.LogDebug("执行任务: {TypeId}", task.TypeId);
+            var stopwatch = Stopwatch.StartNew();
+            bool success = false;
+
             try
             {
-                b = entry.TaskCallback?.Invoke(entry.Key, entry.State) ?? true;
-                exception = null;
+                success = task.TaskCallback(task.State); // 执行任务回调
             }
-            catch (Exception excp)
+            catch (Exception ex)
             {
-                exception = excp;
-                b = false;
+                _logger.LogError(ex, "任务执行异常: {TypeId}", task.TypeId);
+                success = false;
             }
-            if (b)
-                entry.SetExpired(now);
-            return b;
-        }
+            finally
+            {
+                stopwatch.Stop();
+            }
 
-        /// <summary>
-        /// 执行指定键值的任务。
-        /// </summary>
-        /// <param name="key"></param>
-        /// <param name="sync">true同步执行，false(默认)计划优先执行。</param>
-        /// <returns>同步执行时返回任务的返回值。异步执行时返回true标识成功增加优先任务，false表示优先队列中有一个同样的项尚未执行。</returns>
-        public bool Run(object key, bool sync = false)
-        {
-            if (sync) //若同步执行
+            lock (_syncLock)
             {
-                using var dw = DisposeHelper.Create(Options.LockCallback, Options.UnlockCallback, key, Timeout.InfiniteTimeSpan);
-                var entry = _Items.GetValueOrDefault(key);
-                var b = RunCore(entry, out _);
-                if (b)
-                    _Plans.Remove(key, out _);
-                return b;
-            }
-            else //若计划优先执行
-            {
-                var b = _Plans.TryAdd(key, null);
-                //发送脉冲
-                using var dw = DisposeHelper.Create(Options.LockCallback, Options.UnlockCallback, _Plans, TimeSpan.Zero);
-                if (!dw.IsEmpty) Monitor.Pulse(_Plans);
-                return b;
+                _status.TotalTasksExecuted++; // 更新执行总数
+
+                if (success)
+                {
+                    _status.SuccessfulTasksExecuted++; // 更新成功数
+                    _status.TotalExecutionTimeMs += stopwatch.ElapsedMilliseconds; // 累加执行时间
+                    _logger.LogInformation("任务成功: {TypeId}, 耗时: {ElapsedMs}ms", task.TypeId, stopwatch.ElapsedMilliseconds);
+                }
+                else
+                {
+                    _logger.LogError("任务失败: {TypeId}", task.TypeId);
+                }
+
+                _taskIndex.Remove(task.TypeId); // 从索引中移除任务
             }
         }
 
-        /// <summary>
-        /// 增加一个幂等任务。
-        /// </summary>
-        /// <param name="key"></param>
-        /// <param name="task"></param>
-        /// <param name="state"></param>
-        public void TryAddIdempotent(object key, Func<object, object, bool> task, object state)
+        /// <summary>执行队列中的所有剩余任务</summary>
+        private void ExecuteRemainingTasks()
         {
-            var entry = new OwSchedulerEntry
+            List<OwSchedulerEntry> remainingTasks;
+
+            lock (_syncLock)
             {
-                TaskType = OwTaskType.Idempotent,
-                Key = key,
-                State = state,
-                TaskCallback = task,
-            };
-            _IdempotentEntries.AddOrUpdate(key, entry, (lkey, ov) => entry);
+                _logger.LogInformation("开始执行剩余的 {Count} 个任务", _taskQueue.Count);
+                remainingTasks = new List<OwSchedulerEntry>(_taskQueue); // 复制任务列表
+                _taskQueue.Clear();
+                _taskIndex.Clear();
+                _status.QueueLength = 0;
+            }
+
+            foreach (var task in remainingTasks)
+            {
+                _logger.LogInformation("执行剩余任务: {TypeId}", task.TypeId);
+                ExecuteTask(task);
+            }
+
+            _logger.LogInformation("所有剩余任务处理完成");
         }
 
-        /// <summary>
-        /// 确保指定键的幂等任务完成。
-        /// </summary>
-        /// <param name="key"></param>
-        /// <param name="timeout">锁定键等待的超时时间。</param>
-        /// <returns>true成功执行并移除或不存在指定key的幂等操作任务；false无法锁定key或任务无法成功完成。
-        /// </returns>
-        public bool EnsureComplateIdempotent(object key, TimeSpan timeout)
+        /// <summary>任务处理线程的主循环</summary>
+        private void ProcessTasks()
         {
-            using var dw = DisposeHelper.Create(Options.LockCallback, Options.UnlockCallback, key, timeout);
-            if (dw.IsEmpty)
-            {
-                OwHelper.SetLastErrorAndMessage(258, $"锁定键时超时,Key={key} ,Timeout={timeout}");
-                return false;
-            }
-            if (!_IdempotentEntries.TryRemove(key, out var entry)) return true;
+            _logger.LogInformation("任务处理线程已启动");
+
             try
             {
-                if (!entry.TaskCallback(entry.Key, entry.State))
-                    _IdempotentEntries.TryAdd(entry.Key, entry);
-            }
-            catch (Exception)
-            {
-                _IdempotentEntries.TryAdd(entry.Key, entry);
-                return false;
-            }
-            return true;
-        }
-
-        /// <summary>
-        /// 增加一个任务项。
-        /// </summary>
-        /// <param name="key"></param>
-        /// <param name="value"></param>
-        /// <returns>true成功加入，false已经存在指定的 <paramref name="key"/>。</returns>
-        public bool TryAdd(object key, OwSchedulerEntry value)
-        {
-            value.IsValid();
-            using var dw = DisposeHelper.Create(Options.LockCallback, Options.UnlockCallback, key, Timeout.InfiniteTimeSpan);
-            value.Key = key;
-            return _Items.TryAdd(key, value);
-        }
-
-        /// <summary>
-        /// 移除一个任务项。
-        /// </summary>
-        /// <param name="key"></param>
-        /// <returns>true成功删除，否则返回false,可能是指定key不存在 -或- 作为优先执行任务却无法执行成功执行。</returns>
-        public bool TryRemove(object key)
-        {
-            bool result;
-            using var dw = DisposeHelper.Create(Options.LockCallback, Options.UnlockCallback, key, Timeout.InfiniteTimeSpan);
-            if (_Plans.Remove(key, out _))    //若在优先执行任务列表
-            {
-                result = Run(key, true);    //强制运行任务
-                if (!result)    //若任务失败
-                    return result;
-            }
-            result = _Items.Remove(key, out _);
-            return result;
-        }
-
-        #region BackgroundService及相关
-
-        /// <summary>
-        /// <inheritdoc/>
-        /// </summary>
-        /// <param name="stoppingToken"></param>
-        /// <returns></returns>
-        protected override Task ExecuteAsync(CancellationToken stoppingToken)
-        {
-            //注册终止函数。
-            stoppingToken.Register(c =>
-            {
-                try
+                while (!_cts.IsCancellationRequested) // 循环直到被取消
                 {
-                    ExecuteTask?.Wait(); //等待后台任务结束
-                }
-                catch (Exception) { }
-                RunPlans();
-                return;
-            }, null);
-            //后台任务
-            return Task.Factory.StartNew(stoppingTokenObj =>
-            {
-                CancellationToken ctStop = (CancellationToken)stoppingTokenObj;
-                DateTime now;  //此轮工作的开始时间
-                var lastNow = DateTime.MinValue;    //上一轮运行时间点
-                while (!stoppingToken.IsCancellationRequested)
-                {
-                    now = OwHelper.WorldNow;
-                    if (!_Plans.IsEmpty)  //若有优先运行事务
-                        RunPlans();
-                    if (now - lastNow >= Options.Frequency)  //若需要运行完整的事务
+                    OwSchedulerEntry taskToExecute = null;
+
+                    lock (_syncLock)
                     {
-                        RunAll(now);
-                        lastNow = now;
-                    }
-                    //等待
-                    var ts = OwHelper.ComputeTimeout(now, Options.Frequency);
-                    var task = Task.Run(() =>
-                    {
-                        using var dw = DisposeHelper.Create(Monitor.TryEnter, Monitor.Exit, _Plans, ts);
-                        if (!dw.IsEmpty)
+                        if (_taskQueue.Count > 0)
                         {
-                            ts = OwHelper.ComputeTimeout(OwHelper.WorldNow, now + Options.Frequency);
-                            if (!_Plans.IsEmpty)   //若有优先执行任务
-                                return;
-                            Monitor.Wait(_Plans, ts, true);
+                            var node = _taskQueue.First; // 获取第一个任务
+                            taskToExecute = node.Value;
+                            _taskQueue.RemoveFirst(); // 从队列中移除
+                            _taskIndex.Remove(taskToExecute.TypeId); // 从索引中移除
+                            _status.QueueLength = _taskQueue.Count; // 更新队列长度
                         }
-                    });
-                    try
-                    {
-                        task.Wait((int)ts.TotalMilliseconds, ctStop);
+                        else
+                        {
+                            Monitor.Wait(_syncLock, 200); // 队列为空时等待
+                            continue;
+                        }
                     }
-                    catch (AggregateException) { }
-                    catch (OperationCanceledException) { break; }
+
+                    if (taskToExecute != null)
+                    {
+                        ExecuteTask(taskToExecute); // 执行任务
+                    }
                 }
-            }, stoppingToken, TaskCreationOptions.LongRunning);
-        }
-
-        #endregion BackgroundService及相关
-
-        #region IDisposable接口及相关
-
-        private bool _Disposed;
-
-        /// <summary>
-        /// 是否已经被处置。
-        /// </summary>
-        protected bool Disposed => _Disposed;
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!_Disposed)
+            }
+            catch (Exception ex)
             {
-                if (disposing)
-                {
-                    // 释放托管状态(托管对象)
-                }
-
-                // 释放未托管的资源(未托管的对象)并重写终结器
-                // 将大型字段设置为 null
-                _Items = null;
-                _Plans = null;
-                _Logger = null;
-                _Disposed = true;
-                _Logger.LogInformation("{GetType().Name}已经处置。", GetType().Name);
+                _logger.LogError(ex, "任务处理线程异常");
+            }
+            finally
+            {
+                _logger.LogInformation("任务处理线程已停止");
             }
         }
 
-        // 仅当“Dispose(bool disposing)”拥有用于释放未托管资源的代码时才替代终结器
-        // ~OwScheduler()
-        // {
-        //     // 不要更改此代码。请将清理代码放入“Dispose(bool disposing)”方法中
-        //     Dispose(disposing: false);
-        // }
+        /// <summary>释放资源</summary>
+        public void Dispose()
+        {
+            if (_disposed) return; // 避免重复释放
 
-        //public void Dispose()
-        //{
-        //    // 不要更改此代码。请将清理代码放入“Dispose(bool disposing)”方法中
-        //    Dispose(disposing: true);
-        //    GC.SuppressFinalize(this);
-        //}
+            _logger.LogInformation("正在关闭任务调度器...");
+            _cts.Cancel(); // 发送取消信号
 
-        #endregion IDisposable接口及相关
+            try
+            {
+                // 等待处理线程结束
+                if (_processingThread != null && _processingThread.IsAlive)
+                {
+                    _processingThread.Join(TimeSpan.FromSeconds(5));
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "关闭任务调度器时发生异常");
+            }
 
+            ExecuteRemainingTasks(); // 处理剩余任务
+            _cts.Dispose();
+            _disposed = true;
+            _logger.LogInformation("任务调度器已关闭");
+        }
     }
 
+    /// <summary>任务调度器扩展方法</summary>
     public static class OwSchedulerExtensions
     {
+        /// <summary>向服务集合添加任务调度器</summary>
         public static IServiceCollection AddOwScheduler(this IServiceCollection services)
         {
-            services.AddHostedService<OwScheduler>();
-            services.AddSingleton(sp => (OwScheduler)sp.GetRequiredService<IEnumerable<IHostedService>>().First(c => c is OwScheduler));
+            services.AddSingleton<OwScheduler>();
             return services;
-        }
-    }
-
-    public class OwTimerSchedulerEntry
-    {
-
-    }
-
-    /// <summary>
-    /// 一次性的定时任务
-    /// </summary>
-    public class OwDelayScheduler
-    {
-        public OwDelayScheduler()
-        {
-
-        }
-
-        //ConcurrentDictionary<object, OwTimerSchedulerEntry> keys;
-        //PriorityQueue<object, DateTime> values;
-
-        public void Add()
-        {
-            
-        }
-
-        public void Remove()
-        {
-
-        }
-
-        public void Delay()
-        {
-        }
-
-        protected void Scan()
-        {
-
-        }
-
-        public void EnsureRunAndRemove()
-        {
         }
     }
 }
