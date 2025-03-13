@@ -337,7 +337,10 @@ namespace PowerLmsServer.Managers
         /// <param name="cacheItem"></param>
         protected void SetCacheItem(OwCacheItem<Account> cacheItem)
         {
-            Token2KeyDic.AddOrUpdate(cacheItem.Data.Token.Value, cacheItem.Data.IdString, (key, ov) => cacheItem.Data.IdString);
+            if (cacheItem?.Data?.Token.HasValue == true)
+            {
+                Token2KeyDic.AddOrUpdate(cacheItem.Data.Token.Value, cacheItem.Data.IdString, (key, ov) => cacheItem.Data.IdString);
+            }
         }
 
         /// <summary>
