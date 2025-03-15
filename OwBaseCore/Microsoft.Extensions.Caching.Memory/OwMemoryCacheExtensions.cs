@@ -94,7 +94,64 @@ namespace Microsoft.Extensions.Caching.Memory
             return entry;
         }
 
-        /// <summary>/// 用于存储回调状态的辅助类。/// </summary>
+        /// <summary>
+        /// 为缓存选项关联一个取消令牌，当令牌被取消时自动逐出相关缓存条目。
+        /// </summary>
+        /// <param name="options">缓存条目选项。</param>
+        /// <param name="cache">缓存实例，用于获取取消令牌字典。</param>
+        /// <param name="key">缓存项的键，用于在取消令牌字典中标识此条目。</param>
+        /// <param name="tokenSource">可选的取消令牌源。如果为null，将创建一个新的。</param>
+        /// <param name="autoDispose">是否自动处置令牌源。默认为true。</param>
+        /// <returns>传入的缓存选项（用于链式调用）。</returns>
+        /// <exception cref="ArgumentNullException">当options、cache或key参数为null时抛出。</exception>
+        public static MemoryCacheEntryOptions RegisterCancellationToken(this MemoryCacheEntryOptions options,
+            IMemoryCache cache, object key, CancellationTokenSource tokenSource = null, bool autoDispose = true)
+        {
+            if (options == null) throw new ArgumentNullException(nameof(options)); // 检查options是否为空
+            if (cache == null) throw new ArgumentNullException(nameof(cache)); // 检查cache是否为空
+            if (key == null) throw new ArgumentNullException(nameof(key)); // 检查key是否为空
+
+            var cts = tokenSource ?? new CancellationTokenSource(); // 获取或创建取消令牌源
+            var tokenMap = cache.GetCancellationTokenMap(); // 获取取消令牌字典
+            tokenMap[key] = cts; // 存储取消令牌源
+            options.ExpirationTokens.Add(new CancellationChangeToken(cts.Token)); // 注册更改的通知
+
+            // 创建一个包含所需状态的对象，避免闭包直接捕获参数
+            var state = new TokenCallbackState
+            {
+                Cache = cache,
+                AutoDispose = autoDispose
+            };
+
+            // 注册逐出回调，当缓存项被逐出时清理取消令牌资源并取消令牌
+            options.RegisterPostEvictionCallback((evictedKey, _, reason, callbackState) =>
+            {
+                if (callbackState is TokenCallbackState callbackStateObj && callbackStateObj.Cache is IMemoryCache ch)
+                {
+                    var map = ch.GetCancellationTokenMap();
+                    if (map.TryRemove(evictedKey, out var source)) // 从映射中移除取消令牌源
+                    {
+                        try
+                        {
+                            if (!source.IsCancellationRequested) // 确保令牌被取消，以便通知观察者
+                            {
+                                source.Cancel();
+                            }
+
+                            if (callbackStateObj.AutoDispose) // 如果设置了自动处置，则处置令牌源
+                            {
+                                source.Dispose();
+                            }
+                        }
+                        catch { /* 忽略可能的异常 */ }
+                    }
+                }
+            }, state);
+
+            return options;
+        }
+
+        /// <summary> 用于存储回调状态的辅助类。 </summary>
         private class TokenCallbackState
         {
             public IMemoryCache Cache { get; set; }
