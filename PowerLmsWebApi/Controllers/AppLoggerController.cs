@@ -65,7 +65,7 @@ namespace GY02.Controllers
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             if (context.User.IsMerchantAdmin)
             {
-                var merchantId = _MerchantManager.GetOrLoadByUser(context.User).Data.Id;
+                var merchantId = _MerchantManager.GetOrLoadByUser(context.User).Id;
                 coll = coll.Where(c => c.MerchantId == merchantId);
             }
             var dic = new Dictionary<string, string>(conditional, StringComparer.OrdinalIgnoreCase);
@@ -133,7 +133,7 @@ namespace GY02.Controllers
             // 如果是商户管理员，只能导出自己商户的日志
             if (context.User.IsMerchantAdmin)
             {
-                var merchantId = _MerchantManager.GetOrLoadByUser(context.User).Data.Id;
+                var merchantId = _MerchantManager.GetOrLoadByUser(context.User).Id;
                 query = query.Where(c => c.MerchantId == merchantId);
             }
 

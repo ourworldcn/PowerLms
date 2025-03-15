@@ -66,18 +66,18 @@ namespace PowerLmsWebApi.Controllers
             {
                 return BadRequest("超管不能获取具体商户的机构");
             }
-            if (_MerchantManager.GetOrLoadByUser(context.User) is not OwCacheItem<PlMerchant> merch)    //若找不到商户
+            if (_MerchantManager.GetOrLoadByUser(context.User) is not PlMerchant merch)    //若找不到商户
                 return BadRequest("找不到用户所属的商户");
-            var orgs = _OrganizationManager.GetOrLoadByMerchantId(merch.Data.Id);  //获取其所有机构
+            var orgs = _OrganizationManager.GetOrLoadByMerchantId(merch.Id);  //获取其所有机构
             if (rootId.HasValue) //若指定了根机构
             {
-                if (!orgs.Data.TryGetValue(rootId.Value, out var org) && rootId.Value != merch.Data.Id) return BadRequest($"找不到指定的机构，Id={rootId}");
+                if (!orgs.TryGetValue(rootId.Value, out var org) && rootId.Value != merch.Id) return BadRequest($"找不到指定的机构，Id={rootId}");
                 if (context.User.IsMerchantAdmin)    //若是商管
                 {
                     if (org is not null)
                         result.Result.Add(org);
                     else
-                        result.Result.AddRange(orgs.Data.Values.Where(c => c.ParentId is null));
+                        result.Result.AddRange(orgs.Values.Where(c => c.ParentId is null));
                 }
                 else //非商管
                 {
@@ -92,7 +92,7 @@ namespace PowerLmsWebApi.Controllers
             {
                 if (context.User.IsMerchantAdmin)    //若是商管
                 {
-                    result.Result.AddRange(orgs.Data.Values.Where(c => c.Parent is null));
+                    result.Result.AddRange(orgs.Values.Where(c => c.Parent is null));
                 }
                 else //非商管
                 {
@@ -164,12 +164,6 @@ namespace PowerLmsWebApi.Controllers
 
             if (!_EntityManager.Modify(model.Items, list)) return NotFound();
 
-            //list.ForEach(tmp =>
-            //{
-            //    var entity = _DbContext.Entry(tmp);
-            //    entity.Navigation(nameof(PlOrganization.Children)).IsModified = false;
-            //    entity.Collection(c => c.Children).IsModified = false;
-            //});
             try
             {
                 restore.ForEach(c =>
@@ -186,7 +180,12 @@ namespace PowerLmsWebApi.Controllers
                 foreach (var item in merchIds)
                 {
                     if (!item.HasValue) continue;
-                    _MerchantManager.GetCacheItemById(item.Value)?.CancellationTokenSource.Cancel();
+
+                    // 使用InvalidateCache方法使商户缓存失效，替代直接操作CancellationTokenSource
+                    _MerchantManager.InvalidateCache(item.Value);
+
+                    // 同时，也应该使组织机构缓存失效
+                    _OrganizationManager.InvalidateOrgCache(item.Value);
                 }
             }
             catch (Exception excp)

@@ -7,13 +7,6 @@
       <FileName>Managers\AccountManager.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="PowerLmsServer.Managers.OwContext" Collapsed="true">
-    <Position X="17.25" Y="0.5" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>gAABAAAAACAAAAAAAAAAAAAAQCAAAAAAAQAAAAABAAA=</HashCode>
-      <FileName>Managers\AccountManager.cs</FileName>
-    </TypeIdentifier>
-  </Class>
   <Class Name="PowerLmsServer.Managers.MerchantManager">
     <Position X="8.25" Y="0.5" Width="2.5" />
     <TypeIdentifier>
@@ -62,6 +55,13 @@
     <ShowAsAssociation>
       <Field Name="_PermissionManager" />
     </ShowAsAssociation>
+  </Class>
+  <Class Name="PowerLmsServer.Managers.OwContext" Collapsed="true">
+    <Position X="17.25" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>gAABAAAAACAAAAAAAAAAAAAAQCAAAAAAAQAAAAABAAA=</HashCode>
+      <FileName>Managers\OwContext.cs</FileName>
+    </TypeIdentifier>
   </Class>
   <Font Name="Microsoft YaHei UI" Size="9" />
 </ClassDiagram>

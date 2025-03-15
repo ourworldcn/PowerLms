@@ -141,11 +141,16 @@ namespace PowerLmsServer.Managers
         /// <returns>本币编码</returns>
         private string GetCurrencyCode(Guid orgId)
         {
-            var orgsCacheItem = _OrganizationManager.GetOrLoadByOrgId(orgId);
-            if (orgsCacheItem == null || !orgsCacheItem.Data.TryGetValue(orgId, out var org))
+            var orgs = _OrganizationManager.GetOrLoadByOrgId(orgId);
+            if (orgs == null || !orgs.TryGetValue(orgId, out var org))
                 throw new InvalidOperationException($"未找到 Id 为 {orgId} 的组织机构。");
-            if (!string.IsNullOrEmpty(org.BaseCurrencyCode)) return org.BaseCurrencyCode;
-            if (org.ParentId.HasValue) return GetCurrencyCode(org.ParentId.Value);
+
+            if (!string.IsNullOrEmpty(org.BaseCurrencyCode))
+                return org.BaseCurrencyCode;
+
+            if (org.ParentId.HasValue)
+                return GetCurrencyCode(org.ParentId.Value);
+
             throw new InvalidOperationException($"未找到 Id 为 {orgId} 的组织机构的本币码。");
         }
 

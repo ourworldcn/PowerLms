@@ -68,58 +68,89 @@ namespace PowerLmsServer.Managers
         /// 
         /// </summary>
         /// <param name="dic"></param>
-        //[MethodImpl(MethodImplOptions.NoOptimization)]
         public void PermissionLoaded(IDictionary<string, PlPermission> dic)
         {
-            //foreach (var kvp in dic)
-            //{
-            //    var p = kvp.Value.Parent;
-            //    var c = kvp.Value.Children;
-            //}
+            // 原方法保持为空，符合原有实现
         }
 
         /// <summary>
-        /// 获取所有权限的缓存项。
+        /// 获取所有权限。
         /// </summary>
-        /// <returns></returns>
-        public OwCacheItem<ConcurrentDictionary<string, PlPermission>> GetPermission()
+        /// <returns>所有权限的集合，如果没有找到则返回null</returns>
+        public ConcurrentDictionary<string, PlPermission> GetPermissions()
         {
-            var result = _Cache.Get<OwCacheItem<ConcurrentDictionary<string, PlPermission>>>(PermissionsCacheKey);
-            return result;
+            return _Cache.TryGetValue(PermissionsCacheKey, out ConcurrentDictionary<string, PlPermission> permissions) ? permissions : null;
+        }
+
+        /// <summary>
+        /// 使全局权限缓存失效。
+        /// </summary>
+        /// <returns>如果成功使缓存失效则返回true，否则返回false</returns>
+        public bool InvalidatePermissionCache()
+        {
+            return _Cache.CancelSource(PermissionsCacheKey);
         }
 
         /// <summary>
         /// 获取或加载所有权限对象。
         /// </summary>
-        /// <returns></returns>
-        public OwCacheItem<ConcurrentDictionary<string, PlPermission>> GetOrLoadPermission()
+        /// <returns>所有权限的集合</returns>
+        public ConcurrentDictionary<string, PlPermission> GetOrLoadPermissions()
         {
-            var result = _Cache.GetOrCreate(PermissionsCacheKey, entry =>
+            return _Cache.GetOrCreate(PermissionsCacheKey, entry =>
             {
                 var db = _DbContextFactory.CreateDbContext();
-                var item = new OwCacheItem<ConcurrentDictionary<string, PlPermission>>()
+                try
                 {
-                    Data = LoadPermission(ref db),
-                }.SetCancellations(new CancellationTokenSource());
-                entry.AddExpirationToken(item.ChangeToken);
-                using var t = db;
-                return item;
-            });
+                    var permissions = LoadPermission(ref db);
 
-            return result;
+                    // 配置缓存条目
+                    ConfigurePermissionsCacheEntry(entry);
+
+                    return permissions;
+                }
+                finally
+                {
+                    db?.Dispose();
+                }
+            });
+        }
+
+        /// <summary>
+        /// 配置权限缓存条目
+        /// </summary>
+        /// <param name="entry">缓存条目</param>
+        private void ConfigurePermissionsCacheEntry(ICacheEntry entry)
+        {
+            // 设置滑动过期时间
+            entry.SetSlidingExpiration(TimeSpan.FromMinutes(30));
+
+            // 使用OwMemoryCacheExtensions注册取消令牌
+            entry.RegisterCancellationToken(_Cache);
         }
 
         #endregion 所有权限对象及相关
 
         /// <summary>
-        /// 获取指定角色的当前权限缓存项。
+        /// 获取指定用户的当前权限。
         /// </summary>
         /// <param name="userId"></param>
-        /// <returns>指定角色的当前权限缓存项，没有则返回null</returns>
-        public OwCacheItem<ConcurrentDictionary<string, PlPermission>> GetCurrentPermissions(Guid userId)
+        /// <returns>指定用户的当前权限，没有则返回null</returns>
+        public ConcurrentDictionary<string, PlPermission> GetCurrentPermissions(Guid userId)
         {
-            var result = _Cache.Get<OwCacheItem<ConcurrentDictionary<string, PlPermission>>>(OwCacheHelper.GetCacheKeyFromId(userId, ".CurrentPermissions"));
-            return result;
+            string cacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId(userId, ".CurrentPermissions");
+            return _Cache.TryGetValue(cacheKey, out ConcurrentDictionary<string, PlPermission> permissions) ? permissions : null;
+        }
+
+        /// <summary>
+        /// 使指定用户ID的权限缓存失效。
+        /// </summary>
+        /// <param name="userId">用户ID。</param>
+        /// <returns>如果成功使缓存失效则返回true，否则返回false</returns>
+        public bool InvalidateUserPermissionsCache(Guid userId)
+        {
+            string cacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId(userId, ".CurrentPermissions");
+            return _Cache.CancelSource(cacheKey);
         }
 
         /// <summary>
@@ -130,15 +161,19 @@ namespace PowerLmsServer.Managers
         /// <returns></returns>
         public ConcurrentDictionary<string, PlPermission> LoadCurrentPermissionsByUser(Account user, ref PowerLmsUserDbContext db)
         {
-            var roles = _RoleManager.GetOrLoadCurrentRolesCacheItemByUser(user);    //用户所属的所有角色
+            var roles = _RoleManager.GetOrLoadCurrentRolesByUser(user);    // 用户所属的所有角色
 
             db ??= _DbContextFactory.CreateDbContext();
-            HashSet<string> ids = new HashSet<string>();
+            HashSet<string> ids;
             lock (db)
-                ids = db.PlRolePermissions.Where(c => roles.Data.Keys.Contains(c.RoleId)).Select(c => c.PermissionId).Distinct().AsEnumerable().ToHashSet();
+                ids = db.PlRolePermissions.Where(c => roles.Keys.Contains(c.RoleId))
+                    .Select(c => c.PermissionId)
+                    .Distinct()
+                    .AsEnumerable()
+                    .ToHashSet();
 
-            var allPerm = GetOrLoadPermission();
-            var coll = allPerm.Data.Where(c => ids.Contains(c.Key));
+            var allPerm = GetOrLoadPermissions();
+            var coll = allPerm.Where(c => ids.Contains(c.Key));
             return new ConcurrentDictionary<string, PlPermission>(coll);
         }
 
@@ -146,25 +181,51 @@ namespace PowerLmsServer.Managers
         /// 获取或加载用户当前机构下的所有授权。
         /// </summary>
         /// <param name="user"></param>
-        /// <returns></returns>
-        public OwCacheItem<ConcurrentDictionary<string, PlPermission>> GetOrLoadCurrentPermissionsByUser(Account user)
+        /// <returns>用户当前的所有权限</returns>
+        public ConcurrentDictionary<string, PlPermission> GetOrLoadUserCurrentPermissions(Account user)
         {
-            var result = _Cache.GetOrCreate(OwCacheHelper.GetCacheKeyFromId(user.Id, ".CurrentPermissions"), entry =>
+            string cacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId(user.Id, ".CurrentPermissions");
+
+            return _Cache.GetOrCreate(cacheKey, entry =>
             {
                 var db = user.DbContext;
+                var permissions = LoadCurrentPermissionsByUser(user, ref db);
 
-                var item = new OwCacheItem<ConcurrentDictionary<string, PlPermission>>()
-                {
-                    Data = LoadCurrentPermissionsByUser(user, ref db),
-                };
-                var pers = GetOrLoadPermission();
-                var roles = _RoleManager.GetOrLoadCurrentRolesCacheItemByUser(user);
-                item.SetCancellations(new CancellationTokenSource(), roles.ChangeToken, pers.ChangeToken);
-                entry.AddExpirationToken(item.ChangeToken);
-                return item;
+                // 配置缓存条目
+                ConfigureUserPermissionsCacheEntry(entry, user.Id);
+
+                return permissions;
             });
-            return result;
         }
 
+        /// <summary>
+        /// 配置用户当前权限缓存条目
+        /// </summary>
+        /// <param name="entry">缓存条目</param>
+        /// <param name="userId">用户ID</param>
+        private void ConfigureUserPermissionsCacheEntry(ICacheEntry entry, Guid userId)
+        {
+            // 设置滑动过期时间
+            entry.SetSlidingExpiration(TimeSpan.FromMinutes(15));
+
+            // 使用OwMemoryCacheExtensions注册取消令牌
+            entry.RegisterCancellationToken(_Cache);
+
+            // 添加权限和角色更改的依赖关系
+            // 获取全局权限缓存的取消令牌源
+            var permissionsTokenSource = _Cache.GetCancellationTokenSource(PermissionsCacheKey);
+            if (permissionsTokenSource != null)
+            {
+                entry.AddExpirationToken(new CancellationChangeToken(permissionsTokenSource.Token));
+            }
+
+            // 获取用户角色缓存的取消令牌源
+            string rolesCacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId(userId, ".CurrentRoles");
+            var rolesTokenSource = _Cache.GetCancellationTokenSource(rolesCacheKey);
+            if (rolesTokenSource != null)
+            {
+                entry.AddExpirationToken(new CancellationChangeToken(rolesTokenSource.Token));
+            }
+        }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Primitives;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using System;
@@ -10,9 +11,6 @@ namespace PowerLmsServer.Managers
 {
     /// <summary>
     /// 商户功能管理服务。
-    /// 作者: OW
-    /// 修改日期: 2025年2月10日。
-    /// 创建日期: 2025年2月10日。
     /// </summary>
     [OwAutoInjection(ServiceLifetime.Scoped)]
     public class MerchantManager
@@ -62,47 +60,92 @@ namespace PowerLmsServer.Managers
         /// <param name="dbContext">数据库上下文。</param>
         private void Loaded(PlMerchant merch, PowerLmsUserDbContext dbContext)
         {
-            merch.DbContext = dbContext;
+            if (merch != null)  // 添加空检查以避免NullReferenceException
+                merch.DbContext = dbContext;
         }
 
         /// <summary>
-        /// 获取指定id的商户对象缓存。
+        /// 获取指定id的商户对象。
         /// </summary>
         /// <param name="merchantId">商户ID。</param>
         /// <returns>商户对象，若没有找到，则返回null。</returns>
-        public OwCacheItem<PlMerchant> GetCacheItemById(Guid merchantId)
+        public PlMerchant GetById(Guid merchantId)
         {
-            return _MemoryCache.Get<OwCacheItem<PlMerchant>>(OwCacheHelper.GetCacheKeyFromId<PlMerchant>(merchantId));
+            var cacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId<PlMerchant>(merchantId);
+            return _MemoryCache.TryGetValue(cacheKey, out PlMerchant merchant) ? merchant : null;
+        }
+
+        /// <summary>
+        /// 使指定ID的商户缓存失效。
+        /// </summary>
+        /// <param name="merchantId">商户ID。</param>
+        /// <returns>如果成功使缓存失效则返回true，否则返回false</returns>
+        public bool InvalidateCache(Guid merchantId)
+        {
+            var cacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId<PlMerchant>(merchantId);
+            return _MemoryCache.CancelSource(cacheKey);
+        }
+
+        /// <summary>
+        /// 获取商户缓存的取消令牌源。
+        /// </summary>
+        /// <param name="merchantId">商户ID。</param>
+        /// <returns>取消令牌源，如果不存在则返回null</returns>
+        public CancellationTokenSource GetCacheTokenSource(Guid merchantId)
+        {
+            var cacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId<PlMerchant>(merchantId);
+            return _MemoryCache.GetCancellationTokenSource(cacheKey);
         }
 
         /// <summary>
         /// 加载或获取缓存的商户对象。
         /// </summary>
         /// <param name="merchantId">商户ID。</param>
-        /// <returns>商户对象缓存项。</returns>
-        public OwCacheItem<PlMerchant> GetOrLoadById(Guid merchantId)
+        /// <returns>商户对象。</returns>
+        public PlMerchant GetOrLoadById(Guid merchantId)
         {
-            return _MemoryCache.GetOrCreate(OwCacheHelper.GetCacheKeyFromId<PlMerchant>(merchantId), c =>
+            var cacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId<PlMerchant>(merchantId);
+
+            return _MemoryCache.GetOrCreate(cacheKey, entry =>
             {
                 PowerLmsUserDbContext db = null;
-                var r = LoadById(OwCacheHelper.GetIdFromCacheKey<PlMerchant>(c.Key as string).Value, ref db);
-                var item = new OwCacheItem<PlMerchant>
-                {
-                    Data = r,
-                };
-                item.SetCancellations(new CancellationTokenSource());
-                return item;
+                var merchant = LoadById(merchantId, ref db);
+
+                // 配置缓存条目
+                ConfigureMerchantCacheEntry(entry, merchant);
+
+                return merchant;
             });
         }
 
         /// <summary>
-        /// 按 OrgId 获取或加载 PlMerchant 的缓存项。
+        /// 配置商户缓存条目
+        /// </summary>
+        /// <param name="entry">缓存条目</param>
+        /// <param name="merchant">商户对象</param>
+        private void ConfigureMerchantCacheEntry(ICacheEntry entry, PlMerchant merchant)
+        {
+            // 设置滑动过期时间
+            entry.SetSlidingExpiration(TimeSpan.FromMinutes(30));
+
+            // 设置绝对过期时间
+            entry.SetAbsoluteExpiration(TimeSpan.FromHours(24));
+
+            // 设置优先级
+            entry.SetPriority(CacheItemPriority.Normal);
+
+            // 使用OwMemoryCacheExtensions注册取消令牌
+            entry.RegisterCancellationToken(_MemoryCache);
+        }
+
+        /// <summary>
+        /// 按 OrgId 获取或加载 PlMerchant。
         /// </summary>
         /// <param name="orgId">组织ID。</param>
-        /// <returns>商户对象缓存项。</returns>
-        public OwCacheItem<PlMerchant> GetOrLoadByOrgId(Guid orgId)
+        /// <returns>商户对象。</returns>
+        public PlMerchant GetOrLoadByOrgId(Guid orgId)
         {
-            if (TryGetIdByOrgOrMerchantId(orgId, out var merchantId))
+            if (TryGetIdByOrgOrMerchantId(orgId, out var merchantId) && merchantId.HasValue)
             {
                 return GetOrLoadById(merchantId.Value);
             }
@@ -116,7 +159,7 @@ namespace PowerLmsServer.Managers
         /// </summary>
         /// <param name="user">用户对象。</param>
         /// <returns>对于不属于商户的账号返回null。</returns>
-        public OwCacheItem<PlMerchant> GetOrLoadByUser(Account user)
+        public PlMerchant GetOrLoadByUser(Account user)
         {
             var merchId = user.MerchantId;
             if (merchId is null)    //若未缓存商户Id
@@ -124,7 +167,7 @@ namespace PowerLmsServer.Managers
                 if (!GetIdByUserId(user.Id, out merchId)) return null;
                 user.MerchantId = merchId;
             }
-            return GetOrLoadById(merchId.Value);
+            return merchId.HasValue ? GetOrLoadById(merchId.Value) : null;
         }
 
         /// <summary>
@@ -176,7 +219,7 @@ namespace PowerLmsServer.Managers
                     if (org.ParentId is null)
                     {
                         merchantId = org.MerchantId;
-                        return true;
+                        return merchantId.HasValue;
                     }
                     org = dbContext.PlOrganizations.Find(org.ParentId);
                 }
@@ -208,5 +251,16 @@ namespace PowerLmsServer.Managers
             return TryGetIdByOrgOrMerchantId(role.OrgId.Value, out merchantId);
         }
         #endregion 用户相关
+
+        /// <summary>
+        /// 获取指定商户的缓存项。
+        /// </summary>
+        /// <param name="merchantId">商户ID。</param>
+        /// <returns>缓存项，如果不存在则返回null。</returns>
+        public PlMerchant GetCacheItemById(Guid merchantId)
+        {
+            var cacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId<PlMerchant>(merchantId);
+            return _MemoryCache.TryGetValue<PlMerchant>(cacheKey, out var result) ? result : null;
+        }
     }
 }

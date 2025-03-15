@@ -57,7 +57,6 @@ namespace PowerLmsWebApi.Controllers
         readonly BusinessLogicManager _BusinessLogic;
 
         #region 业务总表
-
         /// <summary>
         /// 获取全部业务总表。
         /// </summary>
@@ -82,8 +81,9 @@ namespace PowerLmsWebApi.Controllers
             var r = coll.AsEnumerable();    //设计备注：如果结果集小则没问题；如果结果集大虽然这导致巨大内存消耗，但在此问题规模下，用内存替换cpu消耗是合理的置换代价
             if (!_AuthorizationManager.Demand(out err, "F.2"))  //若无通用查看权限
             {
-                var orgs = _OrganizationManager.GetOrLoadCurrentOrgsCacheItemByUser(context.User);
-                var orgIds = orgs.Data.Select(c => c.Key).ToArray();    //所有机构Id集合
+                // 修改这一行，使用正确的方法名称
+                var orgs = _OrganizationManager.GetOrLoadCurrentOrgsByUser(context.User);
+                var orgIds = orgs.Keys.ToArray();    //所有机构Id集合
                 var userIds = _DbContext.AccountPlOrganizations.Where(c => orgIds.Contains(c.OrgId)).Select(c => c.UserId).Distinct().ToHashSet();   //所有相关人Id集合
                 var d0Func = GetFunc("D0.1.1.1", ProjectContent.AeId);
                 var d1Func = GetFunc("D1.1.1.1", ProjectContent.AiId);
@@ -124,7 +124,6 @@ namespace PowerLmsWebApi.Controllers
             var prb = _EntityManager.GetAll(r.AsQueryable(), model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
-
         }
 
         /// <summary>
@@ -805,8 +804,9 @@ namespace PowerLmsWebApi.Controllers
             var r = coll.AsEnumerable();
             if (!_AuthorizationManager.Demand(out err, "F.2.4.2"))  //若无通用查看权限
             {
-                var orgs = _OrganizationManager.GetOrLoadCurrentOrgsCacheItemByUser(context.User);
-                var orgIds = orgs.Data.Select(c => c.Key).ToArray();    //所有机构Id集合
+                // 修改这一行，使用正确的方法名称
+                var orgs = _OrganizationManager.GetOrLoadCurrentOrgsByUser(context.User);
+                var orgIds = orgs.Keys.ToArray();    //所有机构Id集合
                 var userIds = _DbContext.AccountPlOrganizations.Where(c => orgIds.Contains(c.OrgId)).Select(c => c.UserId).Distinct().ToHashSet();   //所有相关人Id集合
                 var jobIds = r.Select(c => c.JobId).Distinct().ToHashSet();
                 var jobDic = _DbContext.PlJobs.Where(c => jobIds.Contains(c.Id)).AsEnumerable().ToDictionary(c => c.Id);
@@ -895,10 +895,11 @@ namespace PowerLmsWebApi.Controllers
             var r = collBase.AsEnumerable();
             if (!_AuthorizationManager.Demand(out err, "F.2.4.2"))  //若无通用查看权限
             {
-                var orgs = _OrganizationManager.GetOrLoadCurrentOrgsCacheItemByUser(context.User);
-                var orgIds = orgs.Data.Select(c => c.Key).ToArray();    //所有机构Id集合
+                // 修改这一行，使用正确的方法名称
+                var orgs = _OrganizationManager.GetOrLoadCurrentOrgsByUser(context.User);
+                var orgIds = orgs.Keys.ToArray();    //所有机构Id集合
                 var userIds = _DbContext.AccountPlOrganizations.Where(c => orgIds.Contains(c.OrgId)).Select(c => c.UserId).Distinct().ToHashSet();   //所有相关人Id集合
-                //var jobIds = r.Select(c => c.JobId).Distinct().ToHashSet();
+                                                                                                                                                     //var jobIds = r.Select(c => c.JobId).Distinct().ToHashSet();
                 var jobDic = _DbContext.PlJobs.Where(c => jobIds.Contains(c.Id)).AsEnumerable().ToDictionary(c => c.Id);
                 var d0Func = GetFunc("D0.6.2", ProjectContent.AeId);
                 var d1Func = GetFunc("D1.6.2", ProjectContent.AiId);

@@ -83,26 +83,6 @@ namespace PowerLmsWebApi.Controllers
             coll = EfHelper.GenerateWhereAnd(coll, conditional);
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
-            //foreach (var item in conditional)
-            //    if (string.Equals(item.Key, "name", StringComparison.OrdinalIgnoreCase))
-            //    {
-            //        coll = coll.Where(c => c.Name.Name.Contains(item.Value));
-            //    }
-            //    else if (string.Equals(item.Key, "Id", StringComparison.OrdinalIgnoreCase))
-            //    {
-            //        if (Guid.TryParse(item.Value, out var id))
-            //            coll = coll.Where(c => c.Id == id);
-            //    }
-            //    else if (string.Equals(item.Key, "ShortName", StringComparison.OrdinalIgnoreCase))
-            //    {
-            //        coll = coll.Where(c => c.Name.ShortName.Contains(item.Value));
-            //    }
-            //    else if (string.Equals(item.Key, "displayname", StringComparison.OrdinalIgnoreCase))
-            //    {
-            //        coll = coll.Where(c => c.Name.DisplayName.Contains(item.Value));
-            //    }
-            //var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
-            _Mapper.Map(prb, result);
             return result;
         }
 
@@ -130,12 +110,12 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.SaveChanges();
             result.Id = model.Item.Id;
 
-
-            if (model.Item.OrgId.HasValue)
+            // 更新以适应新的缓存管理接口
+            if (model.Item.OrgId.HasValue && _MerchantManager.TryGetIdByOrgOrMerchantId(model.Item.OrgId.Value, out var merchId) && merchId.HasValue)
             {
-                if (_MerchantManager.TryGetIdByOrgOrMerchantId(model.Item.OrgId.Value, out var merchId))
-                    _RoleManager.GetRolesCacheItemByMerchantId(merchId.Value)?.CancellationTokenSource.Cancel();
+                _RoleManager.InvalidateRoleCache(merchId.Value);
             }
+
             return result;
         }
 
@@ -154,7 +134,7 @@ namespace PowerLmsWebApi.Controllers
             var result = new ModifyPlRoleReturnDto();
             var newOrgId = model.PlRole.OrgId;
             var oldRole = _DbContext.PlRoles.Find(model.PlRole.Id);
-            var oldOrgId = oldRole.OrgId;
+            var oldOrgId = oldRole?.OrgId;
 
             if (!_EntityManager.Modify(new[] { model.PlRole })) return NotFound();
             var newRole = _DbContext.PlRoles.Find(model.PlRole.Id);
@@ -162,10 +142,17 @@ namespace PowerLmsWebApi.Controllers
 
             _DbContext.SaveChanges();
 
-            if (oldOrgId.HasValue && _MerchantManager.GetIdByRoleId(oldOrgId.Value, out var oldMerchId))
-                _MerchantManager.GetCacheItemById(oldMerchId.Value)?.CancellationTokenSource.Cancel();
-            if (newOrgId.HasValue && _MerchantManager.GetIdByRoleId(newOrgId.Value, out var newMerchId))
-                _MerchantManager.GetCacheItemById(newMerchId.Value)?.CancellationTokenSource.Cancel();
+            // 更新以适应新的缓存管理接口
+            if (oldOrgId.HasValue && _MerchantManager.GetIdByRoleId(oldOrgId.Value, out var oldMerchId) && oldMerchId.HasValue)
+            {
+                _MerchantManager.InvalidateCache(oldMerchId.Value);
+            }
+
+            if (newOrgId.HasValue && _MerchantManager.GetIdByRoleId(newOrgId.Value, out var newMerchId) && newMerchId.HasValue)
+            {
+                _MerchantManager.InvalidateCache(newMerchId.Value);
+            }
+
             return result;
         }
 
@@ -187,18 +174,25 @@ namespace PowerLmsWebApi.Controllers
             var dbSet = _DbContext.PlRoles;
             var item = dbSet.Find(id);
             if (item is null) return BadRequest();
+
             Guid? merchantId = null;
             if (item.OrgId.HasValue)
+            {
                 _MerchantManager.TryGetIdByOrgOrMerchantId(item.OrgId.Value, out merchantId);
+            }
+
             _EntityManager.Remove(item);
             _DbContext.SaveChanges();
 
+            // 更新以适应新的缓存管理接口
             if (merchantId.HasValue)
-                _OrganizationManager.GetOrgsCacheItemByMerchantId(merchantId.Value)?.CancellationTokenSource.Cancel();
+            {
+                _OrganizationManager.InvalidateOrgCache(merchantId.Value);
+            }
+
             return result;
         }
         #endregion 角色的CRUD
-
         #region 权限的CRUD
 
         /// <summary>
@@ -251,7 +245,10 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.PlPermissions.Add(model.PlPermission);
             _DbContext.SaveChanges();
             result.Id = model.PlPermission.Name;
-            _PermissionManager.GetPermission()?.CancellationTokenSource.Cancel();
+
+            // 更新以适应新的缓存管理接口
+            _PermissionManager.InvalidatePermissionCache();
+
             return result;
         }
 
@@ -288,7 +285,10 @@ namespace PowerLmsWebApi.Controllers
             }
 
             _DbContext.SaveChanges();
-            _PermissionManager.GetPermission()?.CancellationTokenSource.Cancel();
+
+            // 更新以适应新的缓存管理接口
+            _PermissionManager.InvalidatePermissionCache();
+
             return result;
         }
 
@@ -311,11 +311,13 @@ namespace PowerLmsWebApi.Controllers
             if (item is null) return BadRequest();
             _EntityManager.Remove(item);
             _DbContext.SaveChanges();
-            _PermissionManager.GetPermission()?.CancellationTokenSource.Cancel();
+
+            // 更新以适应新的缓存管理接口
+            _PermissionManager.InvalidatePermissionCache();
+
             return result;
         }
         #endregion 权限的CRUD
-
         #region 用户-角色关系的CRUD
 
         /// <summary>
@@ -366,7 +368,9 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.PlAccountRoles.Add(model.AccountRole);
             _DbContext.SaveChanges();
 
-            _RoleManager.GetCurrentRolesCacheItem(model.AccountRole.UserId)?.CancellationTokenSource.Cancel();
+            // 更新以适应新的缓存管理接口
+            _RoleManager.InvalidateUserRolesCache(model.AccountRole.UserId);
+
             return result;
         }
 
@@ -389,7 +393,10 @@ namespace PowerLmsWebApi.Controllers
             if (item is null) return BadRequest();
             _EntityManager.Remove(item);
             _DbContext.SaveChanges();
-            _RoleManager.GetCurrentRolesCacheItem(model.UserId)?.CancellationTokenSource.Cancel();
+
+            // 更新以适应新的缓存管理接口
+            _RoleManager.InvalidateUserRolesCache(model.UserId);
+
             return result;
         }
         #endregion 用户-角色关系的CRUD
@@ -445,7 +452,12 @@ namespace PowerLmsWebApi.Controllers
 
             var userIds = _DbContext.PlAccountRoles.Where(c => model.RolePermission.RoleId == c.RoleId).Select(c => c.UserId).ToArray();
 
-            userIds.ForEach(userId => _RoleManager.GetCurrentRolesCacheItem(userId)?.CancellationTokenSource.Cancel());
+            // 更新以适应新的缓存管理接口
+            foreach (var userId in userIds)
+            {
+                _RoleManager.InvalidateUserRolesCache(userId);
+            }
+
             return result;
         }
 
@@ -468,8 +480,15 @@ namespace PowerLmsWebApi.Controllers
             if (item is null) return BadRequest();
             _EntityManager.Remove(item);
             _DbContext.SaveChanges();
+
             var userIds = _DbContext.PlAccountRoles.Where(c => model.RoleId == c.RoleId).Select(c => c.UserId).ToArray();
-            userIds.ForEach(c => _PermissionManager.GetCurrentPermissions(c)?.CancellationTokenSource.Cancel());
+
+            // 更新以适应新的缓存管理接口
+            foreach (var userId in userIds)
+            {
+                _PermissionManager.InvalidateUserPermissionsCache(userId);
+            }
+
             return result;
         }
         #endregion 角色-权限关系的CRUD
@@ -500,7 +519,11 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.PlAccountRoles.AddRange(adds.Select(c => new AccountRole { RoleId = model.RoleId, UserId = c }));
             _DbContext.SaveChanges();
 
-            model.UserIds.ForEach(c => _PermissionManager.GetCurrentPermissions(c)?.CancellationTokenSource.Cancel());
+            // 更新以适应新的缓存管理接口
+            foreach (var userId in model.UserIds)
+            {
+                _PermissionManager.InvalidateUserPermissionsCache(userId);
+            }
 
             return result;
         }
@@ -529,8 +552,15 @@ namespace PowerLmsWebApi.Controllers
             var adds = ids.Except(setRela.Where(c => c.RoleId == model.RoleId).Select(c => c.PermissionId).AsEnumerable()).ToArray();
             setRela.AddRange(adds.Select(c => new RolePermission { RoleId = model.RoleId, PermissionId = c, CreateBy = context.User.Id }));
             _DbContext.SaveChanges();
+
             var userIds = _DbContext.PlAccountRoles.Where(c => model.RoleId == c.RoleId).Select(c => c.UserId).ToArray();
-            userIds.ForEach(userId => _AccountManager.GetCacheItemById(userId)?.CancellationTokenSource?.Cancel());
+
+            // 更新以适应新的缓存管理接口
+            foreach (var userId in userIds)
+            {
+                _AccountManager.InvalidateUserCache(userId);
+            }
+
             return result;
         }
 
@@ -547,10 +577,15 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPermissionsInCurrentUserReturnDto();
-            result.Permissions.AddRange(_PermissionManager.GetOrLoadCurrentPermissionsByUser(context.User).Data.Values);
+
+            // 更新以适应新的权限管理接口获取方式
+            var permissions = _PermissionManager.GetOrLoadUserCurrentPermissions(context.User);
+            if (permissions != null)
+            {
+                result.Permissions.AddRange(permissions.Values);
+            }
+
             return result;
         }
     }
-
-
 }

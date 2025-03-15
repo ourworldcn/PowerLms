@@ -52,8 +52,8 @@ namespace PowerLmsServer.Managers
         /// <returns></returns>
         public ConcurrentDictionary<Guid, PlRole> LoadByMerchantId(Guid merchId, ref PowerLmsUserDbContext dbContext)
         {
-            var dic = _OrganizationManager.GetOrLoadByMerchantId(merchId);
-            var orgIds = dic.Data.Keys;
+            var orgs = _OrganizationManager.GetOrLoadByMerchantId(merchId);
+            var orgIds = orgs.Keys;
             dbContext ??= _DbContextFactory.CreateDbContext();
             lock (dbContext)
             {
@@ -63,57 +63,99 @@ namespace PowerLmsServer.Managers
         }
 
         /// <summary>
-        /// 获取指定商户下所有角色的缓存项。
+        /// 获取指定商户下所有角色。
         /// </summary>
         /// <param name="merchId"></param>
-        /// <returns>指定商户下所有角色的缓存项，如果没找到则返回null。</returns>
-        public OwCacheItem<ConcurrentDictionary<Guid, PlRole>> GetRolesCacheItemByMerchantId(Guid merchId)
+        /// <returns>指定商户下所有角色，如果没找到则返回null。</returns>
+        public ConcurrentDictionary<Guid, PlRole> GetRolesByMerchantId(Guid merchId)
         {
-            var result = _Cache.Get<OwCacheItem<ConcurrentDictionary<Guid, PlRole>>>(OwCacheHelper.GetCacheKeyFromId(merchId, ".Roles"));
-            return result;
+            string cacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId(merchId, ".Roles");
+            return _Cache.TryGetValue(cacheKey, out ConcurrentDictionary<Guid, PlRole> roles) ? roles : null;
         }
 
         /// <summary>
-        /// 获取或加载商户下所有角色的缓存项。
+        /// 获取或加载商户下所有角色。
         /// </summary>
         /// <param name="merchId">商户Id。</param>
-        /// <returns></returns>
-        public OwCacheItem<ConcurrentDictionary<Guid, PlRole>> GetOrLoadRolesCacheItemByMerchantId(Guid merchId)
+        /// <returns>商户下所有角色。</returns>
+        public ConcurrentDictionary<Guid, PlRole> GetOrLoadRolesByMerchantId(Guid merchId)
         {
-            var result = _Cache.GetOrCreate(OwCacheHelper.GetCacheKeyFromId(merchId, ".Roles"), entry =>
+            string cacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId(merchId, ".Roles");
+
+            return _Cache.GetOrCreate(cacheKey, entry =>
             {
-                var merchCi = _MerchantManager.GetOrLoadById(merchId);
-                var orgCi = _OrganizationManager.GetOrLoadByMerchantId(merchCi.Data.Id);
-                var db = merchCi.Data.DbContext;
-                var r = new OwCacheItem<ConcurrentDictionary<Guid, PlRole>>
-                {
-                    Data = LoadByMerchantId(merchId, ref db),
-                }.SetCancellations(new CancellationTokenSource(), merchCi.ChangeToken, orgCi.ChangeToken);
-                entry.AddExpirationToken(r.ChangeToken);
-                return r;
+                // 获取商户和组织信息
+                var merchant = _MerchantManager.GetOrLoadById(merchId);
+                if (merchant == null) return new ConcurrentDictionary<Guid, PlRole>();
+
+                var orgs = _OrganizationManager.GetOrLoadByMerchantId(merchId);
+
+                // 加载角色数据
+                PowerLmsUserDbContext db = merchant.DbContext;
+                var rolesData = LoadByMerchantId(merchId, ref db);
+
+                // 配置缓存条目
+                ConfigureRolesCacheEntry(entry, rolesData);
+
+                return rolesData;
             });
-            return result;
+        }
+
+        /// <summary>
+        /// 使指定商户ID的角色缓存失效。
+        /// </summary>
+        /// <param name="merchantId">商户ID。</param>
+        /// <returns>如果成功使缓存失效则返回true，否则返回false</returns>
+        public bool InvalidateRoleCache(Guid merchantId)
+        {
+            string cacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId(merchantId, ".Roles");
+            return _Cache.CancelSource(cacheKey);
+        }
+
+        /// <summary>
+        /// 配置角色缓存条目属性
+        /// </summary>
+        /// <param name="entry">缓存条目</param>
+        /// <param name="rolesData">角色数据</param>
+        private void ConfigureRolesCacheEntry(ICacheEntry entry, ConcurrentDictionary<Guid, PlRole> rolesData)
+        {
+            // 设置滑动过期时间
+            entry.SetSlidingExpiration(TimeSpan.FromMinutes(30));
+
+            // 使用OwMemoryCacheExtensions注册取消令牌
+            entry.RegisterCancellationToken(_Cache);
         }
 
         /// <summary>
         /// 返回指定用户当前登录公司的所有角色。
         /// </summary>
         /// <param name="user"></param>
-        /// <returns>用户当前登录公司的所有角色缓存项，如果没找到则返回null。</returns>
-        public OwCacheItem<ConcurrentDictionary<Guid, PlRole>> GetCurrentRolesCacheItem(Account user)
+        /// <returns>用户当前登录公司的所有角色，如果没找到则返回null。</returns>
+        public ConcurrentDictionary<Guid, PlRole> GetCurrentRoles(Account user)
         {
-            return GetCurrentRolesCacheItem(user.Id);
+            return GetCurrentRoles(user.Id);
         }
 
         /// <summary>
-        /// 返回指定用户当前登录公司的所有组织机构。
+        /// 返回指定用户当前登录公司的所有角色。
         /// </summary>
         /// <param name="userId"></param>
-        /// <returns>用户当前登录公司的所有组织机构缓存项，如果没找到则返回null。</returns>
-        public OwCacheItem<ConcurrentDictionary<Guid, PlRole>> GetCurrentRolesCacheItem(Guid userId)
+        /// <returns>用户当前登录公司的所有角色，如果没找到则返回null。</returns>
+        public ConcurrentDictionary<Guid, PlRole> GetCurrentRoles(Guid userId)
         {
-            var result = _Cache.Get<OwCacheItem<ConcurrentDictionary<Guid, PlRole>>>(OwCacheHelper.GetCacheKeyFromId(userId, ".CurrentRoles"));
-            return result;
+            string cacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId(userId, ".CurrentRoles");
+            return _Cache.TryGetValue(cacheKey, out ConcurrentDictionary<Guid, PlRole> roles) ? roles : null;
+        }
+
+        /// <summary>
+        /// 使指定用户ID的角色缓存失效。
+        /// </summary>
+        /// <param name="userId">用户ID。</param>
+        /// <returns>如果成功使缓存失效则返回true，否则返回false</returns>
+        public bool InvalidateUserRolesCache(Guid userId)
+        {
+            string cacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId(userId, ".CurrentRoles");
+            return _Cache.CancelSource(cacheKey);
         }
 
         /// <summary>
@@ -123,16 +165,19 @@ namespace PowerLmsServer.Managers
         /// <param name="db"></param>
         public ConcurrentDictionary<Guid, PlRole> LoadCurrentRolesByUser(Account user, ref PowerLmsUserDbContext db)
         {
-            var orgs = _OrganizationManager.GetOrLoadCurrentOrgsCacheItemByUser(user);   //用户登录的有效机构集合
+            var orgs = _OrganizationManager.GetOrLoadCurrentOrgsByUser(user);   // 用户登录的有效机构集合
             var merchant = _MerchantManager.GetOrLoadByUser(user);
-            var allRoles = GetOrLoadRolesCacheItemByMerchantId(merchant.Data.Id);   //商户下所有角色
+            if (merchant == null) return new ConcurrentDictionary<Guid, PlRole>();
+
+            var allRoles = GetOrLoadRolesByMerchantId(merchant.Id);   // 商户下所有角色
 
             db ??= _DbContextFactory.CreateDbContext();
             HashSet<Guid> hsRoleIds;
             lock (db)
-                hsRoleIds = db.PlAccountRoles.Where(c => c.UserId == user.Id).Select(c => c.RoleId).ToHashSet(); //所有直属角色Id集合
-            var coll = allRoles.Data.Where(c => c.Value.OrgId.HasValue && hsRoleIds.Contains(c.Key)   //直属角色
-                && orgs.Data.ContainsKey(c.Value.OrgId.Value));    //属于有效机构
+                hsRoleIds = db.PlAccountRoles.Where(c => c.UserId == user.Id).Select(c => c.RoleId).ToHashSet(); // 所有直属角色Id集合
+
+            var coll = allRoles.Where(c => c.Value.OrgId.HasValue && hsRoleIds.Contains(c.Key)   // 直属角色
+                && orgs.ContainsKey(c.Value.OrgId.Value));    // 属于有效机构
 
             return new ConcurrentDictionary<Guid, PlRole>(coll);
         }
@@ -142,25 +187,35 @@ namespace PowerLmsServer.Managers
         /// </summary>
         /// <param name="user"></param>
         /// <returns>所有当前有效角色的字典。未登录到公司则返回空字典。</returns>
-        public OwCacheItem<ConcurrentDictionary<Guid, PlRole>> GetOrLoadCurrentRolesCacheItemByUser(Account user)
+        public ConcurrentDictionary<Guid, PlRole> GetOrLoadCurrentRolesByUser(Account user)
         {
-            var result = _Cache.GetOrCreate(OwCacheHelper.GetCacheKeyFromId(user.Id, ".CurrentRoles"), entry =>
+            string cacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId(user.Id, ".CurrentRoles");
+
+            return _Cache.GetOrCreate(cacheKey, entry =>
             {
-                var db = user.DbContext;
-                var r = new OwCacheItem<ConcurrentDictionary<Guid, PlRole>>
-                {
-                    Data = LoadCurrentRolesByUser(user, ref db),
-                };
-                var orgs = _OrganizationManager.GetOrLoadCurrentOrgsCacheItemByUser(user);
-                var merch = _MerchantManager.GetOrLoadByUser(user);
-                var roles = GetOrLoadRolesCacheItemByMerchantId(merch.Data.Id);
-                r.SetCancellations(new CancellationTokenSource(), orgs.ChangeToken, roles.ChangeToken);
-                entry.AddExpirationToken(r.ChangeToken);
-                return r;
+                // 加载用户角色数据
+                PowerLmsUserDbContext db = user.DbContext;
+                var rolesData = LoadCurrentRolesByUser(user, ref db);
+
+                // 配置缓存条目
+                ConfigureCurrentRolesCacheEntry(entry);
+
+                return rolesData;
             });
-            return result;
         }
 
+        /// <summary>
+        /// 配置当前用户角色缓存条目属性
+        /// </summary>
+        /// <param name="entry">缓存条目</param>
+        private void ConfigureCurrentRolesCacheEntry(ICacheEntry entry)
+        {
+            // 设置滑动过期时间
+            entry.SetSlidingExpiration(TimeSpan.FromMinutes(15));
+
+            // 使用OwMemoryCacheExtensions注册取消令牌
+            entry.RegisterCancellationToken(_Cache);
+        }
     }
 
 }

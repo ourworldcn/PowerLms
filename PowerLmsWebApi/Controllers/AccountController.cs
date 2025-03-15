@@ -39,9 +39,10 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="authorizationManager"></param>
         /// <param name="merchantManager"></param>
         /// <param name="roleManager"></param>
+        /// <param name="appLogger"></param>
         public AccountController(PowerLmsUserDbContext dbContext, AccountManager accountManager, IServiceProvider serviceProvider, IMapper mapper,
             EntityManager entityManager, OrganizationManager organizationManager, CaptchaManager captchaManager, AuthorizationManager authorizationManager,
-            MerchantManager merchantManager, RoleManager roleManager, OwSqlAppLogger appLogger)
+            MerchantManager merchantManager, RoleManager roleManager, OwSqlAppLogger appLogger, IMemoryCache cache)
         {
             _DbContext = dbContext;
             _AccountManager = accountManager;
@@ -54,6 +55,7 @@ namespace PowerLmsWebApi.Controllers
             _MerchantManager = merchantManager;
             _RoleManager = roleManager;
             _AppLogger = appLogger;
+            _Cache = cache;
         }
 
         readonly IServiceProvider _ServiceProvider;
@@ -67,6 +69,7 @@ namespace PowerLmsWebApi.Controllers
         readonly MerchantManager _MerchantManager;
         readonly RoleManager _RoleManager;
         OwSqlAppLogger _AppLogger;
+        IMemoryCache _Cache;
 #if DEBUG
         /*
         /// <summary>
@@ -106,7 +109,7 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.IsMerchantAdmin(context.User) && _MerchantManager.GetIdByUserId(context.User.Id, out var merchantId))
             {
                 var orgs = _OrganizationManager.GetOrLoadByMerchantId(merchantId.Value);
-                var tmp = orgs.Data.Keys;    //所有机构Id
+                var tmp = orgs.Keys;    // 修改: 移除 .Data
                 if (merchantId.HasValue) tmp = tmp.Append(merchantId.Value).ToArray();
                 var userIds = _DbContext.AccountPlOrganizations.Where(c => tmp.Contains(c.OrgId)).Select(c => c.UserId).Distinct().ToArray();
                 coll = coll.Where(c => userIds.Contains(c.Id));
@@ -196,10 +199,9 @@ namespace PowerLmsWebApi.Controllers
             if (user is null) return BadRequest("用户名或密码不正确。");
             if (!user.IsPwd(model.Pwd)) return BadRequest("用户名或密码不正确。");
             //找到合法用户
-            if (_AccountManager.GetCacheItemById(user.Id) is OwCacheItem<Account> oldUserCi)
-            {
-                oldUserCi.CancellationTokenSource?.Cancel();
-            }
+            // 修改: 使用新的缓存取消方法
+            _Cache.CancelSource(OwMemoryCacheExtensions.GetCacheKeyFromId<Account>(user.Id));
+
             result.Token = Guid.NewGuid();
             user.LastModifyDateTimeUtc = OwHelper.WorldNow;
             user.Token = result.Token;
@@ -404,17 +406,22 @@ namespace PowerLmsWebApi.Controllers
             {
                 if (!_MerchantManager.TryGetIdByOrgOrMerchantId(model.CurrentOrgId, out var merchantId)) return BadRequest("错误的当前组织机构Id。");
                 var orgs = _OrganizationManager.GetOrLoadByMerchantId(merchantId.Value);
-                if (!orgs.Data.TryGetValue(model.CurrentOrgId, out var currentOrg)) return BadRequest("错误的当前组织机构Id。");
+                if (!orgs.TryGetValue(model.CurrentOrgId, out var currentOrg)) return BadRequest("错误的当前组织机构Id。");
                 if (currentOrg.Otc != 2)
                     return BadRequest("错误的当前组织机构Id——不是公司。");
                 context.User.OrgId = model.CurrentOrgId;
-                _OrganizationManager.GetOrLoadCurrentOrgsCacheItemByUser(context.User)?.CancellationTokenSource?.Cancel();
+
+                // 取消当前用户的组织机构缓存
+                _Cache.Remove(OwMemoryCacheExtensions.GetCacheKeyFromId(context.User.Id, ".CurrentOrgs"));
             }
+
             context.User.CurrentLanguageTag = model.LanguageTag;
             context.Nop();
             context.SaveChanges();
 
-            result.Permissions.AddRange(permissionManager.GetOrLoadCurrentPermissionsByUser(context.User).Data.Values);
+            // 获取用户权限并添加到结果中
+            var userPermissions = permissionManager.GetOrLoadUserCurrentPermissions(context.User);
+            result.Permissions.AddRange(userPermissions.Values);
             return result;
         }
 
@@ -474,9 +481,13 @@ namespace PowerLmsWebApi.Controllers
             if (!context.User.IsAdmin()) return StatusCode((int)HttpStatusCode.Forbidden, "只有超管或商管可以使用此功能");
             if (_DbContext.Accounts.FirstOrDefault(c => c.Id == model.Id) is not Account tmpUser)
                 return BadRequest("指定账号不存在。");
-            var userCi = _AccountManager.GetOrLoadCacheItemById(tmpUser.Id);
-            if (context.User.IsSuperAdmin && !userCi.Data.IsMerchantAdmin) return BadRequest("超管不能重置普通用户的密码。");
-            else if (context.User.IsMerchantAdmin && userCi.Data.IsAdmin()) return BadRequest("商管只能重置普通用户的密码。");
+
+            // 修改: 使用 GetOrLoadAccountById 替代 GetOrLoadCacheItemById
+            var targetUser = _AccountManager.GetOrLoadAccountById(tmpUser.Id);
+            if (targetUser == null) return BadRequest("指定账号不存在。");
+
+            if (context.User.IsSuperAdmin && !targetUser.IsMerchantAdmin) return BadRequest("超管不能重置普通用户的密码。");
+            else if (context.User.IsMerchantAdmin && targetUser.IsAdmin()) return BadRequest("商管只能重置普通用户的密码。");
 
             var result = new ResetPwdReturnDto { };
             //生成密码
@@ -487,9 +498,9 @@ namespace PowerLmsWebApi.Controllers
             }
             result.Pwd = new string(span);
 
-            userCi.Data.SetPwd(result.Pwd);
-            lock (userCi.Data.DbContext)
-                userCi.Data.DbContext.SaveChanges();
+            targetUser.SetPwd(result.Pwd);
+            lock (targetUser.DbContext)
+                targetUser.DbContext.SaveChanges();
             return result;
         }
 
@@ -514,7 +525,8 @@ namespace PowerLmsWebApi.Controllers
 
             _MerchantManager.GetIdByUserId(model.UserId, out var merchId);  //获取商户Id
 
-            var orgs = merchId.HasValue ? _OrganizationManager.GetOrgsCacheItemByMerchantId(merchId.Value) : null;
+            // 修改: 获取组织机构并取消缓存
+            var cacheKey = merchId.HasValue ? OwMemoryCacheExtensions.GetCacheKeyFromId(merchId.Value, ".Orgs") : null;
 
             var removes = _DbContext.AccountPlOrganizations.Where(c => c.UserId == model.UserId && !ids.Contains(c.OrgId));
             _DbContext.AccountPlOrganizations.RemoveRange(removes);
@@ -523,7 +535,10 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.AccountPlOrganizations.AddRange(adds.Select(c => new AccountPlOrganization { OrgId = c, UserId = model.UserId }));
             _DbContext.SaveChanges();
 
-            orgs?.CancellationTokenSource.Cancel();
+            // 取消相关缓存
+            if (cacheKey != null)
+                _Cache.CancelSource(cacheKey);
+
             return result;
         }
 
@@ -548,8 +563,12 @@ namespace PowerLmsWebApi.Controllers
             var count = _DbContext.PlRoles.Count(c => ids.Contains(c.Id));
             if (count != ids.Count) return BadRequest($"{nameof(model.RoleIds)}中至少有一个组织角色不存在。");
 
-            if (_AccountManager.GetOrLoadCacheItemById(model.UserId) is not OwCacheItem<Account> account) return BadRequest($"{nameof(model.UserId)}指定用户不存在。");
-            var rls = _RoleManager.GetCurrentRolesCacheItem(account.Data);
+            // 修改: 使用 GetOrLoadAccountById 替代 GetOrLoadCacheItemById
+            var account = _AccountManager.GetOrLoadAccountById(model.UserId);
+            if (account == null) return BadRequest($"{nameof(model.UserId)}指定用户不存在。");
+
+            // 修改: 获取角色缓存键
+            var cacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId(account.Id, ".CurrentRoles");
 
             var removes = _DbContext.PlAccountRoles.Where(c => c.UserId == model.UserId && !ids.Contains(c.RoleId));
             _DbContext.PlAccountRoles.RemoveRange(removes);
@@ -558,7 +577,9 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.PlAccountRoles.AddRange(adds.Select(c => new AccountRole { RoleId = c, UserId = model.UserId }));
             _DbContext.SaveChanges();
 
-            rls?.CancellationTokenSource?.Cancel();
+            // 取消相关缓存
+            _Cache.CancelSource(cacheKey);
+
             return result;
         }
 

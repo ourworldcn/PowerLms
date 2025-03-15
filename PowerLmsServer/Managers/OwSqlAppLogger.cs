@@ -136,7 +136,7 @@ namespace PowerLmsServer.Managers
             var displayName = owContext?.User?.DisplayName ?? "Unknown";
 
             var merchantManager = _ServiceProvider.GetService<MerchantManager>();
-            var merchant = merchantManager?.GetOrLoadByUser(owContext?.User)?.Data;
+            var merchant = merchantManager?.GetOrLoadByUser(owContext?.User);
             var companyName = merchant?.Name.DisplayName ?? "Unknown";
 
             // 通用日志记录

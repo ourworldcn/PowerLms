@@ -45,7 +45,7 @@ namespace PowerLmsServer.Managers
         /// <summary>
         /// 是否拥有指定的一组权限。对于超管，商管总是返回true。
         /// </summary>
-        /// <param name="pIds"></param>
+        /// <param name="pIds">权限ID数组</param>
         /// <returns>拥有指定的所有权限则返回true,否则返回false。</returns>
         public bool Demand(params string[] pIds)
         {
@@ -55,28 +55,43 @@ namespace PowerLmsServer.Managers
         /// <summary>
         /// 测试是否拥有指定的权限
         /// </summary>
-        /// <param name="pIds"></param>
-        /// <param name="err"></param>
-        /// <returns></returns>
+        /// <param name="pIds">权限ID数组</param>
+        /// <param name="err">错误信息输出</param>
+        /// <returns>拥有所有指定权限返回true，否则返回false</returns>
         public bool Demand(out string err, params string[] pIds)
         {
             err = null;
             var user = _OwContext.User;
-            if (user.IsSuperAdmin) return true;
-            if (user.IsMerchantAdmin)
+
+            // 超级管理员和商户管理员默认拥有所有权限
+            if (user.IsSuperAdmin || user.IsMerchantAdmin)
             {
                 return true;
             }
-            var ci = _PermissionManager.GetOrLoadCurrentPermissionsByUser(user);
-            var firstNo = pIds.FirstOrDefault(c => !ci.Data.ContainsKey(c));
-            if (firstNo != null)
+
+            // 获取用户当前的权限集合
+            // 修复：使用正确的方法名称 GetOrLoadUserCurrentPermissions
+            var permissions = _PermissionManager.GetOrLoadUserCurrentPermissions(user);
+
+            // 检查用户是否拥有所有指定的权限
+            foreach (var permissionId in pIds)
             {
-                if (_PermissionManager.GetOrLoadPermission().Data.TryGetValue(firstNo, out var perm))
-                    err = $"缺少权限：{perm.Name}({perm.DisplayName})";
-                else
-                    err = $"试图断言一个不存在的权限项：{firstNo}";
-                return false;
+                if (!permissions.ContainsKey(permissionId))
+                {
+                    // 尝试获取权限的详细信息来提供更有用的错误消息
+                    var allPermissions = _PermissionManager.GetOrLoadPermissions();
+                    if (allPermissions.TryGetValue(permissionId, out var permission))
+                    {
+                        err = $"缺少权限：{permission.Name}({permission.DisplayName})";
+                    }
+                    else
+                    {
+                        err = $"试图断言一个不存在的权限项：{permissionId}";
+                    }
+                    return false;
+                }
             }
+
             return true;
         }
     }
