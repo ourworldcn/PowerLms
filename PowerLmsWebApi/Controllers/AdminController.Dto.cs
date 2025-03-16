@@ -691,4 +691,70 @@ namespace PowerLmsWebApi.Controllers
 
     #endregion 国家代码及相关
 
+    #region 税务发票渠道相关
+
+    /// <summary>
+    /// 获取指定ID的税务发票渠道的返回值封装类。
+    /// </summary>
+    public class GetTaxInvoiceChannelReturnDto : PagingReturnDtoBase<TaxInvoiceChannel>
+    {
+    }
+
+    /// <summary>
+    /// 增加税务发票渠道记录的功能参数封装类。
+    /// </summary>
+    public class AddTaxInvoiceChannelParamsDto : AddParamsDtoBase<TaxInvoiceChannel>
+    {
+    }
+
+    /// <summary>
+    /// 增加税务发票渠道记录的功能返回值封装类。
+    /// </summary>
+    public class AddTaxInvoiceChannelReturnDto : AddReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 修改税务发票渠道记录的功能参数封装类。
+    /// </summary>
+    public class ModifyTaxInvoiceChannelParamsDto : ModifyParamsDtoBase<TaxInvoiceChannel>
+    {
+    }
+
+    /// <summary>
+    /// 修改税务发票渠道记录的功能返回值封装类。
+    /// </summary>
+    public class ModifyTaxInvoiceChannelReturnDto : ModifyReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 删除税务发票渠道记录的功能参数封装类。
+    /// </summary>
+    public class RemoveTaxInvoiceChannelParamsDto : RemoveParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 删除税务发票渠道记录的功能返回值封装类。
+    /// </summary>
+    public class RemoveTaxInvoiceChannelReturnDto : RemoveReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 恢复指定被删除税务发票渠道记录的功能参数封装类。
+    /// </summary>
+    public class RestoreTaxInvoiceChannelParamsDto : RestoreParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 恢复指定被删除税务发票渠道记录的功能返回值封装类。
+    /// </summary>
+    public class RestoreTaxInvoiceChannelReturnDto : RestoreReturnDtoBase
+    {
+    }
+    #endregion 税务发票渠道相关
+
 }

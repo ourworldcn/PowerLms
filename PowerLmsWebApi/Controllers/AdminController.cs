@@ -2309,6 +2309,116 @@ namespace PowerLmsWebApi.Controllers
             _Mapper.Map(prb, result);
             return result;
         }
+
+        #region 税务发票渠道相关
+
+        /// <summary>
+        /// 获取指定ID的税务发票渠道。
+        /// </summary>
+        /// <param name="model">分页参数</param>
+        /// <param name="conditional">查询条件。支持通用查询接口。</param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        public ActionResult<GetTaxInvoiceChannelReturnDto> GetTaxInvoiceChannel([FromQuery] PagingParamsDtoBase model,
+            [FromQuery] Dictionary<string, string> conditional = null)
+        {
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetTaxInvoiceChannelReturnDto();
+
+            var dbSet = _DbContext.TaxInvoiceChannels;
+            var coll = dbSet.AsNoTracking();
+
+            // 使用通用查询条件处理方式
+            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+
+            // 应用排序
+            coll = coll.OrderBy(model.OrderFieldName, model.IsDesc);
+
+            // 获取分页结果
+            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
+            _Mapper.Map(prb, result);
+            return result;
+        }
+
+        /// <summary>
+        /// 增加税务发票渠道记录。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">参数错误。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
+        [HttpPost]
+        public ActionResult<AddTaxInvoiceChannelReturnDto> AddTaxInvoiceChannel(AddTaxInvoiceChannelParamsDto model)
+        {
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+
+            var result = new AddTaxInvoiceChannelReturnDto();
+            model.Item.GenerateNewId();
+            var id = model.Item.Id;
+            _DbContext.TaxInvoiceChannels.Add(model.Item);
+            _DbContext.SaveChanges();
+            result.Id = id;
+            return result;
+        }
+
+        /// <summary>
+        /// 修改税务发票渠道记录。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
+        [HttpPut]
+        public ActionResult<ModifyTaxInvoiceChannelReturnDto> ModifyTaxInvoiceChannel(ModifyTaxInvoiceChannelParamsDto model)
+        {
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            string err;
+            if (!_AuthorizationManager.Demand(out err, "B.11")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+
+            var result = new ModifyTaxInvoiceChannelReturnDto();
+            if (!_EntityManager.Modify(model.Items))
+            {
+                var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
+                return errResult;
+            }
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        /// <summary>
+        /// 删除税务发票渠道记录。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
+        [HttpDelete]
+        public ActionResult<RemoveTaxInvoiceChannelReturnDto> RemoveTaxInvoiceChannel(RemoveTaxInvoiceChannelParamsDto model)
+        {
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            string err;
+            if (!_AuthorizationManager.Demand(out err, "B.11")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+
+            var result = new RemoveTaxInvoiceChannelReturnDto();
+            var id = model.Id;
+            var dbSet = _DbContext.TaxInvoiceChannels;
+            var item = dbSet.Find(id);
+            if (item is null) return BadRequest();
+            _EntityManager.Remove(item);
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        #endregion 税务发票渠道相关
+
     }
 
     /// <summary>

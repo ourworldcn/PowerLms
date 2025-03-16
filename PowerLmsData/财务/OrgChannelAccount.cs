@@ -28,5 +28,12 @@ namespace PowerLms.Data
         [Key, Column(Order = 1)]
         [Comment("渠道账号Id")]
         public Guid ChannelAccountId { get; set; }
+
+        /// <summary>
+        /// 作为销方时发票抬头。
+        /// </summary>
+        [Comment("作为销方时发票抬头")]
+        [MaxLength(64)]
+        public string InvoiceHeader { get; set; }
     }
 }
