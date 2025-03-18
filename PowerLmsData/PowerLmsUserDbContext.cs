@@ -120,14 +120,16 @@ namespace PowerLmsServer.EfData
 
             modelBuilder.Entity<PlBusinessHeader>().HasKey(nameof(PlBusinessHeader.CustomerId), nameof(PlBusinessHeader.UserId), nameof(PlBusinessHeader.OrderTypeId));
 
+            // 配置联合主键
+            modelBuilder.Entity<OrgTaxChannelAccount>().HasKey(e => new { e.OrgId, e.ChannelAccountId }); // 设置联合主键
+
             #region 权限相关
             modelBuilder.Entity<AccountRole>().HasKey(nameof(AccountRole.UserId), nameof(AccountRole.RoleId));
             modelBuilder.Entity<RolePermission>().HasKey(nameof(RolePermission.RoleId), nameof(RolePermission.PermissionId));
-
             #endregion 权限相关
 
             base.OnModelCreating(modelBuilder);
-            
+
             #region 应用日志相关
             modelBuilder.Entity<OwAppLogStore>().HasData(
                 new OwAppLogStore
@@ -537,6 +539,11 @@ namespace PowerLmsServer.EfData
         /// 税务发票信息明细表。
         /// </summary>
         public DbSet<TaxInvoiceInfoItem> TaxInvoiceInfoItems { get; set; }
+
+        /// <summary>
+        /// 机构渠道账号表。
+        /// </summary>
+        public DbSet<OrgTaxChannelAccount> OrgTaxChannelAccounts { get; set; }
 
         #endregion 税务发票相关
     }

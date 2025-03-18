@@ -28,6 +28,7 @@ using Microsoft.Data.Sql;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 using NPOI.SS.Formula.Functions;
 using OW.EntityFrameworkCore;
+using System.Reflection.Emit;
 
 namespace PowerLmsServer.Managers
 {
@@ -154,7 +155,27 @@ namespace PowerLmsServer.Managers
                 Id = Guid.Parse("{AD6339C7-015E-482F-A8A1-29BB9E595750}"),
                 ParentId = inv.Id,
             });
-            //
+
+            #region 税务发票通道初始数据
+            db.AddOrUpdate(
+                new TaxInvoiceChannel
+                {
+                    Id = typeof(NuoNuoManager).GUID,
+                    DisplayName = "诺诺发票",
+                    InvoiceChannel = nameof(NuoNuoManager),
+                    InvoiceChannelParams = "{}",
+                });
+            db.AddOrUpdate(
+                new TaxInvoiceChannel
+                {
+                    Id = typeof(ManualInvoicingManager).GUID,
+                    DisplayName = "手工开票",
+                    InvoiceChannel = nameof(ManualInvoicingManager),
+                    InvoiceChannelParams = "{}",
+                }
+            );
+            #endregion 税务发票通道初始数据
+
             db.SaveChanges();
         }
 
@@ -220,25 +241,6 @@ namespace PowerLmsServer.Managers
 
             //sheet = workbook.GetSheet(nameof(db.DD_JobNumberRules));
             //_NpoiManager.WriteToDb(sheet, db, db.DD_JobNumberRules);
-
-            // 增加手工开票和诺诺开票两条数据
-            var manualInvoiceChannel = new TaxInvoiceChannel
-            {
-                Id = Guid.Parse("{A1E637AE-88B9-45F6-8925-4A9EF1B75F88}"),
-                DisplayName = "手工开票",
-                InvoiceChannel = "Manual",
-                InvoiceChannelParams = "{}"
-            };
-            db.AddOrUpdate(manualInvoiceChannel);
-
-            var nuonuoInvoiceChannel = new TaxInvoiceChannel
-            {
-                Id = Guid.Parse("{B2E637AE-88B9-45F6-8925-4A9EF1B75F88}"),
-                DisplayName = "诺诺开票",
-                InvoiceChannel = "Nuonuo",
-                InvoiceChannelParams = "{}"
-            };
-            db.AddOrUpdate(nuonuoInvoiceChannel);
 
             // 保存所有更改
             db.SaveChanges();

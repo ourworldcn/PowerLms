@@ -166,6 +166,7 @@ namespace PowerLmsWebApi.Controllers
 
         /// <summary>
         /// 登录。随后应调用Account/SetUserInfo。通过Account/GetAccountInfo可以获取自身信息。
+        /// 调用此接口后，需创建用户成功。否则无法正常使用。
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
@@ -176,10 +177,12 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<LoginReturnDto> Login(LoginParamsDto model)
         {
             var result = new LoginReturnDto();
+#if !DEBUG
             if (!_CaptchaManager.Verify(model.CaptchaId, model.Answer, _DbContext))
             {
                 return Conflict();
             }
+#endif
             var pwdHash = Account.GetPwdHash(model.Pwd);
             Account user;
             switch (model.EvidenceType)
@@ -198,26 +201,26 @@ namespace PowerLmsWebApi.Controllers
             }
             if (user is null) return BadRequest("用户名或密码不正确。");
             if (!user.IsPwd(model.Pwd)) return BadRequest("用户名或密码不正确。");
-            //找到合法用户
-            // 修改: 使用新的缓存取消方法
-            _Cache.CancelSource(OwMemoryCacheExtensions.GetCacheKeyFromId<Account>(user.Id));
+            //用Id加载或获取用户对象
+            user = _AccountManager.GetOrLoadById(user.Id);
+            if (user is null)
+                return BadRequest("用户数据结构损坏。");
 
             result.Token = Guid.NewGuid();
-            user.LastModifyDateTimeUtc = OwHelper.WorldNow;
-            user.Token = result.Token;
+            _AccountManager.UpdateToken(user.Id, result.Token);
             user.CurrentLanguageTag = model.LanguageTag;
             //设置直属组织机构信息。
             var orgIds = _DbContext.AccountPlOrganizations.Where(c => c.UserId == user.Id).Select(c => c.OrgId);
             result.Orgs.AddRange(_DbContext.PlOrganizations.Where(c => orgIds.Contains(c.Id)));
             result.User = user;
-            //_AccountManager.SetAccount(user);
+
             if (_MerchantManager.GetIdByUserId(user.Id, out var merchId)) //若找到商户Id
             {
                 result.MerchantId = merchId;
                 if (result.User.IsMerchantAdmin)
                     result.User.OrgId ??= merchId;
             }
-            _DbContext.SaveChanges();
+            //_DbContext.SaveChanges();
             if (_AccountManager.GetOrLoadContextByToken(result.Token, _ServiceProvider) is OwContext context)
                 _AppLogger.LogGeneralInfo("登录");
             return result;
@@ -483,7 +486,7 @@ namespace PowerLmsWebApi.Controllers
                 return BadRequest("指定账号不存在。");
 
             // 修改: 使用 GetOrLoadAccountById 替代 GetOrLoadCacheItemById
-            var targetUser = _AccountManager.GetOrLoadAccountById(tmpUser.Id);
+            var targetUser = _AccountManager.GetOrLoadById(tmpUser.Id);
             if (targetUser == null) return BadRequest("指定账号不存在。");
 
             if (context.User.IsSuperAdmin && !targetUser.IsMerchantAdmin) return BadRequest("超管不能重置普通用户的密码。");
@@ -564,7 +567,7 @@ namespace PowerLmsWebApi.Controllers
             if (count != ids.Count) return BadRequest($"{nameof(model.RoleIds)}中至少有一个组织角色不存在。");
 
             // 修改: 使用 GetOrLoadAccountById 替代 GetOrLoadCacheItemById
-            var account = _AccountManager.GetOrLoadAccountById(model.UserId);
+            var account = _AccountManager.GetOrLoadById(model.UserId);
             if (account == null) return BadRequest($"{nameof(model.UserId)}指定用户不存在。");
 
             // 修改: 获取角色缓存键

@@ -1,5 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.Extensions.DependencyInjection;
 using OW.Data;
+using OW.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -145,6 +148,12 @@ namespace PowerLms.Data
         [Comment("已经结算的金额。计算属性。")]
         [Precision(18, 2)]
         public decimal TotalSettledAmount { get; set; }
+
+        /// <summary>
+        /// 关联的发票Id。冗余属性。
+        /// </summary>
+        [Comment("关联的发票Id，冗余属性")]
+        public Guid? TaxInvoiceId { get; set; }
     }
 
     /// <summary>
@@ -277,6 +286,51 @@ namespace PowerLms.Data
         public static IQueryable<PlInvoicesItem> GetInvoicesItems(this DocFeeRequisitionItem requisitionItem, DbContext db)
         {
             return db.Set<PlInvoicesItem>().Where(x => x.RequisitionItemId == requisitionItem.Id);
+        }
+    }
+
+    /// <summary>
+    /// 保存发票信息时，更新关联的申请单。
+    /// </summary>
+    [OwAutoInjection(ServiceLifetime.Scoped, ServiceType = typeof(IDbContextSaving<TaxInvoiceInfo>))]
+    public class DocFeeRequisitionSaving : IDbContextSaving<TaxInvoiceInfo>
+    {
+        public void Saving(IEnumerable<EntityEntry> entity, IServiceProvider serviceProvider, Dictionary<object, object> states)
+        {
+            var db = entity.FirstOrDefault().Context;
+            entity.Where(c => c.Entity is TaxInvoiceInfo).ToArray().ForEach(c =>
+            {
+                var item = (TaxInvoiceInfo)c.Entity;
+                switch (c.State)
+                {
+                    case EntityState.Detached:
+                        break;
+                    case EntityState.Unchanged:
+                        break;
+                    case EntityState.Deleted:
+                        {
+                            if (c.OriginalValues.TryGetValue<Guid?>(nameof(TaxInvoiceInfo.DocFeeRequisitionId), out var rId))
+                            {
+                                if (db.Set<DocFeeRequisition>().Find(item.DocFeeRequisitionId.GetValueOrDefault()) is DocFeeRequisition requisition)
+                                {
+                                    requisition.TaxInvoiceId = null;
+                                }
+                            }
+                        }
+                        break;
+                    case EntityState.Modified:
+                    case EntityState.Added:
+                        {
+                            if (db.Set<DocFeeRequisition>().Find(item.DocFeeRequisitionId.GetValueOrDefault()) is DocFeeRequisition requisition)
+                            {
+                                requisition.TaxInvoiceId = item.Id;
+                            }
+                        }
+                        break;
+                    default:
+                        break;
+                }
+            });
         }
     }
 }

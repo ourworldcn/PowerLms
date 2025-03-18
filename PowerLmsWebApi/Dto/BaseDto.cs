@@ -156,6 +156,7 @@ namespace PowerLmsWebApi.Dto
         /// <summary>
         /// 要删除实体的Id。
         /// </summary>
+        [Required]
         public Guid Id { get; set; }
     }
 

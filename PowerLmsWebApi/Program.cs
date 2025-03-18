@@ -100,6 +100,7 @@ internal class Program
         {
             opt.JsonSerializerOptions.Converters.Add(new CustomsJsonConverter());
         });
+
         #region 配置Swagger
         // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
         builder.Services.AddEndpointsApiExplorer();
@@ -156,6 +157,7 @@ internal class Program
         services.AddAutoMapper(hsAssm);
         #endregion 配置 AutoMapper
 
+        services.AddTaskDispatcher(); //添加任务调度器服务
         return builder;
     }
 

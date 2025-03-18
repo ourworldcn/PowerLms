@@ -17,6 +17,7 @@ namespace PowerLmsServer.Managers
     using System;
     using System.Collections.Generic;
     using System.Net.Http;
+    using System.Runtime.InteropServices;
     using System.Text;
     using System.Text.Json;
     using System.Text.Json.Serialization;
@@ -25,6 +26,7 @@ namespace PowerLmsServer.Managers
     /// <summary>
     /// 诺诺发票服务类，包含获取访问令牌和创建发票的具体实现。
     /// </summary>
+    [Guid("A08D3ECD-57CF-4E4E-B8F1-6B7C5B7F96E9")]
     public class NuoNuoManager
     {
         private const string TokenUrl = "https://open.nuonuo.com/accessToken";

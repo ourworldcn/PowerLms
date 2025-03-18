@@ -22,7 +22,7 @@ namespace PowerLms.Data
 
         /// <summary>发票状态。0：创建后待审核；1：已审核开票中；2：已开票。</summary>
         [Comment("发票状态。0：创建后待审核；1：已审核开票中；2：已开票")]
-        public byte Status { get; set; }
+        public byte State { get; set; }
 
         /// <summary>所属组织机构的Id。冗余字段。</summary>
         [Comment("所属组织机构的Id")]

@@ -17,7 +17,7 @@ namespace PowerLms.Data
         public Guid? CreateBy { get; set; }
 
         /// <summary>
-        /// 创建的时间。
+        /// 创建的时间。一般记录Utc时间。
         /// </summary>
         public DateTime CreateDateTime { get; set; }
     }

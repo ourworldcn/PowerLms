@@ -27,12 +27,13 @@ namespace PowerLmsServer.Managers
         /// <param name="mapper"></param>
         /// <param name="memoryCache"></param>
         /// <param name="dbContextFactory"></param>
-        public AccountManager(PasswordGenerator passwordGenerator, IMapper mapper, IMemoryCache memoryCache, IDbContextFactory<PowerLmsUserDbContext> dbContextFactory)
+        public AccountManager(PasswordGenerator passwordGenerator, IMapper mapper, IMemoryCache memoryCache, IDbContextFactory<PowerLmsUserDbContext> dbContextFactory, TaskDispatcher taskDispatcher)
         {
             _PasswordGenerator = passwordGenerator;
             _Mapper = mapper;
             _MemoryCache = memoryCache;
             _DbContextFactory = dbContextFactory;
+            TaskDispatcher = taskDispatcher;
         }
 
         readonly PasswordGenerator _PasswordGenerator;
@@ -44,6 +45,11 @@ namespace PowerLmsServer.Managers
         /// 将令牌转换为用户Key的字典的缓存项的key。
         /// </summary>
         const string Token2KeyCacheKey = $"097E641E-03D5-45CE-A911-B4A1C7D2392B.Token2Key";
+
+        /// <summary>
+        /// TaskDispatcher 实例。延迟初始化。
+        /// </summary>
+        private TaskDispatcher TaskDispatcher;
 
         /// <summary>
         /// 令牌到缓存键的映射字典。
@@ -128,7 +134,7 @@ namespace PowerLmsServer.Managers
         /// <returns>上下文对象，可能是null如果出错。</returns>
         public OwContext GetOrLoadContextByToken(Guid token, IServiceProvider scope)
         {
-            var account = GetOrLoadAccountByToken(token);
+            var account = GetOrLoadByToken(token);
             if (account is null) goto lbErr;
 
             var context = scope.GetRequiredService<OwContext>();
@@ -147,7 +153,7 @@ namespace PowerLmsServer.Managers
         /// </summary>
         /// <param name="token"></param>
         /// <returns>指定令牌的账号，没有找到则返回null。</returns>
-        public Account GetAccountByToken(Guid token)
+        public Account GetByToken(Guid token)
         {
             if (!Token2KeyDic.TryGetValue(token, out var key)) // 若缓存中没有指定Token
             {
@@ -176,13 +182,13 @@ namespace PowerLmsServer.Managers
         /// </summary>
         /// <param name="token"></param>
         /// <returns>指定用户，没找到则返回null。</returns>
-        public Account GetOrLoadAccountByToken(Guid token)
+        public Account GetOrLoadByToken(Guid token)
         {
             PowerLmsUserDbContext db = null;
             var id = GetOrLoadIdByToken(token, ref db);
             using var dw = db;
             if (id is null) return null;
-            return GetOrLoadAccountById(id.Value);
+            return GetOrLoadById(id.Value);
         }
 
         /// <summary>
@@ -268,7 +274,7 @@ namespace PowerLmsServer.Managers
         /// </summary>
         /// <param name="id"></param>
         /// <returns>返回用户对象，没有找到则返回null。</returns>
-        public virtual Account GetOrLoadAccountById(Guid id)
+        public virtual Account GetOrLoadById(Guid id)
         {
             using var dw = Lock(id.ToString(), Timeout.InfiniteTimeSpan);
 
@@ -308,6 +314,7 @@ namespace PowerLmsServer.Managers
                 {
                     // 释放数据库上下文
                     using var dbContext = acc?.DbContext;
+                    dbContext?.SaveChanges();
 
                     // 从Token映射字典中移除
                     Token2KeyDic.TryRemove(acc.Token.Value, out _);
@@ -365,26 +372,15 @@ namespace PowerLmsServer.Managers
 
             // 使用OwMemoryCacheExtensions的CancelSource方法触发取消令牌
             // 这将自动通过已注册的回调处理资源释放和缓存移除
-            bool cancelled = _MemoryCache.CancelSource(cacheKey);
-
-            if (cancelled)
+            if (_MemoryCache.CancelSource(cacheKey))
             {
-                // 记录日志或执行后续操作（如果需要）
                 return true;
             }
 
             // 如果没有找到对应的取消令牌源，直接尝试从缓存中移除
-            if (_MemoryCache.TryGetValue<Account>(cacheKey, out var account))
+            // 注意：正常情况下不应该走到这里，因为所有缓存条目都应该有关联的取消令牌
+            if (_MemoryCache.TryGetValue(cacheKey, out _))
             {
-                if (account?.Token.HasValue == true)
-                {
-                    Token2KeyDic.TryRemove(account.Token.Value, out _);
-                }
-
-                // 释放数据库上下文
-                using var dbContext = account?.DbContext;
-
-                // 直接从缓存中移除
                 _MemoryCache.Remove(cacheKey);
                 return true;
             }
@@ -415,6 +411,95 @@ namespace PowerLmsServer.Managers
         {
             string cacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId<Account>(userId);
             return _MemoryCache.GetCancellationTokenSource(cacheKey);
+        }
+
+        /// <summary>
+        /// 更新用户令牌并确保相关缓存和映射正确更新。
+        /// 在用户登录或令牌刷新时调用此方法。
+        /// </summary>
+        /// <param name="userId">要更新令牌的账号ID</param>
+        /// <param name="newToken">新令牌，若为null则自动生成</param>
+        /// <returns>新的令牌值，如果用户不存在则返回null</returns>
+        public Guid? UpdateToken(Guid userId, Guid? newToken = null)
+        {
+            // 使用锁以确保原子性操作
+            using var dw = Lock(userId.ToString(), Timeout.InfiniteTimeSpan);
+
+            // 获取账号（这会自动处理缓存和数据库加载）
+            var account = GetOrLoadById(userId);
+            if (account == null) return null;
+
+            // 记录旧令牌，以便从映射中移除
+            var oldToken = account.Token;
+
+            // 设置新令牌和更新时间
+            account.Token = newToken ?? Guid.NewGuid();
+            account.LastModifyDateTimeUtc = OwHelper.WorldNow;
+
+            // 如果有旧令牌，从映射中移除
+            if (oldToken.HasValue)
+            {
+                Token2KeyDic.TryRemove(oldToken.Value, out _);
+            }
+
+            // 添加新的令牌映射
+            // 注意：这里直接添加映射而不依赖缓存项的回调
+            Token2KeyDic[account.Token.Value] = account.IdString;
+            SaveAccount(userId);
+            return account.Token;
+        }
+
+        /// <summary>
+        /// 将账号的更改保存到数据库。
+        /// 该方法使用TaskDispatcher排队保存任务，确保对同一账号的操作按序执行。
+        /// </summary>
+        /// <param name="userId">要保存的账号ID</param>
+        /// <returns>是否成功保存</returns>
+        public bool SaveAccount(Guid userId)
+        {
+            if (userId == Guid.Empty)
+            {
+                OwHelper.SetLastErrorAndMessage(400, "账号ID不能为空。");
+                return false;
+            }
+            // 获取账号对象
+            var account = GetAccountById(userId);
+            if (account == null)
+            {
+                OwHelper.SetLastErrorAndMessage(404, "未找到指定的账号。");
+                return false;
+            }
+
+
+            // 使用TaskDispatcher排队保存任务
+            return TaskDispatcher.Enqueue(
+                account.IdString,      // 任务类型标识
+                parameter =>                  // 执行任务的函数
+                {
+                    if(parameter is not Account user)   //忽略不是Account类型的参数
+                        return true;
+                    try
+                    {
+                        // 保存更改
+                        user.DbContext?.SaveChanges();
+                        return true;
+                    }
+                    catch (DbUpdateConcurrencyException)
+                    {
+                        // 处理并发异常
+                        OwHelper.SetLastErrorAndMessage(409, "保存账号时发生并发冲突。");
+                        return false;
+                    }
+                    catch (Exception ex)
+                    {
+                        // 记录异常
+                        OwHelper.SetLastErrorAndMessage(500, $"保存账号时发生错误：{ex.Message}");
+                        return false;
+                    }
+                },
+                account,       // 任务参数
+                true          // 需要锁定
+            );
         }
     }
 }
