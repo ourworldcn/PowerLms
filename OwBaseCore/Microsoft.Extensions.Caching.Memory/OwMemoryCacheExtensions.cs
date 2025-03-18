@@ -203,63 +203,87 @@ namespace Microsoft.Extensions.Caching.Memory
         }
 
         /// <summary>
-        /// Id在缓存键值中的长度。
+        /// Id在缓存键值中的长度，标准GUID字符串表示为36个字符。
         /// </summary>
-        public readonly static int IdKeyLength;
+        public const int IdKeyLength = 36;
 
         /// <summary>
-        /// 根据缓存的键值和后缀获取其Id。
+        /// 从缓存键中提取GUID标识符。
         /// </summary>
-        /// <param name="key"></param>
-        /// <param name="suffix">为null则不会验证后缀是否合法。</param>
-        /// <returns>获取id,如果不合法的后缀或格式则返回null。</returns>
-        public static Guid? GetIdFromCacheKey(string key, string suffix = null)
+        /// <param name="key">缓存键字符串</param>
+        /// <param name="prefix">预期的前缀，为null则不会验证前缀是否合法</param>
+        /// <returns>提取的GUID，如果格式不合法或前缀不匹配则返回null</returns>
+        public static Guid? GetIdFromCacheKey(string key, string prefix = null)
         {
-            if (suffix != null && key[^suffix.Length..] != suffix)    //若未找到后缀
+            if (key == null) return null;
+
+            // 如果有前缀，检查键是否以前缀开头
+            if (prefix != null)
             {
-                OwHelper.SetLastErrorAndMessage(400, "格式错误");
+                if (!key.StartsWith(prefix, StringComparison.Ordinal))
+                {
+                    OwHelper.SetLastErrorAndMessage(400, "格式错误：前缀不匹配");
+                    return null;
+                }
+
+                // 移除前缀
+                key = key.Substring(prefix.Length);
+            }
+
+            // 确保剩余部分至少等于GUID的长度
+            if (key.Length < IdKeyLength) return null;
+
+            // 提取GUID部分（取前IdKeyLength个字符）
+            var guidPart = key.Substring(0, IdKeyLength);
+
+            // 尝试解析GUID
+            if (!Guid.TryParse(guidPart, out var id))
+            {
+                OwHelper.SetLastErrorAndMessage(400, "格式错误：无效的GUID格式");
                 return null;
             }
-            if (!Guid.TryParse(key[..IdKeyLength], out var id))
-            {
-                OwHelper.SetLastErrorAndMessage(400, "格式错误");
-                return Guid.Empty;
-            }
+
             return id;
         }
 
         /// <summary>
-        /// 根据缓存的键值和后缀获取其Id。
+        /// 根据类型和缓存键提取GUID标识符。
         /// </summary>
-        /// <param name="key"></param>
-        /// <param name="suffix">为null则不会验证后缀是否合法。</param>
-        /// <returns>获取id,如果不合法的后缀或格式则返回null。</returns>
-        public static Guid? GetIdFromCacheKey<T>(string key, string suffix = $".{nameof(T)}")
+        /// <typeparam name="T">类型</typeparam>
+        /// <param name="key">缓存键字符串</param>
+        /// <param name="prefix">预期的前缀，默认为类型名称加点</param>
+        /// <returns>提取的GUID，如果格式不合法或前缀不匹配则返回null</returns>
+        public static Guid? GetIdFromCacheKey<T>(string key, string prefix = null)
         {
-            return GetIdFromCacheKey(key, suffix);
+            // 如果未提供前缀，使用类型名称作为前缀
+            prefix = prefix ?? $"{typeof(T).Name}.";
+            return GetIdFromCacheKey(key, prefix);
         }
 
         /// <summary>
-        /// 根据指定Id和前缀获取其用于缓存的键值。
+        /// 根据前缀和GUID构建缓存键。
         /// </summary>
-        /// <param name="id"></param>
-        /// <param name="suffix">后缀</param>
-        /// <returns></returns>
-        public static string GetCacheKeyFromId(Guid id, string suffix = null)
+        /// <param name="id">GUID标识符</param>
+        /// <param name="prefix">前缀</param>
+        /// <returns>格式化的缓存键</returns>
+        public static string GetCacheKeyFromId(Guid id, string prefix = null)
         {
-            return $"{id}{suffix}";
+            // 使用标准格式（含连字符）生成GUID字符串
+            return $"{prefix ?? string.Empty}{id:D}";
         }
 
         /// <summary>
-        /// 根据指定Id和前缀获取其用于缓存的键值。
+        /// 根据类型、前缀和GUID构建缓存键。
         /// </summary>
-        /// <param name="id"></param>
-        /// <param name="suffix"></param>
-        /// <returns></returns>
-        public static string GetCacheKeyFromId<T>(Guid id, string suffix = $".{nameof(T)}")
+        /// <typeparam name="T">类型</typeparam>
+        /// <param name="id">GUID标识符</param>
+        /// <param name="prefix">前缀，默认为类型名称加点</param>
+        /// <returns>格式化的缓存键</returns>
+        public static string GetCacheKeyFromId<T>(Guid id, string prefix = null)
         {
-            return GetCacheKeyFromId(id, suffix);
+            // 如果未提供前缀，使用类型名称作为前缀
+            prefix = prefix ?? $"{typeof(T).Name}.";
+            return GetCacheKeyFromId(id, prefix);
         }
-
     }
 }

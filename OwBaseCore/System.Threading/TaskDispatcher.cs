@@ -352,4 +352,14 @@ namespace System.Threading
             public DateTime EnqueueTime { get; set; }
         }
     }
+
+    /// <summary>扩展方法类</summary>
+    public static class TaskDispatcherExtensions
+    {
+        /// <summary>将服务添加到容器</summary>
+        public static IServiceCollection AddTaskDispatcher(this IServiceCollection services)
+        {
+            return services.AddSingleton<TaskDispatcher>();
+        }
+    }
 }
