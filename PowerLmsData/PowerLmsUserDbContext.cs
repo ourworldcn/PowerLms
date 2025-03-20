@@ -531,6 +531,16 @@ namespace PowerLmsServer.EfData
         public DbSet<TaxInvoiceChannel> TaxInvoiceChannels { get; set; }
 
         /// <summary>
+        /// 渠道账号表。
+        /// </summary>
+        public DbSet<TaxInvoiceChannelAccount> TaxInvoiceChannelAccounts { get; set; }
+
+        /// <summary>
+        /// 机构渠道账号表。
+        /// </summary>
+        public DbSet<OrgTaxChannelAccount> OrgTaxChannelAccounts { get; set; }
+
+        /// <summary>
         /// 税务发票信息表。
         /// </summary>
         public DbSet<TaxInvoiceInfo> TaxInvoiceInfos { get; set; }
@@ -539,11 +549,6 @@ namespace PowerLmsServer.EfData
         /// 税务发票信息明细表。
         /// </summary>
         public DbSet<TaxInvoiceInfoItem> TaxInvoiceInfoItems { get; set; }
-
-        /// <summary>
-        /// 机构渠道账号表。
-        /// </summary>
-        public DbSet<OrgTaxChannelAccount> OrgTaxChannelAccounts { get; set; }
 
         #endregion 税务发票相关
     }

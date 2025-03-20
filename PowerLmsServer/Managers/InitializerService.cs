@@ -157,7 +157,7 @@ namespace PowerLmsServer.Managers
             });
 
             #region 税务发票通道初始数据
-            db.AddOrUpdate(
+            db.Update(
                 new TaxInvoiceChannel
                 {
                     Id = typeof(NuoNuoManager).GUID,
@@ -165,7 +165,7 @@ namespace PowerLmsServer.Managers
                     InvoiceChannel = nameof(NuoNuoManager),
                     InvoiceChannelParams = "{}",
                 });
-            db.AddOrUpdate(
+            db.Update(
                 new TaxInvoiceChannel
                 {
                     Id = typeof(ManualInvoicingManager).GUID,

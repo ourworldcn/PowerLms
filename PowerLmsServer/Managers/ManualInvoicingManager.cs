@@ -22,7 +22,7 @@ namespace PowerLmsServer.Managers
         /// <summary>将手工开票管理器加入服务容器。</summary>
         public static IServiceCollection AddManualInvoicingManager(this IServiceCollection services)
         {
-            return services.AddSingleton<ManualInvoicingManager>();
+            return services.AddScoped<ManualInvoicingManager>();
         }
     }
 }

@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 namespace PowerLms.Data
 {
     /// <summary>
-    /// 开票渠道。
+    /// 开票渠道。其中Id属性是对应处理服务的GUID属性(如typeof(NuoNuoManager).GUID)。
     /// </summary>
     public class TaxInvoiceChannel : GuidKeyObjectBase
     {

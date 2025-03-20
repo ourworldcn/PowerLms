@@ -16,17 +16,13 @@ namespace PowerLms.Data
     public class TaxInvoiceInfo : GuidKeyObjectBase
     {
         #region 基本信息
-        /// <summary>开票渠道Id。关联到<see cref="TaxInvoiceChannel"/>。</summary>
+        /// <summary>开票渠道Id。关联到<see cref="TaxInvoiceChannelAccount"/>。</summary>
         [Comment("开票渠道Id")]
-        public Guid? TaxInvoiceChannelId { get; set; }
+        public Guid? TaxInvoiceChannelAccountlId { get; set; }
 
         /// <summary>发票状态。0：创建后待审核；1：已审核开票中；2：已开票。</summary>
         [Comment("发票状态。0：创建后待审核；1：已审核开票中；2：已开票")]
         public byte State { get; set; }
-
-        /// <summary>所属组织机构的Id。冗余字段。</summary>
-        [Comment("所属组织机构的Id")]
-        public Guid? OrgId { get; set; }
 
         /// <summary>费用申请单Id。关联到<see cref="DocFeeRequisition"/>。</summary>
         [Comment("费用申请单Id")]
@@ -91,13 +87,13 @@ namespace PowerLms.Data
         #endregion
 
         #region 联系方式
-        /// <summary>推送手机号。</summary>
-        [Comment("推送手机号")]
-        [MaxLength(32)]
+        /// <summary>推送手机号。设置为空则不推送。</summary>
+        [Comment("推送手机号。设置为空则不推送。")]
+        [MaxLength(32),Phone]
         public string Mobile { get; set; }
 
-        /// <summary>推送Mail。</summary>
-        [Comment("推送Mail")]
+        /// <summary>推送Mail。设置为空则不推送。</summary>
+        [Comment("推送Mail。设置为空则不推送。")]
         [MaxLength(256), EmailAddress]
         public string Mail { get; set; }
         #endregion
