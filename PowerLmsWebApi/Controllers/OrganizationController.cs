@@ -64,7 +64,48 @@ namespace PowerLmsWebApi.Controllers
             if (!rootId.HasValue && !context.User.IsAdmin()) return StatusCode((int)HttpStatusCode.Forbidden, "只有商管可以获取全商户的机构");
             if (context.User.IsSuperAdmin)   //若是超管
             {
-                return BadRequest("超管不能获取具体商户的机构");
+                // 如果没有指定rootId，超管可以查看所有组织机构
+                if (!rootId.HasValue)
+                {
+                    // 获取所有顶级组织机构（没有父级的组织机构）
+                    var allTopOrgs = _DbContext.PlOrganizations
+                        .Where(o => o.ParentId == null)
+                        .Include(o => o.Children)
+                        .ToList();
+
+                    result.Result.AddRange(allTopOrgs);
+                }
+                else
+                {
+                    // 如果指定了rootId，获取此组织机构及其所有子机构
+                    var rootOrg = _DbContext.PlOrganizations
+                        .Include(o => o.Children)
+                        .FirstOrDefault(o => o.Id == rootId.Value);
+
+                    if (rootOrg == null)
+                    {
+                        // 检查是否为商户ID
+                        var merchantOrgs = _DbContext.PlOrganizations
+                            .Where(o => o.MerchantId == rootId.Value && o.ParentId == null)
+                            .Include(o => o.Children)
+                            .ToList();
+
+                        if (merchantOrgs.Any())
+                        {
+                            result.Result.AddRange(merchantOrgs);
+                        }
+                        else
+                        {
+                            return BadRequest($"找不到指定的组织机构或商户，Id={rootId}");
+                        }
+                    }
+                    else
+                    {
+                        result.Result.Add(rootOrg);
+                    }
+                }
+
+                return result;
             }
             if (_MerchantManager.GetOrLoadByUser(context.User) is not PlMerchant merch)    //若找不到商户
                 return BadRequest("找不到用户所属的商户");
