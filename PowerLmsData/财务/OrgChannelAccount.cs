@@ -36,6 +36,13 @@ namespace PowerLms.Data
         #region 销方基本信息
 
         /// <summary>
+        /// 显示名称。
+        /// </summary>
+        [Comment("显示名称。")]
+        [MaxLength(64)]
+        public string DisplayName { get; set; }
+
+        /// <summary>
         /// 作为销方时发票抬头。
         /// </summary>
         [Comment("作为销方时发票抬头")]

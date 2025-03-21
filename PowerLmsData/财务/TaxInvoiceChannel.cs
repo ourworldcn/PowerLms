@@ -2,6 +2,7 @@
 using OW.Data;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
@@ -47,5 +48,17 @@ namespace PowerLms.Data
         [Comment("渠道Id")]
         public Guid? ParentlId { get; set; }
 
+        /// <summary>
+        /// 商户Id。关联<see cref="PlMerchant"/>。
+        /// </summary>
+        [Comment(" 商户Id。")]
+        public Guid? MerchantId { get; set; }
+
+        /// <summary>
+        /// 显示名称。
+        /// </summary>
+        [Comment("显示名称。")]
+        [MaxLength(64)]
+        public string DisplayName { get; set; }
     }
 }
