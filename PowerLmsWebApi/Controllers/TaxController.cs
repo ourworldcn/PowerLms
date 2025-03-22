@@ -265,6 +265,8 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="model">分页和排序参数</param>
         /// <param name="conditional">查询条件字典</param>
         /// <returns>机构渠道账号列表及总数</returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
         [HttpGet]
         public ActionResult<GetAllOrgTaxChannelAccountReturnDto> GetAllOrgTaxChannelAccount([FromQuery] PagingParamsDtoBase model, [FromQuery] Dictionary<string, string> conditional = null)
         {
@@ -281,55 +283,97 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>新增机构渠道账号，自动设置创建信息，支持设置默认账号。</summary>
         /// <param name="model">包含新账号信息的参数对象</param>
         /// <returns>添加结果</returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
+        /// <response code="409">已存在相同的机构和渠道账号关联。</response>  
         [HttpPost]
         public ActionResult<AddOrgTaxChannelAccountReturnDto> AddOrgTaxChannelAccount(AddOrgTaxChannelAccountParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized(); // 验证令牌
+            if(!context.User.IsSuperAdmin) return StatusCode((int)HttpStatusCode.Forbidden, "只有超管可以使用此功能"); ; // 仅超级管理员可以增删改加机构渠道账号
+
             var result = new AddOrgTaxChannelAccountReturnDto();
             var entity = model.Item;
-            entity.OrgId = context.User.OrgId.GetValueOrDefault(); // 设置机构Id
-            entity.CreateDateTime = OwHelper.WorldNow; // 设置创建时间
-            entity.CreateBy = context.User.Id; // 设置创建者
+
+            // 检查是否已存在相同机构和渠道账号的记录
+            var existingAccount = _DbContext.OrgTaxChannelAccounts.FirstOrDefault(a =>
+                a.OrgId == entity.OrgId && a.ChannelAccountId == entity.ChannelAccountId);
+
+            if (existingAccount != null)
+            {
+                result.HasError = true;
+                result.DebugMessage = "已存在相同的机构和渠道账号关联";
+                return Conflict(result.DebugMessage);
+            }
+
+            // 生成新ID
+            entity.GenerateNewId();
+
             if (entity.IsDefault) // 如果设为默认账号
             {
-                var defaultAccounts = _DbContext.OrgTaxChannelAccounts.Where(c => c.OrgId == context.User.OrgId && c.IsDefault).ToList();
+                var defaultAccounts = _DbContext.OrgTaxChannelAccounts.Where(c => c.OrgId == entity.OrgId && c.IsDefault).ToList();
                 foreach (var acc in defaultAccounts) acc.IsDefault = false; // 取消其他默认账号
             }
+
+            entity.CreateDateTime = OwHelper.WorldNow; // 设置创建时间
+            entity.CreateBy = context.User.Id; // 设置创建者
             _DbContext.OrgTaxChannelAccounts.Add(entity); // 添加新账号
             _DbContext.SaveChanges(); // 保存更改
+
+            result.Id = entity.Id; // 返回新创建记录的ID
             return result;
         }
 
         /// <summary>修改机构渠道账号信息，支持批量修改，自动维护默认账号状态。</summary>
         /// <param name="model">包含要修改账号信息的参数对象</param>
         /// <returns>修改结果</returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPut]
         public ActionResult<ModifyOrgTaxChannelAccountReturnDto> ModifyOrgTaxChannelAccount(ModifyOrgTaxChannelAccountParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized(); // 验证令牌
+            if (!context.User.IsSuperAdmin) return StatusCode((int)HttpStatusCode.Forbidden, "只有超管可以使用此功能"); ; // 仅超级管理员可以增删改加机构渠道账号
             var result = new ModifyOrgTaxChannelAccountReturnDto();
             if (model.Items?.Count == 0) { result.HasError = true; return result; } // 验证输入
             int modifiedCount = 0;
+
             foreach (var item in model.Items)
             {
-                item.OrgId = context.User.OrgId.GetValueOrDefault(); // 确保只能修改当前用户机构的数据
-                var existingAccount = _DbContext.OrgTaxChannelAccounts
-                    .Where(a => a.OrgId == context.User.OrgId && a.ChannelAccountId == item.ChannelAccountId)
-                    .FirstOrDefault();
-                if (existingAccount == null) continue; // 跳过不存在的账号
+                // 确保只能修改当前用户机构的数据 - 可选附加安全措施
+                var existingAccount = _DbContext.OrgTaxChannelAccounts.Find(item.Id);
+
+                if (existingAccount == null) continue; // 跳过不存在或不属于当前用户机构的账号
+
+                // 保存原来的OrgId和ChannelAccountId，确保不修改这两个关键字段
+                var orgId = existingAccount.OrgId;
                 var channelAccountId = existingAccount.ChannelAccountId;
-                _DbContext.Entry(existingAccount).CurrentValues.SetValues(item); // 更新实体
-                item.LastModifyUtc = OwHelper.WorldNow; // 设置修改时间
-                item.LastModifyBy = context.User.Id; // 设置修改者
-                if (item.IsDefault && !existingAccount.IsDefault) // 如果设为默认账号
+
+                // 更新实体
+                _DbContext.Entry(existingAccount).CurrentValues.SetValues(item);
+
+                // 确保不修改关键字段
+                existingAccount.OrgId = orgId;
+                existingAccount.ChannelAccountId = channelAccountId;
+
+                // 设置修改时间和修改者
+                existingAccount.LastModifyUtc = OwHelper.WorldNow;
+                existingAccount.LastModifyBy = context.User.Id;
+
+                // 如果设为默认账号，取消其他账号的默认状态
+                if (item.IsDefault && !existingAccount.IsDefault)
                 {
                     var defaultAccounts = _DbContext.OrgTaxChannelAccounts
-                        .Where(c => c.OrgId == context.User.OrgId && c.IsDefault && c.ChannelAccountId != item.ChannelAccountId).ToList();
-                    foreach (var acc in defaultAccounts) acc.IsDefault = false; // 取消其他默认账号
+                        .Where(c => c.OrgId == orgId && c.IsDefault && c.Id != item.Id).ToList();
+                    foreach (var acc in defaultAccounts) acc.IsDefault = false;
                 }
-                _SqlAppLogger.LogGeneralInfo($"Modify.{nameof(OrgTaxChannelAccount)}"); // 记录系统日志
+
+                _SqlAppLogger.LogGeneralInfo($"Modify.{nameof(OrgTaxChannelAccount)}.{item.Id}"); // 记录系统日志
                 modifiedCount++;
             }
+
             if (modifiedCount == 0) { result.HasError = true; return NotFound(); } // 未找到要修改的账号
             _DbContext.SaveChanges(); // 保存更改
             return result;
@@ -338,32 +382,55 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>删除指定的机构渠道账号。</summary>
         /// <param name="model">包含要删除账号ID的参数对象</param>
         /// <returns>删除结果</returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpDelete]
         public ActionResult<RemoveOrgTaxChannelAccountReturnDto> RemoveOrgTaxChannelAccount(RemoveOrgTaxChannelAccountParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized(); // 验证令牌
+            if(!context.User.IsSuperAdmin) return StatusCode((int)HttpStatusCode.Forbidden, "只有超管可以使用此功能"); ; // 仅超级管理员可以增删改加机构渠道账号
             var result = new RemoveOrgTaxChannelAccountReturnDto();
-            var orgId = model.OrgId ?? context.User.OrgId.GetValueOrDefault(); // 获取要操作的机构Id
-            var account = _DbContext.OrgTaxChannelAccounts.Where(a => a.OrgId == orgId && a.ChannelAccountId == model.ChannelAccountId).FirstOrDefault();
-            if (account == null) return NotFound(); // 账号不存在
+
+            // 查找要删除的账号，确保只能删除当前用户机构的数据
+            var account = _DbContext.OrgTaxChannelAccounts.FirstOrDefault(a => a.Id == model.Id && a.OrgId == context.User.OrgId);
+
+            if (account == null) return NotFound(); // 账号不存在或不属于当前用户机构
+
             _DbContext.OrgTaxChannelAccounts.Remove(account); // 删除账号
-            _SqlAppLogger.LogGeneralInfo($"删除渠道账号 {nameof(OrgTaxChannelAccount)}.{account.ChannelAccountId}"); // 记录日志
+            _SqlAppLogger.LogGeneralInfo($"删除渠道账号 {nameof(OrgTaxChannelAccount)}.{account.Id}"); // 记录日志
             _DbContext.SaveChanges(); // 保存更改
+
             return result;
         }
 
         /// <summary>设置指定的机构渠道账号为默认账号，同时取消其他账号的默认状态。</summary>
         /// <param name="model">包含要设为默认的账号ID的参数对象</param>
         /// <returns>设置结果</returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
         [HttpPost]
         public ActionResult<SetDefaultOrgTaxChannelAccountReturnDto> SetDefaultOrgTaxChannelAccount(SetDefaultOrgTaxChannelAccountParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized(); // 验证令牌
+            if(!context.User.IsSuperAdmin) return StatusCode((int)HttpStatusCode.Forbidden, "只有超管可以使用此功能"); ; // 仅超级管理员可以增删改加机构渠道账号
             var result = new SetDefaultOrgTaxChannelAccountReturnDto();
-            var account = _DbContext.OrgTaxChannelAccounts.Where(a => a.OrgId == context.User.OrgId && a.ChannelAccountId == model.ChannelAccountId).FirstOrDefault();
-            if (account == null) return NotFound(); // 账号不存在
-            var allAccounts = _DbContext.OrgTaxChannelAccounts.Where(a => a.OrgId == context.User.OrgId).ToList(); // 获取所有账号
-            foreach (var acc in allAccounts) acc.IsDefault = (acc.ChannelAccountId == model.ChannelAccountId); // 设置默认状态
+
+            // 查找要设为默认的账号，确保只能操作当前用户机构的数据
+            var account = _DbContext.OrgTaxChannelAccounts.FirstOrDefault(a => a.Id == model.Id && a.OrgId == context.User.OrgId);
+
+            if (account == null) return NotFound(); // 账号不存在或不属于当前用户机构
+
+            // 获取该机构的所有账号
+            var allAccounts = _DbContext.OrgTaxChannelAccounts.Where(a => a.OrgId == account.OrgId).ToList();
+
+            // 设置默认状态
+            foreach (var acc in allAccounts)
+            {
+                acc.IsDefault = (acc.Id == model.Id);
+            }
+
             _DbContext.SaveChanges(); // 保存更改
             return result;
         }

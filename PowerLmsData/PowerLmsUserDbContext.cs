@@ -120,9 +120,6 @@ namespace PowerLmsServer.EfData
 
             modelBuilder.Entity<PlBusinessHeader>().HasKey(nameof(PlBusinessHeader.CustomerId), nameof(PlBusinessHeader.UserId), nameof(PlBusinessHeader.OrderTypeId));
 
-            // 配置联合主键
-            modelBuilder.Entity<OrgTaxChannelAccount>().HasKey(e => new { e.OrgId, e.ChannelAccountId }); // 设置联合主键
-
             #region 权限相关
             modelBuilder.Entity<AccountRole>().HasKey(nameof(AccountRole.UserId), nameof(AccountRole.RoleId));
             modelBuilder.Entity<RolePermission>().HasKey(nameof(RolePermission.RoleId), nameof(RolePermission.PermissionId));

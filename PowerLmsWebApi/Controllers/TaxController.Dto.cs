@@ -161,17 +161,9 @@ namespace PowerLmsWebApi.Controllers
     /// <summary>
     /// 删除指定的机构渠道账号功能参数封装类。注意：机构渠道账号是两个字段的联合主键。
     /// </summary>
-    public class RemoveOrgTaxChannelAccountParamsDto : TokenDtoBase
+    public class RemoveOrgTaxChannelAccountParamsDto : RemoveAccountParamsDto
     {
-        /// <summary>
-        /// 渠道账号Id。
-        /// </summary>
-        public Guid ChannelAccountId { get; set; }
 
-        /// <summary>
-        /// 机构Id。可省略，省略时自动使用当前登录用户登录机构Id。
-        /// </summary>
-        public Guid? OrgId { get; set; }
     }
 
     /// <summary>
@@ -190,7 +182,7 @@ namespace PowerLmsWebApi.Controllers
         /// 要设为默认的渠道账号Id。
         /// </summary>
         [Required]
-        public Guid ChannelAccountId { get; set; }
+        public Guid Id { get; set; }
     }
 
     /// <summary>
