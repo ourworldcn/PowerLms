@@ -272,7 +272,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized(); // 验证令牌
             var result = new GetAllOrgTaxChannelAccountReturnDto();
-            var dbSet = _DbContext.OrgTaxChannelAccounts.Where(c => c.OrgId == context.User.OrgId); // 仅查询当前用户机构的数据
+            var dbSet = _DbContext.OrgTaxChannelAccounts;    //.Where(c => c.OrgId == context.User.OrgId); // 仅查询当前用户机构的数据
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking(); // 排序并禁用实体追踪
             coll = EfHelper.GenerateWhereAnd(coll, conditional); // 应用查询条件
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count); // 获取分页数据
@@ -291,7 +291,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<AddOrgTaxChannelAccountReturnDto> AddOrgTaxChannelAccount(AddOrgTaxChannelAccountParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized(); // 验证令牌
-            if(!context.User.IsSuperAdmin) return StatusCode((int)HttpStatusCode.Forbidden, "只有超管可以使用此功能"); ; // 仅超级管理员可以增删改加机构渠道账号
+            if (!context.User.IsSuperAdmin) return StatusCode((int)HttpStatusCode.Forbidden, "只有超管可以使用此功能"); ; // 仅超级管理员可以增删改加机构渠道账号
 
             var result = new AddOrgTaxChannelAccountReturnDto();
             var entity = model.Item;
@@ -312,11 +312,11 @@ namespace PowerLmsWebApi.Controllers
 
             if (entity.IsDefault) // 如果设为默认账号
             {
-                var defaultAccounts = _DbContext.OrgTaxChannelAccounts.Where(c => c.OrgId == entity.OrgId && c.IsDefault).ToList();
+                var defaultAccounts = _DbContext.OrgTaxChannelAccounts.Where(c => c.OrgId == entity.OrgId && c.IsDefault).ToArray();
                 foreach (var acc in defaultAccounts) acc.IsDefault = false; // 取消其他默认账号
             }
 
-            entity.CreateDateTime = OwHelper.WorldNow; // 设置创建时间
+            entity.CreateDateTime = DateTime.UtcNow; // 设置创建时间
             entity.CreateBy = context.User.Id; // 设置创建者
             _DbContext.OrgTaxChannelAccounts.Add(entity); // 添加新账号
             _DbContext.SaveChanges(); // 保存更改
@@ -331,6 +331,7 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         /// <response code="403">权限不足。</response>  
+        /// <response code="409">已存在相同的机构和渠道账号关联。</response>  
         [HttpPut]
         public ActionResult<ModifyOrgTaxChannelAccountReturnDto> ModifyOrgTaxChannelAccount(ModifyOrgTaxChannelAccountParamsDto model)
         {
@@ -346,17 +347,16 @@ namespace PowerLmsWebApi.Controllers
                 var existingAccount = _DbContext.OrgTaxChannelAccounts.Find(item.Id);
 
                 if (existingAccount == null) continue; // 跳过不存在或不属于当前用户机构的账号
-
-                // 保存原来的OrgId和ChannelAccountId，确保不修改这两个关键字段
-                var orgId = existingAccount.OrgId;
-                var channelAccountId = existingAccount.ChannelAccountId;
+                //新实体的OrgId和ChannelAccountId必须不和已有实体重复
+                if (_DbContext.OrgTaxChannelAccounts.Any(a => a.OrgId == item.OrgId && a.ChannelAccountId == item.ChannelAccountId && a.Id != item.Id))
+                {
+                    result.HasError = true;
+                    result.DebugMessage = "已存在相同的机构和渠道账号关联";
+                    return Conflict(result.DebugMessage);
+                }
 
                 // 更新实体
                 _DbContext.Entry(existingAccount).CurrentValues.SetValues(item);
-
-                // 确保不修改关键字段
-                existingAccount.OrgId = orgId;
-                existingAccount.ChannelAccountId = channelAccountId;
 
                 // 设置修改时间和修改者
                 existingAccount.LastModifyUtc = OwHelper.WorldNow;
@@ -366,7 +366,7 @@ namespace PowerLmsWebApi.Controllers
                 if (item.IsDefault && !existingAccount.IsDefault)
                 {
                     var defaultAccounts = _DbContext.OrgTaxChannelAccounts
-                        .Where(c => c.OrgId == orgId && c.IsDefault && c.Id != item.Id).ToList();
+                        .Where(c => c.OrgId == item.OrgId && c.IsDefault && c.Id != item.Id).ToList();
                     foreach (var acc in defaultAccounts) acc.IsDefault = false;
                 }
 
@@ -389,7 +389,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<RemoveOrgTaxChannelAccountReturnDto> RemoveOrgTaxChannelAccount(RemoveOrgTaxChannelAccountParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized(); // 验证令牌
-            if(!context.User.IsSuperAdmin) return StatusCode((int)HttpStatusCode.Forbidden, "只有超管可以使用此功能"); ; // 仅超级管理员可以增删改加机构渠道账号
+            if (!context.User.IsSuperAdmin) return StatusCode((int)HttpStatusCode.Forbidden, "只有超管可以使用此功能"); ; // 仅超级管理员可以增删改加机构渠道账号
             var result = new RemoveOrgTaxChannelAccountReturnDto();
 
             // 查找要删除的账号，确保只能删除当前用户机构的数据
@@ -414,11 +414,11 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<SetDefaultOrgTaxChannelAccountReturnDto> SetDefaultOrgTaxChannelAccount(SetDefaultOrgTaxChannelAccountParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized(); // 验证令牌
-            if(!context.User.IsSuperAdmin) return StatusCode((int)HttpStatusCode.Forbidden, "只有超管可以使用此功能"); ; // 仅超级管理员可以增删改加机构渠道账号
+            if (!context.User.IsSuperAdmin) return StatusCode((int)HttpStatusCode.Forbidden, "只有超管可以使用此功能"); ; // 仅超级管理员可以增删改加机构渠道账号
             var result = new SetDefaultOrgTaxChannelAccountReturnDto();
 
             // 查找要设为默认的账号，确保只能操作当前用户机构的数据
-            var account = _DbContext.OrgTaxChannelAccounts.FirstOrDefault(a => a.Id == model.Id && a.OrgId == context.User.OrgId);
+            var account = _DbContext.OrgTaxChannelAccounts.FirstOrDefault(a => a.Id == model.Id);
 
             if (account == null) return NotFound(); // 账号不存在或不属于当前用户机构
 
