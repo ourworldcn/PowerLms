@@ -108,7 +108,7 @@ namespace PowerLmsServer.AutoMappper
                     !string.IsNullOrEmpty(src.InvoiceSerialNum) ? src.InvoiceSerialNum : Guid.NewGuid().ToString("N").Substring(0, 20)))
                 .ForMember(dest => dest.InvoiceDate, opt => opt.MapFrom(src => src.ApplyDateTime ?? DateTime.Now))
                 .ForMember(dest => dest.InvoiceType, opt => opt.MapFrom(src => 1)) //TO DO 这里暂时仅考虑蓝票
-                .ForMember(dest => dest.InvoiceLine, opt => opt.MapFrom(src => src.InvoiceType != null && src.InvoiceType.Contains("专用") ? "s" : "p"))
+                .ForMember(dest => dest.InvoiceLine, opt => opt.MapFrom(src => src.InvoiceType != null))
 
                 // 默认值
                 .ForMember(dest => dest.Clerk, opt => opt.MapFrom(src => "系统开票"))

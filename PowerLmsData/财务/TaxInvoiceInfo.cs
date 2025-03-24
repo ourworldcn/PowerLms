@@ -39,6 +39,9 @@ namespace PowerLms.Data
         public string InvoiceSerialNum { get; set; }
 
         /// <summary>发票类型。如：增值税专用发票、增值税普通发票等。</summary>
+        /// <value>发票种类：p,普通发票(电票)(默认);c,普通发票(纸票); s,专用发票;e,收购发票(电票); f,收购发票(纸质); r,普通发票(卷式); b,增值税电子专用发票; 
+        /// j,机动车销售统一发票;u,二手车销售统一发票; bs:电子发票(增值税专用发票)-即数电专票(电子),pc:电子发票(普通发票)-即数电普票(电子),
+        /// es:数电纸质发票(增值税专用发票)-即数电专票(纸质); ec:数电纸质发票(普通发票)-即数电普票(纸质)</value>
         [Comment("发票类型")]
         [MaxLength(64)]
         public string InvoiceType { get; set; }
