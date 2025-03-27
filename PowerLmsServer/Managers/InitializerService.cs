@@ -277,12 +277,9 @@ namespace PowerLmsServer.Managers
         [Conditional("DEBUG")]
         private void Test(IServiceProvider svc)
         {
-            var _Mapper = svc.GetRequiredService<IMapper>();
+            var nn = svc.GetRequiredService<NuoNuoManager>();
 
-            var savingInterfaceType = svc.GetService<IDbContextSaving<DocFee>>()?.GetType();
-            var savingInterfaceType1 = svc.GetService<IAfterDbContextSaving<DocFee>>()?.GetType();
-            var method = savingInterfaceType.GetMethod(nameof(IDbContextSaving<object>.Saving));
-            var method1 = savingInterfaceType1.GetMethod(nameof(IAfterDbContextSaving<object>.AfterSaving));
+            nn.TestIssueInvoiceInSandbox("SD56531018", "SD3C429B318C485E");
         }
 
         private void CreateDb()

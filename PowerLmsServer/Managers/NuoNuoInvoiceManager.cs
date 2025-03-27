@@ -17,6 +17,8 @@ using PowerLmsServer.EfData;
 using Microsoft.Extensions.Caching.Memory;
 using System.Net;
 using Microsoft.Extensions.ObjectPool;
+using System.Security.Cryptography;
+using System.Buffers;
 
 
 namespace PowerLmsServer.Managers
@@ -442,21 +444,29 @@ namespace PowerLmsServer.Managers
                 };
                 var jsonContent = JsonSerializer.Serialize(request, options);
 
-                // 计算签名
-                string signContent = nnChannelAccount.AppKey + nnChannelAccount.AppSecret + jsonContent + nnChannelAccount.AppSecret;
-                string sign = ComputeMD5Hash(signContent);
+                // 使用ComputeSignature方法计算签名
+                string sign = ComputeSignature(
+                    nnChannelAccount.AppKey,
+                    nnChannelAccount.AppSecret,
+                    request.Senid,
+                    request.Nonce,
+                    request.Timestamp,
+                    jsonContent);
 
                 // 设置请求头
                 _httpClient.DefaultRequestHeaders.Clear();
-                _httpClient.DefaultRequestHeaders.Add("Content-type", "application/json");
+                // 此代码将引发异常，直接在内容中设置即可 _httpClient.DefaultRequestHeaders.Add("Content-type", "application/json");
                 _httpClient.DefaultRequestHeaders.Add("X-Nuonuo-Sign", sign);
                 _httpClient.DefaultRequestHeaders.Add("accessToken", accessToken);
                 _httpClient.DefaultRequestHeaders.Add("userTax", request.Order.SalerTaxNum);
                 _httpClient.DefaultRequestHeaders.Add("method", "nuonuo.OpeMplatform.requestBillingNew");
 
-                // 发送请求
+                // 构建带参数的请求URL
+                var requestUrl = $"{InvoiceUrl}?senid={request.Senid}&nonce={request.Nonce}&timestamp={request.Timestamp}&appkey={nnChannelAccount.AppKey}";
+
+                // 发送请求到构建的URL
                 var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
-                var responseTask = _httpClient.PostAsync(InvoiceUrl, content);
+                var responseTask = _httpClient.PostAsync(requestUrl, content);
                 responseTask.Wait(); // 同步等待请求
                 var response = responseTask.Result;
 
@@ -613,23 +623,335 @@ namespace PowerLmsServer.Managers
             };
         }
 
+        #region 签名相关
         /// <summary>
-        /// 计算MD5哈希
+        /// 计算诺诺开放平台API的签名
         /// </summary>
-        private string ComputeMD5Hash(string input)
+        /// <param name="appKey">应用的AppKey</param>
+        /// <param name="appSecret">应用的AppSecret</param>
+        /// <param name="senid">32位随机码</param>
+        /// <param name="nonce">8位随机数</param>
+        /// <param name="timestamp">当前时间戳(秒)</param>
+        /// <param name="content">报文内容</param>
+        /// <returns>计算得到的签名字符串</returns>
+        /// <remarks>
+        /// 按照诺诺开放平台规定的格式计算签名:
+        /// 1. 明文格式: a=services&amp;l=v1&amp;p=open&amp;k={appkey}&amp;i={senid}&amp;n={nonce}&amp;t={timestamp}&amp;f={content}
+        /// 2. 使用HmacSHA1算法和appSecret作为密钥计算哈希值
+        /// 3. 对哈希值进行Base64编码并返回
+        /// </remarks>
+        public string ComputeSignature(string appKey, string appSecret, string senid, int nonce, long timestamp, string content)
         {
-            using var md5 = System.Security.Cryptography.MD5.Create();
-            byte[] inputBytes = Encoding.UTF8.GetBytes(input);
-            byte[] hashBytes = md5.ComputeHash(inputBytes);
-
-            // 转换为十六进制字符串
-            var sb = new StringBuilder();
-            for (int i = 0; i < hashBytes.Length; i++)
+            try
             {
-                sb.Append(hashBytes[i].ToString("x2"));
+                // 按照规定格式构建签名明文
+                string plainText = $"a=services&l=v1&p=open&k={appKey}&i={senid}&n={nonce}&t={timestamp}&f={content}";
+
+                _logger?.LogDebug("签名明文: {PlainText}", plainText);
+
+                // 利用已有的ComputeHmacSha1方法计算签名
+                string signature = ComputeHmacSha1(plainText, appSecret);
+
+                _logger?.LogDebug("计算的签名: {Signature}", signature);
+
+                return signature;
             }
-            return sb.ToString();
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "计算诺诺开放平台签名时发生错误");
+                throw new InvalidOperationException("计算签名失败", ex);
+            }
         }
+
+        /// <summary>
+        /// 使用指定密钥计算 HMACSHA1 哈希值，并返回Base64编码结果
+        /// </summary>
+        /// <param name="message">待哈希的消息</param>
+        /// <param name="key">用于 HMAC 的密钥</param>
+        /// <returns>HMACSHA1 哈希的Base64编码字符串</returns>
+        public string ComputeHmacSha1(string message, string key = null)
+        {
+            // 将消息和密钥转换为字节数组
+            byte[] keyBytes = Encoding.UTF8.GetBytes(key);
+            byte[] messageBytes = Encoding.UTF8.GetBytes(message);
+
+            // 使用指定密钥创建 HMACSHA1 实例
+
+            using var hmac = key is null ? new HMACSHA1() : new HMACSHA1(keyBytes);
+
+            // 计算哈希
+            byte[] hashBytes = hmac.ComputeHash(messageBytes);
+
+            // 将结果转换为Base64编码字符串
+            // Base64编码会自动添加适当的填充（=或==），确保输出遵循Base64规范
+            return Convert.ToBase64String(hashBytes);
+        }
+
+        #endregion 签名相关
+
+        #region 测试相关
+        /// <summary>
+        /// 在沙箱环境测试开具发票
+        /// </summary>
+        /// <param name="appKey">沙箱环境AppKey</param>
+        /// <param name="appSecret">沙箱环境AppSecret</param>
+        /// <returns>测试结果</returns>
+        public NuoNuoInvoiceResult TestIssueInvoiceInSandbox(string appKey, string appSecret)
+        {
+            try
+            {
+                _logger?.LogInformation("开始沙箱环境测试开具发票");
+
+                // 沙箱环境基础URL
+                const string SandboxBaseUrl = "https://sandbox.nuonuocs.cn/open/v1/services";
+
+                // 构造测试数据 - 使用正确的属性名和数据类型
+                var testInvoice = new TaxInvoiceInfo
+                {
+                    Id = Guid.NewGuid(),
+                    BuyerTitle = "测试企业名称",
+                    BuyerTaxNum = "339901999999198",
+                    BuyerTel = "0571-88888888",
+                    BuyerAddress = "杭州市",
+                    BuyerAccount = "中国工商银行 111111111111",
+                    Mail = "test@example.com",
+                    Mobile = "15858585858",
+                    Remark = "沙箱环境测试",
+                    SellerTitle = "销方企业名称",
+                    SellerTaxNum = "339901999999142", // 沙箱环境销方税号
+                    SellerTel = "0571-77777777",
+                    SellerAddress = "销方地址",
+                    InvoiceType = "pc" // 电子发票(普通发票)-即数电普票(电子)
+                };
+
+                // 构造测试明细项
+                var testItems = new List<TaxInvoiceInfoItem>
+                {
+                    new TaxInvoiceInfoItem
+                    {
+                        Id = Guid.NewGuid(),
+                        ParentId = testInvoice.Id,
+                        GoodsName = "电脑",
+                        Quantity = 1,
+                        UnitPrice = 885.00m,
+                        TaxRate = 0.13m
+                    }
+                };
+
+                // 构造沙箱测试渠道账号对象
+                var sandboxChannelAccount = new NNChannelAccountObject
+                {
+                    AppKey = appKey,
+                    AppSecret = appSecret,
+                    Token = GetSandboxToken(appKey, appSecret) ?? "12345", // 调用获取沙箱令牌方法
+                    TokenRefreshTime = DateTime.Now,
+                    TokenExpiry = TimeSpan.FromHours(2)
+                };
+
+                // 生成请求基本参数
+                var senid = Guid.NewGuid().ToString("N");
+                var nonce = new Random().Next(10000000, 99999999);
+                var timestamp = DateTimeOffset.Now.ToUnixTimeSeconds();
+
+                // 构建订单对象
+                var order = new NNOrder
+                {
+                    BuyerName = testInvoice.BuyerTitle,
+                    BuyerTaxNum = testInvoice.BuyerTaxNum,
+                    BuyerTel = testInvoice.BuyerTel,
+                    BuyerAddress = testInvoice.BuyerAddress,
+                    BuyerAccount = testInvoice.BuyerAccount,
+                    BuyerPhone = testInvoice.Mobile,
+                    SalerTaxNum = testInvoice.SellerTaxNum,
+                    SalerTel = testInvoice.SellerTel,
+                    SalerAddress = testInvoice.SellerAddress,
+                    OrderNo = "TEST" + DateTime.Now.ToString("yyyyMMddHHmmss"),
+                    InvoiceDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), // 使用字符串格式
+                    InvoiceType = 1, // 蓝票
+                    InvoiceLine = testInvoice.InvoiceType, // 发票种类
+                    Clerk = "张三", // 开票员
+                    PushMode = "-1", // 不推送
+                    Email = testInvoice.Mail,
+                    Remark = testInvoice.Remark
+                };
+
+                // 构建明细项
+                order.InvoiceDetail = testItems.Select(item => new NNInvoiceDetail
+                {
+                    GoodsName = item.GoodsName,
+                    Unit = "台",
+                    SpecType = "规格型号",
+                    WithTaxFlag = 0, // 含税
+                    Price = item.UnitPrice.ToString("0.00"),
+                    Num = item.Quantity.ToString(),
+                    TaxRate = item.TaxRate,
+                    TaxExcludedAmount = (item.UnitPrice * item.Quantity).ToString("0.00"),
+                    Tax = (item.UnitPrice * item.Quantity * item.TaxRate).ToString("0.00"),
+                    TaxIncludedAmount = (item.UnitPrice * item.Quantity * (1 + item.TaxRate)).ToString("0.00"),
+                    InvoiceLineProperty = "0" // 正常行
+                }).ToList();
+
+                // 构建完整请求
+                var request = new NuoNuoRequest
+                {
+                    Senid = senid,
+                    Nonce = nonce,
+                    Timestamp = timestamp,
+                    AppKey = sandboxChannelAccount.AppKey,
+                    Method = "nuonuo.OpeMplatform.requestBillingNew",
+                    Order = order
+                };
+
+                // 序列化请求内容
+                var options = new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                    WriteIndented = false,
+                };
+                var jsonContent = JsonSerializer.Serialize(request, options);
+
+                // 构建URL，根据开放平台要求添加公共参数
+                var requestUrl = $"{SandboxBaseUrl}?senid={senid}&nonce={nonce}&timestamp={timestamp}&appkey={appKey}";
+
+                // 使用ComputeSignature方法计算签名
+                string sign = ComputeSignature(
+                    appKey,
+                    appSecret,
+                    senid,
+                    nonce,
+                    timestamp,
+                    jsonContent);
+
+                // 设置请求头
+                _httpClient.DefaultRequestHeaders.Clear();
+                //_httpClient.DefaultRequestHeaders.Add("Content-type", "application/json");
+                _httpClient.DefaultRequestHeaders.Add("X-Nuonuo-Sign", sign);
+                _httpClient.DefaultRequestHeaders.Add("accessToken", sandboxChannelAccount.Token);
+                _httpClient.DefaultRequestHeaders.Add("userTax", order.SalerTaxNum);
+                _httpClient.DefaultRequestHeaders.Add("method", "nuonuo.OpeMplatform.requestBillingNew");
+
+                // 发送请求
+                var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+                _logger?.LogInformation("发送沙箱请求URL: {RequestUrl}", requestUrl);
+                _logger?.LogInformation("发送沙箱请求内容: {JsonContent}", jsonContent);
+
+                var responseTask = _httpClient.PostAsync(requestUrl, content);
+                responseTask.Wait();
+                var response = responseTask.Result;
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    return new NuoNuoInvoiceResult
+                    {
+                        Success = false,
+                        ErrorCode = response.StatusCode.ToString(),
+                        ErrorMessage = $"沙箱请求失败，状态码: {response.StatusCode}"
+                    };
+                }
+
+                var responseContentTask = response.Content.ReadAsStringAsync();
+                responseContentTask.Wait();
+                var responseContent = responseContentTask.Result;
+
+                _logger?.LogInformation("沙箱响应: {ResponseContent}", responseContent);
+
+                // 处理响应
+                var result = JsonSerializer.Deserialize<NuoNuoInvoiceResponse>(responseContent, options);
+
+                if (result != null && result.Code == "E0000")
+                {
+                    return new NuoNuoInvoiceResult
+                    {
+                        Success = true,
+                        InvoiceSerialNum = result.Result?.InvoiceSerialNum,
+                        ErrorMessage = "沙箱环境测试成功"
+                    };
+                }
+                else
+                {
+                    return new NuoNuoInvoiceResult
+                    {
+                        Success = false,
+                        ErrorCode = result?.Code,
+                        ErrorMessage = $"沙箱环境测试失败: {result?.Describe}"
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "沙箱测试开票时发生异常");
+                return new NuoNuoInvoiceResult
+                {
+                    Success = false,
+                    ErrorCode = "Exception",
+                    ErrorMessage = ex.Message
+                };
+            }
+        }
+
+        /// <summary>
+        /// 获取沙箱环境访问令牌
+        /// </summary>
+        /// <param name="appKey">沙箱环境AppKey</param>
+        /// <param name="appSecret">沙箱环境AppSecret</param>
+        /// <returns>访问令牌，失败返回null</returns>
+        private string GetSandboxToken(string appKey, string appSecret)
+        {
+            try
+            {
+                _logger?.LogInformation("尝试获取沙箱环境访问令牌");
+
+                // 沙箱环境token获取地址
+                var tokenUrl = "https://sandbox.nuonuocs.cn/open/accessToken";
+
+                var content = new FormUrlEncodedContent(new[]
+                {
+            new KeyValuePair<string, string>("client_id", appKey),
+            new KeyValuePair<string, string>("client_secret", appSecret),
+            new KeyValuePair<string, string>("grant_type", "client_credentials")
+        });
+
+                var task = _httpClient.PostAsync(tokenUrl, content);
+                task.Wait();
+                var response = task.Result;
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger?.LogError("获取沙箱访问令牌失败，状态码: {StatusCode}", response.StatusCode);
+                    return null;
+                }
+
+                var responseBodyTask = response.Content.ReadAsStringAsync();
+                responseBodyTask.Wait();
+                var responseBody = responseBodyTask.Result;
+
+                _logger?.LogInformation("沙箱令牌响应: {Response}", responseBody);
+
+                // 解析响应
+                var options = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true // 忽略属性名大小写
+                };
+
+                var json = JsonSerializer.Deserialize<NNAccessTokenResponse>(responseBody, options);
+
+                if (json == null || string.IsNullOrEmpty(json.AccessToken))
+                {
+                    _logger?.LogError("解析沙箱访问令牌失败");
+                    return null;
+                }
+
+                _logger?.LogInformation("成功获取沙箱访问令牌");
+                return json.AccessToken;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "获取沙箱访问令牌时发生异常");
+                return null;
+            }
+        }
+
+        #endregion 测试相关
     }
 
     /// <summary>扩展方法类，包含配置NuoNuoManager的依赖注入方法</summary>

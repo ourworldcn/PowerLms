@@ -435,7 +435,7 @@ namespace PowerLmsWebApi.Controllers
             if (!_AuthorizationManager.Demand(out err, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             if (!context.User.IsAdmin())   //若非超管也非商管
             {
-                return base.Forbid("需要管理员权限。");
+                return StatusCode((int)HttpStatusCode.Forbidden, "需要管理员权限。");
             }
             var ss = from tmp in _DbContext.DD_DataDicCatalogs
                      where tmp.OrgId == model.Item.OrgId && tmp.Code == model.Item.Code

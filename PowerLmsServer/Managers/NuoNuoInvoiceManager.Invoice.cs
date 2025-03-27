@@ -105,7 +105,7 @@ namespace PowerLmsServer.Managers
 
         /// <summary>订单时间</summary>
         [JsonPropertyName("invoiceDate")]
-        public DateTime InvoiceDate { get; set; }
+        public string InvoiceDate { get; set; }
         #endregion
 
         #region 发票信息

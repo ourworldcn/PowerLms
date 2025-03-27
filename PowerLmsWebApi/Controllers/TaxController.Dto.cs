@@ -197,16 +197,9 @@ namespace PowerLmsWebApi.Controllers
     /// <summary>
     /// 获取全部税务发票信息的返回值封装类。
     /// </summary>
-    public class GetAllTaxInvoiceInfoReturnDto : ReturnDtoBase
+    public class GetAllTaxInvoiceInfoReturnDto : PagingReturnDtoBase<TaxInvoiceInfo>
     {
-        /// <summary>
-        /// 集合元素的最大总数量。
-        /// </summary>
-        public int Total { get; set; }
-        /// <summary>
-        /// 返回的集合。
-        /// </summary>
-        public List<TaxInvoiceInfo> Result { get; set; } = new();
+
     }
 
     /// <summary>
@@ -310,16 +303,8 @@ namespace PowerLmsWebApi.Controllers
     /// <summary>
     /// 获取全部税务发票信息明细的返回值封装类。
     /// </summary>
-    public class GetAllTaxInvoiceInfoItemReturnDto : ReturnDtoBase
+    public class GetAllTaxInvoiceInfoItemReturnDto : PagingReturnDtoBase<TaxInvoiceInfoItem>
     {
-        /// <summary>
-        /// 集合元素的最大总数量。
-        /// </summary>
-        public int Total { get; set; }
-        /// <summary>
-        /// 返回的集合。
-        /// </summary>
-        public List<TaxInvoiceInfoItem> Result { get; set; } = new();
     }
 
     /// <summary>

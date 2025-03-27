@@ -157,7 +157,6 @@ internal class Program
         services.AddAutoMapper(hsAssm);
         #endregion 配置 AutoMapper
 
-        services.AddTaskDispatcher(); //添加任务调度器服务
         services.AddManualInvoicingManager(); //添加手工开票管理服务
         services.AddNuoNuoManager(); //添加诺诺开票管理服务
         return builder;

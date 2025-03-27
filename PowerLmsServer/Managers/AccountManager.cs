@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Primitives;
 using OW;
 using PowerLms.Data;
@@ -27,19 +28,21 @@ namespace PowerLmsServer.Managers
         /// <param name="mapper"></param>
         /// <param name="memoryCache"></param>
         /// <param name="dbContextFactory"></param>
-        public AccountManager(PasswordGenerator passwordGenerator, IMapper mapper, IMemoryCache memoryCache, IDbContextFactory<PowerLmsUserDbContext> dbContextFactory, TaskDispatcher taskDispatcher)
+        public AccountManager(PasswordGenerator passwordGenerator, IMapper mapper, IMemoryCache memoryCache, IDbContextFactory<PowerLmsUserDbContext> dbContextFactory, IHostApplicationLifetime applicationLifetime)
         {
             _PasswordGenerator = passwordGenerator;
             _Mapper = mapper;
             _MemoryCache = memoryCache;
             _DbContextFactory = dbContextFactory;
-            TaskDispatcher = taskDispatcher;
+            _ApplicationLifetime = applicationLifetime;
+            TaskDispatcher = new TaskDispatcher(new TaskDispatcherOptions { CancellationToken = _ApplicationLifetime.ApplicationStopped });
         }
 
         readonly PasswordGenerator _PasswordGenerator;
         readonly IMapper _Mapper;
         readonly IMemoryCache _MemoryCache;
         readonly IDbContextFactory<PowerLmsUserDbContext> _DbContextFactory;
+        IHostApplicationLifetime _ApplicationLifetime;
 
         /// <summary>
         /// 将令牌转换为用户Key的字典的缓存项的key。
@@ -476,7 +479,7 @@ namespace PowerLmsServer.Managers
                 account.IdString,      // 任务类型标识
                 parameter =>                  // 执行任务的函数
                 {
-                    if(parameter is not Account user)   //忽略不是Account类型的参数
+                    if (parameter is not Account user)   //忽略不是Account类型的参数
                         return true;
                     try
                     {
