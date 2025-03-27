@@ -74,6 +74,12 @@ namespace System
     /// </summary>
     public static class OwHelper
     {
+#if NET6_0_OR_GREATER
+        /// <summary>
+        /// 公用的每线程独立的随机数生成器。每个线程独立实例。
+        /// </summary>
+        public static Random Random => Random.Shared;
+#else
         /// <summary>
         /// 公用的每线程独立的随机数生成器。
         /// </summary>
@@ -84,6 +90,7 @@ namespace System
         /// 公用的每线程独立的随机数生成器。每个线程独立实例。
         /// </summary>
         public static Random Random => _Random ??= new Random();
+#endif // NET6_0_OR_GREATER
 
         /// <summary>
         /// 游戏内使用的时间与Utc时间的偏移量。

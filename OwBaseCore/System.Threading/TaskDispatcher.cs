@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Configuration;
 
 
 namespace System.Threading
@@ -35,6 +36,16 @@ namespace System.Threading
         public int LockTimeoutMs { get; set; } = 0;
 
         /// <summary>
+        /// 日志记录器
+        /// </summary>
+        public ILogger Logger { get; set; }
+
+        /// <summary>
+        /// 取消令牌，用于停止任务执行线程
+        /// </summary>
+        public CancellationToken CancellationToken { get; set; } = CancellationToken.None;
+
+        /// <summary>
         /// <inheritdoc/>
         /// </summary>
         public TaskDispatcherOptions Value => this;
@@ -43,28 +54,24 @@ namespace System.Threading
     /// <summary>
     /// 任务调度器，管理和执行一系列任务，支持相同类型任务合并
     /// </summary>
-    [OwAutoInjection(ServiceLifetime.Singleton)]
     public class TaskDispatcher : IDisposable
     {
-        private readonly ILogger<TaskDispatcher> _logger;
-        private readonly IHostApplicationLifetime _applicationLifetime;
+        private readonly ILogger _logger;
         private readonly ConcurrentDictionary<object, TaskItem> _taskQueue = new ConcurrentDictionary<object, TaskItem>();
         private readonly Thread _executionThread;
         private readonly TaskDispatcherOptions _options;
+        private readonly CancellationToken _cancellationToken;
         private bool _disposed;
-
+        
         /// <summary>
         /// 任务调度器构造函数
         /// </summary>
-        /// <param name="logger">日志记录器</param>
-        /// <param name="applicationLifetime">应用程序生命周期</param>
-        /// <param name="options">配置选项</param>
-        public TaskDispatcher(ILogger<TaskDispatcher> logger, IHostApplicationLifetime applicationLifetime,
-            IOptions<TaskDispatcherOptions> options)
+        /// <param name="options">配置选项，为空则使用默认配置。</param>
+        public TaskDispatcher(TaskDispatcherOptions options)
         {
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _applicationLifetime = applicationLifetime ?? throw new ArgumentNullException(nameof(applicationLifetime));
-            _options = options?.Value ?? new TaskDispatcherOptions();
+            _options = options ?? new TaskDispatcherOptions();
+            _logger = _options.Logger;
+            _cancellationToken = _options.CancellationToken;
 
             // 创建低优先级执行线程
             _executionThread = new Thread(ExecuteLoop)
@@ -74,8 +81,8 @@ namespace System.Threading
                 Name = "TaskDispatcher_ExecutionThread"
             };
             _executionThread.Start();
-
-            _logger.LogInformation("TaskDispatcher 已初始化，最大队列容量: {MaxQueueSize}",
+            
+            _logger?.LogInformation("TaskDispatcher 已初始化，最大队列容量: {MaxQueueSize}",
                 _options.MaxQueueSize > 0 ? _options.MaxQueueSize.ToString() : "不限制");
         }
 
@@ -96,11 +103,11 @@ namespace System.Threading
             // 检查队列容量限制
             if (_options.MaxQueueSize > 0 && _taskQueue.Count >= _options.MaxQueueSize)
             {
-                _logger.LogWarning("任务队列已达到最大容量 {MaxSize}，无法添加新任务: {TypeId}",
+                _logger?.LogWarning("任务队列已达到最大容量 {MaxSize}，无法添加新任务: {TypeId}",
                     _options.MaxQueueSize, typeId);
                 return false;
             }
-
+            
             var taskItem = new TaskItem
             {
                 TypeId = typeId,
@@ -113,9 +120,6 @@ namespace System.Threading
             // 添加或更新任务
             _taskQueue[typeId] = taskItem;
 
-            // 不再需要通过信号通知执行线程
-
-            _logger.LogDebug("任务已添加到队列: {TypeId}", typeId);
             return true;
         }
 
@@ -126,8 +130,6 @@ namespace System.Threading
         public bool ProcessAll()
         {
             if (_disposed) return false;
-
-            _logger.LogDebug("开始手动处理队列中的所有任务");
 
             // 设置超时时间
             DateTime startTime = DateTime.UtcNow;
@@ -151,13 +153,9 @@ namespace System.Threading
 
             bool allTasksProcessed = _taskQueue.IsEmpty;
 
-            if (allTasksProcessed)
+            if (!allTasksProcessed && DateTime.UtcNow - startTime >= timeout)
             {
-                _logger.LogDebug("所有任务已处理完成");
-            }
-            else if (DateTime.UtcNow - startTime >= timeout)
-            {
-                _logger.LogWarning("任务处理超时，仍有 {RemainingTasks} 个任务未处理", _taskQueue.Count);
+                _logger?.LogWarning("任务处理超时，仍有 {RemainingTasks} 个任务未处理", _taskQueue.Count);
             }
 
             return allTasksProcessed;
@@ -170,11 +168,11 @@ namespace System.Threading
 
         private void ExecuteLoop()
         {
-            _logger.LogInformation("任务执行线程已启动");
+            _logger?.LogInformation("任务执行线程已启动");
 
             try
             {
-                while (!_applicationLifetime.ApplicationStopped.IsCancellationRequested)
+                while (!_cancellationToken.IsCancellationRequested && !_disposed)
                 {
                     // 处理队列中的所有任务
                     if (!_taskQueue.IsEmpty)
@@ -183,29 +181,41 @@ namespace System.Threading
                         var currentTasks = _taskQueue.Keys.ToList();
                         foreach (var taskId in currentTasks)
                         {
-                            // 每次处理任务前检查应用是否要停止
-                            if (_applicationLifetime.ApplicationStopped.IsCancellationRequested)
+                            // 每次处理任务前检查是否要停止
+                            if (_cancellationToken.IsCancellationRequested || _disposed)
                                 break;
 
                             ProcessTask(taskId);
                         }
                     }
 
-                    // 快速响应应用停止
-                    if (_applicationLifetime.ApplicationStopped.WaitHandle.WaitOne(_options.CheckIntervalMs))
+                    // 快速响应取消
+                    try
+                    {
+                        // 等待间隔时间或取消信号
+                        WaitHandle.WaitAny(
+                            new[] { _cancellationToken.WaitHandle },
+                            _options.CheckIntervalMs);
+                    }
+                    catch (OperationCanceledException)
+                    {
                         break;
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        break;
+                    }
                 }
 
                 // 应用停止后尝试处理剩余任务
-                _logger.LogInformation("应用程序正在停止，处理剩余任务");
                 ProcessAll();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "任务执行线程发生异常");
+                _logger?.LogError(ex, "任务执行线程发生异常");
             }
 
-            _logger.LogInformation("任务执行线程已停止");
+            _logger?.LogInformation("任务执行线程已停止");
         }
 
         private void ProcessTask(object taskId)
@@ -222,7 +232,6 @@ namespace System.Threading
                 {
                     if (!SingletonLocker.TryEnter(taskItem.TypeId, TimeSpan.FromMilliseconds(_options.LockTimeoutMs)))
                     {
-                        _logger.LogDebug("无法锁定任务，将重新加入队列稍后再试: {TypeId}", taskItem.TypeId);
                         // 锁定失败，将任务重新加入队列，但如果队列中已存在相同任务则不再添加
                         _taskQueue.TryAdd(taskItem.TypeId, taskItem);
                         return;
@@ -233,18 +242,14 @@ namespace System.Threading
                 {
                     // 执行任务，使用任务参数而不是类型ID
                     bool result = taskItem.ExecuteFunc(taskItem.Parameter ?? taskItem.TypeId);
-                    if (result)
+                    if (!result)
                     {
-                        _logger.LogDebug("任务执行成功: {TypeId}", taskItem.TypeId);
-                    }
-                    else
-                    {
-                        _logger.LogWarning("任务执行返回失败: {TypeId}", taskItem.TypeId);
+                        _logger?.LogWarning("任务执行返回失败: {TypeId}", taskItem.TypeId);
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "任务执行时发生异常: {TypeId}", taskItem.TypeId);
+                    _logger?.LogError(ex, "任务执行时发生异常: {TypeId}", taskItem.TypeId);
                 }
                 finally
                 {
@@ -257,7 +262,7 @@ namespace System.Threading
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "处理任务过程中发生异常: {TypeId}", taskItem.TypeId);
+                _logger?.LogError(ex, "处理任务过程中发生异常: {TypeId}", taskItem.TypeId);
                 // 重新将任务添加到队列
                 _taskQueue.TryAdd(taskItem.TypeId, taskItem);
             }
@@ -309,10 +314,10 @@ namespace System.Threading
 
             if (_executionThread.IsAlive && !_executionThread.Join(10000))
             {
-                _logger.LogWarning("执行线程未能在超时时间内结束");
+                _logger?.LogWarning("执行线程未能在超时时间内结束");
             }
 
-            _logger.LogInformation("TaskDispatcher 已释放资源");
+            _logger?.LogInformation("TaskDispatcher 已释放资源");
         }
 
         /// <summary>
@@ -353,13 +358,4 @@ namespace System.Threading
         }
     }
 
-    /// <summary>扩展方法类</summary>
-    public static class TaskDispatcherExtensions
-    {
-        /// <summary>将服务添加到容器</summary>
-        public static IServiceCollection AddTaskDispatcher(this IServiceCollection services)
-        {
-            return services.AddSingleton<TaskDispatcher>();
-        }
-    }
 }
