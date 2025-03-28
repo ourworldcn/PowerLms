@@ -419,53 +419,137 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// 增加一个数据字典(目录)。
+        /// 增加一个数据字典(目录)。无论CopyToChildren的值，对于超管都会增加一个全局字典目录(OrgId为空)，对于商管都会增加一个商户级字典目录(OrgId为商户Id)。
+        /// 只有当勾选了复制选项(CopyToChildren=true)时，才会将字典目录复制到公司型机构。超管会复制到所有公司型机构，商管会复制到其商户下所有公司型机构。
+        /// 考虑到机构是树状结构，会遵循机构的层级关系进行复制。
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
-        /// <response code="400">指定的Code已经存在。</response>  
+        /// <response code="302">需要管理员权限。</response>  
+        /// <response code="400">未知的商户Id。</response>  
         /// <response code="401">无效令牌。</response>  
-        /// <response code="403">非超管商管或权限不足。</response>  
         [HttpPost]
         public ActionResult<AddDataDicCatalogReturnDto> AddDataDicCatalog(AddDataDicCatalogParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-            if (!context.User.IsAdmin())   //若非超管也非商管
-            {
-                return StatusCode((int)HttpStatusCode.Forbidden, "需要管理员权限。");
-            }
-            var ss = from tmp in _DbContext.DD_DataDicCatalogs
-                     where tmp.OrgId == model.Item.OrgId && tmp.Code == model.Item.Code
-                     select tmp;
-            if (ss.FirstOrDefault(c => c.OrgId == model.Item.OrgId && c.Code == model.Item.Code) is not null)
-            {
-                return BadRequest();
-            }
-            var result = new AddDataDicCatalogReturnDto();
-            model.Item.GenerateNewId();
-            _DbContext.DD_DataDicCatalogs.Add(model.Item);
 
-            if (model.CopyToChildren)   //若须向下复制。
+            if (!context.User.IsSuperAdmin) //若非超管
             {
-                IEnumerable<Guid> catalogIds;
-                if (model.CopyToChildren)    //若须向下传播
+                string err;
+                if (!_AuthorizationManager.Demand(out err, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!context.User.IsAdmin()) return StatusCode((int)HttpStatusCode.Forbidden, "需要管理员权限。");
+            }
+
+            // 根据用户类型设置正确的OrgId
+            Guid? targetOrgId = null;
+            if (context.User.IsSuperAdmin)
+            {
+                targetOrgId = null; // 超管使用全局目录
+            }
+            else if (context.User.IsMerchantAdmin)
+            {
+                if (!_MerchantManager.GetIdByUserId(context.User.Id, out var merchId))
+                    return BadRequest("无法获取商户ID");
+                targetOrgId = merchId;
+            }
+
+            // 检查同一机构下是否已存在相同Code的目录
+            if (_DbContext.DD_DataDicCatalogs.Any(c => c.OrgId == targetOrgId && c.Code == model.Item.Code))
+                return BadRequest($"已存在相同Code的目录: {model.Item.Code}");
+
+            // 创建主字典目录并使用AutoMapper复制属性
+            var mainCatalog = _Mapper.Map<DataDicCatalog>(model.Item);
+            mainCatalog.OrgId = targetOrgId;
+            mainCatalog.GenerateNewId();
+
+            _DbContext.DD_DataDicCatalogs.Add(mainCatalog);
+
+            // 只有勾选了复制选项时才复制到公司型机构
+            if (model.CopyToChildren)
+            {
+                List<PlOrganization> targetOrgs = new List<PlOrganization>();
+
+                // 获取目标机构集合
+                if (context.User.IsSuperAdmin)
                 {
-                    if (context.User.IsSuperAdmin)    //若是超管
+                    // 超管：获取所有公司型机构 (先查询数据，确保EF可以正确处理)
+                    targetOrgs = _DbContext.PlOrganizations
+                        .Where(o => o.Otc == 2)
+                        .AsNoTracking()
+                        .ToList();
+                }
+                else if (context.User.IsMerchantAdmin && targetOrgId.HasValue)
+                {
+                    // 商管：获取所属商户下所有公司型机构
+                    var allOrgs = _OrganizationManager.GetOrLoadByMerchantId(targetOrgId.Value);
+                    if (allOrgs != null)
                     {
-                        catalogIds = _DbContext.DD_DataDicCatalogs.Where(c => c.Code == model.Item.Code && c.Id != model.Item.Id).Select(c => c.Id).ToArray();
-                    }
-                    else if (context.User.IsMerchantAdmin)   //若是商管
-                    {
-
+                        targetOrgs = allOrgs.Values
+                            .Where(o => o.Otc == 2)
+                            .ToList();
                     }
                 }
+
+                // 获取已存在相同Code的目录的机构Id (先查询数据，确保EF可以正确处理)
+                var existingCatalogOrgIds = _DbContext.DD_DataDicCatalogs
+                    .Where(c => c.Code == model.Item.Code)
+                    .AsNoTracking()
+                    .Select(c => c.OrgId)
+                    .ToList();
+
+                var existingIdSet = new HashSet<Guid?>(existingCatalogOrgIds);
+
+                // 构建父子关系字典 (在内存中完成，而非在EF查询中)
+                var parentChildMap = new Dictionary<Guid?, List<Guid>>();
+                foreach (var org in targetOrgs)
+                {
+                    if (!parentChildMap.ContainsKey(org.ParentId))
+                        parentChildMap[org.ParentId] = new List<Guid>();
+
+                    parentChildMap[org.ParentId].Add(org.Id);
+                }
+
+                // 处理每个目标机构
+                foreach (var org in targetOrgs)
+                {
+                    // 跳过已存在相同Code的机构
+                    if (existingIdSet.Contains(org.Id))
+                        continue;
+
+                    // 检查父级链是否已存在相同Code的目录
+                    bool skipThisOrg = false;
+                    var currentParentId = org.ParentId;
+
+                    while (currentParentId != null && !skipThisOrg)
+                    {
+                        if (existingIdSet.Contains(currentParentId))
+                        {
+                            skipThisOrg = true;
+                            break;
+                        }
+
+                        var parentOrg = targetOrgs.FirstOrDefault(o => o.Id == currentParentId);
+                        if (parentOrg == null) break;
+
+                        currentParentId = parentOrg.ParentId;
+                    }
+
+                    if (skipThisOrg)
+                        continue;
+
+                    // 创建新目录
+                    var newCatalog = _Mapper.Map<DataDicCatalog>(mainCatalog);
+                    newCatalog.OrgId = org.Id;
+                    newCatalog.GenerateNewId();
+
+                    _DbContext.DD_DataDicCatalogs.Add(newCatalog);
+                    existingIdSet.Add(org.Id);
+                }
             }
+
             _DbContext.SaveChanges();
-            result.Id = model.Item.Id;
-            return result;
+            return new AddDataDicCatalogReturnDto { Id = mainCatalog.Id };
         }
 
         /// <summary>
