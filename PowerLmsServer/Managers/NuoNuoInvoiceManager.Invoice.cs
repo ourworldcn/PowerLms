@@ -137,6 +137,10 @@ namespace PowerLmsServer.Managers
         /// <summary>备注信息</summary>
         [JsonPropertyName("remark")]
         public string Remark { get; set; }
+
+        /// <summary>回传发票信息地址（开票完成、开票失败）</summary>
+        [JsonPropertyName("callBackUrl")]
+        public string CallBackUrl { get; set; } = "api/NuoNuoCallback/HandleCallback";
         #endregion
     }
 

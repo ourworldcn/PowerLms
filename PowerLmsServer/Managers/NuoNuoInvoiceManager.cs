@@ -33,10 +33,12 @@ namespace PowerLmsServer.Managers
         /// 访问令牌地址。
         /// </summary>
         private const string TokenUrl = "https://open.nuonuo.com/accessToken";
+
         /// <summary>
-        /// 沙箱环境地址。
+        /// 沙箱环境基础URL。
         /// </summary>
-        private const string SanBoxTokenUrl = "https://sandbox.nuonuocs.cn/open/v1/services";
+        const string SandboxBaseUrl = "https://sandbox.nuonuocs.cn/open/v1/services";
+
         /// <summary>
         /// 正式环境地址。
         /// </summary>
@@ -367,8 +369,9 @@ namespace PowerLmsServer.Managers
         /// 根据发票ID发起开票请求
         /// </summary>
         /// <param name="taxInvoiceInfoId">发票信息ID</param>
+        /// <param name="useSandbox">是否使用沙箱环境进行测试，默认为false</param>
         /// <returns>开票结果</returns>
-        public NuoNuoInvoiceResult IssueInvoice(Guid taxInvoiceInfoId)
+        public NuoNuoInvoiceResult IssueInvoice(Guid taxInvoiceInfoId, bool useSandbox = false)
         {
             try
             {
@@ -423,6 +426,38 @@ namespace PowerLmsServer.Managers
                     };
                 }
 
+                // 检查是否使用沙箱模式
+                if (useSandbox)
+                {
+                    _logger?.LogInformation($"使用沙箱环境开具发票，发票ID: {taxInvoiceInfoId}");
+
+                    // 调用沙箱测试方法
+                    var sandboxResult = TestIssueInvoiceInSandbox(nnChannelAccount.AppKey, nnChannelAccount.AppSecret);
+
+                    // 如果沙箱测试成功，更新发票信息
+                    if (sandboxResult.Success)
+                    {
+                        _logger?.LogInformation($"沙箱环境开票成功，发票ID: {taxInvoiceInfoId}，流水号: {sandboxResult.InvoiceSerialNum}");
+
+                        // 更新发票状态和流水号
+                        if (!string.IsNullOrEmpty(sandboxResult.InvoiceSerialNum))
+                        {
+                            invoiceInfo.InvoiceSerialNum = sandboxResult.InvoiceSerialNum;
+                            invoiceInfo.State = 2; // 已开票状态
+                            invoiceInfo.ReturnInvoiceTime = DateTime.Now;
+                            invoiceInfo.SellerInvoiceData = $"{{\"sandboxTest\": true, \"invoiceSerialNum\": \"{sandboxResult.InvoiceSerialNum}\"}}";
+                            _dbContext.SaveChanges();
+                        }
+                    }
+                    else
+                    {
+                        _logger?.LogWarning($"沙箱环境开票失败，发票ID: {taxInvoiceInfoId}，错误: {sandboxResult.ErrorMessage}");
+                    }
+
+                    return sandboxResult;
+                }
+
+                // 正式环境开票流程 - 使用现有逻辑
                 // 获取令牌
                 string accessToken = GetAccessToken(taxInvoiceInfoId);
                 if (string.IsNullOrEmpty(accessToken))
@@ -455,7 +490,6 @@ namespace PowerLmsServer.Managers
 
                 // 设置请求头
                 _httpClient.DefaultRequestHeaders.Clear();
-                // 此代码将引发异常，直接在内容中设置即可 _httpClient.DefaultRequestHeaders.Add("Content-type", "application/json");
                 _httpClient.DefaultRequestHeaders.Add("X-Nuonuo-Sign", sign);
                 _httpClient.DefaultRequestHeaders.Add("accessToken", accessToken);
                 _httpClient.DefaultRequestHeaders.Add("userTax", request.Order.SalerTaxNum);
@@ -702,9 +736,6 @@ namespace PowerLmsServer.Managers
             {
                 _logger?.LogInformation("开始沙箱环境测试开具发票");
 
-                // 沙箱环境基础URL
-                const string SandboxBaseUrl = "https://sandbox.nuonuocs.cn/open/v1/services";
-
                 // 构造测试数据 - 使用正确的属性名和数据类型
                 var testInvoice = new TaxInvoiceInfo
                 {
@@ -906,10 +937,10 @@ namespace PowerLmsServer.Managers
 
                 var content = new FormUrlEncodedContent(new[]
                 {
-            new KeyValuePair<string, string>("client_id", appKey),
-            new KeyValuePair<string, string>("client_secret", appSecret),
-            new KeyValuePair<string, string>("grant_type", "client_credentials")
-        });
+                    new KeyValuePair<string, string>("client_id", appKey),
+                    new KeyValuePair<string, string>("client_secret", appSecret),
+                    new KeyValuePair<string, string>("grant_type", "client_credentials")
+                });
 
                 var task = _httpClient.PostAsync(tokenUrl, content);
                 task.Wait();

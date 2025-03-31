@@ -277,9 +277,9 @@ namespace PowerLmsServer.Managers
         [Conditional("DEBUG")]
         private void Test(IServiceProvider svc)
         {
-            var nn = svc.GetRequiredService<NuoNuoManager>();
+            //var nn = svc.GetRequiredService<NuoNuoManager>();
 
-            nn.TestIssueInvoiceInSandbox("SD56531018", "SD3C429B318C485E");
+            //nn.TestIssueInvoiceInSandbox("SD56531018", "SD3C429B318C485E");
         }
 
         private void CreateDb()

@@ -566,7 +566,7 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// 更改税务发票信息状态。目前仅支持从0切换到1。
+        /// 更改税务发票信息状态。当状态从0变更为1时，将调用诺诺开票接口。
         /// </summary>
         /// <param name="model">状态更改参数</param>
         /// <returns>状态更改结果</returns>
@@ -586,7 +586,9 @@ namespace PowerLmsWebApi.Controllers
             //if (!_AuthorizationManager.Demand(out err, "F.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
 
             // 获取指定的发票信息
-            var taxInvoiceInfo = _DbContext.TaxInvoiceInfos.Find(model.Id);
+            var taxInvoiceInfo = _DbContext.TaxInvoiceInfos
+                .FirstOrDefault(t => t.Id == model.Id);
+
             if (taxInvoiceInfo == null)
             {
                 return NotFound("指定的税务发票信息不存在");
@@ -595,22 +597,98 @@ namespace PowerLmsWebApi.Controllers
             // 更新状态及相关字段
             var now = OwHelper.WorldNow;
             var oldState = taxInvoiceInfo.State;
-            taxInvoiceInfo.State = model.NewState;
 
-            switch (model.NewState)
+            if (model.NewState == 1 && oldState == 0) // 从待录入状态变更为待审核状态
             {
-                case 1 when taxInvoiceInfo.State == 0: // 待审核
-                                                       // 从驳回状态重新提交审核
-                    taxInvoiceInfo.State = 1;
-                    break;
-                default:
-                    return BadRequest("状态不允许变更");
+                // 设置新状态
+                taxInvoiceInfo.State = 1;
+
+                // 记录系统日志
+                _SqlAppLogger.LogGeneralInfo($"变更发票状态.{nameof(TaxInvoiceInfo)}.{oldState}To{model.NewState}");
+
+                // 保存状态变更
+                _DbContext.SaveChanges();
+
+                // 确定是否使用沙箱模式
+                bool useSandbox = false;
+                // 检查是否有沙箱标记（可以通过Remark或特殊参数）
+                if (!string.IsNullOrEmpty(model.Reason) && model.Reason.Contains("sandbox", StringComparison.OrdinalIgnoreCase))
+                {
+                    useSandbox = true;
+                    _Logger.LogInformation($"将使用沙箱模式开具发票，发票ID: {taxInvoiceInfo.Id}");
+                }
+
+                // 在状态成功变更为审核通过(1)后，调用诺诺开票接口
+                try
+                {
+                    // 尝试获取NuoNuoManager服务
+                    var nuoNuoManager = _ServiceProvider.GetService<NuoNuoManager>();
+                    if (nuoNuoManager != null)
+                    {
+                        // 异步处理开票请求，避免阻塞当前请求
+                        Task.Run(() =>
+                        {
+                            try
+                            {
+                                _Logger.LogInformation($"开始调用诺诺开票接口，发票ID: {taxInvoiceInfo.Id}, 沙箱模式: {useSandbox}");
+
+                                // 调用开票接口，传入沙箱模式参数
+                                var issueResult = nuoNuoManager.IssueInvoice(taxInvoiceInfo.Id, useSandbox);
+
+                                if (issueResult.Success)
+                                {
+                                    _Logger.LogInformation($"调用诺诺开票接口成功，发票ID: {taxInvoiceInfo.Id}, 沙箱模式: {useSandbox}");
+                                }
+                                else
+                                {
+                                    _Logger.LogWarning($"调用诺诺开票接口失败，发票ID: {taxInvoiceInfo.Id}, 错误: {issueResult.ErrorMessage}, 错误代码: {issueResult.ErrorCode}, 沙箱模式: {useSandbox}");
+
+                                    // 如果开票失败，记录错误信息
+                                    using (var scope = _ServiceProvider.CreateScope())
+                                    {
+                                        var dbContext = scope.ServiceProvider.GetRequiredService<PowerLmsUserDbContext>();
+                                        var invoice = dbContext.TaxInvoiceInfos.Find(taxInvoiceInfo.Id);
+                                        if (invoice != null)
+                                        {
+                                            // 记录错误信息
+                                            invoice.SellerInvoiceData = $"{{\"errorCode\": \"{issueResult.ErrorCode}\", \"errorMessage\": \"{issueResult.ErrorMessage}\", \"sandbox\": {useSandbox.ToString().ToLower()}}}";
+                                            dbContext.SaveChanges();
+                                        }
+                                    }
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                _Logger.LogError(ex, $"调用诺诺开票接口时发生异常，发票ID: {taxInvoiceInfo.Id}, 沙箱模式: {useSandbox}");
+
+                                // 记录异常信息
+                                using (var scope = _ServiceProvider.CreateScope())
+                                {
+                                    var dbContext = scope.ServiceProvider.GetRequiredService<PowerLmsUserDbContext>();
+                                    var invoice = dbContext.TaxInvoiceInfos.Find(taxInvoiceInfo.Id);
+                                    if (invoice != null)
+                                    {
+                                        invoice.SellerInvoiceData = $"{{\"errorMessage\": \"系统异常: {ex.Message.Replace("\"", "\\\"")}\", \"sandbox\": {useSandbox.ToString().ToLower()}}}";
+                                        dbContext.SaveChanges();
+                                    }
+                                }
+                            }
+                        });
+                    }
+                    else
+                    {
+                        _Logger.LogWarning($"未能找到NuoNuoManager服务，无法调用开票接口，发票ID: {taxInvoiceInfo.Id}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _Logger.LogError(ex, $"尝试调用诺诺开票接口时发生异常，发票ID: {taxInvoiceInfo.Id}");
+                }
             }
-
-            // 记录系统日志
-            _SqlAppLogger.LogGeneralInfo($"变更发票状态.{nameof(TaxInvoiceInfo)}.{oldState}To{model.NewState}");
-
-            _DbContext.SaveChanges();
+            else
+            {
+                return BadRequest("状态不允许变更");
+            }
 
             result.Id = taxInvoiceInfo.Id;
             result.NewState = taxInvoiceInfo.State;
