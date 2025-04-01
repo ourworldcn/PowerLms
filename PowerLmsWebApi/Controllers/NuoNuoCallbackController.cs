@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
+using PowerLmsServer.Managers;
 
 namespace PowerLmsWebApi.Controllers
 {
@@ -19,16 +20,22 @@ namespace PowerLmsWebApi.Controllers
     {
         private readonly PowerLmsUserDbContext _dbContext;
         private readonly ILogger<NuoNuoCallbackController> _logger;
+        private readonly OwMessageManager _messageManager; // 注入消息管理器
 
         /// <summary>
         /// 初始化诺诺回调控制器
         /// </summary>
         /// <param name="dbContext">数据库上下文</param>
         /// <param name="logger">日志记录器</param>
-        public NuoNuoCallbackController(PowerLmsUserDbContext dbContext, ILogger<NuoNuoCallbackController> logger)
+        /// <param name="messageManager">消息管理器</param>
+        public NuoNuoCallbackController(
+            PowerLmsUserDbContext dbContext,
+            ILogger<NuoNuoCallbackController> logger,
+            OwMessageManager messageManager) // 添加消息管理器参数
         {
             _dbContext = dbContext;
             _logger = logger;
+            _messageManager = messageManager; // 初始化消息管理器
         }
 
         /// <summary>
@@ -215,38 +222,117 @@ namespace PowerLmsWebApi.Controllers
                 }
                 else if (status == "2") // 开票失败
                 {
-                    invoiceInfo.State = 5; // 设置为开票失败状态
+                    // 保存原审核人ID以便发送通知
+                    var auditorId = invoiceInfo.AuditorId;
 
-                    // 记录失败原因
+                    // 将状态重置为待审核状态
+                    invoiceInfo.State = 0;
+
+                    // 清除审核人和审核日期
+                    invoiceInfo.AuditorId = null;
+                    invoiceInfo.AuditDateTime = null;
+
+                    // 获取错误信息
+                    string errorMessage = "开票失败: 未知原因";
                     if (invoiceData.TryGetValue("c_errorMessage", out var errorMsg) &&
                         errorMsg.ValueKind != JsonValueKind.Undefined)
                     {
-                        // 将错误信息存储在Remark字段(如果模型中有此字段)或SellerInvoiceData中
-                        invoiceInfo.SellerInvoiceData = $"{{\"errorMessage\": \"{errorMsg.GetString()}\"}}";
+                        errorMessage = errorMsg.GetString();
+                    }
+
+                    // 将错误信息存储在SellerInvoiceData字段
+                    invoiceInfo.SellerInvoiceData = $"{{\"errorMessage\": \"{errorMessage}\"}}";
+                    invoiceInfo.ReturnInvoiceTime = DateTime.Now;
+
+                    // 如果有原审核人ID，向审核人发送消息通知
+                    if (auditorId.HasValue)
+                    {
+                        try
+                        {
+                            // 构建有意义的通知内容
+                            string title = $"发票开具失败通知 - {invoiceInfo.InvoiceSerialNum}";
+                            string content = $@"<div style='font-family: Arial, sans-serif; padding: 15px;'>
+                        <h3 style='color: #d9534f;'>发票开具失败</h3>
+                        <p><strong>流水号:</strong> {invoiceInfo.InvoiceSerialNum}</p>
+                        <p><strong>购方名称:</strong> {invoiceInfo.BuyerTitle}</p>
+                        <p><strong>购方税号:</strong> {invoiceInfo.BuyerTaxNum}</p>
+                        <p><strong>销方名称:</strong> {invoiceInfo.SellerTitle}</p>
+                        <p><strong>销方税号:</strong> {invoiceInfo.SellerTaxNum}</p>
+                        <p><strong>失败原因:</strong> {errorMessage}</p>
+                        <p style='margin-top: 20px;'>该发票已重置为待审核状态，请修正问题后重新审核。</p>
+                    </div>";
+
+                            // 发送系统消息给原审核人
+                            _messageManager.SendMessage(
+                                null,                   // 发送者ID，系统消息为null
+                                new[] { auditorId.Value }, // 接收者ID数组，这里只有原审核人
+                                title,                  // 消息标题
+                                content,                // 消息内容，HTML格式
+                                true                    // 是系统消息
+                            );
+
+                            _logger.LogInformation($"已向原审核人 {auditorId.Value} 发送开票失败通知，发票已重置为待审核状态");
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, $"向原审核人 {auditorId.Value} 发送开票失败通知时出错");
+                        }
                     }
                     else
                     {
-                        invoiceInfo.SellerInvoiceData = "{\"errorMessage\": \"开票失败: 未知原因\"}";
+                        _logger.LogWarning($"发票 {invoiceInfo.Id} 开票失败，但未找到原审核人ID，无法发送通知");
                     }
-
-                    invoiceInfo.ReturnInvoiceTime = DateTime.Now;
                 }
                 else if (status == "3") // 开票成功签章失败
                 {
                     invoiceInfo.State = 6; // 设置为签章失败状态
 
-                    // 记录失败原因
+                    // 获取错误信息
+                    string errorMessage = "签章失败: 未知原因";
                     if (invoiceData.TryGetValue("c_errorMessage", out var errorMsg) &&
                         errorMsg.ValueKind != JsonValueKind.Undefined)
                     {
-                        invoiceInfo.SellerInvoiceData = $"{{\"errorMessage\": \"签章失败: {errorMsg.GetString()}\"}}";
-                    }
-                    else
-                    {
-                        invoiceInfo.SellerInvoiceData = "{\"errorMessage\": \"签章失败: 未知原因\"}";
+                        errorMessage = $"签章失败: {errorMsg.GetString()}";
                     }
 
+                    // 将错误信息存储在SellerInvoiceData字段
+                    invoiceInfo.SellerInvoiceData = $"{{\"errorMessage\": \"{errorMessage}\"}}";
                     invoiceInfo.ReturnInvoiceTime = DateTime.Now;
+
+                    // 如果有审核人ID，向审核人发送消息通知
+                    if (invoiceInfo.AuditorId.HasValue)
+                    {
+                        try
+                        {
+                            // 构建有意义的通知内容
+                            string title = $"发票签章失败通知 - {invoiceInfo.InvoiceSerialNum}";
+                            string content = $@"<div style='font-family: Arial, sans-serif; padding: 15px;'>
+                        <h3 style='color: #f0ad4e;'>发票签章失败</h3>
+                        <p><strong>流水号:</strong> {invoiceInfo.InvoiceSerialNum}</p>
+                        <p><strong>购方名称:</strong> {invoiceInfo.BuyerTitle}</p>
+                        <p><strong>购方税号:</strong> {invoiceInfo.BuyerTaxNum}</p>
+                        <p><strong>销方名称:</strong> {invoiceInfo.SellerTitle}</p>
+                        <p><strong>销方税号:</strong> {invoiceInfo.SellerTaxNum}</p>
+                        <p><strong>失败原因:</strong> {errorMessage}</p>
+                        <p style='margin-top: 20px;'>发票已开具成功，但签章操作失败，请联系系统管理员。</p>
+                    </div>";
+
+                            // 发送系统消息给审核人
+                            _messageManager.SendMessage(
+                                null,                       // 发送者ID，系统消息为null
+                                new[] { invoiceInfo.AuditorId.Value }, // 接收者ID数组，这里只有审核人
+                                title,                      // 消息标题
+                                content,                    // 消息内容，HTML格式
+                                true                        // 是系统消息
+                            );
+
+                            _logger.LogInformation($"已向审核人 {invoiceInfo.AuditorId.Value} 发送签章失败通知");
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, $"向审核人 {invoiceInfo.AuditorId.Value} 发送签章失败通知时出错");
+                        }
+                    }
                 }
             }
             catch (Exception ex)

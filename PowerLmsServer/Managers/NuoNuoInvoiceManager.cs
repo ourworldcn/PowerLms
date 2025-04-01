@@ -706,12 +706,12 @@ namespace PowerLmsServer.Managers
         public string ComputeHmacSha1(string message, string key = null)
         {
             // 将消息和密钥转换为字节数组
-            byte[] keyBytes = Encoding.UTF8.GetBytes(key);
+            byte[] keyBytes = key is null ? null : Encoding.UTF8.GetBytes(key);
             byte[] messageBytes = Encoding.UTF8.GetBytes(message);
 
             // 使用指定密钥创建 HMACSHA1 实例
 
-            using var hmac = key is null ? new HMACSHA1() : new HMACSHA1(keyBytes);
+            using var hmac = keyBytes is null ? new HMACSHA1() : new HMACSHA1(keyBytes);
 
             // 计算哈希
             byte[] hashBytes = hmac.ComputeHash(messageBytes);

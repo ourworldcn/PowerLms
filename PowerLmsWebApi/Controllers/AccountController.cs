@@ -40,6 +40,7 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="merchantManager"></param>
         /// <param name="roleManager"></param>
         /// <param name="appLogger"></param>
+        /// <param name="cache"></param>
         public AccountController(PowerLmsUserDbContext dbContext, AccountManager accountManager, IServiceProvider serviceProvider, IMapper mapper,
             EntityManager entityManager, OrganizationManager organizationManager, CaptchaManager captchaManager, AuthorizationManager authorizationManager,
             MerchantManager merchantManager, RoleManager roleManager, OwSqlAppLogger appLogger, IMemoryCache cache)

@@ -282,6 +282,13 @@ namespace PowerLmsWebApi.Controllers
         /// 原因说明。在变更为已驳回(3)或已作废(4)状态时必须提供。
         /// </summary>
         public string Reason { get; set; }
+
+        /// <summary>
+        /// 是否使用沙箱模式。
+        /// 当设置为true时，将在沙箱环境中测试开票流程，不会产生真实发票。
+        /// 默认为false，表示使用正式环境。
+        /// </summary>
+        public bool UseSandbox { get; set; } = false;
     }
 
     /// <summary>

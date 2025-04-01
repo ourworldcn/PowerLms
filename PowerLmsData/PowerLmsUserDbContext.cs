@@ -548,6 +548,13 @@ namespace PowerLmsServer.EfData
         public DbSet<TaxInvoiceInfoItem> TaxInvoiceInfoItems { get; set; }
 
         #endregion 税务发票相关
+
+        #region 消息系统
+        /// <summary>
+        /// 消息表。
+        /// </summary>
+        public DbSet<OwMessage> OwMessages { get; set; }
+        #endregion 消息系统
     }
 
     /// <summary>
