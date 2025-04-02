@@ -505,6 +505,7 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="model"></param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">发票状态不是未审核状态，无法修改。</response>  
         /// <response code="401">无效令牌。</response>  
         /// <response code="403">权限不足。</response>  
         /// <response code="404">指定Id的税务发票信息不存在。</response>  
@@ -515,11 +516,29 @@ namespace PowerLmsWebApi.Controllers
             string err;
             //if (!_AuthorizationManager.Demand(out err, "F.3.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ModifyTaxInvoiceInfoReturnDto();
+
+            // 检查发票状态
+            var existingInvoice = _DbContext.TaxInvoiceInfos.Find(model.TaxInvoiceInfo.Id);
+            if (existingInvoice == null) return NotFound("指定ID的发票信息不存在");
+
+            // 只有状态为0(未审核)的发票才能修改
+            if (existingInvoice.State != 0)
+            {
+                result.HasError = true;
+                result.ErrorCode = 400;
+                result.DebugMessage = "只有未审核状态的发票才能修改";
+                return BadRequest(result.DebugMessage);
+            }
+
             if (!_EntityManager.Modify(new[] { model.TaxInvoiceInfo })) return NotFound();
             //忽略不可更改字段
             var entity = _DbContext.Entry(model.TaxInvoiceInfo);
             entity.Property(c => c.State).IsModified = false;
             _DbContext.SaveChanges();
+
+            // 记录日志
+            _SqlAppLogger.LogGeneralInfo($"修改发票信息.{nameof(TaxInvoiceInfo)}.{model.TaxInvoiceInfo.Id}");
+
             return result;
         }
 
@@ -529,7 +548,7 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="model"></param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
-        /// <response code="400">若已经审核，则不能删除发票文件。</response>  
+        /// <response code="400">只有未审核状态的发票才能删除。</response>  
         /// <response code="401">无效令牌。</response>  
         /// <response code="403">权限不足。</response>  
         /// <response code="404">指定Id的税务发票信息不存在。</response>  
@@ -543,16 +562,23 @@ namespace PowerLmsWebApi.Controllers
             var id = model.Id;
             var dbSet = _DbContext.TaxInvoiceInfos;
             var item = dbSet.Find(id);
-            if (item is null) return BadRequest();
+
+            if (item is null) return NotFound("指定ID的发票信息不存在");
+
+            // 只有状态为0(未审核)的发票才能删除
+            if (item.State != 0)
+            {
+                result.HasError = true;
+                result.ErrorCode = 400;
+                result.DebugMessage = "只有未审核状态的发票才能删除";
+                return BadRequest(result.DebugMessage);
+            }
+
             var children = _DbContext.TaxInvoiceInfoItems.Where(c => c.ParentId == item.Id).ToArray();
 
             _EntityManager.Remove(item);
             if (children.Length > 0) _DbContext.RemoveRange(children);
-            //若已经审核，则不能删除发票文件
-            if (item.State > 0)
-            {
-                return BadRequest("已经审核的发票不能删除！");
-            }
+
             //记录日志
             _DbContext.OwSystemLogs.Add(new OwSystemLog
             {
@@ -560,8 +586,10 @@ namespace PowerLmsWebApi.Controllers
                 ActionId = $"Delete.{nameof(TaxInvoiceInfo)}.{item.Id}",
                 ExtraGuid = context.User.Id,
                 ExtraDecimal = children.Length,
+                WorldDateTime = DateTime.Now
             });
             _DbContext.SaveChanges();
+
             return result;
         }
 
@@ -769,9 +797,10 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="model"></param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">关联的发票不是未审核状态，无法修改明细。</response>  
         /// <response code="401">无效令牌。</response>  
         /// <response code="403">权限不足。</response>  
-        /// <response code="404">指定Id的税务发票信息明细不存在。</response>  
+        /// <response code="404">指定Id的税务发票信息明细不存在或关联的发票不存在。</response>  
         [HttpPut]
         public ActionResult<ModifyTaxInvoiceInfoItemReturnDto> ModifyTaxInvoiceInfoItem(ModifyTaxInvoiceInfoItemParamsDto model)
         {
@@ -779,10 +808,30 @@ namespace PowerLmsWebApi.Controllers
             var result = new ModifyTaxInvoiceInfoItemReturnDto();
             string err;
             //if (!_AuthorizationManager.Demand(out err, "F.3.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+
+            // 获取明细记录
+            var item = _DbContext.TaxInvoiceInfoItems.Find(model.TaxInvoiceInfoItem.Id);
+            if (item == null) return NotFound("指定ID的发票明细信息不存在");
+
+            // 获取关联的发票
+            var parentInvoice = _DbContext.TaxInvoiceInfos.Find(item.ParentId);
+            if (parentInvoice == null) return NotFound("关联的发票信息不存在");
+
+            // 检查发票状态
+            if (parentInvoice.State != 0)
+            {
+                result.HasError = true;
+                result.ErrorCode = 400;
+                result.DebugMessage = "只有未审核状态的发票才能修改其明细";
+                return BadRequest(result.DebugMessage);
+            }
+
             if (!_EntityManager.Modify(new[] { model.TaxInvoiceInfoItem })) return NotFound();
-            //忽略不可更改字段
-            var entity = _DbContext.Entry(model.TaxInvoiceInfoItem);
             _DbContext.SaveChanges();
+
+            // 记录日志
+            _SqlAppLogger.LogGeneralInfo($"修改发票明细.{nameof(TaxInvoiceInfoItem)}.{model.TaxInvoiceInfoItem.Id}");
+
             return result;
         }
 
@@ -792,9 +841,10 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="model"></param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">关联的发票不是未审核状态，无法删除明细。</response>  
         /// <response code="401">无效令牌。</response>  
         /// <response code="403">权限不足。</response>  
-        /// <response code="404">指定Id的税务发票信息明细不存在。</response>  
+        /// <response code="404">指定Id的税务发票信息明细不存在或关联的发票不存在。</response>  
         [HttpDelete]
         public ActionResult<RemoveTaxInvoiceInfoItemReturnDto> RemoveTaxInvoiceInfoItem(RemoveTaxInvoiceInfoItemParamsDto model)
         {
@@ -802,11 +852,29 @@ namespace PowerLmsWebApi.Controllers
             string err;
             //if (!_AuthorizationManager.Demand(out err, "F.3.2") && !_AuthorizationManager.Demand(out err, "F.3.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new RemoveTaxInvoiceInfoItemReturnDto();
-            var id = model.Id;
-            var dbSet = _DbContext.TaxInvoiceInfoItems;
-            var item = dbSet.Find(id);
-            if (item is null) return BadRequest();
+
+            // 获取明细记录
+            var item = _DbContext.TaxInvoiceInfoItems.Find(model.Id);
+            if (item is null) return NotFound("指定ID的发票明细信息不存在");
+
+            // 获取关联的发票
+            var parentInvoice = _DbContext.TaxInvoiceInfos.Find(item.ParentId);
+            if (parentInvoice == null) return NotFound("关联的发票信息不存在");
+
+            // 检查发票状态
+            if (parentInvoice.State != 0)
+            {
+                result.HasError = true;
+                result.ErrorCode = 400;
+                result.DebugMessage = "只有未审核状态的发票才能删除其明细";
+                return BadRequest(result.DebugMessage);
+            }
+
             _EntityManager.Remove(item);
+
+            // 记录日志
+            _SqlAppLogger.LogGeneralInfo($"删除发票明细.{nameof(TaxInvoiceInfoItem)}.{item.Id}");
+
             _DbContext.SaveChanges();
             return result;
         }
@@ -818,6 +886,7 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="model"></param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">发票不是未审核状态，无法修改明细。</response>  
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">指定Id的税务发票信息不存在。</response>  
         [HttpPut]
@@ -825,8 +894,19 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new SetTaxInvoiceInfoItemReturnDto();
+
+            // 获取发票信息
             var taxInvoiceInfo = _DbContext.TaxInvoiceInfos.Find(model.TaxInvoiceInfoId);
-            if (taxInvoiceInfo is null) return NotFound();
+            if (taxInvoiceInfo is null) return NotFound("指定ID的发票信息不存在");
+
+            // 检查发票状态
+            if (taxInvoiceInfo.State != 0)
+            {
+                result.HasError = true;
+                result.ErrorCode = 400;
+                result.DebugMessage = "只有未审核状态的发票才能设置其明细";
+                return BadRequest(result.DebugMessage);
+            }
 
             var aryIds = model.Items.Select(c => c.Id).ToArray();   //指定的Id
             var existsIds = _DbContext.TaxInvoiceInfoItems.Where(c => c.ParentId == taxInvoiceInfo.Id).Select(c => c.Id).ToArray();    //已经存在的Id
@@ -840,11 +920,17 @@ namespace PowerLmsWebApi.Controllers
             //增加
             var addIds = aryIds.Except(existsIds).ToArray();
             var adds = model.Items.Where(c => addIds.Contains(c.Id)).ToArray();
-            Array.ForEach(adds, c => c.GenerateNewId());
+            Array.ForEach(adds, c => {
+                c.GenerateNewId();
+                c.ParentId = taxInvoiceInfo.Id; // 确保设置父ID
+            });
             _DbContext.AddRange(adds);
             //删除
             var removeIds = existsIds.Except(aryIds).ToArray();
             _DbContext.RemoveRange(_DbContext.TaxInvoiceInfoItems.Where(c => removeIds.Contains(c.Id)));
+
+            // 记录日志
+            _SqlAppLogger.LogGeneralInfo($"设置发票明细.{nameof(TaxInvoiceInfo)}.{taxInvoiceInfo.Id}");
 
             _DbContext.SaveChanges();
             //后处理

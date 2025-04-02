@@ -75,13 +75,75 @@ namespace PowerLmsWebApi.Controllers
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
 
             coll = EfHelper.GenerateWhereAnd(coll, conditional);
+            #region 业务表单关联过滤
+            if (conditional != null)
+            {
+                // 空运出口单条件过滤
+                var eaDocConditions = conditional
+                    .Where(c => c.Key.StartsWith("PlEaDoc."))
+                    .ToDictionary(
+                        c => c.Key.Substring("PlEaDoc.".Length),
+                        c => c.Value);
 
+                if (eaDocConditions.Any())
+                {
+                    var eaDocQuery = _DbContext.PlEaDocs.AsNoTracking();
+                    eaDocQuery = EfHelper.GenerateWhereAnd(eaDocQuery, eaDocConditions);
+                    var eaDocJobIds = eaDocQuery.Select(doc => doc.JobId);
+                    coll = coll.Where(job => eaDocJobIds.Contains(job.Id));
+                }
+
+                // 空运进口单条件过滤
+                var iaDocConditions = conditional
+                    .Where(c => c.Key.StartsWith("PlIaDoc."))
+                    .ToDictionary(
+                        c => c.Key.Substring("PlIaDoc.".Length),
+                        c => c.Value);
+
+                if (iaDocConditions.Any())
+                {
+                    var iaDocQuery = _DbContext.PlIaDocs.AsNoTracking();
+                    iaDocQuery = EfHelper.GenerateWhereAnd(iaDocQuery, iaDocConditions);
+                    var iaDocJobIds = iaDocQuery.Select(doc => doc.JobId);
+                    coll = coll.Where(job => iaDocJobIds.Contains(job.Id));
+                }
+
+                // 海运出口单条件过滤
+                var esDocConditions = conditional
+                    .Where(c => c.Key.StartsWith("PlEsDoc."))
+                    .ToDictionary(
+                        c => c.Key.Substring("PlEsDoc.".Length),
+                        c => c.Value);
+
+                if (esDocConditions.Any())
+                {
+                    var esDocQuery = _DbContext.PlEsDocs.AsNoTracking();
+                    esDocQuery = EfHelper.GenerateWhereAnd(esDocQuery, esDocConditions);
+                    var esDocJobIds = esDocQuery.Select(doc => doc.JobId);
+                    coll = coll.Where(job => esDocJobIds.Contains(job.Id));
+                }
+
+                // 海运进口单条件过滤
+                var isDocConditions = conditional
+                    .Where(c => c.Key.StartsWith("PlIsDoc."))
+                    .ToDictionary(
+                        c => c.Key.Substring("PlIsDoc.".Length),
+                        c => c.Value);
+
+                if (isDocConditions.Any())
+                {
+                    var isDocQuery = _DbContext.PlIsDocs.AsNoTracking();
+                    isDocQuery = EfHelper.GenerateWhereAnd(isDocQuery, isDocConditions);
+                    var isDocJobIds = isDocQuery.Select(doc => doc.JobId);
+                    coll = coll.Where(job => isDocJobIds.Contains(job.Id));
+                }
+            }
+            #endregion 业务表单关联过滤
             #region 权限判定
             string err;
             var r = coll.AsEnumerable();    //设计备注：如果结果集小则没问题；如果结果集大虽然这导致巨大内存消耗，但在此问题规模下，用内存替换cpu消耗是合理的置换代价
             if (!_AuthorizationManager.Demand(out err, "F.2"))  //若无通用查看权限
             {
-                // 修改这一行，使用正确的方法名称
                 var orgs = _OrganizationManager.GetOrLoadCurrentOrgsByUser(context.User);
                 var orgIds = orgs.Keys.ToArray();    //所有机构Id集合
                 var userIds = _DbContext.AccountPlOrganizations.Where(c => orgIds.Contains(c.OrgId)).Select(c => c.UserId).Distinct().ToHashSet();   //所有相关人Id集合
@@ -120,7 +182,9 @@ namespace PowerLmsWebApi.Controllers
                 #endregion 获取判断函数的本地函数。
             }
             #endregion 权限判定
+            // TO DO要支持关联到具体业务表单并依据表单的状态进行过滤
 
+            // 从数据库中获取数据
             var prb = _EntityManager.GetAll(r.AsQueryable(), model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;

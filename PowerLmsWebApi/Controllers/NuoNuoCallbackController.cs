@@ -249,25 +249,23 @@ namespace PowerLmsWebApi.Controllers
                     {
                         try
                         {
-                            // 构建有意义的通知内容
+                            // 使用纯文本格式构建通知内容
                             string title = $"发票开具失败通知 - {invoiceInfo.InvoiceSerialNum}";
-                            string content = $@"<div style='font-family: Arial, sans-serif; padding: 15px;'>
-                        <h3 style='color: #d9534f;'>发票开具失败</h3>
-                        <p><strong>流水号:</strong> {invoiceInfo.InvoiceSerialNum}</p>
-                        <p><strong>购方名称:</strong> {invoiceInfo.BuyerTitle}</p>
-                        <p><strong>购方税号:</strong> {invoiceInfo.BuyerTaxNum}</p>
-                        <p><strong>销方名称:</strong> {invoiceInfo.SellerTitle}</p>
-                        <p><strong>销方税号:</strong> {invoiceInfo.SellerTaxNum}</p>
-                        <p><strong>失败原因:</strong> {errorMessage}</p>
-                        <p style='margin-top: 20px;'>该发票已重置为待审核状态，请修正问题后重新审核。</p>
-                    </div>";
+                            string content = $"发票开具失败\n" +
+                                $"流水号: {invoiceInfo.InvoiceSerialNum}\n" +
+                                $"购方名称: {invoiceInfo.BuyerTitle}\n" +
+                                $"购方税号: {invoiceInfo.BuyerTaxNum}\n" +
+                                $"销方名称: {invoiceInfo.SellerTitle}\n" +
+                                $"销方税号: {invoiceInfo.SellerTaxNum}\n" +
+                                $"失败原因: {errorMessage}\n\n" +
+                                $"该发票已重置为待审核状态，请修正问题后重新审核。";
 
                             // 发送系统消息给原审核人
                             _messageManager.SendMessage(
                                 null,                   // 发送者ID，系统消息为null
                                 new[] { auditorId.Value }, // 接收者ID数组，这里只有原审核人
                                 title,                  // 消息标题
-                                content,                // 消息内容，HTML格式
+                                content,                // 消息内容，纯文本格式
                                 true                    // 是系统消息
                             );
 
@@ -304,25 +302,23 @@ namespace PowerLmsWebApi.Controllers
                     {
                         try
                         {
-                            // 构建有意义的通知内容
+                            // 使用纯文本格式构建通知内容
                             string title = $"发票签章失败通知 - {invoiceInfo.InvoiceSerialNum}";
-                            string content = $@"<div style='font-family: Arial, sans-serif; padding: 15px;'>
-                        <h3 style='color: #f0ad4e;'>发票签章失败</h3>
-                        <p><strong>流水号:</strong> {invoiceInfo.InvoiceSerialNum}</p>
-                        <p><strong>购方名称:</strong> {invoiceInfo.BuyerTitle}</p>
-                        <p><strong>购方税号:</strong> {invoiceInfo.BuyerTaxNum}</p>
-                        <p><strong>销方名称:</strong> {invoiceInfo.SellerTitle}</p>
-                        <p><strong>销方税号:</strong> {invoiceInfo.SellerTaxNum}</p>
-                        <p><strong>失败原因:</strong> {errorMessage}</p>
-                        <p style='margin-top: 20px;'>发票已开具成功，但签章操作失败，请联系系统管理员。</p>
-                    </div>";
+                            string content = $"发票签章失败\n" +
+                                $"流水号: {invoiceInfo.InvoiceSerialNum}\n" +
+                                $"购方名称: {invoiceInfo.BuyerTitle}\n" +
+                                $"购方税号: {invoiceInfo.BuyerTaxNum}\n" +
+                                $"销方名称: {invoiceInfo.SellerTitle}\n" +
+                                $"销方税号: {invoiceInfo.SellerTaxNum}\n" +
+                                $"失败原因: {errorMessage}\n\n" +
+                                $"发票已开具成功，但签章操作失败，请联系系统管理员。";
 
                             // 发送系统消息给审核人
                             _messageManager.SendMessage(
                                 null,                       // 发送者ID，系统消息为null
                                 new[] { invoiceInfo.AuditorId.Value }, // 接收者ID数组，这里只有审核人
                                 title,                      // 消息标题
-                                content,                    // 消息内容，HTML格式
+                                content,                    // 消息内容，纯文本格式
                                 true                        // 是系统消息
                             );
 
