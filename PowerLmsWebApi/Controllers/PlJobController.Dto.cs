@@ -237,6 +237,22 @@ namespace PowerLmsWebApi.Controllers
     }
 
     /// <summary>
+    /// 根据业务Id，获取相关账单对象功能的返回值封装类内的元素类型。
+    /// </summary>
+    public class GetDocBillsByJobIdItemDto
+    {
+        /// <summary>
+        /// 业务Id。
+        /// </summary>
+        public Guid JobId { get; set; }
+
+        /// <summary>
+        /// 相关的账单。
+        /// </summary>
+        public List<DocBill> Bills { get; set; } = new List<DocBill>();
+    }
+
+    /// <summary>
     /// 根据业务Id，获取相关账单对象功能的返回值封装类。
     /// </summary>
     public class GetDocBillsByJobIdReturnDto : ReturnDtoBase
@@ -244,19 +260,6 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 根据业务Id，获取相关账单对象功能的返回值内的元素类型。
         /// </summary>
-        public class GetDocBillsByJobIdItemDto
-        {
-            /// <summary>
-            /// 业务Id。
-            /// </summary>
-            public Guid JobId { get; set; }
-
-            /// <summary>
-            /// 相关的账单。
-            /// </summary>
-            public List<DocBill> Bills { get; set; } = new List<DocBill>();
-        }
-
         /// <summary>
         /// 返回的账单。
         /// </summary>

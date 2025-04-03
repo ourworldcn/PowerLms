@@ -168,6 +168,11 @@ namespace PowerLms.Data
         [MaxLength(32)]
         public string BuyerTel { get; set; }
         #endregion
+
+        /// <summary>
+        /// 回调地址。用于接收开票结果通知。
+        /// </summary>
+        public string CallbackUrl { get; set; }
     }
 
     /// <summary>

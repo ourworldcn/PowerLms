@@ -204,8 +204,8 @@ namespace PowerLmsWebApi.Controllers
                 // 根据状态更新发票
                 if (status == null || status == "1") // 开票完成
                 {
-                    // 已成功开票
-                    invoiceInfo.State = 2;
+                    // 已成功开票 - 状态2表示已开票
+                    invoiceInfo.State = 2; // 保持状态值为2，表示已开票
 
                     // 更新发票基本信息
                     if (invoiceData.TryGetValue("c_fpdm", out var fpdm) && fpdm.ValueKind != JsonValueKind.Undefined)
@@ -225,8 +225,8 @@ namespace PowerLmsWebApi.Controllers
                     // 保存原审核人ID以便发送通知
                     var auditorId = invoiceInfo.AuditorId;
 
-                    // 将状态重置为待审核状态
-                    invoiceInfo.State = 0;
+                    // 将状态重置为待审核状态 - 状态0表示创建后待审核
+                    invoiceInfo.State = 0; // 确保状态值为0，表示创建后待审核
 
                     // 清除审核人和审核日期
                     invoiceInfo.AuditorId = null;
@@ -283,7 +283,8 @@ namespace PowerLmsWebApi.Controllers
                 }
                 else if (status == "3") // 开票成功签章失败
                 {
-                    invoiceInfo.State = 6; // 设置为签章失败状态
+                    // 状态值6为签章失败状态
+                    invoiceInfo.State = 6; // 这是一个特殊状态，表示签章失败
 
                     // 获取错误信息
                     string errorMessage = "签章失败: 未知原因";

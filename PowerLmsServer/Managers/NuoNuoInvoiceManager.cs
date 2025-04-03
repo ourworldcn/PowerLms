@@ -363,6 +363,7 @@ namespace PowerLmsServer.Managers
                 return null;
             }
         }
+
         #endregion 令牌相关
 
         /// <summary>
@@ -432,7 +433,7 @@ namespace PowerLmsServer.Managers
                     _logger?.LogInformation($"使用沙箱环境开具发票，发票ID: {taxInvoiceInfoId}");
 
                     // 调用沙箱测试方法
-                    var sandboxResult = TestIssueInvoiceInSandbox(nnChannelAccount.AppKey, nnChannelAccount.AppSecret);
+                    var sandboxResult = TestIssueInvoiceInSandbox(nnChannelAccount.AppKey, nnChannelAccount.AppSecret, invoiceInfo.CallbackUrl);
 
                     // 如果沙箱测试成功，更新发票信息
                     if (sandboxResult.Success)
@@ -468,6 +469,16 @@ namespace PowerLmsServer.Managers
                         ErrorCode = "TokenError",
                         ErrorMessage = $"无法获取发票ID {taxInvoiceInfoId} 的访问令牌"
                     };
+                }
+
+                // 检查回调地址
+                if (string.IsNullOrEmpty(invoiceInfo.CallbackUrl))
+                {
+                    _logger?.LogWarning($"发票ID {taxInvoiceInfoId} 未设置回调地址，将无法接收开票结果通知");
+                }
+                else
+                {
+                    _logger?.LogInformation($"发票ID {taxInvoiceInfoId} 设置了回调地址: {invoiceInfo.CallbackUrl}");
                 }
 
                 // 准备数据
@@ -646,6 +657,13 @@ namespace PowerLmsServer.Managers
             // 设置额外的推送方式
             order.PushMode = DeterminePushMode(invoiceInfo);
 
+            // 设置回调地址
+            if (!string.IsNullOrEmpty(invoiceInfo.CallbackUrl))
+            {
+                order.CallBackUrl = invoiceInfo.CallbackUrl;
+                _logger?.LogDebug($"设置回调URL: {order.CallBackUrl}");
+            }
+
             return new NuoNuoRequest
             {
                 Senid = senid,
@@ -721,16 +739,14 @@ namespace PowerLmsServer.Managers
             return Convert.ToBase64String(hashBytes);
         }
 
-        #endregion 签名相关
-
-        #region 测试相关
         /// <summary>
         /// 在沙箱环境测试开具发票
         /// </summary>
         /// <param name="appKey">沙箱环境AppKey</param>
         /// <param name="appSecret">沙箱环境AppSecret</param>
+        /// <param name="callbackUrl">回调地址(可选)</param>
         /// <returns>测试结果</returns>
-        public NuoNuoInvoiceResult TestIssueInvoiceInSandbox(string appKey, string appSecret)
+        public NuoNuoInvoiceResult TestIssueInvoiceInSandbox(string appKey, string appSecret, string callbackUrl = null)
         {
             try
             {
@@ -752,7 +768,8 @@ namespace PowerLmsServer.Managers
                     SellerTaxNum = "339901999999142", // 沙箱环境销方税号
                     SellerTel = "0571-77777777",
                     SellerAddress = "销方地址",
-                    InvoiceType = "pc" // 电子发票(普通发票)-即数电普票(电子)
+                    InvoiceType = "pc", // 电子发票(普通发票)-即数电普票(电子)
+                    CallbackUrl = callbackUrl // 设置回调地址
                 };
 
                 // 构造测试明细项
@@ -805,6 +822,13 @@ namespace PowerLmsServer.Managers
                     Email = testInvoice.Mail,
                     Remark = testInvoice.Remark
                 };
+
+                // 设置回调地址
+                if (!string.IsNullOrEmpty(callbackUrl))
+                {
+                    order.CallBackUrl = callbackUrl;
+                    _logger?.LogInformation($"设置沙箱测试回调URL: {callbackUrl}");
+                }
 
                 // 构建明细项
                 order.InvoiceDetail = testItems.Select(item => new NNInvoiceDetail

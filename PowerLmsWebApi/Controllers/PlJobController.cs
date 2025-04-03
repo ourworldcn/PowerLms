@@ -1,21 +1,12 @@
 ﻿using AutoMapper;
-using MathNet.Numerics;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.EntityFrameworkCore;
-using NPOI.SS.Formula.Functions;
-using NPOI.SS.UserModel;
 using PowerLms.Data;
 using PowerLmsServer;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
 using System.Net;
-using System.Reflection;
-using System.Security.Policy;
-using System.Threading.Tasks.Dataflow;
-using static PowerLmsWebApi.Controllers.GetDocBillsByJobIdReturnDto;
 
 namespace PowerLmsWebApi.Controllers
 {

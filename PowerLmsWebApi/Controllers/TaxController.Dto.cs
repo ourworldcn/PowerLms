@@ -273,7 +273,7 @@ namespace PowerLmsWebApi.Controllers
 
         /// <summary>
         /// 新状态。
-        /// 0=初始状态，1=待审核，2=已审核
+        /// 0：创建后待审核；1：已审核开票中；2：已开票。
         /// </summary>
         [Range(0, 2)]
         public byte NewState { get; set; }
