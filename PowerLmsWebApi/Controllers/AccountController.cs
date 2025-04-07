@@ -71,24 +71,8 @@ namespace PowerLmsWebApi.Controllers
         readonly RoleManager _RoleManager;
         OwSqlAppLogger _AppLogger;
         IMemoryCache _Cache;
-#if DEBUG
-        /*
-        /// <summary>
-        /// 测试
-        /// </summary>
-        /// <param name="model">查询的一般条件</param>
-        /// <param name="conditional">通用条件</param>
-        /// <returns></returns>
-        [HttpGet]
-        public ActionResult<bool> Test([FromQuery] ConditionalQueryParamsDto model, [FromQuery] Dictionary<string, string> conditional = null)
-        {
-            Func<ShippingLane, bool> f = c => c.Id == Guid.Empty;
-            //var ary = _DbContext.Set(typeof(ShippingLane)).Where(f).ToArray();
-            return default;
-        }*/
-#endif //DEBUG
-        #region 用户相关
 
+        #region 用户相关
         /// <summary>
         /// 获取账户信息。
         /// </summary>
@@ -103,65 +87,95 @@ namespace PowerLmsWebApi.Controllers
         [HttpGet]
         public ActionResult<GetAllAccountReturnDto> GetAll([FromQuery] PagingParamsDtoBase model, [FromQuery] Dictionary<string, string> conditional = null)
         {
-            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
+                return Unauthorized();
+
             var result = new GetAllAccountReturnDto();
-            var dbSet = _DbContext.Accounts;
-            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-            if (_AccountManager.IsMerchantAdmin(context.User) && _MerchantManager.GetIdByUserId(context.User.Id, out var merchantId))
+
+            try
             {
-                var orgs = _OrganizationManager.GetOrLoadByMerchantId(merchantId.Value);
-                var tmp = orgs.Keys;    // 修改: 移除 .Data
-                if (merchantId.HasValue) tmp = tmp.Append(merchantId.Value).ToArray();
-                var userIds = _DbContext.AccountPlOrganizations.Where(c => tmp.Contains(c.OrgId)).Select(c => c.UserId).Distinct().ToArray();
-                coll = coll.Where(c => userIds.Contains(c.Id));
-            }
-            foreach (var item in conditional)
-                if (string.Equals(item.Key, "eMail", StringComparison.OrdinalIgnoreCase))
+                // 初始查询
+                var coll = _DbContext.Accounts.AsNoTracking();
+
+                // 处理商户管理员权限
+                if (_AccountManager.IsMerchantAdmin(context.User) && _MerchantManager.GetIdByUserId(context.User.Id, out var merchantId) && merchantId.HasValue)
                 {
-                    coll = coll.Where(c => c.EMail.Contains(item.Value));
+                    var orgs = _OrganizationManager.GetOrLoadByMerchantId(merchantId.Value);
+                    var tmp = orgs.Keys;
+                    if (merchantId.HasValue) tmp = tmp.Append(merchantId.Value).ToArray();
+                    var userIds = _DbContext.AccountPlOrganizations
+                        .Where(c => tmp.Contains(c.OrgId))
+                        .Select(c => c.UserId)
+                        .Distinct()
+                        .ToArray();
+                    coll = coll.Where(c => userIds.Contains(c.Id));
                 }
-                else if (string.Equals(item.Key, "Id", StringComparison.OrdinalIgnoreCase))
+
+                if (conditional != null && conditional.Count > 0)
                 {
-                    if (Guid.TryParse(item.Value, out var id))
-                        coll = coll.Where(c => c.Id == id);
-                }
-                else if (string.Equals(item.Key, "LoginName", StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.LoginName.Contains(item.Value));
-                }
-                else if (string.Equals(item.Key, "Mobile", StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.Mobile.Contains(item.Value));
-                }
-                else if (string.Equals(item.Key, "DisplayName", StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.DisplayName.Contains(item.Value));
-                }
-                else if (string.Equals(item.Key, "IsAdmin", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (bool.TryParse(item.Value, out var boolValue))
-                        if (boolValue)
-                            coll = coll.Where(c => (c.State & 4) != 0);
-                        else
-                            coll = coll.Where(c => (c.State & 4) == 0);
-                }
-                else if (string.Equals(item.Key, "IsMerchantAdmin", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (bool.TryParse(item.Value, out var boolValue))
-                        if (boolValue)
-                            coll = coll.Where(c => (c.State & 8) != 0);
-                        else
-                            coll = coll.Where(c => (c.State & 8) == 0);
-                }
-                else if (string.Equals(item.Key, "OrgId", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (Guid.TryParse(item.Value, out var id))
+                    // 需要特殊处理的条件键名
+                    var specialKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
                     {
-                        coll = coll.Where(c => _DbContext.AccountPlOrganizations.Any(d => c.Id == d.UserId && d.OrgId == id));
+                        "OrgId", "IsAdmin", "IsMerchantAdmin"
+                    };
+
+                    // 提取需要特殊处理的条件
+                    var specialConditions = conditional
+                        .Where(kvp => specialKeys.Contains(kvp.Key))
+                        .ToDictionary(kvp => kvp.Key, kvp => kvp.Value, StringComparer.OrdinalIgnoreCase);
+
+                    // 提取可以用标准方式处理的条件
+                    var standardConditions = conditional
+                        .Where(kvp => !specialKeys.Contains(kvp.Key))
+                        .ToDictionary(kvp => kvp.Key, kvp => kvp.Value, StringComparer.OrdinalIgnoreCase);
+
+                    // 首先应用标准条件
+                    if (standardConditions.Count > 0)
+                    {
+                        coll = EfHelper.GenerateWhereAnd(coll, standardConditions);
+                    }
+
+                    // 然后手动应用特殊条件
+                    foreach (var item in specialConditions)
+                    {
+                        if (string.Equals(item.Key, "IsAdmin", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (bool.TryParse(item.Value, out var boolValue))
+                            {
+                                coll = coll.Where(c => boolValue ? (c.State & 4) != 0 : (c.State & 4) == 0);
+                            }
+                        }
+                        else if (string.Equals(item.Key, "IsMerchantAdmin", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (bool.TryParse(item.Value, out var boolValue))
+                            {
+                                coll = coll.Where(c => boolValue ? (c.State & 8) != 0 : (c.State & 8) == 0);
+                            }
+                        }
+                        else if (string.Equals(item.Key, "OrgId", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (Guid.TryParse(item.Value, out var id))
+                            {
+                                coll = coll.Where(c => _DbContext.AccountPlOrganizations.Any(d => c.Id == d.UserId && d.OrgId == id));
+                            }
+                        }
                     }
                 }
-            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
-            _Mapper.Map(prb, result);
+
+                // 应用排序
+                coll = coll.OrderBy(model.OrderFieldName, model.IsDesc);
+
+                // 获取分页结果
+                var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
+                _Mapper.Map(prb, result);
+            }
+            catch (Exception ex)
+            {
+                result.HasError = true;
+                result.ErrorCode = 500;
+                result.DebugMessage = $"获取账户列表时出错: {ex.Message}";
+            }
+
             return result;
         }
 
