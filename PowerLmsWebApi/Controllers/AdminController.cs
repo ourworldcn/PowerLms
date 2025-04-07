@@ -513,27 +513,6 @@ namespace PowerLmsWebApi.Controllers
                         if (existingIdSet.Contains(org.Id))
                             continue;
 
-                        // 检查父级链是否已存在相同Code的目录
-                        bool skipThisOrg = false;
-                        var currentParentId = org.ParentId;
-
-                        while (currentParentId.HasValue && !skipThisOrg)
-                        {
-                            if (existingIdSet.Contains(currentParentId))
-                            {
-                                skipThisOrg = true;
-                                break;
-                            }
-
-                            var parentOrg = targetOrgs.FirstOrDefault(o => o.Id == currentParentId);
-                            if (parentOrg == null) break;
-
-                            currentParentId = parentOrg.ParentId;
-                        }
-
-                        if (skipThisOrg)
-                            continue;
-
                         // 创建新目录 - 只使用DataDicCatalog实际拥有的属性
                         var newCatalog = new DataDicCatalog
                         {
