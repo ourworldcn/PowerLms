@@ -196,6 +196,7 @@ namespace OW.Data
         /// <typeparam name="T">查询的实体类型</typeparam>
         /// <param name="queryable">原始查询对象</param>
         /// <param name="conditional">条件字典，其中键为属性名，值为过滤条件。
+        /// 注意，字符串的键必须是ORM映射的属性名，且不区分大小写，如存在非ORM属性名可能出错。</param>
         /// 格式示例：
         /// 1. 单值条件："PropertyName"="Value" - 对字符串使用包含(Contains)匹配，对其他类型使用等于(==)匹配
         /// 2. 范围条件："PropertyName"="MinValue,MaxValue" - 使用大于等于和小于等于匹配
