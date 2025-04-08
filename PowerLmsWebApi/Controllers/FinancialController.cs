@@ -80,7 +80,9 @@ namespace PowerLmsWebApi.Controllers
         /// 获取当前用户相关的业务费用申请单和审批流状态。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">查询的条件。实体属性名不区分大小写。
+        /// <param name="conditional">查询的条件。支持 OwWf.State 格式来分别筛选申请单和工作流数据,键不区分大小写。无实体名的条件会被当作申请单的条件。
+        /// OwWf.State意义是1=正等待指定操作者审批，2=指定操作者已审批但仍在流转中，4=指定操作者参与的且已成功结束的流程,8=指定操作者参与的且已失败结束的流程。
+        /// 12=指定操作者参与的且已结束的流程（包括成功/失败）
         /// 通用条件写法:所有条件都是字符串，对区间的写法是用逗号分隔（字符串类型暂时不支持区间且都是模糊查询）如"2024-1-1,2024-1-2"。
         /// 对强制取null的约束，则写"null"。</param>
         /// <returns></returns>
@@ -93,35 +95,59 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllDocFeeRequisitionWithWfReturnDto();
             var dbSet = _DbContext.DocFeeRequisitions.Where(c => c.OrgId == context.User.OrgId);
-            if (model.WfState.HasValue)  //须限定审批流程状态
+
+            // 处理工作流状态筛选 - 仅处理 OwWf.State，不区分大小写
+            byte wfState = 15; // 默认不限定状态
+
+            if (conditional != null)
             {
-                var tmpColl = _WfManager.GetWfNodeItemByOpertorId(context.User.Id, model.WfState.Value).Select(c => c.Parent.Parent.DocId);
-                dbSet = dbSet.Where(c => tmpColl.Contains(c.Id));
+                // 找到匹配的键，不区分大小写
+                var stateKey = conditional.Keys.FirstOrDefault(k =>
+                    string.Equals(k, "OwWf.State", StringComparison.OrdinalIgnoreCase));
+
+                if (stateKey != null)
+                {
+                    string stateString = conditional[stateKey];
+                    conditional.Remove(stateKey); // 从条件中移除
+
+                    if (byte.TryParse(stateString, out var state))
+                    {
+                        // 确保状态值在有效范围内：1、2、4、8、12、15
+                        if (state == 1 || state == 2 || state == 4 || state == 8 || state == 12 || state == 15)
+                        {
+                            wfState = state;
+                        }
+                    }
+                }
             }
-            else
-            {
-                var tmpColl = _WfManager.GetWfNodeItemByOpertorId(context.User.Id, 15).Select(c => c.Parent.Parent.DocId);
-                dbSet = dbSet.Where(c => tmpColl.Contains(c.Id));
-            }
+
+            // 获取与指定操作人相关的DocId集合
+            var tmpColl = _WfManager.GetWfNodeItemByOpertorId(context.User.Id, wfState).Select(c => c.Parent.Parent.DocId);
+            dbSet = dbSet.Where(c => tmpColl.Contains(c.Id));
+
+            // 应用申请单条件
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             coll = EfHelper.GenerateWhereAnd(coll, conditional);
+
+            // 获取符合条件的申请单
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
 
-            //后处理
+            // 获取相关的工作流
             var ids = prb.Result.Select(c => c.Id).ToList();
-            var wfs = _DbContext.OwWfs.Where(c => ids.Contains(c.DocId.Value)).ToArray();
+            var wfsArray = _DbContext.OwWfs.Where(c => ids.Contains(c.DocId.Value)).ToArray();
 
-            prb.Result.ForEach(c =>
+            // 组装结果
+            foreach (var requisition in prb.Result)
             {
+                var wf = wfsArray.FirstOrDefault(d => d.DocId == requisition.Id);
                 result.Result.Add(new GetAllDocFeeRequisitionWithWfItemDto()
                 {
-                    Requisition = c,
-                    Wf = _Mapper.Map<OwWfDto>(wfs.FirstOrDefault(d => d.DocId == c.Id)),
+                    Requisition = requisition,
+                    Wf = _Mapper.Map<OwWfDto>(wf),
                 });
-            });
-            result.Total = prb.Total;
-            //_Mapper.Map(prb, result);
+            }
 
+            result.Total = prb.Total;
             return result;
         }
 

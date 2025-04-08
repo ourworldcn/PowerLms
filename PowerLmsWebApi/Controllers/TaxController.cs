@@ -111,6 +111,8 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="model">分页参数</param>
         /// <param name="conditional">查询条件</param>
         /// <returns>税务发票渠道账号列表</returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
         [HttpGet]
         [Description("获取税务发票渠道账号列表")]
         public ActionResult<GetAllTaxInvoiceChannelAccountReturnDto> GetAllTaxInvoiceChannelAccount(
@@ -139,6 +141,8 @@ namespace PowerLmsWebApi.Controllers
         /// </summary>
         /// <param name="model">添加参数</param>
         /// <returns>操作结果</returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
         [HttpPost]
         [Description("添加税务发票渠道账号")]
         public ActionResult<AddTaxInvoiceChannelAccountReturnDto> AddTaxInvoiceChannelAccount(AddTaxInvoiceChannelAccountParamsDto model)
@@ -182,6 +186,9 @@ namespace PowerLmsWebApi.Controllers
         /// </summary>
         /// <param name="model">修改参数</param>
         /// <returns>操作结果</returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+        /// <response code="401">无效令牌。</response>  
         [HttpPut]
         [Description("修改税务发票渠道账号")]
         public ActionResult<ModifyTaxInvoiceChannelAccountReturnDto> ModifyTaxInvoiceChannelAccount(ModifyTaxInvoiceChannelAccountParamsDto model)
@@ -223,6 +230,9 @@ namespace PowerLmsWebApi.Controllers
         /// </summary>
         /// <param name="model">删除参数</param>
         /// <returns>操作结果</returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
+        /// <response code="401">无效令牌。</response>  
         [HttpDelete]
         [Description("删除税务发票渠道账号")]
         public ActionResult<RemoveTaxInvoiceChannelAccountReturnDto> RemoveTaxInvoiceChannelAccount(RemoveTaxInvoiceChannelAccountParamsDto model)

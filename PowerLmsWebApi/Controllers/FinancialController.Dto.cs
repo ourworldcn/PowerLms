@@ -474,12 +474,6 @@ namespace PowerLmsWebApi.Dto
     /// </summary>
     public class GetAllDocFeeRequisitionWithWfParamsDto : PagingParamsDtoBase
     {
-        /// <summary>
-        /// 限定流程状态。省略或为null则不限定。若限定流程状态，则操作人默认当前登录用户。
-        /// 1=正等待指定操作者审批，2=指定操作者已审批但仍在流转中，4=指定操作者参与的且已成功结束的流程,8=指定操作者参与的且已失败结束的流程。
-        /// 12=指定操作者参与的且已结束的流程（包括成功/失败）
-        /// </summary>
-        public byte? WfState { get; set; }
     }
 
     /// <summary>

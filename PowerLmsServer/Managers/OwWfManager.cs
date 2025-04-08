@@ -26,16 +26,28 @@ namespace PowerLmsServer.Managers
         private PowerLmsUserDbContext _DbContext;
 
         /// <summary>
-        /// 获取指定人员相关的节点项。
+        /// 获取指定操作人相关的工作流节点项。
         /// </summary>
-        /// <param name="opertorId">人员Id。</param>
-        /// <param name="state">1=正等待指定操作者审批，2=指定操作者已审批但仍在流转中，4=指定操作者参与的且已成功结束的流程,8=指定操作者参与的且已失败结束的流程。
-        /// 12=指定操作者参与的且已结束的流程（包括成功/失败）,15=不限定状态</param>
-        /// <returns></returns>
-        /// <exception cref="ArgumentOutOfRangeException"><paramref name="state"/> 数值错误。</exception>
+        /// <param name="opertorId">操作人Id。用于筛选与特定操作人相关的工作流节点项。</param>
+        /// <param name="state">工作流状态过滤条件，不同值代表不同的筛选条件：
+        /// <list type="bullet">
+        /// <item><term>1</term><description>正等待指定操作者审批的节点项（流程处于流转中且该节点项未处理）</description></item>
+        /// <item><term>2</term><description>指定操作者已审批但流程仍在流转中的节点项</description></item>
+        /// <item><term>4</term><description>指定操作者参与的且已成功结束的流程中的节点项</description></item>
+        /// <item><term>8</term><description>指定操作者参与的且已失败结束（被终止）的流程中的节点项</description></item>
+        /// <item><term>12</term><description>指定操作者参与的且已结束的流程中的节点项（包括成功/失败，相当于4|8）</description></item>
+        /// <item><term>15</term><description>不限定状态，返回所有与指定操作者相关的节点项</description></item>
+        /// </list>
+        /// </param>
+        /// <returns>符合条件的工作流节点项查询结果。可以进一步链式调用其他LINQ方法进行筛选或转换。</returns>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="state"/>值不在支持的范围内（1、2、4、8、12、15）。</exception>
+        /// <remarks>
+        /// 此方法仅返回操作类型（OperationKind）为0（审批者）的节点项。
+        /// 如果需要查询其他类型的操作人（如抄送人），需要额外添加条件。
+        /// 工作流状态（State）说明：0=流转中，1=成功完成，2=已被终止（失败）。
+        /// </remarks>
         public IQueryable<OwWfNodeItem> GetWfNodeItemByOpertorId(Guid opertorId, byte state)
         {
-            //Guid opertorId, byte state
             var collBase = _DbContext.OwWfNodeItems.Where(c => c.OpertorId == opertorId && c.OperationKind == 0);
             var result = state switch
             {

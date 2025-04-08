@@ -27,7 +27,7 @@ namespace PowerLmsServer.Managers
         /// <summary>令牌刷新获取时间点</summary>
         public DateTime TokenRefreshTime { get; set; }
 
-        /// <summary>令牌有效期</summary>
+        /// <summary>令牌有效期.可能永不过期。"TokenExpiry":"-00:00:00.0010000"</summary>
         public TimeSpan TokenExpiry { get; set; }
 
         /// <summary>访问令牌</summary>
@@ -37,13 +37,19 @@ namespace PowerLmsServer.Managers
         /// 计算指定时间点到令牌失效的剩余时间
         /// </summary>
         /// <param name="currentTime">指定的当前时间点</param>
-        /// <returns>返回剩余有效时间；如果令牌已过期或不存在，则返回TimeSpan.Zero</returns>
+        /// <returns>返回剩余有效时间；如果令牌已过期或不存在，则返回TimeSpan.Zero；如果令牌永不过期，则返回TimeSpan.MaxValue</returns>
         public TimeSpan GetTimeToExpiry(DateTime currentTime)
         {
             // 如果令牌为空，则视为已过期
             if (string.IsNullOrEmpty(Token))
             {
                 return TimeSpan.Zero;
+            }
+
+            // 检查是否为永不过期的特殊值
+            if (TokenExpiry.Ticks < 0)
+            {
+                return TimeSpan.MaxValue; // 返回最大时间间隔表示永不过期
             }
 
             // 计算令牌的过期时间点
