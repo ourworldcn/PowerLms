@@ -76,13 +76,15 @@ namespace PowerLmsWebApi.Controllers
         ILogger<AccountController> _Logger;
 
         #region 用户相关
+
         /// <summary>
         /// 获取账户信息。
         /// </summary>
         /// <param name="model"></param>
         /// <param name="conditional">查询的条件。支持 通用查询条件。<br/>
         /// 特别地支持 IsAdmin("true"=限定超管,"false"=限定非超管) IsMerchantAdmin（"true"=限定商户管,"false"=限定非商户管）；
-        /// OrgId 指定其所属的组织机构Id(明确直属的组织机构Id)。</param>
+        /// OrgId 指定其所属的组织机构Id(明确直属的组织机构Id)。<br/>
+        /// 普通用户（非超管也非商管）最多只能看到当前登录的同一个公司及其下属机构/公司内的所有用户</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定类别Id无效。</response>  
@@ -99,11 +101,16 @@ namespace PowerLmsWebApi.Controllers
             {
                 // 初始查询
                 var coll = _DbContext.Accounts.AsNoTracking();
-                
-                // 处理商户管理员权限
-                if (_AccountManager.IsMerchantAdmin(context.User) && _MerchantManager.GetIdByUserId(context.User.Id, out var merchantId) && merchantId.HasValue)
+
+                // 根据用户角色限制查询范围
+                if (context.User.IsSuperAdmin)
                 {
-                    // 获取该商户下所有组织机构的ID
+                    // 超级管理员可以查看所有用户，不做限制
+                    _Logger.LogDebug("超级管理员查询所有用户");
+                }
+                else if (_AccountManager.IsMerchantAdmin(context.User) && _MerchantManager.GetIdByUserId(context.User.Id, out var merchantId) && merchantId.HasValue)
+                {
+                    // 商户管理员可以查看该商户下的所有用户
                     var orgs = _OrganizationManager.GetOrLoadByMerchantId(merchantId.Value);
                     var orgIds = orgs.Keys.ToArray();
 
@@ -121,17 +128,53 @@ namespace PowerLmsWebApi.Controllers
                     }
 
                     coll = coll.Where(c => userIds.Contains(c.Id));
-
                     _Logger.LogDebug("商户管理员查询用户: 找到 {count} 个用户关联到商户 {merchantId}",
                         userIds.Length, merchantId.Value);
                 }
+                else
+                {
+                    // 普通用户只能查看当前登录公司及其子机构内的用户
+                    // 获取当前用户登录的公司
+                    var currentCompany = _OrganizationManager.GetCurrentCompanyByUser(context.User);
+                    if (currentCompany == null)
+                    {
+                        // 如果用户未登录到任何公司，返回空结果
+                        _Logger.LogDebug("普通用户未登录到任何公司，返回空结果");
+                        result.Result = new List<Account>();
+                        return result;
+                    }
 
+                    // 获取当前公司及所有子机构的ID
+                    var companyAndChildrenOrgs = OwHelper.GetAllSubItemsOfTree(currentCompany, c => c.Children)
+                        .Select(c => c.Id)
+                        .ToArray();
+
+                    // 查找这些组织机构下的所有用户ID
+                    var userIds = _DbContext.AccountPlOrganizations
+                        .Where(c => companyAndChildrenOrgs.Contains(c.OrgId))
+                        .Select(c => c.UserId)
+                        .Distinct()
+                        .ToArray();
+
+                    // 添加当前用户自身（防止遗漏）
+                    if (!userIds.Contains(context.User.Id))
+                    {
+                        userIds = userIds.Append(context.User.Id).ToArray();
+                    }
+
+                    coll = coll.Where(c => userIds.Contains(c.Id));
+                    _Logger.LogDebug("普通用户查询: 当前公司 {companyName}(ID:{companyId}) 下找到 {count} 个用户",
+                        currentCompany.Name?.DisplayName, currentCompany.Id, userIds.Length);
+                }
+
+                // 处理条件查询
                 if (conditional != null && conditional.Count > 0)
                 {
                     // 需要特殊处理的条件键名
                     var specialKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
                     {
-                        "OrgId", "IsAdmin", "IsMerchantAdmin"
+                        "OrgId", "IsAdmin", "IsMerchantAdmin",
+                        "Token",    //在查询账号实体时，Token不能参与过滤
                     };
 
                     // 提取需要特殊处理的条件
@@ -150,7 +193,7 @@ namespace PowerLmsWebApi.Controllers
                         coll = EfHelper.GenerateWhereAnd(coll, standardConditions);
                     }
 
-                    // 然后手动应用特殊条件
+                    // 手动应用特殊条件
                     foreach (var item in specialConditions)
                     {
                         if (string.Equals(item.Key, "IsAdmin", StringComparison.OrdinalIgnoreCase))

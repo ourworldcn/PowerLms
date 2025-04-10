@@ -357,7 +357,7 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetUnreadMessageCountReturnDto> GetUnreadMessageCount(TokenDtoBase model)
+        public ActionResult<GetUnreadMessageCountReturnDto> GetUnreadMessageCount([FromQuery]TokenDtoBase model)
         {
             // 验证令牌
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
