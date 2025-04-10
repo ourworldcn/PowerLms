@@ -495,7 +495,7 @@ namespace PowerLmsWebApi.Dto
     /// <summary>
     /// 获取当前用户相关的业务费用申请单和审批流状态的返回值封装类。
     /// </summary>
-    public class GetAllDocFeeRequisitionWithWfReturnDto
+    public class GetAllDocFeeRequisitionWithWfReturnDto : ReturnDtoBase
     {
         /// <summary>
         /// 集合元素的最大总数量。

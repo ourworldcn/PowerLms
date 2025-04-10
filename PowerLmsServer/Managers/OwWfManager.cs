@@ -33,6 +33,7 @@ namespace PowerLmsServer.Managers
         /// <list type="bullet">
         /// <item><term>1</term><description>正等待指定操作者审批的节点项（流程处于流转中且该节点项未处理）</description></item>
         /// <item><term>2</term><description>指定操作者已审批但流程仍在流转中的节点项</description></item>
+        /// <item><term>3</term><description>所有流转中的节点项（1和2的合集）</description></item>
         /// <item><term>4</term><description>指定操作者参与的且已成功结束的流程中的节点项</description></item>
         /// <item><term>8</term><description>指定操作者参与的且已失败结束（被终止）的流程中的节点项</description></item>
         /// <item><term>12</term><description>指定操作者参与的且已结束的流程中的节点项（包括成功/失败，相当于4|8）</description></item>
@@ -40,7 +41,7 @@ namespace PowerLmsServer.Managers
         /// </list>
         /// </param>
         /// <returns>符合条件的工作流节点项查询结果。可以进一步链式调用其他LINQ方法进行筛选或转换。</returns>
-        /// <exception cref="ArgumentOutOfRangeException"><paramref name="state"/>值不在支持的范围内（1、2、4、8、12、15）。</exception>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="state"/>值不在支持的范围内（1、2、3、4、8、12、15）。</exception>
         /// <remarks>
         /// 此方法仅返回操作类型（OperationKind）为0（审批者）的节点项。
         /// 如果需要查询其他类型的操作人（如抄送人），需要额外添加条件。
@@ -53,6 +54,7 @@ namespace PowerLmsServer.Managers
             {
                 1 => collBase.Where(c => c.Parent.Parent.State == 0 && c.IsSuccess == null),
                 2 => collBase.Where(c => c.Parent.Parent.State == 0 && c.IsSuccess != null),
+                3 => collBase.Where(c => c.Parent.Parent.State == 0), // 合并1和2，表示所有流转中的节点项
                 4 => collBase.Where(c => c.Parent.Parent.State == 1),
                 8 => collBase.Where(c => c.Parent.Parent.State == 2),
                 12 => collBase.Where(c => c.Parent.Parent.State == 2 || c.Parent.Parent.State == 1),

@@ -42,26 +42,47 @@ namespace PowerLmsServer.Managers
         readonly AccountManager _AccountManager;
 
         #region 机构缓存及相关
-
         /// <summary>
         /// 加载指定商户下所有机构对象。
         /// </summary>
-        /// <param name="merchId"></param>
+        /// <param name="merchId">商户ID</param>
         /// <param name="dbContext">使用的数据库上下文，null则自动从池中取一个新上下文,调用者负责处置对象。</param>
-        /// <returns></returns>
+        /// <returns>指定商户下的所有组织机构的并发字典</returns>
         public ConcurrentDictionary<Guid, PlOrganization> LoadOrgsByMerchantId(Guid merchId, ref PowerLmsUserDbContext dbContext)
         {
             dbContext ??= _DbContextFactory.CreateDbContext();
             IDictionary<Guid, PlOrganization> tmp;
             ConcurrentDictionary<Guid, PlOrganization> result;
+
             lock (dbContext)
             {
-                var orgs = dbContext.PlOrganizations.Where(c => c.MerchantId == merchId).Include(c => c.Parent).Include(c => c.Children).AsEnumerable();
-                tmp = orgs.SelectMany(c => OwHelper.GetAllSubItemsOfTree(new PlOrganization[] { c }, d => d.Children))
+                // 1. 首先查询该商户直接关联的顶层组织机构（总公司，ParentId为null且MerchantId为指定商户ID）
+                var rootOrgs = dbContext.PlOrganizations
+                    .Where(c => c.MerchantId == merchId && c.ParentId == null)
+                    .Include(c => c.Parent)
+                    .Include(c => c.Children)
+                    .AsEnumerable();
+
+                // 2. 如果没有找到任何顶层机构，返回空字典
+                if (!rootOrgs.Any())
+                {
+                    return new ConcurrentDictionary<Guid, PlOrganization>();
+                }
+
+                // 3. 对每个顶层组织机构，获取其所有子孙节点
+                tmp = rootOrgs.SelectMany(c => OwHelper.GetAllSubItemsOfTree(new[] { c }, d => d.Children))
                     .ToDictionary(c => c.Id);
+
+                // 4. 创建并发字典
                 result = new ConcurrentDictionary<Guid, PlOrganization>(tmp);
-                OrgsLoaded(result);
+
+                // 5. 加载完成后的处理
+                if (result.Count > 0)
+                {
+                    OrgsLoaded(result);
+                }
             }
+
             return result;
         }
 

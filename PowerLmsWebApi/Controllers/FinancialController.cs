@@ -79,13 +79,15 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 获取当前用户相关的业务费用申请单和审批流状态。
         /// </summary>
-        /// <param name="model"></param>
-        /// <param name="conditional">查询的条件。支持 OwWf.State 格式来分别筛选申请单和工作流数据,键不区分大小写。无实体名的条件会被当作申请单的条件。
-        /// OwWf.State意义是1=正等待指定操作者审批，2=指定操作者已审批但仍在流转中，4=指定操作者参与的且已成功结束的流程,8=指定操作者参与的且已失败结束的流程。
-        /// 12=指定操作者参与的且已结束的流程（包括成功/失败）
+        /// <param name="model">分页和排序参数</param>
+        /// <param name="conditional">查询的条件。支持两种格式的条件：
+        /// 1. 无前缀的条件：直接作为申请单(DocFeeRequisition)的筛选条件
+        /// 2. "OwWf.字段名" 格式的条件：用于筛选关联的工作流(OwWf)对象.
+        /// 所有键不区分大小写。其中，OwWf.State会特殊处理，与OwWfManager.GetWfNodeItemByOpertorId方法的state参数映射关系：
+        /// 0(流转中)→3, 1(成功完成)→4, 2(已被终止)→8
         /// 通用条件写法:所有条件都是字符串，对区间的写法是用逗号分隔（字符串类型暂时不支持区间且都是模糊查询）如"2024-1-1,2024-1-2"。
         /// 对强制取null的约束，则写"null"。</param>
-        /// <returns></returns>
+        /// <returns>包含申请单和对应工作流信息的结果集</returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
@@ -94,60 +96,123 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllDocFeeRequisitionWithWfReturnDto();
-            var dbSet = _DbContext.DocFeeRequisitions.Where(c => c.OrgId == context.User.OrgId);
 
-            // 处理工作流状态筛选 - 仅处理 OwWf.State，不区分大小写
-            byte wfState = 15; // 默认不限定状态
-
-            if (conditional != null)
+            try
             {
-                // 找到匹配的键，不区分大小写
-                var stateKey = conditional.Keys.FirstOrDefault(k =>
-                    string.Equals(k, "OwWf.State", StringComparison.OrdinalIgnoreCase));
+                // 从条件中分离出OwWf开头的条件
+                Dictionary<string, string> wfConditions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                Dictionary<string, string> reqConditions = conditional != null
+                    ? new Dictionary<string, string>(conditional, StringComparer.OrdinalIgnoreCase)
+                    : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                byte wfState = 15; // 默认值，意味着获取指定操作人相关的所有工作流节点项
 
-                if (stateKey != null)
+                if (reqConditions.Count > 0)
                 {
-                    string stateString = conditional[stateKey];
-                    conditional.Remove(stateKey); // 从条件中移除
+                    List<string> keysToRemove = new List<string>();
 
-                    if (byte.TryParse(stateString, out var state))
+                    foreach (var pair in reqConditions)
                     {
-                        // 确保状态值在有效范围内：1、2、4、8、12、15
-                        if (state == 1 || state == 2 || state == 4 || state == 8 || state == 12 || state == 15)
+                        if (pair.Key.StartsWith("OwWf.", StringComparison.OrdinalIgnoreCase))
                         {
-                            wfState = state;
+                            string wfFieldName = pair.Key.Substring(5); // 去掉"OwWf."前缀
+
+                            // 处理 State 的特殊情况
+                            if (string.Equals(wfFieldName, "State", StringComparison.OrdinalIgnoreCase))
+                            {
+                                if (byte.TryParse(pair.Value, out var state))
+                                {
+                                    switch (state)
+                                    {
+                                        case 0: // 流转中 - 等价于旧的"3"（1|2）
+                                            wfState = 3; // 使用OwWfManager中的值3：流转中的节点项
+                                            break;
+                                        case 1: // 成功完成 - 等价于旧的"4"
+                                            wfState = 4; // 使用OwWfManager中的值4：成功结束的流程
+                                            break;
+                                        case 2: // 已被终止 - 等价于旧的"8"
+                                            wfState = 8; // 使用OwWfManager中的值8：已失败结束的流程
+                                            break;
+                                        default:
+                                            wfState = 15; // 使用默认值15：不限定状态
+                                            break;
+                                    }
+                                }
+                            }
+                            else // 其他工作流条件
+                            {
+                                wfConditions[wfFieldName] = pair.Value;
+                            }
+                            keysToRemove.Add(pair.Key);
                         }
                     }
+
+                    // 从原始条件中移除OwWf开头的条件
+                    foreach (var key in keysToRemove)
+                    {
+                        reqConditions.Remove(key);
+                    }
                 }
-            }
 
-            // 获取与指定操作人相关的DocId集合
-            var tmpColl = _WfManager.GetWfNodeItemByOpertorId(context.User.Id, wfState).Select(c => c.Parent.Parent.DocId);
-            dbSet = dbSet.Where(c => tmpColl.Contains(c.Id));
+                // 查询关联的工作流和申请单
+                var docIdsQuery = _WfManager.GetWfNodeItemByOpertorId(context.User.Id, wfState)
+                    .Select(c => c.Parent.Parent);
 
-            // 应用申请单条件
-            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-            coll = EfHelper.GenerateWhereAnd(coll, conditional);
-
-            // 获取符合条件的申请单
-            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
-
-            // 获取相关的工作流
-            var ids = prb.Result.Select(c => c.Id).ToList();
-            var wfsArray = _DbContext.OwWfs.Where(c => ids.Contains(c.DocId.Value)).ToArray();
-
-            // 组装结果
-            foreach (var requisition in prb.Result)
-            {
-                var wf = wfsArray.FirstOrDefault(d => d.DocId == requisition.Id);
-                result.Result.Add(new GetAllDocFeeRequisitionWithWfItemDto()
+                // 如果有其他工作流条件，先应用它们
+                if (wfConditions.Count > 0)
                 {
-                    Requisition = requisition,
-                    Wf = _Mapper.Map<OwWfDto>(wf),
-                });
+                    _Logger.LogDebug("应用工作流过滤条件: {conditions}",
+                        string.Join(", ", wfConditions.Select(kv => $"{kv.Key}={kv.Value}")));
+
+                    // 应用工作流筛选条件
+                    docIdsQuery = EfHelper.GenerateWhereAnd(docIdsQuery, wfConditions);
+                }
+
+                // 获取符合条件的文档ID
+                var docIds = docIdsQuery.Select(wf => wf.DocId.Value).Distinct();
+
+                // 构建申请单查询
+                var dbSet = _DbContext.DocFeeRequisitions
+                    .Where(c => c.OrgId == context.User.OrgId && docIds.Contains(c.Id));
+
+                // 应用申请单条件
+                if (reqConditions.Count > 0)
+                {
+                    dbSet = EfHelper.GenerateWhereAnd(dbSet, reqConditions);
+                }
+
+                // 应用分页和排序
+                var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
+                var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
+
+                // 获取结果ID集合
+                var resultIds = prb.Result.Select(c => c.Id).ToList();
+
+                // 只查询结果相关的工作流
+                var wfsArray = _DbContext.OwWfs
+                    .Where(c => resultIds.Contains(c.DocId.Value))
+                    .ToArray();
+
+                // 组装结果
+                foreach (var requisition in prb.Result)
+                {
+                    var wf = wfsArray.FirstOrDefault(d => d.DocId == requisition.Id);
+                    result.Result.Add(new GetAllDocFeeRequisitionWithWfItemDto()
+                    {
+                        Requisition = requisition,
+                        Wf = _Mapper.Map<OwWfDto>(wf),
+                    });
+                }
+
+                result.Total = prb.Total;
+            }
+            catch (Exception ex)
+            {
+                _Logger.LogError(ex, "获取业务费用申请单时发生错误");
+                result.HasError = true;
+                result.ErrorCode = 500;
+                result.DebugMessage = $"获取业务费用申请单时发生错误: {ex.Message}";
             }
 
-            result.Total = prb.Total;
             return result;
         }
 

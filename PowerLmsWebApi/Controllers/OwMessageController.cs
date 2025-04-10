@@ -349,10 +349,59 @@ namespace PowerLmsWebApi.Controllers
             }
         }
 
-        #endregion
+        /// <summary>
+        /// 获取当前用户未读消息数量。
+        /// </summary>
+        /// <param name="model">参数，仅需提供令牌</param>
+        /// <returns>未读消息数量</returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        public ActionResult<GetUnreadMessageCountReturnDto> GetUnreadMessageCount(TokenDtoBase model)
+        {
+            // 验证令牌
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
+                return Unauthorized();
+
+            var result = new GetUnreadMessageCountReturnDto();
+
+            try
+            {
+                // 查询未读消息数量
+                var unreadCount = _DbContext.Set<OwMessage>()
+                    .Where(m => m.UserId == context.User.Id && m.ReadUtc == null)
+                    .Count();
+
+                // 记录日志
+                _SqlAppLogger.LogGeneralInfo("获取未读消息数量");
+
+                result.UnreadCount = unreadCount;
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _Logger.LogError(ex, "获取未读消息数量时发生异常");
+                result.HasError = true;
+                result.ErrorCode = 500;
+                result.DebugMessage = $"获取未读消息数量时发生异常: {ex.Message}";
+                return result;
+            }
+        }
+        #endregion 消息查询
     }
 
     #region DTO类
+
+    /// <summary>
+    /// 获取未读消息数量的返回值封装类。
+    /// </summary>
+    public class GetUnreadMessageCountReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 未读消息数量。
+        /// </summary>
+        public int UnreadCount { get; set; }
+    }
 
     /// <summary>
     /// 获取所有消息列表的返回值封装类。

@@ -41,9 +41,10 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="roleManager"></param>
         /// <param name="appLogger"></param>
         /// <param name="cache"></param>
+        /// <param name="logger"></param>
         public AccountController(PowerLmsUserDbContext dbContext, AccountManager accountManager, IServiceProvider serviceProvider, IMapper mapper,
             EntityManager entityManager, OrganizationManager organizationManager, CaptchaManager captchaManager, AuthorizationManager authorizationManager,
-            MerchantManager merchantManager, RoleManager roleManager, OwSqlAppLogger appLogger, IMemoryCache cache)
+            MerchantManager merchantManager, RoleManager roleManager, OwSqlAppLogger appLogger, IMemoryCache cache, ILogger<AccountController> logger)
         {
             _DbContext = dbContext;
             _AccountManager = accountManager;
@@ -57,6 +58,7 @@ namespace PowerLmsWebApi.Controllers
             _RoleManager = roleManager;
             _AppLogger = appLogger;
             _Cache = cache;
+            _Logger = logger;
         }
 
         readonly IServiceProvider _ServiceProvider;
@@ -71,15 +73,16 @@ namespace PowerLmsWebApi.Controllers
         readonly RoleManager _RoleManager;
         OwSqlAppLogger _AppLogger;
         IMemoryCache _Cache;
+        ILogger<AccountController> _Logger;
 
         #region 用户相关
         /// <summary>
         /// 获取账户信息。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">查询的条件。支持 LoginName Mobile eMail DisplayName，
-        /// IsAdmin("true"=限定超管,"false"=限定非超管) IsMerchantAdmin（"true"=限定商户管,"false"=限定非商户管）；
-        /// OrgId 指定其所属的组织机构Id(需要时明确直属的组织机构Id)。</param>
+        /// <param name="conditional">查询的条件。支持 通用查询条件。<br/>
+        /// 特别地支持 IsAdmin("true"=限定超管,"false"=限定非超管) IsMerchantAdmin（"true"=限定商户管,"false"=限定非商户管）；
+        /// OrgId 指定其所属的组织机构Id(明确直属的组织机构Id)。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定类别Id无效。</response>  
@@ -96,19 +99,31 @@ namespace PowerLmsWebApi.Controllers
             {
                 // 初始查询
                 var coll = _DbContext.Accounts.AsNoTracking();
-
+                
                 // 处理商户管理员权限
                 if (_AccountManager.IsMerchantAdmin(context.User) && _MerchantManager.GetIdByUserId(context.User.Id, out var merchantId) && merchantId.HasValue)
                 {
+                    // 获取该商户下所有组织机构的ID
                     var orgs = _OrganizationManager.GetOrLoadByMerchantId(merchantId.Value);
-                    var tmp = orgs.Keys;
-                    if (merchantId.HasValue) tmp = tmp.Append(merchantId.Value).ToArray();
+                    var orgIds = orgs.Keys.ToArray();
+
+                    // 查找所有与这些组织机构关联的用户ID
                     var userIds = _DbContext.AccountPlOrganizations
-                        .Where(c => tmp.Contains(c.OrgId))
+                        .Where(c => orgIds.Contains(c.OrgId))
                         .Select(c => c.UserId)
                         .Distinct()
                         .ToArray();
+
+                    // 添加商户管理员自身（防止遗漏）
+                    if (!userIds.Contains(context.User.Id))
+                    {
+                        userIds = userIds.Append(context.User.Id).ToArray();
+                    }
+
                     coll = coll.Where(c => userIds.Contains(c.Id));
+
+                    _Logger.LogDebug("商户管理员查询用户: 找到 {count} 个用户关联到商户 {merchantId}",
+                        userIds.Length, merchantId.Value);
                 }
 
                 if (conditional != null && conditional.Count > 0)
@@ -174,6 +189,7 @@ namespace PowerLmsWebApi.Controllers
                 result.HasError = true;
                 result.ErrorCode = 500;
                 result.DebugMessage = $"获取账户列表时出错: {ex.Message}";
+                _Logger.LogError(ex, "获取账户列表时出错");
             }
 
             return result;
