@@ -64,7 +64,7 @@ namespace PowerLms.Data
         /// 编码。对本系统有一定意义的编码。
         /// </summary>
         [Comment("编码，对本系统有一定意义的编码")]
-        [Column(TypeName = "varchar"), MaxLength(32), Required(AllowEmptyStrings = false)]   //最多32个ASCII字符
+        [Unicode(false), MaxLength(32), Required(AllowEmptyStrings = false)]   //最多32个ASCII字符
         public virtual string Code { get; set; }
 
         /// <summary>
@@ -137,7 +137,7 @@ namespace PowerLms.Data
         /// 编码。对本系统有一定意义的编码。
         /// </summary>
         [Comment("编码，对本系统有一定意义的编码")]
-        [Column(TypeName = "varchar"), MaxLength(32), Required(AllowEmptyStrings = false)]   //最多32个ASCII字符
+        [MaxLength(32), Required(AllowEmptyStrings = false), Unicode(false)]   //最多32个ASCII字符
         public virtual string Code { get; set; }
 
         /// <summary>
