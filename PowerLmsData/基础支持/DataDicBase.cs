@@ -105,7 +105,7 @@ namespace PowerLms.Data
     /// <summary>
     /// 特殊字典的基类。
     /// </summary>
-    public abstract class SpecialDataDicBase : GuidKeyObjectBase, IMarkDelete, ISpecificOrg
+    public abstract class SpecialDataDicBase : GuidKeyObjectBase, IMarkDelete, ISpecificOrg, ICloneable
     {
         /// <summary>
         /// 所属组织机构Id。
@@ -117,7 +117,7 @@ namespace PowerLms.Data
         /// 快捷输入名。如"as6"则在键盘输入按as6能选择到此项。服务器并不使用该字段。
         /// </summary>
         [Comment("快捷输入名")]
-        [Column(TypeName = "varchar"), MaxLength(8)]
+        [Unicode(false), MaxLength(8)]
         public virtual string ShortcutName { get; set; }
 
         /// <summary>
@@ -126,12 +126,29 @@ namespace PowerLms.Data
         [Comment("是否已标记为删除。false(默认)未标记为删除，true标记为删除。")]
         public bool IsDelete { get; set; }
 
+        /// <summary>
+        /// 创建此对象的深表副本。
+        /// </summary>
+        /// <returns>返回当前对象的深表副本，各属性值与原对象相同但有新的Id。</returns>
+        public virtual object Clone()
+        {
+            // 创建当前对象的浅表副本
+            var clone = (SpecialDataDicBase)MemberwiseClone();
+
+            // 强制生成新ID，以确保克隆对象有自己唯一的标识
+            clone.GenerateNewId();
+
+            // 由于当前类的所有属性都是值类型或字符串（不可变类型），不需要额外处理
+            // 如果后续添加了引用类型属性，需要在子类中处理它们的深复制
+
+            return clone;
+        }
     }
 
     /// <summary>
     /// 带多个命名的特殊字典的基类。
     /// </summary>
-    public abstract class NamedSpecialDataDicBase : SpecialDataDicBase, IMarkDelete
+    public abstract class NamedSpecialDataDicBase : SpecialDataDicBase, IMarkDelete, ICloneable
     {
         /// <summary>
         /// 编码。对本系统有一定意义的编码。
@@ -159,5 +176,6 @@ namespace PowerLms.Data
         /// </summary>
         [Comment("备注")]
         public string Remark { get; set; }
+
     }
 }

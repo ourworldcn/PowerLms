@@ -1332,11 +1332,10 @@ namespace PowerLmsWebApi.Controllers
 
         #region 费用种类相关
         /// <summary>
-        /// 获取费用种类。
+        /// 获取费用种类。超管可以不受限制，其他用户最多仅能看到其所属公司/机构下的实体。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">查询的条件。支持 DisplayName 和 ShortName ,orgId查询。</param>
-        /// 
+        /// <param name="conditional">支持通用查询的条件。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定类别Id无效。</response>  
@@ -1352,39 +1351,11 @@ namespace PowerLmsWebApi.Controllers
                 coll = coll.Where(c => c.OrgId == null);
             else
             {
-                if (!_MerchantManager.GetIdByUserId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
-                if (context.User.OrgId is null) //若没有指定机构
-                {
-                    coll = coll.Where(c => c.OrgId == merchId);
-                }
-                else
-                {
-                    coll = coll.Where(c => c.OrgId == context.User.OrgId);
-                }
+                // 获取用户管辖范围内的公司型组织机构ID
+                var companyIds = _OrganizationManager.GetCompanyIds(context.User);
+                coll = coll.Where(c => companyIds.Contains(c.OrgId));
             }
-            foreach (var item in conditional)
-                if (string.Equals(item.Key, nameof(FeesType.Id), StringComparison.OrdinalIgnoreCase))
-                {
-                    if (OwConvert.TryToGuid(item.Value, out var id))
-                        coll = coll.Where(c => c.Id == id);
-                }
-                else if (string.Equals(item.Key, nameof(FeesType.OrgId), StringComparison.OrdinalIgnoreCase))
-                {
-                    if (OwConvert.TryToGuid(item.Value, out var id))
-                        coll = coll.Where(c => c.OrgId == id);
-                }
-                else if (string.Equals(item.Key, nameof(FeesType.DisplayName), StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.DisplayName.Contains(item.Value));
-                }
-                else if (string.Equals(item.Key, nameof(FeesType.ShortName), StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.ShortName.Contains(item.Value));
-                }
-                else if (string.Equals(item.Key, "ShortcutName", StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
-                }
+            coll = EfHelper.GenerateWhereAnd(coll, conditional);
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
@@ -1405,10 +1376,40 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             string err;
             if (!_AuthorizationManager.Demand(out err, "B.8")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+
             var result = new AddFeesTypeReturnDto();
+
+            // 确保使用当前用户的组织机构ID
+            model.Item.OrgId = context.User.OrgId;
+
+            // 生成主记录ID
             model.Item.GenerateNewId();
             var id = model.Item.Id;
+
+            // 添加主记录
             _DbContext.DD_FeesTypes.Add(model.Item);
+
+            // 如果需要同步到子机构
+            if (model.CopyToChildren)
+            {
+                // 获取用户管辖范围内的公司型组织机构ID
+                var companyIds = _OrganizationManager.GetCompanyIds(context.User, true);
+
+                foreach (var orgId in companyIds)
+                {
+                    // 检查是否已存在相同Code的记录
+                    if (_DbContext.DD_FeesTypes.Any(f => f.OrgId == orgId && f.Code == model.Item.Code))
+                        continue;
+
+                    // 使用Clone方法创建深表副本
+                    var newItem = (FeesType)model.Item.Clone();
+                    newItem.OrgId = orgId;
+                    newItem.GenerateNewId(); // 确保新记录有唯一ID
+
+                    _DbContext.DD_FeesTypes.Add(newItem);
+                }
+            }
+
             _DbContext.SaveChanges();
             result.Id = id;
             return result;
@@ -1465,12 +1466,6 @@ namespace PowerLmsWebApi.Controllers
             if (item is null) return BadRequest();
             _EntityManager.Remove(item);
             _DbContext.SaveChanges();
-            //if (item.DataDicType == 1) //若是简单字典
-            //    _DbContext.Database.ExecuteSqlRaw($"delete from {nameof(_DbContext.SimpleDataDics)} where {nameof(SimpleDataDic.DataDicId)}='{id.ToString()}'");
-            //else //其他字典待定
-            //{
-
-            //}
             return result;
         }
 

@@ -186,6 +186,10 @@ namespace PowerLmsWebApi.Controllers
     /// </summary>
     public class AddFeesTypeParamsDto : AddParamsDtoBase<FeesType>
     {
+        /// <summary>
+        /// 是否同步到子公司/组织机构。对于超管复制到所有字典中，对于商户管理员视同为普通用户。
+        /// </summary>
+        public bool CopyToChildren { get; internal set; }
     }
 
     /// <summary>

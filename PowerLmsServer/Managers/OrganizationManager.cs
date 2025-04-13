@@ -28,18 +28,16 @@ namespace PowerLmsServer.Managers
         /// <summary>
         /// 构造函数。
         /// </summary>
-        public OrganizationManager(IMemoryCache cache, IDbContextFactory<PowerLmsUserDbContext> dbContextFactory, MerchantManager merchantManager, AccountManager accountManager)
+        public OrganizationManager(IMemoryCache cache, IDbContextFactory<PowerLmsUserDbContext> dbContextFactory, MerchantManager merchantManager)
         {
             _Cache = cache;
             _DbContextFactory = dbContextFactory;
             _MerchantManager = merchantManager;
-            _AccountManager = accountManager;
         }
 
         readonly IMemoryCache _Cache;
         readonly IDbContextFactory<PowerLmsUserDbContext> _DbContextFactory;
         readonly MerchantManager _MerchantManager;
-        readonly AccountManager _AccountManager;
 
         #region 机构缓存及相关
         /// <summary>
@@ -298,5 +296,162 @@ namespace PowerLmsServer.Managers
             for (tmp = org; tmp is not null && tmp.Otc != 2; tmp = tmp.Parent) ;
             return tmp;
         }
+
+        #region 用户管理范围相关
+
+        /// <summary>
+        /// 获取指定用户管辖范围内的公司型组织机构ID集合。
+        /// </summary>
+        /// <param name="user">用户账号</param>
+        /// <param name="treatMerchantAdminAsNormal">是否将商户管理员视为普通用户，若为true则商户管理员仅能管理其指定OrgId下的机构</param>
+        /// <returns>返回用户管辖范围内的公司型组织机构ID集合，对于超级管理员将包含null值</returns>
+        public HashSet<Guid?> GetCompanyIds(Account user, bool treatMerchantAdminAsNormal = false)
+        {
+            var result = new HashSet<Guid?>();
+
+            try
+            {
+                // 处理超级管理员情况
+                if (user.IsSuperAdmin)
+                {
+                    // 超级管理员管辖全局设置和所有公司型组织机构
+                    result.Add(null); // 添加null表示全局设置
+
+                    using var context = _DbContextFactory.CreateDbContext();
+                    var companyOrgs = context.PlOrganizations
+                        .Where(o => o.Otc == 2)
+                        .AsNoTracking()
+                        .Select(o => o.Id)
+                        .ToList();
+
+                    foreach (var orgId in companyOrgs)
+                    {
+                        result.Add(orgId);
+                    }
+                }
+                // 处理商户管理员情况
+                else if (user.IsMerchantAdmin && !treatMerchantAdminAsNormal && user.MerchantId.HasValue)
+                {
+                    // 商户管理员管辖商户ID和所属商户下所有公司型组织机构
+                    result.Add(user.MerchantId);
+
+                    var orgs = GetOrLoadByMerchantId(user.MerchantId.Value);
+                    if (orgs != null && orgs.Count > 0)
+                    {
+                        foreach (var org in orgs.Values.Where(o => o.Otc == 2))
+                        {
+                            result.Add(org.Id);
+                        }
+                    }
+                }
+                // 处理普通用户或被视为普通用户的商户管理员
+                else if (user.OrgId.HasValue)
+                {
+                    // 普通用户管辖当前公司及其下级公司型组织机构
+                    var currentOrg = GetCurrentCompanyByUser(user);
+                    if (currentOrg != null)
+                    {
+                        result.Add(currentOrg.Id);
+
+                        // 获取所有子公司
+                        var merchId = currentOrg.MerchantId;
+                        if (merchId.HasValue)
+                        {
+                            var allOrgs = GetOrLoadByMerchantId(merchId.Value);
+                            if (allOrgs != null && allOrgs.Count > 0)
+                            {
+                                // 获取当前公司下的所有子组织机构
+                                var subOrgs = OwHelper.GetAllSubItemsOfTree(new[] { currentOrg }, c => c.Children);
+
+                                // 筛选出公司型组织机构(Otc == 2)
+                                foreach (var org in subOrgs.Where(o => o.Otc == 2 && o.Id != currentOrg.Id))
+                                {
+                                    result.Add(org.Id);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // 记录异常但不抛出，返回已收集的结果
+                Debug.WriteLine($"获取用户管辖公司型组织机构ID时出错: {ex.Message}");
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// 获取指定用户管辖范围内的所有公司型组织机构。
+        /// </summary>
+        /// <param name="user">用户账号</param>
+        /// <param name="treatMerchantAdminAsNormal">是否将商户管理员视为普通用户，若为true则商户管理员仅能管理其指定OrgId下的机构</param>
+        /// <returns>返回用户管辖范围内的公司型组织机构集合</returns>
+        public List<PlOrganization> GetCompanys(Account user, bool treatMerchantAdminAsNormal = false)
+        {
+            var result = new List<PlOrganization>();
+
+            try
+            {
+                // 处理超级管理员情况
+                if (user.IsSuperAdmin)
+                {
+                    using var context = _DbContextFactory.CreateDbContext();
+                    var companyOrgs = context.PlOrganizations
+                        .Where(o => o.Otc == 2)
+                        .AsNoTracking()
+                        .ToList();
+
+                    result.AddRange(companyOrgs);
+                }
+                // 处理商户管理员情况
+                else if (user.IsMerchantAdmin && !treatMerchantAdminAsNormal && user.MerchantId.HasValue)
+                {
+                    var orgs = GetOrLoadByMerchantId(user.MerchantId.Value);
+                    if (orgs != null && orgs.Count > 0)
+                    {
+                        result.AddRange(orgs.Values.Where(o => o.Otc == 2));
+                    }
+                }
+                // 处理普通用户或被视为普通用户的商户管理员
+                else if (user.OrgId.HasValue)
+                {
+                    var currentOrg = GetCurrentCompanyByUser(user);
+                    if (currentOrg != null)
+                    {
+                        result.Add(currentOrg);
+
+                        // 获取所有子公司
+                        var merchId = currentOrg.MerchantId;
+                        if (merchId.HasValue)
+                        {
+                            var allOrgs = GetOrLoadByMerchantId(merchId.Value);
+                            if (allOrgs != null && allOrgs.Count > 0)
+                            {
+                                // 获取当前公司下的所有子组织机构
+                                var subOrgs = OwHelper.GetAllSubItemsOfTree(new[] { currentOrg }, c => c.Children);
+
+                                // 筛选出公司型组织机构(Otc == 2)并排除当前公司
+                                var subCompanies = subOrgs
+                                    .Where(o => o.Otc == 2 && o.Id != currentOrg.Id)
+                                    .ToList();
+
+                                result.AddRange(subCompanies);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // 记录异常但不抛出，返回已收集的结果
+                System.Diagnostics.Debug.WriteLine($"获取用户管辖公司型组织机构时出错: {ex.Message}");
+            }
+
+            return result;
+        }
+
+        #endregion  用户管理范围相关
     }
 }
