@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PowerLmsServer.EfData;
 
@@ -11,9 +12,10 @@ using PowerLmsServer.EfData;
 namespace PowerLmsData.Migrations
 {
     [DbContext(typeof(PowerLmsUserDbContext))]
-    partial class PowerLmsUserDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250415082552_25041502")]
+    partial class _25041502
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -3426,15 +3428,9 @@ namespace PowerLmsData.Migrations
                         .HasColumnType("varchar(32)")
                         .HasComment("编码，对本系统有一定意义的编码");
 
-                    b.Property<string>("CountryCode")
-                        .HasMaxLength(3)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(3)")
-                        .HasComment("国家代码。使用标准的国家代码。");
-
                     b.Property<Guid?>("CountryId")
                         .HasColumnType("uniqueidentifier")
-                        .HasComment("国家Id。建议使用CountryCode属性替代。");
+                        .HasComment("国家Id。");
 
                     b.Property<string>("CustomsCode")
                         .HasColumnType("nvarchar(max)")

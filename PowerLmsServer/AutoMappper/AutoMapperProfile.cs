@@ -97,19 +97,26 @@ namespace PowerLmsServer.AutoMappper
 
             #region 诺诺发票映射
             // TaxInvoiceInfo 到 NNOrder 的映射
+
             CreateMap<TaxInvoiceInfo, NNOrder>()
-                // 不同名属性映射
+                // 购方信息映射
                 .ForMember(dest => dest.BuyerName, opt => opt.MapFrom(src => src.BuyerTitle))
                 .ForMember(dest => dest.BuyerPhone, opt => opt.MapFrom(src => src.Mobile))
                 .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Mail))
+
+                // 销方信息映射
+                .ForMember(dest => dest.SalerTaxNum, opt => opt.MapFrom(src => src.SellerTaxNum))
+                .ForMember(dest => dest.SalerTel, opt => opt.MapFrom(src => src.SellerTel))
+                .ForMember(dest => dest.SalerAddress, opt => opt.MapFrom(src => src.SellerAddress))
+                .ForMember(dest => dest.SalerAccount, opt => opt.MapFrom(src => src.SellerAccount))
 
                 // 需要转换的字段
                 .ForMember(dest => dest.OrderNo, opt => opt.MapFrom(src =>
                     !string.IsNullOrEmpty(src.InvoiceSerialNum) ? src.InvoiceSerialNum : Guid.NewGuid().ToString("N").Substring(0, 20)))
                 .ForMember(dest => dest.InvoiceDate, opt => opt.MapFrom(src =>
                     (src.ApplyDateTime ?? DateTime.Now).ToString("yyyy-MM-dd HH:mm:ss")))
-                .ForMember(dest => dest.InvoiceType, opt => opt.MapFrom(src => 1)) //TO DO 这里暂时仅考虑蓝票
-                .ForMember(dest => dest.InvoiceLine, opt => opt.MapFrom(src => src.InvoiceType != null))
+                .ForMember(dest => dest.InvoiceType, opt => opt.MapFrom(src => src.IsRedLetter ? 2 : 1))
+                .ForMember(dest => dest.InvoiceLine, opt => opt.MapFrom(src => src.InvoiceType.ToLower()))
 
                 // 默认值
                 .ForMember(dest => dest.Clerk, opt => opt.MapFrom(src => "系统开票"))
@@ -119,28 +126,35 @@ namespace PowerLmsServer.AutoMappper
 
             // TaxInvoiceInfoItem 到 NNInvoiceDetail 的映射
             CreateMap<TaxInvoiceInfoItem, NNInvoiceDetail>()
-                .ForMember(dest => dest.WithTaxFlag, opt => opt.MapFrom(src => 1)) // 含税
-                .ForMember(dest => dest.Unit, opt => opt.MapFrom(src => string.Empty))
-                .ForMember(dest => dest.SpecType, opt => opt.MapFrom(src => string.Empty))
+                // 商品信息映射
+                .ForMember(dest => dest.GoodsName, opt => opt.MapFrom(src => src.GoodsName))
+                .ForMember(dest => dest.Unit, opt => opt.MapFrom(src => !string.IsNullOrEmpty(src.Unit) ? src.Unit : string.Empty))
+                .ForMember(dest => dest.SpecType, opt => opt.MapFrom(src => !string.IsNullOrEmpty(src.SpecType) ? src.SpecType : string.Empty))
 
-                // 金额格式化
+                // 含税标志
+                .ForMember(dest => dest.WithTaxFlag, opt => opt.MapFrom(src => 0)) // 不含税
+
+                // 数量和单价映射
                 .ForMember(dest => dest.Price, opt => opt.MapFrom(src => src.UnitPrice.ToString("0.00")))
                 .ForMember(dest => dest.Num, opt => opt.MapFrom(src => src.Quantity.ToString("0.00000000")))
 
-                // 计算金额 - 使用内联表达式替代方法调用
-                .ForMember(dest => dest.TaxExcludedAmount, opt => opt.MapFrom(src =>
-                    (src.UnitPrice * src.Quantity).ToString("0.00")))
-                .ForMember(dest => dest.Tax, opt => opt.MapFrom(src =>
-                    (src.UnitPrice * src.Quantity * src.TaxRate).ToString("0.00")))
-                .ForMember(dest => dest.TaxIncludedAmount, opt => opt.MapFrom(src =>
-                    (src.UnitPrice * src.Quantity * (1 + src.TaxRate)).ToString("0.00")))
+                // 税率映射
+                .ForMember(dest => dest.TaxRate, opt => opt.MapFrom(src => src.TaxRate))
 
-                // 默认值
-                .ForMember(dest => dest.InvoiceLineProperty, opt => opt.MapFrom(src => "0"))
-                .ForMember(dest => dest.FavouredPolicyFlag, opt => opt.MapFrom(src => "0"))
+                // 金额映射 - 确保格式正确且计算准确
+                .ForMember(dest => dest.TaxExcludedAmount, opt => opt.MapFrom(src =>
+                    (src.UnitPrice * src.Quantity).ToString("0.00"))) // 不含税金额
+                .ForMember(dest => dest.Tax, opt => opt.MapFrom(src =>
+                    (src.UnitPrice * src.Quantity * src.TaxRate).ToString("0.00"))) // 税额
+                .ForMember(dest => dest.TaxIncludedAmount, opt => opt.MapFrom(src =>
+                    src.TaxInclusiveAmount.ToString("0.00"))) // 含税金额
+
+                // 发票行属性和政策信息
+                .ForMember(dest => dest.InvoiceLineProperty, opt => opt.MapFrom(src => "0")) // 正常行
+                .ForMember(dest => dest.FavouredPolicyFlag, opt => opt.MapFrom(src => "0")) // 不使用优惠政策
                 .ForMember(dest => dest.FavouredPolicyName, opt => opt.MapFrom(src => string.Empty))
-                .ForMember(dest => dest.Deduction, opt => opt.MapFrom(src => "0"))
-                .ForMember(dest => dest.ZeroRateFlag, opt => opt.MapFrom(src => "0"))
+                .ForMember(dest => dest.Deduction, opt => opt.MapFrom(src => "0")) // 非差额征税
+                .ForMember(dest => dest.ZeroRateFlag, opt => opt.MapFrom(src => "0")) // 非零税率
                 .IncludeAllDerived();
             #endregion
         }

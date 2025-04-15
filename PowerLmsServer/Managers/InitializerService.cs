@@ -279,12 +279,8 @@ namespace PowerLmsServer.Managers
         [Conditional("DEBUG")]
         private void Test(IServiceProvider svc)
         {
-            var obj = new NNChannelAccountObject { TokenExpiry = Timeout.InfiniteTimeSpan };
-            var str = JsonSerializer.Serialize(obj);
-            var obj1 = JsonSerializer.Deserialize<NNChannelAccountObject>(str);
-            //var nn = svc.GetRequiredService<NuoNuoManager>();
-
-            //nn.TestIssueInvoiceInSandbox("SD56531018", "SD3C429B318C485E");
+            var nn = _ServiceProvider.GetRequiredService<NuoNuoManager>();
+            nn.IssueInvoice(Guid.Parse("29DC0DA1-C1AB-4EB1-98D8-6B7F5339381E"));
         }
 
         private void CreateDb()

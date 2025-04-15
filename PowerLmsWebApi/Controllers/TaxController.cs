@@ -483,6 +483,7 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         /// <response code="403">权限不足。</response>  
+        /// <response code="409">同一申请单不能重复开票。</response>  
         [HttpPost]
         public ActionResult<AddTaxInvoiceInfoReturnDto> AddTaxInvoiceInfo(AddTaxInvoiceInfoParamsDto model)
         {
@@ -491,17 +492,38 @@ namespace PowerLmsWebApi.Controllers
                 _Logger.LogWarning("无效的令牌{token}", model.Token);
                 return Unauthorized();
             }
+
             string err;
             //if (!_AuthorizationManager.Demand(out err, "F.3.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
 
             var result = new AddTaxInvoiceInfoReturnDto();
             var entity = model.TaxInvoiceInfo;
+
+            // 检查是否已存在该申请单的发票记录
+            if (entity.DocFeeRequisitionId.HasValue && entity.DocFeeRequisitionId != Guid.Empty)
+            {
+                var existingInvoice = _DbContext.TaxInvoiceInfos
+                    .FirstOrDefault(ti => ti.DocFeeRequisitionId == entity.DocFeeRequisitionId);
+
+                if (existingInvoice != null)
+                {
+                    _Logger.LogWarning("尝试为申请单 {RequisitionId} 创建重复发票", entity.DocFeeRequisitionId);
+                    result.HasError = true;
+                    result.ErrorCode = (int)HttpStatusCode.Conflict;
+                    result.DebugMessage = $"此申请单已存在发票记录(发票ID: {existingInvoice.Id})，不能重复开票";
+                    return StatusCode((int)HttpStatusCode.Conflict, result);
+                }
+            }
+
             entity.GenerateNewId();
             //entry.CreateBy = context.User.Id;
             //entry.Entity.CreateDateTime = OwHelper.WorldNow;
             _DbContext.TaxInvoiceInfos.Add(model.TaxInvoiceInfo);
             var entry = _DbContext.Entry(entity);
             entry.Entity.State = 0;
+
+            // 记录日志
+            _SqlAppLogger.LogGeneralInfo($"创建发票信息.{nameof(TaxInvoiceInfo)}.{entity.Id}");
 
             _DbContext.SaveChanges();
 

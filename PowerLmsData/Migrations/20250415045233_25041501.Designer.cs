@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PowerLmsServer.EfData;
 
@@ -11,9 +12,10 @@ using PowerLmsServer.EfData;
 namespace PowerLmsData.Migrations
 {
     [DbContext(typeof(PowerLmsUserDbContext))]
-    partial class PowerLmsUserDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250415045233_25041501")]
+    partial class _25041501
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -3426,15 +3428,9 @@ namespace PowerLmsData.Migrations
                         .HasColumnType("varchar(32)")
                         .HasComment("编码，对本系统有一定意义的编码");
 
-                    b.Property<string>("CountryCode")
-                        .HasMaxLength(3)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(3)")
-                        .HasComment("国家代码。使用标准的国家代码。");
-
                     b.Property<Guid?>("CountryId")
                         .HasColumnType("uniqueidentifier")
-                        .HasComment("国家Id。建议使用CountryCode属性替代。");
+                        .HasComment("国家Id。");
 
                     b.Property<string>("CustomsCode")
                         .HasColumnType("nvarchar(max)")
@@ -4124,18 +4120,9 @@ namespace PowerLmsData.Migrations
                         .HasColumnType("tinyint")
                         .HasComment("发票状态。0：创建后待审核；1：已审核开票中；2：已开票");
 
-                    b.Property<decimal>("TaxInclusiveAmount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)")
-                        .HasComment("含税总金额。由关联的TaxInvoiceInfoItem.TaxInclusiveAmount 合计计算得到。");
-
                     b.Property<Guid?>("TaxInvoiceChannelAccountlId")
                         .HasColumnType("uniqueidentifier")
                         .HasComment("开票渠道Id");
-
-                    b.Property<bool>("WithTax")
-                        .HasColumnType("bit")
-                        .HasComment("是否含税。服务器不使用。");
 
                     b.HasKey("Id");
 
@@ -4149,9 +4136,8 @@ namespace PowerLmsData.Migrations
                         .HasColumnOrder(0);
 
                     b.Property<string>("GoodsName")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)")
-                        .HasComment("商品名称。必填。");
+                        .HasComment("商品名称");
 
                     b.Property<Guid?>("ParentId")
                         .HasColumnType("uniqueidentifier")
@@ -4161,23 +4147,10 @@ namespace PowerLmsData.Migrations
                         .HasColumnType("decimal(18,2)")
                         .HasComment("数量");
 
-                    b.Property<string>("SpecType")
-                        .HasColumnType("nvarchar(max)")
-                        .HasComment("规格型号,可选");
-
-                    b.Property<decimal>("TaxInclusiveAmount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)")
-                        .HasComment("含税金额。计算公式：税额 = 单价 * 数量 * 税率。计算结果保留两位小数。");
-
                     b.Property<decimal>("TaxRate")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")
                         .HasComment("税率");
-
-                    b.Property<string>("Unit")
-                        .HasColumnType("nvarchar(max)")
-                        .HasComment("单位,可选");
 
                     b.Property<decimal>("UnitPrice")
                         .HasPrecision(18, 2)

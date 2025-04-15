@@ -2,6 +2,7 @@
 using OW.Data;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Net.Sockets;
 using System.Text;
@@ -22,10 +23,19 @@ namespace PowerLms.Data
         public string CustomsCode { get; set; }
 
         /// <summary>
-        /// 国家Id。
+        /// 国家Id。建议使用CountryCode属性替代。
         /// </summary>
-        [Comment("国家Id。")]
+        [Comment("国家Id。建议使用CountryCode属性替代。")]
+        [Obsolete("请使用CountryCode属性替代")]
         public Guid? CountryId { get; set; }
+
+        /// <summary>
+        /// 国家代码。使用标准的国家代码（例如：CN-中国，US-美国）。
+        /// </summary>
+        [Comment("国家代码。使用标准的国家代码。")]
+        [MaxLength(3)]  //放宽到3个字符，原有是2个字符
+        [Unicode(false)] // 使用ASCII编码存储
+        public string CountryCode { get; set; }
 
         /// <summary>
         /// 省。
@@ -45,7 +55,6 @@ namespace PowerLms.Data
         [Comment("所属航线Id")]
         public Guid? PlCargoRouteId { get; set; }
     }
-
     /// <summary>
     /// 航线类。
     /// </summary>

@@ -28,7 +28,8 @@ namespace PowerLmsServer.Managers
         public DateTime TokenRefreshTime { get; set; }
 
         /// <summary>令牌有效期.可能永不过期。"TokenExpiry":"-00:00:00.0010000"</summary>
-        public TimeSpan TokenExpiry { get; set; }
+        /// <value>默认设置为永不过期,NuoNuo技术支持如此要求。</value>
+        public TimeSpan TokenExpiry { get; set; } = Timeout.InfiniteTimeSpan;
 
         /// <summary>访问令牌</summary>
         public string Token { get; set; }

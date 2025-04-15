@@ -19,6 +19,7 @@ using System.Net;
 using Microsoft.Extensions.ObjectPool;
 using System.Security.Cryptography;
 using System.Buffers;
+using Microsoft.EntityFrameworkCore;
 
 
 namespace PowerLmsServer.Managers
@@ -47,8 +48,10 @@ namespace PowerLmsServer.Managers
         private readonly HttpClient _httpClient;
         private readonly ILogger<NuoNuoManager> _logger;
         IMapper _mapper;
-        PowerLmsUserDbContext _dbContext;
         IMemoryCache _cache;
+        IDbContextFactory<PowerLmsUserDbContext> _dbContextFactory;
+        PowerLmsUserDbContext DbContext => _DbContext ??= _dbContextFactory.CreateDbContext();
+        PowerLmsUserDbContext _DbContext;
 
         /// <summary>
         /// 构造函数，初始化HttpClient实例。
@@ -58,13 +61,13 @@ namespace PowerLmsServer.Managers
         /// <param name="logger">日志记录器(可选)</param>
         /// <param name="dbContext">数据库上下文</param>
         /// <param name="cache">缓存对象</param>
-        public NuoNuoManager(HttpClient httpClient, IMapper mapper, ILogger<NuoNuoManager> logger, PowerLmsUserDbContext dbContext, IMemoryCache cache)
+        public NuoNuoManager(HttpClient httpClient, IMapper mapper, ILogger<NuoNuoManager> logger, IMemoryCache cache, IDbContextFactory<PowerLmsUserDbContext> dbContextFactory)
         {
             _httpClient = httpClient;
             _logger = logger;
             _mapper = mapper;
-            _dbContext = dbContext;
             _cache = cache;
+            _dbContextFactory = dbContextFactory;
         }
 
         #region 基础数据查询
@@ -78,7 +81,7 @@ namespace PowerLmsServer.Managers
         {
             try
             {
-                var invoiceInfo = _dbContext.TaxInvoiceInfos.Find(taxInvoiceInfoId); // 查询发票信息
+                var invoiceInfo = DbContext.TaxInvoiceInfos.Find(taxInvoiceInfoId); // 查询发票信息
                 if (invoiceInfo == null) // 发票信息不存在
                 {
                     string errorMessage = $"未找到ID为 {taxInvoiceInfoId} 的发票信息";
@@ -125,7 +128,7 @@ namespace PowerLmsServer.Managers
                     goto ErrorHandler;
                 }
 
-                var channelAccount = _dbContext.TaxInvoiceChannelAccounts.Find(channelAccountId.Value); // 查询渠道账号配置
+                var channelAccount = DbContext.TaxInvoiceChannelAccounts.Find(channelAccountId.Value); // 查询渠道账号配置
                 if (channelAccount == null) // 检查配置是否存在
                 {
                     errorMessage = $"未找到渠道账号ID {channelAccountId} 的配置信息";
@@ -226,11 +229,11 @@ namespace PowerLmsServer.Managers
         #region 令牌相关
 
         /// <summary>
-        /// 从指定发票ID获取有效的访问令牌，如果令牌过期则自动刷新
+        /// 从指定发票ID获取有效的访问令牌，如果令牌过期则自动刷新并返回。
         /// </summary>
         /// <param name="taxInvoiceInfoId">发票信息ID</param>
         /// <returns>有效的访问令牌，如果获取失败则返回null</returns>
-        public string GetAccessToken(Guid taxInvoiceInfoId)
+        public string GetOrRefreshAccessToken(Guid taxInvoiceInfoId)
         {
             try
             {
@@ -348,7 +351,7 @@ namespace PowerLmsServer.Managers
 
                 // 更新到数据库
                 channelAccount.JsonObjectString = JsonSerializer.Serialize(channelAccountObject);
-                _dbContext.SaveChanges();
+                DbContext.SaveChanges();
 
                 _logger?.LogInformation(
                     "成功刷新访问令牌，渠道账号ID: {ChannelAccountId}, 令牌有效期: {ExpirySeconds}秒",
@@ -389,7 +392,7 @@ namespace PowerLmsServer.Managers
                 }
 
                 // 获取发票明细
-                var items = _dbContext.TaxInvoiceInfoItems
+                var items = DbContext.TaxInvoiceInfoItems
                     .Where(item => item.ParentId == taxInvoiceInfoId)
                     .ToList();
 
@@ -446,8 +449,8 @@ namespace PowerLmsServer.Managers
                             invoiceInfo.InvoiceSerialNum = sandboxResult.InvoiceSerialNum;
                             invoiceInfo.State = 2; // 已开票状态
                             invoiceInfo.ReturnInvoiceTime = DateTime.Now;
-                            invoiceInfo.SellerInvoiceData = $"{{\"sandboxTest\": true, \"invoiceSerialNum\": \"{sandboxResult.InvoiceSerialNum}\"}}";
-                            _dbContext.SaveChanges();
+                            invoiceInfo.SellerInvoiceData = $"{{\"sandboxTest\": {useSandbox}, \"invoiceSerialNum\": \"{sandboxResult.InvoiceSerialNum}\"}}";
+                            DbContext.SaveChanges();
                         }
                     }
                     else
@@ -460,7 +463,7 @@ namespace PowerLmsServer.Managers
 
                 // 正式环境开票流程 - 使用现有逻辑
                 // 获取令牌
-                string accessToken = GetAccessToken(taxInvoiceInfoId);
+                string accessToken = GetOrRefreshAccessToken(taxInvoiceInfoId);
                 if (string.IsNullOrEmpty(accessToken))
                 {
                     return new NuoNuoInvoiceResult
@@ -540,7 +543,7 @@ namespace PowerLmsServer.Managers
                         invoiceInfo.InvoiceSerialNum = result.Result.InvoiceSerialNum;
                         invoiceInfo.State = 2; // 已开票状态
                         invoiceInfo.ReturnInvoiceTime = DateTime.Now;
-                        _dbContext.SaveChanges();
+                        DbContext.SaveChanges();
 
                         _logger?.LogInformation($"开票成功并更新了发票状态，发票ID: {taxInvoiceInfoId}, 流水号: {result.Result.InvoiceSerialNum}");
                     }
@@ -558,6 +561,7 @@ namespace PowerLmsServer.Managers
                 else
                 {
                     _logger?.LogError($"开票失败，发票ID: {taxInvoiceInfoId}, 错误码: {result?.Code}, 描述: {result?.Describe}");
+                    DbContext.SaveChanges();
 
                     return new NuoNuoInvoiceResult
                     {
@@ -1023,8 +1027,7 @@ namespace PowerLmsServer.Managers
                 client.Timeout = TimeSpan.FromSeconds(30);
             });
 
-            // 不需要再次添加AddScoped，因为AddHttpClient已经注册了服务
-            // services.AddScoped<NuoNuoManager>(); // 这行应该被移除
+            services.AddSingleton<NuoNuoManager>();
         }
     }
 }
