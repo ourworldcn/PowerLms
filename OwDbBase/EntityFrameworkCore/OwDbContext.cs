@@ -23,7 +23,7 @@ namespace OW.EntityFrameworkCore
     /// <summary>
     /// 表示 OwDbContext 类，用于管理数据库上下文并自动生成存储过程。
     /// </summary>
-    public class OwDbContext : DbContext
+    public abstract class OwDbContext : DbContext
     {
         #region 字段
 
@@ -65,8 +65,9 @@ namespace OW.EntityFrameworkCore
         /// 初始化 OwDbContext 类的新实例。
         /// </summary>
         /// <param name="options">用于此上下文的选项。</param>
+        /// <param name="serviceProvider">服务容器。</param>
         /// <param name="logger">日志记录器实例。</param>
-        public OwDbContext(DbContextOptions<OwDbContext> options, IServiceProvider serviceProvider, ILogger<OwDbContext> logger) : base(options)
+        protected OwDbContext(DbContextOptions options, IServiceProvider serviceProvider, ILogger<OwDbContext> logger) : base(options)
         {
             _ServiceProvider = serviceProvider;
             _Logger = logger;

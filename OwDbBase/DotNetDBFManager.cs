@@ -177,6 +177,183 @@ namespace OW.Data
                 _ => throw new ArgumentException("不支持的数据类型"),
             };
         }
+
+        /// <summary>
+        /// 将实体集合写入流，该流可以保存为 .dbf 文件。
+        /// </summary>
+        /// <typeparam name="T">实体类型</typeparam>
+        /// <param name="stream">要写入的流</param>
+        /// <param name="entities">实体集合</param>
+        /// <param name="fieldMappings">字段映射字典，键为DBF字段名，值为实体属性名</param>
+        /// <param name="customFieldTypes">可选的自定义字段类型字典，键为DBF字段名，值为DBF字段类型</param>
+        /// <param name="encoding">字符编码，默认为UTF-8</param>
+        public void WriteEntitiesToStream<T>(Stream stream, IEnumerable<T> entities,
+            Dictionary<string, string> fieldMappings,
+            Dictionary<string, NativeDbType> customFieldTypes = null,
+            System.Text.Encoding encoding = null) where T : class
+        {
+            if (stream == null)
+            {
+                _logger.LogDebug("流对象为空。");
+                throw new ArgumentNullException(nameof(stream));
+            }
+            if (entities == null)
+            {
+                _logger.LogDebug("实体集合为空。");
+                throw new ArgumentNullException(nameof(entities));
+            }
+            if (fieldMappings == null || fieldMappings.Count == 0)
+            {
+                _logger.LogDebug("字段映射为空或不包含任何映射关系。");
+                throw new ArgumentNullException(nameof(fieldMappings));
+            }
+
+            try
+            {
+                using (var writer = new DBFWriter(stream))
+                {
+                    writer.CharEncoding = encoding ?? System.Text.Encoding.UTF8;
+
+                    var entityType = typeof(T);
+                    var properties = entityType.GetProperties();
+                    var propertyMap = properties.ToDictionary(p => p.Name, p => p);
+
+                    // 创建字段定义
+                    var fields = new List<DBFField>();
+                    foreach (var mapping in fieldMappings)
+                    {
+                        string dbfFieldName = mapping.Key;
+                        string propertyName = mapping.Value;
+
+                        if (!propertyMap.TryGetValue(propertyName, out var property))
+                        {
+                            _logger.LogWarning($"属性 {propertyName} 在类型 {entityType.Name} 中不存在，将被跳过。");
+                            continue;
+                        }
+
+                        NativeDbType fieldType;
+                        if (customFieldTypes != null && customFieldTypes.TryGetValue(dbfFieldName, out var customType))
+                        {
+                            fieldType = customType;
+                        }
+                        else
+                        {
+                            try
+                            {
+                                fieldType = GetDBFFieldType(property.PropertyType);
+                            }
+                            catch (ArgumentException)
+                            {
+                                _logger.LogWarning($"属性 {propertyName} 的类型 {property.PropertyType.Name} 不支持，将被跳过。");
+                                continue;
+                            }
+                        }
+
+                        // 根据属性类型设置适当的字段长度
+                        int length = 0;
+                        int decimalCount = 0;
+
+                        switch (fieldType)
+                        {
+                            case NativeDbType.Char:
+                                length = 254; // 最大字符长度
+                                break;
+                            case NativeDbType.Numeric:
+                                length = 18;
+                                decimalCount = 0;
+                                break;
+                            case NativeDbType.Float:
+                                length = 18;
+                                decimalCount = 6;
+                                break;
+                            case NativeDbType.Date:
+                                length = 8;
+                                break;
+                            case NativeDbType.Logical:
+                                length = 1;
+                                break;
+                        }
+
+                        fields.Add(new DBFField(dbfFieldName, fieldType, length, decimalCount));
+                    }
+
+                    writer.Fields = fields.ToArray();
+
+                    // 写入记录
+                    foreach (var entity in entities)
+                    {
+                        var record = new object[fields.Count];
+                        int fieldIndex = 0;
+
+                        foreach (var mapping in fieldMappings)
+                        {
+                            if (fieldIndex >= fields.Count) break;
+
+                            string propertyName = mapping.Value;
+                            if (!propertyMap.TryGetValue(propertyName, out var property))
+                            {
+                                record[fieldIndex++] = null;
+                                continue;
+                            }
+
+                            var value = property.GetValue(entity);
+                            // 对可空类型进行处理
+                            if (value != null && property.PropertyType.IsGenericType &&
+                                property.PropertyType.GetGenericTypeDefinition() == typeof(Nullable<>))
+                            {
+                                value = Convert.ChangeType(value, Nullable.GetUnderlyingType(property.PropertyType));
+                            }
+
+                            record[fieldIndex++] = value;
+                        }
+
+                        writer.WriteRecord(record);
+                    }
+                }
+                _logger.LogDebug("成功将实体集合写入流。");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "写入 DBF 流时发生错误。");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// 将实体集合写入 DBF 文件。
+        /// </summary>
+        /// <typeparam name="T">实体类型</typeparam>
+        /// <param name="filePath">DBF 文件路径</param>
+        /// <param name="entities">实体集合</param>
+        /// <param name="fieldMappings">字段映射字典，键为DBF字段名，值为实体属性名</param>
+        /// <param name="customFieldTypes">可选的自定义字段类型字典，键为DBF字段名，值为DBF字段类型</param>
+        /// <param name="encoding">字符编码，默认为UTF-8</param>
+        public void WriteEntitiesToDBF<T>(string filePath, IEnumerable<T> entities,
+            Dictionary<string, string> fieldMappings,
+            Dictionary<string, NativeDbType> customFieldTypes = null,
+            System.Text.Encoding encoding = null) where T : class
+        {
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                _logger.LogDebug("文件路径为空或仅包含空白字符。");
+                throw new ArgumentNullException(nameof(filePath));
+            }
+
+            try
+            {
+                using (var stream = File.Open(filePath, FileMode.Create, FileAccess.Write))
+                {
+                    WriteEntitiesToStream(stream, entities, fieldMappings, customFieldTypes, encoding);
+                }
+                _logger.LogDebug($"成功将实体集合写入文件 {filePath}。");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, $"写入 DBF 文件 {filePath} 时发生错误。");
+                throw;
+            }
+        }
+
     }
 
     public class DotNetDBFManagerTest
