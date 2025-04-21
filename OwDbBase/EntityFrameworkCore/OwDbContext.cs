@@ -27,7 +27,7 @@ namespace OW.EntityFrameworkCore
     {
         #region 字段
 
-        private readonly ILogger<OwDbContext> _Logger;
+        private readonly ILogger _Logger;
         private readonly IServiceProvider _ServiceProvider;
 
         private const string _CreateGetRootIdProcedure = @"
@@ -65,9 +65,9 @@ namespace OW.EntityFrameworkCore
         /// 初始化 OwDbContext 类的新实例。
         /// </summary>
         /// <param name="options">用于此上下文的选项。</param>
-        /// <param name="serviceProvider">服务容器。</param>
         /// <param name="logger">日志记录器实例。</param>
-        protected OwDbContext(DbContextOptions options, IServiceProvider serviceProvider, ILogger<OwDbContext> logger) : base(options)
+        /// <param name="serviceProvider">服务容器。</param>
+        protected OwDbContext(DbContextOptions options, ILogger logger, IServiceProvider serviceProvider) : base(options)
         {
             _ServiceProvider = serviceProvider;
             _Logger = logger;

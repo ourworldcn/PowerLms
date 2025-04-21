@@ -146,18 +146,43 @@ namespace OW.Data
         /// <returns>DBF 字段类型。</returns>
         private NativeDbType GetDBFFieldType(Type type)
         {
-            if (type == typeof(string))
-                return NativeDbType.Char;
-            if (type == typeof(int) || type == typeof(long) || type == typeof(short) || type == typeof(byte))
-                return NativeDbType.Numeric;
-            if (type == typeof(float) || type == typeof(double) || type == typeof(decimal))
-                return NativeDbType.Float;
-            if (type == typeof(DateTime))
-                return NativeDbType.Date;
-            if (type == typeof(bool))
-                return NativeDbType.Logical;
+            // 处理可空类型
+            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
+            {
+                type = Nullable.GetUnderlyingType(type);
+            }
 
-            throw new ArgumentException("不支持的数据类型");
+            return type switch
+            {
+                // 字符串类型
+                Type t when t == typeof(string) => NativeDbType.Char,
+
+                // 整数类型
+                Type t when t == typeof(int) || t == typeof(uint) => NativeDbType.Long,
+                Type t when t == typeof(long) || t == typeof(ulong) => NativeDbType.Numeric,
+                Type t when t == typeof(short) || t == typeof(ushort) => NativeDbType.Numeric,
+                Type t when t == typeof(byte) || t == typeof(sbyte) => NativeDbType.Numeric,
+
+                // 浮点类型
+                Type t when t == typeof(float) => NativeDbType.Float,
+                Type t when t == typeof(double) => NativeDbType.Double,
+                Type t when t == typeof(decimal) => NativeDbType.Numeric,
+
+                // 日期时间类型
+                Type t when t == typeof(DateTime) => NativeDbType.Date,
+                Type t when t == typeof(DateTimeOffset) => NativeDbType.Date,
+
+                // 布尔类型
+                Type t when t == typeof(bool) => NativeDbType.Logical,
+
+                // 二进制数据类型
+                Type t when t == typeof(byte[]) => NativeDbType.Binary,
+#if NET472_OR_GREATER || NETFRAMEWORK
+                Type t when t == typeof(System.Data.Linq.Binary) => NativeDbType.Binary,
+#endif
+                // 其他类型默认为字符类型
+                _ => NativeDbType.Char
+            };
         }
 
         /// <summary>
@@ -169,14 +194,22 @@ namespace OW.Data
         {
             return dbfType switch
             {
-                NativeDbType.Char => typeof(string),
-                NativeDbType.Numeric => typeof(decimal),
-                NativeDbType.Float => typeof(double),
-                NativeDbType.Date => typeof(DateTime),
-                NativeDbType.Logical => typeof(bool),
-                _ => throw new ArgumentException("不支持的数据类型"),
+                NativeDbType.Char => typeof(string),        // 'C' 字符型
+                NativeDbType.Numeric => typeof(decimal),    // 'N' 数值型
+                NativeDbType.Float => typeof(float),        // 'F' 浮点型
+                NativeDbType.Date => typeof(DateTime),      // 'D' 日期型
+                NativeDbType.Logical => typeof(bool),       // 'L' 逻辑型
+                NativeDbType.Memo => typeof(string),        // 'M' 备注型
+                NativeDbType.Binary => typeof(byte[]),      // 'B' 二进制
+                NativeDbType.Long => typeof(int),           // 'I' 长整型
+                NativeDbType.Double => typeof(double),      // 'O' 双精度浮点型
+                NativeDbType.Autoincrement => typeof(int),  // '+' 自增型
+                NativeDbType.Timestamp => typeof(DateTime), // '@' 时间戳
+                NativeDbType.Ole => typeof(byte[]),         // 'G' OLE对象
+                _ => typeof(string)                         // 默认为字符串
             };
         }
+
 
         /// <summary>
         /// 将实体集合写入流，该流可以保存为 .dbf 文件。
