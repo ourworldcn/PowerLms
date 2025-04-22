@@ -93,12 +93,10 @@ namespace OW.EntityFrameworkCore
         /// <param name="context">数据库上下文实例。</param>
         public static void InitializeDatabase(OwDbContext context)
         {
-            context.Database.ExecuteSqlRaw(@"
-                                    IF NOT EXISTS (SELECT * FROM sys.objects WHERE type = 'P' AND name = 'GetRootId')
-                                    BEGIN
-                                        EXEC sp_executesql N'" + _CreateGetRootIdProcedure + @"'
-                                    END
-                                ");
+            context.Database.ExecuteSqlRaw(@"IF NOT EXISTS (SELECT * FROM sys.objects WHERE type = 'P' AND name = 'GetRootId')
+                                                BEGIN
+                                                    EXEC sp_executesql N'" + _CreateGetRootIdProcedure + @"'
+                                                END");
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -163,7 +161,8 @@ namespace OW.EntityFrameworkCore
             do
             {
                 hasNewChanges = false;
-
+                if (!ChangeTracker.AutoDetectChangesEnabled)    //若没有开启自动检测更改，则手动检测
+                    ChangeTracker.DetectChanges();
                 using (var pooledArray = context.ChangeTracker.Entries()
                     .Where(e => (e.State == EntityState.Added || e.State == EntityState.Modified || e.State == EntityState.Deleted) && !processedEntities.Contains(e))
                     .TryToPooledArray())
@@ -172,7 +171,7 @@ namespace OW.EntityFrameworkCore
                         // 按实体类型分组
                         var groupedEntities = pooledArray.Array
                             .Take(pooledArray.Count)
-                            .GroupBy(e => e.Entity.GetType());
+                            .GroupBy(e => e.Metadata.ClrType);  //避免获取到代理类的类型
 
                         foreach (var group in groupedEntities)
                         {

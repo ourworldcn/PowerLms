@@ -78,7 +78,6 @@ namespace System.Collections.Generic
             {
                 var pool = ArrayPool<T>.Shared;
                 var array = pool.Rent(count);
-                var s = array[..^1];
                 if (source is ICollection<T> collection)
                     collection.CopyTo(array, 0);
                 else
@@ -125,6 +124,11 @@ namespace System.Collections.Generic
             /// 获取有效元素数量。
             /// </summary>
             public readonly int Count => _count;
+
+            /// <summary>
+            /// 获取一个值，指示是否使用了数组池。
+            /// </summary>
+            public readonly bool IsPooledArray => _pool != null;
 
             /// <summary>
             /// 释放资源，将数组返回到池中（如果适用）。
