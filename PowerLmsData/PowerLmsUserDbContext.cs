@@ -43,28 +43,23 @@ namespace PowerLmsServer.EfData
     /// <summary>
     /// 项目使用的主要数据库上下文。
     /// </summary>
-    public class PowerLmsUserDbContext : DbContext
+    public class PowerLmsUserDbContext : OwDbContext
     {
         /// <summary>
-        /// 
+        /// 创建新的数据库上下文实例。
         /// </summary>
-        /// <param name="options"></param>
-        /// <param name="serviceProvider"></param>
-        public PowerLmsUserDbContext(DbContextOptions options, IServiceProvider serviceProvider) : base(options)
+        public PowerLmsUserDbContext(DbContextOptions<PowerLmsUserDbContext> options,
+                                     ILogger<PowerLmsUserDbContext> logger,
+                                     IServiceProvider serviceProvider)
+            : base(options, logger, serviceProvider)  // 调用基类构造函数
         {
             //Database.SetInitializer<Context>(new MigrateDatabaseToLatestVersion<Context, ReportingDbMigrationsConfiguration>());
-            _ServiceProvider = serviceProvider;
             Initialize();
         }
 
         void Initialize()
         {
-            SavingChanges += PowerLmsUserDbContext_SavingChanges;
         }
-
-        IServiceProvider _ServiceProvider;
-
-        public IServiceProvider ServiceProvider => _ServiceProvider;
 
         class EntityEntryEqualityComparer : EqualityComparer<EntityEntry>
         {
@@ -76,22 +71,6 @@ namespace PowerLmsServer.EfData
             public override int GetHashCode(EntityEntry bx)
             {
                 return bx.Entity.GetHashCode();
-            }
-        }
-
-
-        private void PowerLmsUserDbContext_SavingChanges(object sender, SavingChangesEventArgs e)
-        {
-            var context = sender as PowerLmsUserDbContext;
-            var services = context.ServiceProvider;
-            var checker = services.GetRequiredService<ServiceProviderChecker>();
-            if (checker.IsRootContainer(_ServiceProvider))
-            {
-            }
-            else //非根容器
-            {
-                var svc = context.ServiceProvider.GetService<OwEfTriggers<PowerLmsUserDbContext>>();   //尽在范围容器内调用
-                svc?.ExecuteSavingChanges(context, context.ServiceProvider);
             }
         }
 

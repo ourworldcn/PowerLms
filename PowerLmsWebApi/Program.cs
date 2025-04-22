@@ -134,7 +134,6 @@ internal class Program
             options.UseLazyLoadingProxies().UseSqlServer(userDbConnectionString).EnableSensitiveDataLogging();
         });
         services.AddOwBatchDbWriter<PowerLmsUserDbContext>();
-        services.AddOwEfTriggers<PowerLmsUserDbContext>();
         
         #endregion ≈‰÷√ ˝æ›ø‚
 

@@ -50,11 +50,21 @@ namespace PowerLms.Data
         public int? NumCode { get; set; }
 
         /// <summary>
-        /// 所属航线Id。
+        /// 所属航线Id。不推荐使用，请使用CargoRouteCode替代。
         /// </summary>
-        [Comment("所属航线Id")]
+        [Comment("所属航线Id。不推荐使用，请使用CargoRouteCode替代。")]
+        [Obsolete("请使用CargoRouteCode属性替代")]
         public Guid? PlCargoRouteId { get; set; }
+
+        /// <summary>
+        /// 所属航线编码。关联到PlCargoRoute.Code，可为空表示该港口不属于任何航线。
+        /// </summary>
+        [Comment("所属航线编码。可为空表示该港口不属于任何航线。")]
+        [MaxLength(32)]
+        [Unicode(false)] // 使用ASCII编码存储
+        public string CargoRouteCode { get; set; }
     }
+
     /// <summary>
     /// 航线类。
     /// </summary>

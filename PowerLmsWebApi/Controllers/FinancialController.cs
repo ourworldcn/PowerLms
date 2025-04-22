@@ -53,7 +53,8 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="model"></param>
         /// <param name="conditional">查询的条件。实体属性名不区分大小写。
         /// 通用条件写法:所有条件都是字符串，对区间的写法是用逗号分隔（字符串类型暂时不支持区间且都是模糊查询）如"2024-1-1,2024-1-2"。
-        /// 对强制取null的约束，则写"null"。</param>
+        /// 对强制取null的约束，则写"null"。
+        /// 支持 PlJob.属性名 格式的键，用于关联到工作号表进行过滤。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
@@ -63,16 +64,93 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllDocFeeRequisitionReturnDto();
-            var dbSet = _DbContext.DocFeeRequisitions.Where(c => c.OrgId == context.User.OrgId);
-            if (model.WfState.HasValue)  //须限定审批流程状态
+
+            try
             {
-                var tmpColl = _WfManager.GetWfNodeItemByOpertorId(context.User.Id, model.WfState.Value).Select(c => c.Parent.Parent.DocId);
-                dbSet = dbSet.Where(c => tmpColl.Contains(c.Id));
+                // 从条件中分离出PlJob开头的条件
+                Dictionary<string, string> plJobConditions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                Dictionary<string, string> reqConditions = conditional != null
+                    ? new Dictionary<string, string>(conditional, StringComparer.OrdinalIgnoreCase)
+                    : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+                if (reqConditions.Count > 0)
+                {
+                    List<string> keysToRemove = new List<string>();
+
+                    foreach (var pair in reqConditions)
+                    {
+                        if (pair.Key.StartsWith("PlJob.", StringComparison.OrdinalIgnoreCase))
+                        {
+                            string jobFieldName = pair.Key.Substring(6); // 去掉"PlJob."前缀
+                            plJobConditions[jobFieldName] = pair.Value;
+                            keysToRemove.Add(pair.Key);
+                        }
+                    }
+
+                    // 从原始条件中移除PlJob开头的条件
+                    foreach (var key in keysToRemove)
+                    {
+                        reqConditions.Remove(key);
+                    }
+                }
+
+                IQueryable<DocFeeRequisition> dbSet;
+
+                // 如果有PlJob相关的条件，则需要联合查询
+                if (plJobConditions.Count > 0)
+                {
+                    _Logger.LogDebug("应用工作号过滤条件: {conditions}",
+                        string.Join(", ", plJobConditions.Select(kv => $"{kv.Key}={kv.Value}")));
+
+                    // 先获取符合PlJob条件的工作号
+                    var jobIds = EfHelper.GenerateWhereAnd(_DbContext.PlJobs.AsNoTracking(), plJobConditions)
+                        .Select(job => job.Id);
+
+                    // 按ID链接查询相关申请单
+                    dbSet = (from requisition in _DbContext.DocFeeRequisitions
+                             join item in _DbContext.DocFeeRequisitionItems on requisition.Id equals item.ParentId
+                             join fee in _DbContext.DocFees on item.FeeId equals fee.Id
+                             where requisition.OrgId == context.User.OrgId
+                                   && fee.JobId.HasValue
+                                   && jobIds.Contains(fee.JobId.Value)
+                             select requisition).Distinct();
+
+                    if (model.WfState.HasValue)  //须限定审批流程状态
+                    {
+                        var tmpColl = _WfManager.GetWfNodeItemByOpertorId(context.User.Id, model.WfState.Value)
+                            .Select(c => c.Parent.Parent.DocId);
+                        dbSet = dbSet.Where(c => tmpColl.Contains(c.Id));
+                    }
+                }
+                else
+                {
+                    // 原始查询逻辑
+                    dbSet = _DbContext.DocFeeRequisitions.Where(c => c.OrgId == context.User.OrgId);
+
+                    if (model.WfState.HasValue)  //须限定审批流程状态
+                    {
+                        var tmpColl = _WfManager.GetWfNodeItemByOpertorId(context.User.Id, model.WfState.Value)
+                            .Select(c => c.Parent.Parent.DocId);
+                        dbSet = dbSet.Where(c => tmpColl.Contains(c.Id));
+                    }
+                }
+
+                // 应用申请单条件
+                var coll = EfHelper.GenerateWhereAnd(dbSet, reqConditions);
+
+                // 应用排序和分页
+                coll = coll.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
+                var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
+                _Mapper.Map(prb, result);
             }
-            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-            coll = EfHelper.GenerateWhereAnd(coll, conditional);
-            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
-            _Mapper.Map(prb, result);
+            catch (Exception ex)
+            {
+                _Logger.LogError(ex, "获取业务费用申请单时发生错误");
+                result.HasError = true;
+                result.ErrorCode = 500;
+                result.DebugMessage = $"获取业务费用申请单时发生错误: {ex.Message}";
+            }
+
             return result;
         }
 
