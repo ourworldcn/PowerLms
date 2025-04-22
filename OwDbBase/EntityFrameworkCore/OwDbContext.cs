@@ -82,10 +82,38 @@ namespace OW.EntityFrameworkCore
         /// <summary>
         /// 本对象生成时注入的服务提供者。
         /// </summary>
-        public IServiceProvider Service => _ServiceProvider;
+        public IServiceProvider ServiceProvider => _ServiceProvider;
         #endregion 属性
 
         #region 方法
+
+        private static bool _databaseInitialized = false;
+        private static readonly object _initLock = new object();
+        
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            base.OnConfiguring(optionsBuilder);
+
+            // 仅在第一个实例时初始化数据库
+            if (!_databaseInitialized)
+            {
+                lock (_initLock)
+                {
+                    if (!_databaseInitialized)
+                    {
+                        try
+                        {
+                            //InitializeDatabase(this);
+                            _databaseInitialized = true;
+                        }
+                        catch (Exception ex)
+                        {
+                            _Logger.LogError(ex, "数据库初始化失败");
+                        }
+                    }
+                }
+            }
+        }
 
         /// <summary>
         /// 初始化数据库，检查并创建存储过程。
@@ -102,7 +130,6 @@ namespace OW.EntityFrameworkCore
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-            InitializeDatabase(this);
         }
 
         /// <summary>
