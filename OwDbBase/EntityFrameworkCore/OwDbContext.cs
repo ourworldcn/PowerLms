@@ -89,7 +89,7 @@ namespace OW.EntityFrameworkCore
 
         private static bool _databaseInitialized = false;
         private static readonly object _initLock = new object();
-        
+
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             base.OnConfiguring(optionsBuilder);
@@ -180,8 +180,8 @@ namespace OW.EntityFrameworkCore
             var context = (OwDbContext)sender;
 
             // 用于跟踪已处理的实体条目
-            var processedEntities = new HashSet<EntityEntry>();
-
+            var processedEntities = new HashSet<object>();
+            var types = new HashSet<Type>();
             // 定义一个标志，用于控制循环
             bool hasNewChanges;
 
@@ -191,14 +191,14 @@ namespace OW.EntityFrameworkCore
                 if (!ChangeTracker.AutoDetectChangesEnabled)    //若没有开启自动检测更改，则手动检测
                     ChangeTracker.DetectChanges();
                 using (var pooledArray = context.ChangeTracker.Entries()
-                    .Where(e => (e.State == EntityState.Added || e.State == EntityState.Modified || e.State == EntityState.Deleted) && !processedEntities.Contains(e))
+                    .Where(c => (c.State == EntityState.Added || c.State == EntityState.Modified || c.State == EntityState.Deleted) && !processedEntities.Contains(c.Entity))
                     .TryToPooledArray())
                     if (pooledArray.Count > 0)
                     {
                         // 按实体类型分组
                         var groupedEntities = pooledArray.Array
                             .Take(pooledArray.Count)
-                            .GroupBy(e => e.Metadata.ClrType);  //避免获取到代理类的类型
+                            .GroupBy(c => c.Metadata.ClrType);  //避免获取到代理类的类型
 
                         foreach (var group in groupedEntities)
                         {
@@ -206,6 +206,7 @@ namespace OW.EntityFrameworkCore
                             var savingInterfaceType = typeof(IDbContextSaving<>).MakeGenericType(entityType);
 
                             var savingServices = _ServiceProvider.GetServices(savingInterfaceType);
+                            types.Add(entityType); // 添加到类型集合中
                             foreach (var service in savingServices)
                             {
                                 var method = savingInterfaceType.GetMethod(nameof(IDbContextSaving<object>.Saving));
@@ -214,7 +215,7 @@ namespace OW.EntityFrameworkCore
                                 // 将已处理的实体条目添加到集合中
                                 foreach (var entityEntry in group)
                                 {
-                                    processedEntities.Add(entityEntry);
+                                    processedEntities.Add(entityEntry.Entity);
                                 }
                                 hasNewChanges = true; // 仅在处理了新的实体时设置为 true
                             }
@@ -223,11 +224,9 @@ namespace OW.EntityFrameworkCore
             } while (hasNewChanges);
 
             // 触发 IAfterDbContextSaving 接口的方法
-            var afterGroupedEntities = processedEntities.GroupBy(e => e.Entity.GetType());
 
-            foreach (var group in afterGroupedEntities)
+            foreach (var entityType in types)
             {
-                var entityType = group.Key;
                 var afterSavingInterfaceType = typeof(IAfterDbContextSaving<>).MakeGenericType(entityType);
 
                 var afterSavingServices = _ServiceProvider.GetServices(afterSavingInterfaceType);
