@@ -430,6 +430,33 @@ namespace PowerLmsServer.Managers
                     };
                 }
 
+                // 回填发票信息的必要属性 - 先计算并更新含税总金额
+                decimal totalTaxInclusiveAmount = items.Sum(item => item.TaxInclusiveAmount);
+                invoiceInfo.TaxInclusiveAmount = totalTaxInclusiveAmount;
+
+                // 如果发票申请日期为空，设置为当前时间
+                if (!invoiceInfo.ApplyDateTime.HasValue)
+                {
+                    invoiceInfo.ApplyDateTime = DateTime.Now;
+                }
+
+                // 检查是否有关联的申请单，如果有且需要更新关联信息
+                if (invoiceInfo.DocFeeRequisitionId.HasValue)
+                {
+                    var requisition = DbContext.DocFeeRequisitions.Find(invoiceInfo.DocFeeRequisitionId.Value);
+                    if (requisition != null && requisition.TaxInvoiceId != taxInvoiceInfoId)
+                    {
+                        requisition.TaxInvoiceId = taxInvoiceInfoId;
+                        DbContext.Entry(requisition).Property(x => x.TaxInvoiceId).IsModified = true;
+                    }
+                }
+
+                // 先保存回填的基本信息
+                DbContext.Entry(invoiceInfo).State = EntityState.Modified;
+                DbContext.SaveChanges();
+
+                _logger?.LogInformation($"已回填并保存发票基本信息，发票ID: {taxInvoiceInfoId}, 含税总金额: {totalTaxInclusiveAmount}");
+
                 // 检查是否使用沙箱模式
                 if (useSandbox)
                 {
@@ -449,8 +476,10 @@ namespace PowerLmsServer.Managers
                             invoiceInfo.InvoiceSerialNum = sandboxResult.InvoiceSerialNum;
                             invoiceInfo.State = 2; // 已开票状态
                             invoiceInfo.ReturnInvoiceTime = DateTime.Now;
-                            invoiceInfo.SellerInvoiceData = $"{{\"sandboxTest\": {useSandbox}, \"invoiceSerialNum\": \"{sandboxResult.InvoiceSerialNum}\"}}";
+                            invoiceInfo.SellerInvoiceData = $"{{\"sandboxTest\": {useSandbox.ToString().ToLower()}, \"invoiceSerialNum\": \"{sandboxResult.InvoiceSerialNum}\"}}";
                             DbContext.SaveChanges();
+
+                            _logger?.LogInformation($"已更新沙箱开票结果信息，发票ID: {taxInvoiceInfoId}");
                         }
                     }
                     else
@@ -520,6 +549,11 @@ namespace PowerLmsServer.Managers
 
                 if (!response.IsSuccessStatusCode)
                 {
+                    // 记录失败原因
+                    _logger?.LogError($"开票失败，发票ID: {taxInvoiceInfoId}, 错误码: {response.StatusCode}");
+
+                    DbContext.SaveChanges();
+
                     return new NuoNuoInvoiceResult
                     {
                         Success = false,
@@ -537,20 +571,23 @@ namespace PowerLmsServer.Managers
 
                 if (result != null && result.Code == "E0000")
                 {
-                    // 更新发票状态和流水号
-                    if (!string.IsNullOrEmpty(result.Result?.InvoiceSerialNum))
-                    {
-                        invoiceInfo.InvoiceSerialNum = result.Result.InvoiceSerialNum;
-                        invoiceInfo.State = 2; // 已开票状态
-                        invoiceInfo.ReturnInvoiceTime = DateTime.Now;
-                        DbContext.SaveChanges();
+                    // 更新发票状态和流水号以及其他必要信息
+                    invoiceInfo.InvoiceSerialNum = result.Result?.InvoiceSerialNum;
+                    invoiceInfo.State = 2; // 已开票状态
+                    invoiceInfo.ReturnInvoiceTime = DateTime.Now;
 
-                        _logger?.LogInformation($"开票成功并更新了发票状态，发票ID: {taxInvoiceInfoId}, 流水号: {result.Result.InvoiceSerialNum}");
-                    }
-                    else
+                    // 保存完整的响应数据
+                    invoiceInfo.SellerInvoiceData = responseContent;
+
+                    // 如果响应中包含发票号，则更新
+                    if (result.Result?.InvoiceSerialNum != null)
                     {
-                        _logger?.LogInformation($"开票成功但未返回流水号，发票ID: {taxInvoiceInfoId}");
+                        invoiceInfo.InvoiceNumber = result.Result.InvoiceSerialNum;
                     }
+
+                    DbContext.SaveChanges();
+
+                    _logger?.LogInformation($"开票成功并更新了发票状态和信息，发票ID: {taxInvoiceInfoId}, 流水号: {result.Result?.InvoiceSerialNum}");
 
                     return new NuoNuoInvoiceResult
                     {
@@ -560,8 +597,8 @@ namespace PowerLmsServer.Managers
                 }
                 else
                 {
+                    // 记录失败原因
                     _logger?.LogError($"开票失败，发票ID: {taxInvoiceInfoId}, 错误码: {result?.Code}, 描述: {result?.Describe}");
-                    DbContext.SaveChanges();
 
                     return new NuoNuoInvoiceResult
                     {

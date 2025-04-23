@@ -201,6 +201,8 @@ namespace PowerLmsWebApi.Controllers
         {
             try
             {
+                _logger.LogInformation($"开始更新发票信息, 发票ID: {invoiceInfo.Id}, 状态: {status}");
+
                 // 根据状态更新发票
                 if (status == null || status == "1") // 开票完成
                 {
@@ -209,16 +211,65 @@ namespace PowerLmsWebApi.Controllers
 
                     // 更新发票基本信息
                     if (invoiceData.TryGetValue("c_fpdm", out var fpdm) && fpdm.ValueKind != JsonValueKind.Undefined)
-                        invoiceInfo.InvoiceNumber = fpdm.GetString() + "-" + invoiceInfo.InvoiceNumber;
+                    {
+                        string fpdmValue = fpdm.GetString();
+                        // 如果发票号为空或不包含代码前缀，则添加代码
+                        if (string.IsNullOrEmpty(invoiceInfo.InvoiceNumber))
+                            invoiceInfo.InvoiceNumber = fpdmValue + "-";
+                        else if (!invoiceInfo.InvoiceNumber.Contains("-"))
+                            invoiceInfo.InvoiceNumber = fpdmValue + "-" + invoiceInfo.InvoiceNumber;
+                    }
 
+                    // 更新发票号
                     if (invoiceData.TryGetValue("c_fphm", out var fphm) && fphm.ValueKind != JsonValueKind.Undefined)
-                        invoiceInfo.InvoiceNumber = invoiceInfo.InvoiceNumber ?? fphm.GetString();
+                    {
+                        string fphmValue = fphm.GetString();
+                        if (string.IsNullOrEmpty(invoiceInfo.InvoiceNumber))
+                            invoiceInfo.InvoiceNumber = fphmValue;
+                        else if (!invoiceInfo.InvoiceNumber.Contains("-"))
+                            invoiceInfo.InvoiceNumber = fphmValue;
+                        else if (invoiceInfo.InvoiceNumber.EndsWith("-"))
+                            invoiceInfo.InvoiceNumber += fphmValue;
+                    }
+
+                    // 更新开票金额，若回调中包含金额信息
+                    if (invoiceData.TryGetValue("c_jshj", out var jshj) && jshj.ValueKind != JsonValueKind.Undefined)
+                    {
+                        if (decimal.TryParse(jshj.GetString(), out decimal amount))
+                        {
+                            invoiceInfo.TaxInclusiveAmount = amount;
+                        }
+                    }
+
+                    // 更新开票日期
+                    if (invoiceData.TryGetValue("c_kprq", out var kprq) && kprq.ValueKind != JsonValueKind.Undefined)
+                    {
+                        if (DateTime.TryParse(kprq.GetString(), out DateTime invoiceDate))
+                        {
+                            invoiceInfo.InvoiceDate = invoiceDate;
+                        }
+                    }
+
+                    // 更新发票类型信息
+                    if (invoiceData.TryGetValue("c_fpzl_dm", out var fpzlDm) && fpzlDm.ValueKind != JsonValueKind.Undefined)
+                    {
+                        // 更新发票类型代码，根据实际情况可能需要转换
+                        invoiceInfo.InvoiceTypeCode = fpzlDm.GetString();
+                    }
+
+                    // 更新PDF下载地址
+                    if (invoiceData.TryGetValue("c_pdf_url", out var pdfUrl) && pdfUrl.ValueKind != JsonValueKind.Undefined)
+                    {
+                        invoiceInfo.PdfUrl = pdfUrl.GetString();
+                    }
 
                     // 将完整的回调数据存储在SellerInvoiceData字段中
                     invoiceInfo.SellerInvoiceData = rawContent;
 
                     // 设置返回发票时间
                     invoiceInfo.ReturnInvoiceTime = DateTime.Now;
+
+                    _logger.LogInformation($"发票开具成功，已更新发票信息，发票ID: {invoiceInfo.Id}, 发票号: {invoiceInfo.InvoiceNumber}");
                 }
                 else if (status == "2") // 开票失败
                 {
@@ -240,9 +291,12 @@ namespace PowerLmsWebApi.Controllers
                         errorMessage = errorMsg.GetString();
                     }
 
-                    // 将错误信息存储在SellerInvoiceData字段
+                    // 将错误信息存储在SellerInvoiceData字段和FailReason字段中
                     invoiceInfo.SellerInvoiceData = $"{{\"errorMessage\": \"{errorMessage}\"}}";
+                    invoiceInfo.FailReason = errorMessage; // 明确记录失败原因
                     invoiceInfo.ReturnInvoiceTime = DateTime.Now;
+
+                    _logger.LogWarning($"发票开具失败，已重置状态，发票ID: {invoiceInfo.Id}, 失败原因: {errorMessage}");
 
                     // 如果有原审核人ID，向审核人发送消息通知
                     if (auditorId.HasValue)
@@ -294,9 +348,12 @@ namespace PowerLmsWebApi.Controllers
                         errorMessage = $"签章失败: {errorMsg.GetString()}";
                     }
 
-                    // 将错误信息存储在SellerInvoiceData字段
+                    // 将错误信息存储在SellerInvoiceData字段和FailReason字段中
                     invoiceInfo.SellerInvoiceData = $"{{\"errorMessage\": \"{errorMessage}\"}}";
+                    invoiceInfo.FailReason = errorMessage; // 明确记录失败原因
                     invoiceInfo.ReturnInvoiceTime = DateTime.Now;
+
+                    _logger.LogWarning($"发票签章失败，已更新状态，发票ID: {invoiceInfo.Id}, 失败原因: {errorMessage}");
 
                     // 如果有审核人ID，向审核人发送消息通知
                     if (invoiceInfo.AuditorId.HasValue)
@@ -329,6 +386,24 @@ namespace PowerLmsWebApi.Controllers
                         {
                             _logger.LogError(ex, $"向审核人 {invoiceInfo.AuditorId.Value} 发送签章失败通知时出错");
                         }
+                    }
+                }
+
+                // 检查是否有关联的申请单，如果有则更新关联信息
+                if (invoiceInfo.DocFeeRequisitionId.HasValue)
+                {
+                    try
+                    {
+                        var requisition = _dbContext.DocFeeRequisitions.Find(invoiceInfo.DocFeeRequisitionId.Value);
+                        if (requisition != null && requisition.TaxInvoiceId != invoiceInfo.Id)
+                        {
+                            requisition.TaxInvoiceId = invoiceInfo.Id;
+                            _logger.LogInformation($"已更新费用申请单与发票的关联，申请单ID: {requisition.Id}, 发票ID: {invoiceInfo.Id}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, $"更新费用申请单与发票关联时出错，申请单ID: {invoiceInfo.DocFeeRequisitionId}, 发票ID: {invoiceInfo.Id}");
                     }
                 }
             }

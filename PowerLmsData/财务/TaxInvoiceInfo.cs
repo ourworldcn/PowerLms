@@ -195,6 +195,38 @@ namespace PowerLms.Data
         /// 回调地址。用于接收开票结果通知。
         /// </summary>
         public string CallbackUrl { get; set; }
+
+        #region 需要添加的必要字段
+
+        /// <summary>
+        /// 开票日期。
+        /// </summary>
+        [Comment("开票日期")]
+        [Column(TypeName = "DATETIME2(3)")]
+        public DateTime? InvoiceDate { get; set; }
+
+        /// <summary>
+        /// 发票类型代码。对应诺诺返回的c_fpzl_dm。
+        /// </summary>
+        [Comment("发票类型代码")]
+        [MaxLength(32)]
+        public string InvoiceTypeCode { get; set; }
+
+        /// <summary>
+        /// PDF文件下载地址。
+        /// </summary>
+        [Comment("PDF文件下载地址")]
+        [MaxLength(512)]
+        public string PdfUrl { get; set; }
+
+        /// <summary>
+        /// 开票失败原因。
+        /// </summary>
+        [Comment("开票失败原因")]
+        [MaxLength(512)]
+        public string FailReason { get; set; }
+
+        #endregion
     }
 
     /// <summary>
