@@ -1272,23 +1272,32 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">至少一个费用Id不存在。</response>  
         /// <response code="401">无效令牌。</response>  
-        /// <response code="404">指定Id的业务单的账单不存在。</response>  
         /// <response code="403">权限不足。</response>  
+        /// <response code="404">指定Id的业务单的账单不存在。</response>  
         [HttpPut]
         public ActionResult<ModifyDocBillReturnDto> ModifyDocBill(ModifyDocBillParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
 
             var result = new ModifyDocBillReturnDto();
-            if (!_EntityManager.Modify(new[] { model.DocBill })) return NotFound();
-            //处理费用对象
-            var collFees = _DbContext.DocFees.Where(c => model.FeeIds.Contains(c.Id)).ToArray();
-            if (collFees.Count() != model.FeeIds.Count)
+
+            // 确保账单存在
+            var existingBill = _DbContext.DocBills.Find(model.DocBill.Id);
+            if (existingBill == null)
+                return NotFound("指定Id的账单不存在");
+
+            // 处理费用对象 - 检查它们是否存在
+            var collFees = _DbContext.DocFees.Where(c => model.FeeIds.Contains(c.Id)).ToList();
+            if (collFees.Count != model.FeeIds.Count)
             {
                 return BadRequest("至少一个费用Id不存在。");
             }
-            var oldFee = _DbContext.DocFees.Where(c => c.BillId == model.DocBill.Id).ToArray();    //旧费用对象
-            var jobs = GetJobsFromFeeIds(oldFee.Select(c => c.Id)); //相关业务对象
+
+            // 获取当前关联到此账单的所有费用
+            var oldFee = _DbContext.DocFees.Where(c => c.BillId == model.DocBill.Id).ToList();
+            var jobs = GetJobsFromFeeIds(oldFee.Select(c => c.Id)); // 相关业务对象
+
+            // 权限检查
             string err;
             if (jobs.Any())
             {
@@ -1310,11 +1319,44 @@ namespace PowerLmsWebApi.Controllers
                 }
             }
 
-            oldFee.ForEach(c => c.BillId = null);
+            // 开始显式事务
+            try
+            {
+                // 修改账单实体
+                _DbContext.Entry(existingBill).CurrentValues.SetValues(model.DocBill);
 
-            collFees.ForEach(c => c.BillId = model.DocBill.Id);
-            _DbContext.SaveChanges();
-            return result;
+                // 解除旧费用关联
+                foreach (var fee in oldFee)
+                {
+                    fee.BillId = null;
+                    _DbContext.Entry(fee).Property(f => f.BillId).IsModified = true;
+                }
+
+                // 建立新费用关联
+                foreach (var fee in collFees)
+                {
+                    fee.BillId = model.DocBill.Id;
+                    _DbContext.Entry(fee).Property(f => f.BillId).IsModified = true;
+                }
+
+                // 保存所有更改
+                _DbContext.SaveChanges();
+
+                // 记录日志
+                _SqlAppLogger.LogGeneralInfo($"修改账单.{nameof(DocBill)}.{model.DocBill.Id}");
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                // 记录错误日志
+                _Logger.LogError(ex, "修改账单时发生错误，账单ID: {BillId}", model.DocBill.Id);
+
+                result.HasError = true;
+                result.ErrorCode = 500;
+                result.DebugMessage = $"修改账单时发生错误: {ex.Message}";
+                return result;
+            }
         }
 
         /// <summary>

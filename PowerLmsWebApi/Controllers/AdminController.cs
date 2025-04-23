@@ -75,7 +75,7 @@ namespace PowerLmsWebApi.Controllers
         /// 获取所有数据字典的目录列表。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">支持id, code,displayname 关键字。</param>
+        /// <param name="conditional">支持通用查询。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
@@ -101,24 +101,13 @@ namespace PowerLmsWebApi.Controllers
                     coll = coll.Where(c => c.OrgId == context.User.OrgId);
                 }
             }
-            foreach (var item in conditional)
-                if (string.Equals(item.Key, "id", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (OwConvert.TryToGuid(item.Value, out var id))
-                        coll = coll.Where(c => c.Id == id);
-                }
-                else if (string.Equals(item.Key, "code", StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.Code.Contains(item.Value));
-                }
-                else if (string.Equals(item.Key, "displayname", StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.DisplayName.Contains(item.Value));
-                }
+
+            // 使用EfHelper.GenerateWhereAnd进行通用查询条件处理
+            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
-
         }
 
         /// <summary>
@@ -333,7 +322,7 @@ namespace PowerLmsWebApi.Controllers
         /// 获取指定类别数据字典的全部内容。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">查询的条件。catalogId </param>
+        /// <param name="conditional">支持通用查询条件。 </param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定类别Id无效。</response>  
@@ -347,29 +336,9 @@ namespace PowerLmsWebApi.Controllers
             var dbSet = _DbContext.DD_SimpleDataDics;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
 
-            foreach (var item in conditional)
-                if (string.Equals(item.Key, "id", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (OwConvert.TryToGuid(item.Value, out var id))
-                        coll = coll.Where(c => c.Id == id);
-                }
-                else if (string.Equals(item.Key, "catalogId", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (OwConvert.TryToGuid(item.Value, out var id))
-                        coll = coll.Where(c => c.DataDicId == id);
-                }
-                else if (string.Equals(item.Key, "code", StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.Code == item.Value);
-                }
-                else if (string.Equals(item.Key, "displayname", StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.DisplayName.Contains(item.Value));
-                }
-                else if (string.Equals(item.Key, "ShortcutName", StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
-                }
+            // 使用EfHelper.GenerateWhereAnd进行通用查询条件处理
+            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
@@ -700,7 +669,7 @@ namespace PowerLmsWebApi.Controllers
         /// 获取港口。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">查询的条件。</param>
+        /// <param name="conditional">支持通用查询条件。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定类别Id无效。</response>  
@@ -726,24 +695,10 @@ namespace PowerLmsWebApi.Controllers
                     coll = coll.Where(c => c.OrgId == context.User.OrgId);
                 }
             }
-            foreach (var item in conditional)
-                if (string.Equals(item.Key, "id", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (OwConvert.TryToGuid(item.Value, out var id))
-                        coll = coll.Where(c => c.Id == id);
-                }
-                else if (string.Equals(item.Key, "code", StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.Code == item.Value);
-                }
-                else if (string.Equals(item.Key, "displayname", StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.DisplayName.Contains(item.Value));
-                }
-                else if (string.Equals(item.Key, "ShortcutName", StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
-                }
+
+            // 使用EfHelper.GenerateWhereAnd进行通用查询条件处理
+            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
@@ -863,7 +818,7 @@ namespace PowerLmsWebApi.Controllers
         /// 获取航线。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">查询的条件。</param>
+        /// <param name="conditional">支持通用查询条件。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定类别Id无效。</response>  
@@ -890,29 +845,10 @@ namespace PowerLmsWebApi.Controllers
                     coll = coll.Where(c => c.OrgId == context.User.OrgId);
                 }
             }
-            foreach (var item in conditional)
-                if (string.Equals(item.Key, "id", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (OwConvert.TryToGuid(item.Value, out var id))
-                        coll = coll.Where(c => c.Id == id);
-                }
-                else if (string.Equals(item.Key, "Id", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (Guid.TryParse(item.Value, out var id))
-                        coll = coll.Where(c => c.Id == id);
-                }
-                else if (string.Equals(item.Key, "code", StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.Code == item.Value);
-                }
-                else if (string.Equals(item.Key, "displayname", StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.DisplayName.Contains(item.Value));
-                }
-                else if (string.Equals(item.Key, "ShortcutName", StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
-                }
+
+            // 使用EfHelper.GenerateWhereAnd进行通用查询条件处理
+            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
@@ -1030,7 +966,7 @@ namespace PowerLmsWebApi.Controllers
         /// 获取汇率。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">查询的条件。支持Id，BeginDate，EndData三个字段</param>
+        /// <param name="conditional">支持通用查询条件。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定类别Id无效。</response>  
@@ -1056,24 +992,10 @@ namespace PowerLmsWebApi.Controllers
                     coll = coll.Where(c => c.OrgId == context.User.OrgId);
                 }
             }
-            foreach (var item in conditional)
-                if (string.Equals(item.Key, "id", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (OwConvert.TryToGuid(item.Value, out var id))
-                        coll = coll.Where(c => c.Id == id);
-                }
-                else if (string.Equals(item.Key, nameof(PlExchangeRate.BeginDate), StringComparison.OrdinalIgnoreCase) && OwConvert.TryGetDateTime(item.Value, out var bdt))
-                {
-                    coll = coll.Where(c => c.BeginDate >= bdt);
-                }
-                else if (string.Equals(item.Key, nameof(PlExchangeRate.EndData), StringComparison.OrdinalIgnoreCase) && OwConvert.TryGetDateTime(item.Value, out var edt))
-                {
-                    coll = coll.Where(c => c.EndData <= edt);
-                }
-                else if (string.Equals(item.Key, "ShortcutName", StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
-                }
+
+            // 使用EfHelper.GenerateWhereAnd进行通用查询条件处理
+            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
@@ -1173,7 +1095,7 @@ namespace PowerLmsWebApi.Controllers
         /// 获取单位换算。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">查询的条件。支持basic 和 rim查询。</param>
+        /// <param name="conditional">支持通用查询条件。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定类别Id无效。</response>  
@@ -1200,24 +1122,10 @@ namespace PowerLmsWebApi.Controllers
                     coll = coll.Where(c => c.OrgId == context.User.OrgId);
                 }
             }
-            foreach (var item in conditional)
-                if (string.Equals(item.Key, "id", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (OwConvert.TryToGuid(item.Value, out var id))
-                        coll = coll.Where(c => c.Id == id);
-                }
-                else if (string.Equals(item.Key, "basic", StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.Basic.Contains(item.Value));
-                }
-                else if (string.Equals(item.Key, "rim", StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.Rim.Contains(item.Value));
-                }
-                else if (string.Equals(item.Key, "ShortcutName", StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
-                }
+
+            // 使用EfHelper.GenerateWhereAnd进行通用查询条件处理
+            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
@@ -1501,7 +1409,7 @@ namespace PowerLmsWebApi.Controllers
         /// 获取业务编码规则。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">查询的条件。支持 DisplayName , ShortName ,OrgId, BusinessTypeId查询。</param>
+        /// <param name="conditional">支持通用查询条件。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定类别Id无效。</response>  
@@ -1527,29 +1435,10 @@ namespace PowerLmsWebApi.Controllers
                     coll = coll.Where(c => c.OrgId == context.User.OrgId);
                 }
             }
-            foreach (var item in conditional)
-                if (string.Equals(item.Key, nameof(JobNumberRule.Id), StringComparison.OrdinalIgnoreCase))
-                {
-                    if (OwConvert.TryToGuid(item.Value, out var id))
-                        coll = coll.Where(c => c.Id == id);
-                }
-                else if (string.Equals(item.Key, nameof(JobNumberRule.DisplayName), StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.DisplayName.Contains(item.Value));
-                }
-                else if (string.Equals(item.Key, nameof(JobNumberRule.ShortName), StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
-                }
-                else if (string.Equals(item.Key, "ShortcutName", StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
-                }
-                else if (string.Equals(item.Key, nameof(JobNumberRule.BusinessTypeId), StringComparison.OrdinalIgnoreCase))
-                {
-                    if (OwConvert.TryToGuid(item.Value, out var id))
-                        coll = coll.Where(c => c.BusinessTypeId == id);
-                }
+
+            // 使用EfHelper.GenerateWhereAnd进行通用查询条件处理
+            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
@@ -1693,7 +1582,7 @@ namespace PowerLmsWebApi.Controllers
         /// 获取其它编码规则。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">查询的条件。支持 DisplayName(模糊) ，Code,Id查询。</param>
+        /// <param name="conditional">支持通用查询条件。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定类别Id无效。</response>  
@@ -1719,20 +1608,10 @@ namespace PowerLmsWebApi.Controllers
                     coll = coll.Where(c => c.OrgId == context.User.OrgId);
                 }
             }
-            foreach (var item in conditional)
-                if (string.Equals(item.Key, nameof(OtherNumberRule.Id), StringComparison.OrdinalIgnoreCase))
-                {
-                    if (OwConvert.TryToGuid(item.Value, out var id))
-                        coll = coll.Where(c => c.Id == id);
-                }
-                else if (string.Equals(item.Key, nameof(OtherNumberRule.DisplayName), StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.DisplayName.Contains(item.Value));
-                }
-                else if (string.Equals(item.Key, nameof(OtherNumberRule.Code), StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.Code == item.Value);
-                }
+
+            // 使用EfHelper.GenerateWhereAnd进行通用查询条件处理
+            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
@@ -1845,7 +1724,7 @@ namespace PowerLmsWebApi.Controllers
         /// 获取国家。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">查询的条件。支持 DisplayName 和 ShortName 查询。</param>
+        /// <param name="conditional">查询的条件。支持通用查询条件。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定类别Id无效。</response>  
@@ -1871,24 +1750,10 @@ namespace PowerLmsWebApi.Controllers
                     coll = coll.Where(c => c.OrgId == context.User.OrgId);
                 }
             }
-            foreach (var item in conditional)
-                if (string.Equals(item.Key, nameof(PlCountry.Id), StringComparison.OrdinalIgnoreCase))
-                {
-                    if (OwConvert.TryToGuid(item.Value, out var id))
-                        coll = coll.Where(c => c.Id == id);
-                }
-                else if (string.Equals(item.Key, nameof(PlCountry.DisplayName), StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.DisplayName.Contains(item.Value));
-                }
-                else if (string.Equals(item.Key, nameof(PlCountry.ShortName), StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
-                }
-                else if (string.Equals(item.Key, "ShortcutName", StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
-                }
+
+            // 使用EfHelper.GenerateWhereAnd进行通用查询条件处理
+            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
@@ -2010,7 +1875,7 @@ namespace PowerLmsWebApi.Controllers
         /// 获取币种。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">查询的条件。支持 DisplayName 和 ShortName 查询。</param>
+        /// <param name="conditional">支持通用查询条件。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定类别Id无效。</response>  
@@ -2036,24 +1901,10 @@ namespace PowerLmsWebApi.Controllers
                     coll = coll.Where(c => c.OrgId == context.User.OrgId);
                 }
             }
-            foreach (var item in conditional)
-                if (string.Equals(item.Key, nameof(PlCurrency.Id), StringComparison.OrdinalIgnoreCase))
-                {
-                    if (OwConvert.TryToGuid(item.Value, out var id))
-                        coll = coll.Where(c => c.Id == id);
-                }
-                else if (string.Equals(item.Key, nameof(PlCurrency.DisplayName), StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.DisplayName.Contains(item.Value));
-                }
-                else if (string.Equals(item.Key, nameof(PlCurrency.ShortName), StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
-                }
-                else if (string.Equals(item.Key, "ShortcutName", StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
-                }
+
+            // 使用EfHelper.GenerateWhereAnd进行通用查询条件处理
+            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
@@ -2167,7 +2018,7 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.SaveChanges();
             return result;
         }
-
+        
         #endregion 币种相关
 
         #region 箱型相关
@@ -2175,7 +2026,7 @@ namespace PowerLmsWebApi.Controllers
         /// 获取箱型。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">查询的条件。支持 DisplayName 和 ShortName ,orgId查询。</param>
+        /// <param name="conditional">支持通用查询条件。</param>
         /// 
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
@@ -2202,29 +2053,10 @@ namespace PowerLmsWebApi.Controllers
                     coll = coll.Where(c => c.OrgId == context.User.OrgId);
                 }
             }
-            foreach (var item in conditional)
-                if (string.Equals(item.Key, nameof(ShippingContainersKind.Id), StringComparison.OrdinalIgnoreCase))
-                {
-                    if (OwConvert.TryToGuid(item.Value, out var id))
-                        coll = coll.Where(c => c.Id == id);
-                }
-                else if (string.Equals(item.Key, nameof(ShippingContainersKind.OrgId), StringComparison.OrdinalIgnoreCase))
-                {
-                    if (OwConvert.TryToGuid(item.Value, out var id))
-                        coll = coll.Where(c => c.OrgId == id);
-                }
-                else if (string.Equals(item.Key, nameof(ShippingContainersKind.DisplayName), StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.DisplayName.Contains(item.Value));
-                }
-                else if (string.Equals(item.Key, nameof(ShippingContainersKind.ShortName), StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.ShortName.Contains(item.Value));
-                }
-                else if (string.Equals(item.Key, "ShortcutName", StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.ShortcutName.Contains(item.Value));
-                }
+
+            // 使用EfHelper.GenerateWhereAnd进行通用查询条件处理
+            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
