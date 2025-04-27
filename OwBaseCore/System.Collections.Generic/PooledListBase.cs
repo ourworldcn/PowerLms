@@ -2,6 +2,7 @@
 using System.Buffers;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -14,7 +15,13 @@ namespace System.Collections.Generic
     /// <typeparam name="T">列表中的元素类型</typeparam>
     public class PooledListBase<T> : IList<T>, IDisposable
     {
-        internal T[] _Items;          // 存储元素的池化数组
+        private T[] _Items;          // 存储元素的池化数组
+
+        /// <summary>
+        /// 内部数据的数组，它从0开始有<see cref="Count"/>个有效数据。数组的长度是容量<see cref="Capacity"/>。
+        /// </summary>
+        protected T[] Items=>_Items;
+
         private int _Count;           // 列表中当前元素数量
         private bool _isDisposed;    // 对象是否已被释放
         private const int DefaultCapacity = 8;  // 默认初始容量

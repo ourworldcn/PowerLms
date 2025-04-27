@@ -207,7 +207,7 @@ namespace System.Collections.Generic
         public int IndexOf(T item, int index)
         {
             if (index < 0 || index > Count) throw new ArgumentOutOfRangeException(nameof(index));
-            return Array.IndexOf(_Items, item, index, Count - index);
+            return Array.IndexOf(Items, item, index, Count - index);
         }
 
         /// <summary>在 PooledList&lt;T&gt; 内，从指定的索引开始并包含指定计数的元素，搜索对象，并返回第一个匹配项的从零开始的索引</summary>
@@ -220,7 +220,7 @@ namespace System.Collections.Generic
         {
             if (index < 0 || index > Count) throw new ArgumentOutOfRangeException(nameof(index));
             if (count < 0 || index + count > Count) throw new ArgumentOutOfRangeException(nameof(count));
-            return Array.IndexOf(_Items, item, index, count);
+            return Array.IndexOf(Items, item, index, count);
         }
 
         /// <summary>从 PooledList&lt;T&gt; 中移除与指定谓词定义的条件相匹配的所有元素</summary>
