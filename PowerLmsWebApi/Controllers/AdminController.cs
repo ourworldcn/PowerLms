@@ -1489,7 +1489,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<ModifyJobNumberRuleReturnDto> ModifyJobNumberRule(ModifyJobNumberRuleParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (model.Items.Any()) return BadRequest($"{nameof(model.Items)} 为空集合。");
+            if (model.Items == null || model.Items.Count == 0) return BadRequest($"{nameof(model.Items)} 为空集合。");
 
             string err;
             if (!_AuthorizationManager.Demand(out err, "B.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
@@ -1504,7 +1504,7 @@ namespace PowerLmsWebApi.Controllers
             }
             model.Items.Select(c => c.Id).ToList().ForEach(c =>
             {
-                var entity = _DbContext.DD_OtherNumberRules.Find(c);
+                var entity = _DbContext.DD_JobNumberRules.Find(c);
                 if (entity is null) return;
                 _DbContext.Entry(entity).Property(c => c.OrgId).IsModified = false;
             });
