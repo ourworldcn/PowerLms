@@ -4,6 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
@@ -15,12 +16,12 @@ namespace System.Collections.Generic
     /// <typeparam name="T">列表中的元素类型</typeparam>
     public class PooledListBase<T> : IList<T>, IDisposable
     {
-        private T[] _Items;          // 存储元素的池化数组
+        private T[] _Buffer;          // 存储元素的池化数组
 
         /// <summary>
         /// 内部数据的数组，它从0开始有<see cref="Count"/>个有效数据。数组的长度是容量<see cref="Capacity"/>。
         /// </summary>
-        protected T[] Items=>_Items;
+        protected T[] Buffer=>_Buffer;
 
         private int _Count;           // 列表中当前元素数量
         private bool _isDisposed;    // 对象是否已被释放
@@ -31,7 +32,7 @@ namespace System.Collections.Generic
         /// </summary>
         public PooledListBase()
         {
-            _Items = ArrayPool<T>.Shared.Rent(DefaultCapacity);
+            _Buffer = ArrayPool<T>.Shared.Rent(DefaultCapacity);
             _Count = 0;
         }
 
@@ -45,7 +46,7 @@ namespace System.Collections.Generic
             if (capacity < 0)
                 throw new ArgumentOutOfRangeException(nameof(capacity), "容量不能为负数");
 
-            _Items = capacity == 0 ? Array.Empty<T>() : ArrayPool<T>.Shared.Rent(capacity);
+            _Buffer = capacity == 0 ? Array.Empty<T>() : ArrayPool<T>.Shared.Rent(capacity);
             _Count = 0;
         }
 
@@ -74,14 +75,14 @@ namespace System.Collections.Generic
                 if ((uint)index >= (uint)_Count)
                     throw new ArgumentOutOfRangeException(nameof(index));
 
-                return _Items[index];
+                return _Buffer[index];
             }
             set
             {
                 if ((uint)index >= (uint)_Count)
                     throw new ArgumentOutOfRangeException(nameof(index));
 
-                _Items[index] = value;
+                _Buffer[index] = value;
             }
         }
 
@@ -91,12 +92,12 @@ namespace System.Collections.Generic
         /// <param name="item">要添加的元素</param>
         public void Add(T item)
         {
-            if (_Count == _Items.Length)
+            if (_Count == _Buffer.Length)
             {
                 EnsureCapacity(_Count + 1);
             }
 
-            _Items[_Count++] = item;
+            _Buffer[_Count++] = item;
         }
 
         /// <summary>
@@ -110,17 +111,17 @@ namespace System.Collections.Generic
             if ((uint)index > (uint)_Count)
                 throw new ArgumentOutOfRangeException(nameof(index));
 
-            if (_Count == _Items.Length)
+            if (_Count == _Buffer.Length)
             {
                 EnsureCapacity(_Count + 1);
             }
 
             if (index < _Count)
             {
-                Array.Copy(_Items, index, _Items, index + 1, _Count - index);
+                Array.Copy(_Buffer, index, _Buffer, index + 1, _Count - index);
             }
 
-            _Items[index] = item;
+            _Buffer[index] = item;
             _Count++;
         }
 
@@ -155,13 +156,13 @@ namespace System.Collections.Generic
 
             if (index < _Count)
             {
-                Array.Copy(_Items, index + 1, _Items, index, _Count - index);
+                Array.Copy(_Buffer, index + 1, _Buffer, index, _Count - index);
             }
 
             // 防止保留引用
             if (RuntimeHelpers.IsReferenceOrContainsReferences<T>())
             {
-                _Items[_Count] = default;
+                _Buffer[_Count] = default;
             }
         }
 
@@ -172,7 +173,7 @@ namespace System.Collections.Generic
         {
             if (RuntimeHelpers.IsReferenceOrContainsReferences<T>())
             {
-                Array.Clear(_Items, 0, _Count);
+                Array.Clear(_Buffer, 0, _Count);
             }
 
             _Count = 0;
@@ -185,7 +186,7 @@ namespace System.Collections.Generic
         /// <returns>如果找到元素，则为该元素的索引；否则为 -1</returns>
         public int IndexOf(T item)
         {
-            return Array.IndexOf(_Items, item, 0, _Count);
+            return Array.IndexOf(_Buffer, item, 0, _Count);
         }
 
         /// <summary>
@@ -214,7 +215,7 @@ namespace System.Collections.Generic
             if (arrayIndex < 0 || arrayIndex > array.Length - _Count)
                 throw new ArgumentOutOfRangeException(nameof(arrayIndex));
 
-            Array.Copy(_Items, 0, array, arrayIndex, _Count);
+            Array.Copy(_Buffer, 0, array, arrayIndex, _Count);
         }
 
         /// <summary>
@@ -225,7 +226,7 @@ namespace System.Collections.Generic
         {
             for (int i = 0; i < _Count; i++)
             {
-                yield return _Items[i];
+                yield return _Buffer[i];
             }
         }
 
@@ -243,7 +244,7 @@ namespace System.Collections.Generic
         /// <summary>
         /// 列表的当前容量，只读属性
         /// </summary>
-        public int Capacity => _Items.Length;
+        public int Capacity => _Buffer.Length;
 
         /// <summary>
         /// 调整列表的容量大小
@@ -255,28 +256,28 @@ namespace System.Collections.Generic
             if (newCapacity < _Count)
                 throw new ArgumentOutOfRangeException(nameof(newCapacity), "新容量小于当前元素数量");
 
-            if (newCapacity != _Items.Length)
+            if (newCapacity != _Buffer.Length)
             {
                 if (newCapacity > 0)
                 {
                     T[] newItems = ArrayPool<T>.Shared.Rent(newCapacity);
-                    if (newItems.Length == _Items.Length) //直接返回原数组，避免不必要的内存分配
+                    if (newItems.Length == _Buffer.Length) //直接返回原数组，避免不必要的内存分配
                     {
                         ArrayPool<T>.Shared.Return(newItems);
                         return;
                     }
                     if (_Count > 0)
                     {
-                        Array.Copy(_Items, newItems, _Count);
+                        Array.Copy(_Buffer, newItems, _Count);
                     }
 
                     ReturnArray();
-                    _Items = newItems;
+                    _Buffer = newItems;
                 }
                 else
                 {
                     ReturnArray();
-                    _Items = Array.Empty<T>();
+                    _Buffer = Array.Empty<T>();
                 }
             }
         }
@@ -288,7 +289,7 @@ namespace System.Collections.Generic
         private void ReturnArray()
         {
             // 使用 Interlocked.Exchange 原子地替换 _items 并获取旧值
-            T[] toReturn = Interlocked.Exchange(ref _Items, Array.Empty<T>());
+            T[] toReturn = Interlocked.Exchange(ref _Buffer, Array.Empty<T>());
 
             // 如果没有数组需要返回，直接退出
             if (toReturn == null || toReturn.Length == 0)
@@ -353,7 +354,7 @@ namespace System.Collections.Generic
                 if (count > 0)
                 {
                     EnsureCapacity(_Count + count);
-                    c.CopyTo(_Items, _Count);
+                    c.CopyTo(_Buffer, _Count);
                     _Count += count;
                 }
             }
@@ -371,7 +372,7 @@ namespace System.Collections.Generic
         /// </summary>
         public void TrimExcess()
         {
-            if (_Count < _Items.Length * 0.9)
+            if (_Count < _Buffer.Length * 0.9)
             {
                 Resize(_Count);
             }
@@ -383,9 +384,9 @@ namespace System.Collections.Generic
         /// <param name="min">所需的最小容量</param>
         public void EnsureCapacity(int min)
         {
-            if (_Items.Length < min)
+            if (_Buffer.Length < min)
             {
-                int newCapacity = _Items.Length == 0 ? DefaultCapacity : _Items.Length * 2;
+                int newCapacity = _Buffer.Length == 0 ? DefaultCapacity : _Buffer.Length * 2;
 
                 if (newCapacity < min)
                     newCapacity = min;
