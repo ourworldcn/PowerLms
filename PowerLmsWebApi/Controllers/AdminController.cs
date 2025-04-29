@@ -42,9 +42,10 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="dataManager"></param>
         /// <param name="authorizationManager"></param>
         /// <param name="merchantManager"></param>
+        /// <param name="logger"></param>
         public AdminController(PowerLmsUserDbContext context, NpoiManager npoiManager, AccountManager accountManager, IServiceProvider scope, EntityManager entityManager,
             IMapper mapper, OrganizationManager organizationManager, DataDicManager dataManager, AuthorizationManager authorizationManager,
-            MerchantManager merchantManager)
+            MerchantManager merchantManager, ILogger<AdminController> logger)
         {
             _DbContext = context;
             _NpoiManager = npoiManager;
@@ -56,6 +57,7 @@ namespace PowerLmsWebApi.Controllers
             _DataManager = dataManager;
             _AuthorizationManager = authorizationManager;
             _MerchantManager = merchantManager;
+            _Logger = logger;
         }
 
         readonly PowerLmsUserDbContext _DbContext;
@@ -68,6 +70,7 @@ namespace PowerLmsWebApi.Controllers
         readonly DataDicManager _DataManager;
         readonly AuthorizationManager _AuthorizationManager;
         readonly MerchantManager _MerchantManager;
+        ILogger<AdminController> _Logger;
 
         #region 字典目录
 
@@ -1494,22 +1497,59 @@ namespace PowerLmsWebApi.Controllers
             string err;
             if (!_AuthorizationManager.Demand(out err, "B.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
 
-            if (model.Items.Any(c => c.BusinessTypeId == ProjectContent.AeId))    //若是空运出口业务
+            if (model.Items.Any(item => item.BusinessTypeId == ProjectContent.AeId))    //若是空运出口业务
                 if (!_AuthorizationManager.Demand(out err, "D0.1.1.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+
             var result = new ModifyJobNumberRuleReturnDto();
-            if (!_EntityManager.ModifyWithMarkDelete(model.Items))
+
+            try
             {
-                var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
-                return errResult;
+                // 在修改之前保存OrgId值
+                var originalOrgIds = new Dictionary<Guid, Guid?>();
+                foreach (var item in model.Items)
+                {
+                    if (item.Id != Guid.Empty)
+                    {
+                        var originalEntity = _DbContext.DD_JobNumberRules.AsNoTracking().FirstOrDefault(e => e.Id == item.Id);
+                        if (originalEntity != null)
+                        {
+                            originalOrgIds[item.Id] = originalEntity.OrgId;
+                        }
+                    }
+                }
+
+                // 执行修改操作
+                if (!_EntityManager.ModifyWithMarkDelete(model.Items))
+                {
+                    return new StatusCodeResult(OwHelper.GetLastError());
+                }
+
+                // 确保OrgId属性不被修改
+                foreach (var item in model.Items)
+                {
+                    if (originalOrgIds.TryGetValue(item.Id, out var orgId))
+                    {
+                        var entry = _DbContext.Entry(item);
+                        if (entry.State == EntityState.Modified)
+                        {
+                            entry.Property(e => e.OrgId).IsModified = false;
+                            // 确保OrgId值保持不变
+                            item.OrgId = orgId;
+                        }
+                    }
+                }
+
+                _DbContext.SaveChanges();
+                return result;
             }
-            model.Items.Select(c => c.Id).ToList().ForEach(c =>
+            catch (Exception ex)
             {
-                var entity = _DbContext.DD_JobNumberRules.Find(c);
-                if (entity is null) return;
-                _DbContext.Entry(entity).Property(c => c.OrgId).IsModified = false;
-            });
-            _DbContext.SaveChanges();
-            return result;
+                _Logger.LogError(ex, "修改业务编码规则记录时出错");
+                result.HasError = true;
+                result.ErrorCode = 500;
+                result.DebugMessage = $"修改业务编码规则记录时出错: {ex.Message}";
+                return result;
+            }
         }
 
         /// <summary>

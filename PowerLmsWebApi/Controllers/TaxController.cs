@@ -456,22 +456,84 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="model"></param>
         /// <param name="conditional">查询的条件。
         /// 通用条件写法:所有条件都是字符串，对区间的写法是用逗号分隔（字符串类型暂时不支持区间且都是模糊查询）如"2024-1-1,2024-1-2"。
-        /// 对强制取null的约束，则写"null"。</param>
+        /// 对强制取null的约束，则写"null"。
+        /// 支持 DocFeeRequisition.属性名 格式的键，用于关联到申请单表进行过滤。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
         public ActionResult<GetAllTaxInvoiceInfoReturnDto> GetAllTaxInvoiceInfo([FromQuery] PagingParamsDtoBase model,
-            [FromQuery] Dictionary<string, string> conditional = null)
+            [FromQuery][ModelBinder(typeof(DotKeyDictionaryModelBinder))] Dictionary<string, string> conditional = null)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllTaxInvoiceInfoReturnDto();
-            var dbSet = _DbContext.TaxInvoiceInfos;
 
-            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-            coll = EfHelper.GenerateWhereAnd(coll, conditional);
-            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
-            _Mapper.Map(prb, result);
+            try
+            {
+                // 从条件中分离出DocFeeRequisition开头的条件
+                string docFeeRequisitionPrefix = $"{nameof(DocFeeRequisition)}.";
+
+                // 初始化条件字典
+                var reqConditions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                var invoiceConditions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+                // 如果有条件，需要分类处理
+                if (conditional != null && conditional.Count > 0)
+                {
+                    foreach (var pair in conditional)
+                    {
+                        if (pair.Key.StartsWith(docFeeRequisitionPrefix, StringComparison.OrdinalIgnoreCase))
+                        {
+                            // 提取申请单条件，去掉前缀
+                            string fieldName = pair.Key.Substring(docFeeRequisitionPrefix.Length);
+                            reqConditions[fieldName] = pair.Value;
+                        }
+                        else
+                        {
+                            // 保存发票条件
+                            invoiceConditions[pair.Key] = pair.Value;
+                        }
+                    }
+                }
+
+                IQueryable<TaxInvoiceInfo> dbSet;
+
+                // 如果有DocFeeRequisition相关的条件，则需要联合查询
+                if (reqConditions.Count > 0)
+                {
+                    _Logger.LogDebug("应用申请单过滤条件: {conditions}",
+                        string.Join(", ", reqConditions.Select(kv => $"{kv.Key}={kv.Value}")));
+
+                    // 先获取符合条件的申请单
+                    var requisitions = EfHelper.GenerateWhereAnd(_DbContext.DocFeeRequisitions.AsNoTracking(), reqConditions);
+
+                    // 通过申请单关联查询发票信息
+                    dbSet = from invoice in _DbContext.TaxInvoiceInfos
+                            join req in requisitions on invoice.DocFeeRequisitionId equals req.Id
+                            select invoice;
+                }
+                else
+                {
+                    // 不需要关联查询
+                    dbSet = _DbContext.TaxInvoiceInfos;
+                }
+
+                // 应用发票信息自身的过滤条件
+                var coll = EfHelper.GenerateWhereAnd(dbSet, invoiceConditions);
+
+                // 应用排序和分页
+                coll = coll.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
+                var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
+                _Mapper.Map(prb, result);
+            }
+            catch (Exception ex)
+            {
+                _Logger.LogError(ex, "获取税务发票信息时发生错误");
+                result.HasError = true;
+                result.ErrorCode = 500;
+                result.DebugMessage = $"获取税务发票信息时发生错误: {ex.Message}";
+            }
+
             return result;
         }
 
