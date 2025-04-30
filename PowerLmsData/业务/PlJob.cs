@@ -330,6 +330,13 @@ goodssize	尺寸	string100	字符串表达
         public decimal? Weight { get; set; }
 
         /// <summary>
+        /// 计费重量,单位Kg,三位小数。委托重量KG数，海运显示为毛重。
+        /// </summary>
+        [Comment("计费重量,单位Kg,三位小数。委托计费重量，海运显示为净重。")]
+        [Precision(18, 3)]
+        public decimal? ChargeWeight { get; set; }
+
+        /// <summary>
         /// 体积,三位小数,委托体积立方
         /// </summary>
         [Comment("体积,三位小数,委托体积立方")]
