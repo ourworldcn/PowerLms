@@ -148,6 +148,7 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 强制指定的新值，键是属性名，值字符串化的属性值。
         /// 除 Job对象本体属性外，其它实体的属性要在其属性名前加 实体名 并以.分割，如:PlEsDoc.CargoRouteId。不能给费用对象指定新值。
+        /// 支持 DocFee 的属性。
         /// </summary>
         public Dictionary<string, string> NewValues { get; set; } = new Dictionary<string, string>();
     }

@@ -2,7 +2,9 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.ObjectPool;
 using Microsoft.VisualBasic;
+using NPOI.SS.Formula.Functions;
 using NPOI.Util;
 using OW.Data;
 using PowerLms.Data;
@@ -198,26 +200,77 @@ namespace PowerLmsServer.Managers
         /// <typeparam name="T"></typeparam>
         /// <param name="src"></param>
         /// <param name="dest"></param>
-        /// <param name="newVals">要设置的新值，不设置新值可以为null或空字典。</param>
-        /// <param name="ignorePropertyNames">要忽略的属性名集合，不忽略可以为null或空集合。</param>
-        /// 
+        /// <param name="newVals">要设置的新值，不设置新值可以为null或空字典。字典可以被指定为键不区分大小写。</param>
+        /// <param name="ignorePropertyNames">要忽略的属性名集合，不忽略可以为null或空集合。该集合可能本身就不区分大小写。</param>
         /// <returns></returns>
         public bool Copy<T>(T src, T dest, IDictionary<string, string> newVals, IEnumerable<string> ignorePropertyNames)
         {
+            // 获取类型的所有属性，只需获取一次
+            var properties = typeof(T).GetProperties();
+
+            // 映射时直接使用原始的 ignorePropertyNames 进行映射
             _Mapper.Map(src, dest, c =>
             {
-                ignorePropertyNames?.Select(subc => $"-{subc}").ForEach(subc => c.Items.Add(subc, true));
-            });
-            var jobType = typeof(T);
-            if (newVals is not null)
-                foreach (var item in newVals)  //设置新值
+                if (ignorePropertyNames is not null)
                 {
-                    if (jobType.GetProperty(item.Key) is PropertyInfo pi && pi.CanWrite && OwConvert.TryChangeType(item.Value, pi.PropertyType, out var nVal))
-                        pi.SetValue(dest, nVal);
+                    // 对于每个属性，检查是否在忽略列表中
+                    // 这里使用属性的实际名称(区分大小写)，但通过 ignorePropertyNames.Contains 来判断
+                    // ignorePropertyNames.Contains 会使用其自身的比较逻辑
+                    foreach (var prop in properties)
+                    {
+                        if (ignorePropertyNames.Contains(prop.Name))
+                        {
+                            c.Items.Add($"-{prop.Name}", true);
+                        }
+                    }
                 }
+            });
+
+            // 处理 newVals 中的特殊值
+            if (newVals != null && newVals.Count > 0)
+            {
+                // 遍历所有可写属性
+                foreach (var prop in properties.Where(p => p.CanWrite))
+                {
+                    // 跳过被忽略的属性 - 这里直接使用集合的 Contains 方法，尊重其内部比较逻辑
+                    if (ignorePropertyNames?.Contains(prop.Name) == true)
+                        continue;
+
+                    // 尝试从 newVals 中获取值 - 这里会使用 newVals 的键比较逻辑
+                    if (newVals.TryGetValue(prop.Name, out var strValue) &&
+                        OwConvert.TryChangeType(strValue, prop.PropertyType, out var typedValue))
+                    {
+                        prop.SetValue(dest, typedValue);
+                    }
+                }
+            }
+
             return true;
         }
 
+        /// <summary>
+        /// 复制对象，强制不区分大小写处理属性名称，并能指定忽略属性和强行设置的新值。
+        /// </summary>
+        /// <typeparam name="T">对象类型</typeparam>
+        /// <param name="src">源对象</param>
+        /// <param name="dest">目标对象</param>
+        /// <param name="newVals">要设置的新值，不设置新值可以为null或空字典</param>
+        /// <param name="ignorePropertyNames">要忽略的属性名集合，不忽略可以为null或空集合</param>
+        /// <returns>是否成功复制</returns>
+        public bool CopyIgnoreCase<T>(T src, T dest, IDictionary<string, string> newVals, IEnumerable<string> ignorePropertyNames)
+        {
+            // 创建不区分大小写的字典和集合
+            var caseInsensitiveNewVals = newVals != null
+                ? new Dictionary<string, string>(newVals, StringComparer.OrdinalIgnoreCase)
+                : null;
+
+            var caseInsensitiveIgnoreProps = ignorePropertyNames != null
+                ? new HashSet<string>(ignorePropertyNames, StringComparer.OrdinalIgnoreCase)
+                : null;
+
+            // 复用现有的 Copy 方法实现
+            return Copy(src, dest, caseInsensitiveNewVals, caseInsensitiveIgnoreProps);
+        }
 
     }
 
