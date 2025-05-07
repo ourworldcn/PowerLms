@@ -21,7 +21,7 @@ namespace System.Collections.Generic
         /// <summary>
         /// 内部数据的数组，它从0开始有<see cref="Count"/>个有效数据。数组的长度是容量<see cref="Capacity"/>。
         /// </summary>
-        protected T[] Buffer=>_Buffer;
+        protected T[] Buffer => _Buffer;
 
         private int _Count;           // 列表中当前元素数量
         private bool _isDisposed;    // 对象是否已被释放
@@ -48,6 +48,17 @@ namespace System.Collections.Generic
 
             _Buffer = capacity == 0 ? Array.Empty<T>() : ArrayPool<T>.Shared.Rent(capacity);
             _Count = 0;
+        }
+
+        /// <summary>
+        /// 从指定的集合初始化 PooledListBase 实例
+        /// </summary>
+        /// <param name="collection">用于初始化列表的集合</param>
+        /// <exception cref="ArgumentNullException">collection 为 null 时抛出</exception>
+        public PooledListBase(IEnumerable<T> collection)
+        {
+            ArgumentNullException.ThrowIfNull(collection);
+            AddRange(collection);
         }
 
         #region IList<T> 和 ICollection<T> 接口实现
@@ -249,47 +260,55 @@ namespace System.Collections.Generic
         /// <summary>
         /// 调整列表的容量大小
         /// </summary>
-        /// <param name="newCapacity">新的容量大小</param>
-        /// <exception cref="ArgumentOutOfRangeException">newCapacity 小于当前元素数量</exception>
-        public void Resize(int newCapacity)
+        /// <remarks>如果 newSize 大于 Length 旧数组，则会分配一个新数组，并将所有元素从旧数组复制到新数组。
+        /// 如果 newSize 小于 Length 旧数组，则会分配一个新数组，并将元素从旧数组复制到新数组，直到填充新数组;旧数组中的其余元素将被忽略。
+        /// 如果 newSize 等于 Length 旧数组，则此方法不执行任何作用。</remarks>
+        /// <param name="buffer">要调整大小的数组的引用</param>
+        /// <param name="count">数组中有效元素的数量的引用</param>
+        /// <param name="newSize">新的容量大小</param>
+        public static void Resize<TElement>(ref TElement[] buffer, ref int count, int newSize)
         {
-            if (newCapacity < _Count)
-                throw new ArgumentOutOfRangeException(nameof(newCapacity), "新容量小于当前元素数量");
+            // 如果大小相同，无需操作
+            if (newSize == buffer.Length)
+                return;
 
-            if (newCapacity != _Buffer.Length)
+            // 处理新大小为0的情况
+            if (newSize == 0)
             {
-                if (newCapacity > 0)
-                {
-                    T[] newItems = ArrayPool<T>.Shared.Rent(newCapacity);
-                    if (newItems.Length == _Buffer.Length) //直接返回原数组，避免不必要的内存分配
-                    {
-                        ArrayPool<T>.Shared.Return(newItems);
-                        return;
-                    }
-                    if (_Count > 0)
-                    {
-                        Array.Copy(_Buffer, newItems, _Count);
-                    }
-
-                    ReturnArray();
-                    _Buffer = newItems;
-                }
-                else
-                {
-                    ReturnArray();
-                    _Buffer = Array.Empty<T>();
-                }
+                ReturnPooledArray(ref buffer);
+                count = 0;  // 重置元素计数，因为没有存储空间
+                return;
             }
+
+            // 分配新数组
+            var newItems = ArrayPool<TElement>.Shared.Rent(newSize);
+
+            // 检查是否由于内存对齐得到了相同大小的数组
+            if (newItems.Length == buffer.Length)
+            {
+                ArrayPool<TElement>.Shared.Return(newItems);
+                return;
+            }
+
+            // 只在有数据时复制
+            if (count > 0)
+                Array.Copy(buffer, 0, newItems, 0, Math.Min(newSize, count));
+
+            // 归还旧数组，设置新数组
+            ReturnPooledArray(ref buffer);
+            buffer = newItems;
+            count = Math.Min(newSize, count);
         }
 
         /// <summary>
-        /// 将内部数组归还到数组池
+        /// 将数组归还到数组池
         /// </summary>
+        /// <param name="array">要归还的数组的引用，归还后会被设置为空数组</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void ReturnArray()
+        private static void ReturnPooledArray<TElement>(ref TElement[] array)
         {
-            // 使用 Interlocked.Exchange 原子地替换 _items 并获取旧值
-            T[] toReturn = Interlocked.Exchange(ref _Buffer, Array.Empty<T>());
+            // 使用 Exchange 原子地替换数组并获取旧值
+            var toReturn = Interlocked.Exchange(ref array, Array.Empty<TElement>());
 
             // 如果没有数组需要返回，直接退出
             if (toReturn == null || toReturn.Length == 0)
@@ -298,7 +317,7 @@ namespace System.Collections.Generic
             try
             {
                 // 直接使用 clearArray: true 让 ArrayPool 内部处理清理工作
-                ArrayPool<T>.Shared.Return(toReturn, clearArray: true);
+                ArrayPool<TElement>.Shared.Return(toReturn, clearArray: true);
             }
             catch (Exception ex)
             {
@@ -328,7 +347,7 @@ namespace System.Collections.Generic
                 if (disposing)
                 {
                     // 释放托管资源
-                    ReturnArray();
+                    ReturnPooledArray(ref _Buffer);
                 }
 
                 // 释放非托管资源
@@ -339,14 +358,13 @@ namespace System.Collections.Generic
         #endregion
 
         /// <summary>
-        /// 将现有集合中的元素添加到列表的末尾
+        /// 将现有集合中的元素添加到列表的末尾。
         /// </summary>
-        /// <param name="collection">要添加的集合</param>
+        /// <param name="collection">要添加的集合,可以是空的集合。</param>
         /// <exception cref="ArgumentNullException">collection 为 null</exception>
         public void AddRange(IEnumerable<T> collection)
         {
-            if (collection == null)
-                throw new ArgumentNullException(nameof(collection));
+            ArgumentNullException.ThrowIfNull(collection);
 
             if (collection is ICollection<T> c)
             {
@@ -374,7 +392,7 @@ namespace System.Collections.Generic
         {
             if (_Count < _Buffer.Length * 0.9)
             {
-                Resize(_Count);
+                Resize(ref _Buffer, ref _Count, _Count);
             }
         }
 
@@ -384,6 +402,13 @@ namespace System.Collections.Generic
         /// <param name="min">所需的最小容量</param>
         public void EnsureCapacity(int min)
         {
+            // 确保_Buffer已经初始化
+            if (_Buffer is null)
+            {
+                _Buffer = ArrayPool<T>.Shared.Rent(Math.Max(min, DefaultCapacity));
+                return;
+            }
+
             if (_Buffer.Length < min)
             {
                 int newCapacity = _Buffer.Length == 0 ? DefaultCapacity : _Buffer.Length * 2;
@@ -391,9 +416,51 @@ namespace System.Collections.Generic
                 if (newCapacity < min)
                     newCapacity = min;
 
-                Resize(newCapacity);
+                Resize(ref _Buffer, ref _Count, newCapacity);
             }
         }
 
+    }
+
+    /// <summary>
+    /// 为 IEnumerable&lt;T&gt; 提供扩展方法
+    /// </summary>
+    public static class PooledListBaseExtensions
+    {
+        /// <summary>
+        /// 从 IEnumerable&lt;T&gt; 创建一个 PooledListBase&lt;T&gt;
+        /// </summary>
+        /// <typeparam name="TSource">源集合元素的类型</typeparam>
+        /// <param name="source">要转换的 IEnumerable&lt;T&gt; 集合</param>
+        /// <returns>包含输入序列中的元素的 PooledListBase&lt;T&gt;</returns>
+        /// <exception cref="ArgumentNullException">source 为 null</exception>
+        public static PooledListBase<TSource> ToPooledListBase<TSource>(this IEnumerable<TSource> source)
+        {
+            ArgumentNullException.ThrowIfNull(source);
+            // 对于未知大小的集合，使用默认容量
+            var list = new PooledListBase<TSource>(source);
+            return list;
+        }
+
+        /// <summary>
+        /// 从 IEnumerable&lt;T&gt; 创建一个具有指定初始容量的 PooledListBase&lt;T&gt;
+        /// </summary>
+        /// <typeparam name="TSource">源集合元素的类型</typeparam>
+        /// <param name="source">要转换的 IEnumerable&lt;T&gt; 集合</param>
+        /// <param name="capacity">初始容量</param>
+        /// <returns>包含输入序列中的元素的 PooledListBase&lt;T&gt;</returns>
+        /// <exception cref="ArgumentNullException">source 为 null</exception>
+        /// <exception cref="ArgumentOutOfRangeException">capacity 小于 0</exception>
+        public static PooledListBase<TSource> ToPooledListBase<TSource>(this IEnumerable<TSource> source, int capacity)
+        {
+            ArgumentNullException.ThrowIfNull(source);
+
+            if (capacity < 0)
+                throw new ArgumentOutOfRangeException(nameof(capacity));
+
+            var list = new PooledListBase<TSource>(capacity);
+            list.AddRange(source);
+            return list;
+        }
     }
 }

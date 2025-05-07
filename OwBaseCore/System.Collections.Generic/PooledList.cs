@@ -171,7 +171,7 @@ namespace System.Collections.Generic
             if (match == null) throw new ArgumentNullException(nameof(match));
             for (int i = Count - 1; i >= 0; i--)
             {
-                if (match(this[i])) return this[i];
+                if (match(this[i])) return this[i];new List<int>();
             }
             return default;
         }
