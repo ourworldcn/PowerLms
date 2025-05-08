@@ -38,7 +38,6 @@ builder.Services.AddSwaggerGen(c =>
 
 Enable-Migrations –EnableAutomaticMigrations -Context PowerLmsUserDbContext
 Add-Migration 25010601 -Context PowerLmsUserDbContext
-#pragma warning disable CS1591 // 缺少对公共可见类型或成员的 XML 注释
 
 超管账号 868d61ae-3a86-42a8-8a8c-1ed6cfa90817//1D381427-86BB-4D88-8CB0-5D92F8E1BADF
 
@@ -52,39 +51,4 @@ InsufficientStorage	507
 测试服务器 101.200.75.226 Administrator//ZAQ!xsw2
 测试服务器 101.200.75.226 Administrator//Www.)(*&1234
 
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
--- =============================================
--- Author:		<Author,,Name>
--- Create date: <Create Date,,>
--- Description:	<Description,,>
--- =============================================
-CREATE TRIGGER huizong 
-   ON  [dbo].[PlInvoicesItems]
-   AFTER  INSERT,DELETE,UPDATE
-AS 
-BEGIN
-	-- SET NOCOUNT ON added to prevent extra result sets from
-	-- interfering with SELECT statements.
-	SET NOCOUNT ON;
-
-	update [dbo].[PlInvoicess]
-	set [Amount]=SUM(CAST( tr.Amount*tr.ExchangeRate as decimal(18,4)))
-	from [dbo].[PlInvoicess] as tl inner join 
-	[dbo].[PlInvoicesItems] as tr on tl.Id=tr.ParentId
-	where tl.Id in(
-	select [ParentId] from inserted
-	union(select [ParentId] from deleted))
-    -- Insert statements for trigger here
-
-END
-GO
-
-	update [dbo].[PlInvoicess]
-	set [Amount]=
-	(select iif(SUM(CAST( tr.Amount*tr.ExchangeRate as decimal(18,4))) is null,0,SUM(CAST( tr.Amount*tr.ExchangeRate as decimal(18,4))))
-	from [dbo].[PlInvoicesItems] as tr
-	where Id=tr.ParentId)
 	

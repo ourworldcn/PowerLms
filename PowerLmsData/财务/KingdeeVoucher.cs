@@ -594,5 +594,115 @@ namespace PowerLms.Data.Finance
         [Comment("处理者")]
         [StringLength(50)]
         public string FHANDLER { get; set; }
+
+        /// <summary>
+        /// 生成金蝶凭证记录的种子数据
+        /// </summary>
+        /// <param name="count">要生成的记录数量</param>
+        /// <returns>金蝶凭证记录的集合</returns>
+        public static IEnumerable<KingdeeVoucher> GenerateSeedData(int count)
+        {
+            if (count <= 0)
+                throw new ArgumentException("生成的记录数量必须大于零", nameof(count));
+
+            var random = new Random();
+            var result = new List<KingdeeVoucher>(count);
+
+            // 定义一些样本数据，用于随机选择
+            string[] accountIds = { "1001", "1002", "2001", "2002", "5001", "6001" };
+            string[] groups = { "记", "付", "收", "转" };
+            string[] classNames = { "客户", "部门", "员工", "项目", "地区", "银行账户", "供应商" };
+            string[] objIds = { "C001", "C002", "D001", "D002", "E001", "E002", "P001", "P002" };
+            string[] objNames = { "华为科技", "腾讯公司", "研发部", "市场部", "李明", "张华", "ERP项目", "CRM项目" };
+            string[] currencies = { "RMB", "USD", "EUR", "GBP", "JPY" };
+            string[] handlers = { "王经理", "李财务", "张总监", "陈主管" };
+
+            var baseDate = DateTime.Now.Date.AddDays(-30); // 基准日期为当前日期往前30天
+
+            for (int i = 0; i < count; i++)
+            {
+                var voucherDate = baseDate.AddDays(random.Next(30)); // 随机凭证日期(最近30天内)
+                var transDate = voucherDate.AddDays(-random.Next(5)); // 交易日期通常在凭证日期之前
+                var period = Math.Floor((decimal)voucherDate.Month) + (decimal)voucherDate.Day / 100; // 期间，例如5月10日为5.10
+
+                // 随机金额，保留两位小数
+                var amount = Math.Round((decimal)(random.NextDouble() * 10000 + 100), 2);
+                // 随机决定是借方还是贷方
+                var isDC = random.Next(2);
+                // 先选择币种
+                var currency = currencies[random.Next(currencies.Length)];
+                // 根据币种确定汇率
+                var exchangeRate = currency == "RMB" ? 1.0m : Math.Round((decimal)(random.NextDouble() * 2 + 5), 4);
+
+                var voucher = new KingdeeVoucher
+                {
+                    // 系统会自动生成Id
+                    FDATE = voucherDate, // 凭单日期
+                    FTRANSDATE = transDate, // 凭证日期
+                    FPERIOD = period, // 期间
+                    FGROUP = groups[random.Next(groups.Length)], // 随机凭证字
+                    FNUM = i + 1, // 凭证号，从1开始递增
+                    FENTRYID = i + 1, // 记录号
+                    FEXP = $"业务摘要{i + 1} - {objNames[random.Next(objNames.Length)]}的{random.Next(1000, 9999)}号业务", // 摘要
+                    FACCTID = accountIds[random.Next(accountIds.Length)], // 随机科目代码
+
+                    // 核算维度1 - 通常是客户
+                    FCLSNAME1 = classNames[0], // 客户
+                    FOBJID1 = objIds[random.Next(2)], // 随机客户代码
+                    FOBJNAME1 = objNames[random.Next(2)], // 随机客户名称
+
+                    // 核算维度2 - 通常是部门
+                    FCLSNAME2 = classNames[1], // 部门
+                    FOBJID2 = objIds[2 + random.Next(2)], // 随机部门代码
+                    FOBJNAME2 = objNames[2 + random.Next(2)], // 随机部门名称
+
+                    // 客户交易号
+                    FTRANSID = $"TX{DateTime.Now:yyyyMMdd}{i + 1:D4}", // 生成交易编号
+
+                    // 币种信息
+                    FCYID = currency, // 使用提前选择的币种
+                    FEXCHRATE = exchangeRate, // 使用提前计算的汇率
+
+                    // 借贷方向
+                    FDC = isDC, // 0-借方，1-贷方
+
+                    // 金额信息
+                    FFCYAMT = amount, // 原币金额
+                    FQTY = random.Next(1, 10), // 数量，1-10之间
+                    FPRICE = Math.Round(amount / (decimal)random.Next(1, 10), 2), // 单价
+
+                    // 根据借贷方向设置金额
+                    FDEBIT = isDC == 0 ? amount : 0, // 借方金额
+                    FCREDIT = isDC == 1 ? amount : 0, // 贷方金额
+
+                    // 结算信息
+                    FSETTLCODE = $"JS{random.Next(10000, 99999)}", // 结算方式代码
+                    FSETTLENO = $"JH{DateTime.Now:yyyyMMdd}{i + 1:D4}", // 结算号
+
+                    // 操作人员信息
+                    FPREPARE = handlers[random.Next(handlers.Length)], // 制单人员
+                    FPAY = handlers[random.Next(handlers.Length)], // 支付
+                    FCASH = handlers[random.Next(handlers.Length)], // 现金操作人
+                    FPOSTER = handlers[random.Next(handlers.Length)], // 过账操作人
+                    FCHECKER = handlers[random.Next(handlers.Length)], // 审核操作人
+
+                    // 其他信息
+                    FATTCHMENT = random.Next(1, 5), // 附件张数
+                    FPOSTED = random.Next(0, 2), // 过账状态，0或1
+                    FMODULE = "GL", // 模块，GL为总账
+                    FDELETED = false, // 非删除
+                    FSERIALNO = $"SN{DateTime.Now:yyyyMMdd}{i + 1:D6}", // 流水号
+                    FUNITNAME = "篇", // 单位名称
+                    FREFERENCE = $"REF{i + 1:D6}", // 参考编号
+                    FCASHFLOW = $"CSF{random.Next(1000, 9999)}", // 现金流编号
+                    FHANDLER = handlers[random.Next(handlers.Length)] // 经手人
+                };
+
+                result.Add(voucher);
+            }
+
+            return result;
+        }
+
     }
 }

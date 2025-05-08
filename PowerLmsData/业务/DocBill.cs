@@ -196,6 +196,19 @@ namespace PowerLms.Data
         public decimal Weight { get; set; }
 
         /// <summary>
+        /// 计费重量，单位Kg，3位小数。
+        /// </summary>
+        [Comment("计费重量，单位Kg，3位小数。")]
+        [Precision(18, 3)]
+        public decimal ChargeWeight { get; set; }
+
+        /// <summary>
+        /// 包装类型Id。关联简单字典PackType。
+        /// </summary>
+        [Comment("包装类型Id。关联简单字典PackType。")]
+        public Guid? PackTypeId { get; set; }
+
+        /// <summary>
         /// 重量，3位小数。
         /// </summary>
         [Comment("体积，3位小数")]
