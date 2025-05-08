@@ -231,45 +231,50 @@ namespace System
         /// <returns></returns>
         public static bool TryChangeType(string val, Type type, out object result)
         {
-            if (type == typeof(string))
+            if (type == typeof(string)) // 若目标是字符串类型，直接返回字符串值
             {
                 result = val;
                 return true;
             }
-            var aryParams = new object[] { val, default };
-            bool r;
-            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))    //若是可空类型
+            if (val is null || string.Equals(val, "null")) // 若为 null 或 "null" 字符串且类型允许为 null
             {
-                var tType = type.GetGenericArguments()[0];
-                r = (bool)tType.InvokeMember("TryParse", BindingFlags.InvokeMethod | BindingFlags.Static | BindingFlags.Public | BindingFlags.FlattenHierarchy,
-                   null, null, aryParams);
-                if (r)  //若成功的转换了类型
+                // 引用类型或可空值类型可以接受 null
+                if (type.IsClass ||
+                    (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>)))
                 {
-                    var ctor = type.GetConstructor(new Type[] { tType });
-                    var ss = ctor.Invoke(new object[] { aryParams[1] });
-                    result = ss;
+                    result = null;
+                    return true;
                 }
-                else
-                {
-                    OwHelper.SetLastErrorAndMessage(400, $"无法将字符串 {val} 转换为 {type} 类型。");
-                    result = default;
-                }
+                // 不可为 null 的值类型无法转换为 null
+                OwHelper.SetLastErrorAndMessage(400, $"不可为 null 的值类型 {type} 无法转换为 null。");
+                result = default;
+                return false;
             }
-            else
+            // 处理普通类型
+            var parameters = new object[] { val, default };
+            try
             {
-                r = (bool)type.InvokeMember("TryParse", BindingFlags.InvokeMethod | BindingFlags.Static | BindingFlags.Public | BindingFlags.FlattenHierarchy,
-                   null, null, aryParams);
+                var r = (bool)type.InvokeMember(
+                    "TryParse",
+                    BindingFlags.InvokeMethod | BindingFlags.Static | BindingFlags.Public | BindingFlags.FlattenHierarchy,
+                    null, null, parameters);
+
                 if (r)
                 {
-                    result = aryParams[1];
-                }
-                else
-                {
-                    OwHelper.SetLastErrorAndMessage(400, $"无法将字符串 {val} 转换为 {type} 类型。");
-                    result = default;
+                    result = parameters[1];
+                    return true;
                 }
             }
-            return r;
+            catch (Exception ex)
+            {
+                OwHelper.SetLastErrorAndMessage(400, $"尝试将字符串 {val} 转换为 {type} 类型时发生异常: {ex.Message}");
+                result = default;
+                return false;
+            }
+
+            OwHelper.SetLastErrorAndMessage(400, $"无法将字符串 {val} 转换为 {type} 类型。");
+            result = default;
+            return false;
         }
         #endregion 试图转换类型
 
