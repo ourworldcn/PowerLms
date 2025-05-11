@@ -297,28 +297,56 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 增加新业务费用申请单。
         /// </summary>
-        /// <param name="model"></param>
-        /// <returns></returns>
-        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <param name="model">包含新业务费用申请单信息的参数对象</param>
+        /// <returns>操作结果，包含新创建申请单的ID</returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpPost]
         public ActionResult<AddDocFeeRequisitionReturnDto> AddDocFeeRequisition(AddDocFeeRequisitionParamsDto model)
         {
+            // 验证令牌和获取上下文
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
             {
-                _Logger.LogWarning("无效的令牌{token}", model.Token);
+                _Logger.LogWarning("添加业务费用申请单时提供了无效的令牌: {token}", model.Token);
                 return Unauthorized();
             }
-            var result = new AddDocFeeRequisitionReturnDto();
-            var entity = model.DocFeeRequisition;
-            entity.GenerateNewId();
-            _DbContext.DocFeeRequisitions.Add(model.DocFeeRequisition);
-            entity.MakerId = context.User.Id;
-            entity.MakeDateTime = OwHelper.WorldNow;
-            entity.OrgId = context.User.OrgId;
 
-            _DbContext.SaveChanges();
-            result.Id = model.DocFeeRequisition.Id;
+            var result = new AddDocFeeRequisitionReturnDto();
+
+            try
+            {
+                // 获取要保存的实体并进行基础设置
+                var entity = model.DocFeeRequisition;
+                entity.GenerateIdIfEmpty(); // 生成新的GUID
+
+                // 设置创建信息
+                entity.MakerId = context.User.Id; // 设置创建者ID
+                entity.MakeDateTime = OwHelper.WorldNow; // 设置创建时间
+                entity.OrgId = context.User.OrgId; // 设置组织ID
+
+                // 添加实体到数据库上下文
+                _DbContext.DocFeeRequisitions.Add(entity);
+
+                // 应用审计日志(可选) - 修改为只传递一个参数
+                _SqlAppLogger.LogGeneralInfo($"用户 {context.User.Id} 创建了业务费用申请单ID:{entity.Id}，操作：AddDocFeeRequisition");
+
+                // 保存更改到数据库
+                _DbContext.SaveChanges();
+
+                // 设置返回结果
+                result.Id = entity.Id;
+
+                _Logger.LogDebug("成功创建业务费用申请单: {id}", entity.Id);
+            }
+            catch (Exception ex)
+            {
+                // 记录错误并设置返回错误信息
+                _Logger.LogError(ex, "创建业务费用申请单时发生错误");
+                result.HasError = true;
+                result.ErrorCode = 500;
+                result.DebugMessage = $"创建业务费用申请单时发生错误: {ex.Message}";
+            }
+
             return result;
         }
 
@@ -724,26 +752,65 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="401">无效令牌。</response>  
         /// <response code="403">权限不足。</response>  
         [HttpPost]
-        public ActionResult<AddPlInvoicesReturnDto> AddPlInvoices(AddPlInvoicesParamsDto model)
+        public ActionResult<AddPlInvoicesReturnDto> AddPlInvoicesReturnDto(AddPlInvoicesParamsDto model)
         {
+            // 验证令牌和获取上下文
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
             {
-                _Logger.LogWarning("无效的令牌{token}", model.Token);
+                _Logger.LogWarning("添加结算单时提供了无效的令牌: {token}", model.Token);
                 return Unauthorized();
             }
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "F.3.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
 
             var result = new AddPlInvoicesReturnDto();
-            var entity = model.PlInvoices;
-            entity.GenerateNewId();
-            model.PlInvoices.CreateBy = context.User.Id;
-            model.PlInvoices.CreateDateTime = OwHelper.WorldNow;
-            _DbContext.PlInvoicess.Add(model.PlInvoices);
 
-            _DbContext.SaveChanges();
+            try
+            {
+                // 验证权限
+                string err;
+                if (!_AuthorizationManager.Demand(out err, "F.3.1"))
+                    return StatusCode((int)HttpStatusCode.Forbidden, err);
 
-            result.Id = model.PlInvoices.Id;
+                // 验证输入参数
+                if (model.PlInvoices == null)
+                {
+                    result.HasError = true;
+                    result.ErrorCode = 400;
+                    result.DebugMessage = "结算单数据不能为空";
+                    return result;
+                }
+
+                // 获取要保存的实体并进行基础设置
+                var entity = model.PlInvoices;
+                entity.GenerateIdIfEmpty(); // 生成新的GUID
+
+                // 设置创建信息
+                entity.CreateBy = context.User.Id;
+                entity.CreateDateTime = OwHelper.WorldNow;
+
+                // 添加实体到数据库上下文
+                _DbContext.PlInvoicess.Add(entity);
+
+                // 应用审计日志(可选)
+                _SqlAppLogger.LogGeneralInfo($"用户 {context.User.Id} 创建了结算单ID:{entity.Id}，操作：AddPlInvoices");
+
+                // 保存更改到数据库
+                _DbContext.SaveChanges();
+
+                // 设置返回结果
+                result.Id = entity.Id;
+                result.HasError = false;
+
+                _Logger.LogDebug("成功创建结算单: {id}", entity.Id);
+            }
+            catch (Exception ex)
+            {
+                // 记录错误并设置返回错误信息
+                _Logger.LogError(ex, "创建结算单时发生错误");
+                result.HasError = true;
+                result.ErrorCode = 500;
+                result.DebugMessage = $"创建结算单时发生错误: {ex.Message}";
+            }
+
             return result;
         }
 

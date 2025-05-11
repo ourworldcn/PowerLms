@@ -1264,50 +1264,96 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<AddDocBillReturnDto> AddDocBill(AddDocBillParamsDto model)
         {
-            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
+            {
+                _Logger.LogWarning("无效的令牌{token}", model.Token);
+                return Unauthorized();
+            }
+
             var result = new AddDocBillReturnDto();
-            var entity = model.DocBill;
-            entity.GenerateNewId();
 
-            string err;
-            var collPerm = GetJobsFromFeeIds(model.FeeIds);
-            if (collPerm.Any())
+            try
             {
-                if (collPerm.Any(c => c.JobTypeId == ProjectContent.AeId))
+                // 参数验证
+                if (model.FeeIds == null || model.FeeIds.Count == 0)
                 {
-                    if (!_AuthorizationManager.Demand(out err, "D0.7.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                    result.HasError = true;
+                    result.ErrorCode = 400;
+                    result.DebugMessage = "必须指定至少一个费用ID";
+                    return result;
                 }
-                if (collPerm.Any(c => c.JobTypeId == ProjectContent.AiId))
-                {
-                    if (!_AuthorizationManager.Demand(out err, "D1.7.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-                }
-                if (collPerm.Any(c => c.JobTypeId == ProjectContent.SeId))
-                {
-                    if (!_AuthorizationManager.Demand(out err, "D2.7.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-                }
-                if (collPerm.Any(c => c.JobTypeId == ProjectContent.SiId))
-                {
-                    if (!_AuthorizationManager.Demand(out err, "D3.7.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-                }
-            }
 
-            if (entity is ICreatorInfo creatorInfo)
-            {
-                creatorInfo.CreateBy = context.User.Id;
-                creatorInfo.CreateDateTime = OwHelper.WorldNow;
-            }
-            _DbContext.DocBills.Add(model.DocBill);
+                var entity = model.DocBill;
+                entity.GenerateIdIfEmpty();
 
-            //处理费用对象
-            var collFees = _DbContext.DocFees.Where(c => model.FeeIds.Contains(c.Id)).ToArray();
-            if (collFees.Count() != model.FeeIds.Count)
-            {
-                return BadRequest("至少一个费用Id不存在。");
+                // 权限检查
+                string err;
+                var collPerm = GetJobsFromFeeIds(model.FeeIds);
+                if (collPerm.Any())
+                {
+                    if (collPerm.Any(c => c.JobTypeId == ProjectContent.AeId))
+                    {
+                        if (!_AuthorizationManager.Demand(out err, "D0.7.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                    }
+                    if (collPerm.Any(c => c.JobTypeId == ProjectContent.AiId))
+                    {
+                        if (!_AuthorizationManager.Demand(out err, "D1.7.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                    }
+                    if (collPerm.Any(c => c.JobTypeId == ProjectContent.SeId))
+                    {
+                        if (!_AuthorizationManager.Demand(out err, "D2.7.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                    }
+                    if (collPerm.Any(c => c.JobTypeId == ProjectContent.SiId))
+                    {
+                        if (!_AuthorizationManager.Demand(out err, "D3.7.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                    }
+                }
+
+                if (entity is ICreatorInfo creatorInfo)
+                {
+                    creatorInfo.CreateBy = context.User.Id;
+                    creatorInfo.CreateDateTime = OwHelper.WorldNow;
+                }
+
+                // 处理费用对象
+                var collFees = _DbContext.DocFees.Where(c => model.FeeIds.Contains(c.Id)).ToArray();
+                if (collFees.Length != model.FeeIds.Count)
+                {
+                    return BadRequest("至少一个费用ID不存在");
+                }
+
+                // 检查费用是否已关联其他账单
+                var linkedFeeIds = collFees.Where(c => c.BillId.HasValue && c.BillId != entity.Id).Select(c => c.Id).ToArray();
+                if (linkedFeeIds.Any())
+                {
+                    return BadRequest($"以下费用ID已关联到其他账单: {string.Join(", ", linkedFeeIds)}");
+                }
+
+                // 添加账单
+                _DbContext.DocBills.Add(model.DocBill);
+
+                // 关联费用
+                foreach (var fee in collFees)
+                {
+                    fee.BillId = model.DocBill.Id;
+                }
+
+                // 记录审计日志
+                _SqlAppLogger.LogGeneralInfo($"用户 {context.User.Id} 创建了账单ID:{entity.Id}，操作：AddDocBill");
+
+                _DbContext.SaveChanges();
+
+                result.Id = model.DocBill.Id;
+                return result;
             }
-            collFees.ForEach(c => c.BillId = model.DocBill.Id);
-            _DbContext.SaveChanges();
-            result.Id = model.DocBill.Id;
-            return result;
+            catch (Exception ex)
+            {
+                _Logger.LogError(ex, "创建账单时发生错误");
+                result.HasError = true;
+                result.ErrorCode = 500;
+                result.DebugMessage = $"创建账单时发生错误: {ex.Message}";
+                return result;
+            }
         }
 
         /// <summary>

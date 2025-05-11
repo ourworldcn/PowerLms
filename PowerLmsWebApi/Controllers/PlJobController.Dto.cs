@@ -1,5 +1,6 @@
 ﻿using PowerLms.Data;
 using PowerLmsWebApi.Dto;
+using System.ComponentModel.DataAnnotations;
 
 namespace PowerLmsWebApi.Controllers
 {
@@ -282,6 +283,7 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 新业务单的账单信息。其中Id可以是任何值，返回时会指定新值。
         /// </summary>
+        [Required]
         public DocBill DocBill { get; set; }
 
         /// <summary>
