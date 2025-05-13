@@ -154,6 +154,11 @@ namespace PowerLms.Data
         /// </summary>
         [Comment("关联的发票Id，冗余属性")]
         public Guid? TaxInvoiceId { get; set; }
+
+        /// <summary>发票号。</summary>
+        [Comment("发票号")]
+        [MaxLength(64)]
+        public string InvoiceNumber { get; set; }
     }
 
     /// <summary>
@@ -324,6 +329,8 @@ namespace PowerLms.Data
                             if (db.Set<DocFeeRequisition>().Find(item.DocFeeRequisitionId.GetValueOrDefault()) is DocFeeRequisition requisition)
                             {
                                 requisition.TaxInvoiceId = item.Id;
+                                if (db.Entry(requisition).Property(c => c.InvoiceNumber).IsModified)
+                                    requisition.InvoiceNumber = item.InvoiceNumber;
                             }
                         }
                         break;

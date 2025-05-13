@@ -4,38 +4,6 @@
 安装IIS
 安装NetCore绑定
 
-多项目解决方案需要修改一下代码
-builder.Services.AddSwaggerGen(c =>
-{
-    c.SwaggerDoc("v1", new OpenApiInfo
-    {
-        Version = "v1",
-        Title = $"PowerLms",
-        Description = "接口文档v2.0.0",
-        Contact = new OpenApiContact() { }
-    });
-    // 为 Swagger 设置xml文档注释路径
-    var fileNames = Directory.GetFiles(AppContext.BaseDirectory, "*ApiDoc.xml");
-    foreach (var item in fileNames) //加入多个xml描述文件
-    {
-        var xmlPath = Path.Combine(AppContext.BaseDirectory, item);
-        c.IncludeXmlComments(xmlPath, true);
-    }
-    c.OrderActionsBy(c => c.RelativePath);
-});
-
-//if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    //启用中间件服务生成SwaggerUI，指定Swagger JSON终结点
-    app.UseSwaggerUI(c =>
-    {
-        //c.SwaggerEndpoint("/swagger/v2/swagger.json", env.EnvironmentName + $" V2");
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", $"{env.EnvironmentName} V1");
-        c.RoutePrefix = string.Empty;//设置根节点访问
-    });
-}
-
 Enable-Migrations –EnableAutomaticMigrations -Context PowerLmsUserDbContext
 Add-Migration 25010601 -Context PowerLmsUserDbContext
 
@@ -44,11 +12,9 @@ Add-Migration 25010601 -Context PowerLmsUserDbContext
 baiduAdmin//lms789$
 testMultionOrg@11.cn//lms789$
 
-InsufficientStorage	507	
-等效于 HTTP 状态 507。 InsufficientStorage 指示服务器无法存储完成请求所需的表示形式。
-服务器遇到该以下异常DbUpdateConcurrencyException DBConcurrencyException，将返回507以表示并发冲突。客户端须妥善处理。不再每个接口单独注释。
-
 测试服务器 101.200.75.226 Administrator//ZAQ!xsw2
 测试服务器 101.200.75.226 Administrator//Www.)(*&1234
 
-	
+https://101.200.75.226/
+商管BaiduAdmin，lms789$
+普通用户sandy.shi，lms789$	百度子公司3

@@ -1,5 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OW.Data;
+using OW.EntityFrameworkCore;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
@@ -54,7 +58,7 @@ namespace PowerLms.Data
         public Guid? InscribeId { get; set; }
 
         /// <summary>
-        /// 金额。冗余字段，所属费用的合计。
+        /// 金额。冗余字段，所属费用的合计。关联到DocFee表的金额字段。
         /// </summary>
         [Comment("金额。冗余字段，所属费用的合计。")]
         [Precision(18, 2)]
@@ -272,6 +276,130 @@ namespace PowerLms.Data
         public static IQueryable<DocFee> GetFees(this DocBill bill, DbContext db)
         {
             return db.Set<DocFee>().Where(DocFee => DocFee.BillId == bill.Id);
+        }
+    }
+
+    /// <summary>
+    /// DocBill 触发器处理类，负责计算 DocBill.Amount 的值。
+    /// 当 DocFee 或 DocBill 发生变更时，自动更新关联账单的金额。
+    /// </summary>
+    //[OwAutoInjection(ServiceLifetime.Scoped, ServiceType = typeof(IDbContextSaving<DocFee>))]
+    //[OwAutoInjection(ServiceLifetime.Scoped, ServiceType = typeof(IDbContextSaving<DocBill>))]
+    //[OwAutoInjection(ServiceLifetime.Scoped, ServiceType = typeof(IAfterDbContextSaving<DocFee>))]
+    //[OwAutoInjection(ServiceLifetime.Scoped, ServiceType = typeof(IAfterDbContextSaving<DocBill>))]
+    public class DocBillAmountCalculator : IDbContextSaving<DocFee>, IDbContextSaving<DocBill>,
+                                         IAfterDbContextSaving<DocFee>, IAfterDbContextSaving<DocBill>
+    {
+        private readonly ILogger<DocBillAmountCalculator> _logger;
+
+        /// <summary>
+        /// 构造函数
+        /// </summary>
+        public DocBillAmountCalculator(ILogger<DocBillAmountCalculator> logger) =>
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+
+        /// <summary>
+        /// 处理实体保存前事件，收集受影响账单的ID
+        /// </summary>
+        public void Saving(IEnumerable<EntityEntry> entities, IServiceProvider serviceProvider, Dictionary<object, object> states)
+        {
+            if (!entities.Any()) return;
+
+            var dbContext = entities.First().Context;
+            if (dbContext == null) return;
+
+            // 收集受影响的账单ID
+            var billIds = new HashSet<Guid>();
+
+            // 处理 DocFee 类型的实体 - 包括新增、修改和删除
+            entities.Where(e => e.Entity is DocFee)
+                .ForEach(entry =>
+                {
+                    // 获取当前和原始的 DocFee 实体
+                    var fee = entry.Entity as DocFee;
+
+                    // 对于删除的费用，获取其原始 BillId 值
+                    if (entry.State == EntityState.Deleted)
+                    {
+                        var originalBillId = entry.Property("BillId").OriginalValue as Guid?;
+                        if (originalBillId.HasValue)
+                            billIds.Add(originalBillId.Value);
+                    }
+                    // 对于新增或修改的费用
+                    else if (fee?.BillId.HasValue ?? false)
+                    {
+                        billIds.Add(fee.BillId.Value);
+                    }
+                });
+
+            // 处理 DocBill 类型的实体
+            entities.Where(e => e.Entity is DocBill && e.State != EntityState.Deleted)
+                .Select(e => e.Entity as DocBill)
+                .Where(b => b != null)
+                .ForEach(bill => billIds.Add(bill.Id));
+
+            // 如果有需要更新的账单ID，记录到状态字典中
+            if (billIds.Count > 0)
+            {
+                if (states.TryGetValue("DocBillIdsToUpdate", out var existingIds))
+                    ((HashSet<Guid>)existingIds).UnionWith(billIds);
+                else
+                    states["DocBillIdsToUpdate"] = billIds;
+            }
+        }
+
+        /// <summary>
+        /// 保存后处理，计算并更新账单金额
+        /// </summary>
+        public void AfterSaving(DbContext dbContext, IServiceProvider serviceProvider, Dictionary<object, object> states)
+        {
+            // 检查是否有需要更新的账单ID
+            if (!states.TryGetValue("DocBillIdsToUpdate", out var billIdsObj) ||
+                billIdsObj is not HashSet<Guid> billIds ||
+                !billIds.Any())
+            {
+                return;
+            }
+
+            try
+            {
+                // 加载并更新账单
+                var bills = dbContext.Set<DocBill>()
+                    .Where(bill => billIds.Contains(bill.Id))
+                    .ToList();
+
+                foreach (var bill in bills)
+                {
+                    // 获取关联的费用明细
+                    var fees = bill.GetFees(dbContext).ToList();
+
+                    // 计算金额
+                    decimal amount = 0;
+                    if (fees.Any())
+                    {
+                        var incomingAmount = fees.Where(f => f.IO).Sum(f => f.Amount);
+                        var outgoingAmount = fees.Where(f => !f.IO).Sum(f => f.Amount);
+                        amount = Math.Abs(incomingAmount - outgoingAmount);
+                    }
+
+                    // 只在金额有变化时更新
+                    if (bill.Amount != amount)
+                    {
+                        bill.Amount = amount;
+                        _logger.LogDebug($"更新账单 {bill.Id} 的金额为 {amount}");
+                    }
+                }
+
+                // 保存更改
+                dbContext.SaveChanges();
+
+                // 清理使用过的状态
+                states.Remove("DocBillIdsToUpdate");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "在保存后更新账单金额时出错");
+            }
         }
     }
 }

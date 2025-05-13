@@ -80,7 +80,7 @@ namespace PowerLmsServer.Triggers
 
         private void HandleDocBillDeletion(DbContext dbContext, DocBill deletedBill)
         {
-            var relatedFees = dbContext.Set<DocFee>().Where(f => f.BillId == deletedBill.Id).ToList();
+            var relatedFees = dbContext.Set<DocFee>().Where(f => f.BillId == deletedBill.Id).ToList();  // 获取所有相关费用
             foreach (var fee in relatedFees)
             {
                 if (dbContext.Entry(fee).State != EntityState.Deleted)
