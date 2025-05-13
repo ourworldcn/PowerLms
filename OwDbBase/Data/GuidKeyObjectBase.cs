@@ -63,7 +63,7 @@ namespace OW.Data
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool GenerateIdIfEmpty()
         {
-            if (Guid.Empty != Id)
+            if (Guid.Empty == Id)
                 return false;
             Id = Guid.NewGuid();
             return true;
