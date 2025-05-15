@@ -55,7 +55,7 @@ namespace PowerLmsServer.Managers
             isOut = false;
             return false;
         }
-
+        
         /// <summary>
         /// 获取申请单的合计金额和借贷方向。
         /// </summary>

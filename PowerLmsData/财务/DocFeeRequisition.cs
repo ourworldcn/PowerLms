@@ -274,7 +274,7 @@ namespace PowerLms.Data
 
         public static IQueryable<DocFeeRequisitionItem> GetChildren(this DocFeeRequisition requisition, DbContext db)
         {
-            return db.Set<DocFeeRequisitionItem>().Where(x => x.ParentId == requisition.Id);
+            return db.Set<DocFeeRequisitionItem>().WhereWithLocal(x => x.ParentId == requisition.Id).AsQueryable();
         }
 
         public static DocFeeRequisition GetParent(this DocFeeRequisitionItem item, DbContext db)

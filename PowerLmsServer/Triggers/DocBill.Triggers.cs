@@ -68,9 +68,8 @@ namespace PowerLmsServer.Triggers
             }
 
             // 计算并更新父结算单的金额
-            dbContext.Set<DocBill>().Where(c => billIds.Contains(c.Id)).Load(); // 加载所有用到的 DocBill 对象
-            var bills = dbContext.Set<DocBill>().Local.Where(c => billIds.Contains(c.Id));  //获取数据库和缓存中的合集
-            var lkupFee = dbContext.Set<DocFee>().Where(c => c.BillId.HasValue && billIds.Contains(c.BillId.Value)).AsEnumerable().ToLookup(c => c.BillId.Value); // 加载所有用到的 DocFee 对象
+            var bills = dbContext.Set<DocBill>().WhereWithLocal(c => billIds.Contains(c.Id));  //获取数据库和缓存中的合集
+            var lkupFee = dbContext.Set<DocFee>().WhereWithLocal(c => c.BillId.HasValue && billIds.Contains(c.BillId.Value)).AsEnumerable().ToLookup(c => c.BillId.Value); // 加载所有用到的 DocFee 对象
 
             foreach (var bill in bills)
             {

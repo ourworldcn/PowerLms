@@ -85,8 +85,8 @@ namespace PowerLmsServer.Triggers
             }
 
             // 计算并更新父申请单的金额
-            var requisitions = dbContext.Set<DocFeeRequisition>().Where(c => parentIds.Contains(c.Id)).ToArray(); // 加载所有用到的 DocFeeRequisition 对象
-            var lkupRequisitionItem = dbContext.Set<DocFeeRequisitionItem>().Where(c => parentIds.Contains(c.ParentId.Value)).AsEnumerable().ToLookup(c => c.ParentId.Value); // 加载所有用到的 DocFeeRequisitionItem 对象
+            var requisitions = dbContext.Set<DocFeeRequisition>().WhereWithLocal(c => parentIds.Contains(c.Id)).ToArray(); // 加载所有用到的 DocFeeRequisition 对象
+            var lkupRequisitionItem = dbContext.Set<DocFeeRequisitionItem>().WhereWithLocal(c => parentIds.Contains(c.ParentId.Value)).ToLookup(c => c.ParentId.Value); // 加载所有用到的 DocFeeRequisitionItem 对象
 
             var financialManager = service.GetRequiredService<FinancialManager>();
 

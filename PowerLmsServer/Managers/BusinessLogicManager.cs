@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using OW.EntityFrameworkCore;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using System;
@@ -131,7 +132,7 @@ namespace PowerLmsServer.Managers
         {
             var bill = DbContext.Set<DocBill>().Find(billId);
             if (bill == null) throw new InvalidOperationException($"未找到 Id 为 {billId} 的账单。");
-            var fee = DbContext.Set<DocFee>().FirstOrDefault(f => f.BillId == bill.Id);
+            var fee = DbContext.Set<DocFee>().FirstOrDefaultWithLocal(f => f.BillId == bill.Id);
             if (fee == null) throw new InvalidOperationException($"未找到与账单 Id 为 {bill.Id} 关联的费用。");
             return GetJobBaseCurrencyCode(fee.JobId.Value);
         }

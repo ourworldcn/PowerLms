@@ -101,7 +101,7 @@ namespace PowerLms.Data
         #region 联系方式
         /// <summary>推送手机号。设置为空则不推送。</summary>
         [Comment("推送手机号。设置为空则不推送。")]
-        [MaxLength(32),Phone]
+        [MaxLength(32), Phone]
         public string Mobile { get; set; }
 
         /// <summary>推送Mail。设置为空则不推送。</summary>
@@ -304,23 +304,21 @@ namespace PowerLms.Data
         {
             try
             {
-                // 获取所有已修改的TaxInvoiceInfoItem的ParentId
-                var modifiedItems = dbContext.ChangeTracker.Entries<TaxInvoiceInfoItem>()
-                    .Where(e => e.State == EntityState.Added || e.State == EntityState.Modified || e.State == EntityState.Deleted)
-                    .Select(e => e.Entity)
-                    .Where(e => e.ParentId.HasValue)
-                    .Select(e => e.ParentId.Value)
-                    .Distinct()
+                // 获取所有已修改的TaxInvoiceInfo的Id集合
+                var modifiedIds = dbContext.ChangeTracker.Entries<TaxInvoiceInfoItem>()
+                    .Where(e => e.Entity.ParentId.HasValue)
+                    .Select(e => e.Entity.ParentId.Value)
+                    .Union(dbContext.ChangeTracker.Entries<TaxInvoiceInfo>().Where(c => c.State != EntityState.Deleted).Select(c => c.Entity.Id))
                     .ToList();
 
-                if (!modifiedItems.Any())
+                if (!modifiedIds.Any())
                 {
                     _logger.LogDebug("没有发现需要更新金额的发票");
                     return;
                 }
 
                 // 为每个受影响的TaxInvoiceInfo重新计算TaxInclusiveAmount
-                foreach (var parentId in modifiedItems)
+                foreach (var parentId in modifiedIds)
                 {
                     _logger.LogDebug("开始计算发票 {InvoiceId} 的含税总金额", parentId);
 
@@ -334,7 +332,7 @@ namespace PowerLms.Data
 
                     // 查询所有相关的明细项
                     var items = dbContext.Set<TaxInvoiceInfoItem>()
-                        .Where(item => item.ParentId == parentId)
+                        .WhereWithLocal(item => item.ParentId == parentId)
                         .ToList();
 
                     // 计算总金额
