@@ -16,6 +16,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Linq.Expressions;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace OW.EntityFrameworkCore
 {
@@ -253,6 +255,66 @@ namespace OW.EntityFrameworkCore
         }
 
         #endregion 嵌套类型
+    }
+
+    /// <summary>
+    /// 为 <see cref="DbSet{TEntity}"/> 提供扩展方法。
+    /// </summary>
+    public static class OwDbSetExtensions
+    {
+        /// <summary>
+        /// 使用指定的条件从数据库加载实体，并合并本地跟踪器中符合条件的实体。
+        /// </summary>
+        /// <typeparam name="TEntity">实体类型。</typeparam>
+        /// <param name="dbSet">数据库集合。</param>
+        /// <param name="predicate">用于筛选实体的表达式。</param>
+        /// <returns>符合条件的实体列表，包括数据库和本地跟踪器中的实体。</returns>
+        public static IEnumerable<TEntity> WhereWithLocal<TEntity>(this DbSet<TEntity> dbSet, Expression<Func<TEntity, bool>> predicate)
+            where TEntity : class
+        {
+            // 从数据库加载符合条件的实体
+            dbSet.Where(predicate).Load();
+            
+            // 编译表达式，用于在本地集合上筛选
+            var compiledPredicate = predicate.Compile();
+
+            // 从本地集合中获取符合条件的实体（排除已删除的实体）
+            var db = dbSet.GetDbContext();
+            return dbSet.Local
+                .Where(compiledPredicate)
+                .Where(e => db.Entry(e).State != EntityState.Deleted);
+        }
+
+        /// <summary>
+        /// 从本地跟踪器和数据库中查找满足条件的第一个实体。如果找不到，则返回默认值。
+        /// </summary>
+        /// <typeparam name="TEntity">实体类型。</typeparam>
+        /// <param name="dbSet">数据库集合。</param>
+        /// <param name="predicate">用于筛选实体的表达式。</param>
+        /// <returns>满足条件的第一个实体，若没有则返回默认值。</returns>
+        public static TEntity FirstOrDefaultWithLocal<TEntity>(this DbSet<TEntity> dbSet, Expression<Func<TEntity, bool>> predicate)
+            where TEntity : class
+        {
+            var db = dbSet.GetDbContext();
+            var compiledPredicate = predicate.Compile();
+
+            // 先检查本地跟踪器中新添加的实体
+            return db.ChangeTracker.Entries<TEntity>()
+                .Where(e => e.State != EntityState.Deleted)
+                .Select(e => e.Entity)
+                .FirstOrDefault(compiledPredicate) ?? dbSet.FirstOrDefault(predicate);
+        }
+
+        /// <summary>
+        /// 获取 DbSet 关联的 DbContext 实例。
+        /// </summary>
+        public static DbContext GetDbContext<TEntity>(this DbSet<TEntity> dbSet) where TEntity : class
+        { 
+            var infrastructure = dbSet as IInfrastructure<IServiceProvider>;
+            var serviceProvider = infrastructure.Instance;
+            var currentDbContext = serviceProvider.GetService(typeof(ICurrentDbContext)) as ICurrentDbContext;
+            return currentDbContext.Context;
+        }
     }
 }
 
