@@ -597,24 +597,45 @@ namespace PowerLmsWebApi.Controllers
             var ids = new HashSet<Guid>(model.OrgIds);
             if (ids.Count != model.OrgIds.Count) return BadRequest($"{nameof(model.OrgIds)}中有重复键值。");
 
-            var count = _DbContext.PlOrganizations.Count(c => ids.Contains(c.Id));
-            if (count != ids.Count) return BadRequest($"{nameof(model.OrgIds)}中至少有一个组织机构不存在。");
+            // 区分商户ID和组织机构ID
+            var merchantIds = _DbContext.Merchants.Where(c => ids.Contains(c.Id)).Select(c => c.Id).ToArray();
+            var orgIds = _DbContext.PlOrganizations.Where(c => ids.Contains(c.Id)).Select(c => c.Id).ToArray();
 
-            _MerchantManager.GetIdByUserId(model.UserId, out var merchId);  //获取商户Id
+            // 确保所有ID都是有效的商户或组织机构ID
+            if (merchantIds.Length + orgIds.Length != ids.Count)
+                return BadRequest($"{nameof(model.OrgIds)}中至少有一个ID既不是有效的组织机构ID也不是有效的商户ID。");
 
-            // 修改: 获取组织机构并取消缓存
-            var cacheKey = merchId.HasValue ? OwMemoryCacheExtensions.GetCacheKeyFromId(merchId.Value, ".Orgs") : null;
+            // 获取用户关联的商户ID
+            _MerchantManager.GetIdByUserId(model.UserId, out var userMerchantId);
 
-            var removes = _DbContext.AccountPlOrganizations.Where(c => c.UserId == model.UserId && !ids.Contains(c.OrgId));
+            // 同时处理组织机构ID和商户ID
+            var allValidIds = new HashSet<Guid>(orgIds.Concat(merchantIds));
+            var cacheKey = userMerchantId.HasValue ? OwMemoryCacheExtensions.GetCacheKeyFromId(userMerchantId.Value, ".Orgs") : null;
+
+            // 删除不在当前列表中的关联
+            var removes = _DbContext.AccountPlOrganizations.Where(c => c.UserId == model.UserId && !allValidIds.Contains(c.OrgId));
             _DbContext.AccountPlOrganizations.RemoveRange(removes);
 
-            var adds = ids.Except(_DbContext.AccountPlOrganizations.Where(c => c.UserId == model.UserId).Select(c => c.OrgId).AsEnumerable()).ToArray();
+            // 添加新的关联
+            var existingOrgIds = _DbContext.AccountPlOrganizations
+                .Where(c => c.UserId == model.UserId)
+                .Select(c => c.OrgId)
+                .AsEnumerable();
+
+            var adds = allValidIds.Except(existingOrgIds).ToArray();
             _DbContext.AccountPlOrganizations.AddRange(adds.Select(c => new AccountPlOrganization { OrgId = c, UserId = model.UserId }));
+
             _DbContext.SaveChanges();
 
             // 取消相关缓存
             if (cacheKey != null)
                 _Cache.CancelSource(cacheKey);
+
+            // 如果有修改过用户与商户的关联，也应该清除用户相关的缓存
+            if (merchantIds.Length > 0)
+            {
+                _Cache.CancelSource(OwMemoryCacheExtensions.GetCacheKeyFromId(model.UserId, ".CurrentOrgs"));
+            }
 
             return result;
         }
