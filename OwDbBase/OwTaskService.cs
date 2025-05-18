@@ -16,10 +16,39 @@ using System.Threading.Tasks;
 
 namespace OwDbBase.Tasks
 {
-    /// <summary>通用长时间运行任务基础服务类。</summary>
+    /// <summary>通用长时间运行任务基础服务类（单例模式）。</summary>
     /// <typeparam name="TDbContext">数据库上下文类型，必须继承自OwDbContext。</typeparam>
     public class OwTaskService<TDbContext> where TDbContext : OwDbContext
     {
+        #region 单例实现
+
+        // 单例实例的字典，按数据库上下文类型区分不同实例
+        private static readonly ConcurrentDictionary<Type, OwTaskService<TDbContext>> _Instances = new();
+
+        // 用于同步单例创建的锁对象
+        private static readonly object _InstanceLock = new();
+
+        /// <summary>获取OwTaskService的单例实例。</summary>
+        /// <param name="serviceProvider">服务提供者。</param>
+        /// <returns>OwTaskService的单例实例。</returns>
+        public static OwTaskService<TDbContext> GetInstance(IServiceProvider serviceProvider)
+        {
+            if (_Instances.TryGetValue(typeof(TDbContext), out var instance))
+                return instance;
+
+            lock (_InstanceLock)
+            {
+                return _Instances.GetOrAdd(typeof(TDbContext), _ =>
+                {
+                    var logger = serviceProvider.GetRequiredService<ILogger<OwTaskService<TDbContext>>>();
+                    var dbContextFactory = serviceProvider.GetRequiredService<IDbContextFactory<TDbContext>>();
+                    return new OwTaskService<TDbContext>(serviceProvider, logger, dbContextFactory);
+                });
+            }
+        }
+
+        #endregion
+
         #region 字段和属性
 
         private readonly IServiceProvider _ServiceProvider; // 服务提供者
@@ -27,6 +56,7 @@ namespace OwDbBase.Tasks
         private readonly IDbContextFactory<TDbContext> _DbContextFactory; // 数据库上下文工厂
         private readonly ConcurrentQueue<Guid> _PendingTaskIds = new(); // 排队等待的任务队列
         private readonly SemaphoreSlim _Semaphore; // 用于控制并发任务数的信号量
+        private bool _IsRunning = true; // 标记服务是否正在运行
 
         /// <summary>获取当前正在执行的任务数量。</summary>
         public int CurrentRunningTaskCount => Environment.ProcessorCount - _Semaphore.CurrentCount;
@@ -38,11 +68,11 @@ namespace OwDbBase.Tasks
 
         #region 构造函数
 
-        /// <summary>初始化任务服务实例。</summary>
+        /// <summary>初始化任务服务实例（私有构造函数，仅通过GetInstance方法获取实例）。</summary>
         /// <param name="serviceProvider">服务提供者。</param>
         /// <param name="logger">日志记录器。</param>
         /// <param name="dbContextFactory">数据库上下文工厂。</param>
-        public OwTaskService(
+        private OwTaskService(
             IServiceProvider serviceProvider,
             ILogger<OwTaskService<TDbContext>> logger,
             IDbContextFactory<TDbContext> dbContextFactory)
@@ -54,9 +84,18 @@ namespace OwDbBase.Tasks
             // 并发控制，最大并发数等于CPU核心数
             _Semaphore = new SemaphoreSlim(Environment.ProcessorCount, Environment.ProcessorCount);
 
+            // 恢复数据库中未完成的任务
+            RecoverPendingTasksFromDatabase();
+
             // 启动任务调度器
-            var _ = new Thread(ProcessPendingTasks) { IsBackground = true };
-            _.Start();
+            var processorThread = new Thread(ProcessPendingTasks)
+            {
+                IsBackground = true,
+                Name = $"OwTaskProcessor-{typeof(TDbContext).Name}"
+            };
+            processorThread.Start();
+
+            _Logger.LogInformation("OwTaskService 单例已初始化，针对数据库上下文: {DbContext}", typeof(TDbContext).Name);
         }
 
         #endregion
@@ -139,14 +178,85 @@ namespace OwDbBase.Tasks
                 .ToList();
         }
 
+        /// <summary>停止任务服务。</summary>
+        /// <param name="waitForCompletion">是否等待所有任务完成。</param>
+        /// <param name="timeoutInSeconds">等待超时时间（秒）。</param>
+        public void Shutdown(bool waitForCompletion = true, int timeoutInSeconds = 30)
+        {
+            _IsRunning = false;
+
+            if (waitForCompletion)
+            {
+                var startTime = DateTime.UtcNow;
+                while (_PendingTaskIds.Count > 0 && CurrentRunningTaskCount > 0)
+                {
+                    if ((DateTime.UtcNow - startTime).TotalSeconds > timeoutInSeconds)
+                    {
+                        _Logger.LogWarning("任务服务关闭超时，仍有 {Pending} 个任务等待中，{Running} 个任务执行中",
+                            _PendingTaskIds.Count, CurrentRunningTaskCount);
+                        break;
+                    }
+                    Thread.Sleep(100);
+                }
+            }
+
+            _Logger.LogInformation("任务服务已关闭");
+        }
+
         #endregion
 
         #region 内部实现
 
+        /// <summary>从数据库恢复未完成的任务。</summary>
+        private void RecoverPendingTasksFromDatabase()
+        {
+            try
+            {
+                using var dbContext = _DbContextFactory.CreateDbContext();
+
+                // 查询所有处于待处理或运行中状态的任务
+                var pendingTasks = dbContext.Set<OwTaskStore>()
+                    .Where(t => t.StatusValue == (byte)OwTaskStatus.Pending ||
+                                t.StatusValue == (byte)OwTaskStatus.Running)
+                    .ToList();
+
+                if (pendingTasks.Any())
+                {
+                    _Logger.LogInformation("正在恢复 {Count} 个未完成的任务", pendingTasks.Count);
+
+                    foreach (var task in pendingTasks)
+                    {
+                        // 如果任务正在运行，则标记为失败并添加错误信息
+                        if (task.StatusValue == (byte)OwTaskStatus.Running)
+                        {
+                            task.StatusValue = (byte)OwTaskStatus.Failed;
+                            task.ErrorMessage = "服务重启时任务正在执行，已被中断";
+                            task.CompletedUtc = DateTime.UtcNow;
+                        }
+
+                        // 将待处理的任务重新加入队列
+                        if (task.StatusValue == (byte)OwTaskStatus.Pending)
+                        {
+                            _PendingTaskIds.Enqueue(task.Id);
+                        }
+                    }
+
+                    dbContext.SaveChanges();
+                    _Logger.LogInformation("未完成的任务已恢复到队列");
+                }
+            }
+            catch (Exception ex)
+            {
+                _Logger.LogError(ex, "恢复未完成任务时出错");
+            }
+        }
+
         /// <summary>处理等待队列中的任务。</summary>
         private void ProcessPendingTasks()
         {
-            while (true)
+            _Logger.LogInformation("任务处理线程已启动");
+
+            while (_IsRunning)
             {
                 if (_PendingTaskIds.TryDequeue(out var taskId))
                 {
@@ -163,7 +273,11 @@ namespace OwDbBase.Tasks
                         {
                             _Semaphore.Release(); // 完成后释放信号量
                         }
-                    });
+                    })
+                    {
+                        IsBackground = true,
+                        Name = $"TaskExecutor-{taskId}"
+                    };
                     thread.Start();
                 }
                 else
@@ -172,6 +286,8 @@ namespace OwDbBase.Tasks
                     Thread.Sleep(500);
                 }
             }
+
+            _Logger.LogInformation("任务处理线程已结束");
         }
 
         /// <summary>执行指定ID的任务。</summary>
@@ -208,7 +324,10 @@ namespace OwDbBase.Tasks
                     throw new InvalidOperationException($"无法找到类型: {taskEntity.ServiceTypeName}");
                 }
 
-                var service = _ServiceProvider.GetService(serviceType);
+                // 使用作用域服务提供程序，确保每个任务有自己的服务实例
+                using var scope = _ServiceProvider.CreateScope();
+                var service = scope.ServiceProvider.GetService(serviceType);
+
                 if (service == null)
                 {
                     throw new InvalidOperationException($"无法从DI容器中解析服务: {taskEntity.ServiceTypeName}");
@@ -463,18 +582,21 @@ namespace OwDbBase.Tasks
     /// <summary>为OwTaskService提供的扩展方法。</summary>
     public static class OwTaskServiceExtensions
     {
-        /// <summary>向服务集合添加OwTaskService服务。</summary>
+        /// <summary>向服务集合添加OwTaskService服务（单例模式）。</summary>
         /// <typeparam name="TDbContext">数据库上下文类型。</typeparam>
         /// <param name="services">服务集合。</param>
         /// <returns>服务集合，用于链式调用。</returns>
         public static IServiceCollection AddOwTaskService<TDbContext>(this IServiceCollection services)
             where TDbContext : OwDbContext
         {
-            services.AddScoped<OwTaskService<TDbContext>>();
+            // 注册为单例服务，但实际由工厂方法创建实例
+            services.AddSingleton<OwTaskService<TDbContext>>(provider =>
+                OwTaskService<TDbContext>.GetInstance(provider));
+
             return services;
         }
 
-        /// <summary>向服务集合添加OwTaskService服务，同时配置DbContextFactory。</summary>
+        /// <summary>向服务集合添加OwTaskService服务（单例模式），同时配置DbContextFactory。</summary>
         /// <typeparam name="TDbContext">数据库上下文类型。</typeparam>
         /// <param name="services">服务集合。</param>
         /// <param name="optionsAction">数据库上下文配置动作。</param>
@@ -485,7 +607,11 @@ namespace OwDbBase.Tasks
             where TDbContext : OwDbContext
         {
             services.AddDbContextFactory<TDbContext>(optionsAction);
-            services.AddScoped<OwTaskService<TDbContext>>();
+
+            // 注册为单例服务，但实际由工厂方法创建实例
+            services.AddSingleton<OwTaskService<TDbContext>>(provider =>
+                OwTaskService<TDbContext>.GetInstance(provider));
+
             return services;
         }
     }
