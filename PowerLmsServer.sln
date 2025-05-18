@@ -15,7 +15,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "解决方案项", "解决�
 		删除工作任务需求.md = 删除工作任务需求.md
 		杂记.txt = 杂记.txt
 		权限.md = 权限.md
-		系统设计偏好.md = 系统设计偏好.md
 		编程习惯.md = 编程习惯.md
 		遗留权限问题.txt = 遗留权限问题.txt
 		部署指南.txt = 部署指南.txt
@@ -62,6 +61,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OwBaseCore", "..\Bak\OwBase
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OwDbBase", "..\Bak\OwDbBase\OwDbBase.csproj", "{9B055F1C-190C-4335-8F77-140E5FA4B4BD}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Docs", "Docs", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
+	ProjectSection(SolutionItems) = preProject
+		Docs\DESIGN_PREFERENCE_GUIDE.md = Docs\DESIGN_PREFERENCE_GUIDE.md
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -96,6 +100,7 @@ Global
 		{11C197FC-A072-40CC-AEF7-3B552B1935E3} = {485FC0C8-DBF6-4F3C-9AD3-C57F52100CD2}
 		{5B64427F-E0BB-476C-B395-DDF5F2CC526A} = {7B7A10B0-656B-4E84-80C4-4AE68642DE06}
 		{9B055F1C-190C-4335-8F77-140E5FA4B4BD} = {7B7A10B0-656B-4E84-80C4-4AE68642DE06}
+		{02EA681E-C7D8-13C7-8484-4AC65E1B71E8} = {485FC0C8-DBF6-4F3C-9AD3-C57F52100CD2}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {5C76520A-489A-4E63-A407-9AD37BF5AD6C}
