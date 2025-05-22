@@ -198,9 +198,13 @@ namespace OW.EntityFrameworkCore
                     if (pooledArray.Count > 0)
                     {
                         // 按实体类型分组
+                        //var groupedEntities = pooledArray.Array
+                        //    .Take(pooledArray.Count)
+                        //    .GroupBy(c => c.Metadata.ClrType).ToArray();  //避免获取到代理类的类型
+
                         var groupedEntities = pooledArray.Array
                             .Take(pooledArray.Count)
-                            .GroupBy(c => c.Metadata.ClrType);  //避免获取到代理类的类型
+                            .ToLookup(c => c.Metadata.ClrType);  //避免获取到代理类的类型
 
                         foreach (var group in groupedEntities)
                         {
@@ -274,7 +278,7 @@ namespace OW.EntityFrameworkCore
         {
             // 从数据库加载符合条件的实体
             dbSet.Where(predicate).Load();
-            
+
             // 编译表达式，用于在本地集合上筛选
             var compiledPredicate = predicate.Compile();
 
@@ -309,7 +313,7 @@ namespace OW.EntityFrameworkCore
         /// 获取 DbSet 关联的 DbContext 实例。
         /// </summary>
         public static DbContext GetDbContext<TEntity>(this DbSet<TEntity> dbSet) where TEntity : class
-        { 
+        {
             var infrastructure = dbSet as IInfrastructure<IServiceProvider>;
             var serviceProvider = infrastructure.Instance;
             var currentDbContext = serviceProvider.GetService(typeof(ICurrentDbContext)) as ICurrentDbContext;

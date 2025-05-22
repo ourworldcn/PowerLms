@@ -66,3 +66,17 @@ C:\Users\zc-home\source\ourworldcn\Bak\OwBaseCore\obj\Release\net6.0\OwBaseCore.
 C:\Users\zc-home\source\ourworldcn\Bak\OwBaseCore\obj\Release\net6.0\refint\OwBaseCore.dll
 C:\Users\zc-home\source\ourworldcn\Bak\OwBaseCore\obj\Release\net6.0\OwBaseCore.pdb
 C:\Users\zc-home\source\ourworldcn\Bak\OwBaseCore\obj\Release\net6.0\ref\OwBaseCore.dll
+D:\Users\光元\source\Repos1\Bak\OwBaseCore\bin\Release\net6.0\OwBaseCore.deps.json
+D:\Users\光元\source\Repos1\Bak\OwBaseCore\bin\Release\net6.0\OwBaseCore.dll
+D:\Users\光元\source\Repos1\Bak\OwBaseCore\bin\Release\net6.0\OwBaseCore.pdb
+D:\Users\光元\source\Repos1\Bak\OwBaseCore\bin\Release\net6.0\OwBaseCoreApiDoc.xml
+D:\Users\光元\source\Repos1\Bak\OwBaseCore\obj\Release\net6.0\OwBaseCore.csproj.AssemblyReference.cache
+D:\Users\光元\source\Repos1\Bak\OwBaseCore\obj\Release\net6.0\OwBaseCore.GeneratedMSBuildEditorConfig.editorconfig
+D:\Users\光元\source\Repos1\Bak\OwBaseCore\obj\Release\net6.0\OwBaseCore.AssemblyInfoInputs.cache
+D:\Users\光元\source\Repos1\Bak\OwBaseCore\obj\Release\net6.0\OwBaseCore.AssemblyInfo.cs
+D:\Users\光元\source\Repos1\Bak\OwBaseCore\obj\Release\net6.0\OwBaseCore.csproj.CoreCompileInputs.cache
+D:\Users\光元\source\Repos1\Bak\OwBaseCore\obj\Release\net6.0\OwBaseCore.sourcelink.json
+D:\Users\光元\source\Repos1\Bak\OwBaseCore\obj\Release\net6.0\OwBaseCore.dll
+D:\Users\光元\source\Repos1\Bak\OwBaseCore\obj\Release\net6.0\refint\OwBaseCore.dll
+D:\Users\光元\source\Repos1\Bak\OwBaseCore\obj\Release\net6.0\OwBaseCore.pdb
+D:\Users\光元\source\Repos1\Bak\OwBaseCore\obj\Release\net6.0\ref\OwBaseCore.dll
