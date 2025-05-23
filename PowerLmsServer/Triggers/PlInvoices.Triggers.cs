@@ -87,8 +87,14 @@ namespace PowerLmsServer.Triggers
             }
 
             // 计算并更新父结算单的金额
-            var invoices = dbContext.Set<PlInvoices>().WhereWithLocal(c => parentIds.Contains(c.Id)).ToArray(); // 加载所有用到的 PlInvoices 对象
-            var lkupInvoiceItem = dbContext.Set<PlInvoicesItem>().WhereWithLocal(c => parentIds.Contains(c.ParentId.Value)).AsEnumerable().ToLookup(c => c.ParentId.Value); // 加载所有用到的 PlInvoicesItem 对象
+            // 使用 WhereWithLocalSafe 加载实体并立即执行查询，避免枚举期间集合被修改
+            var invoices = dbContext.Set<PlInvoices>().WhereWithLocalSafe(c => parentIds.Contains(c.Id));
+            
+            // 使用 WhereWithLocalSafe 加载实体并立即执行查询，避免枚举期间集合被修改
+            var invoiceItems = dbContext.Set<PlInvoicesItem>()
+                .WhereWithLocalSafe(c => c.ParentId.HasValue && parentIds.Contains(c.ParentId.Value));
+                
+            var lkupInvoiceItem = invoiceItems.ToLookup(c => c.ParentId.Value);
 
             foreach (var invoice in invoices)
             {

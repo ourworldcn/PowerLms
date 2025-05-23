@@ -59,8 +59,8 @@ namespace PowerLmsServer.Managers
         /// <param name="httpClient">HttpClient实例。</param>
         /// <param name="mapper">AutoMapper实例</param>
         /// <param name="logger">日志记录器(可选)</param>
-        /// <param name="dbContext">数据库上下文</param>
         /// <param name="cache">缓存对象</param>
+        /// <param name="dbContextFactory"></param>
         public NuoNuoManager(HttpClient httpClient, IMapper mapper, ILogger<NuoNuoManager> logger, IMemoryCache cache, IDbContextFactory<PowerLmsUserDbContext> dbContextFactory)
         {
             _httpClient = httpClient;

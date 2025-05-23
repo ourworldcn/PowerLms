@@ -64,6 +64,7 @@ namespace PowerLmsServer.Managers
         /// <param name="httpContextAccessor">HTTP 上下文访问器。</param>
         /// <param name="serviceProvider">服务提供者。</param>
         /// <param name="memoryCache">内存缓存。</param>
+        /// <param name="mapper"></param>
         public OwSqlAppLogger(OwBatchDbWriter<PowerLmsUserDbContext> batchDbWriter, IHttpContextAccessor httpContextAccessor,
             IServiceProvider serviceProvider, IMemoryCache memoryCache, IMapper mapper)
         {
