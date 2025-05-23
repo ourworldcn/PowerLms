@@ -290,6 +290,20 @@ namespace OW.EntityFrameworkCore
         }
 
         /// <summary>
+        /// 安全地使用指定的条件从数据库加载实体，并合并本地跟踪器中符合条件的实体，避免"枚举子在枚举期间基础集合被改变"异常。
+        /// </summary>
+        /// <typeparam name="TEntity">实体类型。</typeparam>
+        /// <param name="dbSet">数据库集合。</param>
+        /// <param name="predicate">用于筛选实体的表达式。</param>
+        /// <returns>符合条件的实体列表，包括数据库和本地跟踪器中的实体。</returns>
+        public static List<TEntity> WhereWithLocalSafe<TEntity>(this DbSet<TEntity> dbSet, Expression<Func<TEntity, bool>> predicate)
+            where TEntity : class
+        {
+            // 直接调用 WhereWithLocal 方法并将结果转换为列表
+            return dbSet.WhereWithLocal(predicate).ToList();
+        }
+
+        /// <summary>
         /// 从本地跟踪器和数据库中查找满足条件的第一个实体。如果找不到，则返回默认值。
         /// </summary>
         /// <typeparam name="TEntity">实体类型。</typeparam>
