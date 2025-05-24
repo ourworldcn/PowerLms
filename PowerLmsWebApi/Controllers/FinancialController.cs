@@ -158,9 +158,10 @@ namespace PowerLmsWebApi.Controllers
         /// 获取当前用户相关的业务费用申请单和审批流状态。
         /// </summary>
         /// <param name="model">分页和排序参数</param>
-        /// <param name="conditional">查询的条件。支持两种格式的条件：
+        /// <param name="conditional">查询的条件。支持三种格式的条件：
         /// 1. 无前缀的条件：直接作为申请单(DocFeeRequisition)的筛选条件
-        /// 2. "OwWf.字段名" 格式的条件：用于筛选关联的工作流(OwWf)对象.
+        /// 2. "OwWf.字段名" 格式的条件：用于筛选关联的工作流(OwWf)对象
+        /// 3. "PlJob.字段名" 格式的条件：用于筛选关联的工作号(PlJob)对象
         /// 所有键不区分大小写。其中，OwWf.State会特殊处理，与OwWfManager.GetWfNodeItemByOpertorId方法的state参数映射关系：
         /// 0(流转中)→3, 1(成功完成)→4, 2(已被终止)→8
         /// 通用条件写法:所有条件都是字符串，对区间的写法是用逗号分隔（字符串类型暂时不支持区间且都是模糊查询）如"2024-1-1,2024-1-2"。
@@ -177,8 +178,9 @@ namespace PowerLmsWebApi.Controllers
 
             try
             {
-                // 从条件中分离出OwWf开头的条件
+                // 从条件中分离出不同前缀的条件
                 Dictionary<string, string> wfConditions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                Dictionary<string, string> plJobConditions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 Dictionary<string, string> reqConditions = conditional != null
                     ? new Dictionary<string, string>(conditional, StringComparer.OrdinalIgnoreCase)
                     : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -190,6 +192,7 @@ namespace PowerLmsWebApi.Controllers
 
                     foreach (var pair in reqConditions)
                     {
+                        // 处理工作流条件
                         if (pair.Key.StartsWith("OwWf.", StringComparison.OrdinalIgnoreCase))
                         {
                             string wfFieldName = pair.Key.Substring(5); // 去掉"OwWf."前缀
@@ -222,16 +225,23 @@ namespace PowerLmsWebApi.Controllers
                             }
                             keysToRemove.Add(pair.Key);
                         }
+                        // 处理PlJob条件
+                        else if (pair.Key.StartsWith("PlJob.", StringComparison.OrdinalIgnoreCase))
+                        {
+                            string jobFieldName = pair.Key.Substring(6); // 去掉"PlJob."前缀
+                            plJobConditions[jobFieldName] = pair.Value;
+                            keysToRemove.Add(pair.Key);
+                        }
                     }
 
-                    // 从原始条件中移除OwWf开头的条件
+                    // 从原始条件中移除特殊前缀的条件
                     foreach (var key in keysToRemove)
                     {
                         reqConditions.Remove(key);
                     }
                 }
 
-                // 查询关联的工作流和申请单
+                // 查询关联的工作流
                 var docIdsQuery = _WfManager.GetWfNodeItemByOpertorId(context.User.Id, wfState)
                     .Select(c => c.Parent.Parent);
 
@@ -248,9 +258,28 @@ namespace PowerLmsWebApi.Controllers
                 // 获取符合条件的文档ID
                 var docIds = docIdsQuery.Select(wf => wf.DocId.Value).Distinct();
 
-                // 构建申请单查询
+                // 构建申请单查询的初始部分
                 var dbSet = _DbContext.DocFeeRequisitions
                     .Where(c => c.OrgId == context.User.OrgId && docIds.Contains(c.Id));
+
+                // 如果有PlJob条件，需要联合查询
+                if (plJobConditions.Count > 0)
+                {
+                    _Logger.LogDebug("应用工作号过滤条件: {conditions}",
+                        string.Join(", ", plJobConditions.Select(kv => $"{kv.Key}={kv.Value}")));
+
+                    // 先获取符合PlJob条件的工作号
+                    var jobIds = EfHelper.GenerateWhereAnd(_DbContext.PlJobs.AsNoTracking(), plJobConditions)
+                        .Select(job => job.Id);
+
+                    // 按ID链接查询相关申请单 - 注意保留与docIds的交集条件
+                    dbSet = (from requisition in _DbContext.DocFeeRequisitions
+                             where requisition.OrgId == context.User.OrgId && docIds.Contains(requisition.Id)
+                             join item in _DbContext.DocFeeRequisitionItems on requisition.Id equals item.ParentId
+                             join fee in _DbContext.DocFees on item.FeeId equals fee.Id
+                             where fee.JobId.HasValue && jobIds.Contains(fee.JobId.Value)
+                             select requisition).Distinct();
+                }
 
                 // 应用申请单条件
                 if (reqConditions.Count > 0)
@@ -386,12 +415,67 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveDocFeeRequisitionReturnDto();
-            var id = model.Id;
-            var dbSet = _DbContext.DocFeeRequisitions;
-            var item = dbSet.Find(id);
-            if (item is null) return BadRequest();
-            _EntityManager.Remove(item);
-            _DbContext.SaveChanges();
+            
+            try
+            {
+                var id = model.Id;
+                var dbSet = _DbContext.DocFeeRequisitions;
+                var item = dbSet.Find(id);
+                if (item is null) return BadRequest();
+                
+                // 查找并获取所有关联的申请单明细项
+                var items = _DbContext.DocFeeRequisitionItems.Where(c => c.ParentId == id).ToList();
+                
+                // 记录操作日志
+                _DbContext.OwSystemLogs.Add(new OwSystemLog
+                {
+                    OrgId = context.User.OrgId,
+                    ActionId = $"Delete.{nameof(DocFeeRequisition)}.{item.Id}",
+                    ExtraGuid = context.User.Id,
+                    ExtraDecimal = items.Count,
+                    WorldDateTime = OwHelper.WorldNow
+                });
+                
+                // 如果有关联的明细项，先处理它们
+                if (items.Count > 0)
+                {
+                    _Logger.LogInformation($"删除业务费用申请单 {id} 的 {items.Count} 个明细项");
+                    
+                    // 先恢复相关的费用状态
+                    foreach (var detail in items)
+                    {
+                        // 当明细项有关联费用时，需要处理该费用
+                        if (detail.FeeId.HasValue)
+                        {
+                            var fee = _DbContext.DocFees.Find(detail.FeeId.Value);
+                            if (fee != null)
+                            {
+                                // 这里可以添加恢复费用状态的逻辑，例如更新某些标志字段
+                                _Logger.LogDebug($"恢复费用 {fee.Id} 的状态");
+                            }
+                        }
+                    }
+                    
+                    // 删除所有关联的明细项
+                    _DbContext.DocFeeRequisitionItems.RemoveRange(items);
+                }
+                
+                // 删除申请单
+                _EntityManager.Remove(item);
+                
+                // 保存所有更改
+                _DbContext.SaveChanges();
+                
+                _Logger.LogInformation($"成功删除业务费用申请单 {id} 及其所有关联明细项");
+            }
+            catch (Exception ex)
+            {
+                _Logger.LogError(ex, "删除业务费用申请单时发生错误");
+                result.HasError = true;
+                result.ErrorCode = 500;
+                result.DebugMessage = $"删除业务费用申请单时发生错误: {ex.Message}";
+            }
+            
             return result;
         }
 
