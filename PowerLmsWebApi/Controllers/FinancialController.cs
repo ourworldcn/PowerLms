@@ -752,7 +752,7 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="401">无效令牌。</response>  
         /// <response code="403">权限不足。</response>  
         [HttpPost]
-        public ActionResult<AddPlInvoicesReturnDto> AddPlInvoicesReturnDto(AddPlInvoicesParamsDto model)
+        public ActionResult<AddPlInvoiceReturnDto> AddPlInvoice(AddPlInvoiceParamsDto model)
         {
             // 验证令牌和获取上下文
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
@@ -761,7 +761,7 @@ namespace PowerLmsWebApi.Controllers
                 return Unauthorized();
             }
 
-            var result = new AddPlInvoicesReturnDto();
+            var result = new AddPlInvoiceReturnDto();
 
             try
             {

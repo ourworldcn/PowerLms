@@ -279,7 +279,7 @@ namespace PowerLmsWebApi.Dto
     /// <summary>
     /// 增加新结算单功能参数封装类。
     /// </summary>
-    public class AddPlInvoicesParamsDto : TokenDtoBase
+    public class AddPlInvoiceParamsDto : TokenDtoBase
     {
         /// <summary>
         /// 新结算单信息。其中Id可以是任何值，返回时会指定新值。
@@ -290,7 +290,7 @@ namespace PowerLmsWebApi.Dto
     /// <summary>
     /// 增加新结算单功能返回值封装类。
     /// </summary>
-    public class AddPlInvoicesReturnDto : ReturnDtoBase
+    public class AddPlInvoiceReturnDto : ReturnDtoBase
     {
         /// <summary>
         /// 如果成功添加，这里返回新结算单的Id。
