@@ -332,8 +332,7 @@ namespace PowerLms.Data
 
                     // 查询所有相关的明细项
                     var items = dbContext.Set<TaxInvoiceInfoItem>()
-                        .WhereWithLocal(item => item.ParentId == parentId)
-                        .ToList();
+                        .WhereWithLocalSafe(item => item.ParentId == parentId);
 
                     // 计算总金额
                     decimal totalAmount = items.Sum(item => item.TaxInclusiveAmount);

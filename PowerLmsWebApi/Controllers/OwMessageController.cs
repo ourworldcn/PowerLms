@@ -372,9 +372,6 @@ namespace PowerLmsWebApi.Controllers
                     .Where(m => m.UserId == context.User.Id && m.ReadUtc == null)
                     .Count();
 
-                // 记录日志
-                _SqlAppLogger.LogGeneralInfo("获取未读消息数量");
-
                 result.UnreadCount = unreadCount;
                 return result;
             }

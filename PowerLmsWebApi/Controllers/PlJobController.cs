@@ -58,126 +58,143 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
         public ActionResult<GetAllPlJobReturnDto> GetAllPlJob([FromQuery] PagingParamsDtoBase model,
-            [FromQuery] Dictionary<string, string> conditional = null)
+            [FromQuery][ModelBinder(typeof(DotKeyDictionaryModelBinder))] Dictionary<string, string> conditional = null)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlJobReturnDto();
-            var dbSet = _DbContext.PlJobs.Where(c => c.OrgId == context.User.OrgId);
-            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-
-            coll = EfHelper.GenerateWhereAnd(coll, conditional);
-            #region 业务表单关联过滤
-            if (conditional != null)
+            
+            try
             {
-                // 空运出口单条件过滤
-                var eaDocConditions = conditional
-                    .Where(c => c.Key.StartsWith("PlEaDoc."))
-                    .ToDictionary(
-                        c => c.Key.Substring("PlEaDoc.".Length),
-                        c => c.Value);
+                var dbSet = _DbContext.PlJobs.Where(c => c.OrgId == context.User.OrgId);
+                var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
 
-                if (eaDocConditions.Any())
+                coll = EfHelper.GenerateWhereAnd(coll, conditional);
+                #region 业务表单关联过滤
+                if (conditional != null)
                 {
-                    var eaDocQuery = _DbContext.PlEaDocs.AsNoTracking();
-                    eaDocQuery = EfHelper.GenerateWhereAnd(eaDocQuery, eaDocConditions);
-                    var eaDocJobIds = eaDocQuery.Select(doc => doc.JobId);
-                    coll = coll.Where(job => eaDocJobIds.Contains(job.Id));
+                    // 空运出口单条件过滤 - 使用不区分大小写的比较
+                    var eaDocConditions = conditional
+                        .Where(c => c.Key.StartsWith("PlEaDoc.", StringComparison.OrdinalIgnoreCase))
+                        .ToDictionary(
+                            c => c.Key.Substring(c.Key.IndexOf('.') + 1),
+                            c => c.Value,
+                            StringComparer.OrdinalIgnoreCase);
+
+                    if (eaDocConditions.Any())
+                    {
+                        var eaDocQuery = _DbContext.PlEaDocs.AsNoTracking();
+                        eaDocQuery = EfHelper.GenerateWhereAnd(eaDocQuery, eaDocConditions);
+                        var eaDocJobIds = eaDocQuery.Select(doc => doc.JobId);
+                        coll = coll.Where(job => eaDocJobIds.Contains(job.Id));
+                    }
+
+                    // 空运进口单条件过滤 - 使用不区分大小写的比较
+                    var iaDocConditions = conditional
+                        .Where(c => c.Key.StartsWith("PlIaDoc.", StringComparison.OrdinalIgnoreCase))
+                        .ToDictionary(
+                            c => c.Key.Substring(c.Key.IndexOf('.') + 1),
+                            c => c.Value,
+                            StringComparer.OrdinalIgnoreCase);
+
+                    if (iaDocConditions.Any())
+                    {
+                        var iaDocQuery = _DbContext.PlIaDocs.AsNoTracking();
+                        iaDocQuery = EfHelper.GenerateWhereAnd(iaDocQuery, iaDocConditions);
+                        var iaDocJobIds = iaDocQuery.Select(doc => doc.JobId);
+                        coll = coll.Where(job => iaDocJobIds.Contains(job.Id));
+                    }
+
+                    // 海运出口单条件过滤 - 使用不区分大小写的比较
+                    var esDocConditions = conditional
+                        .Where(c => c.Key.StartsWith("PlEsDoc.", StringComparison.OrdinalIgnoreCase))
+                        .ToDictionary(
+                            c => c.Key.Substring(c.Key.IndexOf('.') + 1),
+                            c => c.Value,
+                            StringComparer.OrdinalIgnoreCase);
+
+                    if (esDocConditions.Any())
+                    {
+                        var esDocQuery = _DbContext.PlEsDocs.AsNoTracking();
+                        esDocQuery = EfHelper.GenerateWhereAnd(esDocQuery, esDocConditions);
+                        var esDocJobIds = esDocQuery.Select(doc => doc.JobId);
+                        coll = coll.Where(job => esDocJobIds.Contains(job.Id));
+                    }
+
+                    // 海运进口单条件过滤 - 使用不区分大小写的比较
+                    // 修复: 使用正确的类型名称 "PlIsDoc" 而不是 "PlIaDoc"
+                    var isDocConditions = conditional
+                        .Where(c => c.Key.StartsWith("PlIsDoc.", StringComparison.OrdinalIgnoreCase))
+                        .ToDictionary(
+                            c => c.Key.Substring(c.Key.IndexOf('.') + 1),
+                            c => c.Value,
+                            StringComparer.OrdinalIgnoreCase);
+
+                    if (isDocConditions.Any())
+                    {
+                        var isDocQuery = _DbContext.PlIsDocs.AsNoTracking();
+                        isDocQuery = EfHelper.GenerateWhereAnd(isDocQuery, isDocConditions);
+                        var isDocJobIds = isDocQuery.Select(doc => doc.JobId);
+                        coll = coll.Where(job => isDocJobIds.Contains(job.Id));
+                    }
                 }
-
-                // 空运进口单条件过滤
-                var iaDocConditions = conditional
-                    .Where(c => c.Key.StartsWith("PlIaDoc."))
-                    .ToDictionary(
-                        c => c.Key.Substring("PlIaDoc.".Length),
-                        c => c.Value);
-
-                if (iaDocConditions.Any())
+                #endregion 业务表单关联过滤
+                
+                #region 权限判定
+                string err;
+                var r = coll.AsEnumerable();    //设计备注：如果结果集小则没问题；如果结果集大虽然这导致巨大内存消耗，但在此问题规模下，用内存替换cpu消耗是合理的置换代价
+                if (!_AuthorizationManager.Demand(out err, "F.2"))  //若无通用查看权限
                 {
-                    var iaDocQuery = _DbContext.PlIaDocs.AsNoTracking();
-                    iaDocQuery = EfHelper.GenerateWhereAnd(iaDocQuery, iaDocConditions);
-                    var iaDocJobIds = iaDocQuery.Select(doc => doc.JobId);
-                    coll = coll.Where(job => iaDocJobIds.Contains(job.Id));
+                    var orgs = _OrganizationManager.GetOrLoadCurrentOrgsByUser(context.User);
+                    var orgIds = orgs.Keys.ToArray();    //所有机构Id集合
+                    var userIds = _DbContext.AccountPlOrganizations.Where(c => orgIds.Contains(c.OrgId)).Select(c => c.UserId).Distinct().ToHashSet();   //所有相关人Id集合
+                    var d0Func = GetFunc("D0.1.1.1", ProjectContent.AeId);
+                    var d1Func = GetFunc("D1.1.1.1", ProjectContent.AiId);
+                    var d2Func = GetFunc("D2.1.1.1", ProjectContent.SeId);
+                    var d3Func = GetFunc("D3.1.1.1", ProjectContent.SiId);
+                    var d4Func = GetFunc("D4.1.1.1", ProjectContent.JeId);
+                    var d5Func = GetFunc("D5.1.1.1", ProjectContent.JiId);
+                    var d6Func = GetFunc("D6.1.1.1", ProjectContent.ReId);
+                    var d7Func = GetFunc("D7.1.1.1", ProjectContent.RiId);
+                    var d8Func = GetFunc("D8.1.1.1", ProjectContent.OtId);
+                    var d9Func = GetFunc("D9.1.1.1", ProjectContent.WhId);
+                    r = r.Where(c => d0Func(c) || d1Func(c) || d2Func(c) || d3Func(c) || d4Func(c)
+                       || d5Func(c) || d6Func(c) || d7Func(c) || d8Func(c) || d9Func(c));
+                    #region 获取判断函数的本地函数。
+                    Func<PlJob, bool> GetFunc(string prefix, Guid typeId)
+                    {
+                        Func<PlJob, bool> result;
+                        if (_AuthorizationManager.Demand(out err, $"{prefix}.3"))    //公司级别权限
+                        {
+                            result = c => c.JobTypeId == typeId;
+                        }
+                        else if (_AuthorizationManager.Demand(out err, $"{prefix}.2"))   //同组级别权限
+                        {
+                            result = c => c.JobTypeId == typeId && c.OperatorId != null && userIds.Contains(c.OperatorId.Value);
+                        }
+                        else if (_AuthorizationManager.Demand(out err, $"{prefix}.1"))   //本人级别权限
+                        {
+                            result = c => c.JobTypeId == typeId && c.OperatorId == context.User.Id;
+                        }
+                        else //此类无权限
+                            result = c => false;
+                        return result;
+                    }
+                    #endregion 获取判断函数的本地函数。
                 }
-
-                // 海运出口单条件过滤
-                var esDocConditions = conditional
-                    .Where(c => c.Key.StartsWith("PlEsDoc."))
-                    .ToDictionary(
-                        c => c.Key.Substring("PlEsDoc.".Length),
-                        c => c.Value);
-
-                if (esDocConditions.Any())
-                {
-                    var esDocQuery = _DbContext.PlEsDocs.AsNoTracking();
-                    esDocQuery = EfHelper.GenerateWhereAnd(esDocQuery, esDocConditions);
-                    var esDocJobIds = esDocQuery.Select(doc => doc.JobId);
-                    coll = coll.Where(job => esDocJobIds.Contains(job.Id));
-                }
-
-                // 海运进口单条件过滤
-                var isDocConditions = conditional
-                    .Where(c => c.Key.StartsWith("PlIsDoc."))
-                    .ToDictionary(
-                        c => c.Key.Substring("PlIsDoc.".Length),
-                        c => c.Value);
-
-                if (isDocConditions.Any())
-                {
-                    var isDocQuery = _DbContext.PlIsDocs.AsNoTracking();
-                    isDocQuery = EfHelper.GenerateWhereAnd(isDocQuery, isDocConditions);
-                    var isDocJobIds = isDocQuery.Select(doc => doc.JobId);
-                    coll = coll.Where(job => isDocJobIds.Contains(job.Id));
-                }
+                #endregion 权限判定
+                
+                // 从数据库中获取数据
+                var prb = _EntityManager.GetAll(r.AsQueryable(), model.StartIndex, model.Count);
+                _Mapper.Map(prb, result);
             }
-            #endregion 业务表单关联过滤
-            #region 权限判定
-            string err;
-            var r = coll.AsEnumerable();    //设计备注：如果结果集小则没问题；如果结果集大虽然这导致巨大内存消耗，但在此问题规模下，用内存替换cpu消耗是合理的置换代价
-            if (!_AuthorizationManager.Demand(out err, "F.2"))  //若无通用查看权限
+            catch (Exception ex)
             {
-                var orgs = _OrganizationManager.GetOrLoadCurrentOrgsByUser(context.User);
-                var orgIds = orgs.Keys.ToArray();    //所有机构Id集合
-                var userIds = _DbContext.AccountPlOrganizations.Where(c => orgIds.Contains(c.OrgId)).Select(c => c.UserId).Distinct().ToHashSet();   //所有相关人Id集合
-                var d0Func = GetFunc("D0.1.1.1", ProjectContent.AeId);
-                var d1Func = GetFunc("D1.1.1.1", ProjectContent.AiId);
-                var d2Func = GetFunc("D2.1.1.1", ProjectContent.SeId);
-                var d3Func = GetFunc("D3.1.1.1", ProjectContent.SiId);
-                var d4Func = GetFunc("D4.1.1.1", ProjectContent.JeId);
-                var d5Func = GetFunc("D5.1.1.1", ProjectContent.JiId);
-                var d6Func = GetFunc("D6.1.1.1", ProjectContent.ReId);
-                var d7Func = GetFunc("D7.1.1.1", ProjectContent.RiId);
-                var d8Func = GetFunc("D8.1.1.1", ProjectContent.OtId);
-                var d9Func = GetFunc("D9.1.1.1", ProjectContent.WhId);
-                r = r.Where(c => d0Func(c) || d1Func(c) || d2Func(c) || d3Func(c) || d4Func(c)
-                   || d5Func(c) || d6Func(c) || d7Func(c) || d8Func(c) || d9Func(c));
-                #region 获取判断函数的本地函数。
-                Func<PlJob, bool> GetFunc(string prefix, Guid typeId)
-                {
-                    Func<PlJob, bool> result;
-                    if (_AuthorizationManager.Demand(out err, $"{prefix}.3"))    //公司级别权限
-                    {
-                        result = c => c.JobTypeId == typeId;
-                    }
-                    else if (_AuthorizationManager.Demand(out err, $"{prefix}.2"))   //同组级别权限
-                    {
-                        result = c => c.JobTypeId == typeId && c.OperatorId != null && userIds.Contains(c.OperatorId.Value);
-                    }
-                    else if (_AuthorizationManager.Demand(out err, $"{prefix}.1"))   //本人级别权限
-                    {
-                        result = c => c.JobTypeId == typeId && c.OperatorId == context.User.Id;
-                    }
-                    else //此类无权限
-                        result = c => false;
-                    return result;
-                }
-                #endregion 获取判断函数的本地函数。
+                _Logger.LogError(ex, "获取业务总表时发生错误");
+                result.HasError = true;
+                result.ErrorCode = 500;
+                result.DebugMessage = $"获取业务总表时发生错误: {ex.Message}";
             }
-            #endregion 权限判定
-            // TO DO要支持关联到具体业务表单并依据表单的状态进行过滤
-
-            // 从数据库中获取数据
-            var prb = _EntityManager.GetAll(r.AsQueryable(), model.StartIndex, model.Count);
-            _Mapper.Map(prb, result);
+            
             return result;
         }
 
