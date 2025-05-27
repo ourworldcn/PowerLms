@@ -518,14 +518,15 @@ namespace PowerLmsWebApi.Controllers
                         var destDoc = new PlEaDoc();
                         var typeName = destDoc.GetType().Name;  //类型名
 
-                        var nVals = model.NewValues
-                            .Where(c => c.Key.StartsWith($"{typeName}."))
+                        var nVals = normalizedNewValues
+                            .Where(c => c.Key.StartsWith($"{typeName}.", StringComparison.OrdinalIgnoreCase))
                             .ToDictionary(
                                 c => c.Key[(typeName.Length + 1)..],
-                                c => c.Value);
+                                c => c.Value,
+                                StringComparer.OrdinalIgnoreCase);
 
                         var ignorePNames = model.IgnorePropertyNames
-                            .Where(c => c.IndexOf($"{typeName}.") == 0)
+                            .Where(c => c.IndexOf($"{typeName}.", StringComparison.OrdinalIgnoreCase) == 0)
                             .Select(c => c[(typeName.Length + 1)..]);
 
                         if (!_EntityManager.CopyIgnoreCase(srcDoc, destDoc, nVals, ignorePNames))
@@ -542,14 +543,15 @@ namespace PowerLmsWebApi.Controllers
                         var destDoc = new PlIaDoc();
                         var typeName = destDoc.GetType().Name;  //类型名
 
-                        var nVals = model.NewValues
-                            .Where(c => c.Key.StartsWith($"{typeName}."))
+                        var nVals = normalizedNewValues
+                            .Where(c => c.Key.StartsWith($"{typeName}.", StringComparison.OrdinalIgnoreCase))
                             .ToDictionary(
                                 c => c.Key[(typeName.Length + 1)..],
-                                c => c.Value);
+                                c => c.Value,
+                                StringComparer.OrdinalIgnoreCase);
 
                         var ignorePNames = model.IgnorePropertyNames
-                            .Where(c => c.IndexOf($"{typeName}.") == 0)
+                            .Where(c => c.IndexOf($"{typeName}.", StringComparison.OrdinalIgnoreCase) == 0)
                             .Select(c => c[(typeName.Length + 1)..]);
 
                         if (!_EntityManager.CopyIgnoreCase(srcDoc, destDoc, nVals, ignorePNames))
@@ -566,14 +568,15 @@ namespace PowerLmsWebApi.Controllers
                         var destDoc = new PlEsDoc();
                         var typeName = destDoc.GetType().Name;  //类型名
 
-                        var nVals = model.NewValues
-                            .Where(c => c.Key.StartsWith($"{typeName}."))
+                        var nVals = normalizedNewValues
+                            .Where(c => c.Key.StartsWith($"{typeName}.", StringComparison.OrdinalIgnoreCase))
                             .ToDictionary(
                                 c => c.Key[(typeName.Length + 1)..],
-                                c => c.Value);
+                                c => c.Value,
+                                StringComparer.OrdinalIgnoreCase);
 
                         var ignorePNames = model.IgnorePropertyNames
-                            .Where(c => c.IndexOf($"{typeName}.") == 0)
+                            .Where(c => c.IndexOf($"{typeName}.", StringComparison.OrdinalIgnoreCase) == 0)
                             .Select(c => c[(typeName.Length + 1)..]);
 
                         if (!_EntityManager.CopyIgnoreCase(srcDoc, destDoc, nVals, ignorePNames))
@@ -590,14 +593,15 @@ namespace PowerLmsWebApi.Controllers
                         var destDoc = new PlIsDoc();
                         var typeName = destDoc.GetType().Name;  //类型名
 
-                        var nVals = model.NewValues
-                            .Where(c => c.Key.StartsWith($"{typeName}."))
+                        var nVals = normalizedNewValues
+                            .Where(c => c.Key.StartsWith($"{typeName}.", StringComparison.OrdinalIgnoreCase))
                             .ToDictionary(
                                 c => c.Key[(typeName.Length + 1)..],
-                                c => c.Value);
+                                c => c.Value,
+                                StringComparer.OrdinalIgnoreCase);
 
                         var ignorePNames = model.IgnorePropertyNames
-                            .Where(c => c.IndexOf($"{typeName}.") == 0)
+                            .Where(c => c.IndexOf($"{typeName}.", StringComparison.OrdinalIgnoreCase) == 0)
                             .Select(c => c[(typeName.Length + 1)..]);
 
                         if (!_EntityManager.CopyIgnoreCase(srcDoc, destDoc, nVals, ignorePNames))
@@ -624,18 +628,14 @@ namespace PowerLmsWebApi.Controllers
                     .Select(c => c[(ignFeeName.Length + 1)..]),
                 StringComparer.OrdinalIgnoreCase);
 
-            // 确保忽略费用的一些关键属性
-            ignFees.Add("BillId");  // 确保不复制账单关联
-            ignFees.Add("AuditOperatorId"); // 确保新费用未审核
-            ignFees.Add("AuditDateTime");  // 确保新费用未审核
-
             try
             {
                 // 提取与DocFee相关的新值，使用不区分大小写的比较
-                var feeNewValues = model.NewValues
-                    .Where(c => c.Key.StartsWith($"{ignFeeName}.", StringComparison.OrdinalIgnoreCase))
+                var feeNewValues = normalizedNewValues
+                    .Where(c => c.Key.StartsWith($"{ignFeeName}.", StringComparison.OrdinalIgnoreCase) ||
+                                c.Key.StartsWith("docFee.", StringComparison.OrdinalIgnoreCase))
                     .ToDictionary(
-                        c => c.Key[(ignFeeName.Length + 1)..],
+                        c => c.Key.Substring(c.Key.IndexOf('.') + 1),
                         c => c.Value,
                         StringComparer.OrdinalIgnoreCase);
 
@@ -650,9 +650,6 @@ namespace PowerLmsWebApi.Controllers
                     }
                     fee.GenerateNewId();
                     fee.JobId = destJob.Id;
-                    fee.BillId = null; // 确保不复制账单关联
-                    fee.AuditOperatorId = null; // 确保新费用未审核
-                    fee.AuditDateTime = null; // 确保新费用未审核
 
                     _DbContext.Add(fee);
                 }
