@@ -231,12 +231,15 @@ namespace System
         /// <returns></returns>
         public static bool TryChangeType(string val, Type type, out object result)
         {
-            if (type == typeof(string)) // 若目标是字符串类型，直接返回字符串值
+            // 若目标是字符串类型，直接返回字符串值
+            if (type == typeof(string))
             {
                 result = val;
                 return true;
             }
-            if (val is null || string.Equals(val, "null")) // 若为 null 或 "null" 字符串且类型允许为 null
+
+            // 处理 null 或 "null" 字符串
+            if (val is null || string.Equals(val, "null", StringComparison.OrdinalIgnoreCase))
             {
                 // 引用类型或可空值类型可以接受 null
                 if (type.IsClass ||
@@ -250,6 +253,25 @@ namespace System
                 result = default;
                 return false;
             }
+
+            // 检查是否为可为空类型
+            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
+            {
+                // 获取可为空类型的底层类型
+                var underlyingType = Nullable.GetUnderlyingType(type);
+                
+                // 递归调用，尝试转换为底层类型
+                if (TryChangeType(val, underlyingType, out var underlyingResult))
+                {
+                    // 创建可为空类型的实例
+                    result = Activator.CreateInstance(type, underlyingResult);
+                    return true;
+                }
+                
+                result = null;
+                return false;
+            }
+
             // 处理普通类型
             var parameters = new object[] { val, default };
             try
