@@ -232,10 +232,6 @@ namespace PowerLmsServer.Managers
                 // 遍历所有可写属性
                 foreach (var prop in properties.Where(p => p.CanWrite))
                 {
-                    // 跳过被忽略的属性 - 这里直接使用集合的 Contains 方法，尊重其内部比较逻辑
-                    if (ignorePropertyNames?.Contains(prop.Name) == true)
-                        continue;
-
                     // 尝试从 newVals 中获取值 - 这里会使用 newVals 的键比较逻辑
                     if (newVals.TryGetValue(prop.Name, out var strValue) &&
                         OwConvert.TryChangeType(strValue, prop.PropertyType, out var typedValue))
