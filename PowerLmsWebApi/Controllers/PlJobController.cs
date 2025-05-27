@@ -62,7 +62,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlJobReturnDto();
-            
+
             try
             {
                 var dbSet = _DbContext.PlJobs.Where(c => c.OrgId == context.User.OrgId);
@@ -138,7 +138,7 @@ namespace PowerLmsWebApi.Controllers
                     }
                 }
                 #endregion 业务表单关联过滤
-                
+
                 #region 权限判定
                 string err;
                 var r = coll.AsEnumerable();    //设计备注：如果结果集小则没问题；如果结果集大虽然这导致巨大内存消耗，但在此问题规模下，用内存替换cpu消耗是合理的置换代价
@@ -182,7 +182,7 @@ namespace PowerLmsWebApi.Controllers
                     #endregion 获取判断函数的本地函数。
                 }
                 #endregion 权限判定
-                
+
                 // 从数据库中获取数据
                 var prb = _EntityManager.GetAll(r.AsQueryable(), model.StartIndex, model.Count);
                 _Mapper.Map(prb, result);
@@ -194,7 +194,7 @@ namespace PowerLmsWebApi.Controllers
                 result.ErrorCode = 500;
                 result.DebugMessage = $"获取业务总表时发生错误: {ex.Message}";
             }
-            
+
             return result;
         }
 
@@ -486,8 +486,21 @@ namespace PowerLmsWebApi.Controllers
             if (srcJob is null) return NotFound($"没找到指定任务对象，Id={model.SourceJobId}");
             var destJob = new PlJob();
 
-            if (!_EntityManager.CopyIgnoreCase(srcJob, destJob,
-                model.NewValues.Where(c => !c.Key.Contains('.')).ToDictionary(k => k.Key, v => v.Value),
+            // 确保NewValues是不区分大小写的，并且将所有键转为标准格式
+            var normalizedNewValues = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var pair in model.NewValues)
+            {
+                // 规范化键名，确保符合命名规范
+                var normalizedKey = pair.Key.Trim();
+                normalizedNewValues[normalizedKey] = pair.Value;
+            }
+
+            // 获取Job对象的属性
+            var jobProperties = normalizedNewValues
+                .Where(c => !c.Key.Contains('.'))
+                .ToDictionary(k => k.Key, v => v.Value, StringComparer.OrdinalIgnoreCase);
+
+            if (!_EntityManager.CopyIgnoreCase(srcJob, destJob, jobProperties,
                 model.IgnorePropertyNames.Where(c => !c.Contains('.'))))
             {
                 return BadRequest($"无法复制新任务对象，Id={model.SourceJobId},错误：{OwHelper.GetLastErrorMessage()}");
@@ -607,27 +620,47 @@ namespace PowerLmsWebApi.Controllers
             // 创建不区分大小写的忽略属性集合
             var ignFees = new HashSet<string>(
                 model.IgnorePropertyNames
-                    .Where(c => c.StartsWith($"{ignFeeName}."))
+                    .Where(c => c.StartsWith($"{ignFeeName}.", StringComparison.OrdinalIgnoreCase))
                     .Select(c => c[(ignFeeName.Length + 1)..]),
                 StringComparer.OrdinalIgnoreCase);
 
-            // 提取与DocFee相关的新值
-            var feeNewValues = model.NewValues
-                .Where(c => c.Key.StartsWith($"{ignFeeName}."))
-                .ToDictionary(
-                    c => c.Key[(ignFeeName.Length + 1)..],
-                    c => c.Value,
-                    StringComparer.OrdinalIgnoreCase);
+            // 确保忽略费用的一些关键属性
+            ignFees.Add("BillId");  // 确保不复制账单关联
+            ignFees.Add("AuditOperatorId"); // 确保新费用未审核
+            ignFees.Add("AuditDateTime");  // 确保新费用未审核
 
-            foreach (var item in fees)
+            try
             {
-                var fee = new DocFee();
+                // 提取与DocFee相关的新值，使用不区分大小写的比较
+                var feeNewValues = model.NewValues
+                    .Where(c => c.Key.StartsWith($"{ignFeeName}.", StringComparison.OrdinalIgnoreCase))
+                    .ToDictionary(
+                        c => c.Key[(ignFeeName.Length + 1)..],
+                        c => c.Value,
+                        StringComparer.OrdinalIgnoreCase);
 
-                // 使用CopyIgnoreCase传递ignFees和feeNewValues
-                _EntityManager.CopyIgnoreCase(item, fee, feeNewValues, ignFees);
-                fee.GenerateNewId();
-                fee.JobId = destJob.Id;
-                _DbContext.Add(fee);
+                foreach (var item in fees)
+                {
+                    var fee = new DocFee();
+
+                    // 使用CopyIgnoreCase传递ignFees和feeNewValues
+                    if (!_EntityManager.CopyIgnoreCase(item, fee, feeNewValues, ignFees))
+                    {
+                        _Logger.LogWarning("复制费用时遇到问题: {FeeId}", item.Id);
+                    }
+                    fee.GenerateNewId();
+                    fee.JobId = destJob.Id;
+                    fee.BillId = null; // 确保不复制账单关联
+                    fee.AuditOperatorId = null; // 确保新费用未审核
+                    fee.AuditDateTime = null; // 确保新费用未审核
+
+                    _DbContext.Add(fee);
+                }
+            }
+            catch (Exception ex)
+            {
+                _Logger.LogError(ex, "复制费用时发生异常");
+                return BadRequest($"复制费用时发生异常: {ex.Message}");
             }
 
             //后处理
@@ -908,7 +941,7 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="403">权限不足。</response>  
         [HttpGet]
         public ActionResult<GetAllDocFeeReturnDto> GetAllDocFee([FromQuery] PagingParamsDtoBase model,
-            [FromQuery] Dictionary<string, string> conditional = null)
+            [FromQuery][ModelBinder(typeof(DotKeyDictionaryModelBinder))] Dictionary<string, string> conditional = null)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             //if (!_AuthorizationManager.HasPermission(context.User, "D0.6.2")) return StatusCode((int)HttpStatusCode.Forbidden);
@@ -916,7 +949,15 @@ namespace PowerLmsWebApi.Controllers
 
             var dbSet = _DbContext.DocFees;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+
+            // 确保条件字典不区分大小写
+            var normalizedConditional = conditional != null ?
+                new Dictionary<string, string>(conditional.Where(c => !c.Key.Contains(".")), StringComparer.OrdinalIgnoreCase) :
+                null;
+
+            // 应用其他条件
+            coll = EfHelper.GenerateWhereAnd(coll, normalizedConditional);
+
             #region 验证权限
             string err;
             var r = coll.AsEnumerable();
@@ -980,31 +1021,59 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetDocFeeReturnDto> GetDocFee([FromQuery] GetDocFeeParamsDto model, [FromQuery] Dictionary<string, string> conditional = null)
+        public ActionResult<GetDocFeeReturnDto> GetDocFee([FromQuery] GetDocFeeParamsDto model, [FromQuery][ModelBinder(typeof(DotKeyDictionaryModelBinder))] Dictionary<string, string> conditional = null)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             string[] entityNames = new string[] { nameof(DocFee), nameof(DocBill), nameof(PlJob) };
             var result = new GetDocFeeReturnDto();
 
-            var keyJob = conditional.Where(c => c.Key.StartsWith(nameof(PlJob) + "."));
-            var dicJob = new Dictionary<string, string>(keyJob.Select(c => new KeyValuePair<string, string>(c.Key.Replace(nameof(PlJob) + ".", string.Empty), c.Value)));
+            // 将条件字典转换为不区分大小写的字典
+            var insensitiveConditional = conditional != null ?
+                new Dictionary<string, string>(conditional, StringComparer.OrdinalIgnoreCase) :
+                new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            var keyJob = insensitiveConditional.Where(c => c.Key.StartsWith(nameof(PlJob) + ".", StringComparison.OrdinalIgnoreCase));
+            var dicJob = new Dictionary<string, string>(keyJob.Select(c => new KeyValuePair<string, string>(c.Key.Replace(nameof(PlJob) + ".", string.Empty, StringComparison.OrdinalIgnoreCase), c.Value)));
             var collJob = EfHelper.GenerateWhereAnd(_DbContext.PlJobs.Where(c => c.OrgId == context.User.OrgId), dicJob);
 
-            var keyBill = conditional.Where(c => c.Key.StartsWith(nameof(DocBill) + "."));
-            var dicBill = new Dictionary<string, string>(keyBill.Select(c => new KeyValuePair<string, string>(c.Key.Replace(nameof(DocBill) + ".", string.Empty), c.Value)));
+            var keyBill = insensitiveConditional.Where(c => c.Key.StartsWith(nameof(DocBill) + ".", StringComparison.OrdinalIgnoreCase));
+            var dicBill = new Dictionary<string, string>(keyBill.Select(c => new KeyValuePair<string, string>(c.Key.Replace(nameof(DocBill) + ".", string.Empty, StringComparison.OrdinalIgnoreCase), c.Value)));
             var collBill = EfHelper.GenerateWhereAnd(_DbContext.DocBills, dicBill);
 
             var jobIds = collJob.Select(c => c.Id).ToArray();
-            var keyDocFee = conditional.Where(c => c.Key.StartsWith(nameof(DocFee) + "."));
-            var dicDocFee = new Dictionary<string, string>(keyDocFee.Select(c => new KeyValuePair<string, string>(c.Key.Replace(nameof(DocFee) + ".", string.Empty), c.Value)));
-            var collDocFee = EfHelper.GenerateWhereAnd(_DbContext.DocFees.Where(c => jobIds.Contains(c.JobId.Value)), dicDocFee);
+            var keyDocFee = insensitiveConditional.Where(c => c.Key.StartsWith(nameof(DocFee) + ".", StringComparison.OrdinalIgnoreCase));
+            var dicDocFee = new Dictionary<string, string>(keyDocFee.Select(c => new KeyValuePair<string, string>(c.Key.Replace(nameof(DocFee) + ".", string.Empty, StringComparison.OrdinalIgnoreCase), c.Value)));
+
+            // 处理特殊情况: balanceId 参数
+            var docFeeQuery = _DbContext.DocFees.Where(c => jobIds.Contains(c.JobId.Value));
+
+            // 检查是否有 balanceId 直接条件 (不带前缀的)
+            if (insensitiveConditional.TryGetValue("balanceId", out var directBalanceIdStr) &&
+                Guid.TryParse(directBalanceIdStr, out var directBalanceId))
+            {
+                // 应用 balanceId 过滤
+                docFeeQuery = docFeeQuery.Where(c => c.BalanceId == directBalanceId);
+            }
+
+            // 检查是否有 DocFee.balanceId 前缀形式的条件
+            if (dicDocFee.TryGetValue("balanceId", out var prefixedBalanceIdStr) &&
+                Guid.TryParse(prefixedBalanceIdStr, out var prefixedBalanceId))
+            {
+                // 应用 DocFee.balanceId 过滤
+                docFeeQuery = docFeeQuery.Where(c => c.BalanceId == prefixedBalanceId);
+                // 从条件中移除已处理的条件
+                dicDocFee.Remove("balanceId");
+            }
+
+            // 应用其他 DocFee 条件
+            var collDocFee = EfHelper.GenerateWhereAnd(docFeeQuery, dicDocFee);
 
             var collBase =
                 from fee in collDocFee
-                    //from job in collJob on fee.JobId equals job.Id 
                 join bill in collBill on fee.BillId equals bill.Id
                 select fee;
-            collBase = collBase.OrderBy(model.OrderFieldName, model.IsDesc);    //18210644348
+
+            collBase = collBase.OrderBy(model.OrderFieldName, model.IsDesc);
             collBase = collBase.Skip(model.StartIndex);
             if (model.Count > -1)
                 collBase = collBase.Take(model.Count);
@@ -1473,7 +1542,7 @@ namespace PowerLmsWebApi.Controllers
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
-        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 Error Code 。</response>  
         /// <response code="400">未找到指定的业务，或该业务不在初始创建状态——无法删除。</response>  
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">指定Id的业务单的账单不存在。</response>  
