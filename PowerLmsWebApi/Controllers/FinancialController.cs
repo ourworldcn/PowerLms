@@ -4,11 +4,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NPOI.SS.Formula.Functions;
 using NuGet.Packaging;
+using OW.Data;
 using PowerLms.Data;
 using PowerLmsServer;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
+using System.Linq;
 using System.Net;
 
 namespace PowerLmsWebApi.Controllers
@@ -570,56 +572,149 @@ namespace PowerLmsWebApi.Controllers
         /// 获取申请单明细增强接口功能。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">条件使用 [实体名.字段名] (带实体名前缀的需要方括号括住)格式,值格式参见通用格式。
-        /// 支持的实体名有：DocFeeRequisition,PlJob,DocFee,DocFeeRequisitionItem</param>
+        /// <param name="conditional">条件使用 实体名.字段名 格式，值格式参见通用格式。
+        /// 支持的实体名(不区分大小写)有：DocFeeRequisition,PlJob,DocFee,DocFeeRequisitionItem</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
         public ActionResult<GetDocFeeRequisitionItemReturnDto> GetDocFeeRequisitionItem([FromQuery] GetDocFeeRequisitionItemParamsDto model,
-            [FromQuery] Dictionary<string, string> conditional = null)
+            [FromQuery][ModelBinder(typeof(DotKeyDictionaryModelBinder))] Dictionary<string, string> conditional = null)
         {
-            //查询 需要返回 申请单 job 费用实体 申请明细的余额（未结算）
-            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            // 查询需要返回：申请单、job、费用实体、申请明细的余额（未结算）
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
+                return Unauthorized();
+
             var result = new GetDocFeeRequisitionItemReturnDto();
-            var dbSet = _DbContext.DocFeeRequisitionItems;
 
-            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-
-            var collDocFeeRequisitionItem = EfHelper.GenerateWhereAndWithEntityName(coll, conditional);
-
-            var collPlJob = EfHelper.GenerateWhereAndWithEntityName(_DbContext.PlJobs, conditional);
-
-            var collDocFee = EfHelper.GenerateWhereAndWithEntityName(_DbContext.DocFees, conditional);
-
-            var collDocFeeRequisitions = EfHelper.GenerateWhereAndWithEntityName(_DbContext.DocFeeRequisitions, conditional).Where(c => c.OrgId == context.User.OrgId);
-
-            var collTmp = from item in collDocFeeRequisitionItem
-                          join fee in collDocFee on item.FeeId equals fee.Id
-                          join job in collPlJob on fee.JobId equals job.Id
-                          join ri in collDocFeeRequisitions on item.ParentId equals ri.Id
-                          select item;
-
-            collTmp = collTmp.Distinct();
-            result.Total = collTmp.Count();
-            collTmp = collTmp.Skip(model.StartIndex);
-            if (model.Count > 0)
-                collTmp = collTmp.Take(model.Count);
-
-            var aryResult = collTmp.ToArray();
-
-            foreach (var item in aryResult)
+            try
             {
-                var tmp = new GetDocFeeRequisitionItemItem
+                // 创建各实体的条件字典（不区分大小写）
+                var itemConditions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                var jobConditions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                var feeConditions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                var requisitionConditions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+                // 将conditional中的条件按实体类型分类
+                if (conditional != null)
                 {
-                    DocFeeRequisitionItem = item,
-                    DocFeeRequisition = _DbContext.DocFeeRequisitions.First(c => c.Id == item.ParentId),
-                    DocFee = _DbContext.DocFees.First(c => c.Id == item.FeeId)
-                };
-                tmp.PlJob = _DbContext.PlJobs.First(c => c.Id == tmp.DocFee.JobId);
-                tmp.Remainder = item.Amount - _DbContext.PlInvoicesItems.Where(c => c.RequisitionItemId == item.Id).Sum(c => c.Amount);
-                result.Result.Add(tmp);
+                    foreach (var pair in conditional)
+                    {
+                        // 查找第一个点号
+                        int dotIndex = pair.Key.IndexOf('.');
+
+                        // 如果没有点号，则默认是DocFeeRequisitionItem的条件
+                        if (dotIndex < 0)
+                        {
+                            itemConditions[pair.Key] = pair.Value;
+                            continue;
+                        }
+
+                        // 提取实体名并标准化为小写
+                        string entityName = pair.Key.Substring(0, dotIndex).ToLowerInvariant();
+                        string propertyName = pair.Key.Substring(dotIndex + 1);
+
+                        // 按实体名分发条件
+                        switch (entityName)
+                        {
+                            case "docfeerequisitionitem":
+                                itemConditions[propertyName] = pair.Value;
+                                break;
+                            case "pljob":
+                                jobConditions[propertyName] = pair.Value;
+                                break;
+                            case "docfee":
+                                feeConditions[propertyName] = pair.Value;
+                                break;
+                            case "docfeerequisition":
+                                requisitionConditions[propertyName] = pair.Value;
+                                break;
+                        }
+                    }
+                }
+
+                // 向requisitionConditions添加组织ID限制
+                requisitionConditions["OrgId"] = context.User.OrgId.ToString();
+
+                // 应用各实体的筛选条件
+                var itemsQuery = EfHelper.GenerateWhereAnd(_DbContext.DocFeeRequisitionItems, itemConditions);
+                var jobsQuery = EfHelper.GenerateWhereAnd(_DbContext.PlJobs, jobConditions);
+                var feesQuery = EfHelper.GenerateWhereAnd(_DbContext.DocFees, feeConditions);
+                var requisitionsQuery = EfHelper.GenerateWhereAnd(_DbContext.DocFeeRequisitions, requisitionConditions);
+
+                // 使用联合查询，一次性获取所有需要的数据
+                var query = from item in itemsQuery
+                            join req in requisitionsQuery on item.ParentId equals req.Id
+                            join fee in feesQuery on item.FeeId equals fee.Id
+                            join job in jobsQuery on fee.JobId equals job.Id
+                            select new
+                            {
+                                item,
+                                req,
+                                fee,
+                                job
+                            };
+
+                // 应用排序
+                query = query.OrderBy(model.OrderFieldName, model.IsDesc);
+
+                // 计算总数
+                result.Total = query.Count();
+
+                // 应用分页
+                var pagedQuery = query.Skip(model.StartIndex);
+                if (model.Count > 0)
+                    pagedQuery = pagedQuery.Take(model.Count);
+
+                // 先获取实体数据，避免在后续步骤中再次查询数据库
+                var queryResults = pagedQuery.AsNoTracking().ToList();
+
+                // 获取所有请求项ID，用于查询已结算金额
+                var itemIds = queryResults.Select(x => x.item.Id).ToList();
+
+                // 修正：先在数据库级别执行分组和求和，然后获取数据到内存
+                var invoiceItems = _DbContext.PlInvoicesItems
+                    .Where(x => x.RequisitionItemId.HasValue && itemIds.Contains(x.RequisitionItemId.Value))
+                    .GroupBy(x => x.RequisitionItemId.Value)
+                    .Select(g => new { RequisitionItemId = g.Key, InvoicedAmount = g.Sum(x => x.Amount) })
+                    .AsNoTracking()
+                    .ToList();
+
+                // 在内存中创建字典
+                var invoicedAmounts = invoiceItems.ToDictionary(
+                    x => x.RequisitionItemId,
+                    x => x.InvoicedAmount
+                );
+
+                // 组装结果
+                foreach (var data in queryResults)
+                {
+                    var resultItem = new GetDocFeeRequisitionItemItem
+                    {
+                        DocFeeRequisitionItem = data.item,
+                        DocFeeRequisition = data.req,
+                        DocFee = data.fee,
+                        PlJob = data.job
+                    };
+
+                    // 计算余额：明细金额减去已结算金额
+                    decimal invoicedAmount = 0;
+                    if (invoicedAmounts.TryGetValue(data.item.Id, out var amount))
+                        invoicedAmount = amount;
+
+                    resultItem.Remainder = data.item.Amount - invoicedAmount;
+
+                    result.Result.Add(resultItem);
+                }
             }
+            catch (Exception ex)
+            {
+                _Logger.LogError(ex, "获取申请单明细时发生错误");
+                result.HasError = true;
+                result.ErrorCode = 500;
+                result.DebugMessage = $"获取申请单明细时发生错误: {ex.Message}";
+            }
+
             return result;
         }
 
