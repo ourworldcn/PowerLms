@@ -25,7 +25,7 @@ namespace PowerLms.Data
         public Guid? JobId { get; set; }
 
         /// <summary>
-        /// 账单号。
+        /// 账单号。关联<see cref="DocBill"/>。
         /// </summary>
         [Comment("账单表中的id")]
         public Guid? BillId { get; set; }

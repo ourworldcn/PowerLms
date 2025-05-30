@@ -152,6 +152,8 @@ namespace PowerLmsWebApi.Dto
 
     }
 
+    // 在 GetDocFeeRequisitionItemItem 类中添加 DocBill 属性
+
     /// <summary>
     /// 获取申请单明细增强接口功能的返回值中的元素类型。
     /// </summary>
@@ -178,11 +180,15 @@ namespace PowerLmsWebApi.Dto
         public DocFee DocFee { get; set; }
 
         /// <summary>
+        /// 相关的账单对象。
+        /// </summary>
+        public DocBill DocBill { get; set; }
+
+        /// <summary>
         /// 申请单明细对象未结算的剩余费用。
         /// </summary>
         public decimal Remainder { get; set; }
     }
-
 
     /// <summary>
     /// 增加新结算单明细功能参数封装类。

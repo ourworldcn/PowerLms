@@ -573,7 +573,7 @@ namespace PowerLmsWebApi.Controllers
         /// </summary>
         /// <param name="model"></param>
         /// <param name="conditional">条件使用 实体名.字段名 格式，值格式参见通用格式。
-        /// 支持的实体名(不区分大小写)有：DocFeeRequisition,PlJob,DocFee,DocFeeRequisitionItem</param>
+        /// 支持的实体名(不区分大小写)有：DocFeeRequisition,PlJob,DocFee,DocFeeRequisitionItem,DocBill</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
@@ -594,6 +594,7 @@ namespace PowerLmsWebApi.Controllers
                 var jobConditions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 var feeConditions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 var requisitionConditions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                var billConditions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase); // 新增DocBill条件字典
 
                 // 将conditional中的条件按实体类型分类
                 if (conditional != null)
@@ -629,6 +630,9 @@ namespace PowerLmsWebApi.Controllers
                             case "docfeerequisition":
                                 requisitionConditions[propertyName] = pair.Value;
                                 break;
+                            case "docbill": // 处理DocBill相关的条件
+                                billConditions[propertyName] = pair.Value;
+                                break;
                         }
                     }
                 }
@@ -641,22 +645,27 @@ namespace PowerLmsWebApi.Controllers
                 var jobsQuery = EfHelper.GenerateWhereAnd(_DbContext.PlJobs, jobConditions);
                 var feesQuery = EfHelper.GenerateWhereAnd(_DbContext.DocFees, feeConditions);
                 var requisitionsQuery = EfHelper.GenerateWhereAnd(_DbContext.DocFeeRequisitions, requisitionConditions);
+                var billsQuery = EfHelper.GenerateWhereAnd(_DbContext.DocBills, billConditions); // 应用DocBill的条件
 
-                // 使用联合查询，一次性获取所有需要的数据
-                var query = from item in itemsQuery
+                // 先对DocFeeRequisitionItem排序，然后再进行连接查询
+                var orderedItemsQuery = itemsQuery.OrderBy(model.OrderFieldName, model.IsDesc);
+
+                // 构建包含DocBill的复合查询
+                var query = from item in orderedItemsQuery
                             join req in requisitionsQuery on item.ParentId equals req.Id
                             join fee in feesQuery on item.FeeId equals fee.Id
                             join job in jobsQuery on fee.JobId equals job.Id
+                            // 左连接DocBill（因为DocFee.BillId可能为空）
+                            join bill in billsQuery on fee.BillId equals bill.Id into billGroup
+                            from bill in billGroup.DefaultIfEmpty()
                             select new
                             {
                                 item,
                                 req,
                                 fee,
-                                job
+                                job,
+                                bill
                             };
-
-                // 应用排序
-                query = query.OrderBy(model.OrderFieldName, model.IsDesc);
 
                 // 计算总数
                 result.Total = query.Count();
@@ -694,7 +703,8 @@ namespace PowerLmsWebApi.Controllers
                         DocFeeRequisitionItem = data.item,
                         DocFeeRequisition = data.req,
                         DocFee = data.fee,
-                        PlJob = data.job
+                        PlJob = data.job,
+                        DocBill = data.bill // 添加DocBill对象
                     };
 
                     // 计算余额：明细金额减去已结算金额
