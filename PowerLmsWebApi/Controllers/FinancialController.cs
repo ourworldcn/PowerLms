@@ -655,9 +655,7 @@ namespace PowerLmsWebApi.Controllers
                             join req in requisitionsQuery on item.ParentId equals req.Id
                             join fee in feesQuery on item.FeeId equals fee.Id
                             join job in jobsQuery on fee.JobId equals job.Id
-                            // 左连接DocBill（因为DocFee.BillId可能为空）
-                            join bill in billsQuery on fee.BillId equals bill.Id into billGroup
-                            from bill in billGroup.DefaultIfEmpty()
+                            join bill in billsQuery on fee.BillId equals bill.Id //into billGroup from bill in billGroup.DefaultIfEmpty()// 左连接DocBill（因为DocFee.BillId可能为空）
                             select new
                             {
                                 item,
