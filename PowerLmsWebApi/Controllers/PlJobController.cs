@@ -6,6 +6,7 @@ using PowerLmsServer;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
+using System.Linq.Expressions;
 using System.Net;
 
 namespace PowerLmsWebApi.Controllers
@@ -1006,6 +1007,253 @@ namespace PowerLmsWebApi.Controllers
             _Mapper.Map(prb, result);
             return result;
 
+        }
+
+        /// <summary>
+        /// 批量查询费用接口V2，支持多实体复合条件查询。注意设置权限。
+        /// </summary>
+        /// <param name="model">分页和排序参数</param>
+        /// <param name="conditional">通用查询条件字典。键是实体名.实体字段名，值是条件值。省略实体名则认为是 DocFee的实体属性。
+        /// </param>
+        /// <returns>符合条件的费用实体列表</returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
+        [HttpGet]
+        public ActionResult<GetAllDocFeeV2ReturnDto> GetAllDocFeeV2(
+            [FromQuery] GetAllDocFeeV2ParamsDto model,
+            [FromQuery][ModelBinder(typeof(DotKeyDictionaryModelBinder))] Dictionary<string, string> conditional = null)
+        {
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
+                return Unauthorized();
+
+            var result = new GetAllDocFeeV2ReturnDto();
+
+            try
+            {
+                // 条件字典初始化（不区分大小写）
+                var docFeeConditional = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                var jobConditional = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                var billConditional = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+                // 一次遍历完成所有条件解析
+                if (conditional != null)
+                {
+                    foreach (var pair in conditional)
+                    {
+                        string key = pair.Key;
+                        int dotIndex = key.IndexOf('.');
+
+                        if (dotIndex > 0)
+                        {
+                            // 有实体前缀的条件
+                            string entityName = key.Substring(0, dotIndex).ToLowerInvariant();
+                            string propertyName = key.Substring(dotIndex + 1);
+
+                            switch (entityName)
+                            {
+                                case "pljob":
+                                    jobConditional[propertyName] = pair.Value;
+                                    break;
+                                case "docbill":
+                                    billConditional[propertyName] = pair.Value;
+                                    break;
+                                case "docfee":
+                                    docFeeConditional[propertyName] = pair.Value;
+                                    break;
+                                default:
+                                    // 未知实体前缀，作为DocFee条件处理
+                                    docFeeConditional[key] = pair.Value;
+                                    break;
+                            }
+                        }
+                        else
+                        {
+                            // 无实体前缀的条件默认为DocFee属性
+                            docFeeConditional[key] = pair.Value;
+                        }
+                    }
+                }
+
+                // 添加组织ID限制（安全检查）
+                jobConditional["OrgId"] = context.User.OrgId.ToString();
+
+                // 构建主查询（最初不执行，仅构建表达式）
+                IQueryable<DocFee> feeQuery = _DbContext.DocFees.AsQueryable();
+
+                // 如果有工作任务条件，应用关联
+                if (jobConditional.Count > 0)
+                {
+                    var jobQuery = _DbContext.PlJobs.AsQueryable();
+                    jobQuery = EfHelper.GenerateWhereAnd(jobQuery, jobConditional);
+
+                    // 获取符合条件的工作ID
+                    var filteredJobIds = jobQuery.Select(j => j.Id).ToList();
+                    if (filteredJobIds.Any())
+                    {
+                        feeQuery = feeQuery.Where(f => f.JobId.HasValue && filteredJobIds.Contains(f.JobId.Value));
+                    }
+                    else
+                    {
+                        // 没有符合条件的工作，返回空结果
+                        feeQuery = feeQuery.Where(f => false);
+                        result.Total = 0;
+                        return result;
+                    }
+                }
+
+                // 如果有账单条件，应用关联
+                if (billConditional.Count > 0)
+                {
+                    var billQuery = _DbContext.DocBills.AsQueryable();
+                    billQuery = EfHelper.GenerateWhereAnd(billQuery, billConditional);
+
+                    // 获取符合条件的账单ID
+                    var filteredBillIds = billQuery.Select(b => b.Id).ToList();
+                    if (filteredBillIds.Any())
+                    {
+                        feeQuery = feeQuery.Where(f => f.BillId.HasValue && filteredBillIds.Contains(f.BillId.Value));
+                    }
+                    else
+                    {
+                        // 没有符合条件的账单，返回空结果
+                        feeQuery = feeQuery.Where(f => false);
+                        result.Total = 0;
+                        return result;
+                    }
+                }
+
+                // 应用DocFee自身的条件过滤
+                feeQuery = EfHelper.GenerateWhereAnd(feeQuery, docFeeConditional);
+
+                // 应用排序
+                feeQuery = feeQuery.OrderBy(model.OrderFieldName, model.IsDesc);
+
+                // 权限检查
+                string err;
+                bool hasGeneralPermission = _AuthorizationManager.Demand(out err, "F.2.4.2");
+
+                if (!hasGeneralPermission)
+                {
+                    // 获取用户所在组织的所有用户ID
+                    var orgs = _OrganizationManager.GetOrLoadCurrentOrgsByUser(context.User);
+                    var orgIds = orgs.Keys.ToArray();
+                    var userIds = _DbContext.AccountPlOrganizations
+                        .Where(c => orgIds.Contains(c.OrgId))
+                        .Select(c => c.UserId)
+                        .Distinct()
+                        .ToList();
+
+                    // 预先加载相关的工作任务
+                    var accessibleJobIds = new HashSet<Guid>();
+                    var relatedJobInfo = _DbContext.PlJobs
+                        .Where(j => feeQuery.Any(f => f.JobId == j.Id))
+                        .Select(j => new { j.Id, j.JobTypeId, j.OperatorId })
+                        .ToList();
+
+                    if (relatedJobInfo.Any())
+                    {
+                        // 检查各业务类型的权限
+                        CheckPermissions("D0.6.2", ProjectContent.AeId);
+                        CheckPermissions("D1.6.2", ProjectContent.AiId);
+                        CheckPermissions("D2.6.2", ProjectContent.SeId);
+                        CheckPermissions("D3.6.2", ProjectContent.SiId);
+                        CheckPermissions("D4.6.2", ProjectContent.JeId);
+                        CheckPermissions("D5.6.2", ProjectContent.JiId);
+                        CheckPermissions("D6.6.2", ProjectContent.ReId);
+                        CheckPermissions("D7.6.2", ProjectContent.RiId);
+                        CheckPermissions("D8.6.2", ProjectContent.OtId);
+                        CheckPermissions("D9.6.2", ProjectContent.WhId);
+
+                        // 本地函数：检查权限
+                        void CheckPermissions(string prefix, Guid typeId)
+                        {
+                            var typeJobs = relatedJobInfo.Where(j => j.JobTypeId == typeId).ToList();
+                            if (!typeJobs.Any()) return;
+
+                            if (_AuthorizationManager.Demand(out err, $"{prefix}.3")) // 公司级别权限
+                            {
+                                foreach (var job in typeJobs)
+                                {
+                                    accessibleJobIds.Add(job.Id);
+                                }
+                            }
+                            else if (_AuthorizationManager.Demand(out err, $"{prefix}.2")) // 同组级别权限
+                            {
+                                foreach (var job in typeJobs)
+                                {
+                                    if (job.OperatorId.HasValue && userIds.Contains(job.OperatorId.Value))
+                                    {
+                                        accessibleJobIds.Add(job.Id);
+                                    }
+                                }
+                            }
+                            else if (_AuthorizationManager.Demand(out err, $"{prefix}.1")) // 本人级别权限
+                            {
+                                foreach (var job in typeJobs)
+                                {
+                                    if (job.OperatorId == context.User.Id)
+                                    {
+                                        accessibleJobIds.Add(job.Id);
+                                    }
+                                }
+                            }
+                        }
+
+                        // 应用权限过滤
+                        if (accessibleJobIds.Any())
+                        {
+                            feeQuery = feeQuery.Where(f => f.JobId.HasValue && accessibleJobIds.Contains(f.JobId.Value));
+                        }
+                        else
+                        {
+                            // 没有权限访问任何记录
+                            feeQuery = feeQuery.Where(f => false);
+                        }
+                    }
+                    else
+                    {
+                        // 没有相关工作任务，返回空结果
+                        feeQuery = feeQuery.Where(f => false);
+                    }
+                }
+
+                // 获取总数（必须在应用分页前进行）
+                result.Total = feeQuery.Count();
+
+                // 应用分页并执行查询
+                result.Result = feeQuery
+                    .Skip(model.StartIndex)
+                    .Take(model.Count > 0 ? model.Count : int.MaxValue)
+                    .ToList();
+            }
+            catch (Exception ex)
+            {
+                _Logger.LogError(ex, "批量查询费用V2时发生错误");
+                result.HasError = true;
+                result.ErrorCode = 500;
+                result.DebugMessage = $"批量查询费用V2时发生错误: {ex.Message}";
+            }
+
+            return result;
+        }
+
+        // 参数替换类（用于表达式树合并）
+        private class ParameterReplacer : ExpressionVisitor
+        {
+            private readonly ParameterExpression _oldParameter;
+            private readonly ParameterExpression _newParameter;
+
+            public ParameterReplacer(ParameterExpression oldParameter, ParameterExpression newParameter)
+            {
+                _oldParameter = oldParameter;
+                _newParameter = newParameter;
+            }
+
+            protected override Expression VisitParameter(ParameterExpression node)
+            {
+                return ReferenceEquals(node, _oldParameter) ? _newParameter : base.VisitParameter(node);
+            }
         }
 
         /// <summary>

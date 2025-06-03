@@ -343,6 +343,20 @@ namespace PowerLmsWebApi.Controllers
     }
 
     /// <summary>
+    /// 批量查询费用V2功能的参数封装类。
+    /// </summary>
+    public class GetAllDocFeeV2ParamsDto : PagingParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 批量查询费用V2功能的返回值封装类。
+    /// </summary>
+    public class GetAllDocFeeV2ReturnDto : PagingReturnDtoBase<DocFee>
+    {
+    }
+
+    /// <summary>
     /// 获取所有业务单的费用单功能的返回值封装类。
     /// </summary>
     public class GetAllDocFeeReturnDto : PagingReturnDtoBase<DocFee>
