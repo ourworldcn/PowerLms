@@ -1,5 +1,4 @@
-﻿
-using AutoMapper;
+﻿using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PowerLms.Data;
@@ -786,55 +785,46 @@ namespace PowerLmsWebApi.Controllers
                             _Logger.LogInformation($"将使用沙箱模式开具发票，发票ID: {taxInvoiceInfo.Id}");
                         }
 
-                        // 异步处理开票请求，避免阻塞当前请求
-                        Task.Run(() =>
+                        // 处理开票请求
+                        try
                         {
-                            try
+                            _Logger.LogInformation($"开始调用诺诺开票接口，发票ID: {taxInvoiceInfo.Id}, 沙箱模式: {model.UseSandbox}, 回调地址: {taxInvoiceInfo.CallbackUrl}");
+
+                            // 调用开票接口，传入沙箱模式参数
+                            var issueResult = nuoNuoManager.IssueInvoice(taxInvoiceInfo.Id, model.UseSandbox);
+
+                            if (issueResult.Success)
                             {
-                                _Logger.LogInformation($"开始调用诺诺开票接口，发票ID: {taxInvoiceInfo.Id}, 沙箱模式: {model.UseSandbox}, 回调地址: {taxInvoiceInfo.CallbackUrl}");
+                                _Logger.LogInformation($"调用诺诺开票接口成功，发票ID: {taxInvoiceInfo.Id}");
+                            }
+                            else
+                            {
+                                _Logger.LogWarning($"调用诺诺开票接口失败，发票ID: {taxInvoiceInfo.Id}, 错误: {issueResult.ErrorMessage}, 错误代码: {issueResult.ErrorCode}");
 
-                                // 调用开票接口，传入沙箱模式参数
-                                var issueResult = nuoNuoManager.IssueInvoice(taxInvoiceInfo.Id, model.UseSandbox);
-
-                                if (issueResult.Success)
+                                // 如果开票失败，直接在当前上下文中更新错误信息
+                                // 重新获取最新的发票信息
+                                var invoice = _DbContext.TaxInvoiceInfos.Find(taxInvoiceInfo.Id);
+                                if (invoice != null)
                                 {
-                                    _Logger.LogInformation($"调用诺诺开票接口成功，发票ID: {taxInvoiceInfo.Id}");
-                                }
-                                else
-                                {
-                                    _Logger.LogWarning($"调用诺诺开票接口失败，发票ID: {taxInvoiceInfo.Id}, 错误: {issueResult.ErrorMessage}, 错误代码: {issueResult.ErrorCode}");
-
-                                    // 如果开票失败，记录错误信息
-                                    using (var scope = _ServiceProvider.CreateScope())
-                                    {
-                                        var dbContext = scope.ServiceProvider.GetRequiredService<PowerLmsUserDbContext>();
-                                        var invoice = dbContext.TaxInvoiceInfos.Find(taxInvoiceInfo.Id);
-                                        if (invoice != null)
-                                        {
-                                            // 记录错误信息
-                                            invoice.SellerInvoiceData = $"{{\"errorCode\": \"{issueResult.ErrorCode}\", \"errorMessage\": \"{issueResult.ErrorMessage}\", \"sandbox\": {model.UseSandbox.ToString().ToLower()}}}";
-                                            dbContext.SaveChanges();
-                                        }
-                                    }
+                                    // 记录错误信息
+                                    invoice.SellerInvoiceData = $"{{\"errorCode\": \"{issueResult.ErrorCode}\", \"errorMessage\": \"{issueResult.ErrorMessage}\", \"sandbox\": {model.UseSandbox.ToString().ToLower()}}}";
+                                    _DbContext.SaveChanges();
                                 }
                             }
-                            catch (Exception ex)
-                            {
-                                _Logger.LogError(ex, $"调用诺诺开票接口时发生异常，发票ID: {taxInvoiceInfo.Id}");
+                        }
+                        catch (Exception ex)
+                        {
+                            _Logger.LogError(ex, $"调用诺诺开票接口时发生异常，发票ID: {taxInvoiceInfo.Id}");
 
-                                // 记录异常信息
-                                using (var scope = _ServiceProvider.CreateScope())
-                                {
-                                    var dbContext = scope.ServiceProvider.GetRequiredService<PowerLmsUserDbContext>();
-                                    var invoice = dbContext.TaxInvoiceInfos.Find(taxInvoiceInfo.Id);
-                                    if (invoice != null)
-                                    {
-                                        invoice.SellerInvoiceData = $"{{\"errorMessage\": \"系统异常: {ex.Message.Replace("\"", "\\\"")}\", \"sandbox\": {model.UseSandbox.ToString().ToLower()}}}";
-                                        dbContext.SaveChanges();
-                                    }
-                                }
+                            // 记录异常信息，直接在当前上下文中更新
+                            // 重新获取最新的发票信息
+                            var invoice = _DbContext.TaxInvoiceInfos.Find(taxInvoiceInfo.Id);
+                            if (invoice != null)
+                            {
+                                invoice.SellerInvoiceData = $"{{\"errorMessage\": \"系统异常: {ex.Message.Replace("\"", "\\\"")}\", \"sandbox\": {model.UseSandbox.ToString().ToLower()}}}";
+                                _DbContext.SaveChanges();
                             }
-                        });
+                        }
                     }
                     else
                     {
@@ -1056,7 +1046,8 @@ namespace PowerLmsWebApi.Controllers
             //增加
             var addIds = aryIds.Except(existsIds).ToArray();
             var adds = model.Items.Where(c => addIds.Contains(c.Id)).ToArray();
-            Array.ForEach(adds, c => {
+            Array.ForEach(adds, c =>
+            {
                 c.GenerateNewId();
                 c.ParentId = taxInvoiceInfo.Id; // 确保设置父ID
             });
