@@ -179,6 +179,13 @@ namespace OW.EntityFrameworkCore
         /// <param name="e">事件参数。</param>
         private void OnSavingChanges(object sender, SavingChangesEventArgs e)
         {
+            bool isRootContainer = _ServiceProvider is IServiceScopeFactory;
+            if (isRootContainer)   // 如果是根容器，则不处理保存事件
+            {
+                // 记录中文的一般信息日志
+                _Logger.LogInformation("OwDbContext.OnSavingChanges: 根容器不处理保存事件。请在具体的 DbContext 实例中处理。");
+                return;
+            }
             var context = (OwDbContext)sender;
 
             // 用于跟踪已处理的实体条目
