@@ -27,7 +27,7 @@ namespace PowerLmsServer.Managers
     /// <summary>
     /// 诺诺发票服务类，包含获取访问令牌和创建发票的具体实现。
     /// </summary>
-    [Guid("A08D3ECD-57CF-4E4E-B8F1-6B7C5B7F96E9")]
+    [Guid("A08D3ECD-57CF-4E4E-B8F1-6B7C5B7F96E9")]  // 这个GUID是诺诺发票渠道的唯一标识符 [TaxInvoiceChannels].[Id]与之对应
     public class NuoNuoManager
     {
         /// <summary>
@@ -567,7 +567,7 @@ namespace PowerLmsServer.Managers
                 var responseContent = responseContentTask.Result;
 
                 // 处理响应
-                var result = JsonSerializer.Deserialize<NuoNuoInvoiceResponse>(responseContent, options);
+                var result = JsonSerializer.Deserialize<NuoNuoInvoiceResponse>(responseContent.ToString(), options);
 
                 if (result != null && result.Code == "E0000")
                 {

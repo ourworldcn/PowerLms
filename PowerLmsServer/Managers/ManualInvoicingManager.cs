@@ -12,7 +12,7 @@ namespace PowerLmsServer.Managers
     /// 手工开票管理器。
     /// </summary>
     [Guid("3F2CD8B7-6A48-4D1E-95A4-F0FAFD2F7670")]
-    public class ManualInvoicingManager
+    public class ManualInvoicingManager // 这个GUID是诺诺发票渠道的唯一标识符 [TaxInvoiceChannels].[Id]与之对应
     {
     }
 

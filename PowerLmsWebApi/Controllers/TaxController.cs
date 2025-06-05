@@ -772,6 +772,16 @@ namespace PowerLmsWebApi.Controllers
                 // 保存状态变更
                 _DbContext.SaveChanges();
 
+                // 判断是否需要调用诺诺开票接口
+                if (taxInvoiceInfo.TaxInvoiceChannelAccountlId == null ||
+                    _DbContext.TaxInvoiceChannelAccounts.Find(taxInvoiceInfo.TaxInvoiceChannelAccountlId) is not TaxInvoiceChannelAccount tica ||
+                    tica.ParentlId is null ||
+                    _DbContext.TaxInvoiceChannels.Find(tica.ParentlId) is not TaxInvoiceChannel tic ||
+                    tic.Id != typeof(NuoNuoManager).GUID)
+                {
+                    _Logger.LogInformation($"发票信息 {taxInvoiceInfo.Id} 没有指定诺诺渠道账号，无法调用开票接口");
+                    return result;
+                }
                 // 在状态成功变更为审核通过(1)后，调用诺诺开票接口
                 try
                 {

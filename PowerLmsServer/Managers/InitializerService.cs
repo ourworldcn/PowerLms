@@ -64,11 +64,11 @@ namespace PowerLmsServer.Managers
         /// <returns></returns>
         protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            CreateDb();
             var task = Task.Run(() =>
             {
                 using var scope = _ServiceScopeFactory.CreateScope();
                 var svc = scope.ServiceProvider;
+                InitDb(svc);
                 CreateSystemResource(svc);
                 InitializeDataDic(svc);
                 CreateAdmin(svc);
@@ -77,6 +77,36 @@ namespace PowerLmsServer.Managers
             }, CancellationToken.None);
             _Logger.LogInformation("Plms服务成功上线");
             return task;
+        }
+
+        /// <summary>
+        /// 初始化所有数据库所需的数据。
+        /// </summary>
+        /// <param name="svc"></param>
+        private void InitDb(IServiceProvider svc)
+        {
+            var db = svc.GetRequiredService<PowerLmsUserDbContext>();
+            #region 税务发票通道初始数据
+            db.AddOrUpdate(
+                new TaxInvoiceChannel
+                {
+                    Id = typeof(NuoNuoManager).GUID,
+                    DisplayName = "诺诺发票",
+                    InvoiceChannel = nameof(NuoNuoManager),
+                    InvoiceChannelParams = "{}",
+                });
+            db.AddOrUpdate(
+                new TaxInvoiceChannel
+                {
+                    Id = typeof(ManualInvoicingManager).GUID,
+                    DisplayName = "手工开票",
+                    InvoiceChannel = nameof(ManualInvoicingManager),
+                    InvoiceChannelParams = "{}",
+                }
+            );
+            #endregion 税务发票通道初始数据
+
+
         }
 
         /// <summary>
@@ -158,26 +188,6 @@ namespace PowerLmsServer.Managers
                     ParentId = inv.Id,
                 });
             }
-            #region 税务发票通道初始数据
-            db.AddOrUpdate(
-                new TaxInvoiceChannel
-                {
-                    Id = typeof(NuoNuoManager).GUID,
-                    DisplayName = "诺诺发票",
-                    InvoiceChannel = nameof(NuoNuoManager),
-                    InvoiceChannelParams = "{}",
-                });
-            db.AddOrUpdate(
-                new TaxInvoiceChannel
-                {
-                    Id = typeof(ManualInvoicingManager).GUID,
-                    DisplayName = "手工开票",
-                    InvoiceChannel = nameof(ManualInvoicingManager),
-                    InvoiceChannelParams = "{}",
-                }
-            );
-            #endregion 税务发票通道初始数据
-
             db.SaveChanges();
         }
 
@@ -282,31 +292,6 @@ namespace PowerLmsServer.Managers
             var nn = _ServiceProvider.GetRequiredService<NuoNuoManager>();
             nn.IssueInvoice(Guid.Parse("29DC0DA1-C1AB-4EB1-98D8-6B7F5339381E"));
         }
-
-        private void CreateDb()
-        {
-            using var scope = _ServiceScopeFactory.CreateScope();
-            var svc = scope.ServiceProvider;
-            try
-            {
-                var db = svc.GetRequiredService<PowerLmsUserDbContext>();
-                MigrateDbInitializer.Initialize(db);
-                db.SaveChanges();
-                _Logger.LogTrace("用户数据库已正常升级。");
-                //var loggingDb = services.GetService<GameLoggingDbContext>();
-                //if (loggingDb != null)
-                //{
-                //    GameLoggingMigrateDbInitializer.Initialize(loggingDb);
-                //    logger.LogTrace("日志数据库已正常升级。");
-                //}
-            }
-            catch (Exception err)
-            {
-                _Logger.LogError(err, "升级数据库出现错误。");
-            }
-
-        }
-
 
     }
 }

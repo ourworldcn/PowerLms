@@ -28,6 +28,11 @@ internal class Program
 
         var config = app.Configuration;
 
+        #region 自动迁移数据库所有挂起的迁移
+        var dbContextFactory = app.Services.GetRequiredService<IDbContextFactory<PowerLmsUserDbContext>>();
+        var dbContext = dbContextFactory.CreateDbContext();
+        dbContext.Database.Migrate(); //自动迁移数据库所有挂起的迁移
+        #endregion 自动迁移数据库所有挂起的迁移
         //app.UseRouting();
 
         // Configure the HTTP request pipeline.

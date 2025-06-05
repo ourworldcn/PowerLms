@@ -22,25 +22,6 @@ using System.Threading.Tasks;
 namespace PowerLmsServer.EfData
 {
     /// <summary>
-    /// 
-    /// </summary>
-    public static class MigrateDbInitializer
-    {
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="context"></param>
-        public static void Initialize(PowerLmsUserDbContext context)
-        {
-            if (context.Database.GetPendingMigrations().Any())
-            {
-                context.Database.Migrate();
-            }
-
-        }
-    }
-
-    /// <summary>
     /// 项目使用的主要数据库上下文。
     /// </summary>
     public class PowerLmsUserDbContext : OwDbContext

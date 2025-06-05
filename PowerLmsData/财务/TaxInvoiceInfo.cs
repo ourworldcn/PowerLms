@@ -20,7 +20,7 @@ namespace PowerLms.Data
     public class TaxInvoiceInfo : GuidKeyObjectBase
     {
         #region 基本信息
-        /// <summary>开票渠道Id。关联到<see cref="TaxInvoiceChannelAccount"/>。</summary>
+        /// <summary>开票渠道账号Id。关联到<see cref="TaxInvoiceChannelAccount"/>。</summary>
         [Comment("开票渠道Id")]
         public Guid? TaxInvoiceChannelAccountlId { get; set; }
 
