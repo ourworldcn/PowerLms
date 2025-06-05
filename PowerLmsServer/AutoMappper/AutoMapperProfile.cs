@@ -135,7 +135,7 @@ namespace PowerLmsServer.AutoMappper
                 .ForMember(dest => dest.WithTaxFlag, opt => opt.MapFrom(src => 0)) // 不含税
 
                 // 数量和单价映射
-                .ForMember(dest => dest.Price, opt => opt.MapFrom(src => src.UnitPrice.ToString("0.00")))
+                .ForMember(dest => dest.Price, opt => opt.MapFrom(src => src.UnitPrice.ToString("0.00000000")))
                 .ForMember(dest => dest.Num, opt => opt.MapFrom(src => src.Quantity.ToString("0.00000000")))
 
                 // 税率映射

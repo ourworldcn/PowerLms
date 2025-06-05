@@ -244,7 +244,109 @@ namespace PowerLmsServer.Managers
 
         /// <summary>响应结果</summary>
         [JsonPropertyName("result")]
+        [JsonConverter(typeof(NuoNuoResponseResultConverter))]
         public NuoNuoInvoiceResponseResult Result { get; set; }
+    }
+
+    /// <summary>
+    /// 处理诺诺发票响应结果字段的自定义JsonConverter
+    /// 当Code="E0000"时，将响应解析为NuoNuoInvoiceResponseResult对象
+    /// 当Code!="E0000"时，可能返回字符串或其他格式
+    /// </summary>
+    public class NuoNuoResponseResultConverter : JsonConverter<NuoNuoInvoiceResponseResult>
+    {
+        public override NuoNuoInvoiceResponseResult Read(
+            ref Utf8JsonReader reader,
+            Type typeToConvert,
+            JsonSerializerOptions options)
+        {
+            // 保存当前位置
+            var readerClone = reader;
+
+            // 尝试将其作为对象读取
+            try
+            {
+                if (reader.TokenType == JsonTokenType.StartObject)
+                {
+                    // 是一个对象，创建结果实例
+                    NuoNuoInvoiceResponseResult result = new NuoNuoInvoiceResponseResult();
+
+                    // 读取对象开始标记
+                    reader.Read();
+
+                    // 读取对象内容
+                    while (reader.TokenType != JsonTokenType.EndObject)
+                    {
+                        // 当前是属性名
+                        if (reader.TokenType == JsonTokenType.PropertyName)
+                        {
+                            string propertyName = reader.GetString();
+                            reader.Read(); // 移动到属性值
+
+                            if (propertyName.Equals("invoiceSerialNum", StringComparison.OrdinalIgnoreCase))
+                            {
+                                result.InvoiceSerialNum = reader.GetString();
+                            }
+                            // 可以处理其他可能的属性...
+                        }
+
+                        // 移动到下一个Token
+                        reader.Read();
+                    }
+
+                    return result;
+                }
+                else if (reader.TokenType == JsonTokenType.String)
+                {
+                    // 当返回值是字符串时，我们创建一个空的结果对象
+                    // 可以考虑将字符串值保存到某个属性中
+                    var strValue = reader.GetString();
+                    return new NuoNuoInvoiceResponseResult
+                    {
+                        // 可以根据需要处理字符串值
+                        // 例如: ErrorMessage = strValue
+                    };
+                }
+                else if (reader.TokenType == JsonTokenType.Null)
+                {
+                    // 处理null值
+                    return null;
+                }
+            }
+            catch
+            {
+                // 如果解析失败，返回null或默认对象
+                return null;
+            }
+
+            // 默认返回null
+            return null;
+        }
+
+        public override void Write(
+            Utf8JsonWriter writer,
+            NuoNuoInvoiceResponseResult value,
+            JsonSerializerOptions options)
+        {
+            // 写入NuoNuoInvoiceResponseResult对象
+            if (value == null)
+            {
+                writer.WriteNullValue();
+                return;
+            }
+
+            writer.WriteStartObject();
+
+            if (!string.IsNullOrEmpty(value.InvoiceSerialNum))
+            {
+                writer.WritePropertyName("invoiceSerialNum");
+                writer.WriteStringValue(value.InvoiceSerialNum);
+            }
+
+            // 可以写入其他属性...
+
+            writer.WriteEndObject();
+        }
     }
 
     /// <summary>诺诺开票响应结果类</summary>

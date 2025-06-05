@@ -30,19 +30,29 @@ PowerLms 是一个专注于货代行业的管理系统（LMS），基于 C# 和 .NET6 技术栈开发。
 
 ## 文档与规范
 
-- **[编码规范（CODE_STYLE）](docs/CODE_STYLE.md)**  
+- **[编码规范（CODE_STYLE）](Docs/CODE_STYLE.md)**  
   请所有贡献者务必阅读并遵守此规范。
 
-- **[设计偏好指南（DESIGN_PREFERENCE_GUIDE）](docs/DESIGN_PREFERENCE_GUIDE.md)**  
+- **[设计偏好指南（DESIGN_PREFERENCE_GUIDE）](Docs/DESIGN_PREFERENCE_GUIDE.md)**  
   了解团队在架构和设计上的主要偏好。
 
-- 其他文档详见 [docs/](docs/) 目录。
+- 其他文档详见 [Docs/](Docs/) 目录。
 
 ---
 
 ## 贡献指南
 
 欢迎各位参与贡献！请先阅读 [CONTRIBUTING.md](CONTRIBUTING.md) 以了解提交流程和要求。
+
+## 开发贡献
+
+如果您想为项目做出贡献，请遵循以下步骤：
+
+1. Fork 这个仓库。
+2. 创建您的特性分支 (`git checkout -b feature/YourFeature`)。
+3. 提交您的更改 (`git commit -m 'Add some feature'`)。
+4. 推送到分支 (`git push origin feature/YourFeature`)。
+5. 创建一个新的 Pull Request。
 
 ---
 

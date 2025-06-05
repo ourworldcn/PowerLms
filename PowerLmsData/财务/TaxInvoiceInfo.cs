@@ -256,12 +256,18 @@ namespace PowerLms.Data
         #region 金额信息
         /// <summary>数量。需要正确传入。</summary>
         [Comment("数量")]
+        [Precision(18, 8)]
         public decimal Quantity { get; set; }
 
         /// <summary>单价（不含税）。需要正确传入。</summary>
         [Comment("单价（不含税）")]
-        [Precision(18, 2)]
+        [Precision(18, 8)]
         public decimal UnitPrice { get; set; }
+
+        /// <summary>含税单价,服务器不使用。</summary>
+        [Comment("含税单价,服务器不使用")]
+        [Precision(18, 8)]
+        public decimal UnitPriceInclusiveTax { get; set; }
 
         /// <summary>税率。需要正确传入。</summary>
         [Comment("税率")]

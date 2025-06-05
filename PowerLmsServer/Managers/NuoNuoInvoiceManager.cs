@@ -567,7 +567,7 @@ namespace PowerLmsServer.Managers
                 var responseContent = responseContentTask.Result;
 
                 // 处理响应
-                var result = JsonSerializer.Deserialize<NuoNuoInvoiceResponse>(responseContent.ToString(), options);
+                var result = JsonSerializer.Deserialize<NuoNuoInvoiceResponse>(responseContent, options);
 
                 if (result != null && result.Code == "E0000")
                 {
@@ -877,7 +877,7 @@ namespace PowerLmsServer.Managers
                     GoodsName = item.GoodsName,
                     Unit = "台",
                     SpecType = "规格型号",
-                    WithTaxFlag = 0, // 含税
+                    WithTaxFlag = 0, // 不含税
                     Price = item.UnitPrice.ToString("0.00"),
                     Num = item.Quantity.ToString(),
                     TaxRate = item.TaxRate,
