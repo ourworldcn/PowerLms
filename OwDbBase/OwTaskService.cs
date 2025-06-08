@@ -13,6 +13,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace OwDbBase.Tasks
 {
@@ -499,6 +500,10 @@ namespace OwDbBase.Tasks
     [Index(nameof(StatusValue))]
     public class OwTaskStore : GuidKeyObjectBase
     {
+        public OwTaskStore()
+        {
+        }
+
         /// <summary>服务类型名称。</summary>
         [Comment("要执行的服务类型的完整名称")]
         public string ServiceTypeName { get; set; }
