@@ -329,8 +329,7 @@ namespace PowerLms.Data
                             if (db.Set<DocFeeRequisition>().Find(item.DocFeeRequisitionId.GetValueOrDefault()) is DocFeeRequisition requisition)
                             {
                                 requisition.TaxInvoiceId = item.Id;
-                                if (db.Entry(requisition).Property(c => c.InvoiceNumber).IsModified)
-                                    requisition.InvoiceNumber = item.InvoiceNumber;
+                                requisition.InvoiceNumber = item.InvoiceNumber;
                             }
                         }
                         break;

@@ -209,27 +209,11 @@ namespace PowerLmsWebApi.Controllers
                     // 已成功开票 - 状态2表示已开票
                     invoiceInfo.State = 2; // 保持状态值为2，表示已开票
 
-                    // 更新发票基本信息
-                    if (invoiceData.TryGetValue("c_fpdm", out var fpdm) && fpdm.ValueKind != JsonValueKind.Undefined)
-                    {
-                        string fpdmValue = fpdm.GetString();
-                        // 如果发票号为空或不包含代码前缀，则添加代码
-                        if (string.IsNullOrEmpty(invoiceInfo.InvoiceNumber))
-                            invoiceInfo.InvoiceNumber = fpdmValue + "-";
-                        else if (!invoiceInfo.InvoiceNumber.Contains("-"))
-                            invoiceInfo.InvoiceNumber = fpdmValue + "-" + invoiceInfo.InvoiceNumber;
-                    }
-
                     // 更新发票号
                     if (invoiceData.TryGetValue("c_fphm", out var fphm) && fphm.ValueKind != JsonValueKind.Undefined)
                     {
                         string fphmValue = fphm.GetString();
-                        if (string.IsNullOrEmpty(invoiceInfo.InvoiceNumber))
-                            invoiceInfo.InvoiceNumber = fphmValue;
-                        else if (!invoiceInfo.InvoiceNumber.Contains("-"))
-                            invoiceInfo.InvoiceNumber = fphmValue;
-                        else if (invoiceInfo.InvoiceNumber.EndsWith("-"))
-                            invoiceInfo.InvoiceNumber += fphmValue;
+                        invoiceInfo.InvoiceNumber = fphmValue;
                     }
 
                     // 更新开票金额，若回调中包含金额信息
