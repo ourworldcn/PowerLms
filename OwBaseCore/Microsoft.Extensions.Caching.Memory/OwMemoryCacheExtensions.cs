@@ -33,7 +33,7 @@ namespace Microsoft.Extensions.Caching.Memory
             {
                 // 创建永不过期的缓存项
                 entry.SetPriority(CacheItemPriority.NeverRemove);
-                
+
                 // 创建并返回新的并发字典，用于存储取消令牌
                 return new ConcurrentDictionary<object, CancellationTokenSource>();
             });
@@ -307,7 +307,7 @@ namespace Microsoft.Extensions.Caching.Memory
             {
                 // 创建永不过期的缓存项
                 entry.SetPriority(CacheItemPriority.NeverRemove);
-                
+
                 // 创建并返回新的并发字典
                 return new ConcurrentDictionary<object, PriorityQueue<PostEvictionCallbackRegistration, int>>();
             });
@@ -326,14 +326,11 @@ namespace Microsoft.Extensions.Caching.Memory
             IMemoryCache cache,
             PostEvictionDelegate callback,
             object state = null,
-            int priority = 0)
+            int priority = 10)
         {
-            if (entry is null)
-                throw new ArgumentNullException(nameof(entry));
-            if (cache is null)
-                throw new ArgumentNullException(nameof(cache));
-            if (callback is null)
-                throw new ArgumentNullException(nameof(callback));
+            ArgumentNullException.ThrowIfNull(entry); // 检查entry是否为空
+            ArgumentNullException.ThrowIfNull(cache);
+            ArgumentNullException.ThrowIfNull(callback);
 
             // 获取优先级回调映射表
             var callbackMap = cache.GetPriorityCallbackMap();
@@ -381,16 +378,13 @@ namespace Microsoft.Extensions.Caching.Memory
             object key,
             PostEvictionDelegate callback,
             object state = null,
-            int priority = 0)
+            int priority = 10)
         {
-            if (options is null)
-                throw new ArgumentNullException(nameof(options));
-            if (cache is null)
-                throw new ArgumentNullException(nameof(cache));
-            if (key is null)
-                throw new ArgumentNullException(nameof(key));
-            if (callback is null)
-                throw new ArgumentNullException(nameof(callback));
+            // 参数检查
+            ArgumentNullException.ThrowIfNull(options);
+            ArgumentNullException.ThrowIfNull(cache);
+            ArgumentNullException.ThrowIfNull(key);
+            ArgumentNullException.ThrowIfNull(callback);
 
             // 获取优先级回调映射表
             var callbackMap = cache.GetPriorityCallbackMap();
