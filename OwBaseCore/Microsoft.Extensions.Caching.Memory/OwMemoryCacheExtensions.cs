@@ -290,12 +290,18 @@ namespace Microsoft.Extensions.Caching.Memory
     /// <summary>
     /// IMemoryCache 优先级回调扩展，提供按优先级顺序执行的缓存失效回调功能。
     /// </summary>
+    [Guid(GuidString)]
     public static class OwPriorityCallbackExtensions
     {
         /// <summary>
+        /// GUID 标识符，用于唯一标识此扩展的缓存键。
+        /// </summary>
+        internal const string GuidString = "B690E855-E90E-4B4D-B454-937477A0DB70";
+
+        /// <summary>
         /// 优先级回调映射字典的缓存键名，用于在缓存中存储优先级回调映射表。
         /// </summary>
-        private const string PriorityCallbackMapKey = $"{OwMemoryCacheExtensions.GuidString}.PriorityCallbackMap";
+        internal const string PriorityCallbackMapKey = $"{GuidString}.PriorityCallbackMap";
 
         /// <summary>
         /// 获取优先级回调字典，使用 IMemoryCache 内置的线程安全方法。
@@ -305,11 +311,8 @@ namespace Microsoft.Extensions.Caching.Memory
         private static ConcurrentDictionary<object, PriorityQueue<PostEvictionCallbackRegistration, int>> GetPriorityCallbackMap(this IMemoryCache cache) =>
             cache.GetOrCreate(PriorityCallbackMapKey, entry =>
             {
-                // 创建永不过期的缓存项
-                entry.SetPriority(CacheItemPriority.NeverRemove);
-
-                // 创建并返回新的并发字典
-                return new ConcurrentDictionary<object, PriorityQueue<PostEvictionCallbackRegistration, int>>();
+                entry.SetPriority(CacheItemPriority.NeverRemove);   // 设置缓存项优先级为永不过期
+                return new ConcurrentDictionary<object, PriorityQueue<PostEvictionCallbackRegistration, int>>();    // 创建并返回新的并发字典，用于存储优先级回调
             });
 
         /// <summary>
@@ -328,31 +331,27 @@ namespace Microsoft.Extensions.Caching.Memory
             object state = null,
             int priority = 10)
         {
-            ArgumentNullException.ThrowIfNull(entry); // 检查entry是否为空
+            // 参数检查
+            ArgumentNullException.ThrowIfNull(entry);
             ArgumentNullException.ThrowIfNull(cache);
             ArgumentNullException.ThrowIfNull(callback);
 
-            // 获取优先级回调映射表
-            var callbackMap = cache.GetPriorityCallbackMap();
+            var callbackMap = cache.GetPriorityCallbackMap();   // 获取优先级回调映射表
 
-            // 创建回调注册对象
-            var callbackRegistration = new PostEvictionCallbackRegistration
+            var callbackRegistration = new PostEvictionCallbackRegistration // 创建回调注册对象
             {
                 EvictionCallback = callback,
                 State = state
             };
 
-            // 为当前缓存键获取优先级队列，如果不存在则创建新队列
             var priorityQueue = callbackMap.GetOrAdd(entry.Key, _ =>
-                new PriorityQueue<PostEvictionCallbackRegistration, int>());
+                new PriorityQueue<PostEvictionCallbackRegistration, int>());    // 为当前缓存键获取优先级队列，如果不存在则创建新队列
 
-            // 添加新的回调项到优先级队列中
-            lock (priorityQueue)
+            lock (priorityQueue)    // 锁定优先级队列以确保线程安全
             {
                 priorityQueue.Enqueue(callbackRegistration, priority);
 
-                // 如果这是第一个回调，注册执行器
-                if (priorityQueue.Count == 1)
+                if (priorityQueue.Count == 1)   // 如果这是第一个回调，注册执行器
                 {
                     entry.RegisterPostEvictionCallback((key, value, reason, _) =>
                         ExecuteCallbacks(key, value, reason, callbackMap));
@@ -461,10 +460,9 @@ namespace Microsoft.Extensions.Caching.Memory
         /// <returns>优先级回调数量，如果没有找到则返回0。</returns>
         public static int GetPriorityCallbackCount(this IMemoryCache cache, object key)
         {
-            if (cache is null)
-                throw new ArgumentNullException(nameof(cache));
-            if (key is null)
-                throw new ArgumentNullException(nameof(key));
+            // 参数检查
+            ArgumentNullException.ThrowIfNull(cache);
+            ArgumentNullException.ThrowIfNull(key);
 
             return cache.GetPriorityCallbackMap().TryGetValue(key, out var callbacks)
                 ? callbacks.Count
@@ -479,10 +477,9 @@ namespace Microsoft.Extensions.Caching.Memory
         /// <returns>如果找到并成功清除则返回true，否则返回false。</returns>
         public static bool ClearPriorityCallbacks(this IMemoryCache cache, object key)
         {
-            if (cache is null)
-                throw new ArgumentNullException(nameof(cache));
-            if (key is null)
-                throw new ArgumentNullException(nameof(key));
+            // 参数检查
+            ArgumentNullException.ThrowIfNull(cache);
+            ArgumentNullException.ThrowIfNull(key);
 
             return cache.GetPriorityCallbackMap().TryRemove(key, out _);
         }

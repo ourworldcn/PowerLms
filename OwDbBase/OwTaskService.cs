@@ -592,14 +592,8 @@ namespace OwDbBase.Tasks
         /// <param name="services">服务集合。</param>
         /// <returns>服务集合，用于链式调用。</returns>
         public static IServiceCollection AddOwTaskService<TDbContext>(this IServiceCollection services)
-            where TDbContext : OwDbContext
-        {
-            // 注册为单例服务，但实际由工厂方法创建实例
-            services.AddSingleton<OwTaskService<TDbContext>>(provider =>
-                OwTaskService<TDbContext>.GetInstance(provider));
-
-            return services;
-        }
+            where TDbContext : OwDbContext =>
+            services.AddSingleton(provider => OwTaskService<TDbContext>.GetInstance(provider));   // 注册为单例服务，但实际由工厂方法创建实例
 
         /// <summary>向服务集合添加OwTaskService服务（单例模式），同时配置DbContextFactory。</summary>
         /// <typeparam name="TDbContext">数据库上下文类型。</typeparam>
