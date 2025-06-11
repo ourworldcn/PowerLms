@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OW.DDD;
 using OW.EntityFrameworkCore;
+using OwDbBase.Tasks;
 using PowerLms.Data;
 using System;
 using System.Collections.Generic;
@@ -516,6 +517,14 @@ namespace PowerLmsServer.EfData
         /// </summary>
         public DbSet<OwMessage> OwMessages { get; set; }
         #endregion 消息系统
+
+        #region 任务系统
+
+        /// <summary>
+        /// 任务存储表。
+        /// </summary>
+        public DbSet<OwTaskStore> OwTaskStores { get; set; }
+        #endregion 任务系统
     }
 
     /// <summary>
