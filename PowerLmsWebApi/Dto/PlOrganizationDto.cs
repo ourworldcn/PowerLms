@@ -30,4 +30,11 @@ namespace PowerLmsWebApi.Dto
         public List<PlOrganization> Result { get; set; } = new List<PlOrganization>();
     }
 
+    /// <summary>
+    /// 获取所有组织机构的返回值封装类。
+    /// </summary>
+    public class GetAllPlOrganizationReturnDto : PagingReturnDtoBase<PlOrganization>
+    {
+    }
+
 }

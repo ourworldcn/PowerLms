@@ -111,8 +111,18 @@ namespace PowerLmsWebApi.Controllers
 
             try
             {
-                // 获取要保存的实体并进行基础设置
-                var entity = model.Task;
+                // 创建新的OwTaskStore实体
+                var entity = new OwTaskStore
+                {
+                    // 设置从DTO中接收的字段
+                    ServiceTypeName = model.ServiceTypeName,
+                    MethodName = model.MethodName,
+                    Parameters = model.Parameters
+                };
+
+                // 设置状态（如果提供）
+                entity.Status = OwTaskStatus.Pending; // 默认状态
+
                 entity.GenerateIdIfEmpty(); // 生成新的GUID
 
                 // 设置创建信息
@@ -141,46 +151,6 @@ namespace PowerLmsWebApi.Controllers
                 result.HasError = true;
                 result.ErrorCode = 500;
                 result.DebugMessage = $"创建任务记录时发生错误: {ex.Message}";
-            }
-
-            return result;
-        }
-
-        /// <summary>
-        /// 修改任务记录信息。
-        /// </summary>
-        /// <param name="model">要修改的任务记录信息</param>
-        /// <returns>操作结果</returns>
-        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
-        /// <response code="401">无效令牌。</response>  
-        /// <response code="404">指定Id的任务不存在。</response>  
-        [HttpPut]
-        public ActionResult<ModifyOwTaskStoreReturnDto> ModifyOwTaskStore(ModifyOwTaskStoreParamsDto model)
-        {
-            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            var result = new ModifyOwTaskStoreReturnDto();
-
-            try
-            {
-                if (!_EntityManager.Modify(new[] { model.Task })) return NotFound();
-
-                // 忽略不可更改字段
-                var entity = _DbContext.Entry(model.Task);
-                entity.Property(c => c.CreatedUtc).IsModified = false;
-                entity.Property(c => c.CreatorId).IsModified = false;
-                entity.Property(c => c.TenantId).IsModified = false;
-
-                // 记录审计日志
-                _SqlAppLogger.LogGeneralInfo($"用户 {context.User.Id} 修改了任务ID:{model.Task.Id}，操作：ModifyOwTaskStore");
-
-                _DbContext.SaveChanges();
-            }
-            catch (Exception ex)
-            {
-                _Logger.LogError(ex, "修改任务记录时发生错误，任务ID: {TaskId}", model.Task.Id);
-                result.HasError = true;
-                result.ErrorCode = 500;
-                result.DebugMessage = $"修改任务记录时发生错误: {ex.Message}";
             }
 
             return result;
@@ -288,117 +258,5 @@ namespace PowerLmsWebApi.Controllers
         #endregion
     }
 
-    #region 获取全部任务记录
 
-    /// <summary>
-    /// 获取全部任务记录的参数
-    /// </summary>
-    public class GetAllOwTaskStoreParamsDto : PagingParamsDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 获取全部任务记录的返回结果
-    /// </summary>
-    public class GetAllOwTaskStoreReturnDto : PagingReturnDtoBase<OwTaskStore>
-    {
-    }
-
-    #endregion
-
-    #region 添加任务记录
-
-    /// <summary>
-    /// 添加任务记录的参数
-    /// </summary>
-    public class AddOwTaskStoreParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 要添加的任务
-        /// </summary>
-        public OwTaskStore Task { get; set; }
-    }
-
-    /// <summary>
-    /// 添加任务记录的返回结果
-    /// </summary>
-    public class AddOwTaskStoreReturnDto : ReturnDtoBase
-    {
-        /// <summary>
-        /// 新创建的任务ID
-        /// </summary>
-        public Guid Id { get; set; }
-    }
-
-    #endregion
-
-    #region 修改任务记录
-
-    /// <summary>
-    /// 修改任务记录的参数
-    /// </summary>
-    public class ModifyOwTaskStoreParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 要修改的任务
-        /// </summary>
-        public OwTaskStore Task { get; set; }
-    }
-
-    /// <summary>
-    /// 修改任务记录的返回结果
-    /// </summary>
-    public class ModifyOwTaskStoreReturnDto : ReturnDtoBase
-    {
-    }
-
-    #endregion
-
-    #region 删除任务记录
-
-    /// <summary>
-    /// 删除任务记录的参数
-    /// </summary>
-    public class RemoveOwTaskStoreParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 要删除的任务ID
-        /// </summary>
-        public Guid Id { get; set; }
-    }
-
-    /// <summary>
-    /// 删除任务记录的返回结果
-    /// </summary>
-    public class RemoveOwTaskStoreReturnDto : ReturnDtoBase
-    {
-    }
-
-    #endregion
-
-    #region 取消任务
-
-    /// <summary>
-    /// 取消任务的参数
-    /// </summary>
-    public class CancelTaskParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 要取消的任务ID
-        /// </summary>
-        public Guid Id { get; set; }
-    }
-
-    /// <summary>
-    /// 取消任务的返回结果
-    /// </summary>
-    public class CancelTaskReturnDto : ReturnDtoBase
-    {
-        /// <summary>
-        /// 操作是否成功
-        /// </summary>
-        public bool Success { get; set; }
-    }
-
-    #endregion
 }

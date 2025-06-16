@@ -146,6 +146,90 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
+        /// 获取组织机构列表，支持分页和条件过滤。
+        /// </summary>
+        /// <param name="model">分页参数</param>
+        /// <param name="conditional">查询条件。支持两种格式：
+        /// 1. 直接使用PlOrganization的属性名作为键进行过滤，如Name、Description、MerchantId等
+        /// 2. 使用"AccountPlOrganization.属性名"前缀进行关联过滤，如AccountPlOrganization.UserId
+        /// 对于字符串类型会进行包含查询，其他类型进行精确匹配。范围查询格式为"min,max"。</param>
+        /// <returns>组织机构列表</returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">条件格式错误。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        public ActionResult<GetAllPlOrganizationReturnDto> GetAllPlOrganization([FromQuery] PagingParamsDtoBase model,
+            [FromQuery][ModelBinder(typeof(DotKeyDictionaryModelBinder))] Dictionary<string, string> conditional = null)
+        {
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            var result = new GetAllPlOrganizationReturnDto();
+
+            // 获取基础查询
+            var dbSet = _DbContext.PlOrganizations;
+            var query = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
+
+            // 处理条件过滤
+            if (conditional != null && conditional.Count > 0)
+            {
+                // 提取AccountPlOrganization过滤条件
+                const string accountOrgPrefix = "AccountPlOrganization.";
+                var accountOrgConditions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                var orgConditions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+                // 分离两种类型的条件
+                foreach (var condition in conditional)
+                {
+                    if (condition.Key.StartsWith(accountOrgPrefix, StringComparison.OrdinalIgnoreCase))
+                    {
+                        // AccountPlOrganization前缀条件
+                        string propName = condition.Key.Substring(accountOrgPrefix.Length);
+                        accountOrgConditions.Add(propName, condition.Value);
+                    }
+                    else
+                    {
+                        // 直接的PlOrganization属性条件
+                        orgConditions.Add(condition.Key, condition.Value);
+                    }
+                }
+
+                // 应用PlOrganization直接属性条件
+                if (orgConditions.Count > 0)
+                {
+                    var filteredQuery = EfHelper.GenerateWhereAnd(query, orgConditions);
+                    if (filteredQuery == null)
+                    {
+                        return BadRequest(OwHelper.GetLastErrorMessage());
+                    }
+                    query = filteredQuery;
+                }
+
+                // 应用AccountPlOrganization关联条件
+                if (accountOrgConditions.Count > 0)
+                {
+                    // 构建子查询，获取满足条件的OrgId
+                    var accountOrgQuery = _DbContext.AccountPlOrganizations.AsQueryable();
+                    var filteredAccountOrgQuery = EfHelper.GenerateWhereAnd(accountOrgQuery, accountOrgConditions);
+
+                    if (filteredAccountOrgQuery == null)
+                    {
+                        return BadRequest(OwHelper.GetLastErrorMessage());
+                    }
+
+                    // 获取满足条件的OrgId
+                    var orgIds = filteredAccountOrgQuery.Select(ao => ao.OrgId).Distinct();
+
+                    // 应用到主查询
+                    query = query.Where(org => orgIds.Contains(org.Id));
+                }
+            }
+
+            // 获取分页数据
+            var prb = _EntityManager.GetAll(query, model.StartIndex, model.Count);
+            _Mapper.Map(prb, result);
+            return result;
+        }
+
+        /// <summary>
         /// 增加一个组织机构。
         /// </summary>
         /// <param name="model"></param>
@@ -164,6 +248,21 @@ namespace PowerLmsWebApi.Controllers
             {
                 _DbContext.SaveChanges();
                 result.Id = id;
+
+                // 使相关商户缓存失效
+                // 如果是顶层组织机构（ParentId为null），直接使用其MerchantId
+                if (model.Item.ParentId == null && model.Item.MerchantId.HasValue)
+                {
+                    _OrganizationManager.InvalidateOrgCache(model.Item.MerchantId.Value);
+                    _MerchantManager.InvalidateCache(model.Item.MerchantId.Value);
+                }
+                // 如果有父级，则通过父级查找关联的商户ID
+                else if (model.Item.ParentId.HasValue && _MerchantManager.TryGetIdByOrgOrMerchantId(model.Item.ParentId.Value, out var merchantId) && merchantId.HasValue)
+                {
+                    _OrganizationManager.InvalidateOrgCache(merchantId.Value);
+                    _MerchantManager.InvalidateCache(merchantId.Value);
+                }
+
                 if (model.IsCopyDataDic) //若需要复制字典
                 {
                     var r = CopyDataDic(new CopyDataDicParamsDto { Token = model.Token, Id = id });
@@ -296,8 +395,32 @@ namespace PowerLmsWebApi.Controllers
             var dbSet = _DbContext.PlOrganizations;
             var item = dbSet.Find(id);
             if (item is null) return BadRequest();
+
+            // 在删除组织机构前，先获取关联的商户ID
+            Guid? merchantId = null;
+
+            // 如果是顶层组织机构（ParentId为null），直接使用其MerchantId
+            if (item.ParentId == null && item.MerchantId.HasValue)
+            {
+                merchantId = item.MerchantId;
+            }
+            // 否则尝试通过组织机构ID找到关联的商户ID
+            else if (_MerchantManager.TryGetIdByOrgOrMerchantId(id, out var merchId))
+            {
+                merchantId = merchId;
+            }
+
+            // 执行删除操作
             _EntityManager.Remove(item);
             _DbContext.SaveChanges();
+
+            // 删除成功后，如果有关联的商户ID，则使缓存失效
+            if (merchantId.HasValue)
+            {
+                _OrganizationManager.InvalidateOrgCache(merchantId.Value);
+                _MerchantManager.InvalidateCache(merchantId.Value);
+            }
+
             return result;
         }
 

@@ -47,14 +47,14 @@ namespace PowerLms.Data
         /// 创建时间。精确到毫秒。
         /// </summary>
         [Comment("创建时间")]
-        [Column(TypeName = "datetime2(3)")]
+        [Precision(3)]
         public DateTime CreateUtc { get; set; } = DateTime.UtcNow;
 
         /// <summary>
         /// 读取时间。未读则为null。精确到毫秒。
         /// </summary>
         [Comment("读取时间")]
-        [Column(TypeName = "datetime2(3)")]
+        [Precision(3)]
         public DateTime? ReadUtc { get; set; }
 
         /// <summary>

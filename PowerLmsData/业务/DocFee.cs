@@ -110,21 +110,21 @@ namespace PowerLms.Data
         /// 创建时间，系统默认，不能更改。
         /// </summary>
         [Comment("创建时间，系统默认，不能更改。")]
-        [Column(TypeName = "datetime2(2)")]
+        [Precision(3)]
         public DateTime CreateDateTime { get; set; } = OwHelper.WorldNow;
 
         /// <summary>
         /// 预计结算日期，客户资料中信用日期自动计算出。
         /// </summary>
         [Comment("预计结算日期，客户资料中信用日期自动计算出。")]
-        [Column(TypeName = "datetime2(2)")]
+        [Precision(3)]
         public DateTime PreclearDate { get; set; }
 
         /// <summary>
         /// 审核日期，为空则未审核。
         /// </summary>
         [Comment("审核日期，为空则未审核。")]
-        [Column(TypeName = "datetime2(2)")]
+        [Precision(3)]
         public DateTime? AuditDateTime { get; set; }
 
         /// <summary>

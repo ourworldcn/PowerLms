@@ -212,7 +212,7 @@ namespace PowerLms.Data
         /// 审核日期,未审核则为空。
         /// </summary>
         [Comment("审核日期,未审核则为空")]
-        [Column(TypeName = "datetime2(2)")]
+        [Precision(3)]
         public DateTime? AuditDateTime { get; set; }
 
         /// <summary>

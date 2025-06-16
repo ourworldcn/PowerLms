@@ -69,22 +69,22 @@ namespace PowerLms.Data
         #region 时间信息
         /// <summary>申请时间。</summary>
         [Comment("申请时间")]
-        [Column(TypeName = "DATETIME2(3)")]
+        [Precision(3)]
         public DateTime? ApplyDateTime { get; set; }
 
         /// <summary>审核时间。</summary>
         [Comment("审核时间")]
-        [Column(TypeName = "DATETIME2(3)")]
+        [Precision(3)]
         public DateTime? AuditDateTime { get; set; }
 
         /// <summary>发送时间。</summary>
         [Comment("发送时间")]
-        [Column(TypeName = "DATETIME2(3)")]
+        [Precision(3)]
         public DateTime? SendTime { get; set; }
 
         /// <summary>返回发票号时间。</summary>
         [Comment("返回发票号时间")]
-        [Column(TypeName = "DATETIME2(3)")]
+        [Precision(3)]
         public DateTime? ReturnInvoiceTime { get; set; }
         #endregion
 
@@ -202,7 +202,7 @@ namespace PowerLms.Data
         /// 开票日期。
         /// </summary>
         [Comment("开票日期")]
-        [Column(TypeName = "DATETIME2(3)")]
+        [Precision(3)]
         public DateTime? InvoiceDate { get; set; }
 
         /// <summary>

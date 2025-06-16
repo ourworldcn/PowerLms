@@ -58,7 +58,9 @@ namespace PowerLmsData.Migrations
                 table: "OwAppLogItemStores",
                 column: "ParentId");
 
-            migrationBuilder.Sql(@"IF NOT EXISTS (SELECT * FROM sys.views WHERE object_id = OBJECT_ID(N'OwAppLogVO'))
+            try
+            {
+                migrationBuilder.Sql(@"IF NOT EXISTS (SELECT * FROM sys.views WHERE object_id = OBJECT_ID(N'OwAppLogVO'))
             BEGIN
                 EXEC('CREATE VIEW OwAppLogVO
                 AS
@@ -74,12 +76,16 @@ namespace PowerLmsData.Migrations
                 JOIN 
                     OwAppLogStores als ON ali.ParentId = als.Id;')
             END");
+            }
+            catch (Exception)
+            {
+            }
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.Sql("DROP VIEW IF EXISTS OwAppLogVO");
-            
+
             migrationBuilder.DropTable(
                 name: "OwAppLogItemStores");
 

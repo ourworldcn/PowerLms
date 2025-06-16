@@ -45,8 +45,8 @@ namespace PowerLms.Data
         /// <summary>
         /// 制单时间。
         /// </summary>
-        [Column(TypeName = "datetime2(2)")]
         [Comment("制单时间")]
+        [Precision(3)]
         public DateTime? MakeDateTime { get; set; }
 
         /// <summary>
@@ -111,15 +111,15 @@ namespace PowerLms.Data
         /// <summary>
         /// 预计回款时间。
         /// </summary>
-        [Column(TypeName = "datetime2(2)")]
         [Comment("预计回款时间")]
+        [Precision(3)]
         public DateTime? PreReturnDate { get; set; }
 
         /// <summary>
         /// 实际回款时间。
         /// </summary>
-        [Column(TypeName = "datetime2(2)")]
         [Comment("实际回款时间")]
+        [Precision(3)]
         public DateTime? ReturnDate { get; set; }
 
         /// <summary>

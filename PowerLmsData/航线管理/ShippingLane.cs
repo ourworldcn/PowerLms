@@ -147,14 +147,14 @@ namespace PowerLms.Data
         /// 生效日期。
         /// </summary>
         [Comment("生效日期")]
-        [Column(TypeName = "datetime2(2)")]
+        [Precision(3)]
         public DateTime StartDateTime { get; set; }
 
         /// <summary>
         /// 终止日期。
         /// </summary>
         [Comment("终止日期")]
-        [Column(TypeName = "datetime2(2)")]
+        [Precision(3)]
         public DateTime EndDateTime { get; set; }
 
         /// <summary>

@@ -45,6 +45,7 @@ namespace PowerLms.Data
         /// </summary>
         /// <value>默认是构造此对象的<see cref="OwHelper.WorldNow"/>时间。</value>
         [Comment("这个行为发生的世界时间。")]
+        [Precision(3)]
         public DateTime WorldDateTime { get; set; } = OwHelper.WorldNow;
 
         /// <summary>

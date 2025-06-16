@@ -43,7 +43,7 @@ namespace PowerLms.Data
         /// 创建时间,系统默认，不能更改
         /// </summary>
         [Comment("新建时间,系统默认，不能更改。")]
-        [Column(TypeName = "datetime2(2)")]
+        [Precision(3)]
         public DateTime CreateDateTime { get; set; } = OwHelper.WorldNow;
 
         /// <summary>
@@ -80,7 +80,8 @@ namespace PowerLms.Data
         /// <summary>
         /// 审核日期，为空则未审核。
         /// </summary>
-        [Comment("审核日期，为空则未审核"), Column(TypeName = "datetime2(2)")]
+        [Comment("审核日期，为空则未审核")]
+        [Precision(3)]
         public DateTime? CheckDate { get; set; }
 
         /// <summary>
@@ -104,7 +105,8 @@ namespace PowerLms.Data
         /// <summary>
         /// 进出口日期。
         /// </summary>
-        [Comment("审核日期，为空则未审核"), Column(TypeName = "datetime2(2)")]
+        [Comment("审核日期，为空则未审核")]
+        [Precision(3)]
         public DateTime? IODate { get; set; }
 
         /// <summary>
@@ -156,14 +158,14 @@ namespace PowerLms.Data
         /// 开航日期。
         /// </summary>
         [Comment("开航日期。")]
-        [Column(TypeName = "datetime2(2)")]
+        [Precision(3)]
         public DateTime Etd { get; set; }
 
         /// <summary>
         /// 到港日期。
         /// </summary>
         [Comment("到港日期。")]
-        [Column(TypeName = "datetime2(2)")]
+        [Precision(3)]
         public DateTime Eta { get; set; }
 
         /// <summary>

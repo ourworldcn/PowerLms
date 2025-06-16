@@ -323,7 +323,7 @@ namespace PowerLmsWebApi.Controllers
         /// 生效日期。
         /// </summary>
         [Comment("生效日期")]
-        [Column(TypeName = "datetime2(2)")]
+        [Precision(3)]
         [JsonPropertyName("生效日期")]
         public DateTime? StartDateTime { get; set; }
 
@@ -331,7 +331,7 @@ namespace PowerLmsWebApi.Controllers
         /// 终止日期。
         /// </summary>
         [Comment("终止日期")]
-        [Column(TypeName = "datetime2(2)")]
+        [Precision(3)]
         [JsonPropertyName("失效日期")]
         public DateTime? EndDateTime { get; set; }
 
