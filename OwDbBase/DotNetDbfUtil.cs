@@ -169,21 +169,18 @@ namespace OW.Data
         public static void WriteToStream<T>(IEnumerable<T> entities, Stream stream,
             Dictionary<string, string> fieldMappings = null,
             Dictionary<string, NativeDbType> customFieldTypes = null,
-            System.Text.Encoding encoding = null) where T : class
+            System.Text.Encoding? encoding = null) where T : class
         {
-            if (stream == null) throw new ArgumentNullException(nameof(stream)); // 检查流对象
-            if (entities == null) throw new ArgumentNullException(nameof(entities)); // 检查实体集合
+            ArgumentNullException.ThrowIfNull(stream);
+            ArgumentNullException.ThrowIfNull(entities);
 
             // 如果未提供映射，则创建自动映射
-            if (fieldMappings == null || fieldMappings.Count == 0)
-            {
-                fieldMappings = CreateAutoFieldMappings<T>();
-            }
+            fieldMappings ??= CreateAutoFieldMappings<T>();
 
             try
             {
                 using var writer = new DBFWriter(stream);
-                writer.CharEncoding = encoding ?? System.Text.Encoding.GetEncoding("GB2312"); // 默认使用GB2312编码
+                writer.CharEncoding = encoding ?? System.Text.Encoding.GetEncoding("GB2312"); // 默认编码
 
                 var entityType = typeof(T);
                 var properties = entityType.GetProperties();
@@ -196,11 +193,11 @@ namespace OW.Data
                     string dbfFieldName = mapping.Key;
                     string propertyName = mapping.Value;
 
-                    // 确保字段名符合DBF限制（最多10个字符）
+                    // 确保字段名符合DBF限制
                     if (dbfFieldName.Length > 10)
                     {
                         OwHelper.SetLastErrorAndMessage(400, $"字段名 {dbfFieldName} 超过10个字符的限制，已截断");
-                        dbfFieldName = dbfFieldName.Substring(0, 10);
+                        dbfFieldName = dbfFieldName[..10]; // 使用范围操作符简化截断操作
                     }
 
                     if (!propertyMap.TryGetValue(propertyName, out var property))
@@ -227,38 +224,22 @@ namespace OW.Data
                         }
                     }
 
-                    // 根据属性类型设置适当的字段长度和精度
+                    // 设置字段参数
                     int length = 0;
                     int decimalCount = 0;
 
                     switch (fieldType)
                     {
-                        case NativeDbType.Char:
-                            length = 254; // 最大字符长度
-                            break;
-                        case NativeDbType.Numeric:
-                            length = 18;
-                            decimalCount = 4; // 适当精度
-                            break;
-                        case NativeDbType.Float:
-                            length = 18;
-                            decimalCount = 6;
-                            break;
-                        case NativeDbType.Date:
-                            length = 8;
-                            break;
-                        case NativeDbType.Logical:
-                            length = 1;
-                            break;
-                        case NativeDbType.Long:
-                            length = 10;
-                            break;
-                        default:
-                            length = 254; // 默认最大长度
-                            break;
+                        case NativeDbType.Char: length = 254; break; // 最大字符长度
+                        case NativeDbType.Numeric: length = 18; decimalCount = 4; break;
+                        case NativeDbType.Float: length = 18; decimalCount = 6; break;
+                        case NativeDbType.Date: length = 8; break;
+                        case NativeDbType.Logical: length = 1; break;
+                        case NativeDbType.Long: length = 10; break;
+                        default: length = 254; break; // 默认最大长度
                     }
 
-                    fields.Add(new DBFField(dbfFieldName, fieldType, length, decimalCount)); // 添加字段定义
+                    fields.Add(new DBFField(dbfFieldName, fieldType, length, decimalCount));
                 }
 
                 writer.Fields = fields.ToArray(); // 设置DBF文件的字段结构
@@ -266,13 +247,13 @@ namespace OW.Data
                 // 写入记录
                 foreach (var entity in entities)
                 {
-                    if (entity == null)
+                    if (entity is null)
                     {
                         OwHelper.SetLastErrorAndMessage(400, "实体集合中包含null值，已跳过");
                         continue;
                     }
 
-                    var record = new object[fields.Count];
+                    var record = new object?[fields.Count];
                     int fieldIndex = 0;
 
                     foreach (var mapping in fieldMappings)
@@ -282,19 +263,19 @@ namespace OW.Data
                         string propertyName = mapping.Value;
                         if (!propertyMap.TryGetValue(propertyName, out var property))
                         {
-                            record[fieldIndex++] = null; // 属性不存在，值为null
+                            record[fieldIndex++] = null; // 属性不存在时使用null
                             continue;
                         }
 
                         var value = property.GetValue(entity); // 获取属性值
 
-                        // 对可空类型进行处理
-                        if (value != null && property.PropertyType.IsGenericType &&
+                        // 处理可空类型
+                        if (value is not null && property.PropertyType.IsGenericType &&
                             property.PropertyType.GetGenericTypeDefinition() == typeof(Nullable<>))
                         {
                             try
                             {
-                                value = Convert.ChangeType(value, Nullable.GetUnderlyingType(property.PropertyType)); // 转换可空类型
+                                value = Convert.ChangeType(value, Nullable.GetUnderlyingType(property.PropertyType)!);
                             }
                             catch
                             {
@@ -303,19 +284,16 @@ namespace OW.Data
                             }
                         }
 
-                        // 处理特殊类型
-                        if (value != null)
+                        // 处理特殊类型数据
+                        if (value is string strValue && strValue.Length > 254)
                         {
-                            if (value is string strValue && strValue.Length > 254)
-                            {
-                                value = strValue.Substring(0, 254); // 截断过长字符串
-                                OwHelper.SetLastErrorAndMessage(400, $"字符串值被截断: {propertyName}");
-                            }
-                            else if (value is DateTime dateValue && (dateValue == DateTime.MinValue || dateValue.Year < 1900))
-                            {
-                                value = null; // DBF不支持过早的日期
-                                OwHelper.SetLastErrorAndMessage(400, $"日期值不支持: {propertyName}");
-                            }
+                            value = strValue[..254]; // 截断过长字符串
+                            OwHelper.SetLastErrorAndMessage(400, $"字符串值被截断: {propertyName}");
+                        }
+                        else if (value is DateTime dateValue && (dateValue == DateTime.MinValue || dateValue.Year < 1900))
+                        {
+                            value = null; // DBF不支持过早的日期
+                            OwHelper.SetLastErrorAndMessage(400, $"日期值不支持: {propertyName}");
                         }
 
                         record[fieldIndex++] = value; // 存储值到记录
@@ -392,10 +370,17 @@ namespace OW.Data
             finally
             {
                 // 释放内存流，保证分配的内存被及时回收
-                ms = null;
-                GC.Collect(); // 强制垃圾回收
-                GC.WaitForPendingFinalizers(); // 等待所有终结器完成
-                GC.Collect(); // 再次强制垃圾回收,确保LOB对象被释放
+                if (ms is not null)
+                {
+                    ms.Dispose();
+                    ms = null;
+                    Task.Run(() =>
+                    {
+                        GC.Collect(); // 强制垃圾回收
+                        GC.WaitForPendingFinalizers(); // 等待所有终结器完成
+                        GC.Collect(); // 再次强制垃圾回收,确保LOB对象被释放
+                    });
+                }
             }
         }
 
