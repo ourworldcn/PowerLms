@@ -179,7 +179,7 @@ namespace OW.EntityFrameworkCore
         /// <param name="e">事件参数。</param>
         private void OnSavingChanges(object sender, SavingChangesEventArgs e)
         {
-            bool isRootContainer = _ServiceProvider is IServiceScopeFactory;
+            bool isRootContainer = ReferenceEquals(_ServiceProvider, _ServiceProvider.GetService<RootServiceProviderMarker>().RootServiceProvider);
             if (isRootContainer)   // 如果是根容器，则不处理保存事件
             {
                 // 记录中文的一般信息日志

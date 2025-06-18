@@ -1,6 +1,7 @@
 ﻿/*
  * 包含一些简单的类。
  */
+using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -239,5 +240,19 @@ namespace System
         public ulong ullTotalVirtual; //Total virtual memory size
         public ulong ullAvailVirtual; //Available virtual memory size
         public ulong ullAvailExtendedVirtual; //Keep this value always zero
+    }
+
+    /// <summary>
+    /// 获取跟容器。
+    /// </summary>
+    [OwAutoInjection(ServiceLifetime.Singleton)]
+    public class RootServiceProviderMarker
+    {
+        public RootServiceProviderMarker(IServiceProvider serviceProvider)
+        {
+            RootServiceProvider = serviceProvider;
+        }
+
+        public readonly IServiceProvider RootServiceProvider;
     }
 }
