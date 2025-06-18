@@ -80,11 +80,14 @@ namespace PowerLmsServer.Triggers
 
         private void HandleDocBillDeletion(DbContext dbContext, DocBill deletedBill)
         {
-            var relatedFees = dbContext.Set<DocFee>().Where(f => f.BillId == deletedBill.Id).ToList();  // 获取所有相关费用
+            // 使用 WhereWithLocal 查找本地缓存和数据库中的实体
+            var relatedFees = dbContext.Set<DocFee>().WhereWithLocal(f => f.BillId.HasValue && f.BillId.Value == deletedBill.Id).ToList();
+
             foreach (var fee in relatedFees)
             {
                 if (dbContext.Entry(fee).State != EntityState.Deleted)
                 {
+                    _Logger.LogInformation("清除费用(Id = {FeeId})的BillId(原值 = {BillId})。", fee.Id, fee.BillId);
                     fee.BillId = null;
                 }
             }

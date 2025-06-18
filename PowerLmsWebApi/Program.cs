@@ -34,7 +34,10 @@ internal class Program
         dbContext.Database.Migrate(); //自动迁移数据库所有挂起的迁移
         #endregion 自动迁移数据库所有挂起的迁移
         //app.UseRouting();
-
+        //app.UseEndpoints(endpoints =>
+        //{
+        //    endpoints.MapControllers();
+        //});
         // Configure the HTTP request pipeline.
         app.UseResponseCompression();
         //if (app.Environment.IsDevelopment())
@@ -139,7 +142,7 @@ internal class Program
             options.UseLazyLoadingProxies().UseSqlServer(userDbConnectionString).EnableSensitiveDataLogging();
         });
         services.AddOwBatchDbWriter<PowerLmsUserDbContext>();
-        
+
         #endregion 配置数据库
 
         services.AddSqlDependencyManager(); //添加SqlDependencyManager服务

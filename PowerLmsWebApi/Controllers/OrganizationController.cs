@@ -22,7 +22,7 @@ namespace PowerLmsWebApi.Controllers
         /// 构造函数。
         /// </summary>
         public OrganizationController(AccountManager accountManager, IServiceProvider serviceProvider, PowerLmsUserDbContext dbContext,
-            OrganizationManager organizationManager, IMapper mapper, EntityManager entityManager, DataDicManager dataManager, MerchantManager merchantManager, AuthorizationManager authorizationManager)
+            OrganizationManager organizationManager, IMapper mapper, EntityManager entityManager, DataDicManager dataManager, MerchantManager merchantManager, AuthorizationManager authorizationManager, ILogger<OrganizationController> logger)
         {
             _AccountManager = accountManager;
             _ServiceProvider = serviceProvider;
@@ -33,6 +33,7 @@ namespace PowerLmsWebApi.Controllers
             _DataManager = dataManager;
             _MerchantManager = merchantManager;
             _AuthorizationManager = authorizationManager;
+            _Logger = logger;
         }
 
         readonly AccountManager _AccountManager;
@@ -44,6 +45,7 @@ namespace PowerLmsWebApi.Controllers
         readonly DataDicManager _DataManager;
         readonly AuthorizationManager _AuthorizationManager;
         readonly MerchantManager _MerchantManager;
+        readonly ILogger<OrganizationController> _Logger;
 
         /// <summary>
         /// 获取组织机构。暂不考虑分页。
@@ -365,7 +367,7 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">找不到指定Id的对象 -或- 不是父对象的孩子 -或- 子对象还有孩子。</response> 
         [HttpDelete]
-        public ActionResult<RemoveOrgRelationReturnDto> RemoveOrgRelation(RemoveOrgRelationParamsDto model)
+        public ActionResult<RemoveOrgRelationReturnDto> RemoveOrgRelation([FromBody] RemoveOrgRelationParamsDto model)
         {
             var result = new RemoveOrgRelationReturnDto();
             var parent = _DbContext.PlOrganizations.Find(model.ParentId);
@@ -387,38 +389,96 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpDelete]
-        public ActionResult<RemoveOrgReturnDto> RemoveOrg(RemoveOrgParamsDto model)
+        public ActionResult<RemoveOrgReturnDto> RemoveOrg([FromBody] RemoveOrgParamsDto model)
         {
-            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            _Logger.LogInformation("开始执行删除组织机构操作，组织ID: {orgId}", model.Id);
+
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
+            {
+                _Logger.LogWarning("删除组织机构失败：无效令牌 {token}", model.Token);
+                return Unauthorized();
+            }
+
+            _Logger.LogDebug("用户 {userId} ({loginName}) 尝试删除组织机构 {orgId}",
+                context.User.Id, context.User.LoginName, model.Id);
+
             var result = new RemoveOrgReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.PlOrganizations;
+
+            // 查找组织机构
             var item = dbSet.Find(id);
-            if (item is null) return BadRequest();
-
-            // 在删除组织机构前，先获取关联的商户ID
-            Guid? merchantId = null;
-
-            // 如果是顶层组织机构（ParentId为null），直接使用其MerchantId
-            if (item.ParentId == null && item.MerchantId.HasValue)
+            if (item is null)
             {
-                merchantId = item.MerchantId;
-            }
-            // 否则尝试通过组织机构ID找到关联的商户ID
-            else if (_MerchantManager.TryGetIdByOrgOrMerchantId(id, out var merchId))
-            {
-                merchantId = merchId;
+                _Logger.LogWarning("删除组织机构失败：找不到ID为 {orgId} 的组织机构", id);
+                return BadRequest($"找不到ID为 {id} 的组织机构");
             }
 
-            // 执行删除操作
-            _EntityManager.Remove(item);
-            _DbContext.SaveChanges();
-
-            // 删除成功后，如果有关联的商户ID，则使缓存失效
-            if (merchantId.HasValue)
+            // 检查是否有子组织机构
+            if (item.Children != null && item.Children.Count > 0)
             {
-                _OrganizationManager.InvalidateOrgCache(merchantId.Value);
-                _MerchantManager.InvalidateCache(merchantId.Value);
+                _Logger.LogWarning("删除组织机构失败：组织机构 {orgId} ({orgName}) 包含 {childCount} 个子组织机构，需要先删除子组织机构",
+                    id, item.Name?.DisplayName, item.Children.Count);
+                return BadRequest($"组织机构 '{item.Name?.DisplayName}' 包含子组织机构，请先删除子组织机构");
+            }
+
+            try
+            {
+                // 在删除组织机构前，先获取关联的商户ID
+                Guid? merchantId = null;
+
+                // 如果是顶层组织机构（ParentId为null），直接使用其MerchantId
+                if (item.ParentId == null && item.MerchantId.HasValue)
+                {
+                    merchantId = item.MerchantId;
+                    _Logger.LogDebug("组织机构 {orgId} 是顶层组织机构，直接关联到商户 {merchantId}", id, merchantId);
+                }
+                // 否则尝试通过组织机构ID找到关联的商户ID
+                else if (_MerchantManager.TryGetIdByOrgOrMerchantId(id, out var merchId))
+                {
+                    merchantId = merchId;
+                    _Logger.LogDebug("组织机构 {orgId} 关联到商户 {merchantId}", id, merchantId);
+                }
+                else
+                {
+                    _Logger.LogWarning("无法确定组织机构 {orgId} 所属的商户ID", id);
+                }
+
+                // 记录删除前的组织机构信息
+                _Logger.LogInformation("准备删除组织机构: ID={orgId}, 名称='{orgName}', 父ID={parentId}, 商户ID={merchantId}",
+                    item.Id, item.Name?.DisplayName, item.ParentId, merchantId);
+
+                // 执行删除操作
+                _EntityManager.Remove(item);
+                _DbContext.SaveChanges();
+
+                _Logger.LogInformation("成功删除组织机构 {orgId}", id);
+
+                // 删除成功后，如果有关联的商户ID，则使缓存失效
+                if (merchantId.HasValue)
+                {
+                    _Logger.LogDebug("正在使商户 {merchantId} 的缓存失效", merchantId.Value);
+                    _OrganizationManager.InvalidateOrgCache(merchantId.Value);
+                    _MerchantManager.InvalidateCache(merchantId.Value);
+                    _Logger.LogInformation("已成功使商户 {merchantId} 的缓存失效", merchantId.Value);
+                }
+            }
+            catch (Exception ex)
+            {
+                // 捕获并记录所有异常
+                _Logger.LogError(ex, "删除组织机构 {orgId} 时发生异常", id);
+
+                // 记录更详细的上下文信息
+                _Logger.LogError("异常上下文: 用户={userId}, 组织机构ID={orgId}, 组织机构名称='{orgName}'",
+                    context.User.Id, id, item.Name?.DisplayName);
+
+                // 返回带有详细错误信息的BadRequest结果
+                return BadRequest(new
+                {
+                    ErrorMessage = "删除组织机构时发生错误",
+                    Details = ex.Message,
+                    OrgId = id
+                });
             }
 
             return result;

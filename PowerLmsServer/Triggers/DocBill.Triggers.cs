@@ -79,19 +79,27 @@ namespace PowerLmsServer.Triggers
                 }
                 var bcCode = _BusinessLogic.GetEntityBaseCurrencyCode(bill.Id, typeof(DocBill));
                 if (bcCode == bill.CurrTypeId)  // 如果本币与账单的币种相同，则不需要转换
-                    bill.Amount = lkupFee[bill.Id].Sum(c => Math.Round(c.Amount * c.ExchangeRate, 4, MidpointRounding.AwayFromZero));
+                {
+                    var amount = lkupFee[bill.Id].Sum(c => Math.Round(c.Amount * c.ExchangeRate, 4, MidpointRounding.AwayFromZero));
+                    _Logger.LogInformation("账单(Id = {BillId}) 合计金额 {Amount}.", bill.Id, amount);
+                    bill.Amount = amount;
+                }
                 else
                 {
                     var jobId = _BusinessLogic.GetJobIdByBillId(bill.Id);
+                    _Logger.LogInformation("找到工作任务(Id = {BillId})。", jobId);
+
                     if (jobId is not null)  //若账单关联了工作，则使用工作的组织机构Id，否则忽略
                     {
                         var job = dbContext.Set<PlJob>().Find(jobId);
                         var orgId = job.OrgId.Value;
-                        bill.Amount = lkupFee[bill.Id].Sum(c =>
+                        var amount = lkupFee[bill.Id].Sum(c =>
                         {
                             var rate = _BusinessLogic.GetExchageRate(job.OrgId.Value, c.Currency, bill.CurrTypeId);
                             return Math.Round(c.Amount * rate, 4, MidpointRounding.AwayFromZero);
                         });
+                        _Logger.LogInformation("账单(Id = {BillId}) 合计金额 {Amount}.", bill.Id, amount);
+                        bill.Amount = amount;
                     }
                 }
             }

@@ -394,11 +394,16 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyDocFeeRequisitionReturnDto();
+            // 查找原始记录以保存制单人和制单时间
+            var originalEntity = _DbContext.DocFeeRequisitions.AsNoTracking().FirstOrDefault(x => x.Id == model.DocFeeRequisition.Id);
+            if (originalEntity == null) return NotFound();
+            var originalMakerId = originalEntity.MakerId;
+            var originalMakeDateTime = originalEntity.MakeDateTime;
             if (!_EntityManager.Modify(new[] { model.DocFeeRequisition })) return NotFound();
             //忽略不可更改字段
             var entity = _DbContext.Entry(model.DocFeeRequisition);
-            entity.Property(c => c.MakeDateTime).IsModified = false;
-            entity.Property(c => c.MakerId).IsModified = false;
+            entity.Entity.MakeDateTime = originalMakeDateTime;
+            entity.Entity.MakerId = originalMakerId;
             entity.Property(c => c.OrgId).IsModified = false;
             _DbContext.SaveChanges();
             return result;
@@ -417,17 +422,17 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveDocFeeRequisitionReturnDto();
-            
+
             try
             {
                 var id = model.Id;
                 var dbSet = _DbContext.DocFeeRequisitions;
                 var item = dbSet.Find(id);
                 if (item is null) return BadRequest();
-                
+
                 // 查找并获取所有关联的申请单明细项
                 var items = _DbContext.DocFeeRequisitionItems.Where(c => c.ParentId == id).ToList();
-                
+
                 // 记录操作日志
                 _DbContext.OwSystemLogs.Add(new OwSystemLog
                 {
@@ -437,12 +442,12 @@ namespace PowerLmsWebApi.Controllers
                     ExtraDecimal = items.Count,
                     WorldDateTime = OwHelper.WorldNow
                 });
-                
+
                 // 如果有关联的明细项，先处理它们
                 if (items.Count > 0)
                 {
                     _Logger.LogInformation($"删除业务费用申请单 {id} 的 {items.Count} 个明细项");
-                    
+
                     // 先恢复相关的费用状态
                     foreach (var detail in items)
                     {
@@ -457,17 +462,17 @@ namespace PowerLmsWebApi.Controllers
                             }
                         }
                     }
-                    
+
                     // 删除所有关联的明细项
                     _DbContext.DocFeeRequisitionItems.RemoveRange(items);
                 }
-                
+
                 // 删除申请单
                 _EntityManager.Remove(item);
-                
+
                 // 保存所有更改
                 _DbContext.SaveChanges();
-                
+
                 _Logger.LogInformation($"成功删除业务费用申请单 {id} 及其所有关联明细项");
             }
             catch (Exception ex)
@@ -477,7 +482,7 @@ namespace PowerLmsWebApi.Controllers
                 result.ErrorCode = 500;
                 result.DebugMessage = $"删除业务费用申请单时发生错误: {ex.Message}";
             }
-            
+
             return result;
         }
 

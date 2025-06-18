@@ -401,7 +401,7 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="401">Token无效或无权限获取指定账号信息。</response>  
         /// <response code="404">指定的账号Id不存在。</response>  
         /// <response code="451">权限不足。</response>  
-        [HttpPut]
+        [HttpPut()]
         public ActionResult<ModifyAccountReturnDto> ModifyAccount(ModifyAccountParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
@@ -530,7 +530,7 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="401">无效令牌。</response>  
         /// <response code="400">旧密码不正确。</response>  
         [HttpPut]
-        public ActionResult<ModifyPwdReturnDto> ModifyPwd(ModifyPwdParamsDto model)
+        public ActionResult<ModifyPwdReturnDto> ModifyPwd([FromBody]ModifyPwdParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyPwdReturnDto();
