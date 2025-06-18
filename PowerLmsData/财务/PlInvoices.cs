@@ -188,7 +188,7 @@ namespace PowerLms.Data
         public decimal ExchangeRate { get; set; }
 
         /// <summary>
-        /// 申请单明细id,对应申请明细的费用。
+        /// 申请单明细id,关联 <see cref="DocFeeRequisitionItem"/> 的Id。
         /// </summary>
         [Comment("申请单明细id")]
         public Guid? RequisitionItemId { get; set; }

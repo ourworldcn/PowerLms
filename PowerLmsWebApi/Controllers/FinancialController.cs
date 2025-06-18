@@ -395,15 +395,15 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyDocFeeRequisitionReturnDto();
             // 查找原始记录以保存制单人和制单时间
-            var originalEntity = _DbContext.DocFeeRequisitions.AsNoTracking().FirstOrDefault(x => x.Id == model.DocFeeRequisition.Id);
+            var originalEntity = _DbContext.DocFeeRequisitions.Find(model.DocFeeRequisition.Id);
             if (originalEntity == null) return NotFound();
             var originalMakerId = originalEntity.MakerId;
             var originalMakeDateTime = originalEntity.MakeDateTime;
             if (!_EntityManager.Modify(new[] { model.DocFeeRequisition })) return NotFound();
             //忽略不可更改字段
             var entity = _DbContext.Entry(model.DocFeeRequisition);
-            entity.Entity.MakeDateTime = originalMakeDateTime;
             entity.Entity.MakerId = originalMakerId;
+            entity.Entity.MakeDateTime = originalMakeDateTime;
             entity.Property(c => c.OrgId).IsModified = false;
             _DbContext.SaveChanges();
             return result;
@@ -412,11 +412,12 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 删除指定Id的业务费用申请单。慎用！
         /// </summary>
-        /// <param name="model"></param>
-        /// <returns></returns>
-        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <param name="model">包含要删除申请单Id的参数</param>
+        /// <returns>删除操作的结果</returns>
+        /// <response code="200">操作成功，申请单及其明细已被删除。</response>  
+        /// <response code="400">无法删除申请单，可能原因：申请单不存在或申请单明细已关联到结算单。</response>  
         /// <response code="401">无效令牌。</response>  
-        /// <response code="404">指定Id的业务费用申请单不存在。</response>  
+        /// <response code="500">服务器内部错误。</response>  
         [HttpDelete]
         public ActionResult<RemoveDocFeeRequisitionReturnDto> RemoveDocFeeRequisition(RemoveDocFeeRequisitionParamsDto model)
         {
@@ -426,12 +427,37 @@ namespace PowerLmsWebApi.Controllers
             try
             {
                 var id = model.Id;
+                _Logger.LogInformation($"开始处理删除业务费用申请单请求，申请单ID：{id}");
+
+                // 查找申请单
                 var dbSet = _DbContext.DocFeeRequisitions;
                 var item = dbSet.Find(id);
-                if (item is null) return BadRequest();
+                if (item is null)
+                {
+                    _Logger.LogWarning($"未找到指定的申请单，ID：{id}");
+                    return BadRequest("找不到指定的申请单");
+                }
 
-                // 查找并获取所有关联的申请单明细项
+                // 获取所有关联的申请单明细项
                 var items = _DbContext.DocFeeRequisitionItems.Where(c => c.ParentId == id).ToList();
+                if (items.Count > 0)
+                {
+                    _Logger.LogInformation($"申请单 {id} 包含 {items.Count} 个明细项，正在检查是否可删除");
+
+                    // 检查明细项是否已结算 - 仅通过直接查询数据库中是否存在关联的结算单明细
+                    foreach (var detail in items)
+                    {
+                        // 直接查询数据库中是否存在关联的结算单明细
+                        bool hasInvoiceItems = _DbContext.PlInvoicesItems.Any(invoiceItem =>
+                            invoiceItem.RequisitionItemId == detail.Id);
+
+                        if (hasInvoiceItems)
+                        {
+                            _Logger.LogWarning($"申请单明细(ID:{detail.Id})存在关联的结算单明细，无法删除申请单");
+                            return BadRequest($"申请单明细(ID:{detail.Id})已被关联到结算单，无法删除申请单");
+                        }
+                    }
+                }
 
                 // 记录操作日志
                 _DbContext.OwSystemLogs.Add(new OwSystemLog
@@ -440,30 +466,13 @@ namespace PowerLmsWebApi.Controllers
                     ActionId = $"Delete.{nameof(DocFeeRequisition)}.{item.Id}",
                     ExtraGuid = context.User.Id,
                     ExtraDecimal = items.Count,
-                    WorldDateTime = OwHelper.WorldNow
+                    WorldDateTime = OwHelper.WorldNow,
                 });
 
-                // 如果有关联的明细项，先处理它们
+                // 如果有关联的明细项，先删除它们
                 if (items.Count > 0)
                 {
                     _Logger.LogInformation($"删除业务费用申请单 {id} 的 {items.Count} 个明细项");
-
-                    // 先恢复相关的费用状态
-                    foreach (var detail in items)
-                    {
-                        // 当明细项有关联费用时，需要处理该费用
-                        if (detail.FeeId.HasValue)
-                        {
-                            var fee = _DbContext.DocFees.Find(detail.FeeId.Value);
-                            if (fee != null)
-                            {
-                                // 这里可以添加恢复费用状态的逻辑，例如更新某些标志字段
-                                _Logger.LogDebug($"恢复费用 {fee.Id} 的状态");
-                            }
-                        }
-                    }
-
-                    // 删除所有关联的明细项
                     _DbContext.DocFeeRequisitionItems.RemoveRange(items);
                 }
 
