@@ -44,7 +44,7 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="logger"></param>
         public AccountController(PowerLmsUserDbContext dbContext, AccountManager accountManager, IServiceProvider serviceProvider, IMapper mapper,
             EntityManager entityManager, OrganizationManager organizationManager, CaptchaManager captchaManager, AuthorizationManager authorizationManager,
-            MerchantManager merchantManager, RoleManager roleManager, OwSqlAppLogger appLogger, IMemoryCache cache, ILogger<AccountController> logger)
+            MerchantManager merchantManager, RoleManager roleManager, OwSqlAppLogger appLogger, IMemoryCache cache, ILogger<AccountController> logger, PermissionManager permissionManager)
         {
             _DbContext = dbContext;
             _AccountManager = accountManager;
@@ -59,6 +59,7 @@ namespace PowerLmsWebApi.Controllers
             _AppLogger = appLogger;
             _Cache = cache;
             _Logger = logger;
+            _PermissionManager = permissionManager;
         }
 
         readonly IServiceProvider _ServiceProvider;
@@ -74,6 +75,7 @@ namespace PowerLmsWebApi.Controllers
         OwSqlAppLogger _AppLogger;
         IMemoryCache _Cache;
         ILogger<AccountController> _Logger;
+        PermissionManager _PermissionManager;
 
         #region 用户相关
 
@@ -653,30 +655,71 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<SetRolesReturnDto> SetRoles(SetRolesParamsDto model)
         {
-            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
+                return Unauthorized();
+
             var result = new SetRolesReturnDto();
+
+            // 验证角色ID参数
             var ids = new HashSet<Guid>(model.RoleIds);
-            if (ids.Count != model.RoleIds.Count) return BadRequest($"{nameof(model.RoleIds)}中有重复键值。");
+            if (ids.Count != model.RoleIds.Count)
+                return BadRequest($"{nameof(model.RoleIds)}中有重复键值。");
 
+            // 验证角色是否存在
             var count = _DbContext.PlRoles.Count(c => ids.Contains(c.Id));
-            if (count != ids.Count) return BadRequest($"{nameof(model.RoleIds)}中至少有一个组织角色不存在。");
+            if (count != ids.Count)
+                return BadRequest($"{nameof(model.RoleIds)}中至少有一个组织角色不存在。");
 
-            // 修改: 使用 GetOrLoadAccountById 替代 GetOrLoadCacheItemById
+            // 验证用户是否存在
             var account = _AccountManager.GetOrLoadById(model.UserId);
-            if (account == null) return BadRequest($"{nameof(model.UserId)}指定用户不存在。");
+            if (account == null)
+                return BadRequest($"{nameof(model.UserId)}指定用户不存在。");
 
-            // 修改: 获取角色缓存键
-            var cacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId(account.Id, ".CurrentRoles");
+            try
+            {
+                // 首先查询当前用户的所有角色关联
+                var currentRoles = _DbContext.PlAccountRoles
+                    .Where(c => c.UserId == model.UserId)
+                    .ToList();
 
-            var removes = _DbContext.PlAccountRoles.Where(c => c.UserId == model.UserId && !ids.Contains(c.RoleId));
-            _DbContext.PlAccountRoles.RemoveRange(removes);
+                // 计算需要删除的角色关联
+                var currentRoleIds = currentRoles.Select(r => r.RoleId).ToHashSet();
+                var rolesToRemove = currentRoles.Where(r => !ids.Contains(r.RoleId)).ToList();
 
-            var adds = ids.Except(_DbContext.PlAccountRoles.Where(c => c.UserId == model.UserId).Select(c => c.RoleId).AsEnumerable()).ToArray();
-            _DbContext.PlAccountRoles.AddRange(adds.Select(c => new AccountRole { RoleId = c, UserId = model.UserId }));
-            _DbContext.SaveChanges();
+                // 计算需要添加的角色关联
+                var rolesToAdd = ids
+                    .Where(id => !currentRoleIds.Contains(id))
+                    .Select(roleId => new AccountRole { RoleId = roleId, UserId = model.UserId })
+                    .ToList();
 
-            // 取消相关缓存
-            _Cache.CancelSource(cacheKey);
+                // 删除旧角色关联
+                if (rolesToRemove.Any())
+                {
+                    _DbContext.PlAccountRoles.RemoveRange(rolesToRemove);
+                }
+
+                // 添加新角色关联
+                if (rolesToAdd.Any())
+                {
+                    _DbContext.PlAccountRoles.AddRange(rolesToAdd);
+                }
+
+                // 保存更改
+                _DbContext.SaveChanges();
+
+                // 使用RoleManager来使用户角色缓存失效
+                _RoleManager.InvalidateUserRolesCache(model.UserId);
+
+                // 由于角色变更会影响权限，也使用户权限缓存失效
+                _PermissionManager.InvalidateUserPermissionsCache(model.UserId);
+
+                _Logger.LogInformation($"已为用户 {model.UserId} 设置 {model.RoleIds.Count} 个角色，移除 {rolesToRemove.Count} 个角色，添加 {rolesToAdd.Count} 个角色");
+            }
+            catch (Exception ex)
+            {
+                _Logger.LogError(ex, $"为用户 {model.UserId} 设置角色时发生错误");
+                return BadRequest($"设置角色失败: {ex.Message}");
+            }
 
             return result;
         }

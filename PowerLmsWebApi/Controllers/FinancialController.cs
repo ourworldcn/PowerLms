@@ -392,20 +392,33 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<ModifyDocFeeRequisitionReturnDto> ModifyDocFeeRequisition(ModifyDocFeeRequisitionParamsDto model)
         {
-            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
+                return Unauthorized();
+
             var result = new ModifyDocFeeRequisitionReturnDto();
-            // 查找原始记录以保存制单人和制单时间
+
+            // 首先获取原始实体并保存需要保留的值
             var originalEntity = _DbContext.DocFeeRequisitions.Find(model.DocFeeRequisition.Id);
-            if (originalEntity == null) return NotFound();
+            if (originalEntity == null)
+                return NotFound();
+
             var originalMakerId = originalEntity.MakerId;
             var originalMakeDateTime = originalEntity.MakeDateTime;
-            if (!_EntityManager.Modify(new[] { model.DocFeeRequisition })) return NotFound();
-            //忽略不可更改字段
-            var entity = _DbContext.Entry(model.DocFeeRequisition);
-            entity.Entity.MakerId = originalMakerId;
-            entity.Entity.MakeDateTime = originalMakeDateTime;
-            entity.Property(c => c.OrgId).IsModified = false;
+
+            // 使用_EntityManager.Modify更新实体
+            var modifiedEntities = new List<DocFeeRequisition>();
+            if (!_EntityManager.Modify(new[] { model.DocFeeRequisition }, modifiedEntities))
+                return NotFound();
+
+            // 确保旧值的属性不被修改
+            var entry = _DbContext.Entry(model.DocFeeRequisition);
+            entry.Property(e => e.OrgId).IsModified = false;
+
+            entry.Entity.MakerId = originalMakerId;
+            entry.Entity.MakeDateTime = originalMakeDateTime;
+
             _DbContext.SaveChanges();
+
             return result;
         }
 

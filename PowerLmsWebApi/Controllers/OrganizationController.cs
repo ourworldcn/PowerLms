@@ -288,52 +288,60 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<ModifyOrgReturnDto> ModifyOrg(ModifyOrgParamsDto model)
         {
-            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized(OwHelper.GetLastErrorMessage());
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
+                return Unauthorized(OwHelper.GetLastErrorMessage());
+
             string err;
-            if (!_AuthorizationManager.Demand(out err, "B.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out err, "B.1"))
+                return StatusCode((int)HttpStatusCode.Forbidden, err);
+
             var result = new ModifyOrgReturnDto();
-            var list = new List<PlOrganization>();
-            List<(PlOrganization, IEnumerable<PlOrganization>)> restore = new List<(PlOrganization, IEnumerable<PlOrganization>)>();
-            var ids = model.Items.Select(c => c.Id).ToArray();
-            _DbContext.PlOrganizations.Where(c => ids.Contains(c.Id)).Load();
+
+            // 提前从DTO中移除Children属性，避免修改父子关系
             foreach (var item in model.Items)
             {
-                if (_DbContext.PlOrganizations.Find(item.Id) is PlOrganization org)
-                    restore.Add((item, item.Children.ToArray()));
-                else
-                    return BadRequest($"指定的机构中至少一个不存在，Id={item.Id}");
+                item.Children = null; // 确保不传递Children属性
             }
 
-            if (!_EntityManager.Modify(model.Items, list)) return NotFound();
+            // 直接修改实体，不需要预先加载
+            var list = new List<PlOrganization>();
+            if (!_EntityManager.Modify(model.Items, list))
+                return NotFound();
 
             try
             {
-                restore.ForEach(c =>
+                // 保存修改但明确告知EF Core不跟踪Children属性的变化
+                foreach (var org in list)
                 {
-                    c.Item1.Children.Clear();
-                    c.Item1.Children.AddRange(c.Item2);
-                });
+                    var entry = _DbContext.Entry(org);
+                    entry.Navigation("Children").IsModified = false;
+                }
+
                 _DbContext.SaveChanges();
-                var merchIds = restore.Select(c =>
-                 {
-                     _MerchantManager.TryGetIdByOrgOrMerchantId(c.Item1.Id, out var r);
-                     return r;
-                 }).Distinct().ToArray();
-                foreach (var item in merchIds)
+
+                // 使商户和组织机构缓存失效
+                var merchIds = list
+                    .Select(c =>
+                    {
+                        _MerchantManager.TryGetIdByOrgOrMerchantId(c.Id, out var r);
+                        return r;
+                    })
+                    .Where(id => id.HasValue)
+                    .Distinct()
+                    .Select(id => id.Value)
+                    .ToArray();
+
+                foreach (var merchId in merchIds)
                 {
-                    if (!item.HasValue) continue;
-
-                    // 使用InvalidateCache方法使商户缓存失效，替代直接操作CancellationTokenSource
-                    _MerchantManager.InvalidateCache(item.Value);
-
-                    // 同时，也应该使组织机构缓存失效
-                    _OrganizationManager.InvalidateOrgCache(item.Value);
+                    _MerchantManager.InvalidateCache(merchId);
+                    _OrganizationManager.InvalidateOrgCache(merchId);
                 }
             }
             catch (Exception excp)
             {
                 return BadRequest(excp.Message);
             }
+
             return result;
         }
 

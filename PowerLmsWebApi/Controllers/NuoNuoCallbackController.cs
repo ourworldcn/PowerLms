@@ -1,12 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text.Json;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
+using System;
+using System.Collections.Generic;
+using System.Text.Json;
 
 namespace PowerLmsWebApi.Controllers
 {
@@ -263,10 +264,6 @@ namespace PowerLmsWebApi.Controllers
                     // 将状态重置为待审核状态 - 状态0表示创建后待审核
                     invoiceInfo.State = 0; // 确保状态值为0，表示创建后待审核
 
-                    // 清除审核人和审核日期
-                    invoiceInfo.AuditorId = null;
-                    invoiceInfo.AuditDateTime = null;
-
                     // 获取错误信息
                     string errorMessage = "开票失败: 未知原因";
                     if (invoiceData.TryGetValue("c_errorMessage", out var errorMsg) &&
@@ -295,8 +292,7 @@ namespace PowerLmsWebApi.Controllers
                                 $"购方税号: {invoiceInfo.BuyerTaxNum}\n" +
                                 $"销方名称: {invoiceInfo.SellerTitle}\n" +
                                 $"销方税号: {invoiceInfo.SellerTaxNum}\n" +
-                                $"失败原因: {errorMessage}\n\n" +
-                                $"该发票已重置为待审核状态，请修正问题后重新审核。";
+                                $"失败原因: {errorMessage}\n\n";
 
                             // 发送系统消息给原审核人
                             _messageManager.SendMessage(
@@ -379,15 +375,16 @@ namespace PowerLmsWebApi.Controllers
                     try
                     {
                         var requisition = _dbContext.DocFeeRequisitions.Find(invoiceInfo.DocFeeRequisitionId.Value);
-                        if (requisition != null && requisition.TaxInvoiceId != invoiceInfo.Id)
+                        if (requisition != null)
                         {
-                            requisition.TaxInvoiceId = invoiceInfo.Id;
-                            _logger.LogInformation($"已更新费用申请单与发票的关联，申请单ID: {requisition.Id}, 发票ID: {invoiceInfo.Id}");
+                            requisition.TaxInvoiceId = invoiceInfo.Id;  // 更新申请单关联的发票ID
+                            requisition.InvoiceNumber = invoiceInfo.InvoiceNumber;  // 回写发票号到申请单
+                            _logger?.LogInformation($"已更新费用申请单与发票的关联，申请单ID: {requisition.Id}, 发票ID: {invoiceInfo.Id}, 发票号: {invoiceInfo.InvoiceNumber}");
                         }
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, $"更新费用申请单与发票关联时出错，申请单ID: {invoiceInfo.DocFeeRequisitionId}, 发票ID: {invoiceInfo.Id}");
+                        _logger?.LogError(ex, $"更新费用申请单与发票关联时出错，申请单ID: {invoiceInfo.DocFeeRequisitionId}, 发票ID: {invoiceInfo.Id}");
                     }
                 }
             }

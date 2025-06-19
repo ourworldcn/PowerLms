@@ -1,25 +1,26 @@
-﻿using System;
+﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.ObjectPool;
+using NPOI.SS.Formula.Functions;
+using PowerLms.Data;
+using PowerLmsServer.EfData;
+using System;
+using System;
+using System.Buffers;
+using System.Collections.Generic;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using System;
-using System.Collections.Generic;
-using System.Net.Http;
 using System.Threading.Tasks;
-using System.Runtime.InteropServices;
-using Microsoft.Extensions.Logging;
-using PowerLms.Data;
-using Microsoft.Extensions.DependencyInjection;
-using AutoMapper;
-using PowerLmsServer.EfData;
-using Microsoft.Extensions.Caching.Memory;
-using System.Net;
-using Microsoft.Extensions.ObjectPool;
-using System.Security.Cryptography;
-using System.Buffers;
-using Microsoft.EntityFrameworkCore;
 
 
 namespace PowerLmsServer.Managers
@@ -451,8 +452,8 @@ namespace PowerLmsServer.Managers
                     }
                 }
 
-                // 先保存回填的基本信息
-                DbContext.Entry(invoiceInfo).State = EntityState.Modified;
+                invoiceInfo.SendTime = OwHelper.WorldNow;   //填写发票发送时间
+
                 DbContext.SaveChanges();
 
                 _logger?.LogInformation($"已回填并保存发票基本信息，发票ID: {taxInvoiceInfoId}, 含税总金额: {totalTaxInclusiveAmount}");
