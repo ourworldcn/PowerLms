@@ -339,8 +339,9 @@ namespace PowerLmsWebApi.Controllers
                     var entry = _DbContext.Entry(no);
                     entry.Property(c => c.ParentId).IsModified = false;
                     entry.Navigation(nameof(PlOrganization.Parent)).IsModified = false;
+                    //entry.Collection(nameof(PlOrganization.Children)).IsModified = false; //实测无法按预期工作
                     no.Children.Clear();
-                    no.Children.AddRange(orgDict[org.Id]); // 恢复子机构
+                    no.Children.AddRange(orgDict[no.Id]); // 恢复子机构
                 }
 
                 _DbContext.SaveChanges();
