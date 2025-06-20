@@ -312,12 +312,6 @@ namespace PowerLmsWebApi.Controllers
 
             var result = new ModifyOrgReturnDto();
 
-            // 提前从DTO中移除Children属性，避免修改父子关系
-            foreach (var item in model.Items)
-            {
-                item.Children = null; // 确保不传递Children属性
-            }
-
             // 直接修改实体，不需要预先加载
             var list = new List<PlOrganization>();
             if (!_EntityManager.Modify(model.Items, list))
@@ -325,11 +319,14 @@ namespace PowerLmsWebApi.Controllers
 
             try
             {
-                // 保存修改但明确告知EF Core不跟踪Children属性的变化
-                foreach (var org in list)
+                // 保存修改但明确告知EF Core不要跟踪Parent和Children属性的变化
+                foreach (var org in model.Items)
                 {
-                    var entry = _DbContext.Entry(org);
-                    entry.Navigation("Children").IsModified = false;
+                    var no = _DbContext.PlOrganizations.Find(org.Id);
+                    var entry = _DbContext.Entry(no);
+                    entry.Property(c => c.ParentId).IsModified = false;
+                    entry.Navigation(nameof(PlOrganization.Parent)).IsModified = false;
+                    entry.Collection(nameof(PlOrganization.Children)).IsModified = false;
                 }
 
                 _DbContext.SaveChanges();

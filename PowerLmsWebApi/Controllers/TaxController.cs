@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using OW.EntityFrameworkCore;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
@@ -93,8 +94,10 @@ namespace PowerLmsWebApi.Controllers
             }
             foreach (var item in model.Items)
             {
-                _DbContext.Entry(item).Property(c => c.InvoiceChannel).IsModified = false;
-                _DbContext.Entry(item).Property(c => c.InvoiceChannelParams).IsModified = false;
+                var tic = _DbContext.TaxInvoiceChannels.Find(item.Id);
+                var entry = _DbContext.Entry(tic);
+                entry.Property(c => c.InvoiceChannel).IsModified = false;
+                entry.Property(c => c.InvoiceChannelParams).IsModified = false;
             }
             _DbContext.SaveChanges();
             return result;
