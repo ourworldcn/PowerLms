@@ -311,6 +311,19 @@ namespace PowerLmsWebApi.Controllers
                 return StatusCode((int)HttpStatusCode.Forbidden, err);
 
             var result = new ModifyOrgReturnDto();
+            Dictionary<Guid, List<PlOrganization>> orgDict = new();
+
+            foreach (var org in model.Items)
+            {
+                var no = _DbContext.PlOrganizations.Find(org.Id);
+                if (no is null)
+                {
+                    _Logger.LogWarning("修改组织机构失败：找不到ID为 {orgId} 的组织机构", org.Id);
+                    return NotFound($"找不到ID为 {org.Id} 的组织机构");
+                }
+                // 保存子机构到一个字典中
+                orgDict[no.Id] = no.Children.ToList();
+            }
 
             // 直接修改实体，不需要预先加载
             var list = new List<PlOrganization>();
@@ -326,7 +339,8 @@ namespace PowerLmsWebApi.Controllers
                     var entry = _DbContext.Entry(no);
                     entry.Property(c => c.ParentId).IsModified = false;
                     entry.Navigation(nameof(PlOrganization.Parent)).IsModified = false;
-                    entry.Collection(nameof(PlOrganization.Children)).IsModified = false;
+                    no.Children.Clear();
+                    no.Children.AddRange(orgDict[org.Id]); // 恢复子机构
                 }
 
                 _DbContext.SaveChanges();
