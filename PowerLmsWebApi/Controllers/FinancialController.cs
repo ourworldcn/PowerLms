@@ -406,16 +406,14 @@ namespace PowerLmsWebApi.Controllers
             var originalMakeDateTime = originalEntity.MakeDateTime;
 
             // 使用_EntityManager.Modify更新实体
-            var modifiedEntities = new List<DocFeeRequisition>();
-            if (!_EntityManager.Modify(new[] { model.DocFeeRequisition }, modifiedEntities))
+            if (!_EntityManager.Modify(new[] { model.DocFeeRequisition }))
                 return NotFound();
 
             // 确保旧值的属性不被修改
-            var entry = _DbContext.Entry(model.DocFeeRequisition);
-            entry.Property(e => e.OrgId).IsModified = false;
+            var entry = _DbContext.DocFeeRequisitions.Find(model.DocFeeRequisition.Id);
 
-            entry.Entity.MakerId = originalMakerId;
-            entry.Entity.MakeDateTime = originalMakeDateTime;
+            entry.MakerId = originalMakerId;
+            entry.MakeDateTime = originalMakeDateTime;
 
             _DbContext.SaveChanges();
 

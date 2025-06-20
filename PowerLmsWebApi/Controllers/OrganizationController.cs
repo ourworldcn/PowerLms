@@ -224,10 +224,25 @@ namespace PowerLmsWebApi.Controllers
                     query = query.Where(org => orgIds.Contains(org.Id));
                 }
             }
+            try
+            {
+                // 获取分页数据
+                var prb = _EntityManager.GetAll(query, model.StartIndex, model.Count);
+                prb.Result.ForEach(c =>
+                {                 // 清除Parent和Children属性，避免循环引用
+                    c.Parent = null;
+                    c.Children = null;
+                });
 
-            // 获取分页数据
-            var prb = _EntityManager.GetAll(query, model.StartIndex, model.Count);
-            _Mapper.Map(prb, result);
+                _Mapper.Map(prb, result);
+            }
+            catch (Exception ex)
+            {
+                _Logger.LogError(ex, "获取组织机构列表时发生错误");
+                result.HasError = true;
+                result.ErrorCode = 500;
+                result.DebugMessage = ex.Message;
+            }
             return result;
         }
 
