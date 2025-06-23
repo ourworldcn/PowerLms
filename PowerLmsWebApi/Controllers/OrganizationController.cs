@@ -449,12 +449,29 @@ namespace PowerLmsWebApi.Controllers
                 return BadRequest($"找不到ID为 {id} 的组织机构");
             }
 
-            // 检查是否有子组织机构
+            // 检查是否有子组织机构（非叶子节点不能删除）
             if (item.Children != null && item.Children.Count > 0)
             {
                 _Logger.LogWarning("删除组织机构失败：组织机构 {orgId} ({orgName}) 包含 {childCount} 个子组织机构，需要先删除子组织机构",
                     id, item.Name?.DisplayName, item.Children.Count);
                 return BadRequest($"组织机构 '{item.Name?.DisplayName}' 包含子组织机构，请先删除子组织机构");
+            }
+
+            // 检查是否有角色指向该组织机构
+            var rolesPointingToOrg = _DbContext.PlRoles.Where(r => r.OrgId == id).ToList();
+            if (rolesPointingToOrg.Any())
+            {
+                _Logger.LogWarning("删除组织机构失败：存在 {count} 个角色指向组织机构 {orgId} ({orgName})",
+                    rolesPointingToOrg.Count, id, item.Name?.DisplayName);
+                return BadRequest($"组织机构 '{item.Name?.DisplayName}' 有 {rolesPointingToOrg.Count} 个角色与其关联，请先删除这些角色");
+            }
+
+            // 检查是否有关联业务
+            if (HasBusinessRelatedToOrg(id))
+            {
+                _Logger.LogWarning("删除组织机构失败：组织机构 {orgId} ({orgName}) 存在关联业务，无法删除",
+                    id, item.Name?.DisplayName);
+                return BadRequest($"组织机构 '{item.Name?.DisplayName}' 存在关联业务，无法删除");
             }
 
             try
@@ -483,7 +500,19 @@ namespace PowerLmsWebApi.Controllers
                 _Logger.LogInformation("准备删除组织机构: ID={orgId}, 名称='{orgName}', 父ID={parentId}, 商户ID={merchantId}",
                     item.Id, item.Name?.DisplayName, item.ParentId, merchantId);
 
-                // 执行删除操作
+                // 1. 删除用户-机构关系
+                var userOrgRelations = _DbContext.AccountPlOrganizations
+                    .Where(ao => ao.OrgId == id)
+                    .ToList();
+
+                if (userOrgRelations.Any())
+                {
+                    _Logger.LogInformation("删除组织机构 {orgId} 的 {count} 个用户-机构关系", id, userOrgRelations.Count);
+                    _DbContext.AccountPlOrganizations.RemoveRange(userOrgRelations);
+                    _DbContext.SaveChanges();
+                }
+
+                // 2. 执行删除组织机构操作
                 _EntityManager.Remove(item);
                 _DbContext.SaveChanges();
 
@@ -517,6 +546,49 @@ namespace PowerLmsWebApi.Controllers
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// 检查组织机构是否有关联业务
+        /// </summary>
+        /// <param name="orgId">组织机构ID</param>
+        /// <returns>true表示有关联业务，false表示没有关联业务</returns>
+        private bool HasBusinessRelatedToOrg(Guid orgId)
+        {
+            _Logger.LogInformation("开始检查组织机构 {orgId} 的业务关联", orgId);
+
+            try
+            {
+                // 检查业务总表多种关联方式
+                if (_DbContext.PlJobs != null && _DbContext.PlJobs.Any(j =>j.OrgId == orgId ))
+                {
+                    _Logger.LogInformation("组织机构 {orgId} 在业务单中存在关联，无法删除", orgId);
+                    return true;
+                }
+
+                // 检查客户资料关联
+                if (_DbContext.PlCustomers != null && _DbContext.PlCustomers.Any(c => c.OrgId == orgId))
+                {
+                    _Logger.LogInformation("组织机构 {orgId} 在客户资料中存在关联，无法删除", orgId);
+                    return true;
+                }
+
+                // 检查银行信息关联
+                if (_DbContext.BankInfos != null && _DbContext.BankInfos.Any(b => b.ParentId == orgId))
+                {
+                    _Logger.LogInformation("组织机构 {orgId} 存在关联银行信息，无法删除", orgId);
+                    return true;
+                }
+
+                _Logger.LogInformation("组织机构 {orgId} 没有发现任何关联业务", orgId);
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _Logger.LogError(ex, "检查组织机构 {orgId} 业务关联时发生异常", orgId);
+                // 为安全起见，发生异常时阻止删除
+                return true;
+            }
         }
 
         /// <summary>

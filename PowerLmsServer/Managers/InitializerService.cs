@@ -73,6 +73,7 @@ namespace PowerLmsServer.Managers
                 InitializeDataDic(svc);
                 CreateAdmin(svc);
                 SeedData(svc);
+                CleanupInvalidRelationships(svc);
                 Test(svc);
             }, CancellationToken.None);
             _Logger.LogInformation("Plms服务成功上线");
@@ -107,6 +108,69 @@ namespace PowerLmsServer.Managers
             #endregion 税务发票通道初始数据
 
 
+        }
+
+        /// <summary>
+        /// 清理无效的用户-角色、角色-权限、用户-机构关系数据
+        /// </summary>
+        /// <param name="svc">服务提供者</param>
+        private void CleanupInvalidRelationships(IServiceProvider svc)
+        {
+            var db = svc.GetRequiredService<PowerLmsUserDbContext>();
+            var stopwatch = new Stopwatch();
+            stopwatch.Start();
+
+            _Logger.LogInformation("开始清理无效的关联关系数据...");
+
+            try
+            {
+                // 使用EF Core删除无效的用户-角色关系
+                var invalidUserRoles = db.PlAccountRoles
+                    .Where(ur => !db.Accounts.Any(u => u.Id == ur.UserId) ||
+                                 !db.PlRoles.Any(r => r.Id == ur.RoleId))
+                    .ToList();
+
+                if (invalidUserRoles.Count > 0)
+                {
+                    db.PlAccountRoles.RemoveRange(invalidUserRoles);
+                    _Logger.LogInformation("准备清理 {count} 条无效的用户-角色关系", invalidUserRoles.Count);
+                }
+
+                // 使用EF Core删除无效的角色-权限关系
+                var invalidRolePermissions = db.PlRolePermissions
+                    .Where(rp => !db.PlRoles.Any(r => r.Id == rp.RoleId) ||
+                                 !db.PlPermissions.Any(p => p.Name == rp.PermissionId))
+                    .ToList();
+
+                if (invalidRolePermissions.Count > 0)
+                {
+                    db.PlRolePermissions.RemoveRange(invalidRolePermissions);
+                    _Logger.LogInformation("准备清理 {count} 条无效的角色-权限关系", invalidRolePermissions.Count);
+                }
+
+                // 使用EF Core删除无效的用户-机构关系
+                var invalidUserOrgs = db.AccountPlOrganizations
+                    .Where(uo => !db.Accounts.Any(u => u.Id == uo.UserId) ||
+                                 !db.PlOrganizations.Any(o => o.Id == uo.OrgId))
+                    .ToList();
+
+                if (invalidUserOrgs.Count > 0)
+                {
+                    db.AccountPlOrganizations.RemoveRange(invalidUserOrgs);
+                    _Logger.LogInformation("准备清理 {count} 条无效的用户-机构关系", invalidUserOrgs.Count);
+                }
+
+                // 保存所有更改
+                var totalRemoved = db.SaveChanges();
+
+                stopwatch.Stop();
+                _Logger.LogInformation("关系清理完成，共删除 {total} 条无效数据，耗时: {elapsed}ms",
+                    totalRemoved, stopwatch.ElapsedMilliseconds);
+            }
+            catch (Exception ex)
+            {
+                _Logger.LogError(ex, "清理无效关联关系时发生错误");
+            }
         }
 
         /// <summary>

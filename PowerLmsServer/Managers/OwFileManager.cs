@@ -65,5 +65,16 @@ namespace PowerLmsServer.Managers
         /// 没有根符号\(入 Files)，则使用基于运行时代码基础路径.有跟符号但没有盘符(如:\Files)则使用同一个驱动器作为盘符。可以指定全路径，如C:\Files
         /// </summary>
         public string FilePath { get; set; } = Path.Combine(AppContext.BaseDirectory, "Files");
+
+        /// <summary>
+        /// 文件上传的最大大小，单位MB。
+        /// </summary>
+        public int MaxFileSizeMB { get; set; } = 5;
+
+        /// <summary>
+        /// 允许上传的文件扩展名列表。
+        /// 例如：.jpg, .png, .pdf
+        /// </summary>
+        public List<string> AllowedFileExtensions { get; set; } = new List<string>();
     }
 }

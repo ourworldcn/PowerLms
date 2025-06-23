@@ -25,7 +25,7 @@ namespace PowerLmsWebApi.Controllers
         /// </summary>
         public AuthorizationController(IServiceProvider serviceProvider, AccountManager accountManager, PowerLmsUserDbContext dbContext, EntityManager entityManager,
             IMapper mapper, AuthorizationManager authorizationManager, OrganizationManager organizationManager, MerchantManager merchantManager,
-            PermissionManager permissionManager, RoleManager roleManager)
+            PermissionManager permissionManager, RoleManager roleManager, ILogger<AuthorizationController> logger)
         {
             _ServiceProvider = serviceProvider;
             _AccountManager = accountManager;
@@ -37,6 +37,7 @@ namespace PowerLmsWebApi.Controllers
             _MerchantManager = merchantManager;
             _PermissionManager = permissionManager;
             _RoleManager = roleManager;
+            _Logger = logger;
         }
 
         readonly IServiceProvider _ServiceProvider;
@@ -49,6 +50,7 @@ namespace PowerLmsWebApi.Controllers
         readonly MerchantManager _MerchantManager;
         readonly PermissionManager _PermissionManager;
         readonly RoleManager _RoleManager;
+        ILogger<AuthorizationController> _Logger;
 
         #region 角色的CRUD
 
@@ -169,8 +171,8 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemovePlRoleReturnDto();
-            var userIds = _DbContext.PlAccountRoles.Where(c => model.Id == c.RoleId).Select(c => c.UserId).ToArray();
             var id = model.Id;
+
             var dbSet = _DbContext.PlRoles;
             var item = dbSet.Find(id);
             if (item is null) return BadRequest();
@@ -181,13 +183,42 @@ namespace PowerLmsWebApi.Controllers
                 _MerchantManager.TryGetIdByOrgOrMerchantId(item.OrgId.Value, out merchantId);
             }
 
-            _EntityManager.Remove(item);
-            _DbContext.SaveChanges();
-
-            // 更新以适应新的缓存管理接口
-            if (merchantId.HasValue)
+            try
             {
-                _OrganizationManager.InvalidateOrgCache(merchantId.Value);
+                // 删除角色-用户关联关系
+                var userRoles = _DbContext.PlAccountRoles.Where(c => c.RoleId == id).ToList();
+                if (userRoles.Any())
+                {
+                    _Logger.LogInformation("删除角色 {roleId} 的 {count} 个用户关联关系", id, userRoles.Count);
+                    _DbContext.PlAccountRoles.RemoveRange(userRoles);
+                }
+
+                // 删除角色-权限关联关系
+                var rolePermissions = _DbContext.PlRolePermissions.Where(rp => rp.RoleId == id).ToList();
+                if (rolePermissions.Any())
+                {
+                    _Logger.LogInformation("删除角色 {roleId} 的 {count} 个权限关联关系", id, rolePermissions.Count);
+                    _DbContext.PlRolePermissions.RemoveRange(rolePermissions);
+                }
+
+                // 删除角色本身
+                _EntityManager.Remove(item);
+                _DbContext.SaveChanges();
+
+                // 更新缓存
+                if (merchantId.HasValue)
+                {
+                    _OrganizationManager.InvalidateOrgCache(merchantId.Value);
+                }
+
+                _Logger.LogInformation("成功删除角色: {roleName}(ID:{roleId})", item.Name, id);
+            }
+            catch (Exception ex)
+            {
+                _Logger.LogError(ex, "删除角色 {roleId} 及其关联关系时发生错误", id);
+                result.HasError = true;
+                result.DebugMessage = $"删除角色失败: {ex.Message}";
+                return result;
             }
 
             return result;

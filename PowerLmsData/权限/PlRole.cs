@@ -24,7 +24,7 @@ namespace PowerLms.Data
         }
 
         /// <summary>
-        /// 所属组织机构Id。
+        /// 所属组织机构Id。关联 PlOrganization。
         /// </summary>
         [Comment("所属组织机构Id。")]
         public Guid? OrgId { get; set; }

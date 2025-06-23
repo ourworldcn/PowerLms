@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.Web.CodeGeneration;
 using NuGet.Common;
 using NuGet.Protocol.Plugins;
@@ -44,7 +45,7 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 构造函数。
         /// </summary>
-        public FileController(IServiceProvider serviceProvider, IMapper mapper, AccountManager accountManager, PowerLmsUserDbContext dbContext, EntityManager entityManager, AuthorizationManager authorizationManager, OwFileManager fileManager)
+        public FileController(IServiceProvider serviceProvider, IMapper mapper, AccountManager accountManager, PowerLmsUserDbContext dbContext, EntityManager entityManager, AuthorizationManager authorizationManager, OwFileManager fileManager, IOptions<OwFileManagerOptions> fileManagerOptions, ILogger<FileController> logger)
         {
             _Mapper = mapper;
             _AccountManager = accountManager;
@@ -53,6 +54,8 @@ namespace PowerLmsWebApi.Controllers
             _EntityManager = entityManager;
             _AuthorizationManager = authorizationManager;
             _FileManager = fileManager;
+            _fileManagerOptions = fileManagerOptions;
+            _Logger = logger;
         }
 
         readonly PowerLmsUserDbContext _DbContext;
@@ -62,6 +65,8 @@ namespace PowerLmsWebApi.Controllers
         IMapper _Mapper;
         readonly private AuthorizationManager _AuthorizationManager;
         readonly OwFileManager _FileManager;
+        IOptions<OwFileManagerOptions> _fileManagerOptions;
+        ILogger<FileController> _Logger;
 
         /// <summary>
         /// 存储文件的根目录。
@@ -215,32 +220,90 @@ namespace PowerLmsWebApi.Controllers
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
-        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="200">文件上传成功。</response>  
+        /// <response code="400">请求无效，未提供文件或文件为空。</response>
         /// <response code="401">无效令牌。</response>  
-        /// <response code="403">权限不足。</response>  
+        /// <response code="403">权限不足。</response>
+        /// <response code="413">文件大小超过限制。</response>
+        /// <response code="415">不支持的文件类型。</response>
+        /// <remarks>
+        /// 规则配置热更新，无需重启服务即可生效，文件上传配置在appsettings.json 或 appsettings.XXX.json中设置：
+        /// {
+        ///   "OwFileManagerOptions": {
+        ///     "MaxFileSizeMB": 5,
+        ///     "AllowedFileExtensions": [
+        ///       ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
+        ///       ".xml", ".ofd", ".json",
+        ///       ".jpg", ".jpeg", ".png", ".bmp", ".gif",
+        ///       ".txt"
+        ///     ]
+        ///   }
+        /// }
+        /// 
+        /// 配置项说明：
+        /// - MaxFileSizeMB：允许上传的最大文件大小，单位MB
+        /// - AllowedFileExtensions：允许上传的文件类型列表，注意包含前导点(.)
+        /// </remarks>
         [HttpPost]
         public ActionResult<AddFileReturnDto> AddFile([FromForm] AddFileParamsDto model)
         {
             var result = new AddFileReturnDto();
+
+            // 权限检查
             if (_DbContext.PlJobs.Find(model.ParentId) is PlJob job)
                 if (job.JobTypeId == ProjectContent.AeId)
                 {
-                    if (!_AuthorizationManager.Demand(out var err, "D0.8.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                    if (!_AuthorizationManager.Demand(out var err, "D0.8.1")) return StatusCode(StatusCodes.Status403Forbidden, err);
                 }
                 else if (job.JobTypeId == ProjectContent.AiId)
                 {
-                    if (!_AuthorizationManager.Demand(out var err, "D1.8.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                    if (!_AuthorizationManager.Demand(out var err, "D1.8.1")) return StatusCode(StatusCodes.Status403Forbidden, err);
                 }
                 else if (job.JobTypeId == ProjectContent.SeId)
                 {
-                    if (!_AuthorizationManager.Demand(out var err, "D2.8.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                    if (!_AuthorizationManager.Demand(out var err, "D2.8.1")) return StatusCode(StatusCodes.Status403Forbidden, err);
                 }
                 else if (job.JobTypeId == ProjectContent.SiId)
                 {
-                    if (!_AuthorizationManager.Demand(out var err, "D3.8.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                    if (!_AuthorizationManager.Demand(out var err, "D3.8.1")) return StatusCode(StatusCodes.Status403Forbidden, err);
                 }
 
-            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            // 验证文件是否存在
+            if (model.File == null || model.File.Length == 0)
+            {
+                result.HasError = true;
+                result.ErrorCode = 1001;
+                result.DebugMessage = "未提供有效的文件";
+                _Logger.LogWarning("文件上传失败：未提供有效的文件");
+                return BadRequest(result.DebugMessage);
+            }
+
+            // 验证文件大小
+            var maxSizeBytes = _fileManagerOptions.Value.MaxFileSizeMB * 1024 * 1024;
+            if (model.File.Length > maxSizeBytes)
+            {
+                result.HasError = true;
+                result.ErrorCode = 1002;
+                result.DebugMessage = $"文件大小超过限制，最大允许{_fileManagerOptions.Value.MaxFileSizeMB}MB";
+                _Logger.LogWarning("文件上传失败：{fileName}，大小：{fileSize}，超出最大限制：{maxSize}MB",
+                    model.File.FileName, model.File.Length / 1024.0 / 1024.0, _fileManagerOptions.Value.MaxFileSizeMB);
+                return StatusCode(StatusCodes.Status413PayloadTooLarge, result.DebugMessage);
+            }
+
+            // 验证文件类型
+            var fileExt = Path.GetExtension(model.File.FileName).ToLowerInvariant();
+            if (_fileManagerOptions.Value.AllowedFileExtensions.Count > 0 &&
+                !_fileManagerOptions.Value.AllowedFileExtensions.Contains(fileExt, StringComparer.OrdinalIgnoreCase))
+            {
+                result.HasError = true;
+                result.ErrorCode = 1003;
+                result.DebugMessage = $"不支持的文件类型：{fileExt}";
+                _Logger.LogWarning("文件上传失败：{fileName}，不支持的文件类型：{fileType}",
+                    model.File.FileName, fileExt);
+                return StatusCode(StatusCodes.Status415UnsupportedMediaType, result.DebugMessage);
+            }
+
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized(result);
             var fileInfo = new PlFileInfo
             {
                 DisplayName = model.DisplayName,
@@ -261,8 +324,11 @@ namespace PowerLmsWebApi.Controllers
             var fullPath = Path.Combine(AppContext.BaseDirectory, "Files", fileInfo.FilePath);
             var dir = Path.GetDirectoryName(fullPath);
             Directory.CreateDirectory(dir);
-            using var file = new FileStream(fullPath, FileMode.CreateNew);
+            using var file = new FileStream(fullPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 81920, FileOptions.SequentialScan);
             model.File.CopyTo(file);
+
+            _Logger.LogInformation("文件上传成功：{fileName}，大小：{fileSize}MB，ID：{fileId}",
+                model.File.FileName, Math.Round(model.File.Length / 1024.0 / 1024.0, 2), fileInfo.Id);
             return result;
         }
 
