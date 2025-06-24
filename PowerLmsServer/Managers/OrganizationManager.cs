@@ -218,7 +218,7 @@ namespace PowerLmsServer.Managers
         }
 
         /// <summary>
-        /// 获取当前的登录公司及子机构但排除下属公司。
+        /// 获取当前的登录公司及子机构,但排除下属公司。
         /// </summary>
         /// <param name="user"></param>
         /// <returns>如果没有指定所属当前机构则返回空字典。</returns>

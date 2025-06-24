@@ -965,6 +965,134 @@ namespace PowerLmsWebApi.Controllers
         #endregion 航线相关
 
         #region 汇率相关
+
+        /// <summary>
+        /// 导入汇率对象.符合条件的汇率对象会被导入到当前用户登录的机构中。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">条件格式错误或未找到符合条件的汇率记录。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpPost]
+        public ActionResult<ImportPlExchangeRateReturnDto> ImportPlExchangeRate(ImportPlExchangeRateParamsDto model)
+        {
+            // 验证令牌并获取上下文
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+
+            var result = new ImportPlExchangeRateReturnDto();
+
+            try
+            {
+                // 确保条件字典键不区分大小写
+                var conditionalIgnoreCase = model.Conditional != null
+                    ? new Dictionary<string, string>(model.Conditional, StringComparer.OrdinalIgnoreCase)
+                    : new Dictionary<string, string>();
+
+                // 获取汇率数据集
+                var dbSet = _DbContext.DD_PlExchangeRates;
+
+                // 构建基本查询
+                var sourceColl = dbSet.AsNoTracking();
+
+                // 根据用户角色确定源数据筛选条件
+                if (_AccountManager.IsAdmin(context.User)) // 若是超管，可以查看全局汇率
+                {
+                    //不做限制
+                }
+                else
+                {
+                    // 并根据用户的机构进行筛选
+                    if (!_MerchantManager.GetIdByUserId(context.User.Id, out var merchId))
+                        return BadRequest("未知的商户Id");
+
+                    if (context.User.OrgId is null) // 若没有指定机构
+                    {
+                        // 返回错误信息，要求用户指定机构
+                        return BadRequest("请指定用户的登录机构");
+                    }
+                    else // 若指定了机构
+                    {
+                        // 获取当前登录机构及其所有子机构包含下属公司的所有机构Id
+                        var allOrgs = _OrganizationManager.GetOrgsByMerchantId(merchId.Value);
+
+                        var allOrgIds = allOrgs.Values.Select(c => c.Id).ToList();  // 获取所有机构ID
+
+                        var orgHierarchy = _OrganizationManager.GetOrLoadCurrentOrgsByUser(context.User);
+                        sourceColl = sourceColl.Where(c => c.OrgId.HasValue && allOrgIds.Contains(c.OrgId.Value));
+                    }
+                }
+
+                // 使用EfHelper.GenerateWhereAnd进行通用查询条件处理
+                var filteredQuery = EfHelper.GenerateWhereAnd(sourceColl, conditionalIgnoreCase);
+                if (filteredQuery == null)
+                {
+                    return BadRequest(OwHelper.GetLastErrorMessage() ?? "条件格式错误");
+                }
+
+                // 执行查询并获取源汇率数据
+                var sourceRates = filteredQuery.ToList();
+                if (sourceRates.Count == 0)
+                {
+                    result.HasError = false;    //不是错误
+                    result.DebugMessage = "未找到符合条件的汇率记录";
+                    return result;
+                }
+
+                // 确定目标组织ID - 导入到当前用户的机构中
+                Guid? targetOrgId;
+                if (context.User.OrgId.HasValue) // 若用户属于某个机构
+                {
+                    targetOrgId = context.User.OrgId;
+                }
+                else
+                {
+                    return BadRequest("未知的商户Id");
+                }
+
+                // 导入汇率记录到目标机构
+                int importedCount = 0;
+                foreach (var sourceRate in sourceRates)
+                {
+                    // 创建新汇率对象，为其分配新的ID
+                    var newRate = new PlExchangeRate
+                    {
+                        Id = Guid.NewGuid(),
+                        OrgId = targetOrgId,
+                        ShortcutName = sourceRate.ShortcutName,
+                        IsDelete = false,
+
+                        BusinessTypeId = sourceRate.BusinessTypeId,
+                        SCurrency = sourceRate.SCurrency,
+                        DCurrency = sourceRate.DCurrency,
+                        Radix = sourceRate.Radix,
+                        Exchange = sourceRate.Exchange,
+                        BeginDate = sourceRate.BeginDate,
+                        EndData = sourceRate.EndData
+                    };
+
+                    // 添加到数据库
+                    _DbContext.DD_PlExchangeRates.Add(newRate);
+                    importedCount++;
+                }
+
+                // 保存更改
+                _DbContext.SaveChanges();
+
+                // 设置返回结果
+                result.HasError = false;
+                result.DebugMessage = $"成功导入{importedCount}条汇率记录";
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                result.HasError = true;
+                result.DebugMessage = "导入汇率时发生错误：" + ex.ToString();
+                return result;
+            }
+        }
+
         /// <summary>
         /// 获取汇率。
         /// </summary>
@@ -975,7 +1103,8 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="400">指定类别Id无效。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
-        public ActionResult<GetAllPlExchangeRateReturnDto> GetAllPlExchangeRate([FromQuery] PagingParamsDtoBase model, [FromQuery] Dictionary<string, string> conditional = null)
+        public ActionResult<GetAllPlExchangeRateReturnDto> GetAllPlExchangeRate([FromQuery] PagingParamsDtoBase model,
+            [FromQuery] Dictionary<string, string> conditional = null)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlExchangeRateReturnDto();
@@ -2058,7 +2187,7 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.SaveChanges();
             return result;
         }
-        
+
         #endregion 币种相关
 
         #region 箱型相关

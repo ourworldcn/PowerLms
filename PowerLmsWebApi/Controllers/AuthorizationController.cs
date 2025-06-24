@@ -366,18 +366,21 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllAccountRoleReturnDto();
             var dbSet = _DbContext.PlAccountRoles;
+
+            // 首先应用排序
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-            foreach (var item in conditional)
-                if (string.Equals(item.Key, "UserId", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (Guid.TryParse(item.Value, out var id))
-                        coll = coll.Where(c => c.UserId == id);
-                }
-                else if (string.Equals(item.Key, "RoleId", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (Guid.TryParse(item.Value, out var id))
-                        coll = coll.Where(c => c.RoleId == id);
-                }
+
+            // 使用EfHelper.GenerateWhereAnd方法直接应用条件,忽略条件字典中键的大小写
+            coll = EfHelper.GenerateWhereAnd(coll, new Dictionary<string, string>(conditional, StringComparer.OrdinalIgnoreCase));
+
+            if (coll == null)   // 如果GenerateWhereAnd返回null，表示发生了条件转换错误
+            {
+                result.HasError = true;
+                result.ErrorCode = OwHelper.GetLastError();
+                result.DebugMessage = OwHelper.GetLastErrorMessage();
+                return result;
+            }
+
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;

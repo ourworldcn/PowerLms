@@ -151,7 +151,7 @@ namespace PowerLmsServer.Managers
                 // 使用EF Core删除无效的用户-机构关系
                 var invalidUserOrgs = db.AccountPlOrganizations
                     .Where(uo => !db.Accounts.Any(u => u.Id == uo.UserId) ||
-                                 !db.PlOrganizations.Any(o => o.Id == uo.OrgId))
+                                (!db.PlOrganizations.Any(o => o.Id == uo.OrgId) && !db.Merchants.Any(c => c.Id == uo.OrgId)))
                     .ToList();
 
                 if (invalidUserOrgs.Count > 0)

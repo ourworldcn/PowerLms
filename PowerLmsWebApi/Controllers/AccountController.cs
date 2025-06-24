@@ -532,7 +532,7 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="401">无效令牌。</response>  
         /// <response code="400">旧密码不正确。</response>  
         [HttpPut]
-        public ActionResult<ModifyPwdReturnDto> ModifyPwd([FromBody]ModifyPwdParamsDto model)
+        public ActionResult<ModifyPwdReturnDto> ModifyPwd([FromBody] ModifyPwdParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyPwdReturnDto();
@@ -645,13 +645,15 @@ namespace PowerLmsWebApi.Controllers
         #endregion 用户相关
 
         /// <summary>
-        /// 设置用户的直属角色。
+        /// 设置用户的直属角色。仅超管或商管可以使用此功能。
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
-        /// <response code="200">未发生系统级错误。</response>  
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode。</response>  
+        /// <response code="400">参数错误，如角色ID不存在或用户ID无效。</response>  
         /// <response code="401">无效令牌。</response>  
-        /// <response code="400">参数错误。</response>  
+        /// <response code="403">权限不足，如尝试修改其他商户的用户角色。</response>  
+        /// <response code="500">服务器内部错误。</response>  
         [HttpPut]
         public ActionResult<SetRolesReturnDto> SetRoles(SetRolesParamsDto model)
         {
@@ -660,70 +662,146 @@ namespace PowerLmsWebApi.Controllers
 
             var result = new SetRolesReturnDto();
 
-            // 验证角色ID参数
-            var ids = new HashSet<Guid>(model.RoleIds);
-            if (ids.Count != model.RoleIds.Count)
-                return BadRequest($"{nameof(model.RoleIds)}中有重复键值。");
-
-            // 验证角色是否存在
-            var count = _DbContext.PlRoles.Count(c => ids.Contains(c.Id));
-            if (count != ids.Count)
-                return BadRequest($"{nameof(model.RoleIds)}中至少有一个组织角色不存在。");
-
-            // 验证用户是否存在
-            var account = _AccountManager.GetOrLoadById(model.UserId);
-            if (account == null)
-                return BadRequest($"{nameof(model.UserId)}指定用户不存在。");
-
+            if (!context.User.IsAdmin())
+            {
+                // 只有超管或商管可以设置用户角色
+                return StatusCode((int)HttpStatusCode.Forbidden, "只有超管或商管可以设置用户角色");
+            }
             try
             {
-                // 首先查询当前用户的所有角色关联
-                var currentRoles = _DbContext.PlAccountRoles
+                // 验证角色ID参数
+                var ids = new HashSet<Guid>(model.RoleIds);
+                if (ids.Count != model.RoleIds.Count)
+                    return BadRequest($"{nameof(model.RoleIds)}中有重复键值。");
+
+                // 验证角色是否存在
+                var existingRoleIds = _DbContext.PlRoles
+                    .Where(c => ids.Contains(c.Id))
+                    .Select(c => c.Id)
+                    .ToHashSet();
+
+                if (existingRoleIds.Count != ids.Count)
+                    return BadRequest($"{nameof(model.RoleIds)}中至少有一个组织角色不存在。");
+
+                // 验证用户是否存在
+                var account = _AccountManager.GetOrLoadById(model.UserId);
+                if (account == null)
+                    return BadRequest($"{nameof(model.UserId)}指定用户不存在。");
+
+                // 超管权限验证
+                if (!context.User.IsSuperAdmin)
+                {
+                    // 获取当前用户所属商户
+                    if (!_MerchantManager.GetIdByUserId(context.User.Id, out var operatorMerchantId))
+                        return BadRequest("无法确定您所属的商户");
+
+                    // 检查目标用户所属商户
+                    if (!_MerchantManager.GetIdByUserId(model.UserId, out var targetUserMerchantId))
+                        return BadRequest("无法确定目标用户所属商户");
+
+                    // 非同一商户用户无权操作
+                    if (operatorMerchantId != targetUserMerchantId)
+                        return StatusCode((int)HttpStatusCode.Forbidden, "无权修改其他商户用户的角色");
+
+                    // 验证角色的所属商户
+                    var rolesWithOrg = _DbContext.PlRoles
+                        .Where(r => ids.Contains(r.Id) && r.OrgId.HasValue)
+                        .Select(r => new { r.Id, r.OrgId })
+                        .ToList();
+
+                    foreach (var role in rolesWithOrg)
+                    {
+                        if (_MerchantManager.TryGetIdByOrgOrMerchantId(role.OrgId.Value, out var roleMerchantId) &&
+                            roleMerchantId != operatorMerchantId)
+                        {
+                            _Logger.LogWarning("尝试设置其他商户的角色 {RoleId}", role.Id);
+                            return StatusCode((int)HttpStatusCode.Forbidden, "无权设置其他商户的角色");
+                        }
+                    }
+                }
+
+                // 执行操作部分
+                // 获取指定用户的当前所有角色
+                var currentUserRoles = _DbContext.PlAccountRoles
                     .Where(c => c.UserId == model.UserId)
                     .ToList();
 
-                // 计算需要删除的角色关联
-                var currentRoleIds = currentRoles.Select(r => r.RoleId).ToHashSet();
-                var rolesToRemove = currentRoles.Where(r => !ids.Contains(r.RoleId)).ToList();
+                // 获取当前角色ID集合
+                var currentRoleIdSet = currentUserRoles
+                    .Select(r => r.RoleId)
+                    .AsEnumerable().ToHashSet();
 
-                // 计算需要添加的角色关联
-                var rolesToAdd = ids
-                    .Where(id => !currentRoleIds.Contains(id))
-                    .Select(roleId => new AccountRole { RoleId = roleId, UserId = model.UserId })
-                    .ToList();
+                // 输入参数中的角色ID集合
+                var requestedRoleIdSet = new HashSet<Guid>(model.RoleIds);
 
-                // 删除旧角色关联
-                if (rolesToRemove.Any())
+                // 计算需要添加的角色ID集合（在请求中存在但当前不存在的角色）
+                var roleIdsToAdd = requestedRoleIdSet
+                    .Where(id => !currentRoleIdSet.Contains(id))
+                    .ToArray();
+
+                // 计算需要删除的角色（在当前存在但请求中不存在的角色）
+                var rolesToDelete = currentUserRoles
+                    .Where(r => !requestedRoleIdSet.Contains(r.RoleId))
+                    .ToArray();
+
+                // 记录要执行的操作
+                _Logger.LogInformation("用户 {UserId} 角色变更: 删除 {RemoveCount}, 添加 {AddCount}",
+                    model.UserId, rolesToDelete.Length, roleIdsToAdd.Length);
+
+                // 如果没有需要变更的角色，直接返回
+                if (roleIdsToAdd.Length == 0 && rolesToDelete.Length == 0)
                 {
-                    _DbContext.PlAccountRoles.RemoveRange(rolesToRemove);
+                    _Logger.LogInformation("用户 {UserId} 的角色没有变化，不需要更新", model.UserId);
+                    return result;
                 }
 
-                // 添加新角色关联
-                if (rolesToAdd.Any())
+                // 执行删除操作
+                if (rolesToDelete.Length > 0)
                 {
+                    _DbContext.PlAccountRoles.RemoveRange(rolesToDelete);
+                }
+
+                // 执行添加操作
+                if (roleIdsToAdd.Length > 0)
+                {
+                    var rolesToAdd = roleIdsToAdd.Select(roleId => new AccountRole
+                    {
+                        UserId = model.UserId,
+                        RoleId = roleId,
+                        CreateBy = context.User.Id,
+                        CreateDateTime = OwHelper.WorldNow
+                    });
+
                     _DbContext.PlAccountRoles.AddRange(rolesToAdd);
                 }
 
-                // 保存更改
+                // 保存所有更改（一次性提交所有操作）
                 _DbContext.SaveChanges();
 
-                // 使用RoleManager来使用户角色缓存失效
+                // 清除相关缓存，确保数据一致性
                 _RoleManager.InvalidateUserRolesCache(model.UserId);
-
-                // 由于角色变更会影响权限，也使用户权限缓存失效
                 _PermissionManager.InvalidateUserPermissionsCache(model.UserId);
-
-                _Logger.LogInformation($"已为用户 {model.UserId} 设置 {model.RoleIds.Count} 个角色，移除 {rolesToRemove.Count} 个角色，添加 {rolesToAdd.Count} 个角色");
+                _AccountManager.InvalidateUserCache(model.UserId);
+            }
+            catch (DbUpdateException ex)
+            {
+                _Logger.LogError(ex, "数据库更新异常: {Message}", ex.InnerException?.Message ?? ex.Message);
+                result.HasError = true;
+                result.ErrorCode = 500;
+                result.DebugMessage = $"数据库更新失败: {ex.InnerException?.Message ?? ex.Message}";
+                return StatusCode(500, result);
             }
             catch (Exception ex)
             {
-                _Logger.LogError(ex, $"为用户 {model.UserId} 设置角色时发生错误");
-                return BadRequest($"设置角色失败: {ex.Message}");
+                _Logger.LogError(ex, "为用户 {UserId} 设置角色时发生错误", model.UserId);
+                result.HasError = true;
+                result.ErrorCode = 500;
+                result.DebugMessage = $"设置角色失败: {ex.Message}";
+                return StatusCode(500, result);
             }
 
             return result;
         }
-
     }
 
 }

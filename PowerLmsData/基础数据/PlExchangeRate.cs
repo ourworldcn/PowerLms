@@ -66,12 +66,14 @@ namespace PowerLms.Data
         /// 生效时点。
         /// </summary>
         [Comment("生效时点")]
+        [Precision(0)]
         public DateTime BeginDate { get; set; }
 
         /// <summary>
         /// 失效时点。
         /// </summary>
         [Comment("失效时点")]
+        [Precision(0)]
         public DateTime EndData { get; set; }
     }
 }

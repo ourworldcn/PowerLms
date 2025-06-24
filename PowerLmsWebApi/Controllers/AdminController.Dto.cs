@@ -416,6 +416,25 @@ namespace PowerLmsWebApi.Controllers
     #region 汇率及相关
 
     /// <summary>
+    /// 导入汇率的功能参数封装类。
+    /// </summary>
+    public class ImportPlExchangeRateParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 要引入的汇率对象的条件。符合该条件的汇率对象将被导入。
+        /// </summary>
+        public Dictionary<string, string> Conditional { get; set; } = new Dictionary<string, string>();
+    }
+
+    /// <summary>
+    /// 导入汇率的功能返回值封装类。
+    /// </summary>
+    public class ImportPlExchangeRateReturnDto : ReturnDtoBase
+    {
+
+    }
+
+    /// <summary>
     /// 修改汇率项的功能参数封装类。
     /// </summary>
     public class ModifyPlExchangeRateParamsDto : ModifyParamsDtoBase<PlExchangeRate>
