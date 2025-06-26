@@ -104,29 +104,77 @@ namespace PowerLmsServer.Managers
         /// <summary>
         /// 创建一个新账号。
         /// </summary>
-        /// <param name="loginName"></param>
-        /// <param name="pwd"></param>
-        /// <param name="id"></param>
+        /// <param name="loginName">登录名</param>
+        /// <param name="pwd">密码，为空时会自动生成</param>
+        /// <param name="id">返回创建的账号ID</param>
         /// <param name="service">当前范围的服务容器。</param>
-        /// <param name="template"></param>
+        /// <param name="template">账号模板</param>
+        /// <returns>创建是否成功</returns>
         public bool CreateNew(string loginName, ref string pwd, out Guid id, IServiceProvider service, Account template)
         {
-            var db = service.GetRequiredService<PowerLmsUserDbContext>();
-            if (db.Accounts.Any(c => c.LoginName == loginName))
+            // 参数验证：检查service是否为空
+            if (service == null)
             {
-                OwHelper.SetLastErrorAndMessage(400, "登录名重复");
+                OwHelper.SetLastErrorAndMessage(400, "服务提供者不能为空");
                 id = Guid.Empty;
                 return false;
             }
-            if (string.IsNullOrEmpty(pwd)) pwd = _PasswordGenerator.Generate(6); // 若需要生成密码
 
-            var user = _Mapper.Map<Account>(template);
-            user.GenerateNewId();
-            user.SetPwd(pwd);
-            id = user.Id;
-            db.Add(user);
-            db.SaveChanges();
-            return true;
+            // 参数验证：检查loginName是否为空
+            if (string.IsNullOrEmpty(loginName))
+            {
+                OwHelper.SetLastErrorAndMessage(400, "登录名不能为空");
+                id = Guid.Empty;
+                return false;
+            }
+
+            // 参数验证：检查template是否为空
+            if (template == null)
+            {
+                OwHelper.SetLastErrorAndMessage(400, "账户模板不能为空");
+                id = Guid.Empty;
+                return false;
+            }
+
+            try
+            {
+                // 获取数据库上下文
+                var db = service.GetRequiredService<PowerLmsUserDbContext>();
+
+                // 检查登录名是否重复 - 修改为409错误并指出字段名
+                if (db.Accounts.Any(c => c.LoginName == loginName))
+                {
+                    OwHelper.SetLastErrorAndMessage(409, nameof(Account.LoginName)); // 返回409错误码，消息为字段名
+                    id = Guid.Empty;
+                    return false;
+                }
+
+                if (string.IsNullOrEmpty(pwd)) pwd = _PasswordGenerator.Generate(6); // 若需要生成密码
+
+                var user = _Mapper.Map<Account>(template);
+                user.GenerateNewId();
+                user.SetPwd(pwd);
+                user.State = template.State; // 确保状态值被正确复制
+                user.LastModifyDateTimeUtc = OwHelper.WorldNow; // 设置最后修改时间
+                id = user.Id;
+                db.Add(user);
+                db.SaveChanges();
+                return true;
+            }
+            catch (DbUpdateException ex) when (ex.InnerException?.Message?.Contains("LoginName") == true)
+            {
+                // 捕获数据库级别的唯一约束违反异常，以防止并发情况下重复检查失效
+                OwHelper.SetLastErrorAndMessage(409, nameof(Account.LoginName));
+                id = Guid.Empty;
+                return false;
+            }
+            catch (Exception ex)
+            {
+                // 异常处理：捕获并记录可能的异常
+                OwHelper.SetLastErrorAndMessage(500, $"创建账户失败: {ex.Message}");
+                id = Guid.Empty;
+                return false;
+            }
         }
 
         /// <summary>

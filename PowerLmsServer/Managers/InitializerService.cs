@@ -353,8 +353,6 @@ namespace PowerLmsServer.Managers
         [Conditional("DEBUG")]
         private void Test(IServiceProvider svc)
         {
-            var nn = _ServiceProvider.GetRequiredService<NuoNuoManager>();
-            nn.IssueInvoice(Guid.Parse("29DC0DA1-C1AB-4EB1-98D8-6B7F5339381E"));
         }
 
     }

@@ -228,13 +228,11 @@ namespace PowerLmsWebApi.Controllers
             {
                 // 获取分页数据
                 var prb = _EntityManager.GetAll(query, model.StartIndex, model.Count);
-                prb.Result.ForEach(c =>
-                {                 // 清除Parent和Children属性，避免循环引用
-                    c.Parent = null;
-                    c.Children = null;
+                _Mapper.Map(prb, result, opt =>
+                {
+                    // 设置忽略的属性
+                    opt.Items["IgnoreProps"] = new HashSet<string> { nameof(PlOrganization.Parent), nameof(PlOrganization.Children) };
                 });
-
-                _Mapper.Map(prb, result);
             }
             catch (Exception ex)
             {
@@ -561,7 +559,7 @@ namespace PowerLmsWebApi.Controllers
             try
             {
                 // 检查业务总表多种关联方式
-                if (_DbContext.PlJobs != null && _DbContext.PlJobs.Any(j =>j.OrgId == orgId ))
+                if (_DbContext.PlJobs != null && _DbContext.PlJobs.Any(j => j.OrgId == orgId))
                 {
                     _Logger.LogInformation("组织机构 {orgId} 在业务单中存在关联，无法删除", orgId);
                     return true;

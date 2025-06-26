@@ -24,7 +24,25 @@ namespace PowerLmsServer.AutoMappper
             CreateMap<PlOwnedContact, PlOwnedContact>().IncludeAllDerived();
             CreateMap<PlBillingInfo, PlBillingInfo>().IncludeAllDerived();
 
-            CreateMap<PlOrganization, PlOrganization>().IncludeAllDerived();
+            CreateMap<PlOrganization, PlOrganization>().IncludeAllDerived()
+                .ForAllMembers(opt =>
+                {
+                    // 为所有成员设置一个前置条件
+                    opt.PreCondition((src, context) =>
+                    {
+                        // 检查是否通过上下文的Items字典传入了要忽略的属性列表
+                        if (context.Items.TryGetValue("IgnoreProps", out var value) &&
+                            value is ISet<string> propsToIgnore)
+                        {
+                            // 如果当前目标属性的名称在忽略列表中，则PreCondition返回false
+                            // 这会阻止AutoMapper继续处理这个属性（包括读取源属性的值）
+                            return !propsToIgnore.Contains(opt.DestinationMember.Name);
+                        }
+
+                        // 如果没有提供忽略列表，或者当前属性不在列表中，则正常处理
+                        return true;
+                    });
+                });
             CreateMap<PlMerchant, PlMerchant>().IncludeAllDerived();
             CreateMap<PlFileInfo, PlFileInfo>().IncludeAllDerived();
 

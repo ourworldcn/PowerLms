@@ -331,26 +331,34 @@ namespace PowerLmsWebApi.Controllers
             }
 
             //检验机构/商户Id合规性
-            Guid[] orgIds = null;
-            if (model.OrgIds != null)
+            Guid[]? orgIds = null;
+            if (model.OrgIds != null && model.OrgIds.Count > 0)
             {
                 orgIds = model.OrgIds.Distinct().ToArray();
                 if (orgIds.Length != model.OrgIds.Count) return BadRequest($"{nameof(model.OrgIds)} 存在重复键值。");
-                if (orgIds.Length > 0)
+
+                var merches = _DbContext.Merchants.Where(c => orgIds.Contains(c.Id)).ToArray();
+                var orgs = _DbContext.PlOrganizations.Where(c => orgIds.Contains(c.Id)).ToArray();
+                if (merches.Length + orgs.Length != orgIds.Length) return BadRequest($"{nameof(model.OrgIds)} 至少一个键值的实体不存在。");
+
+                // 修复权限检查逻辑
+                bool isSuper = (context.User.State & 4) != 0;  // 是否超管
+                bool isMerchantAdmin = (context.User.State & 8) != 0;  // 是否商管
+
+                if (!isSuper && !isMerchantAdmin)
                 {
-                    var merches = _DbContext.Merchants.Where(c => orgIds.Contains(c.Id)).ToArray();
-                    var orgs = _DbContext.PlOrganizations.Where(c => orgIds.Contains(c.Id)).ToArray();
-                    if (merches.Length + orgs.Length != orgIds.Length) return BadRequest($"{nameof(model.OrgIds)} 至少一个键值的实体不存在。");
-                    if ((context.User.State & 4) == 0)  //若非超管
-                        if ((context.User.State & 8) == 0)  //若非商管
-                            return BadRequest("仅超管和商管才可创建用户。");
-                        else //商管
-                        {
-                            if (!_MerchantManager.GetIdByUserId(context.User.Id, out var merchId)) return BadRequest("商管数据结构损坏——无法找到其所属商户");
-                            if (!orgIds.All(c => _MerchantManager.TryGetIdByOrgOrMerchantId(c, out var mId) && mId == merchId)) return BadRequest("商户管理员仅可以设置商户和其下属的机构id。");
-                        }
+                    return BadRequest("仅超管和商管才可创建用户。");
+                }
+                else if (isMerchantAdmin && !isSuper) // 仅商管而非超管
+                {
+                    if (!_MerchantManager.GetIdByUserId(context.User.Id, out var merchId))
+                        return BadRequest("商管数据结构损坏——无法找到其所属商户");
+
+                    if (!orgIds.All(c => _MerchantManager.TryGetIdByOrgOrMerchantId(c, out var mId) && mId == merchId))
+                        return BadRequest("商户管理员仅可以设置商户和其下属的机构id。");
                 }
             }
+
             var pwd = model.Pwd;
             var b = _AccountManager.CreateNew(model.Item.LoginName, ref pwd, out Guid id, _ServiceProvider, model.Item);
             if (b)
@@ -358,14 +366,16 @@ namespace PowerLmsWebApi.Controllers
                 result.Pwd = pwd;
                 result.Result = _DbContext.Accounts.Find(id);
 
-                var b1 = _DbContext.PlOrganizations.Select(c => c.Id).Concat(_DbContext.Merchants.Select(c => c.Id)).All(c => model.OrgIds.Contains(c));
-                var rela = orgIds?.Select(c => new AccountPlOrganization { UserId = result.Result.Id, OrgId = c });
-                if (rela != null)
+                // 确保 result.Result 不为 null
+                if (result.Result != null && orgIds != null && orgIds.Length > 0)
+                {
+                    var rela = orgIds.Select(c => new AccountPlOrganization { UserId = result.Result.Id, OrgId = c });
                     _DbContext.AccountPlOrganizations.AddRange(rela);
+                }
             }
             else
             {
-                return BadRequest("登录名重复。");
+                return StatusCode(OwHelper.GetLastError(), OwHelper.GetLastErrorMessage());
             }
             _DbContext.SaveChanges();
             return result;
