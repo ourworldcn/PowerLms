@@ -710,7 +710,6 @@ namespace PowerLmsWebApi.Controllers
             }
             _DataManager.CopyAllSpecialDataDicBase(model.Id);
             #endregion 复制简单字典
-
             _DbContext.SaveChanges();
             return result;
         }

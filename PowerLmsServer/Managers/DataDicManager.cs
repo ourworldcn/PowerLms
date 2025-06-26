@@ -7,6 +7,7 @@ using NPOI.HPSF;
 using NPOI.SS.Formula.Functions;
 using NPOI.SS.Formula.PTG;
 using NPOI.Util;
+using OW.EntityFrameworkCore;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using System;
@@ -120,6 +121,41 @@ namespace PowerLmsServer.Managers
             mng.AddTo(mng.DbContext.DD_PlPorts.Where(c => c.OrgId == null).AsNoTracking(), orgId);
             mng.AddTo(mng.DbContext.DD_UnitConversions.Where(c => c.OrgId == null).AsNoTracking(), orgId);
             mng.AddTo(mng.DbContext.DD_ShippingContainersKinds.Where(c => c.OrgId == null).AsNoTracking(), orgId);
+
+            // 特殊处理其他编码规则 - 因为它不继承自SpecialDataDicBase
+            CopyOtherNumberRules(mng, orgId);
+        }
+
+        /// <summary>
+        /// 复制其他编码规则到指定组织机构。
+        /// </summary>
+        /// <param name="mng">数据字典管理器</param>
+        /// <param name="orgId">目标组织机构Id</param>
+        private static void CopyOtherNumberRules(DataDicManager mng, Guid orgId)
+        {
+            var sourceRules = mng.DbContext.DD_OtherNumberRules
+                .Where(c => c.OrgId == null)
+                .AsNoTracking()
+                .ToList();
+
+            foreach (var sourceRule in sourceRules)
+            {
+                var newRule = new OtherNumberRule
+                {
+                    Id = Guid.NewGuid(),
+                    OrgId = orgId,
+                    Code = sourceRule.Code,
+                    DisplayName = sourceRule.DisplayName,
+                    CurrentNumber = sourceRule.StartValue, // 重置为起始值
+                    RuleString = sourceRule.RuleString,
+                    RepeatMode = sourceRule.RepeatMode,
+                    StartValue = sourceRule.StartValue,
+                    RepeatDate = sourceRule.RepeatDate,
+                    IsDelete = false // 新创建的规则不应被标记删除
+                };
+
+                mng.DbContext.DD_OtherNumberRules.Add(newRule);
+            }
         }
     }
 }
