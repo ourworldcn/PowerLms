@@ -281,6 +281,34 @@ namespace PowerLmsWebApi.Controllers
                 if (model.IsCopyDataDic) //若需要复制字典
                 {
                     var r = CopyDataDic(new CopyDataDicParamsDto { Token = model.Token, Id = id });
+
+                    // 复制全局财务科目设置(OrgId=null)到新组织机构
+                    var globalSubjectConfigs = _DbContext.SubjectConfigurations
+                        .Where(c => c.OrgId == null && !c.IsDelete)
+                        .AsNoTracking()
+                        .ToList();
+
+                    foreach (var globalConfig in globalSubjectConfigs)
+                    {
+                        var newConfig = new SubjectConfiguration
+                        {
+                            Id = Guid.NewGuid(),
+                            OrgId = id, // 设置为新组织机构ID
+                            Code = globalConfig.Code,
+                            SubjectNumber = globalConfig.SubjectNumber,
+                            DisplayName = globalConfig.DisplayName,
+                            Remark = globalConfig.Remark,
+                            IsDelete = false, // 新创建的不应被标记删除
+                            CreateBy = context.User?.Id,
+                            CreateDateTime = OwHelper.WorldNow
+                        };
+                        _DbContext.SubjectConfigurations.Add(newConfig);
+                    }
+
+                    if (globalSubjectConfigs.Any())
+                    {
+                        _DbContext.SaveChanges(); // 保存财务科目设置
+                    }
                 }
             }
             catch (Exception err)

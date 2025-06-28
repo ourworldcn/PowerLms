@@ -393,6 +393,11 @@ namespace PowerLmsServer.EfData
 
         #region 财务相关
         /// <summary>
+        /// 财务科目设置表
+        /// </summary>
+        public DbSet<SubjectConfiguration> SubjectConfigurations { get; set; }
+
+        /// <summary>
         /// 业务费用收付款申请单.
         /// </summary>
         public DbSet<DocFeeRequisition> DocFeeRequisitions { get; set; }
