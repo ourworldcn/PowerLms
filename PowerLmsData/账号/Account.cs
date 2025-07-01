@@ -291,7 +291,7 @@ namespace PowerLms.Data
         public Guid UserId { get; set; }
 
         /// <summary>
-        /// 直属组织机构Id或商户Id。
+        /// 直属组织机构Id或商户Id。关联到 <see cref="PlOrganization"/> 或 <see cref="PlMerchant"/> 表。
         /// </summary>
         [Comment("直属组织机构Id或商户Id")]
         public Guid OrgId { get; set; }

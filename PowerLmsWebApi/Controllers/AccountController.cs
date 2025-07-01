@@ -316,67 +316,109 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new CreateAccountReturnDto();
 
+            // 检查要创建的账户类型权限
+            bool isCreatingAdmin = (model.Item.State & 4) != 0; // 是否要创建超管
+            bool isCreatingMerchantAdmin = (model.Item.State & 8) != 0; // 是否要创建商管
+            
+            // 权限验证：只有超管可以创建超管
+            if (isCreatingAdmin && !context.User.IsSuperAdmin)
+                return BadRequest("仅超管可以创建超管账户");
+            
+            // 权限验证：只有超管或商管可以创建商管
+            if (isCreatingMerchantAdmin && !context.User.IsAdmin())
+                return BadRequest("仅超管或商管可以创建商管账户");
+
             // 检查登录名、邮件、手机号的全局唯一性
             if (!string.IsNullOrEmpty(model.Item.LoginName) && _DbContext.Accounts.Any(a => a.LoginName == model.Item.LoginName))
-            {
                 return Conflict(nameof(model.Item.LoginName));
-            }
             if (!string.IsNullOrEmpty(model.Item.EMail) && _DbContext.Accounts.Any(a => a.EMail == model.Item.EMail))
-            {
                 return Conflict(nameof(model.Item.EMail));
-            }
             if (!string.IsNullOrEmpty(model.Item.Mobile) && _DbContext.Accounts.Any(a => a.Mobile == model.Item.Mobile))
-            {
                 return Conflict(nameof(model.Item.Mobile));
-            }
 
-            //检验机构/商户Id合规性
+            // 处理组织机构ID验证和权限检查
             Guid[]? orgIds = null;
+            Guid? merchantIdForNewAccount = null; // 新账户所属商户ID（用于商管账户）
+            
             if (model.OrgIds != null && model.OrgIds.Count > 0)
             {
                 orgIds = model.OrgIds.Distinct().ToArray();
-                if (orgIds.Length != model.OrgIds.Count) return BadRequest($"{nameof(model.OrgIds)} 存在重复键值。");
+                if (orgIds.Length != model.OrgIds.Count) return BadRequest($"{nameof(model.OrgIds)} 存在重复键值");
 
-                var merches = _DbContext.Merchants.Where(c => orgIds.Contains(c.Id)).ToArray();
-                var orgs = _DbContext.PlOrganizations.Where(c => orgIds.Contains(c.Id)).ToArray();
-                if (merches.Length + orgs.Length != orgIds.Length) return BadRequest($"{nameof(model.OrgIds)} 至少一个键值的实体不存在。");
+                // 验证所有ID是否存在（商户或组织机构）
+                var merchantCount = _DbContext.Merchants.Count(c => orgIds.Contains(c.Id));
+                var orgCount = _DbContext.PlOrganizations.Count(c => orgIds.Contains(c.Id));
+                if (merchantCount + orgCount != orgIds.Length) 
+                    return BadRequest($"{nameof(model.OrgIds)} 至少一个键值的实体不存在");
 
-                // 修复权限检查逻辑
-                bool isSuper = (context.User.State & 4) != 0;  // 是否超管
-                bool isMerchantAdmin = (context.User.State & 8) != 0;  // 是否商管
-
-                if (!isSuper && !isMerchantAdmin)
+                // 非超管权限检查：只能操作自己商户范围内的组织机构
+                if (!context.User.IsSuperAdmin)
                 {
-                    return BadRequest("仅超管和商管才可创建用户。");
-                }
-                else if (isMerchantAdmin && !isSuper) // 仅商管而非超管
-                {
-                    if (!_MerchantManager.GetIdByUserId(context.User.Id, out var merchId))
+                    if (!context.User.IsAdmin()) return BadRequest("仅超管和商管才可创建用户");
+                    
+                    // 获取当前商管所属商户
+                    if (!_MerchantManager.GetIdByUserId(context.User.Id, out var currentMerchantId))
                         return BadRequest("商管数据结构损坏——无法找到其所属商户");
-
-                    if (!orgIds.All(c => _MerchantManager.TryGetIdByOrgOrMerchantId(c, out var mId) && mId == merchId))
-                        return BadRequest("商户管理员仅可以设置商户和其下属的机构id。");
+                    
+                    // 验证所有指定的组织机构ID都属于当前商户
+                    bool allBelongToMerchant = orgIds.All(c => _MerchantManager.TryGetIdByOrgOrMerchantId(c, out var mId) && mId == currentMerchantId);
+                    if (!allBelongToMerchant) return BadRequest("商户管理员仅可以设置商户和其下属的机构id");
+                    
+                    merchantIdForNewAccount = currentMerchantId; // 记录商户ID供后续使用
                 }
             }
+            else if (isCreatingMerchantAdmin && !context.User.IsSuperAdmin)
+            {
+                // 商管创建商管但未指定组织机构时，自动关联到当前商户
+                if (!_MerchantManager.GetIdByUserId(context.User.Id, out merchantIdForNewAccount))
+                    return BadRequest("商管数据结构损坏——无法找到其所属商户");
+            }
 
+            // 创建账户
             var pwd = model.Pwd;
-            var b = _AccountManager.CreateNew(model.Item.LoginName, ref pwd, out Guid id, _ServiceProvider, model.Item);
-            if (b)
-            {
-                result.Pwd = pwd;
-                result.Result = _DbContext.Accounts.Find(id);
+            var created = _AccountManager.CreateNew(model.Item.LoginName, ref pwd, out Guid newUserId, _ServiceProvider, model.Item);
+            if (!created) return StatusCode(OwHelper.GetLastError(), OwHelper.GetLastErrorMessage());
 
-                // 确保 result.Result 不为 null
-                if (result.Result != null && orgIds != null && orgIds.Length > 0)
+            result.Pwd = pwd;
+            result.Result = _DbContext.Accounts.Find(newUserId);
+            
+            if (result.Result != null)
+            {
+                // 添加组织机构关联关系
+                var organizationRelations = new List<AccountPlOrganization>();
+                
+                // 1. 添加明确指定的组织机构关联
+                if (orgIds != null && orgIds.Length > 0)
                 {
-                    var rela = orgIds.Select(c => new AccountPlOrganization { UserId = result.Result.Id, OrgId = c });
-                    _DbContext.AccountPlOrganizations.AddRange(rela);
+                    organizationRelations.AddRange(orgIds.Select(orgId => new AccountPlOrganization 
+                    { 
+                        UserId = newUserId, 
+                        OrgId = orgId 
+                    }));
+                }
+                
+                // 2. 商管创建商管时，自动关联到调用者所属商户
+                if (isCreatingMerchantAdmin && merchantIdForNewAccount.HasValue)
+                {
+                    // 避免重复添加相同的商户关联
+                    bool alreadyLinkedToMerchant = organizationRelations.Any(r => r.OrgId == merchantIdForNewAccount.Value);
+                    if (!alreadyLinkedToMerchant)
+                    {
+                        organizationRelations.Add(new AccountPlOrganization 
+                        { 
+                            UserId = newUserId, 
+                            OrgId = merchantIdForNewAccount.Value 
+                        });
+                    }
+                }
+                
+                // 批量添加组织机构关联关系
+                if (organizationRelations.Count > 0)
+                {
+                    _DbContext.AccountPlOrganizations.AddRange(organizationRelations);
                 }
             }
-            else
-            {
-                return StatusCode(OwHelper.GetLastError(), OwHelper.GetLastErrorMessage());
-            }
+
             _DbContext.SaveChanges();
             return result;
         }
@@ -406,11 +448,13 @@ namespace PowerLmsWebApi.Controllers
 
         /// <summary>
         /// 设置/修改账号信息。不能用此接口修改敏感信息如密码。修改密码请使用ModifyPwd。
+        /// 超管可修改超管和商管，商管可修改同商户下的商管和普通用户。
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。</response>  
         /// <response code="401">Token无效或无权限获取指定账号信息。</response>  
+        /// <response code="403">权限不足，无法修改指定账户。</response>  
         /// <response code="404">指定的账号Id不存在。</response>  
         /// <response code="451">权限不足。</response>  
         [HttpPut()]
@@ -421,43 +465,116 @@ namespace PowerLmsWebApi.Controllers
             var list = new List<Account>();
             if (!_EntityManager.Modify(new[] { model.Item }, list)) return NotFound();
 
-            //设置管理员
             var account = list[0];
-            if (model.IsAdmin.HasValue)
+            bool isTargetSuperAdmin = (account.State & 4) != 0; //目标是否为超管
+            bool isTargetMerchantAdmin = (account.State & 8) != 0; //目标是否为商管
+            
+            // 权限检查：验证是否有权修改目标账户
+            if (context.User.IsSuperAdmin) //超管权限
             {
-                if ((context.User.State & (255 - 4)) == 0)
-                    return base.StatusCode((int)HttpStatusCode.UnavailableForLegalReasons);
+                // 超管可以修改超管和商管，无限制
+            }
+            else if (context.User.IsMerchantAdmin) //商管权限
+            {
+                if (isTargetSuperAdmin) //商管不能修改超管
+                    return StatusCode((int)HttpStatusCode.Forbidden, "商管不能修改超管账户");
+                
+                if (isTargetMerchantAdmin) //商管修改商管需要验证同商户
+                {
+                    if (!_MerchantManager.GetIdByUserId(context.User.Id, out var operatorMerchantId)) //获取操作者商户
+                        return BadRequest("商管数据结构损坏——无法找到其所属商户");
+                    
+                    if (!_MerchantManager.GetIdByUserId(account.Id, out var targetMerchantId)) //获取目标用户商户
+                        return BadRequest("目标用户商户数据结构损坏");
+                    
+                    if (operatorMerchantId != targetMerchantId) //验证是否同商户
+                        return StatusCode((int)HttpStatusCode.Forbidden, "商管只能修改同商户的商管");
+                }
+                // 商管可以修改普通用户，无需额外检查
+            }
+            else //普通用户权限
+            {
+                if (isTargetSuperAdmin || isTargetMerchantAdmin)
+                    return StatusCode((int)HttpStatusCode.Forbidden, "只有管理员可以修改管理员账户");
+            }
+
+            //设置管理员权限
+            if (model.IsAdmin.HasValue) //修改超管权限
+            {
+                if (!context.User.IsSuperAdmin) //只有超管可以设置超管权限
+                    return base.StatusCode((int)HttpStatusCode.UnavailableForLegalReasons, "只有超管可以设置超管权限");
+                
                 if (model.IsAdmin.Value)
-                    account.State |= 4;
+                    account.State |= 4; //设置为超管
                 else
-                    account.State &= 255 - 4;
+                    account.State &= 255 - 4; //取消超管
             }
-            if (model.IsMerchantAdmin.HasValue)
+            
+            if (model.IsMerchantAdmin.HasValue) //修改商管权限
             {
-                if ((context.User.State & (255 - 4)) == 0 && (context.User.State & (255 - 8)) == 0)
-                    return base.StatusCode((int)HttpStatusCode.UnavailableForLegalReasons);
+                if (!context.User.IsAdmin()) //只有超管或商管可以设置商管权限
+                    return base.StatusCode((int)HttpStatusCode.UnavailableForLegalReasons, "只有管理员可以设置商管权限");
+                
+                // 商管设置商管权限时需要验证同商户
+                if (context.User.IsMerchantAdmin && !context.User.IsSuperAdmin && model.IsMerchantAdmin.Value)
+                {
+                    if (!_MerchantManager.GetIdByUserId(context.User.Id, out var operatorMerchantId)) //获取操作者商户
+                        return BadRequest("商管数据结构损坏——无法找到其所属商户");
+                    
+                    if (!_MerchantManager.GetIdByUserId(account.Id, out var targetMerchantId)) //获取目标用户商户
+                        return BadRequest("目标用户商户数据结构损坏");
+                    
+                    if (operatorMerchantId != targetMerchantId) //验证是否同商户
+                        return StatusCode((int)HttpStatusCode.Forbidden, "商管只能在同商户内设置商管权限");
+                }
+                
                 if (model.IsMerchantAdmin.Value)
-                    account.State |= 8;
+                    account.State |= 8; //设置为商管
                 else
-                    account.State &= 255 - 8;
+                    account.State &= 255 - 8; //取消商管
             }
+            
             var entityAccount = _DbContext.Entry(account);
-            entityAccount.Property(c => c.PwdHash).IsModified = false;
-            entityAccount.Property(c => c.Token).IsModified = false;
-            entityAccount.Property(c => c.NodeNum).IsModified = false;
-            entityAccount.Property(c => c.OrgId).IsModified = false;
+            entityAccount.Property(c => c.PwdHash).IsModified = false; //密码不可修改
+            entityAccount.Property(c => c.Token).IsModified = false; //令牌不可修改
+            entityAccount.Property(c => c.NodeNum).IsModified = false; //节点号不可修改
+            entityAccount.Property(c => c.OrgId).IsModified = false; //组织机构ID不可修改
+            
             _DbContext.SaveChanges();
+            
+            // 缓存失效处理
+            try
+            {
+                _AccountManager.InvalidateUserCache(account.Id); //失效用户缓存
+                _RoleManager.InvalidateUserRolesCache(account.Id); //失效用户角色缓存
+                _PermissionManager.InvalidateUserPermissionsCache(account.Id); //失效用户权限缓存
+                
+                if (_MerchantManager.GetIdByUserId(account.Id, out var merchantId)) //失效商户相关缓存
+                {
+                    _MerchantManager.InvalidateCache(merchantId.Value);
+                    _OrganizationManager.InvalidateOrgCache(merchantId.Value);
+                }
+            }
+            catch (Exception ex)
+            {
+                _Logger.LogWarning(ex, "修改用户 {UserId} 后缓存失效时发生警告", account.Id); //记录缓存失效警告
+            }
+            
+            _Logger.LogInformation("用户 {OperatorId} 修改了账户 {TargetId} 的信息", context.User.Id, account.Id); //记录修改操作日志
+            _AppLogger.LogGeneralInfo($"修改账户.{account.Id}"); //记录系统日志
+            
             return result;
         }
 
         /// <summary>
-        /// 删除账户的功能。不能删除超管（需要先降低权限）。
+        /// 删除账户的功能。超管可以删除超管和商管，商管只能删除同商户的商管。
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
-        /// <response code="400">不能删除超管，需要先降低权限。</response>  
+        /// <response code="400">权限不足或不能删除自己。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足，商管只能删除同商户的商管。</response>  
         /// <response code="404">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
         [HttpDelete]
         public ActionResult<RemoveAccountReturnDto> RemoveAccount(RemoveAccountParamsDto model)
@@ -466,13 +583,81 @@ namespace PowerLmsWebApi.Controllers
             var result = new RemoveAccountReturnDto();
             var id = model.Id;
             var item = _DbContext.Accounts.Find(id);
-            if (item is null) return NotFound();  //若没有指定id的对象。
+            if (item is null) return NotFound(); //若没有指定id的对象
 
-            if ((item.State & 4) != 0) return BadRequest(); //不能删除超管
-            _DbContext.Accounts.Remove(item);
-            _DbContext.AccountPlOrganizations.RemoveRange(_DbContext.AccountPlOrganizations.Where(c => c.UserId == id));
-            _DbContext.PlAccountRoles.RemoveRange(_DbContext.PlAccountRoles.Where(c => c.UserId == id));
+            if (id == context.User.Id) return BadRequest("不能删除自己的账户"); //不能删除自己
+            
+            bool isTargetSuperAdmin = (item.State & 4) != 0; //目标是否为超管
+            bool isTargetMerchantAdmin = (item.State & 8) != 0; //目标是否为商管
+            
+            if (context.User.IsSuperAdmin) //超管权限检查
+            {
+                // 超管可以删除超管和商管，无限制
+            }
+            else if (context.User.IsMerchantAdmin) //商管权限检查
+            {
+                if (isTargetSuperAdmin) return BadRequest("商管不能删除超管"); //商管不能删除超管
+                
+                if (isTargetMerchantAdmin) //商管删除商管需要验证同商户
+                {
+                    if (!_MerchantManager.GetIdByUserId(context.User.Id, out var operatorMerchantId)) //获取操作者商户
+                        return BadRequest("商管数据结构损坏——无法找到其所属商户");
+                    
+                    if (!_MerchantManager.GetIdByUserId(item.Id, out var targetMerchantId)) //获取目标用户商户
+                        return BadRequest("目标用户商户数据结构损坏");
+                    
+                    if (operatorMerchantId != targetMerchantId) //验证是否同商户
+                        return StatusCode((int)HttpStatusCode.Forbidden, "商管只能删除同商户的商管");
+                }
+            }
+            else //普通用户权限检查
+            {
+                if (isTargetSuperAdmin || isTargetMerchantAdmin) 
+                    return BadRequest("只有超管或商管可以删除管理员账户");
+            }
+            
+            // 删除前记录用户相关信息（用于缓存失效）
+            Guid? userMerchantId = null;
+            if (_MerchantManager.GetIdByUserId(id, out var merchantId)) //获取用户所属商户
+            {
+                userMerchantId = merchantId;
+            }
+            
+            _DbContext.Accounts.Remove(item); //删除账户
+            _DbContext.AccountPlOrganizations.RemoveRange(_DbContext.AccountPlOrganizations.Where(c => c.UserId == id)); //删除组织机构关联
+            _DbContext.PlAccountRoles.RemoveRange(_DbContext.PlAccountRoles.Where(c => c.UserId == id)); //删除角色关联
             _DbContext.SaveChanges();
+
+            // 缓存失效处理
+            try
+            {
+                // 使用AccountManager的缓存失效方法（避免循环引用）
+                _AccountManager.InvalidateUserCache(id); //失效用户缓存
+                
+                // 失效角色相关缓存
+                _RoleManager.InvalidateUserRolesCache(id); //失效用户角色缓存
+                
+                // 失效权限相关缓存  
+                _PermissionManager.InvalidateUserPermissionsCache(id); //失效用户权限缓存
+                
+                // 如果用户属于某个商户，失效商户相关缓存
+                if (userMerchantId.HasValue)
+                {
+                    _MerchantManager.InvalidateCache(userMerchantId.Value); //失效商户缓存
+                    _OrganizationManager.InvalidateOrgCache(userMerchantId.Value); //失效组织机构缓存
+                }
+                
+                // 失效当前用户的组织机构缓存
+                _Cache.Remove(OwMemoryCacheExtensions.GetCacheKeyFromId(id, ".CurrentOrgs")); //失效当前组织机构缓存
+            }
+            catch (Exception ex)
+            {
+                _Logger.LogWarning(ex, "删除用户 {UserId} 后缓存失效时发生警告", id); //记录缓存失效警告，不影响删除操作
+            }
+
+            _Logger.LogInformation("用户 {OperatorId} 删除了账户 {TargetId} ({LoginName})", 
+                context.User.Id, id, item.LoginName); //记录删除操作日志
+            _AppLogger.LogGeneralInfo($"删除账户.{id}"); //记录系统日志
 
             return result;
         }

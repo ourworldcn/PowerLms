@@ -83,12 +83,7 @@ namespace PowerLmsWebApi.Controllers
                 }
 
                 // 尝试使用实体名.属性名语法
-                var filteredQuery = EfHelper.GenerateWhereAndWithEntityName(query, normalizedConditional);
-                if (filteredQuery == null)
-                {
-                    // 如果实体名语法失败，尝试直接属性名
-                    filteredQuery = EfHelper.GenerateWhereAnd(query, normalizedConditional);
-                }
+                var filteredQuery = EfHelper.GenerateWhereAnd(query, normalizedConditional);
 
                 if (filteredQuery == null)
                 {
@@ -125,10 +120,11 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<AddSubjectConfigurationReturnDto> AddSubjectConfiguration(AddSubjectConfigurationParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            
+
             // 权限检查：需要B.11权限
             string err;
-            if (!_AuthorizationManager.Demand(out err, "B.11")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!context.User.IsAdmin())
+                if (!_AuthorizationManager.Demand(out err, "B.11")) return StatusCode((int)HttpStatusCode.Forbidden, err);
 
             var result = new AddSubjectConfigurationReturnDto();
 
@@ -188,10 +184,11 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<ModifySubjectConfigurationReturnDto> ModifySubjectConfiguration(ModifySubjectConfigurationParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            
+
             // 权限检查：需要B.11权限
             string err;
-            if (!_AuthorizationManager.Demand(out err, "B.11")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!context.User.IsAdmin())
+                if (!_AuthorizationManager.Demand(out err, "B.11")) return StatusCode((int)HttpStatusCode.Forbidden, err);
 
             var result = new ModifySubjectConfigurationReturnDto();
 
@@ -264,10 +261,11 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<RemoveSubjectConfigurationReturnDto> RemoveSubjectConfiguration([FromBody] RemoveSubjectConfigurationParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            
+
             // 权限检查：需要B.11权限
             string err;
-            if (!_AuthorizationManager.Demand(out err, "B.11")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!context.User.IsAdmin())
+                if (!_AuthorizationManager.Demand(out err, "B.11")) return StatusCode((int)HttpStatusCode.Forbidden, err);
 
             var result = new RemoveSubjectConfigurationReturnDto();
 
@@ -310,10 +308,11 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<RestoreSubjectConfigurationReturnDto> RestoreSubjectConfiguration(RestoreSubjectConfigurationParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            
+
             // 权限检查：需要B.11权限
             string err;
-            if (!_AuthorizationManager.Demand(out err, "B.11")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!context.User.IsAdmin())
+                if (!_AuthorizationManager.Demand(out err, "B.11")) return StatusCode((int)HttpStatusCode.Forbidden, err);
 
             var result = new RestoreSubjectConfigurationReturnDto();
 
