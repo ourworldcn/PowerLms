@@ -173,9 +173,9 @@ namespace PowerLms.Data
             set
             {
                 if (value)
-                    State |= 4;
+                    State |= 4;  // 设置D2位为1
                 else
-                    State &= 4;
+                    State = (byte)(State & ~4);  // 清除D2位，设置为0
             }
         }
 
@@ -188,9 +188,8 @@ namespace PowerLms.Data
         public bool IsMerchantAdmin
         {
             get => (State & 8) != 0;
-            set => _ = value ? State |= 8 : State &= 8;
+            set => State = (byte)(value ? (State | 8) : (State & ~8));  // 修复位操作逻辑
         }
-
 
         #region 数据字典属性
 

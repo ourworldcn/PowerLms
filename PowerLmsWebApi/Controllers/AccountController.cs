@@ -562,7 +562,6 @@ namespace PowerLmsWebApi.Controllers
             
             _Logger.LogInformation("用户 {OperatorId} 修改了账户 {TargetId} 的信息", context.User.Id, account.Id); //记录修改操作日志
             _AppLogger.LogGeneralInfo($"修改账户.{account.Id}"); //记录系统日志
-            
             return result;
         }
 

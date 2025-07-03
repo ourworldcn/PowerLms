@@ -19,8 +19,26 @@ namespace PowerLms.Data
         public Guid? OrgId { get; set; }
 
         /// <summary>
-        /// 服务器用此编码来标识该数据用于什么地方。只能是以下几种之一（可能持续增加）：
+        /// 服务器用此编码来标识该数据用于什么地方。支持以下科目编码（可能持续增加）：
         /// 
+        /// 通用科目 (GEN):
+        /// GEN_COGS - 主营业务成本
+        /// GEN_ADVANCE_PAYMENT - 代垫项（代收代付科目）
+        /// GEN_PREPARER - 制单人（金蝶制单人名称）
+        /// GEN_VOUCHER_GROUP - 凭证类别字（如：转、收、付、记）
+        /// 
+        /// 发票挂账科目 (PBI):
+        /// PBI_SALES_REVENUE - 主营业务收入
+        /// PBI_TAX_PAYABLE - 应交税金
+        /// PBI_ACC_RECEIVABLE - 应收账款
+        /// 
+        /// 实收科目 (RF):
+        /// RF_BANK_DEPOSIT - 银行存款（收款银行存款）
+        /// RF_ACC_RECEIVABLE - 应收账款（冲销应收）
+        /// 
+        /// 实付科目 (PF):
+        /// PF_BANK_DEPOSIT - 银行存款（付款银行存款）
+        /// PF_ACC_PAYABLE - 应付账款
         /// </summary>
         [Comment("科目编码")]
         [MaxLength(32), Unicode(false)]
@@ -42,6 +60,22 @@ namespace PowerLms.Data
         [MaxLength(128)]
         [Required(AllowEmptyStrings = false)]
         public string DisplayName { get; set; }
+
+        /// <summary>
+        /// 凭证类别字。
+        /// 常用值：转（转账凭证）、收（收款凭证）、付（付款凭证）、记（记账凭证）
+        /// </summary>
+        [Comment("凭证类别字")]
+        [MaxLength(10)]
+        public string VoucherGroup { get; set; }
+
+        /// <summary>
+        /// 核算类别。
+        /// 常用值：客户、供应商、部门、员工、项目、地区等
+        /// </summary>
+        [Comment("核算类别")]
+        [MaxLength(50)]
+        public string AccountingCategory { get; set; }
 
         /// <summary>
         /// 备注

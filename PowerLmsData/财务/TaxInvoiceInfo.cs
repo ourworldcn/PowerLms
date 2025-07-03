@@ -86,6 +86,11 @@ namespace PowerLms.Data
         [Comment("返回发票号时间")]
         [Precision(3)]
         public DateTime? ReturnInvoiceTime { get; set; }
+
+        /// <summary>已导出时间,未导出则为null。</summary>
+        [Comment("已导出时间,未导出则为null.")]
+        [Precision(3)]
+        public DateTime? ExportedDateTime { get; set; }
         #endregion
 
         #region 人员信息

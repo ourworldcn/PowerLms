@@ -52,6 +52,10 @@ namespace PowerLmsServer.Managers
             _ServiceProvider = serviceProvider;
         }
 
+        /// <summary>
+        /// 超级管理员登录名。
+        /// </summary>
+        private const string SuperAdminLoginName = "868d61ae-3a86-42a8-8a8c-1ed6cfa90817";
         readonly ILogger<InitializerService> _Logger;
         readonly IServiceScopeFactory _ServiceScopeFactory;
         readonly NpoiManager _NpoiManager;
@@ -88,26 +92,156 @@ namespace PowerLmsServer.Managers
         {
             var db = svc.GetRequiredService<PowerLmsUserDbContext>();
             #region 税务发票通道初始数据
-            db.AddOrUpdate(
-                new TaxInvoiceChannel
+            // 检查诺诺发票通道是否已存在，如不存在则添加
+            var nuoNuoChannelId = typeof(NuoNuoManager).GUID;
+            if (!db.TaxInvoiceChannels.Any(c => c.Id == nuoNuoChannelId))
+            {
+                db.TaxInvoiceChannels.Add(new TaxInvoiceChannel
                 {
-                    Id = typeof(NuoNuoManager).GUID,
+                    Id = nuoNuoChannelId,
                     DisplayName = "诺诺发票",
                     InvoiceChannel = nameof(NuoNuoManager),
                     InvoiceChannelParams = "{}",
                 });
-            db.AddOrUpdate(
-                new TaxInvoiceChannel
+                _Logger.LogInformation("添加诺诺发票通道配置");
+            }
+
+            // 检查手工开票通道是否已存在，如不存在则添加
+            var manualChannelId = typeof(ManualInvoicingManager).GUID;
+            if (!db.TaxInvoiceChannels.Any(c => c.Id == manualChannelId))
+            {
+                db.TaxInvoiceChannels.Add(new TaxInvoiceChannel
                 {
-                    Id = typeof(ManualInvoicingManager).GUID,
+                    Id = manualChannelId,
                     DisplayName = "手工开票",
                     InvoiceChannel = nameof(ManualInvoicingManager),
                     InvoiceChannelParams = "{}",
-                }
-            );
+                });
+                _Logger.LogInformation("添加手工开票通道配置");
+            }
             #endregion 税务发票通道初始数据
 
+            #region 初始化科目配置信息
+            // PBI_SALES_REVENUE - 主营业务收入科目配置
+            var salesRevenueId = Guid.Parse("{E8B5C4D7-3F1A-4C2E-8D9A-1B5E7F9C3A6D}");
+            if (!db.SubjectConfigurations.Any(c => c.Id == salesRevenueId))
+            {
+                db.SubjectConfigurations.Add(new SubjectConfiguration
+                {
+                    Id = salesRevenueId,
+                    Code = "PBI_SALES_REVENUE",
+                    SubjectNumber = "6001",
+                    DisplayName = "主营业务收入",
+                    VoucherGroup = "转", // 转账凭证
+                    AccountingCategory = "客户", // 核算类别为客户
+                    Remark = "发票挂账使用的主营业务收入科目，用于记录开票产生的收入金额（价税合计减去税额）",
+                    CreateBy = null, // 系统初始化，无具体创建人
+                    CreateDateTime = OwHelper.WorldNow,
+                    IsDelete = false
+                });
+                _Logger.LogInformation("添加PBI主营业务收入科目配置");
+            }
+            else
+            {
+                _Logger.LogDebug("PBI主营业务收入科目配置已存在，跳过初始化");
+            }
 
+            // PBI_TAX_PAYABLE - 应交税金科目配置
+            var taxPayableId = Guid.Parse("{F2A6D8E9-4B7C-5E3F-9A1B-2C6F8E0D4A7C}");
+            if (!db.SubjectConfigurations.Any(c => c.Id == taxPayableId))
+            {
+                db.SubjectConfigurations.Add(new SubjectConfiguration
+                {
+                    Id = taxPayableId,
+                    Code = "PBI_TAX_PAYABLE",
+                    SubjectNumber = "2221",
+                    DisplayName = "应交税金",
+                    VoucherGroup = "转", // 转账凭证
+                    AccountingCategory = "客户", // 核算类别为客户
+                    Remark = "发票挂账使用的应交税金科目，用于记录开票产生的税额部分",
+                    CreateBy = null, // 系统初始化，无具体创建人
+                    CreateDateTime = OwHelper.WorldNow,
+                    IsDelete = false
+                });
+                _Logger.LogInformation("添加PBI应交税金科目配置");
+            }
+            else
+            {
+                _Logger.LogDebug("PBI应交税金科目配置已存在，跳过初始化");
+            }
+
+            // PBI_ACC_RECEIVABLE - 应收账款科目配置
+            var accReceivableId = Guid.Parse("{A3B7E1F5-6C8D-7A2B-3E4F-9D1C5B8A7E6F}");
+            if (!db.SubjectConfigurations.Any(c => c.Id == accReceivableId))
+            {
+                db.SubjectConfigurations.Add(new SubjectConfiguration
+                {
+                    Id = accReceivableId,
+                    Code = "PBI_ACC_RECEIVABLE",
+                    SubjectNumber = "1122",
+                    DisplayName = "应收账款",
+                    VoucherGroup = "转", // 转账凭证
+                    AccountingCategory = "客户", // 核算类别为客户
+                    Remark = "发票挂账使用的应收账款科目，用于记录开票产生的应收款项（价税合计）",
+                    CreateBy = null, // 系统初始化，无具体创建人
+                    CreateDateTime = OwHelper.WorldNow,
+                    IsDelete = false
+                });
+                _Logger.LogInformation("添加PBI应收账款科目配置");
+            }
+            else
+            {
+                _Logger.LogDebug("PBI应收账款科目配置已存在，跳过初始化");
+            }
+
+            // GEN_PREPARER - 制单人配置
+            var preparerId = Guid.Parse("{D4F7B3E2-9A8C-4E5F-8D7A-2B6E9F1C5A4B}");
+            if (!db.SubjectConfigurations.Any(c => c.Id == preparerId))
+            {
+                db.SubjectConfigurations.Add(new SubjectConfiguration
+                {
+                    Id = preparerId,
+                    Code = "GEN_PREPARER",
+                    SubjectNumber = "", // 制单人不需要科目号
+                    DisplayName = "系统制单",
+                    VoucherGroup = "转", // 默认转账凭证
+                    AccountingCategory = "客户", // 默认核算类别
+                    Remark = "通用制单人配置，用于在生成金蝶凭证时标识制单人员姓名",
+                    CreateBy = null, // 系统初始化，无具体创建人
+                    CreateDateTime = OwHelper.WorldNow,
+                    IsDelete = false
+                });
+                _Logger.LogInformation("添加GEN制单人配置");
+            }
+            else
+            {
+                _Logger.LogDebug("GEN制单人配置已存在，跳过初始化");
+            }
+
+            // GEN_VOUCHER_GROUP - 凭证类别字配置
+            var voucherGroupId = Guid.Parse("{C8E2A5F7-4B9D-6E3A-1F8C-5A7B2D9E4F6C}");
+            if (!db.SubjectConfigurations.Any(c => c.Id == voucherGroupId))
+            {
+                db.SubjectConfigurations.Add(new SubjectConfiguration
+                {
+                    Id = voucherGroupId,
+                    Code = "GEN_VOUCHER_GROUP",
+                    SubjectNumber = "", // 凭证类别字不需要科目号
+                    DisplayName = "转账凭证类别",
+                    VoucherGroup = "转", // 默认为转账凭证
+                    AccountingCategory = "客户", // 默认核算类别
+                    Remark = "通用凭证类别字配置，用于在生成金蝶凭证时标识凭证类型（转、收、付、记）",
+                    CreateBy = null, // 系统初始化，无具体创建人
+                    CreateDateTime = OwHelper.WorldNow,
+                    IsDelete = false
+                });
+                _Logger.LogInformation("添加GEN凭证类别字配置");
+            }
+            else
+            {
+                _Logger.LogDebug("GEN凭证类别字配置已存在，跳过初始化");
+            }
+            #endregion 初始化科目配置信息
         }
 
         /// <summary>
@@ -330,12 +464,12 @@ namespace PowerLmsServer.Managers
         private void CreateAdmin(IServiceProvider svc)
         {
             var db = svc.GetRequiredService<PowerLmsUserDbContext>();
-            var admin = db.Accounts.FirstOrDefault(c => c.LoginName == "868d61ae-3a86-42a8-8a8c-1ed6cfa90817");
+            var admin = db.Accounts.FirstOrDefault(c => c.LoginName == SuperAdminLoginName);
             if (admin == null)  //若没有创建超管
             {
                 admin = new Account
                 {
-                    LoginName = "868d61ae-3a86-42a8-8a8c-1ed6cfa90817",
+                    LoginName = SuperAdminLoginName,
                     CurrentLanguageTag = "zh-CN",
                     LastModifyDateTimeUtc = OwHelper.WorldNow,
                     State = 4,
