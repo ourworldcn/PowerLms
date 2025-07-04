@@ -27,8 +27,11 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="dbContext">PowerLMS用户数据库上下文，提供对数据库的直接访问能力</param>
         /// <param name="logger">日志记录器，用于记录控制器运行过程中的各种信息</param>
         /// <param name="fileManager">文件管理器，提供文件系统操作的统一接口</param>
+        /// <param name="merchantManager">商户管理器，用于商户相关操作</param>
+        /// <param name="organizationManager">机构管理器，用于机构相关操作</param>
         public FinancialSystemExportController(AccountManager accountManager, IServiceProvider serviceProvider, IServiceScopeFactory serviceScopeFactory,
-            PowerLmsUserDbContext dbContext, ILogger<FinancialSystemExportController> logger, OwFileManager fileManager)
+            PowerLmsUserDbContext dbContext, ILogger<FinancialSystemExportController> logger, OwFileManager fileManager,
+            MerchantManager merchantManager, OrganizationManager organizationManager)
         {
             _AccountManager = accountManager;
             _ServiceProvider = serviceProvider;
@@ -36,6 +39,8 @@ namespace PowerLmsWebApi.Controllers
             _DbContext = dbContext;
             _Logger = logger;
             _FileManager = fileManager;
+            _MerchantManager = merchantManager;
+            _OrganizationManager = organizationManager;
         }
 
         private readonly AccountManager _AccountManager;
@@ -44,6 +49,8 @@ namespace PowerLmsWebApi.Controllers
         private readonly PowerLmsUserDbContext _DbContext;
         private readonly ILogger<FinancialSystemExportController> _Logger;
         private readonly OwFileManager _FileManager;
+        private readonly MerchantManager _MerchantManager;
+        private readonly OrganizationManager _OrganizationManager;
 
         /// <summary>
         /// 导出发票数据为金蝶DBF格式文件。
@@ -77,7 +84,8 @@ namespace PowerLmsWebApi.Controllers
                 }
 
                 // 在方法内直接生成发票集合进行预检查
-                var invoicesQuery = _DbContext.TaxInvoiceInfos.AsQueryable();
+                var invoicesQuery = _DbContext.TaxInvoiceInfos.Where(c => c.ExportedDateTime == null) //需求强制导出未导出过的发票
+                    .AsQueryable();
 
                 // 应用查询条件
                 if (model.ExportConditions != null && model.ExportConditions.Any())
@@ -85,12 +93,8 @@ namespace PowerLmsWebApi.Controllers
                     invoicesQuery = EfHelper.GenerateWhereAnd(invoicesQuery, model.ExportConditions);
                 }
 
-                // 添加组织权限过滤
-                if (!context.User.IsSuperAdmin && context.User.OrgId.HasValue)
-                {
-                    // 根据实际业务需求添加组织过滤逻辑
-                    // invoicesQuery = invoicesQuery.Where(i => i.OrgId == context.User.OrgId);
-                }
+                // 添加组织权限过滤 - 根据用户权限限制导出范围
+                invoicesQuery = ApplyOrganizationFilter(invoicesQuery, context.User);
 
                 // 预检查：统计符合条件的发票数量
                 var invoiceCount = invoicesQuery.Count();
@@ -245,6 +249,18 @@ namespace PowerLmsWebApi.Controllers
                     invoicesQuery = EfHelper.GenerateWhereAnd(invoicesQuery, conditions);
                 }
 
+                // 重新应用组织权限过滤（后台任务中也需要权限过滤）
+                if (!string.IsNullOrEmpty(task.Parameters["UserId"]))
+                {
+                    var taskUserId = Guid.Parse(task.Parameters["UserId"]);
+                    var taskUser = await dbContext.Accounts.FindAsync(taskUserId);
+                    if (taskUser != null)
+                    {
+                        // 在静态方法中调用权限过滤
+                        invoicesQuery = ApplyOrganizationFilterStatic(invoicesQuery, taskUser, dbContext, logger);
+                    }
+                }
+
                 var invoices = await invoicesQuery.ToListAsync();
                 logger.LogDebug("任务 {TaskId} 实际查询到 {ActualCount} 张发票，预期 {ExpectedCount} 张",
                     taskId, invoices.Count, expectedCount);
@@ -394,7 +410,7 @@ namespace PowerLmsWebApi.Controllers
             // 获取通用配置信息
             var preparerName = subjectConfigs.ContainsKey("GEN_PREPARER") ?
                 subjectConfigs["GEN_PREPARER"].DisplayName : "系统导出";
-            
+
             var voucherGroup = subjectConfigs.ContainsKey("GEN_VOUCHER_GROUP") ?
                 subjectConfigs["GEN_VOUCHER_GROUP"].VoucherGroup ?? "转" : "转"; // 默认为转账凭证
 
@@ -496,6 +512,225 @@ namespace PowerLmsWebApi.Controllers
                 voucherNumber++;
             }
             return vouchers;
+        }
+
+        /// <summary>
+        /// 根据用户权限过滤发票查询，确保用户只能导出有权限访问的发票。
+        /// 超级管理员可以导出所有发票，商户管理员可以导出本商户的所有发票，
+        /// 普通用户只能导出与其登录机构相关的发票。
+        /// </summary>
+        /// <param name="invoicesQuery">发票查询对象</param>
+        /// <param name="user">当前用户</param>
+        /// <param name="dbContext">数据库上下文（可选，用于后台任务）</param>
+        /// <returns>过滤后的发票查询对象</returns>
+        private IQueryable<TaxInvoiceInfo> ApplyOrganizationFilter(IQueryable<TaxInvoiceInfo> invoicesQuery, Account user, PowerLmsUserDbContext dbContext = null)
+        {
+            // 使用传入的数据库上下文，如果没有则使用实例字段
+            var context = dbContext ?? _DbContext;
+            
+            try
+            {
+                if (user.IsSuperAdmin)
+                {
+                    // 超级管理员可以导出所有发票
+                    _Logger.LogDebug("超级管理员 {UserId} 可以导出所有发票", user.Id);
+                    return invoicesQuery;
+                }
+
+                // 获取用户所属商户 - 使用实例字段
+                if (!_MerchantManager.GetIdByUserId(user.Id, out var userMerchantId) || !userMerchantId.HasValue)
+                {
+                    _Logger.LogWarning("无法确定用户 {UserId} 所属商户，返回空结果", user.Id);
+                    return invoicesQuery.Where(i => false); // 返回空查询
+                }
+
+                if (user.IsMerchantAdmin)
+                {
+                    // 商户管理员可以导出本商户的所有发票
+                    var merchantOrgs = _OrganizationManager.GetOrLoadByMerchantId(userMerchantId.Value);
+                    var merchantOrgIds = merchantOrgs.Keys.Select(id => (Guid?)id).ToHashSet();
+                    merchantOrgIds.Add(userMerchantId.Value); // 添加商户ID本身
+                    
+                    // 通过发票的关联对象确定发票所属机构
+                    var merchantFilteredQuery = from invoice in invoicesQuery
+                                               join requisition in context.DocFeeRequisitions 
+                                                   on invoice.DocFeeRequisitionId equals requisition.Id into reqGroup
+                                               from req in reqGroup.DefaultIfEmpty()
+                                               join reqItem in context.DocFeeRequisitionItems
+                                                   on req.Id equals reqItem.ParentId into reqItemGroup
+                                               from reqItemDetail in reqItemGroup.DefaultIfEmpty()
+                                               join fee in context.DocFees 
+                                                   on reqItemDetail.FeeId equals fee.Id into feeGroup
+                                               from docFee in feeGroup.DefaultIfEmpty()
+                                               join job in context.PlJobs 
+                                                   on docFee.JobId equals job.Id into jobGroup
+                                               from plJob in jobGroup.DefaultIfEmpty()
+                                               where merchantOrgIds.Contains(req.OrgId) ||       // 申请单机构过滤
+                                                     merchantOrgIds.Contains(plJob.OrgId)         // 业务单机构过滤
+                                               select invoice;
+
+                    _Logger.LogDebug("商户管理员 {UserId} 可以导出商户 {MerchantId} 下 {OrgCount} 个机构的发票", 
+                        user.Id, userMerchantId.Value, merchantOrgIds.Count);
+                    
+                    return merchantFilteredQuery.Distinct();
+                }
+                else
+                {
+                    // 普通用户只能导出与其登录机构相同的发票
+                    var userOrganizations = _OrganizationManager.GetOrLoadCurrentOrgsByUser(user);
+                    var userOrgIds = userOrganizations.Keys.Select(id => (Guid?)id).ToHashSet();
+                    userOrgIds.Add(userMerchantId.Value); // 添加商户ID以支持直接归属商户的发票
+                    
+                    if (!userOrgIds.Any())
+                    {
+                        _Logger.LogWarning("用户 {UserId} 未关联任何机构，返回空结果", user.Id);
+                        return invoicesQuery.Where(i => false); // 返回空查询
+                    }
+
+                    // 通过发票的关联对象确定发票所属机构
+                    var userFilteredQuery = from invoice in invoicesQuery
+                                           join requisition in context.DocFeeRequisitions 
+                                               on invoice.DocFeeRequisitionId equals requisition.Id into reqGroup
+                                           from req in reqGroup.DefaultIfEmpty()
+                                           join reqItem in context.DocFeeRequisitionItems
+                                               on req.Id equals reqItem.ParentId into reqItemGroup
+                                           from reqItemDetail in reqItemGroup.DefaultIfEmpty()
+                                           join fee in context.DocFees 
+                                               on reqItemDetail.FeeId equals fee.Id into feeGroup
+                                           from docFee in feeGroup.DefaultIfEmpty()
+                                           join job in context.PlJobs 
+                                               on docFee.JobId equals job.Id into jobGroup
+                                           from plJob in jobGroup.DefaultIfEmpty()
+                                           where userOrgIds.Contains(req.OrgId) ||     // 申请单机构过滤
+                                                 userOrgIds.Contains(plJob.OrgId)       // 业务单机构过滤
+                                           select invoice;
+
+                    _Logger.LogDebug("普通用户 {UserId} 可以导出其关联的 {OrgCount} 个机构的发票", 
+                        user.Id, userOrgIds.Count);
+                    
+                    return userFilteredQuery.Distinct();
+                }
+            }
+            catch (Exception ex)
+            {
+                _Logger.LogError(ex, "应用组织权限过滤时发生错误，用户: {UserId}", user.Id);
+                // 发生错误时返回空查询以确保安全
+                return invoicesQuery.Where(i => false);
+            }
+        }
+
+        /// <summary>
+        /// 静态版本的组织权限过滤方法，用于后台任务中调用。
+        /// </summary>
+        /// <param name="invoicesQuery">发票查询对象</param>
+        /// <param name="user">当前用户</param>
+        /// <param name="dbContext">数据库上下文</param>
+        /// <param name="logger">日志记录器</param>
+        /// <returns>过滤后的发票查询对象</returns>
+        private static IQueryable<TaxInvoiceInfo> ApplyOrganizationFilterStatic(IQueryable<TaxInvoiceInfo> invoicesQuery, Account user, PowerLmsUserDbContext dbContext, ILogger logger)
+        {
+            try
+            {
+                if (user.IsSuperAdmin)
+                {
+                    // 超级管理员可以导出所有发票
+                    logger.LogDebug("超级管理员 {UserId} 可以导出所有发票", user.Id);
+                    return invoicesQuery;
+                }
+
+                // 获取用户所属商户
+                var userOrgIds = dbContext.AccountPlOrganizations
+                    .Where(apo => apo.UserId == user.Id)
+                    .Select(apo => apo.OrgId)
+                    .FirstOrDefault();
+
+                if (userOrgIds == Guid.Empty)
+                {
+                    logger.LogWarning("无法确定用户 {UserId} 所属机构，返回空结果", user.Id);
+                    return invoicesQuery.Where(i => false);
+                }
+
+                // 确定商户ID - 简化逻辑，直接使用组织机构关联
+                var merchantId = dbContext.Merchants
+                    .Where(m => m.Id == userOrgIds)
+                    .Select(m => m.Id)
+                    .FirstOrDefault();
+
+                if (merchantId == Guid.Empty)
+                {
+                    // 如果不是直接商户关联，查找机构所属商户
+                    merchantId = dbContext.PlOrganizations
+                        .Where(o => o.Id == userOrgIds)
+                        .Select(o => o.MerchantId)
+                        .FirstOrDefault() ?? Guid.Empty;
+                }
+
+                if (merchantId == Guid.Empty)
+                {
+                    logger.LogWarning("无法确定用户 {UserId} 所属商户，返回空结果", user.Id);
+                    return invoicesQuery.Where(i => false);
+                }
+
+                HashSet<Guid?> allowedOrgIds;
+
+                if (user.IsMerchantAdmin)
+                {
+                    // 商户管理员可以导出本商户的所有发票
+                    allowedOrgIds = new HashSet<Guid?> { merchantId };
+                    var merchantOrgIds = dbContext.PlOrganizations
+                        .Where(o => o.MerchantId == merchantId)
+                        .Select(o => (Guid?)o.Id)
+                        .ToHashSet();
+                    allowedOrgIds.UnionWith(merchantOrgIds);
+
+                    logger.LogDebug("商户管理员 {UserId} 可以导出商户 {MerchantId} 下 {OrgCount} 个机构的发票", 
+                        user.Id, merchantId, allowedOrgIds.Count);
+                }
+                else
+                {
+                    // 普通用户只能导出与其登录机构相关的发票
+                    var userOrganizations = dbContext.AccountPlOrganizations
+                        .Where(apo => apo.UserId == user.Id)
+                        .Select(apo => (Guid?)apo.OrgId)
+                        .ToHashSet();
+
+                    if (!userOrganizations.Any())
+                    {
+                        logger.LogWarning("用户 {UserId} 未关联任何机构，返回空结果", user.Id);
+                        return invoicesQuery.Where(i => false);
+                    }
+
+                    allowedOrgIds = userOrganizations;
+                    logger.LogDebug("普通用户 {UserId} 可以导出其关联的 {OrgCount} 个机构的发票", 
+                        user.Id, allowedOrgIds.Count);
+                }
+
+                // 通过发票的关联对象确定发票所属机构并过滤
+                var filteredQuery = from invoice in invoicesQuery
+                                   join requisition in dbContext.DocFeeRequisitions 
+                                       on invoice.DocFeeRequisitionId equals requisition.Id into reqGroup
+                                   from req in reqGroup.DefaultIfEmpty()
+                                   join reqItem in dbContext.DocFeeRequisitionItems
+                                       on req.Id equals reqItem.ParentId into reqItemGroup
+                                   from reqItemDetail in reqItemGroup.DefaultIfEmpty()
+                                   join fee in dbContext.DocFees 
+                                       on reqItemDetail.FeeId equals fee.Id into feeGroup
+                                   from docFee in feeGroup.DefaultIfEmpty()
+                                   join job in dbContext.PlJobs 
+                                       on docFee.JobId equals job.Id into jobGroup
+                                   from plJob in jobGroup.DefaultIfEmpty()
+                                   where allowedOrgIds.Contains(req.OrgId) ||     // 申请单机构过滤
+                                         allowedOrgIds.Contains(plJob.OrgId)       // 业务单机构过滤
+                                   select invoice;
+
+                return filteredQuery.Distinct();
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "应用组织权限过滤时发生错误，用户: {UserId}", user.Id);
+                // 发生错误时返回空查询以确保安全
+                return invoicesQuery.Where(i => false);
+            }
         }
     }
 

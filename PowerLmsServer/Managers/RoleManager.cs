@@ -47,18 +47,29 @@ namespace PowerLmsServer.Managers
         /// <summary>
         /// 从数据库调入指定商户下的所有角色。
         /// </summary>
-        /// <param name="merchId"></param>
-        /// <param name="dbContext"></param>
-        /// <returns></returns>
+        /// <param name="merchId">商户Id</param>
+        /// <param name="dbContext">数据库上下文</param>
+        /// <returns>指定商户下所有角色的字典集合</returns>
         public ConcurrentDictionary<Guid, PlRole> LoadByMerchantId(Guid merchId, ref PowerLmsUserDbContext dbContext)
         {
             var orgs = _OrganizationManager.GetOrLoadByMerchantId(merchId);
-            var orgIds = orgs.Keys;
+            var orgIds = orgs.Keys.ToHashSet();
+            // 添加商户ID本身到查询范围
+            orgIds.Add(merchId);
+            
             dbContext ??= _DbContextFactory.CreateDbContext();
+            
             lock (dbContext)
             {
-                var tmp = dbContext.PlRoles.Where(c => orgIds.Contains(c.OrgId.Value)).AsEnumerable().ToDictionary(c => c.Id);
-                return new ConcurrentDictionary<Guid, PlRole>(tmp);
+                // 查询商户下的所有角色：
+                // 1. 直接从属于商户的角色 (OrgId = merchId)
+                // 2. 从属于商户下属机构的角色 (OrgId in orgIds)
+                var roles = dbContext.PlRoles
+                    .Where(c => c.OrgId.HasValue && orgIds.Contains(c.OrgId.Value))
+                    .AsEnumerable()
+                    .ToDictionary(c => c.Id);
+                
+                return new ConcurrentDictionary<Guid, PlRole>(roles);
             }
         }
 
@@ -161,25 +172,36 @@ namespace PowerLmsServer.Managers
         /// <summary>
         /// 按指定用户当前的登录机构加载其所有角色。
         /// </summary>
-        /// <param name="user"></param>
-        /// <param name="db"></param>
+        /// <param name="user">用户对象</param>
+        /// <param name="db">数据库上下文</param>
+        /// <returns>用户当前有效的角色集合</returns>
         public ConcurrentDictionary<Guid, PlRole> LoadCurrentRolesByUser(Account user, ref PowerLmsUserDbContext db)
         {
             var orgs = _OrganizationManager.GetOrLoadCurrentOrgsByUser(user);   // 用户登录的有效机构集合
             var merchant = _MerchantManager.GetOrLoadByUser(user);
             if (merchant == null) return new ConcurrentDictionary<Guid, PlRole>();
 
-            var allRoles = GetOrLoadRolesByMerchantId(merchant.Id);   // 商户下所有角色
+            // 将商户ID也加入有效机构集合，支持直接归属于商户的角色
+            var validOrgIds = orgs.Keys.ToHashSet();
+            validOrgIds.Add(merchant.Id);
 
             db ??= _DbContextFactory.CreateDbContext();
             HashSet<Guid> hsRoleIds;
             lock (db)
                 hsRoleIds = db.PlAccountRoles.Where(c => c.UserId == user.Id).Select(c => c.RoleId).ToHashSet(); // 所有直属角色Id集合
 
-            var coll = allRoles.Where(c => c.Value.OrgId.HasValue && hsRoleIds.Contains(c.Key)   // 直属角色
-                && orgs.ContainsKey(c.Value.OrgId.Value));    // 属于有效机构
+            if (hsRoleIds.Count == 0) return new ConcurrentDictionary<Guid, PlRole>(); // 如果用户没有角色，直接返回空字典
 
-            return new ConcurrentDictionary<Guid, PlRole>(coll);
+            // 查询用户的直属角色，包括：
+            // 1. 直接从属于商户的角色 (OrgId = merchant.Id)
+            // 2. 从属于用户有效机构的角色 (OrgId in validOrgIds)
+            var userRoles = db.PlRoles
+                .Where(c => hsRoleIds.Contains(c.Id) && 
+                           c.OrgId.HasValue && validOrgIds.Contains(c.OrgId.Value))
+                .AsEnumerable()
+                .ToDictionary(c => c.Id);
+
+            return new ConcurrentDictionary<Guid, PlRole>(userRoles);
         }
 
         /// <summary>
@@ -216,6 +238,6 @@ namespace PowerLmsServer.Managers
             // 使用OwMemoryCacheExtensions注册取消令牌
             entry.RegisterCancellationToken(_Cache);
         }
-    }
+        }
 
 }

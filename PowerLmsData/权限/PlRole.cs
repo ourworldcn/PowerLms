@@ -24,9 +24,11 @@ namespace PowerLms.Data
         }
 
         /// <summary>
-        /// 所属组织机构Id。关联 PlOrganization。
+        /// 所属组织机构Id或商户Id。关联 PlOrganization 或 PlMerchant。
+        /// 当角色归属于机构时，此字段存储机构ID；
+        /// 当角色直接归属于商户时，此字段存储商户ID。
         /// </summary>
-        [Comment("所属组织机构Id。")]
+        [Comment("所属组织机构Id或商户Id。")]
         public Guid? OrgId { get; set; }
 
         /// <summary>
