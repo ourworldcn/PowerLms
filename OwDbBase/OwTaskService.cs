@@ -528,11 +528,40 @@ namespace OwDbBase.Tasks
                 : null;
         }
 
-        /// <summary>任务状态值（数据库中存储的原始字节）</summary>
+        /// <summary>
+        /// 任务状态值（数据库中存储的原始字节）
+        /// <para>该属性直接存储任务状态的数值，用于数据库持久化。</para>
+        /// <para>状态值及其含义：</para>
+        /// <list type="bullet">
+        /// <item><description>1 - 待处理：任务已创建并添加到队列中，等待执行</description></item>
+        /// <item><description>2 - 执行中：任务正在被工作线程执行</description></item>
+        /// <item><description>4 - 已完成：任务成功执行完毕，结果已保存</description></item>
+        /// <item><description>8 - 失败：任务执行过程中发生错误，已停止执行</description></item>
+        /// <item><description>16 - 已取消：任务被用户或系统主动取消</description></item>
+        /// <item><description>32 - 已暂停：任务执行被暂停（保留状态，暂未使用）</description></item>
+        /// <item><description>64 - 已超时：任务执行超过预定时间限制（保留状态，暂未使用）</description></item>
+        /// </list>
+        /// <para>注意：这些数值设计为位标志，可以进行位运算组合，但通常情况下每个任务只会处于一个主要状态。</para>
+        /// <para>建议使用 <see cref="Status"/> 属性进行状态访问，而不是直接操作此数值字段。</para>
+        /// </summary>
         [Comment("任务当前执行状态值")]
         public byte StatusValue { get; set; }
 
-        /// <summary>任务状态（非数据库字段）</summary>
+        /// <summary>
+        /// 任务状态（非数据库字段）
+        /// <para>该属性提供了对任务当前执行状态的访问，将内部存储的字节值转换为有意义的枚举值。</para>
+        /// <para>可能的状态值包括：</para>
+        /// <list type="bullet">
+        /// <item><description><see cref="OwTaskStatus.Pending"/> (1) - 待处理：任务已创建并添加到队列中，等待执行</description></item>
+        /// <item><description><see cref="OwTaskStatus.Running"/> (2) - 执行中：任务正在被工作线程执行</description></item>
+        /// <item><description><see cref="OwTaskStatus.Completed"/> (4) - 已完成：任务成功执行完毕，结果已保存</description></item>
+        /// <item><description><see cref="OwTaskStatus.Failed"/> (8) - 失败：任务执行过程中发生错误，已停止执行</description></item>
+        /// <item><description><see cref="OwTaskStatus.Cancelled"/> (16) - 已取消：任务被用户或系统主动取消</description></item>
+        /// <item><description><see cref="OwTaskStatus.Paused"/> (32) - 已暂停：任务执行被暂停（保留状态，暂未使用）</description></item>
+        /// <item><description><see cref="OwTaskStatus.TimedOut"/> (64) - 已超时：任务执行超过预定时间限制（保留状态，暂未使用）</description></item>
+        /// </list>
+        /// <para>注意：由于使用了 [Flags] 特性，状态值可以进行位运算组合，但通常情况下每个任务只会处于一个主要状态。</para>
+        /// </summary>
         [NotMapped]
         public OwTaskStatus Status
         {

@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
+using System.Runtime.CompilerServices;
 
 namespace Microsoft.Extensions.Caching.Memory
 {
@@ -27,9 +29,10 @@ namespace Microsoft.Extensions.Caching.Memory
         /// </summary>
         /// <param name="cache">缓存实例。</param>
         /// <returns>存储缓存项取消令牌的并发字典。</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static ConcurrentDictionary<object, CancellationTokenSource> GetCancellationTokenMap(this IMemoryCache cache)
         {
-            return cache.GetOrCreate(CancellationTokenMapKey, entry =>
+            return cache.GetOrCreate(CancellationTokenMapKey, static entry =>
             {
                 // 创建永不过期的缓存项
                 entry.SetPriority(CacheItemPriority.NeverRemove);
@@ -51,8 +54,8 @@ namespace Microsoft.Extensions.Caching.Memory
         public static ICacheEntry RegisterCancellationToken(this ICacheEntry entry, IMemoryCache cache,
             CancellationTokenSource tokenSource = null, bool autoDispose = true)
         {
-            if (entry == null) throw new ArgumentNullException(nameof(entry)); // 检查entry是否为空
-            if (cache == null) throw new ArgumentNullException(nameof(cache)); // 检查cache是否为空
+            ArgumentNullException.ThrowIfNull(entry);
+            ArgumentNullException.ThrowIfNull(cache);
 
             var cts = tokenSource ?? new CancellationTokenSource(); // 获取或创建取消令牌源
             var tokenMap = cache.GetCancellationTokenMap(); // 获取取消令牌字典
@@ -60,18 +63,14 @@ namespace Microsoft.Extensions.Caching.Memory
             entry.ExpirationTokens.Add(new CancellationChangeToken(cts.Token)); // 注册更改的通知
 
             // 创建一个包含所需状态的对象，避免闭包直接捕获参数
-            var state = new TokenCallbackState
-            {
-                Cache = cache,
-                AutoDispose = autoDispose
-            };
+            var state = new TokenCallbackState(cache, autoDispose);
 
             // 注册逐出回调，当缓存项被逐出时清理取消令牌资源并取消令牌
-            entry.RegisterPostEvictionCallback((key, _, reason, callbackState) =>
+            entry.RegisterPostEvictionCallback(static (key, _, reason, callbackState) =>
             {
-                if (callbackState is TokenCallbackState state && state.Cache is IMemoryCache ch)
+                if (callbackState is TokenCallbackState state && state.Cache is not null)
                 {
-                    var map = ch.GetCancellationTokenMap();
+                    var map = state.Cache.GetCancellationTokenMap();
                     if (map.TryRemove(key, out var source)) // 从映射中移除取消令牌源
                     {
                         try
@@ -107,9 +106,9 @@ namespace Microsoft.Extensions.Caching.Memory
         public static MemoryCacheEntryOptions RegisterCancellationToken(this MemoryCacheEntryOptions options,
             IMemoryCache cache, object key, CancellationTokenSource tokenSource = null, bool autoDispose = true)
         {
-            if (options == null) throw new ArgumentNullException(nameof(options)); // 检查options是否为空
-            if (cache == null) throw new ArgumentNullException(nameof(cache)); // 检查cache是否为空
-            if (key == null) throw new ArgumentNullException(nameof(key)); // 检查key是否为空
+            ArgumentNullException.ThrowIfNull(options);
+            ArgumentNullException.ThrowIfNull(cache);
+            ArgumentNullException.ThrowIfNull(key);
 
             var cts = tokenSource ?? new CancellationTokenSource(); // 获取或创建取消令牌源
             var tokenMap = cache.GetCancellationTokenMap(); // 获取取消令牌字典
@@ -117,18 +116,14 @@ namespace Microsoft.Extensions.Caching.Memory
             options.ExpirationTokens.Add(new CancellationChangeToken(cts.Token)); // 注册更改的通知
 
             // 创建一个包含所需状态的对象，避免闭包直接捕获参数
-            var state = new TokenCallbackState
-            {
-                Cache = cache,
-                AutoDispose = autoDispose
-            };
+            var state = new TokenCallbackState(cache, autoDispose);
 
             // 注册逐出回调，当缓存项被逐出时清理取消令牌资源并取消令牌
-            options.RegisterPostEvictionCallback((evictedKey, _, reason, callbackState) =>
+            options.RegisterPostEvictionCallback(static (evictedKey, _, reason, callbackState) =>
             {
-                if (callbackState is TokenCallbackState callbackStateObj && callbackStateObj.Cache is IMemoryCache ch)
+                if (callbackState is TokenCallbackState callbackStateObj && callbackStateObj.Cache is not null)
                 {
-                    var map = ch.GetCancellationTokenMap();
+                    var map = callbackStateObj.Cache.GetCancellationTokenMap();
                     if (map.TryRemove(evictedKey, out var source)) // 从映射中移除取消令牌源
                     {
                         try
@@ -151,11 +146,19 @@ namespace Microsoft.Extensions.Caching.Memory
             return options;
         }
 
-        /// <summary> 用于存储回调状态的辅助类。 </summary>
-        private class TokenCallbackState
+        /// <summary>
+        /// 用于存储回调状态的辅助类。
+        /// </summary>
+        private readonly struct TokenCallbackState
         {
-            public IMemoryCache Cache { get; set; }
-            public bool AutoDispose { get; set; }
+            public TokenCallbackState(IMemoryCache cache, bool autoDispose)
+            {
+                Cache = cache;
+                AutoDispose = autoDispose;
+            }
+
+            public IMemoryCache Cache { get; }
+            public bool AutoDispose { get; }
         }
 
         /// <summary>
@@ -165,15 +168,17 @@ namespace Microsoft.Extensions.Caching.Memory
         /// <param name="key">缓存项键。</param>
         /// <returns>与键关联的取消令牌源，如果没有找到则返回null。</returns>
         /// <exception cref="ArgumentNullException">当cache或key参数为null时抛出。</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static CancellationTokenSource GetCancellationTokenSource(this IMemoryCache cache, object key)
         {
-            if (cache == null) throw new ArgumentNullException(nameof(cache));
-            if (key == null) throw new ArgumentNullException(nameof(key));
+            ArgumentNullException.ThrowIfNull(cache);
+            ArgumentNullException.ThrowIfNull(key);
 
             var tokenMap = cache.GetCancellationTokenMap();
             tokenMap.TryGetValue(key, out var source);
             return source;
         }
+
         /// <summary>
         /// 使指定键关联的取消源失效（取消）。
         /// </summary>
@@ -183,14 +188,14 @@ namespace Microsoft.Extensions.Caching.Memory
         /// <exception cref="ArgumentNullException">当cache或key参数为null时抛出。</exception>
         public static bool CancelSource(this IMemoryCache cache, object key)
         {
-            if (cache == null) throw new ArgumentNullException(nameof(cache)); // 检查cache是否为空
-            if (key == null) throw new ArgumentNullException(nameof(key)); // 检查key是否为空
+            ArgumentNullException.ThrowIfNull(cache);
+            ArgumentNullException.ThrowIfNull(key);
 
             // 只调用一次GetCancellationTokenSource，将结果保存到局部变量
             var source = cache.GetCancellationTokenSource(key);
 
             // 检查源是否不为null且未被取消
-            if (source != null && !source.IsCancellationRequested)
+            if (source is not null && !source.IsCancellationRequested)
             {
                 try
                 {
@@ -215,29 +220,34 @@ namespace Microsoft.Extensions.Caching.Memory
         /// <returns>提取的GUID，如果格式不合法或前缀不匹配则返回null</returns>
         public static Guid? GetIdFromCacheKey(string key, string prefix = null)
         {
-            if (key == null) return null;
+            if (string.IsNullOrEmpty(key)) 
+                return null;
 
             // 如果有前缀，检查键是否以前缀开头
-            if (prefix != null)
+            if (prefix is not null)
             {
                 if (!key.StartsWith(prefix, StringComparison.Ordinal))
                 {
-                    OwHelper.SetLastErrorAndMessage(400, "格式错误：前缀不匹配");
+                    OwHelper.SetLastErrorAndMessage(400, $"格式错误：前缀不匹配，期望'{prefix}'");
                     return null;
                 }
 
-                // 移除前缀
-                key = key.Substring(prefix.Length);
+                // 移除前缀，使用Span提高性能
+                key = key[prefix.Length..];
             }
 
             // 确保剩余部分至少等于GUID的长度
-            if (key.Length < IdKeyLength) return null;
+            if (key.Length < IdKeyLength) 
+            {
+                OwHelper.SetLastErrorAndMessage(400, $"格式错误：GUID部分长度不足，需要{IdKeyLength}个字符");
+                return null;
+            }
 
             // 提取GUID部分（取前IdKeyLength个字符）
-            var guidPart = key.Substring(0, IdKeyLength);
+            var guidSpan = key.AsSpan(0, IdKeyLength);
 
-            // 尝试解析GUID
-            if (!Guid.TryParse(guidPart, out var id))
+            // 尝试解析GUID，使用Span版本提高性能
+            if (!Guid.TryParse(guidSpan, out var id))
             {
                 OwHelper.SetLastErrorAndMessage(400, "格式错误：无效的GUID格式");
                 return null;
@@ -253,10 +263,11 @@ namespace Microsoft.Extensions.Caching.Memory
         /// <param name="key">缓存键字符串</param>
         /// <param name="prefix">预期的前缀，默认为类型名称加点</param>
         /// <returns>提取的GUID，如果格式不合法或前缀不匹配则返回null</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Guid? GetIdFromCacheKey<T>(string key, string prefix = null)
         {
             // 如果未提供前缀，使用类型名称作为前缀
-            prefix = prefix ?? $"{typeof(T).Name}.";
+            prefix ??= $"{typeof(T).Name}.";
             return GetIdFromCacheKey(key, prefix);
         }
 
@@ -266,6 +277,7 @@ namespace Microsoft.Extensions.Caching.Memory
         /// <param name="id">GUID标识符</param>
         /// <param name="prefix">前缀</param>
         /// <returns>格式化的缓存键</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static string GetCacheKeyFromId(Guid id, string prefix = null)
         {
             // 使用标准格式（含连字符）生成GUID字符串
@@ -279,11 +291,124 @@ namespace Microsoft.Extensions.Caching.Memory
         /// <param name="id">GUID标识符</param>
         /// <param name="prefix">前缀，默认为类型名称加点</param>
         /// <returns>格式化的缓存键</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static string GetCacheKeyFromId<T>(Guid id, string prefix = null)
         {
             // 如果未提供前缀，使用类型名称作为前缀
-            prefix = prefix ?? $"{typeof(T).Name}.";
+            prefix ??= $"{typeof(T).Name}.";
             return GetCacheKeyFromId(id, prefix);
+        }
+
+        /// <summary>
+        /// 批量取消多个缓存键关联的取消令牌源。
+        /// </summary>
+        /// <param name="cache">缓存实例</param>
+        /// <param name="keys">要取消的缓存键集合</param>
+        /// <param name="removeFromMap">是否从映射中移除已取消的令牌源，默认为true</param>
+        /// <returns>成功取消的数量</returns>
+        public static int CancelSources(this IMemoryCache cache, IEnumerable<object> keys, bool removeFromMap = true)
+        {
+            ArgumentNullException.ThrowIfNull(cache);
+            ArgumentNullException.ThrowIfNull(keys);
+
+            var count = 0;
+            var tokenMap = cache.GetCancellationTokenMap();
+
+            foreach (var key in keys)
+            {
+                if (tokenMap.TryGetValue(key, out var source) && 
+                    source is not null && 
+                    !source.IsCancellationRequested)
+                {
+                    try
+                    {
+                        source.Cancel();
+                        count++;
+                        
+                        // 如果设置了移除标志，则从映射中移除
+                        if (removeFromMap)
+                        {
+                            tokenMap.TryRemove(key, out _);
+                        }
+                    }
+                    catch { /* 忽略异常 */ }
+                }
+            }
+
+            return count;
+        }
+
+        /// <summary>
+        /// 获取所有活跃的取消令牌源的数量。
+        /// </summary>
+        /// <param name="cache">缓存实例</param>
+        /// <returns>活跃的取消令牌源数量</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int GetActiveCancellationTokenCount(this IMemoryCache cache)
+        {
+            ArgumentNullException.ThrowIfNull(cache);
+            
+            var tokenMap = cache.GetCancellationTokenMap();
+            return tokenMap.Count;
+        }
+
+        /// <summary>
+        /// 清理所有已取消或已处置的取消令牌源。
+        /// </summary>
+        /// <param name="cache">缓存实例</param>
+        /// <returns>清理的令牌源数量</returns>
+        public static int CleanupCancelledTokenSources(this IMemoryCache cache)
+        {
+            ArgumentNullException.ThrowIfNull(cache);
+
+            var tokenMap = cache.GetCancellationTokenMap();
+            var keysToRemove = new List<object>();
+
+            // 找出所有已取消或已处置的令牌源
+            foreach (var kvp in tokenMap)
+            {
+                var source = kvp.Value;
+                var shouldRemove = false;
+
+                if (source is null)
+                {
+                    shouldRemove = true;
+                }
+                else
+                {
+                    try
+                    {
+                        // 检查是否已处置（通过访问Token属性）
+                        _ = source.Token;
+                        // 检查是否已取消
+                        if (source.IsCancellationRequested)
+                        {
+                            shouldRemove = true;
+                        }
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        shouldRemove = true;
+                    }
+                }
+
+                if (shouldRemove)
+                {
+                    keysToRemove.Add(kvp.Key);
+                }
+            }
+
+            // 批量移除已找到的键，提高性能
+            var count = 0;
+            foreach (var key in keysToRemove)
+            {
+                if (tokenMap.TryRemove(key, out _))
+                {
+                    count++;
+                }
+            }
+
+            return count;
         }
     }
 
@@ -308,8 +433,9 @@ namespace Microsoft.Extensions.Caching.Memory
         /// </summary>
         /// <param name="cache">缓存实例。</param>
         /// <returns>存储缓存项优先级回调的并发字典。</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static ConcurrentDictionary<object, PriorityQueue<PostEvictionCallbackRegistration, int>> GetPriorityCallbackMap(this IMemoryCache cache) =>
-            cache.GetOrCreate(PriorityCallbackMapKey, entry =>
+            cache.GetOrCreate(PriorityCallbackMapKey, static entry =>
             {
                 entry.SetPriority(CacheItemPriority.NeverRemove);   // 设置缓存项优先级为永不过期
                 return new ConcurrentDictionary<object, PriorityQueue<PostEvictionCallbackRegistration, int>>();    // 创建并返回新的并发字典，用于存储优先级回调
@@ -322,8 +448,9 @@ namespace Microsoft.Extensions.Caching.Memory
         /// <param name="cache">缓存实例。</param>
         /// <param name="callback">当缓存项被移除时要调用的回调方法。</param>
         /// <param name="state">传递给回调的状态对象。</param>
-        /// <param name="priority">回调的优先级，值越小优先级越高。默认为0。</param>
+        /// <param name="priority">回调的优先级，值越小优先级越高。默认为10。</param>
         /// <returns>传入的缓存条目（用于链式调用）。</returns>
+        /// <exception cref="ArgumentNullException">当任何必需参数为null时抛出</exception>
         public static ICacheEntry RegisterPriorityPostEvictionCallback(
             this ICacheEntry entry,
             IMemoryCache cache,
@@ -331,7 +458,7 @@ namespace Microsoft.Extensions.Caching.Memory
             object state = null,
             int priority = 10)
         {
-            // 参数检查
+            // 参数检查 - 使用 .NET 6 的 ArgumentNullException.ThrowIfNull
             ArgumentNullException.ThrowIfNull(entry);
             ArgumentNullException.ThrowIfNull(cache);
             ArgumentNullException.ThrowIfNull(callback);
@@ -344,7 +471,7 @@ namespace Microsoft.Extensions.Caching.Memory
                 State = state
             };
 
-            var priorityQueue = callbackMap.GetOrAdd(entry.Key, _ =>
+            var priorityQueue = callbackMap.GetOrAdd(entry.Key, static _ =>
                 new PriorityQueue<PostEvictionCallbackRegistration, int>());    // 为当前缓存键获取优先级队列，如果不存在则创建新队列
 
             lock (priorityQueue)    // 锁定优先级队列以确保线程安全
@@ -353,8 +480,7 @@ namespace Microsoft.Extensions.Caching.Memory
 
                 if (priorityQueue.Count == 1)   // 如果这是第一个回调，注册执行器
                 {
-                    entry.RegisterPostEvictionCallback((key, value, reason, _) =>
-                        ExecuteCallbacks(key, value, reason, callbackMap));
+                    entry.RegisterPostEvictionCallback(HandleEvictionCallback, cache);
                 }
             }
 
@@ -369,8 +495,9 @@ namespace Microsoft.Extensions.Caching.Memory
         /// <param name="key">缓存项的键。</param>
         /// <param name="callback">当缓存项被移除时要调用的回调方法。</param>
         /// <param name="state">传递给回调的状态对象。</param>
-        /// <param name="priority">回调的优先级，值越小优先级越高。默认为0。</param>
+        /// <param name="priority">回调的优先级，值越小优先级越高。默认为10。</param>
         /// <returns>传入的缓存选项（用于链式调用）。</returns>
+        /// <exception cref="ArgumentNullException">当任何必需参数为null时抛出</exception>
         public static MemoryCacheEntryOptions RegisterPriorityPostEvictionCallback(
             this MemoryCacheEntryOptions options,
             IMemoryCache cache,
@@ -396,7 +523,7 @@ namespace Microsoft.Extensions.Caching.Memory
             };
 
             // 为当前缓存键获取优先级队列，如果不存在则创建新队列
-            var priorityQueue = callbackMap.GetOrAdd(key, _ =>
+            var priorityQueue = callbackMap.GetOrAdd(key, static _ =>
                 new PriorityQueue<PostEvictionCallbackRegistration, int>());
 
             // 添加新的回调项到优先级队列中
@@ -407,8 +534,7 @@ namespace Microsoft.Extensions.Caching.Memory
                 // 如果这是第一个回调，注册执行器
                 if (priorityQueue.Count == 1)
                 {
-                    options.RegisterPostEvictionCallback((evictedKey, value, reason, _) =>
-                        ExecuteCallbacks(evictedKey, value, reason, callbackMap));
+                    options.RegisterPostEvictionCallback(HandleEvictionCallback, cache);
                 }
             }
 
@@ -423,32 +549,44 @@ namespace Microsoft.Extensions.Caching.Memory
             ConcurrentDictionary<object, PriorityQueue<PostEvictionCallbackRegistration, int>> callbackMap)
         {
             // 尝试获取并移除与此键关联的回调队列
-            if (callbackMap.TryRemove(key, out var callbacks))
-            {
-                // 创建一个临时列表来存储所有回调，以便按优先级顺序执行
-                var orderedCallbacks = new List<PostEvictionCallbackRegistration>();
-                lock (callbacks)
-                {
-                    // 将优先级队列中的所有元素按优先级出队到列表中
-                    while (callbacks.Count > 0)
-                    {
-                        orderedCallbacks.Add(callbacks.Dequeue());
-                    }
-                }
+            if (!callbackMap.TryRemove(key, out var callbacks)) 
+                return;
 
-                // 依次执行所有回调
-                foreach (var callbackItem in orderedCallbacks)
+            // 创建一个临时列表来存储所有回调，以便按优先级顺序执行
+            var orderedCallbacks = new List<PostEvictionCallbackRegistration>();
+            
+            lock (callbacks)
+            {
+                // 将优先级队列中的所有元素按优先级出队到列表中
+                while (callbacks.Count > 0)
                 {
-                    try
-                    {
-                        callbackItem.EvictionCallback(key, value, reason, callbackItem.State);
-                    }
-                    catch (Exception ex)
-                    {
-                        // 记录异常但不阻止其他回调执行
-                        System.Diagnostics.Debug.WriteLine($"优先级回调执行异常: {ex.Message}");
-                    }
+                    orderedCallbacks.Add(callbacks.Dequeue());
                 }
+            }
+
+            // 依次执行所有回调
+            foreach (var callbackItem in orderedCallbacks)
+            {
+                try
+                {
+                    callbackItem.EvictionCallback(key, value, reason, callbackItem.State);
+                }
+                catch (Exception ex)
+                {
+                    // 记录异常但不阻止其他回调执行
+                    System.Diagnostics.Debug.WriteLine($"优先级回调执行异常: {ex}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// 回调包装器，用于处理缓存和回调映射。
+        /// </summary>
+        private static void HandleEvictionCallback(object key, object value, EvictionReason reason, object state)
+        {
+            if (state is IMemoryCache cache)
+            {
+                ExecuteCallbacks(key, value, reason, cache.GetPriorityCallbackMap());
             }
         }
 
@@ -458,15 +596,23 @@ namespace Microsoft.Extensions.Caching.Memory
         /// <param name="cache">缓存实例。</param>
         /// <param name="key">缓存项键。</param>
         /// <returns>优先级回调数量，如果没有找到则返回0。</returns>
+        /// <exception cref="ArgumentNullException">当任何必需参数为null时抛出</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int GetPriorityCallbackCount(this IMemoryCache cache, object key)
         {
             // 参数检查
             ArgumentNullException.ThrowIfNull(cache);
             ArgumentNullException.ThrowIfNull(key);
 
-            return cache.GetPriorityCallbackMap().TryGetValue(key, out var callbacks)
-                ? callbacks.Count
-                : 0;
+            var callbackMap = cache.GetPriorityCallbackMap();
+            if (callbackMap.TryGetValue(key, out var callbacks))
+            {
+                lock (callbacks)
+                {
+                    return callbacks.Count;
+                }
+            }
+            return 0;
         }
 
         /// <summary>
@@ -475,6 +621,7 @@ namespace Microsoft.Extensions.Caching.Memory
         /// <param name="cache">缓存实例。</param>
         /// <param name="key">缓存项键。</param>
         /// <returns>如果找到并成功清除则返回true，否则返回false。</returns>
+        /// <exception cref="ArgumentNullException">当任何必需参数为null时抛出</exception>
         public static bool ClearPriorityCallbacks(this IMemoryCache cache, object key)
         {
             // 参数检查
@@ -482,6 +629,134 @@ namespace Microsoft.Extensions.Caching.Memory
             ArgumentNullException.ThrowIfNull(key);
 
             return cache.GetPriorityCallbackMap().TryRemove(key, out _);
+        }
+
+        /// <summary>
+        /// 获取所有有回调的缓存键列表。
+        /// </summary>
+        /// <param name="cache">缓存实例</param>
+        /// <returns>包含回调的缓存键集合</returns>
+        /// <exception cref="ArgumentNullException">当cache参数为null时抛出</exception>
+        public static IEnumerable<object> GetKeysWithPriorityCallbacks(this IMemoryCache cache)
+        {
+            ArgumentNullException.ThrowIfNull(cache);
+            
+            var callbackMap = cache.GetPriorityCallbackMap();
+            return callbackMap.Keys.ToList(); // 创建快照以避免并发修改异常
+        }
+
+        /// <summary>
+        /// 批量清除多个缓存键的优先级回调。
+        /// </summary>
+        /// <param name="cache">缓存实例</param>
+        /// <param name="keys">要清除回调的缓存键集合</param>
+        /// <returns>成功清除的回调数量</returns>
+        /// <exception cref="ArgumentNullException">当任何必需参数为null时抛出</exception>
+        public static int ClearPriorityCallbacksBatch(this IMemoryCache cache, IEnumerable<object> keys)
+        {
+            ArgumentNullException.ThrowIfNull(cache);
+            ArgumentNullException.ThrowIfNull(keys);
+
+            var count = 0;
+            var callbackMap = cache.GetPriorityCallbackMap();
+
+            foreach (var key in keys)
+            {
+                if (callbackMap.TryRemove(key, out _))
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        /// <summary>
+        /// 清理所有空的优先级回调队列。
+        /// </summary>
+        /// <param name="cache">缓存实例</param>
+        /// <returns>清理的空队列数量</returns>
+        /// <exception cref="ArgumentNullException">当cache参数为null时抛出</exception>
+        public static int CleanupEmptyPriorityCallbackQueues(this IMemoryCache cache)
+        {
+            ArgumentNullException.ThrowIfNull(cache);
+
+            var callbackMap = cache.GetPriorityCallbackMap();
+            var keysToRemove = new List<object>();
+
+            // 找出所有空的队列，使用快照避免并发修改
+            var snapshot = callbackMap.ToArray();
+            foreach (var kvp in snapshot)
+            {
+                var queue = kvp.Value;
+                if (queue is not null)
+                {
+                    lock (queue)
+                    {
+                        if (queue.Count == 0)
+                        {
+                            keysToRemove.Add(kvp.Key);
+                        }
+                    }
+                }
+                else
+                {
+                    // 处理null队列的情况
+                    keysToRemove.Add(kvp.Key);
+                }
+            }
+
+            // 批量移除空队列
+            var count = 0;
+            foreach (var key in keysToRemove)
+            {
+                if (callbackMap.TryRemove(key, out _))
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        /// <summary>
+        /// 获取优先级回调的统计信息。
+        /// </summary>
+        /// <param name="cache">缓存实例</param>
+        /// <returns>包含统计信息的元组：(总队列数, 总回调数, 空队列数)</returns>
+        /// <exception cref="ArgumentNullException">当cache参数为null时抛出</exception>
+        public static (int TotalQueues, int TotalCallbacks, int EmptyQueues) GetPriorityCallbackStatistics(this IMemoryCache cache)
+        {
+            ArgumentNullException.ThrowIfNull(cache);
+
+            var callbackMap = cache.GetPriorityCallbackMap();
+            var totalQueues = callbackMap.Count;
+            var totalCallbacks = 0;
+            var emptyQueues = 0;
+
+            // 使用快照避免并发修改，提高统计准确性
+            var snapshot = callbackMap.Values.ToArray();
+            foreach (var queue in snapshot)
+            {
+                if (queue is not null)
+                {
+                    lock (queue)
+                    {
+                        var count = queue.Count;
+                        totalCallbacks += count;
+                        if (count == 0)
+                        {
+                            emptyQueues++;
+                        }
+                    }
+                }
+                else
+                {
+                    emptyQueues++;
+                }
+            }
+
+            return (totalQueues, totalCallbacks, emptyQueues);
         }
     }
 }
