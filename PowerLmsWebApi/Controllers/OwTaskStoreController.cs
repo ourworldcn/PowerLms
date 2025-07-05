@@ -37,14 +37,14 @@ namespace PowerLmsWebApi.Controllers
             _SqlAppLogger = sqlAppLogger;
         }
 
-        private AccountManager _AccountManager;
-        private IServiceProvider _ServiceProvider;
-        private EntityManager _EntityManager;
-        private PowerLmsUserDbContext _DbContext;
-        readonly ILogger<OwTaskStoreController> _Logger;
-        readonly IMapper _Mapper;
-        readonly AuthorizationManager _AuthorizationManager;
-        OwSqlAppLogger _SqlAppLogger;
+        private readonly AccountManager _AccountManager;
+        private readonly IServiceProvider _ServiceProvider;
+        private readonly EntityManager _EntityManager;
+        private readonly PowerLmsUserDbContext _DbContext;
+        private readonly ILogger<OwTaskStoreController> _Logger;
+        private readonly IMapper _Mapper;
+        private readonly AuthorizationManager _AuthorizationManager;
+        private readonly OwSqlAppLogger _SqlAppLogger;
 
         #region 任务操作
 
@@ -117,18 +117,14 @@ namespace PowerLmsWebApi.Controllers
                     // 设置从DTO中接收的字段
                     ServiceTypeName = model.ServiceTypeName,
                     MethodName = model.MethodName,
-                    Parameters = model.Parameters
+                    Parameters = model.Parameters,
+                    // 设置状态为待处理
+                    Status = OwTaskStatus.Pending,
+                    // 设置创建信息
+                    CreatedUtc = DateTime.UtcNow,
+                    CreatorId = context.User.Id,
+                    TenantId = context.User.OrgId
                 };
-
-                // 设置状态（如果提供）
-                entity.Status = OwTaskStatus.Pending; // 默认状态
-
-                entity.GenerateIdIfEmpty(); // 生成新的GUID
-
-                // 设置创建信息
-                entity.CreatedUtc = DateTime.UtcNow;
-                entity.CreatorId = context.User.Id; // 设置创建者ID
-                entity.TenantId = context.User.OrgId; // 设置租户ID
 
                 // 添加实体到数据库上下文
                 _DbContext.Add(entity);
