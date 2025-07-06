@@ -178,8 +178,8 @@ namespace PowerLmsWebApi.Controllers
                 "PBI_ACC_RECEIVABLE",   // 应收账款
                 "PBI_SALES_REVENUE",    // 主营业务收入
                 "PBI_TAX_PAYABLE",      // 应交税金
-                "GEN_PREPARER",         // 制单人
-                "GEN_VOUCHER_GROUP"     // 凭证类别字
+                //"GEN_PREPARER",         // 制单人，暂无
+                //"GEN_VOUCHER_GROUP"     // 凭证类别字，暂无
             };
 
             var existingCodes = _DbContext.SubjectConfigurations
