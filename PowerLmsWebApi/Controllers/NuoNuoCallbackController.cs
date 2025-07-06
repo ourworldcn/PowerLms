@@ -217,6 +217,22 @@ namespace PowerLmsWebApi.Controllers
                         invoiceInfo.InvoiceNumber = fphmValue;
                     }
 
+                    // 更新发票代码 - 注释掉，因为TaxInvoiceInfo没有InvoiceCode属性
+                    // if (invoiceData.TryGetValue("c_fpdm", out var fpdm) && fpdm.ValueKind != JsonValueKind.Undefined)
+                    // {
+                    //     string fpdmValue = fpdm.GetString();
+                    //     invoiceInfo.InvoiceCode = fpdmValue;
+                    //     _logger.LogInformation($"发票ID: {invoiceInfo.Id} 更新发票代码: {fpdmValue}");
+                    // }
+
+                    // 将发票代码等信息记录在日志中或SellerInvoiceData中
+                    if (invoiceData.TryGetValue("c_fpdm", out var fpdm) && fpdm.ValueKind != JsonValueKind.Undefined)
+                    {
+                        string fpdmValue = fpdm.GetString();
+                        _logger.LogInformation($"发票ID: {invoiceInfo.Id} 收到发票代码: {fpdmValue}");
+                        // 发票代码将存储在SellerInvoiceData的完整回调数据中
+                    }
+
                     // 更新开票金额，若回调中包含金额信息
                     if (invoiceData.TryGetValue("c_jshj", out var jshj) && jshj.ValueKind != JsonValueKind.Undefined)
                     {
@@ -226,13 +242,40 @@ namespace PowerLmsWebApi.Controllers
                         }
                     }
 
-                    // 更新开票日期
+                    // 更新开票日期 - 正确的修复版本
                     if (invoiceData.TryGetValue("c_kprq", out var kprq) && kprq.ValueKind != JsonValueKind.Undefined)
                     {
-                        if (DateTime.TryParse(kprq.GetString(), out DateTime invoiceDate))
+                        string dateString = kprq.GetString();
+                        if (!string.IsNullOrEmpty(dateString))
                         {
-                            invoiceInfo.InvoiceDate = invoiceDate;
+                            // 尝试解析为时间戳（毫秒）
+                            if (long.TryParse(dateString, out long timestamp))
+                            {
+                                invoiceInfo.InvoiceDate = DateTimeOffset.FromUnixTimeMilliseconds(timestamp).DateTime;
+                                _logger.LogInformation($"发票ID: {invoiceInfo.Id} 成功解析开票日期时间戳: {dateString} -> {invoiceInfo.InvoiceDate:yyyy-MM-dd HH:mm:ss}");
+                            }
+                            // 如果不是时间戳，尝试直接解析日期字符串
+                            else if (DateTime.TryParse(dateString, out DateTime invoiceDate))
+                            {
+                                invoiceInfo.InvoiceDate = invoiceDate;
+                                _logger.LogInformation($"发票ID: {invoiceInfo.Id} 成功解析开票日期字符串: {dateString} -> {invoiceInfo.InvoiceDate:yyyy-MM-dd HH:mm:ss}");
+                            }
+                            else
+                            {
+                                _logger.LogWarning($"发票ID: {invoiceInfo.Id} 无法解析开票日期: {dateString}，使用当前时间");
+                                invoiceInfo.InvoiceDate = DateTime.Now;
+                            }
                         }
+                        else
+                        {
+                            _logger.LogWarning($"发票ID: {invoiceInfo.Id} 开票日期字段为空，使用当前时间");
+                            invoiceInfo.InvoiceDate = DateTime.Now;
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogWarning($"发票ID: {invoiceInfo.Id} 未找到开票日期字段 c_kprq，使用当前时间");
+                        invoiceInfo.InvoiceDate = DateTime.Now;
                     }
 
                     // 更新发票类型信息
@@ -240,6 +283,63 @@ namespace PowerLmsWebApi.Controllers
                     {
                         // 更新发票类型代码，根据实际情况可能需要转换
                         invoiceInfo.InvoiceTypeCode = fpzlDm.GetString();
+                    }
+
+                    // 更新销方信息（如果回调中包含）
+                    if (invoiceData.TryGetValue("c_xfmc", out var xfmc) && xfmc.ValueKind != JsonValueKind.Undefined)
+                    {
+                        invoiceInfo.SellerTitle = xfmc.GetString();
+                    }
+
+                    if (invoiceData.TryGetValue("c_xfsbh", out var xfsbh) && xfsbh.ValueKind != JsonValueKind.Undefined)
+                    {
+                        invoiceInfo.SellerTaxNum = xfsbh.GetString();
+                    }
+
+                    if (invoiceData.TryGetValue("c_xfdh", out var xfdh) && xfdh.ValueKind != JsonValueKind.Undefined)
+                    {
+                        invoiceInfo.SellerTel = xfdh.GetString();
+                    }
+
+                    if (invoiceData.TryGetValue("c_xfdz", out var xfdz) && xfdz.ValueKind != JsonValueKind.Undefined)
+                    {
+                        invoiceInfo.SellerAddress = xfdz.GetString();
+                    }
+
+                    if (invoiceData.TryGetValue("c_xfyhzh", out var xfyhzh) && xfyhzh.ValueKind != JsonValueKind.Undefined)
+                    {
+                        invoiceInfo.SellerAccount = xfyhzh.GetString();
+                    }
+
+                    // 更新购方信息（如果回调中包含）
+                    if (invoiceData.TryGetValue("c_gfmc", out var gfmc) && gfmc.ValueKind != JsonValueKind.Undefined)
+                    {
+                        invoiceInfo.BuyerTitle = gfmc.GetString();
+                    }
+
+                    if (invoiceData.TryGetValue("c_gfsbh", out var gfsbh) && gfsbh.ValueKind != JsonValueKind.Undefined)
+                    {
+                        invoiceInfo.BuyerTaxNum = gfsbh.GetString();
+                    }
+
+                    // 更新备注信息
+                    if (invoiceData.TryGetValue("c_bz", out var bz) && bz.ValueKind != JsonValueKind.Undefined)
+                    {
+                        invoiceInfo.Remark = bz.GetString();
+                    }
+
+                    // 记录校验码信息到日志中
+                    if (invoiceData.TryGetValue("c_jym", out var jym) && jym.ValueKind != JsonValueKind.Undefined)
+                    {
+                        string jymValue = jym.GetString();
+                        _logger.LogInformation($"发票ID: {invoiceInfo.Id} 收到校验码: {jymValue}");
+                    }
+
+                    // 记录数电票号码信息到日志中
+                    if (invoiceData.TryGetValue("c_ddh", out var ddh) && ddh.ValueKind != JsonValueKind.Undefined)
+                    {
+                        string ddhValue = ddh.GetString();
+                        _logger.LogInformation($"发票ID: {invoiceInfo.Id} 收到数电票号码: {ddhValue}");
                     }
 
                     // 更新PDF下载地址

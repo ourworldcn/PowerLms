@@ -631,6 +631,12 @@ namespace PowerLmsWebApi.Controllers
         {
             try
             {
+                if (user == null)
+                {
+                    logger.LogWarning("用户对象为null，返回空结果");
+                    return invoicesQuery.Where(i => false);
+                }
+
                 if (user.IsSuperAdmin)
                 {
                     // 超级管理员可以导出所有发票
@@ -638,34 +644,41 @@ namespace PowerLmsWebApi.Controllers
                     return invoicesQuery;
                 }
 
-                // 获取用户所属商户
+                // 获取用户关联的所有组织机构ID
                 var userOrgIds = dbContext.AccountPlOrganizations
                     .Where(apo => apo.UserId == user.Id)
                     .Select(apo => apo.OrgId)
-                    .FirstOrDefault();
+                    .ToList();
 
-                if (userOrgIds == Guid.Empty)
+                if (!userOrgIds.Any())
                 {
-                    logger.LogWarning("无法确定用户 {UserId} 所属机构，返回空结果", user.Id);
+                    logger.LogWarning("用户 {UserId} 未关联任何机构，返回空结果", user.Id);
                     return invoicesQuery.Where(i => false);
                 }
 
-                // 确定商户ID - 简化逻辑，直接使用组织机构关联
-                var merchantId = dbContext.Merchants
-                    .Where(m => m.Id == userOrgIds)
-                    .Select(m => m.Id)
-                    .FirstOrDefault();
+                // 获取用户关联的所有商户ID（通过组织机构）
+                var merchantIds = dbContext.PlOrganizations
+                    .Where(o => userOrgIds.Contains(o.Id) && o.MerchantId.HasValue)
+                    .Select(o => o.MerchantId.Value)
+                    .Distinct()
+                    .ToList();
 
-                if (merchantId == Guid.Empty)
+                // 如果没有找到商户ID，检查用户是否直接关联到商户
+                if (!merchantIds.Any())
                 {
-                    // 如果不是直接商户关联，查找机构所属商户
-                    merchantId = dbContext.PlOrganizations
-                        .Where(o => o.Id == userOrgIds)
-                        .Select(o => o.MerchantId)
-                        .FirstOrDefault() ?? Guid.Empty;
+                    // 检查用户关联的组织机构ID是否直接是商户ID
+                    var directMerchantIds = dbContext.Merchants
+                        .Where(m => userOrgIds.Contains(m.Id))
+                        .Select(m => m.Id)
+                        .ToList();
+                    
+                    if (directMerchantIds.Any())
+                    {
+                        merchantIds.AddRange(directMerchantIds);
+                    }
                 }
 
-                if (merchantId == Guid.Empty)
+                if (!merchantIds.Any())
                 {
                     logger.LogWarning("无法确定用户 {UserId} 所属商户，返回空结果", user.Id);
                     return invoicesQuery.Where(i => false);
@@ -676,31 +689,39 @@ namespace PowerLmsWebApi.Controllers
                 if (user.IsMerchantAdmin)
                 {
                     // 商户管理员可以导出本商户的所有发票
-                    allowedOrgIds = new HashSet<Guid?> { merchantId };
-                    var merchantOrgIds = dbContext.PlOrganizations
-                        .Where(o => o.MerchantId == merchantId)
-                        .Select(o => (Guid?)o.Id)
-                        .ToHashSet();
-                    allowedOrgIds.UnionWith(merchantOrgIds);
+                    allowedOrgIds = new HashSet<Guid?>();
+                    
+                    // 添加所有相关商户ID
+                    foreach (var merchantId in merchantIds)
+                    {
+                        allowedOrgIds.Add(merchantId);
+                        
+                        // 添加该商户下的所有组织机构ID
+                        var merchantOrgIds = dbContext.PlOrganizations
+                            .Where(o => o.MerchantId == merchantId)
+                            .Select(o => (Guid?)o.Id)
+                            .ToList();
+                        
+                        foreach (var orgId in merchantOrgIds)
+                        {
+                            allowedOrgIds.Add(orgId);
+                        }
+                    }
 
-                    logger.LogDebug("商户管理员 {UserId} 可以导出商户 {MerchantId} 下 {OrgCount} 个机构的发票", 
-                        user.Id, merchantId, allowedOrgIds.Count);
+                    logger.LogDebug("商户管理员 {UserId} 可以导出 {MerchantCount} 个商户下 {OrgCount} 个机构的发票", 
+                        user.Id, merchantIds.Count, allowedOrgIds.Count);
                 }
                 else
                 {
                     // 普通用户只能导出与其登录机构相关的发票
-                    var userOrganizations = dbContext.AccountPlOrganizations
-                        .Where(apo => apo.UserId == user.Id)
-                        .Select(apo => (Guid?)apo.OrgId)
-                        .ToHashSet();
-
-                    if (!userOrganizations.Any())
+                    allowedOrgIds = userOrgIds.Select(id => (Guid?)id).ToHashSet();
+                    
+                    // 添加相关商户ID以支持直接归属商户的发票
+                    foreach (var merchantId in merchantIds)
                     {
-                        logger.LogWarning("用户 {UserId} 未关联任何机构，返回空结果", user.Id);
-                        return invoicesQuery.Where(i => false);
+                        allowedOrgIds.Add(merchantId);
                     }
 
-                    allowedOrgIds = userOrganizations;
                     logger.LogDebug("普通用户 {UserId} 可以导出其关联的 {OrgCount} 个机构的发票", 
                         user.Id, allowedOrgIds.Count);
                 }
@@ -727,7 +748,7 @@ namespace PowerLmsWebApi.Controllers
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "应用组织权限过滤时发生错误，用户: {UserId}", user.Id);
+                logger.LogError(ex, "应用组织权限过滤时发生错误，用户: {UserId}", user?.Id);
                 // 发生错误时返回空查询以确保安全
                 return invoicesQuery.Where(i => false);
             }
