@@ -1,61 +1,61 @@
 # PowerLms
-�����ֽ�ʼ��ʹ�����Ľ��лظ���
-PowerLms ��һ��רע�ڻ�����ҵ�Ĺ���ϵͳ��LMS�������� C# �� .NET6 ����ջ������  
-����Ŀּ��Ϊ������ҵ�ṩ��Ч����ȫ������չ��ѧϰ����ѵ���������
+本助手将始终使用中文进行回复。
+PowerLms 是一个专注于货代行业的管理系统（LMS），基于 C# 和 .NET6 技术栈开发。  
+本项目旨在为货代企业提供高效、安全、可扩展的学习与培训解决方案。
 
 ---
 
-## ��Ŀ����
+## 项目特性
 
-- ������ҵר��ҵ������֧��
-- �ִ���ǰ��˷���ܹ�
-- ֧�ֶ��ɫ������֯
-- ���Ŀγ��뿼�Թ���ϵͳ
-- ���ݿ��ӻ���ͳ�Ʒ���
+- 货代行业专属业务流程支持
+- 现代化前后端分离架构
+- 支持多角色、多组织
+- 灵活的课程与考试管理系统
+- 数据可视化与统计分析
 
 ---
 
-## ���ٿ�ʼ
+## 快速开始
 
-1. ��¡����ֿ�  
+1. 克隆代码仓库  
    ```bash
    git clone https://github.com/ourworldcn/PowerLms.git
    ```
 
-2. �� `PowerLms.sln`��ʹ�� Visual Studio 2022 ���б�������С�
+2. 打开 `PowerLms.sln`，使用 Visual Studio 2022 进行编译和运行。
 
-3. �������ݿ����ӵȲ�������� docs/INSTALL.md ����Ŀ��ע�ͣ���
-
----
-
-## �ĵ���淶
-
-- **[����淶��CODE_STYLE��](Docs/CODE_STYLE.md)**  
-  �����й���������Ķ������ش˹淶��
-
-- **[���ƫ��ָ�ϣ�DESIGN_PREFERENCE_GUIDE��](Docs/DESIGN_PREFERENCE_GUIDE.md)**  
-  �˽��Ŷ��ڼܹ�������ϵ���Ҫƫ�á�
-
-- �����ĵ���� [Docs/](Docs/) Ŀ¼��
+3. 配置数据库连接等参数（详见项目内注释和配置文件）。
 
 ---
 
-## ����ָ��
+## 文档与规范
 
-��ӭ��λ���빱�ף������Ķ� [CONTRIBUTING.md](CONTRIBUTING.md) ���˽��ύ���̺�Ҫ��
+- **[编码规范（CODE_STYLE）](Docs/CODE_STYLE.md)**  
+  请所有贡献者务必阅读并遵守此规范。
 
-## ��������
+- **[设计偏好指南（DESIGN_PREFERENCE_GUIDE）](Docs/DESIGN_PREFERENCE_GUIDE.md)**  
+  了解团队在架构和设计上的主要偏好。
 
-�������Ϊ��Ŀ�������ף�����ѭ���²��裺
-
-1. Fork ����ֿ⡣
-2. �����������Է�֧ (`git checkout -b feature/YourFeature`)��
-3. �ύ���ĸ��� (`git commit -m 'Add some feature'`)��
-4. ���͵���֧ (`git push origin feature/YourFeature`)��
-5. ����һ���µ� Pull Request��
+- 其他文档详见 [Docs/](Docs/) 目录。
 
 ---
 
-## License
+## 贡献指南
 
-����Ŀ���� MIT License������� [LICENSE](LICENSE) �ļ���
+欢迎各位参与贡献！请先阅读项目文档和代码规范以了解提交流程和要求。
+
+## 开发贡献
+
+如果您想为项目做出贡献，请遵循以下步骤：
+
+1. Fork 这个仓库。
+2. 创建您的特性分支 (`git checkout -b feature/YourFeature`)。
+3. 提交您的更改 (`git commit -m 'Add some feature'`)。
+4. 推送到分支 (`git push origin feature/YourFeature`)。
+5. 创建一个新的 Pull Request。
+
+---
+
+## 许可证
+
+本项目采用 MIT 许可证，详情见项目根目录的许可证文件。
