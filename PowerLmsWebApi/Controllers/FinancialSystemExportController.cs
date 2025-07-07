@@ -199,17 +199,23 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="serviceScopeFactory">服务作用域工厂，用于创建独立的服务作用域</param>
         private static async Task ProcessInvoiceDbfExportAsync(Guid taskId, IServiceScopeFactory serviceScopeFactory)
         {
-            if (serviceScopeFactory == null)
-            {
-                throw new ArgumentNullException(nameof(serviceScopeFactory), "必须提供服务作用域工厂以确保后台任务的独立性");
-            }
-
+            ILogger logger = null;
+            PowerLmsUserDbContext dbContext = null;
+            IServiceScope scope = null;
+            
             try
             {
-                using var scope = serviceScopeFactory.CreateScope();
-                var dbContext = scope.ServiceProvider.GetRequiredService<PowerLmsUserDbContext>();
+                if (serviceScopeFactory == null)
+                {
+                    throw new ArgumentNullException(nameof(serviceScopeFactory), "必须提供服务作用域工厂以确保后台任务的独立性");
+                }
+
+                scope = serviceScopeFactory.CreateScope();
+                dbContext = scope.ServiceProvider.GetRequiredService<PowerLmsUserDbContext>();
                 var fileManager = scope.ServiceProvider.GetRequiredService<OwFileManager>();
-                var logger = scope.ServiceProvider.GetRequiredService<ILogger<FinancialSystemExportController>>();
+                logger = scope.ServiceProvider.GetRequiredService<ILogger<FinancialSystemExportController>>();
+
+                logger.LogInformation("开始处理发票DBF导出任务 {TaskId}", taskId);
 
                 var task = await dbContext.OwTaskStores.FindAsync(taskId);
                 if (task == null)
@@ -221,61 +227,127 @@ namespace PowerLmsWebApi.Controllers
                 // 更新任务状态为执行中
                 task.Status = OwTaskStatus.Running;
                 await dbContext.SaveChangesAsync();
-                logger.LogDebug("任务 {TaskId} 开始执行", taskId);
+                logger.LogInformation("任务 {TaskId} 开始执行", taskId);
 
-                // 解析任务参数
-                var conditions = JsonSerializer.Deserialize<Dictionary<string, string>>(task.Parameters["ExportConditions"]);
-                var userId = Guid.Parse(task.Parameters["UserId"]);
-                var orgId = !string.IsNullOrEmpty(task.Parameters["OrgId"]) ? Guid.Parse(task.Parameters["OrgId"]) : (Guid?)null;
+                // 解析任务参数 - 添加空值检查
+                logger.LogDebug("解析任务参数，任务ID: {TaskId}", taskId);
+                
+                if (task.Parameters == null)
+                {
+                    throw new InvalidOperationException($"任务 {taskId} 的参数为空");
+                }
+
+                if (!task.Parameters.TryGetValue("ExportConditions", out var exportConditionsJson))
+                {
+                    throw new InvalidOperationException($"任务 {taskId} 缺少ExportConditions参数");
+                }
+
+                if (!task.Parameters.TryGetValue("UserId", out var userIdStr))
+                {
+                    throw new InvalidOperationException($"任务 {taskId} 缺少UserId参数");
+                }
+
+                if (!task.Parameters.TryGetValue("ExportDateTime", out var exportDateTimeStr))
+                {
+                    throw new InvalidOperationException($"任务 {taskId} 缺少ExportDateTime参数");
+                }
+
+                var conditions = string.IsNullOrEmpty(exportConditionsJson) ? 
+                    new Dictionary<string, string>() : 
+                    JsonSerializer.Deserialize<Dictionary<string, string>>(exportConditionsJson);
+                
+                var userId = Guid.Parse(userIdStr);
+                var orgId = task.Parameters.TryGetValue("OrgId", out var orgIdStr) && !string.IsNullOrEmpty(orgIdStr) ? 
+                    Guid.Parse(orgIdStr) : (Guid?)null;
                 var expectedCount = int.Parse(task.Parameters.GetValueOrDefault("ExpectedCount", "0"));
-                var exportDateTime = DateTime.Parse(task.Parameters["ExportDateTime"]);
+                var exportDateTime = DateTime.Parse(exportDateTimeStr);
+
+                logger.LogDebug("任务参数解析完成：UserId={UserId}, OrgId={OrgId}, ExpectedCount={ExpectedCount}", 
+                    userId, orgId, expectedCount);
 
                 // 加载科目配置
+                logger.LogDebug("开始加载科目配置，OrgId: {OrgId}", orgId);
                 var subjectConfigs = await LoadSubjectConfigurations(dbContext, orgId);
                 if (!subjectConfigs.Any())
                 {
+                    var errorMessage = $"科目配置未找到，无法生成凭证。组织ID: {orgId}";
+                    logger.LogError(errorMessage);
+                    
                     task.Status = OwTaskStatus.Failed;
                     task.CompletedUtc = DateTime.UtcNow;
-                    task.ErrorMessage = "科目配置未找到，无法生成凭证";
+                    task.ErrorMessage = errorMessage;
                     await dbContext.SaveChangesAsync();
-                    logger.LogError("任务 {TaskId} 失败：科目配置未找到", taskId);
                     return;
                 }
+                logger.LogDebug("科目配置加载完成，共 {Count} 个配置", subjectConfigs.Count);
 
                 // 在后台任务中重新生成发票集合
-                var invoicesQuery = dbContext.TaxInvoiceInfos.AsQueryable();
+                logger.LogDebug("开始构建发票查询");
+                var invoicesQuery = dbContext.TaxInvoiceInfos.Where(i => i.ExportedDateTime == null).AsQueryable();
+                
                 if (conditions != null && conditions.Any())
                 {
-                    invoicesQuery = EfHelper.GenerateWhereAnd(invoicesQuery, conditions);
-                }
-
-                // 重新应用组织权限过滤（后台任务中也需要权限过滤）
-                if (!string.IsNullOrEmpty(task.Parameters["UserId"]))
-                {
-                    var taskUserId = Guid.Parse(task.Parameters["UserId"]);
-                    var taskUser = await dbContext.Accounts.FindAsync(taskUserId);
-                    if (taskUser != null)
+                    logger.LogDebug("应用查询条件，条件数量: {Count}", conditions.Count);
+                    try
                     {
-                        // 在静态方法中调用权限过滤
-                        invoicesQuery = ApplyOrganizationFilterStatic(invoicesQuery, taskUser, dbContext, logger);
+                        invoicesQuery = EfHelper.GenerateWhereAnd(invoicesQuery, conditions);
+                        logger.LogDebug("查询条件应用成功");
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "应用查询条件时发生错误，条件: {@Conditions}", conditions);
+                        throw;
                     }
                 }
 
+                // 重新应用组织权限过滤（后台任务中也需要权限过滤）
+                logger.LogDebug("开始应用组织权限过滤");
+                if (!string.IsNullOrEmpty(userIdStr))
+                {
+                    var taskUserId = Guid.Parse(userIdStr);
+                    var taskUser = await dbContext.Accounts.FindAsync(taskUserId);
+                    if (taskUser != null)
+                    {
+                        logger.LogDebug("找到任务用户，应用权限过滤。UserId: {UserId}, UserName: {UserName}", 
+                            taskUser.Id, taskUser.LoginName);
+                        
+                        try
+                        {
+                            // 在静态方法中调用权限过滤
+                            invoicesQuery = ApplyOrganizationFilterStatic(invoicesQuery, taskUser, dbContext, logger);
+                            logger.LogDebug("权限过滤应用成功");
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogError(ex, "应用组织权限过滤时发生错误");
+                            throw;
+                        }
+                    }
+                    else
+                    {
+                        logger.LogWarning("未找到任务用户，UserId: {UserId}", taskUserId);
+                    }
+                }
+
+                logger.LogDebug("开始执行发票查询");
                 var invoices = await invoicesQuery.ToListAsync();
-                logger.LogDebug("任务 {TaskId} 实际查询到 {ActualCount} 张发票，预期 {ExpectedCount} 张",
+                logger.LogInformation("任务 {TaskId} 实际查询到 {ActualCount} 张发票，预期 {ExpectedCount} 张",
                     taskId, invoices.Count, expectedCount);
 
                 if (!invoices.Any())
                 {
+                    var message = "没有找到符合条件的发票数据";
+                    logger.LogWarning("任务 {TaskId}: {Message}", taskId, message);
+                    
                     task.Status = OwTaskStatus.Completed;
                     task.CompletedUtc = DateTime.UtcNow;
-                    task.ErrorMessage = "没有找到符合条件的发票数据";
+                    task.ErrorMessage = message;
                     await dbContext.SaveChangesAsync();
-                    logger.LogWarning("任务 {TaskId} 完成，但未找到符合条件的发票", taskId);
                     return;
                 }
 
                 // 查询发票明细数据
+                logger.LogDebug("开始查询发票明细数据");
                 var invoiceIds = invoices.Select(i => i.Id).ToList();
                 var invoiceItems = await dbContext.TaxInvoiceInfoItems
                     .Where(item => invoiceIds.Contains(item.ParentId.Value))
@@ -284,84 +356,179 @@ namespace PowerLmsWebApi.Controllers
                 var invoiceItemsDict = invoiceItems.GroupBy(item => item.ParentId.Value)
                     .ToDictionary(g => g.Key, g => g.ToList());
 
+                logger.LogDebug("发票明细查询完成，共 {ItemCount} 条明细，涉及 {InvoiceCount} 张发票", 
+                    invoiceItems.Count, invoiceItemsDict.Count);
+
                 // 转换为金蝶凭证格式（使用科目配置）
-                var kingdeeVouchers = ConvertInvoicesToKingdeeVouchersWithConfig(invoices, invoiceItemsDict, subjectConfigs);
-                logger.LogDebug("任务 {TaskId} 生成了 {VoucherCount} 条金蝶凭证记录", taskId, kingdeeVouchers.Count);
-
-                // 生成文件路径
-                var fileName = $"Invoice_Export_{DateTime.Now:yyyyMMdd_HHmmss}.dbf";
-                var relativePath = Path.Combine("FinancialExports", fileName);
-                var fullPath = Path.Combine(fileManager.GetDirectory(), relativePath);
-
-                Directory.CreateDirectory(Path.GetDirectoryName(fullPath));
-
-                // 使用专门的大文件写入函数生成DBF文件
-                DotNetDbfUtil.WriteLargeFile(kingdeeVouchers, fullPath);
-                logger.LogDebug("任务 {TaskId} 成功生成DBF文件 {FilePath}", taskId, fullPath);
-
-                // 重要：更新导出的发票记录的导出时间
-                foreach (var invoice in invoices)
+                logger.LogDebug("开始转换为金蝶凭证格式");
+                try
                 {
-                    invoice.ExportedDateTime = exportDateTime;
+                    var kingdeeVouchers = ConvertInvoicesToKingdeeVouchersWithConfig(invoices, invoiceItemsDict, subjectConfigs);
+                    logger.LogInformation("任务 {TaskId} 生成了 {VoucherCount} 条金蝶凭证记录", taskId, kingdeeVouchers.Count);
+
+                    if (!kingdeeVouchers.Any())
+                    {
+                        throw new InvalidOperationException("生成的金蝶凭证记录为空");
+                    }
+
+                    // 生成文件路径
+                    logger.LogDebug("开始生成DBF文件");
+                    var fileName = $"Invoice_Export_{DateTime.Now:yyyyMMdd_HHmmss}.dbf";
+                    var relativePath = Path.Combine("FinancialExports", fileName);
+                    
+                    if (fileManager == null)
+                    {
+                        throw new InvalidOperationException("文件管理器为空");
+                    }
+                    
+                    var fileManagerDirectory = fileManager.GetDirectory();
+                    if (string.IsNullOrEmpty(fileManagerDirectory))
+                    {
+                        throw new InvalidOperationException("文件管理器目录为空");
+                    }
+                    
+                    var fullPath = Path.Combine(fileManagerDirectory, relativePath);
+                    var directoryPath = Path.GetDirectoryName(fullPath);
+                    
+                    logger.LogDebug("文件路径: {FullPath}, 目录: {Directory}", fullPath, directoryPath);
+
+                    if (!string.IsNullOrEmpty(directoryPath))
+                    {
+                        Directory.CreateDirectory(directoryPath);
+                        logger.LogDebug("目录创建成功: {Directory}", directoryPath);
+                    }
+
+                    // 使用专门的大文件写入函数生成DBF文件
+                    try
+                    {
+                        logger.LogDebug("开始调用DotNetDbfUtil.WriteLargeFile，凭证数量: {Count}", kingdeeVouchers.Count);
+                        DotNetDbfUtil.WriteLargeFile(kingdeeVouchers, fullPath);
+                        logger.LogInformation("任务 {TaskId} 成功生成DBF文件 {FilePath}", taskId, fullPath);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "生成DBF文件时发生错误，文件路径: {FullPath}", fullPath);
+                        throw;
+                    }
+
+                    // 重要：更新导出的发票记录的导出时间
+                    logger.LogDebug("开始更新发票导出时间");
+                    foreach (var invoice in invoices)
+                    {
+                        invoice.ExportedDateTime = exportDateTime;
+                    }
+                    logger.LogDebug("任务 {TaskId} 已更新 {Count} 张发票的导出时间", taskId, invoices.Count);
+
+                    // 创建文件信息记录并绑定到任务
+                    logger.LogDebug("开始创建文件信息记录");
+                    var fileInfo = new PlFileInfo
+                    {
+                        Id = Guid.NewGuid(),
+                        ParentId = taskId, // 关键：绑定到任务ID
+                        DisplayName = $"发票导出-{DateTime.Now:yyyy年MM月dd日}",
+                        FileName = fileName,
+                        FilePath = relativePath,
+                        CreateBy = userId,
+                        CreateDateTime = DateTime.Now,
+                        Remark = $"发票DBF导出文件，共{invoices.Count}张发票，{kingdeeVouchers.Count}条会计分录，导出时间：{exportDateTime:yyyy-MM-dd HH:mm:ss}"
+                    };
+
+                    dbContext.PlFileInfos.Add(fileInfo);
+
+                    // 更新任务状态为完成
+                    task.Status = OwTaskStatus.Completed;
+                    task.CompletedUtc = DateTime.UtcNow;
+                    task.ErrorMessage = null; // 清除错误信息
+                    task.Result = new Dictionary<string, string>
+                    {
+                        ["FileId"] = fileInfo.Id.ToString(),
+                        ["FileName"] = fileName,
+                        ["InvoiceCount"] = invoices.Count.ToString(),
+                        ["VoucherCount"] = kingdeeVouchers.Count.ToString(),
+                        ["FilePath"] = relativePath,
+                        ["ExportDateTime"] = exportDateTime.ToString("yyyy-MM-dd HH:mm:ss")
+                    };
+
+                    await dbContext.SaveChangesAsync();
+
+                    logger.LogInformation("任务 {TaskId} 成功完成，文件：{FileName}，发票数：{InvoiceCount}，凭证数：{VoucherCount}，导出时间：{ExportDateTime}",
+                        taskId, fileName, invoices.Count, kingdeeVouchers.Count, exportDateTime);
                 }
-                logger.LogDebug("任务 {TaskId} 已更新 {Count} 张发票的导出时间", taskId, invoices.Count);
-
-                // 创建文件信息记录并绑定到任务
-                var fileInfo = new PlFileInfo
+                catch (Exception ex)
                 {
-                    Id = Guid.NewGuid(),
-                    ParentId = taskId, // 关键：绑定到任务ID
-                    DisplayName = $"发票导出-{DateTime.Now:yyyy年MM月dd日}",
-                    FileName = fileName,
-                    FilePath = relativePath,
-                    CreateBy = userId,
-                    CreateDateTime = DateTime.Now,
-                    Remark = $"发票DBF导出文件，共{invoices.Count}张发票，{kingdeeVouchers.Count}条会计分录，导出时间：{exportDateTime:yyyy-MM-dd HH:mm:ss}"
-                };
-
-                dbContext.PlFileInfos.Add(fileInfo);
-
-                // 更新任务状态为完成
-                task.Status = OwTaskStatus.Completed;
-                task.CompletedUtc = DateTime.UtcNow;
-                task.Result = new Dictionary<string, string>
-                {
-                    ["FileId"] = fileInfo.Id.ToString(),
-                    ["FileName"] = fileName,
-                    ["InvoiceCount"] = invoices.Count.ToString(),
-                    ["VoucherCount"] = kingdeeVouchers.Count.ToString(),
-                    ["FilePath"] = relativePath,
-                    ["ExportDateTime"] = exportDateTime.ToString("yyyy-MM-dd HH:mm:ss")
-                };
-
-                await dbContext.SaveChangesAsync();
-
-                logger.LogInformation("任务 {TaskId} 成功完成，文件：{FileName}，发票数：{InvoiceCount}，凭证数：{VoucherCount}，导出时间：{ExportDateTime}",
-                    taskId, fileName, invoices.Count, kingdeeVouchers.Count, exportDateTime);
+                    logger.LogError(ex, "转换为金蝶凭证格式时发生错误");
+                    throw;
+                }
             }
             catch (Exception ex)
             {
-                using var scope = serviceScopeFactory.CreateScope();
-                var dbContext = scope.ServiceProvider.GetRequiredService<PowerLmsUserDbContext>();
-                var logger = scope.ServiceProvider.GetRequiredService<ILogger<FinancialSystemExportController>>();
-
-                logger.LogError(ex, "处理发票DBF导出任务 {TaskId} 时发生错误", taskId);
-
+                // 异常处理逻辑
                 try
                 {
-                    var task = await dbContext.OwTaskStores.FindAsync(taskId);
-                    if (task != null)
+                    // 确保我们有有效的logger和dbContext来记录错误
+                    if (logger == null || dbContext == null)
                     {
-                        task.Status = OwTaskStatus.Failed;
-                        task.CompletedUtc = DateTime.UtcNow;
-                        task.ErrorMessage = ex.Message;
-                        await dbContext.SaveChangesAsync();
+                        // 如果当前scope有问题，创建新的scope
+                        scope?.Dispose();
+                        scope = serviceScopeFactory.CreateScope();
+                        logger ??= scope.ServiceProvider.GetRequiredService<ILogger<FinancialSystemExportController>>();
+                        dbContext ??= scope.ServiceProvider.GetRequiredService<PowerLmsUserDbContext>();
+                    }
+
+                    logger.LogError(ex, "处理发票DBF导出任务 {TaskId} 时发生错误", taskId);
+
+                    if (dbContext != null)
+                    {
+                        // 使用新的上下文查找任务，避免disposed context错误
+                        OwTaskStore task = null;
+                        try
+                        {
+                            task = await dbContext.OwTaskStores.FindAsync(taskId);
+                        }
+                        catch (ObjectDisposedException)
+                        {
+                            // 如果上下文被释放，创建新的scope
+                            scope?.Dispose();
+                            scope = serviceScopeFactory.CreateScope();
+                            dbContext = scope.ServiceProvider.GetRequiredService<PowerLmsUserDbContext>();
+                            logger = scope.ServiceProvider.GetRequiredService<ILogger<FinancialSystemExportController>>();
+                            task = await dbContext.OwTaskStores.FindAsync(taskId);
+                        }
+                        
+                        if (task != null)
+                        {
+                            task.Status = OwTaskStatus.Failed;
+                            task.CompletedUtc = DateTime.UtcNow;
+                            task.ErrorMessage = $"{ex.GetType().Name}: {ex.Message}";
+                            
+                            // 如果有内部异常，也记录下来
+                            if (ex.InnerException != null)
+                            {
+                                task.ErrorMessage += $" | InnerException: {ex.InnerException.GetType().Name}: {ex.InnerException.Message}";
+                            }
+                            
+                            await dbContext.SaveChangesAsync();
+                            logger.LogInformation("任务 {TaskId} 状态已更新为失败，错误信息: {ErrorMessage}", taskId, task.ErrorMessage);
+                        }
+                        else
+                        {
+                            logger.LogError("无法找到任务 {TaskId} 来更新失败状态", taskId);
+                        }
+                    }
+                    else
+                    {
+                        logger?.LogError("数据库上下文为空，无法更新任务 {TaskId} 状态", taskId);
                     }
                 }
                 catch (Exception updateEx)
                 {
-                    logger.LogError(updateEx, "更新任务状态失败");
+                    logger?.LogError(updateEx, "更新任务 {TaskId} 失败状态时发生错误", taskId);
                 }
+            }
+            finally
+            {
+                // 确保scope被正确释放
+                scope?.Dispose();
             }
         }
 
@@ -404,113 +571,138 @@ namespace PowerLmsWebApi.Controllers
             Dictionary<Guid, List<TaxInvoiceInfoItem>> invoiceItemsDict,
             Dictionary<string, SubjectConfiguration> subjectConfigs)
         {
+            if (invoices == null)
+                throw new ArgumentNullException(nameof(invoices));
+            if (subjectConfigs == null)
+                throw new ArgumentNullException(nameof(subjectConfigs));
+            
+            invoiceItemsDict ??= new Dictionary<Guid, List<TaxInvoiceInfoItem>>();
+
             var vouchers = new List<KingdeeVoucher>();
             var voucherNumber = 1;
 
             // 获取通用配置信息
             var preparerName = subjectConfigs.ContainsKey("GEN_PREPARER") ?
-                subjectConfigs["GEN_PREPARER"].DisplayName : "系统导出";
+                (subjectConfigs["GEN_PREPARER"]?.DisplayName ?? "系统导出") : "系统导出";
 
             var voucherGroup = subjectConfigs.ContainsKey("GEN_VOUCHER_GROUP") ?
-                subjectConfigs["GEN_VOUCHER_GROUP"].VoucherGroup ?? "转" : "转"; // 默认为转账凭证
+                (subjectConfigs["GEN_VOUCHER_GROUP"]?.VoucherGroup ?? "转") : "转"; // 默认为转账凭证
 
             foreach (var invoice in invoices)
             {
-                var items = invoiceItemsDict.ContainsKey(invoice.Id) ?
-                    invoiceItemsDict[invoice.Id] : new List<TaxInvoiceInfoItem>();
-
-                var taxRate = items.FirstOrDefault()?.TaxRate ?? 0.06m;
-                var netAmount = invoice.TaxInclusiveAmount / (1 + taxRate);
-                var taxAmount = invoice.TaxInclusiveAmount - netAmount;
-                var invoiceDate = invoice.InvoiceDate ?? DateTime.Now;
-                var description = $"{invoice.BuyerTitle}*{invoice.InvoiceItemName}*{invoice.BuyerTaxNum}";
-                var customerCode = invoice.BuyerTaxNum?.Substring(0, Math.Min(10, invoice.BuyerTaxNum.Length)) ?? "CUSTOMER";
-
-                // 借方：应收账款（PBI_ACC_RECEIVABLE）
-                if (subjectConfigs.TryGetValue("PBI_ACC_RECEIVABLE", out var accReceivableConfig))
+                if (invoice == null) continue; // 跳过空发票
+                
+                try
                 {
-                    vouchers.Add(new KingdeeVoucher
-                    {
-                        Id = Guid.NewGuid(),
-                        FDATE = invoiceDate,
-                        FTRANSDATE = invoiceDate,
-                        FPERIOD = invoiceDate.Month,
-                        FGROUP = voucherGroup, // 从配置表获取凭证类别字
-                        FNUM = voucherNumber,
-                        FENTRYID = 0,
-                        FEXP = description,
-                        FACCTID = accReceivableConfig.SubjectNumber, // 从配置表获取科目号
-                        FCLSNAME1 = accReceivableConfig.AccountingCategory ?? "客户", // 从配置表获取核算类别
-                        FOBJID1 = customerCode,
-                        FOBJNAME1 = invoice.BuyerTitle,
-                        FTRANSID = invoice.BuyerTaxNum,
-                        FCYID = "RMB",
-                        FEXCHRATE = 1.0000000m,
-                        FDC = 0, // 借方
-                        FFCYAMT = invoice.TaxInclusiveAmount,
-                        FDEBIT = invoice.TaxInclusiveAmount,
-                        FCREDIT = 0,
-                        FPREPARE = preparerName // 从配置表获取制单人
-                    });
-                }
+                    var items = invoiceItemsDict.ContainsKey(invoice.Id) ?
+                        invoiceItemsDict[invoice.Id] : new List<TaxInvoiceInfoItem>();
 
-                // 贷方：主营业务收入（PBI_SALES_REVENUE）
-                if (subjectConfigs.TryGetValue("PBI_SALES_REVENUE", out var salesRevenueConfig))
-                {
-                    vouchers.Add(new KingdeeVoucher
-                    {
-                        Id = Guid.NewGuid(),
-                        FDATE = invoiceDate,
-                        FTRANSDATE = invoiceDate,
-                        FPERIOD = invoiceDate.Month,
-                        FGROUP = voucherGroup, // 从配置表获取凭证类别字
-                        FNUM = voucherNumber,
-                        FENTRYID = 1,
-                        FEXP = description,
-                        FACCTID = salesRevenueConfig.SubjectNumber, // 从配置表获取科目号
-                        FCLSNAME1 = salesRevenueConfig.AccountingCategory ?? "客户", // 从配置表获取核算类别
-                        FOBJID1 = customerCode,
-                        FOBJNAME1 = invoice.BuyerTitle,
-                        FTRANSID = invoice.BuyerTaxNum,
-                        FCYID = "RMB",
-                        FEXCHRATE = 1.0000000m,
-                        FDC = 1, // 贷方
-                        FFCYAMT = netAmount,
-                        FDEBIT = 0,
-                        FCREDIT = netAmount,
-                        FPREPARE = preparerName
-                    });
-                }
+                    var taxRate = items.FirstOrDefault()?.TaxRate ?? 0.06m;
+                    var netAmount = invoice.TaxInclusiveAmount / (1 + taxRate);
+                    var taxAmount = invoice.TaxInclusiveAmount - netAmount;
+                    var invoiceDate = invoice.InvoiceDate ?? DateTime.Now;
+                    var description = $"{invoice.BuyerTitle ?? "未知客户"}*{invoice.InvoiceItemName ?? "未知项目"}*{invoice.BuyerTaxNum ?? ""}";
+                    var customerCode = string.IsNullOrEmpty(invoice.BuyerTaxNum) ? 
+                        "CUSTOMER" : 
+                        invoice.BuyerTaxNum.Substring(0, Math.Min(10, invoice.BuyerTaxNum.Length));
 
-                // 贷方：应交税金（PBI_TAX_PAYABLE）（如果有税额）
-                if (taxAmount > 0 && subjectConfigs.TryGetValue("PBI_TAX_PAYABLE", out var taxPayableConfig))
-                {
-                    vouchers.Add(new KingdeeVoucher
+                    // 借方：应收账款（PBI_ACC_RECEIVABLE）
+                    if (subjectConfigs.TryGetValue("PBI_ACC_RECEIVABLE", out var accReceivableConfig) && accReceivableConfig != null)
                     {
-                        Id = Guid.NewGuid(),
-                        FDATE = invoiceDate,
-                        FTRANSDATE = invoiceDate,
-                        FPERIOD = invoiceDate.Month,
-                        FGROUP = voucherGroup, // 从配置表获取凭证类别字
-                        FNUM = voucherNumber,
-                        FENTRYID = 2,
-                        FEXP = description,
-                        FACCTID = taxPayableConfig.SubjectNumber, // 从配置表获取科目号
-                        FCLSNAME1 = taxPayableConfig.AccountingCategory ?? "客户", // 从配置表获取核算类别
-                        FOBJID1 = customerCode,
-                        FOBJNAME1 = invoice.BuyerTitle,
-                        FTRANSID = invoice.BuyerTaxNum,
-                        FCYID = "RMB",
-                        FEXCHRATE = 1.0000000m,
-                        FDC = 1, // 贷方
-                        FFCYAMT = taxAmount,
-                        FDEBIT = 0,
-                        FCREDIT = taxAmount,
-                        FPREPARE = preparerName
-                    });
+                        vouchers.Add(new KingdeeVoucher
+                        {
+                            Id = Guid.NewGuid(),
+                            FDATE = invoiceDate,
+                            FTRANSDATE = invoiceDate,
+                            FPERIOD = invoiceDate.Month,
+                            FGROUP = voucherGroup, // 从配置表获取凭证类别字
+                            FNUM = voucherNumber,
+                            FENTRYID = 0,
+                            FEXP = description,
+                            FACCTID = accReceivableConfig.SubjectNumber ?? "122101", // 从配置表获取科目号，如果为空则使用默认值
+                            FCLSNAME1 = accReceivableConfig.AccountingCategory ?? "客户", // 从配置表获取核算类别
+                            FOBJID1 = customerCode,
+                            FOBJNAME1 = invoice.BuyerTitle ?? "未知客户",
+                            FTRANSID = invoice.BuyerTaxNum ?? "",
+                            FCYID = "RMB",
+                            FEXCHRATE = 1.0000000m,
+                            FDC = 0, // 借方
+                            FFCYAMT = invoice.TaxInclusiveAmount,
+                            FDEBIT = invoice.TaxInclusiveAmount,
+                            FCREDIT = 0,
+                            FPREPARE = preparerName // 从配置表获取制单人
+                        });
+                    }
+
+                    // 贷方：主营业务收入（PBI_SALES_REVENUE）
+                    if (subjectConfigs.TryGetValue("PBI_SALES_REVENUE", out var salesRevenueConfig) && salesRevenueConfig != null)
+                    {
+                        vouchers.Add(new KingdeeVoucher
+                        {
+                            Id = Guid.NewGuid(),
+                            FDATE = invoiceDate,
+                            FTRANSDATE = invoiceDate,
+                            FPERIOD = invoiceDate.Month,
+                            FGROUP = voucherGroup, // 从配置表获取凭证类别字
+                            FNUM = voucherNumber,
+                            FENTRYID = 1,
+                            FEXP = description,
+                            FACCTID = salesRevenueConfig.SubjectNumber ?? "601001", // 从配置表获取科目号，如果为空则使用默认值
+                            FCLSNAME1 = salesRevenueConfig.AccountingCategory ?? "客户", // 从配置表获取核算类别
+                            FOBJID1 = customerCode,
+                            FOBJNAME1 = invoice.BuyerTitle ?? "未知客户",
+                            FTRANSID = invoice.BuyerTaxNum ?? "",
+                            FCYID = "RMB",
+                            FEXCHRATE = 1.0000000m,
+                            FDC = 1, // 贷方
+                            FFCYAMT = netAmount,
+                            FDEBIT = 0,
+                            FCREDIT = netAmount,
+                            FPREPARE = preparerName
+                        });
+                    }
+
+                    // 贷方：应交税金（PBI_TAX_PAYABLE）（如果有税额）
+                    if (taxAmount > 0 && subjectConfigs.TryGetValue("PBI_TAX_PAYABLE", out var taxPayableConfig) && taxPayableConfig != null)
+                    {
+                        vouchers.Add(new KingdeeVoucher
+                        {
+                            Id = Guid.NewGuid(),
+                            FDATE = invoiceDate,
+                            FTRANSDATE = invoiceDate,
+                            FPERIOD = invoiceDate.Month,
+                            FGROUP = voucherGroup, // 从配置表获取凭证类别字
+                            FNUM = voucherNumber,
+                            FENTRYID = 2,
+                            FEXP = description,
+                            FACCTID = taxPayableConfig.SubjectNumber ?? "221001", // 从配置表获取科目号，如果为空则使用默认值
+                            FCLSNAME1 = taxPayableConfig.AccountingCategory ?? "客户", // 从配置表获取核算类别
+                            FOBJID1 = customerCode,
+                            FOBJNAME1 = invoice.BuyerTitle ?? "未知客户",
+                            FTRANSID = invoice.BuyerTaxNum ?? "",
+                            FCYID = "RMB",
+                            FEXCHRATE = 1.0000000m,
+                            FDC = 1, // 贷方
+                            FFCYAMT = taxAmount,
+                            FDEBIT = 0,
+                            FCREDIT = taxAmount,
+                            FPREPARE = preparerName
+                        });
+                    }
+                    voucherNumber++;
                 }
-                voucherNumber++;
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException($"处理发票 {invoice.Id} 时发生错误: {ex.Message}", ex);
+                }
             }
+            
+            // 添加验证，确保生成的凭证不为空
+            if (vouchers.Count == 0)
+            {
+                throw new InvalidOperationException("未能生成任何金蝶凭证记录，请检查科目配置或发票数据");
+            }
+            
             return vouchers;
         }
 
