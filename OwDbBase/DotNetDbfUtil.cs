@@ -104,51 +104,101 @@ namespace OW.Data
         public static Dictionary<string, string> CreateAutoFieldMappings<T>(Dictionary<string, string> fieldMappings = null) where T : class
         {
             var entityType = typeof(T); // 获取实体类型
-            var properties = entityType.GetProperties().Where(c => c.CanRead).ToPooledListBase(); // 获取所有可读属性
+            PropertyInfo[] properties = null;
+
+            try
+            {
+                // 获取所有可读属性，并添加空值检查
+                var allProperties = entityType.GetProperties();
+                if (allProperties == null)
+                {
+                    OwHelper.SetLastErrorAndMessage(400, $"无法获取类型 {entityType.Name} 的属性列表");
+                    return fieldMappings ?? new Dictionary<string, string>();
+                }
+
+                var readableProperties = allProperties.Where(c => c != null && c.CanRead);
+                if (readableProperties == null)
+                {
+                    OwHelper.SetLastErrorAndMessage(400, $"类型 {entityType.Name} 没有可读属性");
+                    return fieldMappings ?? new Dictionary<string, string>();
+                }
+
+                // 转换为数组以避免ToPooledListBase的问题
+                properties = readableProperties.ToArray();
+                if (properties == null || properties.Length == 0)
+                {
+                    OwHelper.SetLastErrorAndMessage(400, $"类型 {entityType.Name} 没有可用的属性用于DBF映射");
+                    return fieldMappings ?? new Dictionary<string, string>();
+                }
+            }
+            catch (Exception ex)
+            {
+                OwHelper.SetLastErrorAndMessage(500, $"获取类型 {entityType.Name} 属性时发生错误: {ex.Message}");
+                return fieldMappings ?? new Dictionary<string, string>();
+            }
 
             // 如果未提供映射或为空，则创建新的
             if (fieldMappings == null)
                 fieldMappings = new Dictionary<string, string>();
 
             // 创建反向映射，用于检查哪些属性已有映射
-            var reverseMappings = fieldMappings.ToDictionary(kv => kv.Value, kv => kv.Key);
+            Dictionary<string, string> reverseMappings = null;
+            try
+            {
+                reverseMappings = fieldMappings.ToDictionary(kv => kv.Value, kv => kv.Key);
+            }
+            catch (Exception ex)
+            {
+                OwHelper.SetLastErrorAndMessage(400, $"处理现有字段映射时发生错误: {ex.Message}");
+                reverseMappings = new Dictionary<string, string>();
+            }
 
             // 为未映射的属性创建映射
             foreach (var prop in properties)
             {
-                // 如果属性已经有映射，则跳过
-                if (reverseMappings.ContainsKey(prop.Name))
-                    continue;
-
-                // 属性名作为DBF字段名，截断到10个字符（DBF字段名长度限制）
-                string dbfFieldName = prop.Name.Length > 10 ? prop.Name.Substring(0, 10) : prop.Name;
-
-                // 避免字段名重复
-                if (!fieldMappings.ContainsKey(dbfFieldName))
+                try
                 {
-                    fieldMappings.Add(dbfFieldName, prop.Name);
-                }
-                else
-                {
-                    // 处理字段名冲突，添加数字后缀
-                    int suffix = 1;
-                    string newFieldName;
-                    do
-                    {
-                        // 确保总长度不超过10个字符
-                        string baseName = dbfFieldName.Length >= 8 ? dbfFieldName.Substring(0, 8) : dbfFieldName;
-                        newFieldName = $"{baseName}_{suffix++}";
-                    } while (fieldMappings.ContainsKey(newFieldName) && suffix < 100); // 避免无限循环
+                    if (prop == null) continue; // 跳过空属性
 
-                    if (suffix < 100) // 确保找到了可用名称
+                    // 如果属性已经有映射，则跳过
+                    if (reverseMappings.ContainsKey(prop.Name))
+                        continue;
+
+                    // 属性名作为DBF字段名，截断到10个字符（DBF字段名长度限制）
+                    string dbfFieldName = prop.Name.Length > 10 ? prop.Name.Substring(0, 10) : prop.Name;
+
+                    // 避免字段名重复
+                    if (!fieldMappings.ContainsKey(dbfFieldName))
                     {
-                        fieldMappings.Add(newFieldName, prop.Name);
-                        OwHelper.SetLastErrorAndMessage(400, $"字段名 {dbfFieldName} 冲突，已重命名为 {newFieldName}");
+                        fieldMappings.Add(dbfFieldName, prop.Name);
                     }
                     else
                     {
-                        OwHelper.SetLastErrorAndMessage(400, $"无法为属性 {prop.Name} 创建唯一字段名，已跳过");
+                        // 处理字段名冲突，添加数字后缀
+                        int suffix = 1;
+                        string newFieldName;
+                        do
+                        {
+                            // 确保总长度不超过10个字符
+                            string baseName = dbfFieldName.Length >= 8 ? dbfFieldName.Substring(0, 8) : dbfFieldName;
+                            newFieldName = $"{baseName}_{suffix++}";
+                        } while (fieldMappings.ContainsKey(newFieldName) && suffix < 100); // 避免无限循环
+
+                        if (suffix < 100) // 确保找到了可用名称
+                        {
+                            fieldMappings.Add(newFieldName, prop.Name);
+                            OwHelper.SetLastErrorAndMessage(400, $"字段名 {dbfFieldName} 冲突，已重命名为 {newFieldName}");
+                        }
+                        else
+                        {
+                            OwHelper.SetLastErrorAndMessage(400, $"无法为属性 {prop.Name} 创建唯一字段名，已跳过");
+                        }
                     }
+                }
+                catch (Exception ex)
+                {
+                    OwHelper.SetLastErrorAndMessage(400, $"处理属性 {prop?.Name ?? "未知"} 的映射时发生错误: {ex.Message}");
+                    continue; // 继续处理下一个属性
                 }
             }
 
