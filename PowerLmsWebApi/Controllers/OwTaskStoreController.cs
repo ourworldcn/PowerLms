@@ -208,7 +208,7 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">指定Id的任务不存在。</response>
-        /// <response code="400">任务无法被取消（已完成或已取消）。</response>
+        /// <response code="400">任务无法被取消（已完成或已失败）。</response>
         [HttpPost]
         public ActionResult<CancelTaskReturnDto> CancelTask(CancelTaskParamsDto model)
         {
@@ -221,7 +221,7 @@ namespace PowerLmsWebApi.Controllers
                 if (task is null) return NotFound();
 
                 // 检查任务是否可以取消
-                if (task.Status == OwTaskStatus.Completed || task.Status == OwTaskStatus.Cancelled)
+                if (task.Status == OwTaskStatus.Completed || task.Status == OwTaskStatus.Failed)
                 {
                     result.HasError = true;
                     result.ErrorCode = 400;
@@ -229,8 +229,8 @@ namespace PowerLmsWebApi.Controllers
                     return BadRequest(result);
                 }
 
-                // 更新任务状态为已取消
-                task.Status = OwTaskStatus.Cancelled;
+                // 更新任务状态为已失败（用失败状态表示被取消）
+                task.Status = OwTaskStatus.Failed;
                 task.CompletedUtc = DateTime.UtcNow;
                 task.ErrorMessage = "用户取消任务";
 

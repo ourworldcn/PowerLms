@@ -180,39 +180,49 @@ namespace PowerLmsWebApi.Controllers
         [HttpDelete]
         public ActionResult<RemoveFileReturnDto> RemoveFile(RemoveFileParamsDto model)
         {
-            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) 
+                return Unauthorized();
 
             var result = new RemoveFileReturnDto();
-            var item = _DbContext.PlFileInfos.Find(model.Id);
-            if (item is null) return NotFound(model.Id);
-            string err;
-            if (item.ParentId.HasValue && _DbContext.PlJobs.Find(item.ParentId.Value) is PlJob job)
-                if (job.JobTypeId == ProjectContent.AeId)
+            
+            try
+            {
+                var item = _DbContext.PlFileInfos.Find(model.Id);
+                if (item is null) return NotFound(model.Id);
+
+                // 检查权限
+                if (item.ParentId.HasValue)
                 {
-                    if (!_AuthorizationManager.Demand(out err, "D0.8.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-                }
-                else if (job.JobTypeId == ProjectContent.AiId)
-                {
-                    if (!_AuthorizationManager.Demand(out err, "D1.8.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-                }
-                else if (job.JobTypeId == ProjectContent.SeId)
-                {
-                    if (!_AuthorizationManager.Demand(out err, "D2.8.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-                }
-                else if (job.JobTypeId == ProjectContent.SiId)
-                {
-                    if (!_AuthorizationManager.Demand(out err, "D3.8.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                    CheckJobPermissions(item.ParentId.Value, "8.4");
                 }
 
-            var path = Path.Combine(_FileManager.GetDirectory(), item.FilePath);
-            _EntityManager.Remove(item);
-            _DbContext.SaveChanges();
-            if (!System.IO.File.Exists(path))   //若此文件已不存在
-            {
-                return StatusCode((int)HttpStatusCode.Gone, $"指定文件已经不存在,{path}");
+                // 删除数据库记录
+                _EntityManager.Remove(item);
+                _DbContext.SaveChanges();
+
+                // 删除磁盘文件
+                var fileDeleted = _FileManager.DeleteFile(item.FilePath);
+                if (!fileDeleted)
+                {
+                    _Logger.LogWarning("文件 {FilePath} 已从数据库删除但磁盘文件不存在或删除失败", item.FilePath);
+                    return StatusCode((int)HttpStatusCode.Gone, $"指定文件已经不存在: {item.FilePath}");
+                }
+
+                _Logger.LogInformation("文件删除成功：{fileName}，ID：{fileId}", item.FileName, item.Id);
+                return result;
             }
-            Task.Run(() => System.IO.File.Delete(path));
-            return result;
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode((int)HttpStatusCode.Forbidden, ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _Logger.LogError(ex, "删除文件时发生错误，文件ID: {FileId}", model.Id);
+                result.HasError = true;
+                result.ErrorCode = 500;
+                result.DebugMessage = $"删除文件时发生错误: {ex.Message}";
+                return StatusCode((int)HttpStatusCode.InternalServerError, result);
+            }
         }
 
         /// <summary>
@@ -249,87 +259,79 @@ namespace PowerLmsWebApi.Controllers
         {
             var result = new AddFileReturnDto();
 
-            // 权限检查
-            if (_DbContext.PlJobs.Find(model.ParentId) is PlJob job)
-                if (job.JobTypeId == ProjectContent.AeId)
-                {
-                    if (!_AuthorizationManager.Demand(out var err, "D0.8.1")) return StatusCode(StatusCodes.Status403Forbidden, err);
-                }
-                else if (job.JobTypeId == ProjectContent.AiId)
-                {
-                    if (!_AuthorizationManager.Demand(out var err, "D1.8.1")) return StatusCode(StatusCodes.Status403Forbidden, err);
-                }
-                else if (job.JobTypeId == ProjectContent.SeId)
-                {
-                    if (!_AuthorizationManager.Demand(out var err, "D2.8.1")) return StatusCode(StatusCodes.Status403Forbidden, err);
-                }
-                else if (job.JobTypeId == ProjectContent.SiId)
-                {
-                    if (!_AuthorizationManager.Demand(out var err, "D3.8.1")) return StatusCode(StatusCodes.Status403Forbidden, err);
-                }
+            // 身份验证
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) 
+                return Unauthorized(result);
 
-            // 验证文件是否存在
-            if (model.File == null || model.File.Length == 0)
+            try
+            {
+                // 权限检查 - 可以提取为独立方法进一步简化
+                CheckJobPermissions(model.ParentId, "8.1");
+
+                // 使用 OwFileManager 创建文件 - 大大简化了代码
+                var fileInfo = _FileManager.CreateFile(
+                    formFile: model.File,
+                    displayName: model.DisplayName,
+                    parentId: model.ParentId,
+                    creatorId: context.User?.Id,
+                    remark: model.Remark
+                );
+
+                // 保存到数据库
+                _DbContext.PlFileInfos.Add(fileInfo);
+                _DbContext.SaveChanges();
+
+                result.Id = fileInfo.Id;
+                _Logger.LogInformation("文件上传成功：{fileName}，大小：{fileSize}MB，ID：{fileId}",
+                    model.File.FileName, Math.Round(model.File.Length / 1024.0 / 1024.0, 2), fileInfo.Id);
+
+                return result;
+            }
+            catch (ArgumentNullException)
             {
                 result.HasError = true;
                 result.ErrorCode = 1001;
                 result.DebugMessage = "未提供有效的文件";
                 _Logger.LogWarning("文件上传失败：未提供有效的文件");
-                return BadRequest(result.DebugMessage);
+                return BadRequest(result);
             }
-
-            // 验证文件大小
-            var maxSizeBytes = _fileManagerOptions.Value.MaxFileSizeMB * 1024 * 1024;
-            if (model.File.Length > maxSizeBytes)
+            catch (ArgumentException ex)
+            {
+                result.HasError = true;
+                result.ErrorCode = 1001;
+                result.DebugMessage = ex.Message;
+                _Logger.LogWarning("文件上传失败：{message}", ex.Message);
+                return BadRequest(result);
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("文件大小"))
             {
                 result.HasError = true;
                 result.ErrorCode = 1002;
-                result.DebugMessage = $"文件大小超过限制，最大允许{_fileManagerOptions.Value.MaxFileSizeMB}MB";
-                _Logger.LogWarning("文件上传失败：{fileName}，大小：{fileSize}，超出最大限制：{maxSize}MB",
-                    model.File.FileName, model.File.Length / 1024.0 / 1024.0, _fileManagerOptions.Value.MaxFileSizeMB);
-                return StatusCode(StatusCodes.Status413PayloadTooLarge, result.DebugMessage);
+                result.DebugMessage = ex.Message;
+                _Logger.LogWarning("文件上传失败：{fileName}，{message}", model.File?.FileName, ex.Message);
+                return StatusCode(StatusCodes.Status413PayloadTooLarge, result);
             }
-
-            // 验证文件类型
-            var fileExt = Path.GetExtension(model.File.FileName).ToLowerInvariant();
-            if (_fileManagerOptions.Value.AllowedFileExtensions.Count > 0 &&
-                !_fileManagerOptions.Value.AllowedFileExtensions.Contains(fileExt, StringComparer.OrdinalIgnoreCase))
+            catch (InvalidOperationException ex) when (ex.Message.Contains("文件类型"))
             {
                 result.HasError = true;
                 result.ErrorCode = 1003;
-                result.DebugMessage = $"不支持的文件类型：{fileExt}";
-                _Logger.LogWarning("文件上传失败：{fileName}，不支持的文件类型：{fileType}",
-                    model.File.FileName, fileExt);
-                return StatusCode(StatusCodes.Status415UnsupportedMediaType, result.DebugMessage);
+                result.DebugMessage = ex.Message;
+                _Logger.LogWarning("文件上传失败：{fileName}，{message}", model.File?.FileName, ex.Message);
+                return StatusCode(StatusCodes.Status415UnsupportedMediaType, result);
             }
-
-            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized(result);
-            var fileInfo = new PlFileInfo
+            catch (UnauthorizedAccessException ex)
             {
-                DisplayName = model.DisplayName,
-                ParentId = model.ParentId,
-                FileName = model.File.FileName,
-                Remark = model.Remark,
-                FilePath = Path.Combine("General", $"{Guid.NewGuid()}.bin"),
-                FileTypeId = null,
-            };
-            if (fileInfo is ICreatorInfo creatorInfo)
-            {
-                creatorInfo.CreateBy = context?.User?.Id;
-                creatorInfo.CreateDateTime = OwHelper.WorldNow;
+                _Logger.LogWarning("权限不足：{message}", ex.Message);
+                return StatusCode(StatusCodes.Status403Forbidden, ex.Message);
             }
-            result.Id = fileInfo.Id;
-            _DbContext.PlFileInfos.Add(fileInfo);
-            _DbContext.SaveChanges();
-            var fullPath = Path.Combine(AppContext.BaseDirectory, "Files", fileInfo.FilePath);
-            var dir = Path.GetDirectoryName(fullPath);
-            Directory.CreateDirectory(dir);
-            using var file = new FileStream(fullPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 81920, FileOptions.SequentialScan);
-            model.File.CopyTo(file);
-
-            _Logger.LogInformation("文件上传成功：{fileName}，大小：{fileSize}MB，ID：{fileId}",
-                model.File.FileName, Math.Round(model.File.Length / 1024.0 / 1024.0, 2), fileInfo.Id);
-            return result;
+            catch (Exception ex)
+            {
+                result.HasError = true;
+                result.ErrorCode = 500;
+                result.DebugMessage = $"文件上传时发生未知错误：{ex.Message}";
+                _Logger.LogError(ex, "文件上传时发生未知错误");
+                return StatusCode(StatusCodes.Status500InternalServerError, result);
+            }
         }
 
         /// <summary>
@@ -343,32 +345,42 @@ namespace PowerLmsWebApi.Controllers
         [HttpGet]
         public ActionResult GetFile([FromQuery] GetFileParamsDto model)
         {
-            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            var info = _DbContext.PlFileInfos.Find(model.FileId);
-            if (info == null) return NotFound();
-            string err;
-            if (info.ParentId.HasValue && _DbContext.PlJobs.Find(info.ParentId.Value) is PlJob job)
-                if (job.JobTypeId == ProjectContent.AeId)
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) 
+                return Unauthorized();
+
+            try
+            {
+                var info = _DbContext.PlFileInfos.Find(model.FileId);
+                if (info == null) return NotFound();
+
+                // 检查权限
+                if (info.ParentId.HasValue)
                 {
-                    if (!_AuthorizationManager.Demand(out err, "D0.8.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-                }
-                else if (job.JobTypeId == ProjectContent.AiId)
-                {
-                    if (!_AuthorizationManager.Demand(out err, "D1.8.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-                }
-                else if (job.JobTypeId == ProjectContent.SeId)
-                {
-                    if (!_AuthorizationManager.Demand(out err, "D2.8.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-                }
-                else if (job.JobTypeId == ProjectContent.SiId)
-                {
-                    if (!_AuthorizationManager.Demand(out err, "D3.8.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                    CheckJobPermissions(info.ParentId.Value, "8.2");
                 }
 
-            var path = Path.Combine(AppContext.BaseDirectory, "Files", info.FilePath);
-            if (!System.IO.File.Exists(path)) return NotFound();
-            var stream = new FileStream(path, FileMode.Open);
-            return File(stream, "application/octet-stream", info.FileName);
+                // 检查文件是否存在
+                if (!_FileManager.FileExists(info.FilePath))
+                {
+                    _Logger.LogWarning("请求的文件不存在：{FilePath}", info.FilePath);
+                    return NotFound("文件不存在");
+                }
+
+                var fullPath = _FileManager.GetFullPath(info.FilePath);
+                var stream = new FileStream(fullPath, FileMode.Open, FileAccess.Read);
+                
+                _Logger.LogDebug("文件下载：{fileName}，ID：{fileId}", info.FileName, info.Id);
+                return File(stream, "application/octet-stream", info.FileName);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode((int)HttpStatusCode.Forbidden, ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _Logger.LogError(ex, "下载文件时发生错误，文件ID: {FileId}", model.FileId);
+                return StatusCode((int)HttpStatusCode.InternalServerError, "下载文件时发生错误");
+            }
         }
 
         /// <summary>
@@ -404,6 +416,36 @@ namespace PowerLmsWebApi.Controllers
             return result;
         }
         #endregion 通用文件管理接口
+
+        #region 私有辅助方法
+
+        /// <summary>
+        /// 检查作业相关的权限
+        /// </summary>
+        /// <param name="parentId">父实体ID</param>
+        /// <param name="operationCode">操作代码（如"8.1"表示上传操作）</param>
+        /// <exception cref="UnauthorizedAccessException">权限不足时抛出</exception>
+        private void CheckJobPermissions(Guid parentId, string operationCode)
+        {
+            if (_DbContext.PlJobs.Find(parentId) is PlJob job)
+            {
+                var permissionCode = job.JobTypeId switch
+                {
+                    var id when id == ProjectContent.AeId => $"D0.{operationCode}",
+                    var id when id == ProjectContent.AiId => $"D1.{operationCode}",
+                    var id when id == ProjectContent.SeId => $"D2.{operationCode}",
+                    var id when id == ProjectContent.SiId => $"D3.{operationCode}",
+                    _ => null
+                };
+
+                if (permissionCode != null && !_AuthorizationManager.Demand(out var err, permissionCode))
+                {
+                    throw new UnauthorizedAccessException(err);
+                }
+            }
+        }
+
+        #endregion
     }
 
 }

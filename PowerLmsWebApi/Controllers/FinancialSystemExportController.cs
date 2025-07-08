@@ -54,19 +54,13 @@ namespace PowerLmsWebApi.Controllers
 
         /// <summary>
         /// 导出发票数据为金蝶DBF格式文件。
-        /// 根据指定的查询条件，查询符合条件的发票集合，并转换为金蝶凭证格式导出为DBF文件。
-        /// 使用通用的OwTaskStore任务管理机制，可通过系统的任务状态查询接口跟踪进度。
+        /// 使用改进后的OwTaskService统一任务调度机制。
         /// </summary>
         /// <param name="model">导出参数，包含查询条件和用户令牌</param>
         /// <returns>导出任务信息，包含任务ID用于跟踪进度</returns>
-        /// <response code="200">任务创建成功，返回任务ID</response>
-        /// <response code="401">无效令牌，用户未认证</response>
-        /// <response code="404">没有找到符合条件的发票数据</response>
-        /// <response code="500">科目配置不完整，无法生成凭证</response>
         [HttpPost]
         public ActionResult<ExportInvoiceToDbfReturnDto> ExportInvoiceToDbf(ExportInvoiceToDbfParamsDto model)
         {
-            // 使用当前请求作用域的服务提供者进行令牌验证
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
                 return Unauthorized();
 
@@ -83,20 +77,14 @@ namespace PowerLmsWebApi.Controllers
                     return result;
                 }
 
-                // 在方法内直接生成发票集合进行预检查
-                var invoicesQuery = _DbContext.TaxInvoiceInfos.Where(c => c.ExportedDateTime == null) //需求强制导出未导出过的发票
-                    .AsQueryable();
-
-                // 应用查询条件
+                // 预检查发票数量
+                var invoicesQuery = _DbContext.TaxInvoiceInfos.Where(c => c.ExportedDateTime == null).AsQueryable();
                 if (model.ExportConditions != null && model.ExportConditions.Any())
                 {
                     invoicesQuery = EfHelper.GenerateWhereAnd(invoicesQuery, model.ExportConditions);
                 }
-
-                // 添加组织权限过滤 - 根据用户权限限制导出范围
                 invoicesQuery = ApplyOrganizationFilter(invoicesQuery, context.User);
 
-                // 预检查：统计符合条件的发票数量
                 var invoiceCount = invoicesQuery.Count();
                 if (invoiceCount == 0)
                 {
@@ -106,50 +94,27 @@ namespace PowerLmsWebApi.Controllers
                     return result;
                 }
 
-                // 创建后台任务，使用通用的OwTaskStore机制
-                var taskId = Guid.NewGuid();
+                // 使用OwTaskService创建任务（同步方式）
+                var taskService = _ServiceProvider.GetRequiredService<OwTaskService<PowerLmsUserDbContext>>();
                 var exportDateTime = DateTime.UtcNow;
-                var task = new OwTaskStore
+                
+                var taskParameters = new Dictionary<string, string>
                 {
-                    Id = taskId,
-                    ServiceTypeName = nameof(FinancialSystemExportController),
-                    MethodName = nameof(ProcessInvoiceDbfExportAsync),
-                    Parameters = new Dictionary<string, string>
-                    {
-                        ["ExportConditions"] = JsonSerializer.Serialize(model.ExportConditions),
-                        ["UserId"] = context.User.Id.ToString(),
-                        ["OrgId"] = context.User.OrgId?.ToString() ?? "",
-                        ["ExpectedCount"] = invoiceCount.ToString(),
-                        ["ExportDateTime"] = exportDateTime.ToString("O") // ISO 8601格式
-                    },
-                    Status = OwTaskStatus.Pending,
-                    CreatedUtc = exportDateTime,
-                    CreatorId = context.User.Id,
-                    TenantId = context.User.OrgId
+                    ["ExportConditions"] = JsonSerializer.Serialize(model.ExportConditions),
+                    ["UserId"] = context.User.Id.ToString(),
+                    ["OrgId"] = context.User.OrgId?.ToString() ?? "",
+                    ["ExpectedCount"] = invoiceCount.ToString(),
+                    ["ExportDateTime"] = exportDateTime.ToString("O")
                 };
 
-                _DbContext.OwTaskStores.Add(task);
-                _DbContext.SaveChanges();
-
-                // 启动后台处理 - 使用独立的服务作用域工厂以避免Controller生命周期依赖
-                var serviceScopeFactory = _ServiceScopeFactory; // 捕获服务作用域工厂引用（单例）
-                _ = Task.Run(async () =>
-                {
-                    try
-                    {
-                        await ProcessInvoiceDbfExportAsync(taskId, serviceScopeFactory);
-                    }
-                    catch (Exception ex)
-                    {
-                        // 确保异常不会导致应用程序崩溃
-                        using var scope = serviceScopeFactory.CreateScope();
-                        var logger = scope.ServiceProvider.GetRequiredService<ILogger<FinancialSystemExportController>>();
-                        logger.LogError(ex, "后台任务 {TaskId} 执行时发生未处理异常", taskId);
-                    }
-                });
+                var taskId = taskService.CreateTask<FinancialSystemExportController>(
+                    nameof(ProcessInvoiceDbfExportTask), 
+                    taskParameters, 
+                    context.User.Id, 
+                    context.User.OrgId);
 
                 result.TaskId = taskId;
-                result.DebugMessage = $"导出任务已创建，预计处理 {invoiceCount} 张发票，将使用DotNetDbfUtil.WriteLargeFile处理大文件。可通过系统任务状态查询接口跟踪进度。";
+                result.DebugMessage = $"导出任务已创建，预计处理 {invoiceCount} 张发票。可通过系统任务状态查询接口跟踪进度。";
                 result.ExpectedInvoiceCount = invoiceCount;
 
                 _Logger.LogInformation("用户 {UserId} 创建了发票DBF导出任务 {TaskId}，预计处理 {Count} 张发票",
@@ -163,6 +128,161 @@ namespace PowerLmsWebApi.Controllers
                 result.DebugMessage = ex.Message;
             }
             return result;
+        }
+
+        /// <summary>
+        /// 处理发票DBF导出任务（由OwTaskService调用）
+        /// 这个方法会被OwTaskService通过反射调用，不应暴露为HTTP端点
+        /// </summary>
+        /// <param name="taskId">任务ID</param>
+        /// <param name="parameters">任务参数</param>
+        /// <returns>任务执行结果</returns>
+        [NonAction] // 防止Swagger将此方法识别为HTTP端点
+        public object ProcessInvoiceDbfExportTask(Guid taskId, Dictionary<string, string> parameters)
+        {
+            try
+            {
+                _Logger.LogInformation("开始处理发票DBF导出任务 {TaskId}", taskId);
+
+                // 解析任务参数
+                if (!parameters.TryGetValue("ExportConditions", out var exportConditionsJson) ||
+                    !parameters.TryGetValue("UserId", out var userIdStr) ||
+                    !parameters.TryGetValue("ExportDateTime", out var exportDateTimeStr))
+                {
+                    throw new InvalidOperationException($"任务 {taskId} 参数不完整");
+                }
+
+                var conditions = string.IsNullOrEmpty(exportConditionsJson) ? 
+                    new Dictionary<string, string>() : 
+                    JsonSerializer.Deserialize<Dictionary<string, string>>(exportConditionsJson);
+                
+                var userId = Guid.Parse(userIdStr);
+                var orgId = parameters.TryGetValue("OrgId", out var orgIdStr) && !string.IsNullOrEmpty(orgIdStr) ? 
+                    Guid.Parse(orgIdStr) : (Guid?)null;
+                var expectedCount = int.Parse(parameters.GetValueOrDefault("ExpectedCount", "0"));
+                var exportDateTime = DateTime.Parse(exportDateTimeStr);
+
+                // 加载科目配置
+                var subjectConfigs = LoadSubjectConfigurations(orgId);
+                if (!subjectConfigs.Any())
+                {
+                    throw new InvalidOperationException($"科目配置未找到，无法生成凭证。组织ID: {orgId}");
+                }
+
+                // 查询发票数据
+                var invoicesQuery = _DbContext.TaxInvoiceInfos.Where(i => i.ExportedDateTime == null).AsQueryable();
+                if (conditions != null && conditions.Any())
+                {
+                    invoicesQuery = EfHelper.GenerateWhereAnd(invoicesQuery, conditions);
+                }
+
+                // 应用权限过滤
+                var taskUser = _DbContext.Accounts.Find(userId);
+                if (taskUser != null)
+                {
+                    invoicesQuery = ApplyOrganizationFilter(invoicesQuery, taskUser);
+                }
+
+                var invoices = invoicesQuery.ToList();
+                _Logger.LogInformation("任务 {TaskId} 实际查询到 {ActualCount} 张发票，预期 {ExpectedCount} 张",
+                    taskId, invoices.Count, expectedCount);
+
+                if (!invoices.Any())
+                {
+                    throw new InvalidOperationException("没有找到符合条件的发票数据");
+                }
+
+                // 查询发票明细数据
+                var invoiceIds = invoices.Select(i => i.Id).ToList();
+                var invoiceItems = _DbContext.TaxInvoiceInfoItems
+                    .Where(item => invoiceIds.Contains(item.ParentId.Value))
+                    .ToList();
+
+                var invoiceItemsDict = invoiceItems.GroupBy(item => item.ParentId.Value)
+                    .ToDictionary(g => g.Key, g => g.ToList());
+
+                // 转换为金蝶凭证格式
+                var kingdeeVouchers = ConvertInvoicesToKingdeeVouchersWithConfig(invoices, invoiceItemsDict, subjectConfigs);
+                _Logger.LogInformation("任务 {TaskId} 生成了 {VoucherCount} 条金蝶凭证记录", taskId, kingdeeVouchers.Count);
+
+                if (!kingdeeVouchers.Any())
+                {
+                    throw new InvalidOperationException("生成的金蝶凭证记录为空");
+                }
+
+                // 生成DBF文件
+                var fileName = $"Invoice_Export_{DateTime.Now:yyyyMMdd_HHmmss}.dbf";
+                
+                // 使用 OwFileManager 创建文件记录 - 先生成文件内容到内存
+                byte[] dbfFileContent;
+                using (var memoryStream = new MemoryStream())
+                {
+                    DotNetDbfUtil.WriteToStream(kingdeeVouchers, memoryStream);
+                    dbfFileContent = memoryStream.ToArray();
+                }
+
+                _Logger.LogInformation("任务 {TaskId} 成功生成DBF文件内容，大小：{FileSize} 字节", taskId, dbfFileContent.Length);
+
+                // 更新发票导出时间
+                foreach (var invoice in invoices)
+                {
+                    invoice.ExportedDateTime = exportDateTime;
+                }
+
+                // 使用 OwFileManager 创建文件记录 - 大大简化了文件创建逻辑
+                var fileInfo = _FileManager.CreateFileFromBytes(
+                    fileContent: dbfFileContent,
+                    fileName: fileName,
+                    displayName: $"发票导出-{DateTime.Now:yyyy年MM月dd日}",
+                    parentId: taskId,
+                    creatorId: userId,
+                    remark: $"发票DBF导出文件，共{invoices.Count}张发票，{kingdeeVouchers.Count}条会计分录，导出时间：{exportDateTime:yyyy-MM-dd HH:mm:ss}",
+                    subDirectory: "FinancialExports"
+                );
+
+                _DbContext.PlFileInfos.Add(fileInfo);
+                _DbContext.SaveChanges();
+
+                _Logger.LogInformation("任务 {TaskId} 成功完成，文件：{FileName}，发票数：{InvoiceCount}，凭证数：{VoucherCount}",
+                    taskId, fileName, invoices.Count, kingdeeVouchers.Count);
+
+                // 返回任务执行结果
+                return new
+                {
+                    FileId = fileInfo.Id,
+                    FileName = fileName,
+                    InvoiceCount = invoices.Count,
+                    VoucherCount = kingdeeVouchers.Count,
+                    FilePath = fileInfo.FilePath,
+                    ExportDateTime = exportDateTime.ToString("yyyy-MM-dd HH:mm:ss")
+                };
+            }
+            catch (Exception ex)
+            {
+                _Logger.LogError(ex, "处理发票DBF导出任务 {TaskId} 时发生错误", taskId);
+                throw; // 让OwTaskService处理异常和更新任务状态
+            }
+        }
+
+        /// <summary>
+        /// 加载科目配置（同步版本，用于任务处理）
+        /// </summary>
+        private Dictionary<string, SubjectConfiguration> LoadSubjectConfigurations(Guid? orgId)
+        {
+            var requiredCodes = new List<string>
+            {
+                "PBI_ACC_RECEIVABLE",   // 应收账款
+                "PBI_SALES_REVENUE",    // 主营业务收入
+                "PBI_TAX_PAYABLE",      // 应交税金
+                "GEN_PREPARER",         // 制单人
+                "GEN_VOUCHER_GROUP"     // 凭证类别字
+            };
+
+            var configs = _DbContext.SubjectConfigurations
+                .Where(c => !c.IsDelete && c.OrgId == orgId && requiredCodes.Contains(c.Code))
+                .ToList();
+
+            return configs.ToDictionary(c => c.Code, c => c);
         }
 
         /// <summary>
@@ -188,373 +308,6 @@ namespace PowerLmsWebApi.Controllers
                 .ToList();
 
             return requiredCodes.Except(existingCodes).ToList();
-        }
-
-        /// <summary>
-        /// 异步处理发票DBF导出任务。
-        /// 完整实现：查询发票集合→查询明细→从科目配置表获取配置→转换为金蝶格式→生成DBF文件→更新导出时间→绑定任务。
-        /// 确保正确更新任务状态，记录导出时间到发票记录中。
-        /// </summary>
-        /// <param name="taskId">任务ID</param>
-        /// <param name="serviceScopeFactory">服务作用域工厂，用于创建独立的服务作用域</param>
-        private static async Task ProcessInvoiceDbfExportAsync(Guid taskId, IServiceScopeFactory serviceScopeFactory)
-        {
-            ILogger logger = null;
-            PowerLmsUserDbContext dbContext = null;
-            IServiceScope scope = null;
-            
-            try
-            {
-                if (serviceScopeFactory == null)
-                {
-                    throw new ArgumentNullException(nameof(serviceScopeFactory), "必须提供服务作用域工厂以确保后台任务的独立性");
-                }
-
-                scope = serviceScopeFactory.CreateScope();
-                dbContext = scope.ServiceProvider.GetRequiredService<PowerLmsUserDbContext>();
-                var fileManager = scope.ServiceProvider.GetRequiredService<OwFileManager>();
-                logger = scope.ServiceProvider.GetRequiredService<ILogger<FinancialSystemExportController>>();
-
-                logger.LogInformation("开始处理发票DBF导出任务 {TaskId}", taskId);
-
-                var task = await dbContext.OwTaskStores.FindAsync(taskId);
-                if (task == null)
-                {
-                    logger.LogWarning("任务 {TaskId} 不存在", taskId);
-                    return;
-                }
-
-                // 更新任务状态为执行中
-                task.Status = OwTaskStatus.Running;
-                await dbContext.SaveChangesAsync();
-                logger.LogInformation("任务 {TaskId} 开始执行", taskId);
-
-                // 解析任务参数 - 添加空值检查
-                logger.LogDebug("解析任务参数，任务ID: {TaskId}", taskId);
-                
-                if (task.Parameters == null)
-                {
-                    throw new InvalidOperationException($"任务 {taskId} 的参数为空");
-                }
-
-                if (!task.Parameters.TryGetValue("ExportConditions", out var exportConditionsJson))
-                {
-                    throw new InvalidOperationException($"任务 {taskId} 缺少ExportConditions参数");
-                }
-
-                if (!task.Parameters.TryGetValue("UserId", out var userIdStr))
-                {
-                    throw new InvalidOperationException($"任务 {taskId} 缺少UserId参数");
-                }
-
-                if (!task.Parameters.TryGetValue("ExportDateTime", out var exportDateTimeStr))
-                {
-                    throw new InvalidOperationException($"任务 {taskId} 缺少ExportDateTime参数");
-                }
-
-                var conditions = string.IsNullOrEmpty(exportConditionsJson) ? 
-                    new Dictionary<string, string>() : 
-                    JsonSerializer.Deserialize<Dictionary<string, string>>(exportConditionsJson);
-                
-                var userId = Guid.Parse(userIdStr);
-                var orgId = task.Parameters.TryGetValue("OrgId", out var orgIdStr) && !string.IsNullOrEmpty(orgIdStr) ? 
-                    Guid.Parse(orgIdStr) : (Guid?)null;
-                var expectedCount = int.Parse(task.Parameters.GetValueOrDefault("ExpectedCount", "0"));
-                var exportDateTime = DateTime.Parse(exportDateTimeStr);
-
-                logger.LogDebug("任务参数解析完成：UserId={UserId}, OrgId={OrgId}, ExpectedCount={ExpectedCount}", 
-                    userId, orgId, expectedCount);
-
-                // 加载科目配置
-                logger.LogDebug("开始加载科目配置，OrgId: {OrgId}", orgId);
-                var subjectConfigs = await LoadSubjectConfigurations(dbContext, orgId);
-                if (!subjectConfigs.Any())
-                {
-                    var errorMessage = $"科目配置未找到，无法生成凭证。组织ID: {orgId}";
-                    logger.LogError(errorMessage);
-                    
-                    task.Status = OwTaskStatus.Failed;
-                    task.CompletedUtc = DateTime.UtcNow;
-                    task.ErrorMessage = errorMessage;
-                    await dbContext.SaveChangesAsync();
-                    return;
-                }
-                logger.LogDebug("科目配置加载完成，共 {Count} 个配置", subjectConfigs.Count);
-
-                // 在后台任务中重新生成发票集合
-                logger.LogDebug("开始构建发票查询");
-                var invoicesQuery = dbContext.TaxInvoiceInfos.Where(i => i.ExportedDateTime == null).AsQueryable();
-                
-                if (conditions != null && conditions.Any())
-                {
-                    logger.LogDebug("应用查询条件，条件数量: {Count}", conditions.Count);
-                    try
-                    {
-                        invoicesQuery = EfHelper.GenerateWhereAnd(invoicesQuery, conditions);
-                        logger.LogDebug("查询条件应用成功");
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogError(ex, "应用查询条件时发生错误，条件: {@Conditions}", conditions);
-                        throw;
-                    }
-                }
-
-                // 重新应用组织权限过滤（后台任务中也需要权限过滤）
-                logger.LogDebug("开始应用组织权限过滤");
-                if (!string.IsNullOrEmpty(userIdStr))
-                {
-                    var taskUserId = Guid.Parse(userIdStr);
-                    var taskUser = await dbContext.Accounts.FindAsync(taskUserId);
-                    if (taskUser != null)
-                    {
-                        logger.LogDebug("找到任务用户，应用权限过滤。UserId: {UserId}, UserName: {UserName}", 
-                            taskUser.Id, taskUser.LoginName);
-                        
-                        try
-                        {
-                            // 在静态方法中调用权限过滤
-                            invoicesQuery = ApplyOrganizationFilterStatic(invoicesQuery, taskUser, dbContext, logger);
-                            logger.LogDebug("权限过滤应用成功");
-                        }
-                        catch (Exception ex)
-                        {
-                            logger.LogError(ex, "应用组织权限过滤时发生错误");
-                            throw;
-                        }
-                    }
-                    else
-                    {
-                        logger.LogWarning("未找到任务用户，UserId: {UserId}", taskUserId);
-                    }
-                }
-
-                logger.LogDebug("开始执行发票查询");
-                var invoices = await invoicesQuery.ToListAsync();
-                logger.LogInformation("任务 {TaskId} 实际查询到 {ActualCount} 张发票，预期 {ExpectedCount} 张",
-                    taskId, invoices.Count, expectedCount);
-
-                if (!invoices.Any())
-                {
-                    var message = "没有找到符合条件的发票数据";
-                    logger.LogWarning("任务 {TaskId}: {Message}", taskId, message);
-                    
-                    task.Status = OwTaskStatus.Completed;
-                    task.CompletedUtc = DateTime.UtcNow;
-                    task.ErrorMessage = message;
-                    await dbContext.SaveChangesAsync();
-                    return;
-                }
-
-                // 查询发票明细数据
-                logger.LogDebug("开始查询发票明细数据");
-                var invoiceIds = invoices.Select(i => i.Id).ToList();
-                var invoiceItems = await dbContext.TaxInvoiceInfoItems
-                    .Where(item => invoiceIds.Contains(item.ParentId.Value))
-                    .ToListAsync();
-
-                var invoiceItemsDict = invoiceItems.GroupBy(item => item.ParentId.Value)
-                    .ToDictionary(g => g.Key, g => g.ToList());
-
-                logger.LogDebug("发票明细查询完成，共 {ItemCount} 条明细，涉及 {InvoiceCount} 张发票", 
-                    invoiceItems.Count, invoiceItemsDict.Count);
-
-                // 转换为金蝶凭证格式（使用科目配置）
-                logger.LogDebug("开始转换为金蝶凭证格式");
-                try
-                {
-                    var kingdeeVouchers = ConvertInvoicesToKingdeeVouchersWithConfig(invoices, invoiceItemsDict, subjectConfigs);
-                    logger.LogInformation("任务 {TaskId} 生成了 {VoucherCount} 条金蝶凭证记录", taskId, kingdeeVouchers.Count);
-
-                    if (!kingdeeVouchers.Any())
-                    {
-                        throw new InvalidOperationException("生成的金蝶凭证记录为空");
-                    }
-
-                    // 生成文件路径
-                    logger.LogDebug("开始生成DBF文件");
-                    var fileName = $"Invoice_Export_{DateTime.Now:yyyyMMdd_HHmmss}.dbf";
-                    var relativePath = Path.Combine("FinancialExports", fileName);
-                    
-                    if (fileManager == null)
-                    {
-                        throw new InvalidOperationException("文件管理器为空");
-                    }
-                    
-                    var fileManagerDirectory = fileManager.GetDirectory();
-                    if (string.IsNullOrEmpty(fileManagerDirectory))
-                    {
-                        throw new InvalidOperationException("文件管理器目录为空");
-                    }
-                    
-                    var fullPath = Path.Combine(fileManagerDirectory, relativePath);
-                    var directoryPath = Path.GetDirectoryName(fullPath);
-                    
-                    logger.LogDebug("文件路径: {FullPath}, 目录: {Directory}", fullPath, directoryPath);
-
-                    if (!string.IsNullOrEmpty(directoryPath))
-                    {
-                        Directory.CreateDirectory(directoryPath);
-                        logger.LogDebug("目录创建成功: {Directory}", directoryPath);
-                    }
-
-                    // 使用专门的大文件写入函数生成DBF文件
-                    try
-                    {
-                        logger.LogDebug("开始调用DotNetDbfUtil.WriteLargeFile，凭证数量: {Count}", kingdeeVouchers.Count);
-                        DotNetDbfUtil.WriteLargeFile(kingdeeVouchers, fullPath);
-                        logger.LogInformation("任务 {TaskId} 成功生成DBF文件 {FilePath}", taskId, fullPath);
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogError(ex, "生成DBF文件时发生错误，文件路径: {FullPath}", fullPath);
-                        throw;
-                    }
-
-                    // 重要：更新导出的发票记录的导出时间
-                    logger.LogDebug("开始更新发票导出时间");
-                    foreach (var invoice in invoices)
-                    {
-                        invoice.ExportedDateTime = exportDateTime;
-                    }
-                    logger.LogDebug("任务 {TaskId} 已更新 {Count} 张发票的导出时间", taskId, invoices.Count);
-
-                    // 创建文件信息记录并绑定到任务
-                    logger.LogDebug("开始创建文件信息记录");
-                    var fileInfo = new PlFileInfo
-                    {
-                        Id = Guid.NewGuid(),
-                        ParentId = taskId, // 关键：绑定到任务ID
-                        DisplayName = $"发票导出-{DateTime.Now:yyyy年MM月dd日}",
-                        FileName = fileName,
-                        FilePath = relativePath,
-                        CreateBy = userId,
-                        CreateDateTime = DateTime.Now,
-                        Remark = $"发票DBF导出文件，共{invoices.Count}张发票，{kingdeeVouchers.Count}条会计分录，导出时间：{exportDateTime:yyyy-MM-dd HH:mm:ss}"
-                    };
-
-                    dbContext.PlFileInfos.Add(fileInfo);
-
-                    // 更新任务状态为完成
-                    task.Status = OwTaskStatus.Completed;
-                    task.CompletedUtc = DateTime.UtcNow;
-                    task.ErrorMessage = null; // 清除错误信息
-                    task.Result = new Dictionary<string, string>
-                    {
-                        ["FileId"] = fileInfo.Id.ToString(),
-                        ["FileName"] = fileName,
-                        ["InvoiceCount"] = invoices.Count.ToString(),
-                        ["VoucherCount"] = kingdeeVouchers.Count.ToString(),
-                        ["FilePath"] = relativePath,
-                        ["ExportDateTime"] = exportDateTime.ToString("yyyy-MM-dd HH:mm:ss")
-                    };
-
-                    await dbContext.SaveChangesAsync();
-
-                    logger.LogInformation("任务 {TaskId} 成功完成，文件：{FileName}，发票数：{InvoiceCount}，凭证数：{VoucherCount}，导出时间：{ExportDateTime}",
-                        taskId, fileName, invoices.Count, kingdeeVouchers.Count, exportDateTime);
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "转换为金蝶凭证格式时发生错误");
-                    throw;
-                }
-            }
-            catch (Exception ex)
-            {
-                // 异常处理逻辑
-                try
-                {
-                    // 确保我们有有效的logger和dbContext来记录错误
-                    if (logger == null || dbContext == null)
-                    {
-                        // 如果当前scope有问题，创建新的scope
-                        scope?.Dispose();
-                        scope = serviceScopeFactory.CreateScope();
-                        logger ??= scope.ServiceProvider.GetRequiredService<ILogger<FinancialSystemExportController>>();
-                        dbContext ??= scope.ServiceProvider.GetRequiredService<PowerLmsUserDbContext>();
-                    }
-
-                    logger.LogError(ex, "处理发票DBF导出任务 {TaskId} 时发生错误", taskId);
-
-                    if (dbContext != null)
-                    {
-                        // 使用新的上下文查找任务，避免disposed context错误
-                        OwTaskStore task = null;
-                        try
-                        {
-                            task = await dbContext.OwTaskStores.FindAsync(taskId);
-                        }
-                        catch (ObjectDisposedException)
-                        {
-                            // 如果上下文被释放，创建新的scope
-                            scope?.Dispose();
-                            scope = serviceScopeFactory.CreateScope();
-                            dbContext = scope.ServiceProvider.GetRequiredService<PowerLmsUserDbContext>();
-                            logger = scope.ServiceProvider.GetRequiredService<ILogger<FinancialSystemExportController>>();
-                            task = await dbContext.OwTaskStores.FindAsync(taskId);
-                        }
-                        
-                        if (task != null)
-                        {
-                            task.Status = OwTaskStatus.Failed;
-                            task.CompletedUtc = DateTime.UtcNow;
-                            task.ErrorMessage = $"{ex.GetType().Name}: {ex.Message}";
-                            
-                            // 如果有内部异常，也记录下来
-                            if (ex.InnerException != null)
-                            {
-                                task.ErrorMessage += $" | InnerException: {ex.InnerException.GetType().Name}: {ex.InnerException.Message}";
-                            }
-                            
-                            await dbContext.SaveChangesAsync();
-                            logger.LogInformation("任务 {TaskId} 状态已更新为失败，错误信息: {ErrorMessage}", taskId, task.ErrorMessage);
-                        }
-                        else
-                        {
-                            logger.LogError("无法找到任务 {TaskId} 来更新失败状态", taskId);
-                        }
-                    }
-                    else
-                    {
-                        logger?.LogError("数据库上下文为空，无法更新任务 {TaskId} 状态", taskId);
-                    }
-                }
-                catch (Exception updateEx)
-                {
-                    logger?.LogError(updateEx, "更新任务 {TaskId} 失败状态时发生错误", taskId);
-                }
-            }
-            finally
-            {
-                // 确保scope被正确释放
-                scope?.Dispose();
-            }
-        }
-
-        /// <summary>
-        /// 加载科目配置。
-        /// 从SubjectConfiguration表中加载发票挂账流程所需的科目配置。
-        /// </summary>
-        /// <param name="dbContext">数据库上下文</param>
-        /// <param name="orgId">组织ID</param>
-        /// <returns>科目配置字典，键为科目代码，值为科目配置对象</returns>
-        private static async Task<Dictionary<string, SubjectConfiguration>> LoadSubjectConfigurations(PowerLmsUserDbContext dbContext, Guid? orgId)
-        {
-            var requiredCodes = new List<string>
-            {
-                "PBI_ACC_RECEIVABLE",   // 应收账款
-                "PBI_SALES_REVENUE",    // 主营业务收入
-                "PBI_TAX_PAYABLE",      // 应交税金
-                "GEN_PREPARER",         // 制单人
-                "GEN_VOUCHER_GROUP"     // 凭证类别字
-            };
-
-            var configs = await dbContext.SubjectConfigurations
-                .Where(c => !c.IsDelete && c.OrgId == orgId && requiredCodes.Contains(c.Code))
-                .ToListAsync();
-
-            return configs.ToDictionary(c => c.Code, c => c);
         }
 
         /// <summary>

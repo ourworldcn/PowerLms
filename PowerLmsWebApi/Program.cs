@@ -6,6 +6,7 @@ using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
 using OW;
 using OW.EntityFrameworkCore;
+using OwDbBase.Tasks;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
@@ -152,6 +153,7 @@ internal class Program
         #region 配置应用的一般服务
         services.AddHostedService<InitializerService>();
         services.AddSingleton<PasswordGenerator>(); //密码生成服务
+        services.AddOwTaskService<PowerLmsUserDbContext>(); //添加长时间运行任务服务
         #endregion 配置应用的一般服务
 
         #region 配置 AutoMapper
