@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using OW.Data;
 using OW.EntityFrameworkCore;
 using System;
 using System.Collections.Concurrent;
@@ -16,7 +15,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace OwDbBase.Tasks
+namespace OW.Data
 {
     /// <summary>任务状态枚举，支持位标志组合</summary>
     [Flags]
@@ -172,50 +171,61 @@ namespace OwDbBase.Tasks
 
         /// <summary>
         /// 执行后台任务处理循环，持续监听任务队列并分发执行
+        /// 使用同步模式避免async/await复杂性
         /// </summary>
         /// <param name="stoppingToken">取消令牌，用于优雅停止服务</param>
         /// <returns>表示异步操作的Task</returns>
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _logger.LogInformation("OwTaskService 后台处理已启动");
-            
-            while (!stoppingToken.IsCancellationRequested)
+            return Task.Run(() =>
             {
-                try
+                _logger.LogInformation("OwTaskService 后台处理已启动");
+                
+                while (!stoppingToken.IsCancellationRequested)
                 {
-                    if (_pendingTaskIds.TryDequeue(out var taskId))
+                    try
                     {
-                        await _semaphore.WaitAsync(stoppingToken); // 控制并发数
-                        
-                        _ = Task.Run(() => // 在独立线程中执行任务
+                        if (_pendingTaskIds.TryDequeue(out var taskId))
                         {
-                            try
+                            _semaphore.Wait(stoppingToken); // 使用同步等待
+                            
+                            _ = Task.Run(() => // 在独立线程中执行任务
                             {
-                                ExecuteTask(taskId);
-                            }
-                            finally
+                                try
+                                {
+                                    ProcessTask(taskId);
+                                }
+                                finally
+                                {
+                                    _semaphore.Release();
+                                }
+                            }, stoppingToken);
+                        }
+                        else
+                        {
+                            // 使用同步延迟方式
+                            if (!stoppingToken.IsCancellationRequested)
                             {
-                                _semaphore.Release();
+                                Thread.Sleep(500); // 队列为空时等待
                             }
-                        }, stoppingToken);
+                        }
                     }
-                    else
+                    catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
                     {
-                        await Task.Delay(500, stoppingToken); // 队列为空时等待
+                        break; // 正常取消
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "任务处理循环中发生错误");
+                        if (!stoppingToken.IsCancellationRequested)
+                        {
+                            Thread.Sleep(1000); // 出错时等待后重试
+                        }
                     }
                 }
-                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-                {
-                    break; // 正常取消
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "任务处理循环中发生错误");
-                    await Task.Delay(1000, stoppingToken); // 出错时等待后重试
-                }
-            }
-            
-            _logger.LogInformation("OwTaskService 后台处理已结束");
+                
+                _logger.LogInformation("OwTaskService 后台处理已结束");
+            }, stoppingToken);
         }
 
         #endregion
@@ -289,10 +299,10 @@ namespace OwDbBase.Tasks
         #region 内部实现
 
         /// <summary>
-        /// 执行指定任务，使用同步方式和范围服务包装确保资源隔离
+        /// 处理指定任务，使用同步方式和范围服务包装确保资源隔离
         /// </summary>
         /// <param name="taskId">要执行的任务ID</param>
-        private void ExecuteTask(Guid taskId)
+        private void ProcessTask(Guid taskId)
         {
             OwTaskStore taskEntity = null;
             
@@ -319,20 +329,41 @@ namespace OwDbBase.Tasks
                 if (serviceType == null)
                     throw new InvalidOperationException($"无法找到类型: {taskEntity.ServiceTypeName}");
                 
-                // 使用范围服务包装执行任务
-                using var scope = _serviceProvider.CreateScope();
-                var scopedProvider = scope.ServiceProvider;
-                
-                var service = scopedProvider.GetService(serviceType);
-                if (service == null)
-                    throw new InvalidOperationException($"无法从DI容器解析服务: {taskEntity.ServiceTypeName}");
-                
-                var methodInfo = serviceType.GetMethod(taskEntity.MethodName);
+                var methodInfo = serviceType.GetMethod(taskEntity.MethodName, BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance);
                 if (methodInfo == null)
                     throw new InvalidOperationException($"在服务 {taskEntity.ServiceTypeName} 中找不到方法 {taskEntity.MethodName}");
                 
+                object result;
                 var parameters = PrepareMethodParameters(methodInfo, taskEntity.Parameters);
-                var result = methodInfo.Invoke(service, parameters);
+                
+                if (methodInfo.IsStatic)
+                {
+                    // 静态方法调用：检查是否需要注入服务提供者
+                    if (HasServiceProviderParameter(methodInfo))
+                    {
+                        // 为静态方法注入服务提供者
+                        using var scope = _serviceProvider.CreateScope();
+                        var scopedProvider = scope.ServiceProvider;
+                        result = InvokeStaticMethodWithServiceProvider(methodInfo, parameters, scopedProvider);
+                    }
+                    else
+                    {
+                        // 普通静态方法调用
+                        result = methodInfo.Invoke(null, parameters);
+                    }
+                }
+                else
+                {
+                    // 实例方法调用（原有逻辑）
+                    using var scope = _serviceProvider.CreateScope();
+                    var scopedProvider = scope.ServiceProvider;
+                    
+                    var service = scopedProvider.GetService(serviceType);
+                    if (service == null)
+                        throw new InvalidOperationException($"无法从DI容器解析服务: {taskEntity.ServiceTypeName}");
+                    
+                    result = methodInfo.Invoke(service, parameters);
+                }
                 
                 UpdateTaskCompletion(taskId, result);
                 
@@ -344,6 +375,45 @@ namespace OwDbBase.Tasks
                 UpdateTaskFailure(taskId, errorMessage);
                 _logger.LogWarning(ex, "任务 {TaskId} 执行失败: {Error}", taskId, errorMessage);
             }
+        }
+
+        /// <summary>
+        /// 检查方法是否有服务提供者参数
+        /// </summary>
+        /// <param name="methodInfo">方法信息</param>
+        /// <returns>如果方法需要服务提供者则返回true</returns>
+        private static bool HasServiceProviderParameter(MethodInfo methodInfo)
+        {
+            var parameters = methodInfo.GetParameters();
+            return parameters.Any(p => p.ParameterType == typeof(IServiceProvider));
+        }
+
+        /// <summary>
+        /// 为静态方法调用注入服务提供者
+        /// </summary>
+        /// <param name="methodInfo">方法信息</param>
+        /// <param name="parameters">原始参数数组</param>
+        /// <param name="serviceProvider">服务提供者</param>
+        /// <returns>方法执行结果</returns>
+        private static object InvokeStaticMethodWithServiceProvider(MethodInfo methodInfo, object[] parameters, IServiceProvider serviceProvider)
+        {
+            var methodParams = methodInfo.GetParameters();
+            var enhancedParameters = new object[methodParams.Length];
+            
+            // 复制原有参数
+            Array.Copy(parameters, enhancedParameters, Math.Min(parameters.Length, enhancedParameters.Length));
+            
+            // 查找并注入服务提供者参数
+            for (int i = 0; i < methodParams.Length; i++)
+            {
+                if (methodParams[i].ParameterType == typeof(IServiceProvider))
+                {
+                    enhancedParameters[i] = serviceProvider;
+                    break;
+                }
+            }
+            
+            return methodInfo.Invoke(null, enhancedParameters);
         }
 
         /// <summary>
@@ -495,6 +565,38 @@ namespace OwDbBase.Tasks
             _semaphore?.Dispose();
             base.Dispose();
         }
+
+        #endregion
+
+        #region 使用示例（注释形式）
+
+        /*
+        // 静态任务调用示例 - 在OwTaskService中的使用
+        
+        // 1. 注册静态任务处理器类型（在Program.cs或启动配置中）
+        services.AddOwTaskService<PowerLmsUserDbContext>();
+        
+        // 2. 在控制器中创建静态任务
+        var taskService = serviceProvider.GetRequiredService<OwTaskService<PowerLmsUserDbContext>>();
+        var taskId = taskService.CreateTask(
+            typeof(FinancialSystemExportTaskProcessor),
+            nameof(FinancialSystemExportTaskProcessor.ProcessInvoiceDbfExportTask),
+            taskParameters,
+            userId,
+            orgId
+        );
+        
+        // 3. OwTaskService自动检测静态方法并调用：
+        // - 检测到方法是静态的
+        // - 检测到方法需要IServiceProvider参数
+        // - 自动注入服务提供者并调用静态方法
+        
+        // 4. 静态方法的优势：
+        // - 避免依赖控制器实例，减少内存占用
+        // - 更好的线程安全性
+        // - 明确的依赖关系（通过参数显式声明）
+        // - 更容易进行单元测试
+        */
 
         #endregion
     }
