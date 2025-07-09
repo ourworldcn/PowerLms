@@ -1,34 +1,35 @@
 ﻿using AutoMapper;
+using DotNetDBF;
+using Microsoft.Data.Sql;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.ObjectPool;
+using Microsoft.Extensions.Primitives;
+using NPOI.SS.Formula.Functions;
 using NPOI.SS.UserModel;
 using OW;
+using OW.Data;
+using OW.EntityFrameworkCore;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using System;
-using System.Diagnostics;
-using System.Net.Mail;
-using System.Text;
-using System.Text.RegularExpressions;
-using OW.Data;
 using System.Data;
+using System.Diagnostics;
 using System.Linq.Expressions;
+using System.Net.Mail;
 using System.Reflection;
-using Microsoft.Extensions.Primitives;
-using Microsoft.EntityFrameworkCore.Query;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
-using System.Text.Json;
-using Microsoft.Data.SqlClient;
-using Microsoft.Data.Sql;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
-using NPOI.SS.Formula.Functions;
-using OW.EntityFrameworkCore;
 using System.Reflection.Emit;
+using System.Text;
+using System.Text.Json;
+using System.Text.RegularExpressions;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
 namespace PowerLmsServer.Managers
 {
@@ -487,6 +488,25 @@ namespace PowerLmsServer.Managers
         [Conditional("DEBUG")]
         private void Test(IServiceProvider svc)
         {
+            var stream = new MemoryStream();
+            using (var writer = new DBFWriter(stream))
+            {
+                writer.Fields = new[]
+                {
+                    new DBFField("Name", NativeDbType.Char, 50, 0),
+                };
+                // 写入一些数据
+            }
+            // 测试流是否还可用
+            try
+            {
+                stream.Position = 0; // 如果抛异常，说明流被关闭了
+                Console.WriteLine("流仍然打开");
+            }
+            catch (ObjectDisposedException)
+            {
+                Console.WriteLine("流已被关闭");
+            }
         }
 
     }
