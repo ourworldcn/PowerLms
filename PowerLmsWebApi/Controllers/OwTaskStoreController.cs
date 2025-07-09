@@ -2,8 +2,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using OW.Data;
-using OwDbBase.Tasks;
 using PowerLms.Data;
 using PowerLmsServer;
 using PowerLmsServer.EfData;

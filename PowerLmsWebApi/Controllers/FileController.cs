@@ -45,7 +45,7 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 构造函数。
         /// </summary>
-        public FileController(IServiceProvider serviceProvider, IMapper mapper, AccountManager accountManager, PowerLmsUserDbContext dbContext, EntityManager entityManager, AuthorizationManager authorizationManager, OwFileManager fileManager, IOptions<OwFileManagerOptions> fileManagerOptions, ILogger<FileController> logger)
+        public FileController(IServiceProvider serviceProvider, IMapper mapper, AccountManager accountManager, PowerLmsUserDbContext dbContext, EntityManager entityManager, AuthorizationManager authorizationManager, OwFileService<PowerLmsUserDbContext> fileService, ILogger<FileController> logger)
         {
             _Mapper = mapper;
             _AccountManager = accountManager;
@@ -53,8 +53,7 @@ namespace PowerLmsWebApi.Controllers
             _ServiceProvider = serviceProvider;
             _EntityManager = entityManager;
             _AuthorizationManager = authorizationManager;
-            _FileManager = fileManager;
-            _fileManagerOptions = fileManagerOptions;
+            _FileService = fileService;
             _Logger = logger;
         }
 
@@ -64,8 +63,7 @@ namespace PowerLmsWebApi.Controllers
         EntityManager _EntityManager;
         IMapper _Mapper;
         readonly private AuthorizationManager _AuthorizationManager;
-        readonly OwFileManager _FileManager;
-        IOptions<OwFileManagerOptions> _fileManagerOptions;
+        readonly OwFileService<PowerLmsUserDbContext> _FileService;
         ILogger<FileController> _Logger;
 
         /// <summary>
@@ -154,7 +152,7 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.Add(info);
 
             var stream = file.OpenReadStream();
-            var path = Path.Combine(_FileManager.GetDirectory(), info.FilePath);
+            var path = Path.Combine(_FileService.GetDirectory(), info.FilePath);
             var dir = Path.GetDirectoryName(path);
             Directory.CreateDirectory(dir);
             using var destStream = new FileStream(path, FileMode.Create);
@@ -196,16 +194,12 @@ namespace PowerLmsWebApi.Controllers
                     CheckJobPermissions(item.ParentId.Value, "8.4");
                 }
 
-                // 删除数据库记录
-                _EntityManager.Remove(item);
-                _DbContext.SaveChanges();
-
-                // 删除磁盘文件
-                var fileDeleted = _FileManager.DeleteFile(item.FilePath);
+                // 使用 OwFileService 删除文件（包括磁盘文件和数据库记录）
+                var fileDeleted = _FileService.DeleteFile(model.Id);
                 if (!fileDeleted)
                 {
-                    _Logger.LogWarning("文件 {FilePath} 已从数据库删除但磁盘文件不存在或删除失败", item.FilePath);
-                    return StatusCode((int)HttpStatusCode.Gone, $"指定文件已经不存在: {item.FilePath}");
+                    _Logger.LogWarning("文件删除失败，文件ID: {FileId}", model.Id);
+                    return StatusCode((int)HttpStatusCode.Gone, $"指定文件不存在或删除失败");
                 }
 
                 _Logger.LogInformation("文件删除成功：{fileName}，ID：{fileId}", item.FileName, item.Id);
@@ -239,7 +233,7 @@ namespace PowerLmsWebApi.Controllers
         /// <remarks>
         /// 规则配置热更新，无需重启服务即可生效，文件上传配置在appsettings.json 或 appsettings.XXX.json中设置：
         /// {
-        ///   "OwFileManagerOptions": {
+        ///   "OwFileService": {
         ///     "MaxFileSizeMB": 5,
         ///     "AllowedFileExtensions": [
         ///       ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
@@ -268,18 +262,19 @@ namespace PowerLmsWebApi.Controllers
                 // 权限检查 - 可以提取为独立方法进一步简化
                 CheckJobPermissions(model.ParentId, "8.1");
 
-                // 使用 OwFileManager 创建文件 - 大大简化了代码
-                var fileInfo = _FileManager.CreateFile(
-                    formFile: model.File,
-                    displayName: model.DisplayName,
-                    parentId: model.ParentId,
-                    creatorId: context.User?.Id,
-                    remark: model.Remark
-                );
-
-                // 保存到数据库
-                _DbContext.PlFileInfos.Add(fileInfo);
-                _DbContext.SaveChanges();
+                // 使用 OwFileService 创建文件 - 文件会自动保存到磁盘和数据库
+                PlFileInfo fileInfo;
+                using (var fileStream = model.File.OpenReadStream())
+                {
+                    fileInfo = _FileService.CreateFile(
+                        fileStream: fileStream,
+                        fileName: model.File.FileName,
+                        displayName: model.DisplayName,
+                        parentId: model.ParentId,
+                        creatorId: context.User?.Id,
+                        remark: model.Remark
+                    );
+                }
 
                 result.Id = fileInfo.Id;
                 _Logger.LogInformation("文件上传成功：{fileName}，大小：{fileSize}MB，ID：{fileId}",
@@ -360,13 +355,13 @@ namespace PowerLmsWebApi.Controllers
                 }
 
                 // 检查文件是否存在
-                if (!_FileManager.FileExists(info.FilePath))
+                if (!_FileService.FileExists(info.FilePath))
                 {
                     _Logger.LogWarning("请求的文件不存在：{FilePath}", info.FilePath);
                     return NotFound("文件不存在");
                 }
 
-                var fullPath = _FileManager.GetFullPath(info.FilePath);
+                var fullPath = _FileService.GetFullPath(info.FilePath);
                 var stream = new FileStream(fullPath, FileMode.Open, FileAccess.Read);
                 
                 _Logger.LogDebug("文件下载：{fileName}，ID：{fileId}", info.FileName, info.Id);

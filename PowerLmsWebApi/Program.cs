@@ -5,8 +5,8 @@ using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
 using OW;
+using OW.Data;
 using OW.EntityFrameworkCore;
-using OwDbBase.Tasks;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
@@ -16,7 +16,6 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using static Org.BouncyCastle.Math.EC.ECCurve;
-
 
 internal class Program
 {
@@ -30,10 +29,19 @@ internal class Program
         var config = app.Configuration;
 
         #region 自动迁移数据库所有挂起的迁移
-        var dbContextFactory = app.Services.GetRequiredService<IDbContextFactory<PowerLmsUserDbContext>>();
-        var dbContext = dbContextFactory.CreateDbContext();
-        dbContext.Database.Migrate(); //自动迁移数据库所有挂起的迁移
+        try
+        {
+            var dbContextFactory = app.Services.GetRequiredService<IDbContextFactory<PowerLmsUserDbContext>>();
+            var dbContext = dbContextFactory.CreateDbContext();
+            dbContext.Database.Migrate(); //自动迁移数据库所有挂起的迁移
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"数据库迁移失败: {ex.Message}");
+            throw; // 重新抛出异常以便调试
+        }
         #endregion 自动迁移数据库所有挂起的迁移
+
         //app.UseRouting();
         //app.UseEndpoints(endpoints =>
         //{
@@ -87,9 +95,6 @@ internal class Program
         var builder = WebApplication.CreateBuilder(args);
         var services = builder.Services;
         services.AddMemoryCache();
-
-        services.AddOptions().Configure<OwFileManagerOptions>(builder.Configuration.GetSection("OwFileManagerOptions"));
-        //services.Configure<BatchDbWriterOptions>(builder.Configuration.GetSection("BatchDbWriterOptions"));
 
         //启用跨域
         services.AddCors(cors =>
@@ -156,6 +161,13 @@ internal class Program
         services.AddOwTaskService<PowerLmsUserDbContext>(); //添加长时间运行任务服务
         #endregion 配置应用的一般服务
 
+        #region 配置文件服务
+        // 配置 OwFileServiceOptions
+        services.Configure<OwFileServiceOptions>(builder.Configuration.GetSection(OwFileServiceOptions.SectionName));
+        // 添加文件服务
+        services.AddOwFileService<PowerLmsUserDbContext>();
+        #endregion 配置文件服务
+
         #region 配置 AutoMapper
 
         var assemblies = new Assembly[] { typeof(PowerLmsUserDbContext).Assembly, typeof(Account).Assembly, typeof(SystemResourceManager).Assembly };   //避免有尚未加载的情况
@@ -170,7 +182,5 @@ internal class Program
         services.AddNuoNuoManager(); //添加诺诺开票管理服务
         return builder;
     }
-
-
 }
 
