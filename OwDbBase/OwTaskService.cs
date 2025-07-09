@@ -1,4 +1,4 @@
-ï»¿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
@@ -17,60 +17,62 @@ using System.Threading.Tasks;
 
 namespace OW.Data
 {
-    /// <summary>ä»»åŠ¡çŠ¶æ€æšä¸¾ï¼Œæ”¯æŒä½æ ‡å¿—ç»„åˆ</summary>
+    /// <summary>ÈÎÎñ×´Ì¬Ã¶¾Ù£¬Ö§³ÖÎ»±êÖ¾×éºÏ</summary>
     [Flags]
     public enum OwTaskStatus : byte
     {
-        /// <summary>å¾…å¤„ç†</summary>
+        /// <summary>¸Õ´´½¨</summary>
+        Created = 0,
+        /// <summary>´ı´¦Àí</summary>
         Pending = 1,
-        /// <summary>æ‰§è¡Œä¸­</summary>
+        /// <summary>Ö´ĞĞÖĞ</summary>
         Running = 2,
-        /// <summary>å·²å®Œæˆ</summary>
+        /// <summary>ÒÑÍê³É</summary>
         Completed = 4,
-        /// <summary>å¤±è´¥</summary>
-        Failed = 8
+        /// <summary>Ê§°Ü</summary>
+        Failed = 8,
     }
 
     /// <summary>
-    /// é•¿æ—¶é—´è¿è¡Œä»»åŠ¡çš„å­˜å‚¨å®ä½“ï¼Œç”¨äºæŒä¹…åŒ–ä»»åŠ¡ä¿¡æ¯å’ŒçŠ¶æ€
+    /// ³¤Ê±¼äÔËĞĞÈÎÎñµÄ´æ´¢ÊµÌå£¬ÓÃÓÚ³Ö¾Ã»¯ÈÎÎñĞÅÏ¢ºÍ×´Ì¬
     /// </summary>
-    [Comment("é•¿æ—¶é—´è¿è¡Œä»»åŠ¡çš„å­˜å‚¨å®ä½“")]
+    [Comment("³¤Ê±¼äÔËĞĞÈÎÎñµÄ´æ´¢ÊµÌå")]
     [Index(nameof(CreatorId))]
     [Index(nameof(TenantId))]
     [Index(nameof(ServiceTypeName), nameof(MethodName))]
     [Index(nameof(StatusValue))]
     public class OwTaskStore : GuidKeyObjectBase
     {
-        /// <summary>è¦æ‰§è¡Œçš„æœåŠ¡ç±»å‹çš„å®Œæ•´åç§°ï¼Œç”¨äºåå°„è°ƒç”¨</summary>
-        [Comment("è¦æ‰§è¡Œçš„æœåŠ¡ç±»å‹çš„å®Œæ•´åç§°")]
+        /// <summary>ÒªÖ´ĞĞµÄ·şÎñÀàĞÍµÄÍêÕûÃû³Æ£¬ÓÃÓÚ·´Éäµ÷ÓÃ</summary>
+        [Comment("ÒªÖ´ĞĞµÄ·şÎñÀàĞÍµÄÍêÕûÃû³Æ")]
         public string ServiceTypeName { get; set; }
 
-        /// <summary>è¦æ‰§è¡Œçš„æ–¹æ³•åç§°ï¼Œé…åˆæœåŠ¡ç±»å‹ç”¨äºåå°„è°ƒç”¨</summary>
-        [Comment("è¦æ‰§è¡Œçš„æ–¹æ³•åç§°")]
+        /// <summary>ÒªÖ´ĞĞµÄ·½·¨Ãû³Æ£¬ÅäºÏ·şÎñÀàĞÍÓÃÓÚ·´Éäµ÷ÓÃ</summary>
+        [Comment("ÒªÖ´ĞĞµÄ·½·¨Ãû³Æ")]
         public string MethodName { get; set; }
 
-        /// <summary>ä»»åŠ¡å‚æ•°çš„JSONå­—ç¬¦ä¸²è¡¨ç¤ºï¼Œå­˜å‚¨åœ¨æ•°æ®åº“ä¸­</summary>
-        [Comment("ä»»åŠ¡å‚æ•°ï¼ŒJSONæ ¼å¼")]
+        /// <summary>ÈÎÎñ²ÎÊıµÄJSON×Ö·û´®±íÊ¾£¬´æ´¢ÔÚÊı¾İ¿âÖĞ</summary>
+        [Comment("ÈÎÎñ²ÎÊı£¬JSON¸ñÊ½")]
         public string ParametersJson { get; set; }
 
         /// <summary>
-        /// ä»»åŠ¡å‚æ•°çš„å­—å…¸å½¢å¼ï¼Œä¸å­˜å‚¨åœ¨æ•°æ®åº“ä¸­ï¼Œé€šè¿‡JSONåºåˆ—åŒ–/ååºåˆ—åŒ–è½¬æ¢
+        /// ÈÎÎñ²ÎÊıµÄ×ÖµäĞÎÊ½£¬²»´æ´¢ÔÚÊı¾İ¿âÖĞ£¬Í¨¹ıJSONĞòÁĞ»¯/·´ĞòÁĞ»¯×ª»»
         /// </summary>
         [NotMapped]
         public Dictionary<string, string> Parameters
         {
-            get => string.IsNullOrEmpty(ParametersJson) 
-                ? new Dictionary<string, string>() 
+            get => string.IsNullOrEmpty(ParametersJson)
+                ? new Dictionary<string, string>()
                 : JsonSerializer.Deserialize<Dictionary<string, string>>(ParametersJson);
             set => ParametersJson = value != null ? JsonSerializer.Serialize(value) : null;
         }
 
-        /// <summary>ä»»åŠ¡å½“å‰æ‰§è¡ŒçŠ¶æ€çš„å­—èŠ‚å€¼ï¼Œå­˜å‚¨åœ¨æ•°æ®åº“ä¸­</summary>
-        [Comment("ä»»åŠ¡å½“å‰æ‰§è¡ŒçŠ¶æ€")]
+        /// <summary>ÈÎÎñµ±Ç°Ö´ĞĞ×´Ì¬µÄ×Ö½ÚÖµ£¬´æ´¢ÔÚÊı¾İ¿âÖĞ</summary>
+        [Comment("ÈÎÎñµ±Ç°Ö´ĞĞ×´Ì¬")]
         public byte StatusValue { get; set; }
 
         /// <summary>
-        /// ä»»åŠ¡çŠ¶æ€çš„æšä¸¾å½¢å¼ï¼Œä¸å­˜å‚¨åœ¨æ•°æ®åº“ä¸­ï¼Œé€šè¿‡StatusValueè½¬æ¢
+        /// ÈÎÎñ×´Ì¬µÄÃ¶¾ÙĞÎÊ½£¬²»´æ´¢ÔÚÊı¾İ¿âÖĞ£¬Í¨¹ıStatusValue×ª»»
         /// </summary>
         [NotMapped]
         public OwTaskStatus Status
@@ -79,117 +81,147 @@ namespace OW.Data
             set => StatusValue = (byte)value;
         }
 
-        /// <summary>ä»»åŠ¡åˆ›å»ºæ—¶é—´ï¼ŒUTCæ ¼å¼ï¼Œç²¾åº¦åˆ°æ¯«ç§’</summary>
-        [Comment("ä»»åŠ¡åˆ›å»ºæ—¶é—´ï¼ŒUTCæ ¼å¼")]
+        /// <summary>ÈÎÎñ´´½¨Ê±¼ä£¬UTC¸ñÊ½£¬¾«¶Èµ½ºÁÃë</summary>
+        [Comment("ÈÎÎñ´´½¨Ê±¼ä£¬UTC¸ñÊ½")]
         [Precision(3)]
         public DateTime CreatedUtc { get; set; }
 
-        /// <summary>ä»»åŠ¡å¼€å§‹æ‰§è¡Œæ—¶é—´ï¼ŒUTCæ ¼å¼ï¼Œç²¾åº¦åˆ°æ¯«ç§’ï¼Œå¯ä¸ºnull</summary>
-        [Comment("ä»»åŠ¡å¼€å§‹æ‰§è¡Œæ—¶é—´ï¼ŒUTCæ ¼å¼")]
+        /// <summary>ÈÎÎñ¿ªÊ¼Ö´ĞĞÊ±¼ä£¬UTC¸ñÊ½£¬¾«¶Èµ½ºÁÃë£¬¿ÉÎªnull</summary>
+        [Comment("ÈÎÎñ¿ªÊ¼Ö´ĞĞÊ±¼ä£¬UTC¸ñÊ½")]
         [Precision(3)]
         public DateTime? StartUtc { get; set; }
 
-        /// <summary>ä»»åŠ¡å®Œæˆæ—¶é—´ï¼ŒUTCæ ¼å¼ï¼Œç²¾åº¦åˆ°æ¯«ç§’ï¼Œå¯ä¸ºnull</summary>
-        [Comment("ä»»åŠ¡å®Œæˆæ—¶é—´ï¼ŒUTCæ ¼å¼")]
+        /// <summary>ÈÎÎñÍê³ÉÊ±¼ä£¬UTC¸ñÊ½£¬¾«¶Èµ½ºÁÃë£¬¿ÉÎªnull</summary>
+        [Comment("ÈÎÎñÍê³ÉÊ±¼ä£¬UTC¸ñÊ½")]
         [Precision(3)]
         public DateTime? CompletedUtc { get; set; }
 
-        /// <summary>ä»»åŠ¡æ‰§è¡Œç»“æœçš„JSONå­—ç¬¦ä¸²è¡¨ç¤ºï¼Œå­˜å‚¨åœ¨æ•°æ®åº“ä¸­</summary>
-        [Comment("ä»»åŠ¡æ‰§è¡Œç»“æœï¼ŒJSONæ ¼å¼")]
+        /// <summary>ÈÎÎñÖ´ĞĞ½á¹ûµÄJSON×Ö·û´®±íÊ¾£¬´æ´¢ÔÚÊı¾İ¿âÖĞ</summary>
+        [Comment("ÈÎÎñÖ´ĞĞ½á¹û£¬JSON¸ñÊ½")]
         public string ResultJson { get; set; }
 
         /// <summary>
-        /// ä»»åŠ¡æ‰§è¡Œç»“æœçš„å­—å…¸å½¢å¼ï¼Œä¸å­˜å‚¨åœ¨æ•°æ®åº“ä¸­ï¼Œé€šè¿‡JSONåºåˆ—åŒ–/ååºåˆ—åŒ–è½¬æ¢
+        /// ÈÎÎñÖ´ĞĞ½á¹ûµÄ×ÖµäĞÎÊ½£¬²»´æ´¢ÔÚÊı¾İ¿âÖĞ£¬Í¨¹ıJSONĞòÁĞ»¯/·´ĞòÁĞ»¯×ª»»
         /// </summary>
         [NotMapped]
         public Dictionary<string, string> Result
         {
-            get => string.IsNullOrEmpty(ResultJson) 
-                ? new Dictionary<string, string>() 
+            get => string.IsNullOrEmpty(ResultJson)
+                ? new Dictionary<string, string>()
                 : JsonSerializer.Deserialize<Dictionary<string, string>>(ResultJson);
             set => ResultJson = value != null ? JsonSerializer.Serialize(value) : null;
         }
 
-        /// <summary>ä»»åŠ¡æ‰§è¡Œå¤±è´¥æ—¶çš„é”™è¯¯ä¿¡æ¯ï¼ŒåŒ…å«å®Œæ•´çš„å¼‚å¸¸å †æ ˆ</summary>
-        [Comment("ä»»åŠ¡æ‰§è¡Œå¤±è´¥æ—¶çš„é”™è¯¯ä¿¡æ¯")]
+        /// <summary>ÈÎÎñÖ´ĞĞÊ§°ÜÊ±µÄ´íÎóĞÅÏ¢£¬°üº¬ÍêÕûµÄÒì³£¶ÑÕ»</summary>
+        [Comment("ÈÎÎñÖ´ĞĞÊ§°ÜÊ±µÄ´íÎóĞÅÏ¢")]
         public string ErrorMessage { get; set; }
 
-        /// <summary>åˆ›å»ºæ­¤ä»»åŠ¡çš„ç”¨æˆ·IDï¼Œç”¨äºæƒé™æ§åˆ¶å’Œå®¡è®¡</summary>
-        [Comment("åˆ›å»ºæ­¤ä»»åŠ¡çš„ç”¨æˆ·ID")]
+        /// <summary>´´½¨´ËÈÎÎñµÄÓÃ»§ID£¬ÓÃÓÚÈ¨ÏŞ¿ØÖÆºÍÉó¼Æ</summary>
+        [Comment("´´½¨´ËÈÎÎñµÄÓÃ»§ID")]
         public Guid CreatorId { get; set; }
 
-        /// <summary>ä»»åŠ¡æ‰€å±çš„ç§Ÿæˆ·IDï¼Œæ”¯æŒå¤šç§Ÿæˆ·åœºæ™¯ï¼Œå¯ä¸ºnull</summary>
-        [Comment("ä»»åŠ¡æ‰€å±çš„ç§Ÿæˆ·ID")]
+        /// <summary>ÈÎÎñËùÊôµÄ×â»§ID£¬Ö§³Ö¶à×â»§³¡¾°£¬¿ÉÎªnull</summary>
+        [Comment("ÈÎÎñËùÊôµÄ×â»§ID")]
         public Guid? TenantId { get; set; }
     }
 
     /// <summary>
-    /// é€šç”¨é•¿æ—¶é—´è¿è¡Œä»»åŠ¡åŸºç¡€æœåŠ¡ç±»ï¼Œä»…æä¾›åˆ›å»ºå’Œæ‰§è¡Œä»»åŠ¡çš„æ ¸å¿ƒåŠŸèƒ½
-    /// ä½¿ç”¨.NET 6æ ‡å‡†çš„BackgroundServiceæ¨¡å¼ï¼Œæ”¯æŒå¹¶å‘æ§åˆ¶å’Œèµ„æºéš”ç¦»
+    /// Í¨ÓÃ³¤Ê±¼äÔËĞĞÈÎÎñ»ù´¡·şÎñÀà£¬½öÌá¹©´´½¨ºÍÖ´ĞĞÈÎÎñµÄºËĞÄ¹¦ÄÜ
+    /// Ê¹ÓÃ.NET 6±ê×¼µÄBackgroundServiceÄ£Ê½£¬Ö§³Ö²¢·¢¿ØÖÆºÍ×ÊÔ´¸ôÀë
+    /// ÔöÇ¿Òì³£´¦Àí£¬È·±£Ö´ĞĞÈÎÎñµÄº¯ÊıÅ×³öµÄÒì³£ÄÜ¹»ÍêÕû¼ÇÂ¼£¬°üÀ¨Õ»ĞÅÏ¢
     /// </summary>
-    /// <typeparam name="TDbContext">æ•°æ®åº“ä¸Šä¸‹æ–‡ç±»å‹ï¼Œå¿…é¡»ç»§æ‰¿è‡ªOwDbContext</typeparam>
+    /// <typeparam name="TDbContext">Êı¾İ¿âÉÏÏÂÎÄÀàĞÍ£¬±ØĞë¼Ì³Ğ×ÔOwDbContext</typeparam>
     public class OwTaskService<TDbContext> : BackgroundService where TDbContext : OwDbContext
     {
-        #region å­—æ®µå’Œå±æ€§
+        #region ×Ö¶ÎºÍÊôĞÔ
 
-        private readonly IServiceProvider _serviceProvider; // æœåŠ¡æä¾›è€…ï¼Œç”¨äºåˆ›å»ºæœåŠ¡èŒƒå›´
-        private readonly ILogger<OwTaskService<TDbContext>> _logger; // æ—¥å¿—è®°å½•å™¨
-        private readonly IDbContextFactory<TDbContext> _dbContextFactory; // æ•°æ®åº“ä¸Šä¸‹æ–‡å·¥å‚
-        private readonly ConcurrentQueue<Guid> _pendingTaskIds = new(); // å¾…æ‰§è¡Œä»»åŠ¡é˜Ÿåˆ—
-        private readonly SemaphoreSlim _semaphore; // ä¿¡å·é‡ï¼Œç”¨äºæ§åˆ¶å¹¶å‘æ•°
+        private readonly IServiceProvider _serviceProvider; // ·şÎñÌá¹©Õß£¬ÓÃÓÚ´´½¨·şÎñ·¶Î§
+        private readonly ILogger<OwTaskService<TDbContext>> _logger; // ÈÕÖ¾¼ÇÂ¼Æ÷
+        private readonly IDbContextFactory<TDbContext> _dbContextFactory; // Êı¾İ¿âÉÏÏÂÎÄ¹¤³§
+        private readonly ConcurrentQueue<Guid> _pendingTaskIds = new(); // ´ıÖ´ĞĞÈÎÎñ¶ÓÁĞ
+        private readonly SemaphoreSlim _semaphore; // ĞÅºÅÁ¿£¬ÓÃÓÚ¿ØÖÆ²¢·¢Êı
 
-        /// <summary>å½“å‰æ­£åœ¨æ‰§è¡Œçš„ä»»åŠ¡æ•°é‡ï¼Œé€šè¿‡ä¿¡å·é‡è®¡ç®—</summary>
+        /// <summary>µ±Ç°ÕıÔÚÖ´ĞĞµÄÈÎÎñÊıÁ¿£¬Í¨¹ıĞÅºÅÁ¿¼ÆËã</summary>
         public int CurrentRunningTaskCount => Environment.ProcessorCount - _semaphore.CurrentCount;
 
-        /// <summary>å½“å‰ç­‰å¾…é˜Ÿåˆ—ä¸­çš„ä»»åŠ¡æ•°é‡</summary>
+        /// <summary>µ±Ç°µÈ´ı¶ÓÁĞÖĞµÄÈÎÎñÊıÁ¿</summary>
         public int PendingTaskCount => _pendingTaskIds.Count;
 
         #endregion
 
-        #region æ„é€ å‡½æ•°
+        #region ¹¹Ôìº¯Êı
 
         /// <summary>
-        /// åˆå§‹åŒ–ä»»åŠ¡æœåŠ¡å®ä¾‹ï¼Œé…ç½®ä¾èµ–é¡¹å’Œå¹¶å‘æ§åˆ¶
+        /// ³õÊ¼»¯ÈÎÎñ·şÎñÊµÀı£¬ÅäÖÃÒÀÀµÏîºÍ²¢·¢¿ØÖÆ
         /// </summary>
-        /// <param name="serviceProvider">æœåŠ¡æä¾›è€…ï¼Œç”¨äºä¾èµ–æ³¨å…¥</param>
-        /// <param name="logger">æ—¥å¿—è®°å½•å™¨</param>
-        /// <param name="dbContextFactory">æ•°æ®åº“ä¸Šä¸‹æ–‡å·¥å‚</param>
-        /// <exception cref="ArgumentNullException">å½“ä»»ä½•å‚æ•°ä¸ºnullæ—¶æŠ›å‡º</exception>
+        /// <param name="serviceProvider">·şÎñÌá¹©Õß£¬ÓÃÓÚÒÀÀµ×¢Èë</param>
+        /// <param name="logger">ÈÕÖ¾¼ÇÂ¼Æ÷</param>
+        /// <param name="dbContextFactory">Êı¾İ¿âÉÏÏÂÎÄ¹¤³§</param>
+        /// <exception cref="ArgumentNullException">µ±ÈÎºÎ²ÎÊıÎªnullÊ±Å×³ö</exception>
         public OwTaskService(IServiceProvider serviceProvider, ILogger<OwTaskService<TDbContext>> logger, IDbContextFactory<TDbContext> dbContextFactory)
         {
             _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _dbContextFactory = dbContextFactory ?? throw new ArgumentNullException(nameof(dbContextFactory));
-            _semaphore = new SemaphoreSlim(Environment.ProcessorCount, Environment.ProcessorCount); // å¹¶å‘æ•°ä¸è¶…è¿‡CPUæ ¸å¿ƒæ•°
-            
-            _logger.LogInformation("OwTaskService å·²åˆå§‹åŒ–ï¼Œæ•°æ®åº“ä¸Šä¸‹æ–‡: {DbContext}", typeof(TDbContext).Name);
+            _semaphore = new SemaphoreSlim(Environment.ProcessorCount, Environment.ProcessorCount); // ²¢·¢Êı²»³¬¹ıCPUºËĞÄÊı
+
+            _logger.LogInformation("OwTaskService ÒÑ³õÊ¼»¯£¬Êı¾İ¿âÉÏÏÂÎÄ: {DbContext}", typeof(TDbContext).Name);
         }
 
         #endregion
 
-        #region BackgroundService å®ç°
+        #region BackgroundService ÊµÏÖ
 
         /// <summary>
-        /// æ‰§è¡Œåå°ä»»åŠ¡å¤„ç†å¾ªç¯ï¼ŒæŒç»­ç›‘å¬ä»»åŠ¡é˜Ÿåˆ—å¹¶åˆ†å‘æ‰§è¡Œ
-        /// ä½¿ç”¨åŒæ­¥æ¨¡å¼é¿å…async/awaitå¤æ‚æ€§
+        /// <inheritdoc />
         /// </summary>
-        /// <param name="stoppingToken">å–æ¶ˆä»¤ç‰Œï¼Œç”¨äºä¼˜é›…åœæ­¢æœåŠ¡</param>
-        /// <returns>è¡¨ç¤ºå¼‚æ­¥æ“ä½œçš„Task</returns>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        public override Task StartAsync(CancellationToken cancellationToken)
+        {
+            _logger.LogInformation("OwTaskService ÕıÔÚÆô¶¯...");
+            // ½«Î´Íê³ÉµÄÈÎÎñ´ÓÊı¾İ¿â¼ÓÔØµ½ÄÚ´æ¶ÓÁĞÖĞ
+            try
+            {
+                using var dbContext = _dbContextFactory.CreateDbContext();
+                var pendingTasks = dbContext.Set<OwTaskStore>()
+                    .Where(t => t.StatusValue == (byte)OwTaskStatus.Pending || t.StatusValue == (byte)OwTaskStatus.Created)
+                    .Select(t => t.Id)
+                    .ToList();
+                foreach (var taskId in pendingTasks)
+                {
+                    _pendingTaskIds.Enqueue(taskId);
+                }
+                _logger.LogInformation("ÒÑ¼ÓÔØ {Count} ¸ö´ı´¦ÀíÈÎÎñµ½¶ÓÁĞ", pendingTasks.Count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "¼ÓÔØ´ı´¦ÀíÈÎÎñÊ±·¢Éú´íÎó");
+            }
+            return base.StartAsync(cancellationToken);
+        }
+
+        /// <summary>
+        /// Ö´ĞĞºóÌ¨ÈÎÎñ´¦ÀíÑ­»·£¬³ÖĞø¼àÌıÈÎÎñ¶ÓÁĞ²¢·Ö·¢Ö´ĞĞ
+        /// Ê¹ÓÃÍ¬²½Ä£Ê½±ÜÃâasync/await¸´ÔÓĞÔ
+        /// </summary>
+        /// <param name="stoppingToken">È¡ÏûÁîÅÆ£¬ÓÃÓÚÓÅÑÅÍ£Ö¹·şÎñ</param>
+        /// <returns>±íÊ¾Òì²½²Ù×÷µÄTask</returns>
         protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
             return Task.Run(() =>
             {
-                _logger.LogInformation("OwTaskService åå°å¤„ç†å·²å¯åŠ¨");
-                
+                _logger.LogInformation("OwTaskService ºóÌ¨´¦ÀíÒÑÆô¶¯");
+
                 while (!stoppingToken.IsCancellationRequested)
                 {
                     try
                     {
                         if (_pendingTaskIds.TryDequeue(out var taskId))
                         {
-                            _semaphore.Wait(stoppingToken); // ä½¿ç”¨åŒæ­¥ç­‰å¾…
-                            
-                            _ = Task.Run(() => // åœ¨ç‹¬ç«‹çº¿ç¨‹ä¸­æ‰§è¡Œä»»åŠ¡
+                            _semaphore.Wait(stoppingToken); // Ê¹ÓÃÍ¬²½µÈ´ı
+
+                            _ = Task.Run(() => // ÔÚ¶ÀÁ¢Ïß³ÌÖĞÖ´ĞĞÈÎÎñ
                             {
                                 try
                                 {
@@ -203,53 +235,53 @@ namespace OW.Data
                         }
                         else
                         {
-                            // ä½¿ç”¨åŒæ­¥å»¶è¿Ÿæ–¹å¼
+                            // Ê¹ÓÃÍ¬²½ÑÓ³Ù·½Ê½
                             if (!stoppingToken.IsCancellationRequested)
                             {
-                                Thread.Sleep(500); // é˜Ÿåˆ—ä¸ºç©ºæ—¶ç­‰å¾…
+                                Thread.Sleep(500); // ¶ÓÁĞÎª¿ÕÊ±µÈ´ı
                             }
                         }
                     }
                     catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
                     {
-                        break; // æ­£å¸¸å–æ¶ˆ
+                        break; // Õı³£È¡Ïû
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "ä»»åŠ¡å¤„ç†å¾ªç¯ä¸­å‘ç”Ÿé”™è¯¯");
+                        _logger.LogError(ex, "ÈÎÎñ´¦ÀíÑ­»·ÖĞ·¢Éú´íÎó");
                         if (!stoppingToken.IsCancellationRequested)
                         {
-                            Thread.Sleep(1000); // å‡ºé”™æ—¶ç­‰å¾…åé‡è¯•
+                            Thread.Sleep(1000); // ³ö´íÊ±µÈ´ıºóÖØÊÔ
                         }
                     }
                 }
-                
-                _logger.LogInformation("OwTaskService åå°å¤„ç†å·²ç»“æŸ");
+
+                _logger.LogInformation("OwTaskService ºóÌ¨´¦ÀíÒÑ½áÊø");
             }, stoppingToken);
         }
 
         #endregion
 
-        #region å…¬å…±æ¥å£
+        #region ¹«¹²½Ó¿Ú
 
         /// <summary>
-        /// åˆ›å»ºå¹¶æäº¤æ–°ä»»åŠ¡åˆ°æ‰§è¡Œé˜Ÿåˆ—
+        /// ´´½¨²¢Ìá½»ĞÂÈÎÎñµ½Ö´ĞĞ¶ÓÁĞ
         /// </summary>
-        /// <param name="serviceType">è¦æ‰§è¡Œçš„æœåŠ¡ç±»å‹ï¼Œå¿…é¡»å·²æ³¨å†Œåˆ°DIå®¹å™¨</param>
-        /// <param name="methodName">è¦è°ƒç”¨çš„æ–¹æ³•åç§°ï¼Œå¿…é¡»æ˜¯å…¬å…±æ–¹æ³•</param>
-        /// <param name="parameters">æ–¹æ³•å‚æ•°å­—å…¸ï¼Œé”®ä¸ºå‚æ•°åï¼Œå€¼ä¸ºå‚æ•°å€¼çš„å­—ç¬¦ä¸²è¡¨ç¤º</param>
-        /// <param name="creatorId">åˆ›å»ºè€…ç”¨æˆ·IDï¼Œç”¨äºå®¡è®¡å’Œæƒé™æ§åˆ¶</param>
-        /// <param name="tenantId">ç§Ÿæˆ·IDï¼Œå¯é€‰ï¼Œç”¨äºå¤šç§Ÿæˆ·åœºæ™¯</param>
-        /// <returns>æ–°åˆ›å»ºä»»åŠ¡çš„å”¯ä¸€æ ‡è¯†ID</returns>
-        /// <exception cref="ArgumentNullException">å½“serviceTypeä¸ºnullæ—¶æŠ›å‡º</exception>
-        /// <exception cref="ArgumentException">å½“methodNameä¸ºç©ºæˆ–nullæ—¶æŠ›å‡º</exception>
+        /// <param name="serviceType">ÒªÖ´ĞĞµÄ·şÎñÀàĞÍ£¬±ØĞëÒÑ×¢²áµ½DIÈİÆ÷</param>
+        /// <param name="methodName">Òªµ÷ÓÃµÄ·½·¨Ãû³Æ£¬±ØĞëÊÇ¹«¹²·½·¨</param>
+        /// <param name="parameters">·½·¨²ÎÊı×Öµä£¬¼üÎª²ÎÊıÃû£¬ÖµÎª²ÎÊıÖµµÄ×Ö·û´®±íÊ¾</param>
+        /// <param name="creatorId">´´½¨ÕßÓÃ»§ID£¬ÓÃÓÚÉó¼ÆºÍÈ¨ÏŞ¿ØÖÆ</param>
+        /// <param name="tenantId">×â»§ID£¬¿ÉÑ¡£¬ÓÃÓÚ¶à×â»§³¡¾°</param>
+        /// <returns>ĞÂ´´½¨ÈÎÎñµÄÎ¨Ò»±êÊ¶ID</returns>
+        /// <exception cref="ArgumentNullException">µ±serviceTypeÎªnullÊ±Å×³ö</exception>
+        /// <exception cref="ArgumentException">µ±methodNameÎª¿Õ»ònullÊ±Å×³ö</exception>
         public Guid CreateTask(Type serviceType, string methodName, Dictionary<string, string> parameters, Guid creatorId, Guid? tenantId = null)
         {
             if (serviceType == null) throw new ArgumentNullException(nameof(serviceType));
-            if (string.IsNullOrWhiteSpace(methodName)) throw new ArgumentException("æ–¹æ³•åç§°ä¸èƒ½ä¸ºç©º", nameof(methodName));
-            
+            if (string.IsNullOrWhiteSpace(methodName)) throw new ArgumentException("·½·¨Ãû³Æ²»ÄÜÎª¿Õ", nameof(methodName));
+
             var taskId = Guid.NewGuid();
-            
+
             try
             {
                 using var dbContext = _dbContextFactory.CreateDbContext();
@@ -264,31 +296,31 @@ namespace OW.Data
                     CreatorId = creatorId,
                     TenantId = tenantId
                 };
-                
+
                 dbContext.Set<OwTaskStore>().Add(taskEntity);
                 dbContext.SaveChanges();
-                
-                _pendingTaskIds.Enqueue(taskId); // åŠ å…¥æ‰§è¡Œé˜Ÿåˆ—
-                
-                _logger.LogDebug("ä»»åŠ¡ {TaskId} å·²åˆ›å»ºï¼ŒæœåŠ¡: {Service}ï¼Œæ–¹æ³•: {Method}", taskId, serviceType.Name, methodName);
+
+                _pendingTaskIds.Enqueue(taskId); // ¼ÓÈëÖ´ĞĞ¶ÓÁĞ
+
+                _logger.LogDebug("ÈÎÎñ {TaskId} ÒÑ´´½¨£¬·şÎñ: {Service}£¬·½·¨: {Method}", taskId, serviceType.Name, methodName);
                 return taskId;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "åˆ›å»ºä»»åŠ¡å¤±è´¥ï¼ŒæœåŠ¡: {Service}ï¼Œæ–¹æ³•: {Method}", serviceType.Name, methodName);
+                _logger.LogError(ex, "´´½¨ÈÎÎñÊ§°Ü£¬·şÎñ: {Service}£¬·½·¨: {Method}", serviceType.Name, methodName);
                 throw;
             }
         }
 
         /// <summary>
-        /// åˆ›å»ºå¹¶æäº¤æ–°ä»»åŠ¡çš„æ³›å‹é‡è½½ç‰ˆæœ¬ï¼Œæä¾›ç¼–è¯‘æ—¶ç±»å‹å®‰å…¨
+        /// ´´½¨²¢Ìá½»ĞÂÈÎÎñµÄ·ºĞÍÖØÔØ°æ±¾£¬Ìá¹©±àÒëÊ±ÀàĞÍ°²È«
         /// </summary>
-        /// <typeparam name="TService">è¦æ‰§è¡Œçš„æœåŠ¡ç±»å‹ï¼Œç¼–è¯‘æ—¶ç¡®å®š</typeparam>
-        /// <param name="methodName">è¦è°ƒç”¨çš„æ–¹æ³•åç§°</param>
-        /// <param name="parameters">æ–¹æ³•å‚æ•°å­—å…¸</param>
-        /// <param name="creatorId">åˆ›å»ºè€…ç”¨æˆ·ID</param>
-        /// <param name="tenantId">ç§Ÿæˆ·IDï¼Œå¯é€‰</param>
-        /// <returns>æ–°åˆ›å»ºä»»åŠ¡çš„å”¯ä¸€æ ‡è¯†ID</returns>
+        /// <typeparam name="TService">ÒªÖ´ĞĞµÄ·şÎñÀàĞÍ£¬±àÒëÊ±È·¶¨</typeparam>
+        /// <param name="methodName">Òªµ÷ÓÃµÄ·½·¨Ãû³Æ</param>
+        /// <param name="parameters">·½·¨²ÎÊı×Öµä</param>
+        /// <param name="creatorId">´´½¨ÕßÓÃ»§ID</param>
+        /// <param name="tenantId">×â»§ID£¬¿ÉÑ¡</param>
+        /// <returns>ĞÂ´´½¨ÈÎÎñµÄÎ¨Ò»±êÊ¶ID</returns>
         public Guid CreateTask<TService>(string methodName, Dictionary<string, string> parameters, Guid creatorId, Guid? tenantId = null)
         {
             return CreateTask(typeof(TService), methodName, parameters, creatorId, tenantId);
@@ -296,92 +328,465 @@ namespace OW.Data
 
         #endregion
 
-        #region å†…éƒ¨å®ç°
+        #region ÄÚ²¿ÊµÏÖ
 
         /// <summary>
-        /// å¤„ç†æŒ‡å®šä»»åŠ¡ï¼Œä½¿ç”¨åŒæ­¥æ–¹å¼å’ŒèŒƒå›´æœåŠ¡åŒ…è£…ç¡®ä¿èµ„æºéš”ç¦»
+        /// ´¦ÀíÖ¸¶¨ÈÎÎñ£¬Ê¹ÓÃÍ¬²½·½Ê½ºÍ·¶Î§·şÎñ°ü×°È·±£×ÊÔ´¸ôÀë
+        /// ÔöÇ¿Òì³£´¦Àí£¬È·±£ÍêÕû¼ÇÂ¼Òì³£ĞÅÏ¢ºÍ¶ÑÕ»¸ú×Ù
         /// </summary>
-        /// <param name="taskId">è¦æ‰§è¡Œçš„ä»»åŠ¡ID</param>
+        /// <param name="taskId">ÒªÖ´ĞĞµÄÈÎÎñID</param>
         private void ProcessTask(Guid taskId)
         {
             OwTaskStore taskEntity = null;
-            
+            string currentStep = "³õÊ¼»¯";
+            bool taskStarted = false; // ±ê¼ÇÈÎÎñÊÇ·ñÒÑ¿ªÊ¼£¬ÓÃÓÚÈ·±£×´Ì¬¸üĞÂµÄÕıÈ·ĞÔ
+
             try
             {
-                // è·å–ä»»åŠ¡å¹¶æ›´æ–°çŠ¶æ€ä¸ºæ‰§è¡Œä¸­
+                currentStep = "²éÕÒÈÎÎñ";
+                // »ñÈ¡ÈÎÎñ²¢¸üĞÂ×´Ì¬ÎªÖ´ĞĞÖĞ
                 using (var dbContext = _dbContextFactory.CreateDbContext())
                 {
                     taskEntity = dbContext.Set<OwTaskStore>().Find(taskId);
                     if (taskEntity == null)
                     {
-                        _logger.LogWarning("æœªæ‰¾åˆ°ä»»åŠ¡ {TaskId}", taskId);
+                        _logger.LogWarning("Î´ÕÒµ½ÈÎÎñ {TaskId}", taskId);
                         return;
                     }
-                    
+
+                    currentStep = "¸üĞÂÈÎÎñ×´Ì¬ÎªÖ´ĞĞÖĞ";
                     taskEntity.StatusValue = (byte)OwTaskStatus.Running;
                     taskEntity.StartUtc = DateTime.UtcNow;
                     dbContext.SaveChanges();
+                    taskStarted = true; // ±ê¼ÇÈÎÎñÒÑ¿ªÊ¼
+
+                    _logger.LogDebug("ÈÎÎñ {TaskId} ×´Ì¬ÒÑ¸üĞÂÎªÖ´ĞĞÖĞ£¬¿ªÊ¼Ê±¼ä: {StartTime}", taskId, taskEntity.StartUtc);
                 }
-                
-                _logger.LogDebug("å¼€å§‹æ‰§è¡Œä»»åŠ¡ {TaskId}ï¼ŒæœåŠ¡: {Service}ï¼Œæ–¹æ³•: {Method}", taskId, taskEntity.ServiceTypeName, taskEntity.MethodName);
-                
-                var serviceType = Type.GetType(taskEntity.ServiceTypeName);
+
+                _logger.LogDebug("¿ªÊ¼Ö´ĞĞÈÎÎñ {TaskId}£¬·şÎñ: {Service}£¬·½·¨: {Method}", taskId, taskEntity.ServiceTypeName, taskEntity.MethodName);
+
+                currentStep = "ÑéÖ¤ÈÎÎñ»ù±¾ĞÅÏ¢";
+                // ÑéÖ¤»ù±¾²ÎÊı
+                if (string.IsNullOrWhiteSpace(taskEntity.ServiceTypeName))
+                    throw new InvalidOperationException("ÈÎÎñµÄ·şÎñÀàĞÍÃû³ÆÎª¿Õ");
+                if (string.IsNullOrWhiteSpace(taskEntity.MethodName))
+                    throw new InvalidOperationException("ÈÎÎñµÄ·½·¨Ãû³ÆÎª¿Õ");
+
+                currentStep = "²éÕÒ·şÎñÀàĞÍ";
+                // ¸Ä½øµÄÀàĞÍ²éÕÒ»úÖÆ
+                var serviceType = FindTypeByName(taskEntity.ServiceTypeName);
                 if (serviceType == null)
-                    throw new InvalidOperationException($"æ— æ³•æ‰¾åˆ°ç±»å‹: {taskEntity.ServiceTypeName}");
-                
+                    throw new InvalidOperationException($"ÎŞ·¨ÕÒµ½ÀàĞÍ: {taskEntity.ServiceTypeName}");
+
+                _logger.LogDebug("ÈÎÎñ {TaskId} ÕÒµ½·şÎñÀàĞÍ: {ServiceType}", taskId, serviceType.FullName);
+
+                currentStep = "²éÕÒ·½·¨";
                 var methodInfo = serviceType.GetMethod(taskEntity.MethodName, BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance);
                 if (methodInfo == null)
-                    throw new InvalidOperationException($"åœ¨æœåŠ¡ {taskEntity.ServiceTypeName} ä¸­æ‰¾ä¸åˆ°æ–¹æ³• {taskEntity.MethodName}");
-                
+                    throw new InvalidOperationException($"ÔÚ·şÎñ {taskEntity.ServiceTypeName} ÖĞÕÒ²»µ½·½·¨ {taskEntity.MethodName}");
+
+                _logger.LogDebug("ÈÎÎñ {TaskId} ÕÒµ½·½·¨: {Method}, ÊÇ·ñ¾²Ì¬: {IsStatic}", taskId, methodInfo.Name, methodInfo.IsStatic);
+
+                currentStep = "×¼±¸·½·¨²ÎÊı";
                 object result;
-                var parameters = PrepareMethodParameters(methodInfo, taskEntity.Parameters);
+                object[] parameters;
                 
+                try
+                {
+                    parameters = PrepareMethodParameters(methodInfo, taskEntity.Parameters);
+                    _logger.LogDebug("ÈÎÎñ {TaskId} ²ÎÊı×¼±¸Íê³É£¬²ÎÊıÊıÁ¿: {ParameterCount}", taskId, parameters?.Length ?? 0);
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException($"×¼±¸·½·¨²ÎÊıÊ±·¢Éú´íÎó: {ex.Message}", ex);
+                }
+
+                currentStep = "Ö´ĞĞ·½·¨";
                 if (methodInfo.IsStatic)
                 {
-                    // é™æ€æ–¹æ³•è°ƒç”¨ï¼šæ£€æŸ¥æ˜¯å¦éœ€è¦æ³¨å…¥æœåŠ¡æä¾›è€…
+                    // ¾²Ì¬·½·¨µ÷ÓÃ£º¼ì²éÊÇ·ñĞèÒª×¢Èë·şÎñÌá¹©Õß
                     if (HasServiceProviderParameter(methodInfo))
                     {
-                        // ä¸ºé™æ€æ–¹æ³•æ³¨å…¥æœåŠ¡æä¾›è€…
+                        currentStep = "´´½¨·şÎñ×÷ÓÃÓò²¢Ö´ĞĞ¾²Ì¬·½·¨";
+                        // Îª¾²Ì¬·½·¨×¢Èë·şÎñÌá¹©Õß
                         using var scope = _serviceProvider.CreateScope();
                         var scopedProvider = scope.ServiceProvider;
-                        result = InvokeStaticMethodWithServiceProvider(methodInfo, parameters, scopedProvider);
+                        if (scopedProvider == null)
+                            throw new InvalidOperationException("ÎŞ·¨´´½¨·şÎñ×÷ÓÃÓò");
+
+                        _logger.LogDebug("ÈÎÎñ {TaskId} ¿ªÊ¼Ö´ĞĞ¾²Ì¬·½·¨£¨º¬·şÎñÌá¹©Õß£©", taskId);
+                        
+                        result = InvokeMethodWithExceptionHandling(methodInfo, null, parameters, scopedProvider, taskId);
                     }
                     else
                     {
-                        // æ™®é€šé™æ€æ–¹æ³•è°ƒç”¨
-                        result = methodInfo.Invoke(null, parameters);
+                        currentStep = "Ö´ĞĞ¾²Ì¬·½·¨";
+                        _logger.LogDebug("ÈÎÎñ {TaskId} ¿ªÊ¼Ö´ĞĞ¾²Ì¬·½·¨", taskId);
+                        
+                        result = InvokeMethodWithExceptionHandling(methodInfo, null, parameters, null, taskId);
                     }
                 }
                 else
                 {
-                    // å®ä¾‹æ–¹æ³•è°ƒç”¨ï¼ˆåŸæœ‰é€»è¾‘ï¼‰
+                    currentStep = "´´½¨·şÎñ×÷ÓÃÓò²¢½âÎö·şÎñÊµÀı";
+                    // ÊµÀı·½·¨µ÷ÓÃ
                     using var scope = _serviceProvider.CreateScope();
                     var scopedProvider = scope.ServiceProvider;
-                    
+                    if (scopedProvider == null)
+                        throw new InvalidOperationException("ÎŞ·¨´´½¨·şÎñ×÷ÓÃÓò");
+
                     var service = scopedProvider.GetService(serviceType);
                     if (service == null)
-                        throw new InvalidOperationException($"æ— æ³•ä»DIå®¹å™¨è§£ææœåŠ¡: {taskEntity.ServiceTypeName}");
+                        throw new InvalidOperationException($"ÎŞ·¨´ÓDIÈİÆ÷½âÎö·şÎñ: {taskEntity.ServiceTypeName}");
+
+                    currentStep = "Ö´ĞĞÊµÀı·½·¨";
+                    _logger.LogDebug("ÈÎÎñ {TaskId} ¿ªÊ¼Ö´ĞĞÊµÀı·½·¨", taskId);
                     
-                    result = methodInfo.Invoke(service, parameters);
+                    result = InvokeMethodWithExceptionHandling(methodInfo, service, parameters, scopedProvider, taskId);
                 }
-                
+
+                currentStep = "¸üĞÂÈÎÎñÍê³É×´Ì¬";
+                _logger.LogDebug("ÈÎÎñ {TaskId} Ö´ĞĞÍê³É£¬¿ªÊ¼¸üĞÂ×´Ì¬", taskId);
                 UpdateTaskCompletion(taskId, result);
-                
-                _logger.LogDebug("ä»»åŠ¡ {TaskId} æ‰§è¡ŒæˆåŠŸ", taskId);
+
+                _logger.LogDebug("ÈÎÎñ {TaskId} Ö´ĞĞ³É¹¦", taskId);
             }
             catch (Exception ex)
             {
-                var errorMessage = GetExceptionMessage(ex);
-                UpdateTaskFailure(taskId, errorMessage);
-                _logger.LogWarning(ex, "ä»»åŠ¡ {TaskId} æ‰§è¡Œå¤±è´¥: {Error}", taskId, errorMessage);
+                // ÔöÇ¿µÄ´íÎóĞÅÏ¢£¬°üº¬µ±Ç°Ö´ĞĞ²½ÖèºÍÍêÕûµÄÒì³£ĞÅÏ¢
+                var contextualError = $"ÈÎÎñÖ´ĞĞÊ§°Ü£¬µ±Ç°²½Öè: {currentStep}";
+                if (taskEntity != null)
+                {
+                    contextualError += $"\nÈÎÎñÏêÇé: ID={taskId}, ·şÎñ={taskEntity.ServiceTypeName}, ·½·¨={taskEntity.MethodName}";
+                    contextualError += $"\nÈÎÎñ²ÎÊı: {taskEntity.ParametersJson ?? "ÎŞ"}";
+                }
+                
+                // ¼ÇÂ¼ÏêÏ¸µÄÒì³£ĞÅÏ¢µ½ÈÕÖ¾
+                _logger.LogWarning(ex, "ÈÎÎñ {TaskId} ÔÚ²½Öè '{CurrentStep}' Ö´ĞĞÊ§°Ü", taskId, currentStep);
+
+                // ´´½¨°üº¬ÉÏÏÂÎÄĞÅÏ¢µÄÒì³££¬±£ÁôÔ­Ê¼Òì³£×÷ÎªÄÚ²¿Òì³£
+                var wrappedException = new InvalidOperationException(contextualError, ex);
+                
+                // Ìí¼Ó¶îÍâµÄÉÏÏÂÎÄĞÅÏ¢µ½Òì³£Êı¾İÖĞ
+                wrappedException.Data["TaskId"] = taskId;
+                wrappedException.Data["ExecutionStep"] = currentStep;
+                wrappedException.Data["TaskStarted"] = taskStarted;
+                wrappedException.Data["ExecutionTime"] = DateTime.UtcNow;
+                
+                if (taskEntity != null)
+                {
+                    wrappedException.Data["ServiceTypeName"] = taskEntity.ServiceTypeName;
+                    wrappedException.Data["MethodName"] = taskEntity.MethodName;
+                    wrappedException.Data["TaskCreatedUtc"] = taskEntity.CreatedUtc;
+                    wrappedException.Data["TaskStartUtc"] = taskEntity.StartUtc;
+                    wrappedException.Data["CreatorId"] = taskEntity.CreatorId;
+                    wrappedException.Data["TenantId"] = taskEntity.TenantId;
+                }
+                
+                // »ñÈ¡ÍêÕûµÄ´íÎóĞÅÏ¢£¨°üÀ¨¶ÑÕ»¸ú×Ù£©
+                var errorMessage = GetCompleteExceptionMessage(wrappedException);
+
+                // È·±£ÈÎÎñ×´Ì¬±»ÕıÈ·¸üĞÂÎªÊ§°Ü
+                try
+                {
+                    if (taskStarted)
+                    {
+                        UpdateTaskFailure(taskId, errorMessage);
+                        _logger.LogDebug("ÈÎÎñ {TaskId} Ê§°Ü×´Ì¬ÒÑ¸üĞÂ", taskId);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("ÈÎÎñ {TaskId} ÔÚ¿ªÊ¼Ç°¾ÍÊ§°ÜÁË£¬×´Ì¬¿ÉÄÜĞèÒªÊÖ¶¯¼ì²é", taskId);
+                        UpdateTaskFailure(taskId, errorMessage);
+                    }
+                }
+                catch (Exception updateEx)
+                {
+                    _logger.LogError(updateEx, "¸üĞÂÈÎÎñ {TaskId} Ê§°Ü×´Ì¬Ê±·¢Éú´íÎó", taskId);
+                }
             }
         }
 
         /// <summary>
-        /// æ£€æŸ¥æ–¹æ³•æ˜¯å¦æœ‰æœåŠ¡æä¾›è€…å‚æ•°
+        /// ¸Ä½øµÄ·½·¨µ÷ÓÃ£¬°üº¬ÍêÕûµÄÒì³£´¦ÀíºÍ¶ÑÕ»ĞÅÏ¢±£´æ
         /// </summary>
-        /// <param name="methodInfo">æ–¹æ³•ä¿¡æ¯</param>
-        /// <returns>å¦‚æœæ–¹æ³•éœ€è¦æœåŠ¡æä¾›è€…åˆ™è¿”å›true</returns>
+        /// <param name="methodInfo">·½·¨ĞÅÏ¢</param>
+        /// <param name="service">·şÎñÊµÀı£¨¾²Ì¬·½·¨Îªnull£©</param>
+        /// <param name="parameters">·½·¨²ÎÊı</param>
+        /// <param name="serviceProvider">·şÎñÌá¹©Õß</param>
+        /// <param name="taskId">ÈÎÎñID</param>
+        /// <returns>·½·¨Ö´ĞĞ½á¹û</returns>
+        private object InvokeMethodWithExceptionHandling(MethodInfo methodInfo, object service, object[] parameters, IServiceProvider serviceProvider, Guid taskId)
+        {
+            try
+            {
+                // Èç¹ûÊÇ¾²Ì¬·½·¨ÇÒĞèÒª·şÎñÌá¹©Õß£¬×¢Èë·şÎñÌá¹©Õß
+                if (methodInfo.IsStatic && serviceProvider != null && HasServiceProviderParameter(methodInfo))
+                {
+                    return InvokeStaticMethodWithServiceProvider(methodInfo, parameters, serviceProvider, taskId);
+                }
+                else
+                {
+                    return methodInfo.Invoke(service, parameters);
+                }
+            }
+            catch (TargetInvocationException tie)
+            {
+                // ÌáÈ¡ÄÚ²¿Òì³££¬Í¬Ê±±£ÁôÔ­Ê¼Òì³£µÄÍêÕûĞÅÏ¢
+                var innerException = tie.InnerException ?? tie;
+                var enhancedException = new InvalidOperationException(
+                    $"·½·¨Ö´ĞĞÊ±·¢ÉúÒì³£: {innerException.Message}\nÔ­Ê¼·´ÉäÒì³£: {tie.Message}", 
+                    innerException);
+                
+                // ½«Ô­Ê¼TargetInvocationExceptionµÄĞÅÏ¢Ìí¼Óµ½DataÖĞ
+                enhancedException.Data["OriginalTargetInvocationException"] = tie.ToString();
+                enhancedException.Data["OriginalStackTrace"] = tie.StackTrace;
+                enhancedException.Data["TargetMethod"] = methodInfo.Name;
+                enhancedException.Data["TargetType"] = methodInfo.DeclaringType?.FullName;
+                enhancedException.Data["IsStatic"] = methodInfo.IsStatic;
+                if (service != null)
+                {
+                    enhancedException.Data["ServiceInstance"] = service.GetType().FullName;
+                }
+                
+                throw enhancedException;
+            }
+            catch (Exception ex)
+            {
+                // ÎªÆäËûÒì³£Ìí¼ÓÉÏÏÂÎÄĞÅÏ¢
+                var enhancedException = new InvalidOperationException(
+                    $"·½·¨Ö´ĞĞÊ±·¢ÉúÒì³£: {ex.Message}", ex);
+                
+                enhancedException.Data["TargetMethod"] = methodInfo.Name;
+                enhancedException.Data["TargetType"] = methodInfo.DeclaringType?.FullName;
+                enhancedException.Data["IsStatic"] = methodInfo.IsStatic;
+                enhancedException.Data["MethodParameters"] = string.Join(", ", parameters?.Select(p => p?.ToString() ?? "null") ?? Array.Empty<string>());
+                if (service != null)
+                {
+                    enhancedException.Data["ServiceInstance"] = service.GetType().FullName;
+                }
+                
+                throw enhancedException;
+            }
+        }
+
+        /// <summary>
+        /// ´ÓÒì³£¶ÔÏóÌáÈ¡ÍêÕûµÄ´íÎóĞÅÏ¢£¬°üÀ¨ÄÚ²¿Òì³£Á´ºÍ¶ÑÕ»ĞÅÏ¢
+        /// È·±£ËùÓĞÒì³£ĞÅÏ¢£¨°üÀ¨·´Éäµ÷ÓÃµÄÒì³££©¶¼ÄÜ±»ÍêÕû¼ÇÂ¼
+        /// </summary>
+        /// <param name="ex">Òì³£¶ÔÏó</param>
+        /// <returns>¸ñÊ½»¯µÄÍêÕû´íÎóĞÅÏ¢×Ö·û´®£¬°üº¬¶ÑÕ»¸ú×Ù</returns>
+        private static string GetCompleteExceptionMessage(Exception ex)
+        {
+            if (ex == null)
+                return "Î´ÖªÒì³£";
+
+            var errorDetails = new List<string>();
+            var currentEx = ex;
+            var exceptionLevel = 0;
+
+            // ±éÀúÒì³£Á´£¬ÊÕ¼¯ËùÓĞÒì³£ĞÅÏ¢
+            while (currentEx != null)
+            {
+                var exceptionInfo = new List<string>();
+
+                // Òì³£»ù±¾ĞÅÏ¢
+                exceptionInfo.Add($"Òì³£¼¶±ğ: {exceptionLevel}");
+                exceptionInfo.Add($"Òì³£ÀàĞÍ: {currentEx.GetType().FullName}");
+                exceptionInfo.Add($"Òì³£ÏûÏ¢: {currentEx.Message}");
+
+                // Èç¹ûÓĞÄ¿±êÕ¾µãĞÅÏ¢£¬Ìí¼ÓËü
+                if (currentEx.TargetSite != null)
+                {
+                    exceptionInfo.Add($"Ä¿±ê·½·¨: {currentEx.TargetSite.DeclaringType?.FullName}.{currentEx.TargetSite.Name}");
+                    
+                    // »ñÈ¡Ä¿±ê·½·¨µÄ²ÎÊıĞÅÏ¢
+                    var parameters = currentEx.TargetSite.GetParameters();
+                    if (parameters.Length > 0)
+                    {
+                        var parameterInfo = string.Join(", ", parameters.Select(p => $"{p.ParameterType.Name} {p.Name}"));
+                        exceptionInfo.Add($"Ä¿±ê·½·¨²ÎÊı: {parameterInfo}");
+                    }
+                }
+
+                // Èç¹ûÓĞÔ´ĞÅÏ¢£¬Ìí¼ÓËü
+                if (!string.IsNullOrEmpty(currentEx.Source))
+                {
+                    exceptionInfo.Add($"Òì³£Ô´: {currentEx.Source}");
+                }
+
+                // ¼ÇÂ¼HResult£¨Èç¹ûÓĞÓÃ£©
+                if (currentEx.HResult != 0)
+                {
+                    exceptionInfo.Add($"HResult: 0x{currentEx.HResult:X8}");
+                }
+
+                // ¶ÑÕ»¸ú×ÙĞÅÏ¢ - ÕâÊÇ×îÖØÒªµÄ²¿·Ö
+                if (!string.IsNullOrEmpty(currentEx.StackTrace))
+                {
+                    exceptionInfo.Add($"¶ÑÕ»¸ú×Ù:\n{currentEx.StackTrace}");
+                }
+                else
+                {
+                    // Èç¹ûÃ»ÓĞ¶ÑÕ»¸ú×Ù£¬³¢ÊÔ»ñÈ¡µ±Ç°µ÷ÓÃÕ»
+                    try
+                    {
+                        var stackTrace = new System.Diagnostics.StackTrace(currentEx, true);
+                        if (stackTrace.FrameCount > 0)
+                        {
+                            exceptionInfo.Add($"¶ÑÕ»¸ú×Ù£¨Í¨¹ıStackTrace»ñÈ¡£©:\n{stackTrace}");
+                        }
+                    }
+                    catch
+                    {
+                        // Èç¹ûÎŞ·¨»ñÈ¡¶ÑÕ»¸ú×Ù£¬ÖÁÉÙ¼ÇÂ¼ÕâÒ»µã
+                        exceptionInfo.Add("¶ÑÕ»¸ú×Ù: ÎŞ·¨»ñÈ¡¶ÑÕ»¸ú×ÙĞÅÏ¢");
+                    }
+                }
+
+                // Èç¹ûÓĞ¸½¼ÓÊı¾İ£¬Ìí¼ÓËü
+                if (currentEx.Data != null && currentEx.Data.Count > 0)
+                {
+                    var dataEntries = new List<string>();
+                    foreach (var key in currentEx.Data.Keys)
+                    {
+                        try
+                        {
+                            dataEntries.Add($"  {key}: {currentEx.Data[key]}");
+                        }
+                        catch
+                        {
+                            dataEntries.Add($"  {key}: <ÎŞ·¨ĞòÁĞ»¯>");
+                        }
+                    }
+                    exceptionInfo.Add($"¸½¼ÓÊı¾İ:\n{string.Join("\n", dataEntries)}");
+                }
+
+                // Õë¶ÔTargetInvocationExceptionµÄÌØÊâ´¦Àí
+                if (currentEx is TargetInvocationException tie)
+                {
+                    exceptionInfo.Add("×¢Òâ: ÕâÊÇÒ»¸ö·´Éäµ÷ÓÃÒì³££¬ÕæÕıµÄÒì³£ÔÚInnerExceptionÖĞ");
+                    if (tie.InnerException != null)
+                    {
+                        exceptionInfo.Add($"ÄÚ²¿Òì³£Ô¤ÀÀ: {tie.InnerException.GetType().Name} - {tie.InnerException.Message}");
+                    }
+                }
+
+                // Õë¶ÔAggregateExceptionµÄÌØÊâ´¦Àí
+                if (currentEx is AggregateException aggEx)
+                {
+                    exceptionInfo.Add($"¾ÛºÏÒì³£°üº¬ {aggEx.InnerExceptions.Count} ¸öÄÚ²¿Òì³£");
+                    for (int i = 0; i < aggEx.InnerExceptions.Count; i++)
+                    {
+                        var innerEx = aggEx.InnerExceptions[i];
+                        exceptionInfo.Add($"  ¾ÛºÏÒì³£[{i}]: {innerEx.GetType().Name} - {innerEx.Message}");
+                    }
+                }
+
+                errorDetails.Add($"=== Òì³£ {exceptionLevel} ===\n{string.Join("\n", exceptionInfo)}");
+
+                currentEx = currentEx.InnerException;
+                exceptionLevel++;
+            }
+
+            // Ìí¼ÓÊ±¼ä´ÁºÍ»·¾³ĞÅÏ¢
+            var environmentInfo = new List<string>
+            {
+                $"Òì³£·¢ÉúÊ±¼ä: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss.fff} UTC",
+                $"±¾µØÊ±¼ä: {DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}",
+                $"»úÆ÷Ãû³Æ: {Environment.MachineName}",
+                $"ÓÃ»§Óò: {Environment.UserDomainName}",
+                $"ÓÃ»§Ãû: {Environment.UserName}",
+                $"²Ù×÷ÏµÍ³: {Environment.OSVersion}",
+                $"½ø³ÌID: {Environment.ProcessId}",
+                $"Ïß³ÌID: {Thread.CurrentThread.ManagedThreadId}",
+                $"Ïß³ÌÃû³Æ: {Thread.CurrentThread.Name ?? "Î´ÃüÃû"}",
+                $"Ó¦ÓÃ³ÌĞòÓò: {AppDomain.CurrentDomain.FriendlyName}",
+                $"¹¤×÷Ä¿Â¼: {Environment.CurrentDirectory}",
+                $"CLR°æ±¾: {Environment.Version}",
+                $"´¦ÀíÆ÷ÊıÁ¿: {Environment.ProcessorCount}",
+                $"ÏµÍ³Æô¶¯Ê±¼ä: {Environment.TickCount}ms"
+            };
+
+            // Ìí¼Óµ±Ç°µ÷ÓÃÕ»£¨Èç¹û¿ÉÓÃ£©
+            try
+            {
+                var currentStackTrace = new System.Diagnostics.StackTrace(true);
+                if (currentStackTrace.FrameCount > 0)
+                {
+                    environmentInfo.Add($"µ±Ç°µ÷ÓÃÕ»:\n{currentStackTrace}");
+                }
+            }
+            catch
+            {
+                environmentInfo.Add("µ±Ç°µ÷ÓÃÕ»: ÎŞ·¨»ñÈ¡");
+            }
+
+            var fullErrorMessage = new List<string>
+            {
+                "=== ÈÎÎñÖ´ĞĞÒì³£ÏêÇé ===",
+                string.Join("\n", environmentInfo),
+                "",
+                string.Join("\n\n", errorDetails),
+                "=== Òì³£ÏêÇé½áÊø ==="
+            };
+
+            return string.Join("\n", fullErrorMessage);
+        }
+
+        /// <summary>
+        /// ¸Ä½øµÄÀàĞÍ²éÕÒ·½·¨£¬Ö§³ÖÔÚËùÓĞÒÑ¼ÓÔØ³ÌĞò¼¯ÖĞ²éÕÒÀàĞÍ
+        /// </summary>
+        /// <param name="typeName">ÍêÕûµÄÀàĞÍÃû³Æ</param>
+        /// <returns>ÕÒµ½µÄÀàĞÍ£¬Èç¹ûÎ´ÕÒµ½Ôò·µ»Ønull</returns>
+        private static Type FindTypeByName(string typeName)
+        {
+            if (string.IsNullOrWhiteSpace(typeName))
+                return null;
+
+            // Ê×ÏÈ³¢ÊÔ±ê×¼µÄType.GetType()
+            var type = Type.GetType(typeName);
+            if (type != null)
+                return type;
+
+            // Èç¹ûÊ§°Ü£¬±éÀúµ±Ç°Ó¦ÓÃÓòÖĞµÄËùÓĞ³ÌĞò¼¯
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                try
+                {
+                    type = assembly.GetType(typeName);
+                    if (type != null)
+                        return type;
+
+                    // Ò²³¢ÊÔ²»Çø·Ö´óĞ¡Ğ´µÄÆ¥Åä
+                    var types = assembly.GetTypes().Where(t =>
+                        string.Equals(t.FullName, typeName, StringComparison.OrdinalIgnoreCase)).ToArray();
+
+                    if (types.Length == 1)
+                        return types[0];
+                    else if (types.Length > 1)
+                        throw new InvalidOperationException($"ÕÒµ½¶à¸öÆ¥ÅäµÄÀàĞÍ: {typeName}");
+                }
+                catch (ReflectionTypeLoadException)
+                {
+                    // Ä³Ğ©³ÌĞò¼¯¿ÉÄÜÎŞ·¨¼ÓÔØËùÓĞÀàĞÍ£¬Ìø¹ıÕâĞ©Òì³£
+                    continue;
+                }
+                catch (Exception)
+                {
+                    // Ìø¹ıÆäËûÒì³££¬¼ÌĞøËÑË÷ÏÂÒ»¸ö³ÌĞò¼¯
+                    continue;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// ¼ì²é·½·¨ÊÇ·ñÓĞ·şÎñÌá¹©Õß²ÎÊı
+        /// </summary>
+        /// <param name="methodInfo">·½·¨ĞÅÏ¢</param>
+        /// <returns>Èç¹û·½·¨ĞèÒª·şÎñÌá¹©ÕßÔò·µ»Øtrue</returns>
         private static bool HasServiceProviderParameter(MethodInfo methodInfo)
         {
             var parameters = methodInfo.GetParameters();
@@ -389,52 +794,90 @@ namespace OW.Data
         }
 
         /// <summary>
-        /// ä¸ºé™æ€æ–¹æ³•è°ƒç”¨æ³¨å…¥æœåŠ¡æä¾›è€…
+        /// Îª¾²Ì¬·½·¨µ÷ÓÃ×¢Èë·şÎñÌá¹©ÕßºÍÈÎÎñID
+        /// ÔöÇ¿´¦ÀíÌØÊâ²ÎÊı×¢Èë£¨taskId, serviceProvider£©
         /// </summary>
-        /// <param name="methodInfo">æ–¹æ³•ä¿¡æ¯</param>
-        /// <param name="parameters">åŸå§‹å‚æ•°æ•°ç»„</param>
-        /// <param name="serviceProvider">æœåŠ¡æä¾›è€…</param>
-        /// <returns>æ–¹æ³•æ‰§è¡Œç»“æœ</returns>
-        private static object InvokeStaticMethodWithServiceProvider(MethodInfo methodInfo, object[] parameters, IServiceProvider serviceProvider)
+        /// <param name="methodInfo">·½·¨ĞÅÏ¢</param>
+        /// <param name="parameters">Ô­Ê¼²ÎÊıÊı×é</param>
+        /// <param name="serviceProvider">·şÎñÌá¹©Õß</param>
+        /// <param name="taskId">ÈÎÎñID</param>
+        /// <returns>·½·¨Ö´ĞĞ½á¹û</returns>
+        private object InvokeStaticMethodWithServiceProvider(MethodInfo methodInfo, object[] parameters, IServiceProvider serviceProvider, Guid taskId)
         {
             var methodParams = methodInfo.GetParameters();
             var enhancedParameters = new object[methodParams.Length];
-            
-            // å¤åˆ¶åŸæœ‰å‚æ•°
+
+            // ¸´ÖÆÔ­ÓĞ²ÎÊı
             Array.Copy(parameters, enhancedParameters, Math.Min(parameters.Length, enhancedParameters.Length));
-            
-            // æŸ¥æ‰¾å¹¶æ³¨å…¥æœåŠ¡æä¾›è€…å‚æ•°
+
+            // ²éÕÒ²¢×¢ÈëÌØÊâ²ÎÊı
             for (int i = 0; i < methodParams.Length; i++)
             {
+                // ×¢Èë·şÎñÌá¹©Õß²ÎÊı
                 if (methodParams[i].ParameterType == typeof(IServiceProvider))
                 {
                     enhancedParameters[i] = serviceProvider;
-                    break;
+                }
+                // ×¢ÈëÈÎÎñID²ÎÊı
+                else if (methodParams[i].ParameterType == typeof(Guid) && 
+                         string.Equals(methodParams[i].Name, "taskId", StringComparison.OrdinalIgnoreCase))
+                {
+                    enhancedParameters[i] = taskId;
                 }
             }
-            
+
             return methodInfo.Invoke(null, enhancedParameters);
         }
 
         /// <summary>
-        /// æ ¹æ®æ–¹æ³•ä¿¡æ¯å’Œå‚æ•°å­—å…¸å‡†å¤‡æ–¹æ³•è°ƒç”¨å‚æ•°æ•°ç»„
+        /// ¸ù¾İ·½·¨ĞÅÏ¢ºÍ²ÎÊı×Öµä×¼±¸·½·¨µ÷ÓÃ²ÎÊıÊı×é
+        /// ÔöÇ¿´¦ÀíÌØÊâ²ÎÊıÆ¥Åä£¬ÌØ±ğÊÇ¶ÔÓÚDictionary<string, string>ÀàĞÍµÄ²ÎÊı
         /// </summary>
-        /// <param name="methodInfo">ç›®æ ‡æ–¹æ³•çš„åå°„ä¿¡æ¯</param>
-        /// <param name="parameterDict">å‚æ•°åå€¼å¯¹å­—å…¸</param>
-        /// <returns>å‡†å¤‡å¥½çš„å‚æ•°æ•°ç»„ï¼ŒæŒ‰æ–¹æ³•ç­¾åé¡ºåºæ’åˆ—</returns>
+        /// <param name="methodInfo">Ä¿±ê·½·¨µÄ·´ÉäĞÅÏ¢</param>
+        /// <param name="parameterDict">²ÎÊıÃûÖµ¶Ô×Öµä</param>
+        /// <returns>×¼±¸ºÃµÄ²ÎÊıÊı×é£¬°´·½·¨Ç©ÃûË³ĞòÅÅÁĞ</returns>
         private static object[] PrepareMethodParameters(MethodInfo methodInfo, Dictionary<string, string> parameterDict)
         {
             var methodParams = methodInfo.GetParameters();
             var parameters = new object[methodParams.Length];
-            
+
             for (int i = 0; i < methodParams.Length; i++)
             {
                 var param = methodParams[i];
+                
+                // ÌØÊâ´¦Àí£ºÈç¹û²ÎÊıÀàĞÍÊÇDictionary<string, string>ÇÒ²ÎÊıÃûÎª"parameters"
+                // Ö±½Ó´«µİÕû¸öparameterDict£¬ÕâÊÇÈÎÎñÏµÍ³µÄÔ¼¶¨
+                if (param.ParameterType == typeof(Dictionary<string, string>) && 
+                    string.Equals(param.Name, "parameters", StringComparison.OrdinalIgnoreCase))
+                {
+                    parameters[i] = parameterDict ?? new Dictionary<string, string>();
+                    continue;
+                }
+                
+                // ÌØÊâ´¦Àí£ºÈç¹û²ÎÊıÀàĞÍÊÇGuidÇÒ²ÎÊıÃûÎª"taskId"
+                // ²»´Ó×ÖµäÖĞ²éÕÒ£¬¶øÊÇÔÚºóĞøÓÉInvokeStaticMethodWithServiceProvider´¦Àí
+                if (param.ParameterType == typeof(Guid) && 
+                    string.Equals(param.Name, "taskId", StringComparison.OrdinalIgnoreCase))
+                {
+                    parameters[i] = Guid.Empty; // ÁÙÊ±Öµ£¬»áÔÚInvokeStaticMethodWithServiceProviderÖĞ±»ÕıÈ·ÉèÖÃ
+                    continue;
+                }
+                
+                // ÌØÊâ´¦Àí£ºÈç¹û²ÎÊıÀàĞÍÊÇIServiceProviderÇÒ²ÎÊıÃûÎª"serviceProvider"
+                // ²»´Ó×ÖµäÖĞ²éÕÒ£¬¶øÊÇÔÚºóĞøÓÉInvokeStaticMethodWithServiceProvider´¦Àí
+                if (param.ParameterType == typeof(IServiceProvider) && 
+                    string.Equals(param.Name, "serviceProvider", StringComparison.OrdinalIgnoreCase))
+                {
+                    parameters[i] = null; // ÁÙÊ±Öµ£¬»áÔÚInvokeStaticMethodWithServiceProviderÖĞ±»ÕıÈ·ÉèÖÃ
+                    continue;
+                }
+
+                // ³£¹æ²ÎÊı´¦Àí
                 if (parameterDict?.TryGetValue(param.Name, out var paramValue) == true && !string.IsNullOrEmpty(paramValue))
                 {
                     try
                     {
-                        // å¤„ç†åŸºæœ¬ç±»å‹çš„è½¬æ¢
+                        // ´¦Àí»ù±¾ÀàĞÍµÄ×ª»»
                         if (param.ParameterType == typeof(Guid) || param.ParameterType == typeof(Guid?))
                         {
                             if (param.ParameterType == typeof(Guid?))
@@ -465,15 +908,15 @@ namespace OW.Data
                     parameters[i] = param.ParameterType.IsValueType ? Activator.CreateInstance(param.ParameterType) : null;
                 }
             }
-            
+
             return parameters;
         }
 
         /// <summary>
-        /// æ›´æ–°ä»»åŠ¡ä¸ºå®ŒæˆçŠ¶æ€ï¼Œå¹¶ä¿å­˜æ‰§è¡Œç»“æœ
+        /// ¸üĞÂÈÎÎñÎªÍê³É×´Ì¬£¬²¢±£´æÖ´ĞĞ½á¹û
         /// </summary>
-        /// <param name="taskId">ä»»åŠ¡ID</param>
-        /// <param name="result">ä»»åŠ¡æ‰§è¡Œç»“æœ</param>
+        /// <param name="taskId">ÈÎÎñID</param>
+        /// <param name="result">ÈÎÎñÖ´ĞĞ½á¹û</param>
         private void UpdateTaskCompletion(Guid taskId, object result)
         {
             try
@@ -484,36 +927,73 @@ namespace OW.Data
                 {
                     task.StatusValue = (byte)OwTaskStatus.Completed;
                     task.CompletedUtc = DateTime.UtcNow;
-                    
+
                     if (result != null)
                     {
                         try
                         {
-                            // å°è¯•å°†ç»“æœåºåˆ—åŒ–ä¸ºJSON
+                            // ³¢ÊÔ½«½á¹ûĞòÁĞ»¯ÎªJSON
                             var resultJson = JsonSerializer.Serialize(result);
                             task.Result = new Dictionary<string, string> { { "Result", resultJson } };
                         }
-                        catch (Exception)
+                        catch (Exception serializationEx)
                         {
-                            // å¦‚æœåºåˆ—åŒ–å¤±è´¥ï¼Œä½¿ç”¨ToString()
-                            task.Result = new Dictionary<string, string> { { "Result", result.ToString() } };
+                            _logger.LogWarning(serializationEx, "ÈÎÎñ {TaskId} ½á¹ûĞòÁĞ»¯Ê§°Ü£¬Ê¹ÓÃToString()·½·¨", taskId);
+                            try
+                            {
+                                // Èç¹ûĞòÁĞ»¯Ê§°Ü£¬Ê¹ÓÃToString()
+                                task.Result = new Dictionary<string, string> { { "Result", result.ToString() } };
+                            }
+                            catch (Exception toStringEx)
+                            {
+                                _logger.LogWarning(toStringEx, "ÈÎÎñ {TaskId} ½á¹ûToString()Ò²Ê§°Ü£¬Ê¹ÓÃÀàĞÍÃû³Æ", taskId);
+                                // Èç¹ûToString()Ò²Ê§°Ü£¬ÖÁÉÙ¼ÇÂ¼ÀàĞÍĞÅÏ¢
+                                task.Result = new Dictionary<string, string> { 
+                                    { "Result", $"<ĞòÁĞ»¯Ê§°Ü: {result.GetType().FullName}>" },
+                                    { "SerializationError", serializationEx.Message }
+                                };
+                            }
                         }
                     }
-                    
+
                     dbContext.SaveChanges();
+                    _logger.LogDebug("ÈÎÎñ {TaskId} Íê³É×´Ì¬¸üĞÂ³É¹¦", taskId);
+                }
+                else
+                {
+                    _logger.LogWarning("³¢ÊÔ¸üĞÂÈÎÎñ {TaskId} Íê³É×´Ì¬Ê±£¬Î´ÕÒµ½¸ÃÈÎÎñ", taskId);
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "æ›´æ–°ä»»åŠ¡å®ŒæˆçŠ¶æ€å¤±è´¥ï¼Œä»»åŠ¡ID: {TaskId}", taskId);
+                _logger.LogError(ex, "¸üĞÂÈÎÎñ {TaskId} Íê³É×´Ì¬Ê§°Ü", taskId);
+                
+                // ³¢ÊÔ¼ò»¯µÄ×´Ì¬¸üĞÂ
+                try
+                {
+                    using var dbContext = _dbContextFactory.CreateDbContext();
+                    var task = dbContext.Set<OwTaskStore>().Find(taskId);
+                    if (task != null)
+                    {
+                        task.StatusValue = (byte)OwTaskStatus.Completed;
+                        task.CompletedUtc = DateTime.UtcNow;
+                        // ²»±£´æ½á¹û£¬Ö»¸üĞÂ×´Ì¬
+                        dbContext.SaveChanges();
+                        _logger.LogDebug("ÈÎÎñ {TaskId} Íê³É×´Ì¬¸üĞÂ³É¹¦£¨¼ò»¯°æ±¾£¬Î´±£´æ½á¹û£©", taskId);
+                    }
+                }
+                catch (Exception retryEx)
+                {
+                    _logger.LogError(retryEx, "ÖØÊÔ¸üĞÂÈÎÎñ {TaskId} Íê³É×´Ì¬Ê±Ò²·¢Éú´íÎó", taskId);
+                }
             }
         }
 
         /// <summary>
-        /// æ›´æ–°ä»»åŠ¡ä¸ºå¤±è´¥çŠ¶æ€ï¼Œå¹¶ä¿å­˜é”™è¯¯ä¿¡æ¯
+        /// ¸üĞÂÈÎÎñÎªÊ§°Ü×´Ì¬£¬²¢±£´æÍêÕûµÄ´íÎóĞÅÏ¢
         /// </summary>
-        /// <param name="taskId">ä»»åŠ¡ID</param>
-        /// <param name="errorMessage">é”™è¯¯ä¿¡æ¯</param>
+        /// <param name="taskId">ÈÎÎñID</param>
+        /// <param name="errorMessage">ÍêÕûµÄ´íÎóĞÅÏ¢£¬°üÀ¨¶ÑÕ»¸ú×Ù</param>
         private void UpdateTaskFailure(Guid taskId, string errorMessage)
         {
             try
@@ -525,40 +1005,54 @@ namespace OW.Data
                     task.StatusValue = (byte)OwTaskStatus.Failed;
                     task.CompletedUtc = DateTime.UtcNow;
                     task.ErrorMessage = errorMessage;
+                    
+                    // ³¢ÊÔ±£´æ¸ü¸Ä
                     dbContext.SaveChanges();
+                    _logger.LogDebug("ÈÎÎñ {TaskId} Ê§°Ü×´Ì¬¸üĞÂ³É¹¦", taskId);
+                }
+                else
+                {
+                    _logger.LogWarning("³¢ÊÔ¸üĞÂÈÎÎñ {TaskId} Ê§°Ü×´Ì¬Ê±£¬Î´ÕÒµ½¸ÃÈÎÎñ", taskId);
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "æ›´æ–°ä»»åŠ¡å¤±è´¥çŠ¶æ€å¤±è´¥ï¼Œä»»åŠ¡ID: {TaskId}", taskId);
+                _logger.LogError(ex, "¸üĞÂÈÎÎñ {TaskId} Ê§°Ü×´Ì¬Ê±·¢Éú´íÎó", taskId);
+                
+                // Èç¹ûÊı¾İ¿â¸üĞÂÊ§°Ü£¬³¢ÊÔ¼ÇÂ¼µ½ÈÕÖ¾ÖĞ
+                _logger.LogError("ÈÎÎñ {TaskId} µÄ´íÎóĞÅÏ¢£¨ÒòÊı¾İ¿â¸üĞÂÊ§°Ü¶ø¼ÇÂ¼µ½ÈÕÖ¾£©£º\n{ErrorMessage}", taskId, errorMessage);
+                
+                // ³¢ÊÔ¼ò»¯µÄ×´Ì¬¸üĞÂ
+                try
+                {
+                    using var dbContext = _dbContextFactory.CreateDbContext();
+                    var task = dbContext.Set<OwTaskStore>().Find(taskId);
+                    if (task != null)
+                    {
+                        task.StatusValue = (byte)OwTaskStatus.Failed;
+                        task.CompletedUtc = DateTime.UtcNow;
+                        // Èç¹û´íÎóĞÅÏ¢Ì«³¤£¬½Ø¶ÏËü
+                        task.ErrorMessage = errorMessage.Length > 8000 ? 
+                            errorMessage.Substring(0, 8000) + "\n...[´íÎóĞÅÏ¢ÒÑ½Ø¶Ï£¬ÍêÕûĞÅÏ¢Çë²é¿´ÈÕÖ¾]" : 
+                            errorMessage;
+                        
+                        dbContext.SaveChanges();
+                        _logger.LogDebug("ÈÎÎñ {TaskId} Ê§°Ü×´Ì¬¸üĞÂ³É¹¦£¨¼ò»¯°æ±¾£©", taskId);
+                    }
+                }
+                catch (Exception retryEx)
+                {
+                    _logger.LogError(retryEx, "ÖØÊÔ¸üĞÂÈÎÎñ {TaskId} Ê§°Ü×´Ì¬Ê±Ò²·¢Éú´íÎó", taskId);
+                }
             }
-        }
-
-        /// <summary>
-        /// ä»å¼‚å¸¸å¯¹è±¡æå–å®Œæ•´çš„é”™è¯¯ä¿¡æ¯ï¼ŒåŒ…æ‹¬å†…éƒ¨å¼‚å¸¸é“¾
-        /// </summary>
-        /// <param name="ex">å¼‚å¸¸å¯¹è±¡</param>
-        /// <returns>æ ¼å¼åŒ–çš„é”™è¯¯ä¿¡æ¯å­—ç¬¦ä¸²</returns>
-        private static string GetExceptionMessage(Exception ex)
-        {
-            var messages = new List<string>();
-            var currentEx = ex;
-            
-            while (currentEx != null)
-            {
-                messages.Add($"{currentEx.GetType().Name}: {currentEx.Message}");
-                currentEx = currentEx.InnerException;
-            }
-            
-            return string.Join(" -> ", messages);
         }
 
         #endregion
 
-        #region é‡Šæ”¾èµ„æº
+        #region ÊÍ·Å×ÊÔ´
 
         /// <summary>
-        /// é‡Šæ”¾æ‰˜ç®¡èµ„æºï¼ŒåŒ…æ‹¬ä¿¡å·é‡ç­‰
+        /// ÊÍ·ÅÍĞ¹Ü×ÊÔ´£¬°üÀ¨ĞÅºÅÁ¿µÈ
         /// </summary>
         public override void Dispose()
         {
@@ -567,67 +1061,35 @@ namespace OW.Data
         }
 
         #endregion
-
-        #region ä½¿ç”¨ç¤ºä¾‹ï¼ˆæ³¨é‡Šå½¢å¼ï¼‰
-
-        /*
-        // é™æ€ä»»åŠ¡è°ƒç”¨ç¤ºä¾‹ - åœ¨OwTaskServiceä¸­çš„ä½¿ç”¨
-        
-        // 1. æ³¨å†Œé™æ€ä»»åŠ¡å¤„ç†å™¨ç±»å‹ï¼ˆåœ¨Program.csæˆ–å¯åŠ¨é…ç½®ä¸­ï¼‰
-        services.AddOwTaskService<PowerLmsUserDbContext>();
-        
-        // 2. åœ¨æ§åˆ¶å™¨ä¸­åˆ›å»ºé™æ€ä»»åŠ¡
-        var taskService = serviceProvider.GetRequiredService<OwTaskService<PowerLmsUserDbContext>>();
-        var taskId = taskService.CreateTask(
-            typeof(FinancialSystemExportTaskProcessor),
-            nameof(FinancialSystemExportTaskProcessor.ProcessInvoiceDbfExportTask),
-            taskParameters,
-            userId,
-            orgId
-        );
-        
-        // 3. OwTaskServiceè‡ªåŠ¨æ£€æµ‹é™æ€æ–¹æ³•å¹¶è°ƒç”¨ï¼š
-        // - æ£€æµ‹åˆ°æ–¹æ³•æ˜¯é™æ€çš„
-        // - æ£€æµ‹åˆ°æ–¹æ³•éœ€è¦IServiceProviderå‚æ•°
-        // - è‡ªåŠ¨æ³¨å…¥æœåŠ¡æä¾›è€…å¹¶è°ƒç”¨é™æ€æ–¹æ³•
-        
-        // 4. é™æ€æ–¹æ³•çš„ä¼˜åŠ¿ï¼š
-        // - é¿å…ä¾èµ–æ§åˆ¶å™¨å®ä¾‹ï¼Œå‡å°‘å†…å­˜å ç”¨
-        // - æ›´å¥½çš„çº¿ç¨‹å®‰å…¨æ€§
-        // - æ˜ç¡®çš„ä¾èµ–å…³ç³»ï¼ˆé€šè¿‡å‚æ•°æ˜¾å¼å£°æ˜ï¼‰
-        // - æ›´å®¹æ˜“è¿›è¡Œå•å…ƒæµ‹è¯•
-        */
-
-        #endregion
     }
 
     /// <summary>
-    /// OwTaskServiceçš„æ‰©å±•æ–¹æ³•ï¼Œç”¨äºç®€åŒ–æœåŠ¡æ³¨å†Œ
+    /// OwTaskServiceµÄÀ©Õ¹·½·¨£¬ÓÃÓÚ¼ò»¯·şÎñ×¢²á
     /// </summary>
     public static class OwTaskServiceExtensions
     {
         /// <summary>
-        /// å‘æœåŠ¡é›†åˆæ·»åŠ OwTaskServiceï¼Œä½¿ç”¨.NET 6æ ‡å‡†çš„HostedServiceæ¨¡å¼
+        /// Ïò·şÎñ¼¯ºÏÌí¼ÓOwTaskService£¬Ê¹ÓÃ.NET 6±ê×¼µÄHostedServiceÄ£Ê½
         /// </summary>
-        /// <typeparam name="TDbContext">æ•°æ®åº“ä¸Šä¸‹æ–‡ç±»å‹</typeparam>
-        /// <param name="services">æœåŠ¡é›†åˆ</param>
-        /// <returns>æ›´æ–°åçš„æœåŠ¡é›†åˆï¼Œæ”¯æŒé“¾å¼è°ƒç”¨</returns>
+        /// <typeparam name="TDbContext">Êı¾İ¿âÉÏÏÂÎÄÀàĞÍ</typeparam>
+        /// <param name="services">·şÎñ¼¯ºÏ</param>
+        /// <returns>¸üĞÂºóµÄ·şÎñ¼¯ºÏ£¬Ö§³ÖÁ´Ê½µ÷ÓÃ</returns>
         public static IServiceCollection AddOwTaskService<TDbContext>(this IServiceCollection services)
             where TDbContext : OwDbContext
         {
             services.AddHostedService<OwTaskService<TDbContext>>();
-            services.TryAddSingleton(provider => 
+            services.TryAddSingleton(provider =>
                 (OwTaskService<TDbContext>)provider.GetRequiredService<IEnumerable<IHostedService>>().First(c => c is OwTaskService<TDbContext>));
             return services;
         }
 
         /// <summary>
-        /// å‘æœåŠ¡é›†åˆæ·»åŠ OwTaskServiceå¹¶åŒæ—¶é…ç½®DbContextFactory
+        /// Ïò·şÎñ¼¯ºÏÌí¼ÓOwTaskService²¢Í¬Ê±ÅäÖÃDbContextFactory
         /// </summary>
-        /// <typeparam name="TDbContext">æ•°æ®åº“ä¸Šä¸‹æ–‡ç±»å‹</typeparam>
-        /// <param name="services">æœåŠ¡é›†åˆ</param>
-        /// <param name="optionsAction">æ•°æ®åº“ä¸Šä¸‹æ–‡é…ç½®å§”æ‰˜</param>
-        /// <returns>æ›´æ–°åçš„æœåŠ¡é›†åˆï¼Œæ”¯æŒé“¾å¼è°ƒç”¨</returns>
+        /// <typeparam name="TDbContext">Êı¾İ¿âÉÏÏÂÎÄÀàĞÍ</typeparam>
+        /// <param name="services">·şÎñ¼¯ºÏ</param>
+        /// <param name="optionsAction">Êı¾İ¿âÉÏÏÂÎÄÅäÖÃÎ¯ÍĞ</param>
+        /// <returns>¸üĞÂºóµÄ·şÎñ¼¯ºÏ£¬Ö§³ÖÁ´Ê½µ÷ÓÃ</returns>
         public static IServiceCollection AddOwTaskService<TDbContext>(this IServiceCollection services, Action<DbContextOptionsBuilder> optionsAction)
             where TDbContext : OwDbContext
         {

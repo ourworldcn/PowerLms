@@ -103,118 +103,96 @@ namespace OW.Data
         /// <returns>字段映射字典，键为DBF字段名(最多10字符)，值为实体属性名</returns>
         public static Dictionary<string, string> CreateAutoFieldMappings<T>(Dictionary<string, string> fieldMappings = null) where T : class
         {
-            var entityType = typeof(T); // 获取实体类型
-            PropertyInfo[] properties = null;
-
+            var entityType = typeof(T);
+            
             try
             {
-                // 获取所有可读属性，并添加空值检查
-                var allProperties = entityType.GetProperties();
-                if (allProperties == null)
-                {
-                    OwHelper.SetLastErrorAndMessage(400, $"无法获取类型 {entityType.Name} 的属性列表");
-                    return fieldMappings ?? new Dictionary<string, string>();
-                }
+                // 获取所有可读的公共属性
+                var properties = entityType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                    .Where(p => p.CanRead && p.GetIndexParameters().Length == 0) // 排除索引器属性
+                    .ToArray();
 
-                var readableProperties = allProperties.Where(c => c != null && c.CanRead);
-                if (readableProperties == null)
-                {
-                    OwHelper.SetLastErrorAndMessage(400, $"类型 {entityType.Name} 没有可读属性");
-                    return fieldMappings ?? new Dictionary<string, string>();
-                }
-
-                // 转换为数组以避免ToPooledListBase的问题
-                properties = readableProperties.ToArray();
-                if (properties == null || properties.Length == 0)
+                if (properties.Length == 0)
                 {
                     OwHelper.SetLastErrorAndMessage(400, $"类型 {entityType.Name} 没有可用的属性用于DBF映射");
                     return fieldMappings ?? new Dictionary<string, string>();
                 }
-            }
-            catch (Exception ex)
-            {
-                OwHelper.SetLastErrorAndMessage(500, $"获取类型 {entityType.Name} 属性时发生错误: {ex.Message}");
-                return fieldMappings ?? new Dictionary<string, string>();
-            }
 
-            // 如果未提供映射或为空，则创建新的
-            if (fieldMappings == null)
-                fieldMappings = new Dictionary<string, string>();
+                // 初始化映射字典
+                fieldMappings ??= new Dictionary<string, string>();
 
-            // 创建反向映射，用于检查哪些属性已有映射
-            Dictionary<string, string> reverseMappings = null;
-            try
-            {
-                reverseMappings = fieldMappings.ToDictionary(kv => kv.Value, kv => kv.Key);
-            }
-            catch (Exception ex)
-            {
-                OwHelper.SetLastErrorAndMessage(400, $"处理现有字段映射时发生错误: {ex.Message}");
-                reverseMappings = new Dictionary<string, string>();
-            }
+                // 创建反向映射，用于检查哪些属性已有映射
+                var reverseMappings = fieldMappings.ToDictionary(kv => kv.Value, kv => kv.Key);
 
-            // 为未映射的属性创建映射
-            foreach (var prop in properties)
-            {
-                try
+                // 为未映射的属性创建映射
+                foreach (var prop in properties)
                 {
-                    if (prop == null) continue; // 跳过空属性
-
-                    // 如果属性已经有映射，则跳过
+                    // 跳过已有映射的属性
                     if (reverseMappings.ContainsKey(prop.Name))
                         continue;
 
-                    // 属性名作为DBF字段名，截断到10个字符（DBF字段名长度限制）
-                    string dbfFieldName = prop.Name.Length > 10 ? prop.Name.Substring(0, 10) : prop.Name;
-
-                    // 避免字段名重复
-                    if (!fieldMappings.ContainsKey(dbfFieldName))
+                    // 生成DBF字段名（最多10个字符）
+                    var dbfFieldName = GenerateUniqueDbfFieldName(prop.Name, fieldMappings);
+                    if (!string.IsNullOrEmpty(dbfFieldName))
                     {
-                        fieldMappings.Add(dbfFieldName, prop.Name);
-                    }
-                    else
-                    {
-                        // 处理字段名冲突，添加数字后缀
-                        int suffix = 1;
-                        string newFieldName;
-                        do
-                        {
-                            // 确保总长度不超过10个字符
-                            string baseName = dbfFieldName.Length >= 8 ? dbfFieldName.Substring(0, 8) : dbfFieldName;
-                            newFieldName = $"{baseName}_{suffix++}";
-                        } while (fieldMappings.ContainsKey(newFieldName) && suffix < 100); // 避免无限循环
-
-                        if (suffix < 100) // 确保找到了可用名称
-                        {
-                            fieldMappings.Add(newFieldName, prop.Name);
-                            OwHelper.SetLastErrorAndMessage(400, $"字段名 {dbfFieldName} 冲突，已重命名为 {newFieldName}");
-                        }
-                        else
-                        {
-                            OwHelper.SetLastErrorAndMessage(400, $"无法为属性 {prop.Name} 创建唯一字段名，已跳过");
-                        }
+                        fieldMappings[dbfFieldName] = prop.Name;
                     }
                 }
-                catch (Exception ex)
-                {
-                    OwHelper.SetLastErrorAndMessage(400, $"处理属性 {prop?.Name ?? "未知"} 的映射时发生错误: {ex.Message}");
-                    continue; // 继续处理下一个属性
-                }
+
+                return fieldMappings;
+            }
+            catch (Exception ex)
+            {
+                OwHelper.SetLastErrorAndMessage(500, $"创建字段映射时发生错误: {ex.Message}");
+                return fieldMappings ?? new Dictionary<string, string>();
+            }
+        }
+
+        /// <summary>
+        /// 生成唯一的DBF字段名
+        /// </summary>
+        /// <param name="propertyName">属性名</param>
+        /// <param name="existingMappings">现有映射</param>
+        /// <returns>唯一的DBF字段名，如果无法生成则返回null</returns>
+        private static string GenerateUniqueDbfFieldName(string propertyName, Dictionary<string, string> existingMappings)
+        {
+            // 截断到10个字符
+            var baseName = propertyName.Length > 10 ? propertyName[..10] : propertyName;
+            
+            // 如果没有冲突，直接返回
+            if (!existingMappings.ContainsKey(baseName))
+                return baseName;
+
+            // 处理冲突，添加数字后缀
+            for (int suffix = 1; suffix < 100; suffix++)
+            {
+                var suffixStr = suffix.ToString();
+                var maxBaseLength = 10 - suffixStr.Length - 1; // 减去后缀长度和下划线
+                if (maxBaseLength <= 0) break;
+
+                var truncatedBase = baseName.Length > maxBaseLength ? baseName[..maxBaseLength] : baseName;
+                var newFieldName = $"{truncatedBase}_{suffixStr}";
+                
+                if (!existingMappings.ContainsKey(newFieldName))
+                    return newFieldName;
             }
 
-            return fieldMappings; // 返回完整的映射字典
+            // 无法生成唯一名称
+            OwHelper.SetLastErrorAndMessage(400, $"无法为属性 {propertyName} 生成唯一的DBF字段名");
+            return null;
         }
         #endregion
 
         #region 数据写入
         /// <summary>
-        /// 将实体集合写入流，该流可以保存为 .dbf 文件。
+        /// 将实体集合写入到流中，属性将被自动转换为 .dbf 文件。
+        /// 使用更安全的DBF写入器处理，避免NullReferenceException
         /// </summary>
         /// <typeparam name="T">实体类型</typeparam>
         /// <param name="entities">实体集合</param>
-        /// <param name="stream">要写入的流</param>
-        /// <param name="fieldMappings">字段映射字典，键为DBF字段名，值为实体属性名；为null则自动创建</param>
-        /// <param name="customFieldTypes">可选的自定义字段类型字典，键为DBF字段名，值为DBF字段类型</param>
+        /// <param name="stream">要写入的流。函数返回后，流的位置不可预知，流会保持打开状态。</param>
+        /// <param name="fieldMappings">字段映射字典，键为DBF字段名，值为实体属性名。为null则自动生成</param>
+        /// <param name="customFieldTypes">可选，自定义字段类型字典，键为DBF字段名，值为DBF字段类型</param>
         /// <param name="encoding">字符编码，默认为GB2312</param>
         public static void WriteToStream<T>(IEnumerable<T> entities, Stream stream,
             Dictionary<string, string> fieldMappings = null,
@@ -224,35 +202,53 @@ namespace OW.Data
             ArgumentNullException.ThrowIfNull(stream);
             ArgumentNullException.ThrowIfNull(entities);
 
+            // 转换为列表以便多次枚举和计数
+            var entityList = entities as List<T> ?? entities.ToList();
+            if (!entityList.Any())
+            {
+                OwHelper.SetLastErrorAndMessage(400, "实体集合为空，无法生成DBF文件");
+                throw new InvalidOperationException("实体集合为空，无法生成DBF文件");
+            }
+
             // 如果未提供映射，则创建自动映射
             fieldMappings ??= CreateAutoFieldMappings<T>();
+            
+            if (fieldMappings == null || !fieldMappings.Any())
+            {
+                throw new InvalidOperationException("无法创建有效的字段映射");
+            }
 
+            var recordsWritten = 0;
+            
             try
             {
-                using var writer = new DBFWriter(stream);
+                using var wapper = new WrapperStream(stream, true); // 使用包装器流以确保正确释放资源
+                using var writer = new DBFWriter(wapper);   // 使用 using 语句确保 DBFWriter 正确释放
                 writer.CharEncoding = encoding ?? System.Text.Encoding.GetEncoding("GB2312"); // 默认编码
 
                 var entityType = typeof(T);
                 var properties = entityType.GetProperties();
-                var propertyMap = properties.ToDictionary(p => p.Name, p => p); // 创建属性查找字典
+                var propertyMap = properties.ToDictionary(p => p.Name, p => p); // 属性名查找字典
 
-                // 创建字段定义
+                // 定义字段定义
                 var fields = new List<DBFField>();
+                var validMappings = new List<KeyValuePair<string, string>>(); // 存储有效的映射
+                
                 foreach (var mapping in fieldMappings)
                 {
                     string dbfFieldName = mapping.Key;
                     string propertyName = mapping.Value;
 
-                    // 确保字段名符合DBF限制
+                    // 确保字段名符合DBF规范
                     if (dbfFieldName.Length > 10)
                     {
-                        OwHelper.SetLastErrorAndMessage(400, $"字段名 {dbfFieldName} 超过10个字符的限制，已截断");
-                        dbfFieldName = dbfFieldName[..10]; // 使用范围操作符简化截断操作
+                        OwHelper.SetLastErrorAndMessage(400, $"字段名 {dbfFieldName} 超过10个字符限制，已截断");
+                        dbfFieldName = dbfFieldName[..10]; // 使用范围运算符简化截断操作
                     }
 
                     if (!propertyMap.TryGetValue(propertyName, out var property))
                     {
-                        OwHelper.SetLastErrorAndMessage(400, $"属性 {propertyName} 在类型 {entityType.Name} 中不存在，将被跳过");
+                        OwHelper.SetLastErrorAndMessage(400, $"属性 {propertyName} 在类型 {entityType.Name} 中不存在，跳过处理");
                         continue;
                     }
 
@@ -269,51 +265,64 @@ namespace OW.Data
                         }
                         catch (ArgumentException)
                         {
-                            OwHelper.SetLastErrorAndMessage(400, $"属性 {propertyName} 的类型 {property.PropertyType.Name} 不支持，将被跳过");
+                            OwHelper.SetLastErrorAndMessage(400, $"属性 {propertyName} 的类型 {property.PropertyType.Name} 不支持，跳过处理");
                             continue;
                         }
                     }
 
-                    // 设置字段参数
-                    int length = 0;
-                    int decimalCount = 0;
-
-                    switch (fieldType)
+                    // 根据字段类型创建DBFField - 修复：检查是否支持长度设置
+                    try
                     {
-                        case NativeDbType.Char: length = 254; break; // 最大字符长度
-                        case NativeDbType.Numeric: length = 18; decimalCount = 4; break;
-                        case NativeDbType.Float: length = 18; decimalCount = 6; break;
-                        case NativeDbType.Date: length = 8; break;
-                        case NativeDbType.Logical: length = 1; break;
-                        case NativeDbType.Long: length = 10; break;
-                        default: length = 254; break; // 默认最大长度
-                    }
+                        DBFField field = fieldType switch
+                        {
+                            NativeDbType.Date => new DBFField(dbfFieldName, fieldType), // 日期类型不需要设置长度
+                            NativeDbType.Logical => new DBFField(dbfFieldName, fieldType), // 逻辑类型不需要设置长度
+                            NativeDbType.Char => new DBFField(dbfFieldName, fieldType, 254, 0), // 字符类型设置长度
+                            NativeDbType.Numeric => new DBFField(dbfFieldName, fieldType, 18, 4), // 数字类型设置长度和小数位
+                            NativeDbType.Float => new DBFField(dbfFieldName, fieldType, 18, 6), // 浮点类型设置长度和小数位
+                            NativeDbType.Long => new DBFField(dbfFieldName, fieldType, 10, 0), // 长整型设置长度
+                            NativeDbType.Double => new DBFField(dbfFieldName, fieldType, 18, 8), // 双精度浮点型设置长度和小数位
+                            _ => new DBFField(dbfFieldName, fieldType) // 其他类型尝试默认构造
+                        };
 
-                    fields.Add(new DBFField(dbfFieldName, fieldType, length, decimalCount));
+                        fields.Add(field);
+                        validMappings.Add(new KeyValuePair<string, string>(dbfFieldName, propertyName));
+                    }
+                    catch (Exception ex)
+                    {
+                        OwHelper.SetLastErrorAndMessage(400, $"创建DBF字段 {dbfFieldName} (类型: {fieldType}) 时发生错误: {ex.Message}，跳过处理");
+                        continue;
+                    }
                 }
 
-                writer.Fields = fields.ToArray(); // 设置DBF文件的字段结构
+                // 确保至少有一个字段
+                if (fields.Count == 0)
+                {
+                    throw new InvalidOperationException("没有有效的字段定义，无法创建DBF文件");
+                }
+
+                // 设置字段结构 - 这是关键步骤，必须在写入记录之前完成
+                writer.Fields = fields.ToArray();
 
                 // 写入记录
-                foreach (var entity in entities)
+                foreach (var entity in entityList)
                 {
                     if (entity is null)
                     {
-                        OwHelper.SetLastErrorAndMessage(400, "实体集合中包含null值，已跳过");
+                        OwHelper.SetLastErrorAndMessage(400, "实体集合中包含null值，跳过处理");
                         continue;
                     }
 
                     var record = new object?[fields.Count];
-                    int fieldIndex = 0;
-
-                    foreach (var mapping in fieldMappings)
+                    
+                    for (int fieldIndex = 0; fieldIndex < validMappings.Count; fieldIndex++)
                     {
-                        if (fieldIndex >= fields.Count) break; // 防止索引越界
-
+                        var mapping = validMappings[fieldIndex];
                         string propertyName = mapping.Value;
+                        
                         if (!propertyMap.TryGetValue(propertyName, out var property))
                         {
-                            record[fieldIndex++] = null; // 属性不存在时使用null
+                            record[fieldIndex] = null; // 属性不存在时使用null
                             continue;
                         }
 
@@ -334,23 +343,29 @@ namespace OW.Data
                             }
                         }
 
-                        // 处理特殊类型数据
-                        if (value is string strValue && strValue.Length > 254)
+                        // 处理特殊值的清理
+                        value = value switch
                         {
-                            value = strValue[..254]; // 截断过长字符串
-                            OwHelper.SetLastErrorAndMessage(400, $"字符串值被截断: {propertyName}");
-                        }
-                        else if (value is DateTime dateValue && (dateValue == DateTime.MinValue || dateValue.Year < 1900))
-                        {
-                            value = null; // DBF不支持过早的日期
-                            OwHelper.SetLastErrorAndMessage(400, $"日期值不支持: {propertyName}");
-                        }
+                            string strValue when strValue.Length > 254 => strValue[..254], // 截断过长字符串
+                            DateTime dateValue when dateValue == DateTime.MinValue || dateValue.Year < 1900 => null, // DBF不支持过早的日期
+                            _ => value
+                        };
 
-                        record[fieldIndex++] = value; // 存储值到记录
+                        record[fieldIndex] = value; // 存储值到记录
                     }
 
                     writer.WriteRecord(record); // 写入记录到DBF
+                    recordsWritten++; // 记录已写入的记录数
                 }
+
+                // 确保至少写入了一条记录
+                if (recordsWritten == 0)
+                {
+                    OwHelper.SetLastErrorAndMessage(400, "没有有效的记录被写入DBF文件");
+                    throw new InvalidOperationException("没有有效的记录被写入DBF文件");
+                }
+
+                // DBFWriter 会在 using 语句结束时自动调用 Dispose 方法完成写入
             }
             catch (Exception ex)
             {
@@ -388,52 +403,58 @@ namespace OW.Data
         }
 
         /// <summary>
-        /// 将实体集合写入文件，适用于大数据量的写入操作。耗费内存。
+        /// 将实体集合写入文件，适用于大数据量的写入操作。优化内存使用。
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="entities"></param>
-        /// <param name="filePath"></param>
-        /// <param name="fieldMappings"></param>
-        /// <param name="customFieldTypes"></param>
-        /// <param name="encoding"></param>
-        /// <exception cref="ArgumentNullException"></exception>
+        /// <typeparam name="T">实体类型</typeparam>
+        /// <param name="entities">实体集合</param>
+        /// <param name="filePath">文件路径</param>
+        /// <param name="fieldMappings">字段映射字典，键为DBF字段名，值为实体属性名</param>
+        /// <param name="customFieldTypes">可选的自定义字段类型字典，键为DBF字段名，值为DBF字段类型</param>
+        /// <param name="encoding">字符编码，默认为GB2312</param>
+        /// <exception cref="ArgumentNullException">当必要参数为null时抛出</exception>
         public static void WriteLargeFile<T>(IEnumerable<T> entities, string filePath,
             Dictionary<string, string> fieldMappings = null,
             Dictionary<string, NativeDbType> customFieldTypes = null,
             System.Text.Encoding encoding = null) where T : class
         {
-            if (string.IsNullOrWhiteSpace(filePath)) throw new ArgumentNullException(nameof(filePath)); // 检查文件路径
-            const int memoryLimit = 1024 * 1024 * 1024; //内存阀门获取1GB内存
-            MemoryStream ms = new MemoryStream(memoryLimit);// 创建内存流
+            if (string.IsNullOrWhiteSpace(filePath)) 
+                throw new ArgumentNullException(nameof(filePath), "文件路径不能为空");
+            
+            if (entities == null)
+                throw new ArgumentNullException(nameof(entities), "实体集合不能为空");
+
+            // 创建目录（如果不存在）
+            var directory = Path.GetDirectoryName(filePath);
+            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            // 使用 using 语句确保文件流正确释放
             try
             {
-                using var stream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None, 8 * 1024 * 1024);
-                WriteToStream(entities, ms, fieldMappings, customFieldTypes, encoding); // 调用流写入方法
-                ms.Position = 0; // 重置内存流位置
-                ms.CopyTo(stream); // 将内存流内容复制到文件流
+                using var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None, 64 * 1024);
+                WriteToStream(entities, fileStream, fieldMappings, customFieldTypes, encoding);
+                // 删除显式的 Flush 调用，让 using 语句处理资源释放
             }
             catch (Exception ex)
             {
                 OwHelper.SetLastErrorAndMessage(500, $"写入 DBF 文件 {filePath} 时发生错误: {ex.Message}");
+                
+                // 清理可能创建的不完整文件
+                try
+                {
+                    if (System.IO.File.Exists(filePath))
+                        System.IO.File.Delete(filePath);
+                }
+                catch
+                {
+                    // 忽略清理时的异常
+                }
+                
                 throw;
             }
-            finally
-            {
-                // 释放内存流，保证分配的内存被及时回收
-                if (ms is not null)
-                {
-                    ms.Dispose();
-                    ms = null;
-                    Task.Run(() =>
-                    {
-                        GC.Collect(); // 强制垃圾回收
-                        GC.WaitForPendingFinalizers(); // 等待所有终结器完成
-                        GC.Collect(); // 再次强制垃圾回收,确保LOB对象被释放
-                    });
-                }
-            }
         }
-
         #endregion
 
         #region 数据读取
@@ -447,127 +468,130 @@ namespace OW.Data
         public static IEnumerable<T> ConvertDataTableToEntities<T>(DataTable dataTable,
             Dictionary<string, string> fieldMappings) where T : class, new()
         {
-            if (dataTable == null) throw new ArgumentNullException(nameof(dataTable)); // 参数验证
+            ArgumentNullException.ThrowIfNull(dataTable);
+            
             if (fieldMappings == null || fieldMappings.Count == 0)
             {
                 OwHelper.SetLastErrorAndMessage(400, "字段映射不能为空");
                 throw new ArgumentException("字段映射不能为空", nameof(fieldMappings));
             }
 
-            var result = new List<T>(); // 结果集合
-            var entityType = typeof(T); // 实体类型
-            var propertyMap = entityType.GetProperties().ToDictionary(p => p.Name, p => p); // 属性字典，便于快速查找
+            var result = new List<T>();
+            var entityType = typeof(T);
+            var propertyMap = entityType.GetProperties().ToDictionary(p => p.Name, p => p);
 
-            // 反向映射，从DBF字段名映射到属性名
-            var reverseMapping = new Dictionary<string, string>();
-            foreach (var mapping in fieldMappings)
-            {
-                if (!reverseMapping.ContainsKey(mapping.Key.ToUpper()))
-                    reverseMapping.Add(mapping.Key.ToUpper(), mapping.Value);
-            }
+            // 反向映射，从DBF字段名映射到属性名（不区分大小写）
+            var reverseMapping = fieldMappings.ToDictionary(
+                kv => kv.Key.ToUpperInvariant(), 
+                kv => kv.Value, 
+                StringComparer.OrdinalIgnoreCase);
 
-            // 创建列名到索引的映射，以便更快地查找列
-            var columnIndexMap = new Dictionary<string, int>();
+            // 创建列名到索引的映射（不区分大小写）
+            var columnIndexMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             for (int i = 0; i < dataTable.Columns.Count; i++)
             {
-                columnIndexMap[dataTable.Columns[i].ColumnName.ToUpper()] = i;
+                columnIndexMap[dataTable.Columns[i].ColumnName] = i;
             }
 
-            // 遍历每一行数据
+            // 处理每一行数据
             foreach (DataRow row in dataTable.Rows)
             {
-                var entity = new T(); // 创建新实体
-                bool hasValidData = false; // 标记是否有有效数据
-
-                // 遍历所有列
-                foreach (var fieldName in reverseMapping.Keys)
+                try
                 {
-                    string propertyName = reverseMapping[fieldName];
-                    if (!propertyMap.TryGetValue(propertyName, out var property))
+                    var entity = new T();
+                    bool hasValidData = false;
+
+                    foreach (var kvp in reverseMapping)
                     {
-                        OwHelper.SetLastErrorAndMessage(400, $"属性 {propertyName} 在类型 {entityType.Name} 中不存在");
-                        continue;
-                    }
+                        var fieldName = kvp.Key;
+                        var propertyName = kvp.Value;
 
-                    // 查找列索引
-                    if (!columnIndexMap.TryGetValue(fieldName, out int columnIndex))
-                    {
-                        OwHelper.SetLastErrorAndMessage(400, $"字段 {fieldName} 在数据表中不存在");
-                        continue;
-                    }
+                        // 检查属性是否存在
+                        if (!propertyMap.TryGetValue(propertyName, out var property))
+                        {
+                            OwHelper.SetLastErrorAndMessage(400, $"属性 {propertyName} 在类型 {entityType.Name} 中不存在");
+                            continue;
+                        }
 
-                    try
-                    {
-                        var value = row[columnIndex]; // 获取单元格值
-
-                        if (value == null || value == DBNull.Value)
-                            continue; // 跳过空值
-
-                        // 类型转换
-                        object convertedValue = null;
+                        // 检查列是否存在
+                        if (!columnIndexMap.TryGetValue(fieldName, out int columnIndex))
+                        {
+                            OwHelper.SetLastErrorAndMessage(400, $"字段 {fieldName} 在数据表中不存在");
+                            continue;
+                        }
 
                         try
                         {
-                            var propertyType = property.PropertyType;
-                            bool isNullable = propertyType.IsGenericType && propertyType.GetGenericTypeDefinition() == typeof(Nullable<>);
+                            var cellValue = row[columnIndex];
+                            if (cellValue == null || cellValue == DBNull.Value)
+                                continue;
 
-                            // 处理可空类型
-                            if (isNullable)
-                                propertyType = Nullable.GetUnderlyingType(propertyType);
-
-                            // 处理字符串特殊情况
-                            if (propertyType == typeof(string))
-                            {
-                                convertedValue = value.ToString().Trim();
-                            }
-                            // 处理日期特殊情况
-                            else if (propertyType == typeof(DateTime))
-                            {
-                                if (DateTime.TryParse(value.ToString(), out var dt))
-                                    convertedValue = dt;
-                            }
-                            // 处理布尔特殊情况
-                            else if (propertyType == typeof(bool))
-                            {
-                                string strValue = value.ToString().ToUpper().Trim();
-                                convertedValue = strValue == "Y" || strValue == "T" || strValue == "YES" ||
-                                               strValue == "TRUE" || strValue == "1";
-                            }
-                            // 处理Guid特殊情况
-                            else if (propertyType == typeof(Guid))
-                            {
-                                if (Guid.TryParse(value.ToString(), out var guid))
-                                    convertedValue = guid;
-                            }
-                            // 常规类型转换
-                            else
-                            {
-                                convertedValue = Convert.ChangeType(value, propertyType);
-                            }
-
+                            // 转换并设置属性值
+                            var convertedValue = ConvertValue(cellValue, property.PropertyType);
                             if (convertedValue != null)
                             {
-                                property.SetValue(entity, convertedValue); // 设置属性值
-                                hasValidData = true; // 标记有有效数据
+                                property.SetValue(entity, convertedValue);
+                                hasValidData = true;
                             }
                         }
                         catch (Exception ex)
                         {
-                            OwHelper.SetLastErrorAndMessage(400, $"转换属性 {propertyName} 的值 {value} 时发生错误: {ex.Message}");
+                            OwHelper.SetLastErrorAndMessage(400, $"转换字段 {fieldName} 到属性 {propertyName} 时发生错误: {ex.Message}");
                         }
                     }
-                    catch (Exception ex)
-                    {
-                        OwHelper.SetLastErrorAndMessage(500, $"处理字段 {fieldName} 时发生错误: {ex.Message}");
-                    }
-                }
 
-                // 仅添加有效数据的实体
-                if (hasValidData)
-                    result.Add(entity);
+                    // 只添加有有效数据的实体
+                    if (hasValidData)
+                        result.Add(entity);
+                }
+                catch (Exception ex)
+                {
+                    OwHelper.SetLastErrorAndMessage(500, $"处理数据行时发生错误: {ex.Message}");
+                }
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// 转换值到目标类型
+        /// </summary>
+        /// <param name="value">原始值</param>
+        /// <param name="targetType">目标类型</param>
+        /// <returns>转换后的值，失败返回null</returns>
+        private static object ConvertValue(object value, Type targetType)
+        {
+            try
+            {
+                // 处理可空类型
+                var isNullable = targetType.IsGenericType && targetType.GetGenericTypeDefinition() == typeof(Nullable<>);
+                var actualType = isNullable ? Nullable.GetUnderlyingType(targetType) : targetType;
+
+                // 根据目标类型进行特殊处理
+                return actualType.Name switch
+                {
+                    nameof(String) => value.ToString().Trim(),
+                    nameof(DateTime) => DateTime.TryParse(value.ToString(), out var dt) ? dt : null,
+                    nameof(Boolean) => ConvertToBoolean(value.ToString()),
+                    nameof(Guid) => Guid.TryParse(value.ToString(), out var guid) ? guid : null,
+                    _ => Convert.ChangeType(value, actualType) // 常规类型转换
+                };
+            }
+            catch
+            {
+                return null; // 转换失败返回null
+            }
+        }
+
+        /// <summary>
+        /// 转换字符串到布尔值
+        /// </summary>
+        /// <param name="value">字符串值</param>
+        /// <returns>布尔值</returns>
+        private static bool ConvertToBoolean(string value)
+        {
+            var upperValue = value.ToUpperInvariant().Trim();
+            return upperValue is "Y" or "T" or "YES" or "TRUE" or "1";
         }
         #endregion
     }
