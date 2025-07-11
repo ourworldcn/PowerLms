@@ -14,6 +14,7 @@ using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace System
 {
@@ -665,6 +666,30 @@ namespace System
             return false;
         }
 
+        private static volatile Task _currentGcTask = Task.CompletedTask; // 当前运行的GC任务
+
+        /// <summary>
+        /// 立即释放对象并将其引用设置为null。并在后台线程强制清理内存。用于释放大型对象或资源。
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="obj">如果是null,则立即返回。</param>
+        public static void DisposeAndRelease<T>(ref T obj) where T : class
+        {
+            if (obj is not null)
+            {
+                (obj as IDisposable)?.Dispose();
+                obj = null;
+                if (_currentGcTask.IsCompleted) // 简单检查，允许轻微的竞争条件，对于GC场景这通常是可接受的。
+                {
+                    _currentGcTask = Task.Run(() =>
+                    {
+                        GC.Collect(); // 强制垃圾回收
+                        GC.WaitForPendingFinalizers(); // 等待所有终结器完成
+                        GC.Collect(); // 再次回收
+                    });
+                }
+            }
+        }
     }
 
     public static class ConcurrentHelper

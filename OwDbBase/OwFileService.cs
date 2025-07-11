@@ -153,7 +153,7 @@ namespace OW.Data
         {
             if (string.IsNullOrWhiteSpace(fileName)) return false;
             if (!_options.AllowedFileExtensions.Any()) return true; // 如果没有配置限制，则允许所有类型
-            
+
             var extension = Path.GetExtension(fileName).ToLowerInvariant();
             return _options.AllowedFileExtensions.Any(ext => string.Equals(ext, extension, StringComparison.OrdinalIgnoreCase));
         }
@@ -195,7 +195,7 @@ namespace OW.Data
         /// <summary>
         /// 创建文件记录并保存文件到磁盘和数据库
         /// </summary>
-        /// <param name="fileStream">文件流</param>
+        /// <param name="fileStream">要写入的流，从流的当前位置读取数据。</param>
         /// <param name="fileName">原始文件名</param>
         /// <param name="displayName">显示名称</param>
         /// <param name="parentId">所属实体ID</param>
@@ -208,24 +208,24 @@ namespace OW.Data
         /// <exception cref="ArgumentNullException">当必要参数为null时抛出</exception>
         /// <exception cref="ArgumentException">当文件流为空或文件名无效时抛出</exception>
         /// <exception cref="InvalidOperationException">当文件验证失败时抛出</exception>
-        public PlFileInfo CreateFile(Stream fileStream, string fileName, string displayName, Guid? parentId, 
+        public PlFileInfo CreateFile(Stream fileStream, string fileName, string displayName, Guid? parentId,
             Guid? creatorId, Guid? fileTypeId = null, string remark = null, string subDirectory = "General", bool skipValidation = false)
         {
             if (fileStream == null) throw new ArgumentNullException(nameof(fileStream));
             if (string.IsNullOrWhiteSpace(fileName)) throw new ArgumentException("文件名不能为空", nameof(fileName));
             if (string.IsNullOrWhiteSpace(displayName)) throw new ArgumentException("显示名称不能为空", nameof(displayName));
-            
+
             if (!skipValidation)
             {
                 // 验证文件大小
                 if (!IsFileSizeAllowed(fileStream.Length))
                     throw new InvalidOperationException($"文件大小超过限制，最大允许 {_options.MaxFileSizeMB}MB");
-                
+
                 // 验证文件扩展名
                 if (!IsFileExtensionAllowed(fileName))
                     throw new InvalidOperationException($"不支持的文件类型：{Path.GetExtension(fileName)}");
             }
-            
+
             // 创建文件信息实体
             var fileInfo = new PlFileInfo
             {
@@ -239,20 +239,20 @@ namespace OW.Data
                 CreateDateTime = DateTime.Now,
                 FilePath = GenerateFilePath(subDirectory)
             };
-            
+
             // 保存文件到磁盘
             SaveFileToDisk(fileStream, fileInfo.FilePath);
-            
+
             // 保存到数据库
             using var dbContext = _dbContextFactory.CreateDbContext();
             var plFileInfosProperty = typeof(TDbContext).GetProperty("PlFileInfos");
             if (plFileInfosProperty == null)
                 throw new InvalidOperationException($"数据库上下文 {typeof(TDbContext).Name} 不包含 PlFileInfos 属性");
-            
+
             var plFileInfosDbSet = plFileInfosProperty.GetValue(dbContext) as DbSet<PlFileInfo>;
             plFileInfosDbSet.Add(fileInfo);
             dbContext.SaveChanges();
-            
+
             return fileInfo;
         }
 
@@ -272,7 +272,7 @@ namespace OW.Data
             Guid? creatorId, Guid? fileTypeId = null, string remark = null, string subDirectory = "Generated")
         {
             if (fileContent == null || fileContent.Length == 0) throw new ArgumentException("文件内容不能为空", nameof(fileContent));
-            
+
             using var memoryStream = new MemoryStream(fileContent);
             return CreateFile(memoryStream, fileName, displayName, parentId, creatorId, fileTypeId, remark, subDirectory);
         }
@@ -290,20 +290,20 @@ namespace OW.Data
                 var plFileInfosProperty = typeof(TDbContext).GetProperty("PlFileInfos");
                 if (plFileInfosProperty == null)
                     throw new InvalidOperationException($"数据库上下文 {typeof(TDbContext).Name} 不包含 PlFileInfos 属性");
-                
+
                 var plFileInfosDbSet = plFileInfosProperty.GetValue(dbContext) as DbSet<PlFileInfo>;
                 var fileInfo = plFileInfosDbSet.Find(fileId);
-                
+
                 if (fileInfo == null) return false;
-                
+
                 // 删除磁盘文件
                 var fullPath = GetFullPath(fileInfo.FilePath);
                 if (File.Exists(fullPath)) File.Delete(fullPath);
-                
+
                 // 删除数据库记录
                 plFileInfosDbSet.Remove(fileInfo);
                 dbContext.SaveChanges();
-                
+
                 return true;
             }
             catch (Exception)
@@ -320,7 +320,7 @@ namespace OW.Data
         public bool DeleteFileOnly(string filePath)
         {
             if (string.IsNullOrWhiteSpace(filePath)) return false;
-            
+
             try
             {
                 var fullPath = GetFullPath(filePath);
@@ -379,61 +379,16 @@ namespace OW.Data
         /// <param name="relativePath">相对路径</param>
         private void SaveFileToDisk(Stream fileStream, string relativePath)
         {
+            const int bufferSize = 1024 * 1024; // 缓冲区大小
             var fullPath = GetFullPath(relativePath);
             var directory = Path.GetDirectoryName(fullPath);
-            
+
             if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
                 Directory.CreateDirectory(directory);
-            
-            using var fileStreamDest = new FileStream(fullPath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, FileOptions.SequentialScan);
-            fileStream.CopyTo(fileStreamDest);
+
+            using var fileStreamDest = new FileStream(fullPath, FileMode.Create, FileAccess.Write, FileShare.None, bufferSize, FileOptions.SequentialScan);
+            fileStream.CopyTo(fileStreamDest, bufferSize);   // 将源文件流复制到目标文件流
         }
-
-        #endregion
-
-        #region 使用示例
-
-        // 以下是 OwFileService 文件创建功能的使用示例（注释形式）
-        
-        /*
-        // 示例1: 从 IFormFile 创建文件
-        var fileInfo = _fileService.CreateFile(
-            fileStream: uploadedFile.OpenReadStream(),
-            fileName: uploadedFile.FileName,
-            displayName: "用户上传的文档",
-            parentId: customerId,
-            creatorId: currentUserId,
-            fileTypeId: documentTypeId,
-            remark: "客户资料文件"
-        );
-        
-        // 示例2: 从字节数组创建文件（适用于生成的文件）
-        var generatedFileInfo = _fileService.CreateFileFromBytes(
-            fileContent: pdfBytes,
-            fileName: "invoice_export.pdf",
-            displayName: "发票导出文件",
-            parentId: taskId,
-            creatorId: systemUserId,
-            subDirectory: "Generated"
-        );
-        
-        // 示例3: 从文件流创建文件
-        using var fileStream = File.OpenRead(localFilePath);
-        var streamFileInfo = _fileService.CreateFile(
-            fileStream: fileStream,
-            fileName: "imported_document.xlsx",
-            displayName: "导入的Excel文档",
-            parentId: jobId,
-            creatorId: userId
-        );
-        
-        // 示例4: 验证和删除文件
-        if (_fileService.FileExists(fileInfo.FilePath))
-        {
-            var deleted = _fileService.DeleteFile(fileInfo.Id);
-            // 文件和数据库记录都已删除
-        }
-        */
 
         #endregion
     }
@@ -452,7 +407,7 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <typeparam name="TDbContext">数据库上下文类型</typeparam>
         /// <param name="services">服务集合</param>
         /// <returns>服务集合</returns>
-        public static IServiceCollection AddOwFileService<TDbContext>(this IServiceCollection services) 
+        public static IServiceCollection AddOwFileService<TDbContext>(this IServiceCollection services)
             where TDbContext : Microsoft.EntityFrameworkCore.DbContext
         {
             services.AddSingleton<OW.Data.OwFileService<TDbContext>>();

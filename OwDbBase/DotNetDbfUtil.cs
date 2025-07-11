@@ -401,60 +401,6 @@ namespace OW.Data
                 throw;
             }
         }
-
-        /// <summary>
-        /// 将实体集合写入文件，适用于大数据量的写入操作。优化内存使用。
-        /// </summary>
-        /// <typeparam name="T">实体类型</typeparam>
-        /// <param name="entities">实体集合</param>
-        /// <param name="filePath">文件路径</param>
-        /// <param name="fieldMappings">字段映射字典，键为DBF字段名，值为实体属性名</param>
-        /// <param name="customFieldTypes">可选的自定义字段类型字典，键为DBF字段名，值为DBF字段类型</param>
-        /// <param name="encoding">字符编码，默认为GB2312</param>
-        /// <exception cref="ArgumentNullException">当必要参数为null时抛出</exception>
-        public static void WriteLargeFile<T>(IEnumerable<T> entities, string filePath,
-            Dictionary<string, string> fieldMappings = null,
-            Dictionary<string, NativeDbType> customFieldTypes = null,
-            System.Text.Encoding encoding = null) where T : class
-        {
-            if (string.IsNullOrWhiteSpace(filePath)) 
-                throw new ArgumentNullException(nameof(filePath), "文件路径不能为空");
-            
-            if (entities == null)
-                throw new ArgumentNullException(nameof(entities), "实体集合不能为空");
-
-            // 创建目录（如果不存在）
-            var directory = Path.GetDirectoryName(filePath);
-            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
-
-            // 使用 using 语句确保文件流正确释放
-            try
-            {
-                using var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None, 64 * 1024);
-                WriteToStream(entities, fileStream, fieldMappings, customFieldTypes, encoding);
-                // 删除显式的 Flush 调用，让 using 语句处理资源释放
-            }
-            catch (Exception ex)
-            {
-                OwHelper.SetLastErrorAndMessage(500, $"写入 DBF 文件 {filePath} 时发生错误: {ex.Message}");
-                
-                // 清理可能创建的不完整文件
-                try
-                {
-                    if (System.IO.File.Exists(filePath))
-                        System.IO.File.Delete(filePath);
-                }
-                catch
-                {
-                    // 忽略清理时的异常
-                }
-                
-                throw;
-            }
-        }
         #endregion
 
         #region 数据读取
