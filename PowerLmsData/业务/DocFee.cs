@@ -20,7 +20,7 @@ namespace PowerLms.Data
     public class DocFee : GuidKeyObjectBase
     {
         /// <summary>
-        /// 业务Id。
+        /// 业务Id。关联到 <see cref="PlJob"/>。
         /// </summary>
         [Comment("业务Id")]
         public Guid? JobId { get; set; }

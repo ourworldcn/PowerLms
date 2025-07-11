@@ -379,6 +379,11 @@ namespace PowerLms.Data
         public DateTime CreateDateTime { get; set; } = OwHelper.WorldNow;
 
         #endregion 客户性质
+
+        /// <summary> 国内外字段，有时也叫国别。某些公司特有字段，用于输出凭证。 </summary>
+        /// <value> true国内，false国外。 </value>
+        [Comment("国内外字段")]
+        public bool? IsDomestic { get; set; }
     }
 
     /// <summary>

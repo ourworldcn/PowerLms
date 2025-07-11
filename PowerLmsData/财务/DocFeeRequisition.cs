@@ -19,7 +19,7 @@ namespace PowerLms.Data
     public class DocFeeRequisition : GuidKeyObjectBase
     {
         /// <summary>
-        /// 机构Id。
+        /// 机构Id。冗余属性。
         /// </summary>
         public Guid? OrgId { get; set; }
 
@@ -167,13 +167,13 @@ namespace PowerLms.Data
     public class DocFeeRequisitionItem : GuidKeyObjectBase
     {
         /// <summary>
-        /// 申请单Id。
+        /// 申请单Id。关联到 <see cref="DocFeeRequisition"/> 的Id。
         /// </summary>
         [Comment("申请单Id")]
         public Guid? ParentId { get; set; }
 
         /// <summary>
-        /// 绑定的费用Id。
+        /// 绑定的费用Id。关联到 <see cref="DocFee"/> 的Id。
         /// </summary>
         [Comment("绑定的费用Id")]
         public Guid? FeeId { get; set; }

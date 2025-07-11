@@ -12,12 +12,15 @@ using System.Threading.Tasks;
 namespace PowerLms.Data
 {
     /// <summary>
-    /// 组织机构。
+    /// 机构实体，包括下属机构，公司。
     /// </summary>
+    /// <remarks> 通过 <see cref="Otc"/> 字段来区分机构类型。
+    /// 下属机构指：某个公司类型的机构的子孙机构，但排除其他公司（公司子孙中可能有子公司）和其下属机构。</remarks>
+    [Comment("机构实体，包括下属机构，公司。")]
     public class PlOrganization : GuidKeyObjectBase, ICreatorInfo
     {
         /// <summary>
-        /// 商户Id。仅总公司(ParentId 是null)需要此字段指向所属商户，其它情况忽略此字段。
+        /// 商户Id。仅总公司(ParentId 是null)需要此字段指向所属商户，其它情况忽略此字段。关联到 <see cref="PlMerchant"/> 实体。
         /// </summary>
         [Comment("商户Id。仅总公司(ParentId 是null)需要此字段指向所属商户，其它情况忽略此字段。")]
         public Guid? MerchantId { get; set; }
@@ -37,14 +40,14 @@ namespace PowerLms.Data
         /// <summary>
         /// 快捷输入码。服务器不使用。8个ASCII字符不足的尾部填充空格（写入时可不填充，但读回后会自动加入）。
         /// </summary>
-        [Column(TypeName = "char"), MaxLength(8)]
+        [Unicode(false), MaxLength(8)]
         [Comment("快捷输入码。服务器不使用。")]
         public string ShortcutCode { get; set; }
 
         /// <summary>
-        /// 机构类型。2公司，4下属机构。
+        /// 机构类型。2公司；4普通机构，此时祖先机构中必有公司类型的机构。
         /// </summary>
-        [Comment("机构类型，2公司，4下属机构")]
+        [Comment("机构类型，2公司；4机构，此时祖先机构中必有公司类型的机构。")]
         public int Otc { get; set; }
 
         /// <summary>
