@@ -150,12 +150,20 @@ namespace OW.Data
             if (conditional == null || !conditional.Any())
                 return queryable;
 
+            // 添加 null 检查以确保 queryable 不为 null
+            if (queryable == null)
+                return null;
+
             var type = typeof(T);
             var para = Expression.Parameter(type);
             Expression body = null;
 
             foreach (var item in conditional)
             {
+                // 检查条件项是否为 null 或空
+                if (item.Key == null || item.Value == null)
+                    continue;
+
                 if (type.GetProperty(item.Key, BindingFlags.IgnoreCase | BindingFlags.GetProperty | BindingFlags.Public | BindingFlags.Instance | BindingFlags.FlattenHierarchy) is null) continue;
                 var left = Expression.Property(para, item.Key);
                 var values = item.Value.Split(',');
@@ -185,6 +193,10 @@ namespace OW.Data
 
                 body = body == null ? condition : Expression.OrElse(body, condition);
             }
+
+            // 如果没有有效的条件，返回原始查询
+            if (body == null)
+                return queryable;
 
             var func = Expression.Lambda<Func<T, bool>>(body, para);
             return queryable.Where(func);
@@ -241,12 +253,20 @@ namespace OW.Data
             if (conditional == null || !conditional.Any())
                 return queryable;
 
+            // 添加 null 检查以确保 queryable 不为 null
+            if (queryable == null)
+                return null;
+
             IQueryable<T> result = queryable;
             var type = typeof(T);
             var para = Expression.Parameter(type); // 创建参数表达式，表示查询对象中的实体
 
             foreach (var item in conditional)
             {
+                // 检查条件项是否为 null 或空
+                if (item.Key == null || item.Value == null)
+                    continue;
+
                 // 忽略实体类中不存在的属性
                 if (type.GetProperty(item.Key, BindingFlags.IgnoreCase | BindingFlags.GetProperty | BindingFlags.Public | BindingFlags.Instance | BindingFlags.FlattenHierarchy) is null)
                     continue;
@@ -422,15 +442,6 @@ namespace OW.Data
                 OwHelper.SetLastErrorAndMessage(404, $"解析枚举值出错: {ex.Message}");
                 return null;
             }
-        }
-
-        public static IQueryable<T> GenerateWhereAndWithEntityName<T>(IQueryable<T> queryable, IDictionary<string, string> conditional) where T : class
-        {
-            var name = typeof(T).Name;
-            var dic = new Dictionary<string, string>(conditional.Where(c => c.Key.StartsWith(name + "."))
-                .Select(c => new KeyValuePair<string, string>(c.Key[(name.Length + 1)..], c.Value)));
-            var result = GenerateWhereAnd(queryable, dic);
-            return result;
         }
 
         /// <summary>
