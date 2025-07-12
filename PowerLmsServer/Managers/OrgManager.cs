@@ -65,37 +65,67 @@ namespace PowerLmsServer.Managers
 
         #region 主要查询方法
         /// <summary>
-        /// 找到指定用户Id的商户Id。
+        /// 找到指定用户Id的商户Id。先从缓存中获取，如果没有就从数据库加载，找不到返回null。
         /// </summary>
         /// <remarks>在缓存中维护一个并发字典，从中找到需要的数据。</remarks>
         /// <param name="userId">用户ID。</param>
-        /// <returns>用户所属的商户ID。</returns>
-        public Guid GetMerchantIdByUserId(Guid userId)
+        /// <returns>用户所属的商户ID，未找到返回null。</returns>
+        public Guid? GetMerchantIdByUserId(Guid userId)
         {
             var cacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId(userId, "UserToMerchant.");
             
-            return _MemoryCache.GetOrCreate(cacheKey, entry =>
+            // 先尝试从缓存获取
+            if (_MemoryCache.TryGetValue(cacheKey, out Guid? cachedMerchantId))
             {
+                return cachedMerchantId;
+            }
+            
+            // 缓存中没有，从数据库查询
+            using var dbContext = _DbContextFactory.CreateDbContext();
+            var merchantId = ResolveMerchantIdByUserIdFromDatabaseCore(dbContext, userId);
+            
+            // 只有找到结果时才放入缓存，避免缓存null值
+            if (merchantId.HasValue)
+            {
+                var entry = _MemoryCache.CreateEntry(cacheKey);
                 ConfigureIdLookupCacheEntry(entry);
-                return ResolveMerchantIdByUserIdFromDatabase(userId);
-            });
+                entry.Value = merchantId;
+                entry.Dispose(); // 提交到缓存
+            }
+            
+            return merchantId;
         }
 
         /// <summary>
-        /// 找到指定组织机构Id的商户Id。
+        /// 找到指定组织机构Id的商户Id。先从缓存中获取，如果没有就从数据库加载，找不到返回null。
         /// </summary>
         /// <remarks>缓存中维护一个并发字典，从中找到需要的数据。</remarks>
         /// <param name="orgId">机构/商户Id。若是商户Id则立即返回该Id。</param>
-        /// <returns>机构所属的商户Id。</returns>
-        public Guid GetMerchantIdByOrgId(Guid orgId)
+        /// <returns>机构所属的商户Id，未找到返回null。</returns>
+        public Guid? GetMerchantIdByOrgId(Guid orgId)
         {
             var cacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId(orgId, "OrgToMerchant.");
             
-            return _MemoryCache.GetOrCreate(cacheKey, entry =>
+            // 先尝试从缓存获取
+            if (_MemoryCache.TryGetValue(cacheKey, out Guid? cachedMerchantId))
             {
+                return cachedMerchantId;
+            }
+            
+            // 缓存中没有，从数据库查询
+            using var dbContext = _DbContextFactory.CreateDbContext();
+            var merchantId = ResolveMerchantIdFromDatabaseCore(dbContext, orgId);
+            
+            // 只有找到结果时才放入缓存，避免缓存null值
+            if (merchantId.HasValue)
+            {
+                var entry = _MemoryCache.CreateEntry(cacheKey);
                 ConfigureIdLookupCacheEntry(entry);
-                return ResolveMerchantIdFromDatabase(orgId);
-            });
+                entry.Value = merchantId;
+                entry.Dispose(); // 提交到缓存
+            }
+            
+            return merchantId;
         }
 
         /// <summary>
@@ -121,25 +151,28 @@ namespace PowerLmsServer.Managers
         }
 
         /// <summary>
-        /// 获取指定机构Id所属公司的Id列表。包含自身。
+        /// 获取指定机构Id所属公司的Id。包含自身。
         /// </summary>
         /// <param name="orgId">机构/公司Id，若本身就是公司则立即返回该值。</param>
-        /// <returns>公司Id。</returns>
-        public Guid GetCompanyIdByOrgId(Guid orgId)
+        /// <returns>公司Id，未找到返回null。</returns>
+        public Guid? GetCompanyIdByOrgId(Guid orgId)
         {
             var merchantId = GetMerchantIdByOrgId(orgId);
-            var cacheItem = GetOrLoadOrgCacheItem(merchantId);
+            if (!merchantId.HasValue)
+                return null; // 未找到所属商户时返回null
+                
+            var cacheItem = GetOrLoadOrgCacheItem(merchantId.Value);
             
             // 如果传入的就是商户ID，查找第一个公司类型的组织
             if (cacheItem.Merchant.Id == orgId)
             {
                 var firstCompany = cacheItem.Orgs.Values.FirstOrDefault(o => o.Otc == 2);
-                return firstCompany?.Id ?? throw new InvalidOperationException($"商户 {merchantId} 下未找到公司类型的组织机构");
+                return firstCompany?.Id; // 未找到公司时返回null
             }
 
             // 查找指定机构
             if (!cacheItem.Orgs.TryGetValue(orgId, out var targetOrg))
-                throw new InvalidOperationException($"组织机构 {orgId} 未找到");
+                return null; // 机构未找到时返回null
 
             // 如果本身就是公司，直接返回
             if (targetOrg.Otc == 2)
@@ -155,7 +188,7 @@ namespace PowerLmsServer.Managers
                     break;
             }
 
-            return current?.Id ?? throw new InvalidOperationException($"组织机构 {orgId} 未找到所属公司");
+            return current?.Id; // 未找到公司时返回null
         }
 
         /// <summary>
@@ -166,39 +199,51 @@ namespace PowerLmsServer.Managers
         public IReadOnlyList<Guid> GetOrgIdsByCompanyId(Guid orgId)
         {
             var companyId = GetCompanyIdByOrgId(orgId);
-            var merchantId = GetMerchantIdByOrgId(companyId);
-            var cacheItem = GetOrLoadOrgCacheItem(merchantId);
+            if (!companyId.HasValue)
+                return Array.Empty<Guid>(); // 未找到公司时返回空列表
+                
+            var merchantId = GetMerchantIdByOrgId(companyId.Value);
+            if (!merchantId.HasValue)
+                return Array.Empty<Guid>(); // 未找到商户时返回空列表
+                
+            var cacheItem = GetOrLoadOrgCacheItem(merchantId.Value);
 
-            if (!cacheItem.Orgs.TryGetValue(companyId, out var company))
-                throw new InvalidOperationException($"公司 {companyId} 未找到");
+            if (!cacheItem.Orgs.TryGetValue(companyId.Value, out var company))
+                return Array.Empty<Guid>(); // 公司未找到时返回空列表
 
-            // 获取公司及其所有下属机构（但排除其他子公司）
-            var result = new List<Guid> { companyId };
-            var subOrgs = OwHelper.GetAllSubItemsOfTree(new[] { company }, c => c.Children);
+            // 优化：在树遍历时直接排除子公司，自然不会获取子公司的下属机构
+            var result = new List<Guid> { companyId.Value };
+            var subOrgs = OwHelper.GetAllSubItemsOfTree(new[] { company }, c => c.Children.Where(child => child.Otc != 2));
             
-            foreach (var subOrg in subOrgs.Where(o => o.Id != companyId))
-            {
-                // 排除其他子公司及其下属机构
-                if (subOrg.Otc == 2) continue; // 跳过子公司本身
-                
-                // 检查是否是其他子公司的下属机构
-                var isUnderOtherCompany = false;
-                var current = subOrg;
-                while (current.ParentId.HasValue && cacheItem.Orgs.TryGetValue(current.ParentId.Value, out var parent))
-                {
-                    if (parent.Otc == 2 && parent.Id != companyId)
-                    {
-                        isUnderOtherCompany = true;
-                        break;
-                    }
-                    current = parent;
-                }
-                
-                if (!isUnderOtherCompany)
-                    result.Add(subOrg.Id);
-            }
+            // 添加所有非公司类型的下属机构
+            result.AddRange(subOrgs.Where(o => o.Id != companyId.Value).Select(o => o.Id));
 
             return result.AsReadOnly();
+        }
+
+        /// <summary>
+        /// 获取用户当前登录的公司对象。
+        /// </summary>
+        /// <param name="user">用户对象。</param>
+        /// <returns>公司对象，未找到返回null。</returns>
+        public PlOrganization GetCurrentCompanyByUser(Account user)
+        {
+            if (user.OrgId == null) return null;
+            var companyId = GetCompanyIdByOrgId(user.OrgId.Value);
+            if (!companyId.HasValue) return null;
+
+            try
+            {
+                var merchantId = GetMerchantIdByOrgId(companyId.Value);
+                if (!merchantId.HasValue) return null;
+                
+                var cacheItem = GetOrLoadOrgCacheItem(merchantId.Value);
+                return cacheItem.Orgs.TryGetValue(companyId.Value, out var company) ? company : null;
+            }
+            catch
+            {
+                return null; // 缓存中未找到对应数据
+            }
         }
         #endregion
 
@@ -263,23 +308,21 @@ namespace PowerLmsServer.Managers
             
             // 2. 🔥 关键修复：如果组织结构发生变化，必须失效整个商户的主缓存
             // 因为主缓存中的组织列表可能已经过期
-            try
+            using var dbContext = _DbContextFactory.CreateDbContext();
+            var merchantId = ResolveMerchantIdFromDatabaseCore(dbContext, orgId);
+            if (merchantId.HasValue)
             {
-                // 尝试从数据库获取该组织所属的商户ID
-                var merchantId = ResolveMerchantIdFromDatabase(orgId);
-                
                 // 失效整个商户的缓存，确保组织列表是最新的
-                var mainCacheCount = InvalidateOrgCaches(merchantId);
+                var mainCacheCount = InvalidateOrgCaches(merchantId.Value);
                 count += mainCacheCount;
                 
                 // 记录日志以便调试
-                // 注意：在生产环境中可以移除或改为Debug级别
                 System.Diagnostics.Debug.WriteLine($"组织 {orgId} 缓存失效导致商户 {merchantId} 的 {mainCacheCount} 个缓存项失效");
             }
-            catch (Exception ex)
+            else
             {
                 // 如果无法确定商户ID（比如组织已被删除），记录警告但不阻断流程
-                System.Diagnostics.Debug.WriteLine($"无法确定组织 {orgId} 的商户ID进行缓存失效: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"无法确定组织 {orgId} 的商户ID进行缓存失效");
             }
             
             return count;
@@ -297,6 +340,8 @@ namespace PowerLmsServer.Managers
             var count = 0;
             var processedMerchants = new HashSet<Guid>(); // 避免重复处理同一商户
             
+            using var dbContext = _DbContextFactory.CreateDbContext();
+            
             foreach (var orgId in orgIds)
             {
                 // 失效单个映射缓存
@@ -305,154 +350,15 @@ namespace PowerLmsServer.Managers
                     count++;
                 
                 // 尝试获取商户ID并失效主缓存
-                try
+                var merchantId = ResolveMerchantIdFromDatabaseCore(dbContext, orgId);
+                if (merchantId.HasValue && processedMerchants.Add(merchantId.Value)) // 如果是第一次处理这个商户
                 {
-                    var merchantId = ResolveMerchantIdFromDatabase(orgId);
-                    if (processedMerchants.Add(merchantId)) // 如果是第一次处理这个商户
-                    {
-                        var mainCacheCount = InvalidateOrgCaches(merchantId);
-                        count += mainCacheCount;
-                    }
-                }
-                catch
-                {
-                    // 忽略单个组织的失败，继续处理其他组织
+                    var mainCacheCount = InvalidateOrgCaches(merchantId.Value);
+                    count += mainCacheCount;
                 }
             }
             
             return count;
-        }
-        #endregion
-
-        #region 兼容性适配方法
-        /// <summary>
-        /// 获取指定商户下所有组织机构ID列表。
-        /// </summary>
-        /// <param name="merchantId">商户ID。</param>
-        /// <returns>组织机构ID集合。</returns>
-        public IEnumerable<Guid> GetOrgIdsByMerchantId(Guid merchantId)
-        {
-            var cacheItem = GetOrLoadOrgCacheItem(merchantId);
-            return cacheItem.Orgs.Keys;
-        }
-
-        /// <summary>
-        /// 获取指定商户下所有组织机构的字典。适配原有接口。
-        /// </summary>
-        /// <param name="merchantId">商户ID。</param>
-        /// <returns>组织机构字典。</returns>
-        public ConcurrentDictionary<Guid, PlOrganization> GetOrLoadByMerchantId(Guid merchantId)
-        {
-            var cacheItem = GetOrLoadOrgCacheItem(merchantId);
-            return new ConcurrentDictionary<Guid, PlOrganization>(cacheItem.Orgs);
-        }
-
-        /// <summary>
-        /// 通过用户获取其所属商户对象。算法：获取user.OrgId所属商户。
-        /// </summary>
-        /// <param name="user">用户对象。</param>
-        /// <returns>商户对象，未找到返回null。</returns>
-        public PlMerchant GetMerchantByUser(Account user)
-        {
-            try
-            {
-                var merchantId = GetMerchantIdByUserId(user.Id);
-                var cacheItem = GetOrLoadOrgCacheItem(merchantId);
-                return cacheItem.Merchant;
-            }
-            catch
-            {
-                return null; // 用户未关联有效商户时返回null
-            }
-        }
-
-        /// <summary>
-        /// 安全版本的GetMerchantIdByOrgId，未找到时返回null而非抛出异常。
-        /// </summary>
-        /// <param name="orgId">组织或商户ID。</param>
-        /// <returns>商户ID，未找到返回null。</returns>
-        public Guid? GetMerchantIdByOrgIdOrNull(Guid orgId)
-        {
-            try
-            {
-                return GetMerchantIdByOrgId(orgId);
-            }
-            catch
-            {
-                return null; // 未找到时返回null
-            }
-        }
-
-        /// <summary>
-        /// TryGet模式的商户ID查找方法，兼容原有接口。
-        /// </summary>
-        /// <param name="orgId">组织或商户ID。</param>
-        /// <param name="merchantId">输出的商户ID。</param>
-        /// <returns>是否找到。</returns>
-        public bool TryGetMerchantIdByOrgId(Guid orgId, out Guid? merchantId)
-        {
-            merchantId = GetMerchantIdByOrgIdOrNull(orgId);
-            return merchantId.HasValue;
-        }
-
-        /// <summary>
-        /// 获取用户当前登录公司的ID。
-        /// </summary>
-        /// <param name="user">用户对象。</param>
-        /// <returns>公司ID，未找到返回null。</returns>
-        public Guid? GetCurrentCompanyIdByUser(Account user)
-        {
-            if (user.OrgId == null) return null;
-            try
-            {
-                return GetCompanyIdByOrgId(user.OrgId.Value);
-            }
-            catch
-            {
-                return null; // 用户未登录到有效机构
-            }
-        }
-
-        /// <summary>
-        /// 获取用户当前登录的公司对象。适配原有接口。
-        /// </summary>
-        /// <param name="user">用户对象。</param>
-        /// <returns>公司对象，未找到返回null。</returns>
-        public PlOrganization GetCurrentCompanyByUser(Account user)
-        {
-            var companyId = GetCurrentCompanyIdByUser(user);
-            if (!companyId.HasValue) return null;
-
-            try
-            {
-                var merchantId = GetMerchantIdByOrgId(companyId.Value);
-                var cacheItem = GetOrLoadOrgCacheItem(merchantId);
-                return cacheItem.Orgs[companyId.Value];
-            }
-            catch
-            {
-                return null; // 缓存中未找到对应数据
-            }
-        }
-
-        /// <summary>
-        /// 兼容原有的缓存失效方法名。
-        /// </summary>
-        /// <param name="merchantId">商户ID。</param>
-        /// <returns>是否成功失效。</returns>
-        public bool InvalidateOrgCache(Guid merchantId)
-        {
-            return InvalidateOrgCaches(merchantId) > 0;
-        }
-
-        /// <summary>
-        /// 兼容原有的商户缓存失效方法名。
-        /// </summary>
-        /// <param name="merchantId">商户ID。</param>
-        /// <returns>是否成功失效。</returns>
-        public bool InvalidateCache(Guid merchantId)
-        {
-            return InvalidateOrgCaches(merchantId) > 0;
         }
         #endregion
 
@@ -475,18 +381,31 @@ namespace PowerLmsServer.Managers
             if (userOrg == null)
                 throw new InvalidOperationException($"用户 {userId} 未找到所属组织机构");
 
-            return ResolveMerchantIdFromDatabaseCore(dbContext, userOrg.OrgId);
+            var merchantId = ResolveMerchantIdFromDatabaseCore(dbContext, userOrg.OrgId);
+            if (!merchantId.HasValue)
+                throw new InvalidOperationException($"用户 {userId} 所属组织机构 {userOrg.OrgId} 未找到关联的商户");
+                
+            return merchantId.Value;
         }
 
         /// <summary>
-        /// 从数据库解析商户ID。
+        /// 从数据库解析用户的商户ID的核心逻辑。
         /// </summary>
-        /// <param name="orgId">机构或商户ID。</param>
-        /// <returns>商户ID。</returns>
-        private Guid ResolveMerchantIdFromDatabase(Guid orgId)
+        /// <param name="dbContext">数据库上下文。</param>
+        /// <param name="userId">用户ID。</param>
+        /// <returns>商户ID，未找到返回null。</returns>
+        private static Guid? ResolveMerchantIdByUserIdFromDatabaseCore(TDbContext dbContext, Guid userId)
         {
-            using var dbContext = _DbContextFactory.CreateDbContext();
-            return ResolveMerchantIdFromDatabaseCore(dbContext, orgId);
+            // 使用泛型方法访问AccountPlOrganizations实体
+            var userOrg = dbContext.Set<AccountPlOrganization>()
+                .AsNoTracking()
+                .Where(c => c.UserId == userId)
+                .FirstOrDefault();
+
+            if (userOrg == null)
+                return null; // 用户未找到所属组织机构
+
+            return ResolveMerchantIdFromDatabaseCore(dbContext, userOrg.OrgId);
         }
 
         /// <summary>
@@ -494,8 +413,8 @@ namespace PowerLmsServer.Managers
         /// </summary>
         /// <param name="dbContext">数据库上下文。</param>
         /// <param name="orgId">机构或商户ID。</param>
-        /// <returns>商户ID。</returns>
-        private static Guid ResolveMerchantIdFromDatabaseCore(TDbContext dbContext, Guid orgId)
+        /// <returns>商户ID，未找到返回null。</returns>
+        private static Guid? ResolveMerchantIdFromDatabaseCore(TDbContext dbContext, Guid orgId)
         {
             // 首先尝试作为商户ID查找，使用Set<T>()方法
             var merchant = dbContext.Set<PlMerchant>().Find(orgId);
@@ -510,12 +429,14 @@ namespace PowerLmsServer.Managers
                 {
                     if (org.MerchantId.HasValue)
                         return org.MerchantId.Value;
-                    throw new InvalidOperationException($"顶层组织机构 {org.Id} 未关联商户");
+                    // 顶层组织未关联商户，这是数据不一致的情况，返回null而不抛异常
+                    return null;
                 }
                 org = dbContext.Set<PlOrganization>().Find(org.ParentId);
             }
 
-            throw new InvalidOperationException($"未找到ID {orgId} 对应的商户或组织机构");
+            // 未找到对应的商户或组织机构，返回null
+            return null;
         }
 
         /// <summary>
@@ -579,9 +500,10 @@ namespace PowerLmsServer.Managers
             
             // 为商户ID本身建立映射缓存
             var merchantCacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId(merchantId, "OrgToMerchant.");
-            var merchantOptions = new MemoryCacheEntryOptions();
-            ConfigureIdLookupCacheEntry(merchantOptions);
-            _MemoryCache.Set(merchantCacheKey, merchantId, merchantOptions);
+            var merchantEntry = _MemoryCache.CreateEntry(merchantCacheKey);
+            ConfigureIdLookupCacheEntry(merchantEntry);
+            merchantEntry.Value = (Guid?)merchantId;
+            merchantEntry.Dispose();
 
             // 为所有组织机构建立到商户的映射缓存
             if (cacheItem.Orgs != null)
@@ -594,16 +516,17 @@ namespace PowerLmsServer.Managers
                 {
                     var orgCacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId(orgId, "OrgToMerchant.");
                     
-                    var orgOptions = new MemoryCacheEntryOptions();
-                    ConfigureIdLookupCacheEntry(orgOptions);
+                    var orgEntry = _MemoryCache.CreateEntry(orgCacheKey);
+                    ConfigureIdLookupCacheEntry(orgEntry);
                     
                     // 添加对主缓存的依赖，当主缓存失效时这些映射也失效
                     if (mainTokenSource != null)
                     {
-                        orgOptions.AddExpirationToken(new CancellationChangeToken(mainTokenSource.Token));
+                        orgEntry.AddExpirationToken(new CancellationChangeToken(mainTokenSource.Token));
                     }
                     
-                    _MemoryCache.Set(orgCacheKey, merchantId, orgOptions);
+                    orgEntry.Value = (Guid?)merchantId;
+                    orgEntry.Dispose();
                 }
             }
         }

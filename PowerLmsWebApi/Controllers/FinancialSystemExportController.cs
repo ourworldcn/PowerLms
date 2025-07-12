@@ -16,7 +16,7 @@ namespace PowerLmsWebApi.Controllers
     /// 提供发票数据导出为金蝶DBF格式文件的功能。
     /// 严格按照SubjectConfiguration表中的科目配置进行凭证生成。
     /// </summary>
-    public class FinancialSystemExportController : PlControllerBase
+    public partial class FinancialSystemExportController : PlControllerBase
     {
         /// <summary>
         /// 构造函数，初始化财务系统导出控制器。
@@ -27,11 +27,10 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="dbContext">PowerLMS用户数据库上下文，提供对数据库的直接访问能力</param>
         /// <param name="logger">日志记录器，用于记录控制器运行过程中的各种信息</param>
         /// <param name="fileService">文件服务，提供文件系统操作的统一接口</param>
-        /// <param name="merchantManager">商户管理器，用于商户相关操作</param>
-        /// <param name="organizationManager">机构管理器，用于机构相关操作</param>
+        /// <param name="orgManager">组织管理器，用于商户和机构相关操作</param>
         public FinancialSystemExportController(AccountManager accountManager, IServiceProvider serviceProvider, IServiceScopeFactory serviceScopeFactory,
             PowerLmsUserDbContext dbContext, ILogger<FinancialSystemExportController> logger, OwFileService<PowerLmsUserDbContext> fileService,
-            MerchantManager merchantManager, OrganizationManager organizationManager)
+            OrgManager<PowerLmsUserDbContext> orgManager)
         {
             _AccountManager = accountManager;
             _ServiceProvider = serviceProvider;
@@ -39,8 +38,7 @@ namespace PowerLmsWebApi.Controllers
             _DbContext = dbContext;
             _Logger = logger;
             _FileService = fileService;
-            _MerchantManager = merchantManager;
-            _OrganizationManager = organizationManager;
+            _OrgManager = orgManager;
         }
 
         private readonly AccountManager _AccountManager;
@@ -49,8 +47,7 @@ namespace PowerLmsWebApi.Controllers
         private readonly PowerLmsUserDbContext _DbContext;
         private readonly ILogger<FinancialSystemExportController> _Logger;
         private readonly OwFileService<PowerLmsUserDbContext> _FileService;
-        private readonly MerchantManager _MerchantManager;
-        private readonly OrganizationManager _OrganizationManager;
+        private readonly OrgManager<PowerLmsUserDbContext> _OrgManager;
 
         #region HTTP接口
 
@@ -592,8 +589,7 @@ namespace PowerLmsWebApi.Controllers
                 return invoicesQuery;
             }
 
-            var merchantManager = serviceProvider.GetRequiredService<MerchantManager>();
-            var organizationManager = serviceProvider.GetRequiredService<OrganizationManager>();
+            var orgManager = serviceProvider.GetRequiredService<OrgManager<PowerLmsUserDbContext>>();
 
             // 获取用户关联的所有组织机构ID
             var userOrgIds = dbContext.AccountPlOrganizations
@@ -606,27 +602,9 @@ namespace PowerLmsWebApi.Controllers
                 return invoicesQuery.Where(i => false);
             }
 
-            // 获取用户关联的所有商户ID
-            var merchantIds = dbContext.PlOrganizations
-                .Where(o => userOrgIds.Contains(o.Id) && o.MerchantId.HasValue)
-                .Select(o => o.MerchantId.Value)
-                .Distinct()
-                .ToList();
-
-            if (!merchantIds.Any())
-            {
-                var directMerchantIds = dbContext.Merchants
-                    .Where(m => userOrgIds.Contains(m.Id))
-                    .Select(m => m.Id)
-                    .ToList();
-
-                if (directMerchantIds.Any())
-                {
-                    merchantIds.AddRange(directMerchantIds);
-                }
-            }
-
-            if (!merchantIds.Any())
+            // 获取用户所属商户ID
+            var merchantId = orgManager.GetMerchantIdByUserId(user.Id);
+            if (!merchantId.HasValue)
             {
                 return invoicesQuery.Where(i => false);
             }
@@ -635,31 +613,23 @@ namespace PowerLmsWebApi.Controllers
 
             if (user.IsMerchantAdmin)
             {
-                allowedOrgIds = new HashSet<Guid?>();
-
-                foreach (var merchantId in merchantIds)
-                {
-                    allowedOrgIds.Add(merchantId);
-
-                    var merchantOrgIds = dbContext.PlOrganizations
-                        .Where(o => o.MerchantId == merchantId)
-                        .Select(o => (Guid?)o.Id)
-                        .ToList();
-
-                    foreach (var orgId in merchantOrgIds)
-                    {
-                        allowedOrgIds.Add(orgId);
-                    }
-                }
+                // 商户管理员可以访问整个商户下的所有组织机构
+                var allOrgIds = orgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs.Keys.ToList();
+                allowedOrgIds = new HashSet<Guid?>(allOrgIds.Cast<Guid?>());
+                allowedOrgIds.Add(merchantId.Value); // 添加商户ID本身
             }
             else
             {
-                allowedOrgIds = userOrgIds.Select(id => (Guid?)id).ToHashSet();
-
-                foreach (var merchantId in merchantIds)
+                // 普通用户只能访问其当前登录的公司及下属机构
+                var companyId = user.OrgId.HasValue ? orgManager.GetCompanyIdByOrgId(user.OrgId.Value) : null;
+                if (!companyId.HasValue)
                 {
-                    allowedOrgIds.Add(merchantId);
+                    return invoicesQuery.Where(i => false);
                 }
+                
+                var companyOrgIds = orgManager.GetOrgIdsByCompanyId(companyId.Value).ToList();
+                allowedOrgIds = new HashSet<Guid?>(companyOrgIds.Cast<Guid?>());
+                allowedOrgIds.Add(merchantId.Value); // 添加商户ID本身
             }
 
             var filteredQuery = from invoice in invoicesQuery
@@ -727,16 +697,18 @@ namespace PowerLmsWebApi.Controllers
                 return invoicesQuery;
             }
 
-            if (!_MerchantManager.GetIdByUserId(user.Id, out var userMerchantId) || !userMerchantId.HasValue)
+            var merchantId = _OrgManager.GetMerchantIdByUserId(user.Id);
+            if (!merchantId.HasValue)
             {
                 return invoicesQuery.Where(i => false);
             }
 
             if (user.IsMerchantAdmin)
             {
-                var merchantOrgs = _OrganizationManager.GetOrLoadByMerchantId(userMerchantId.Value);
-                var merchantOrgIds = merchantOrgs.Keys.Select(id => (Guid?)id).ToHashSet();
-                merchantOrgIds.Add(userMerchantId.Value);
+                // 商户管理员可以访问整个商户下的所有组织机构
+                var merchantOrgIds = _OrgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs.Keys
+                    .Select(id => (Guid?)id).ToHashSet();
+                merchantOrgIds.Add(merchantId.Value);
 
                 var merchantFilteredQuery = from invoice in invoicesQuery
                                             join requisition in context.DocFeeRequisitions
@@ -759,14 +731,16 @@ namespace PowerLmsWebApi.Controllers
             }
             else
             {
-                var userOrganizations = _OrganizationManager.GetOrLoadCurrentOrgsByUser(user);
-                var userOrgIds = userOrganizations.Keys.Select(id => (Guid?)id).ToHashSet();
-                userOrgIds.Add(userMerchantId.Value);
-
-                if (!userOrgIds.Any())
+                // 普通用户只能访问其当前登录的公司及下属机构
+                var companyId = user.OrgId.HasValue ? _OrgManager.GetCompanyIdByOrgId(user.OrgId.Value) : null;
+                if (!companyId.HasValue)
                 {
                     return invoicesQuery.Where(i => false);
                 }
+                
+                var userOrgIds = _OrgManager.GetOrgIdsByCompanyId(companyId.Value)
+                    .Select(id => (Guid?)id).ToHashSet();
+                userOrgIds.Add(merchantId.Value);
 
                 var userFilteredQuery = from invoice in invoicesQuery
                                         join requisition in context.DocFeeRequisitions

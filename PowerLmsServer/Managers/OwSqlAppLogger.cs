@@ -136,8 +136,10 @@ namespace PowerLmsServer.Managers
             var loginName = owContext?.User?.LoginName ?? "Unknown";
             var displayName = owContext?.User?.DisplayName ?? "Unknown";
 
-            var merchantManager = _ServiceProvider.GetService<MerchantManager>();
-            var merchant = merchantManager?.GetOrLoadByUser(owContext?.User);
+            var orgManager = _ServiceProvider.GetService<OrgManager<PowerLmsUserDbContext>>();
+            var userId = owContext?.User?.Id;
+            var userMerchantId = userId.HasValue ? orgManager?.GetMerchantIdByUserId(userId.Value) : null;
+            var merchant = userMerchantId.HasValue ? orgManager?.GetOrLoadOrgCacheItem(userMerchantId.Value)?.Merchant : null;
             var companyName = merchant?.Name.DisplayName ?? "Unknown";
 
             // 通用日志记录
@@ -152,6 +154,7 @@ namespace PowerLmsServer.Managers
             };
 
             var merchantId = merchant?.Id;
+
             // 将 generalInfo 写入日志
             WriteLogItem(new OwAppLogItemStore
             {

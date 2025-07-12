@@ -24,13 +24,11 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="mapper"></param>
         /// <param name="entityManager"></param>
         /// <param name="roleManager"></param>
-        /// <param name="merchantManager"></param>
-        /// <param name="organizationManager"></param>
+        /// <param name="orgManager"></param>
         /// <param name="logger"></param>
         public RoleController(PowerLmsUserDbContext dbContext, AccountManager accountManager,
             IServiceProvider serviceProvider, IMapper mapper, EntityManager entityManager,
-            RoleManager roleManager, MerchantManager merchantManager,
-            OrganizationManager organizationManager, ILogger<RoleController> logger)
+            RoleManager roleManager, OrgManager<PowerLmsUserDbContext> orgManager, ILogger<RoleController> logger)
         {
             _DbContext = dbContext;
             _AccountManager = accountManager;
@@ -38,8 +36,7 @@ namespace PowerLmsWebApi.Controllers
             _Mapper = mapper;
             _EntityManager = entityManager;
             _RoleManager = roleManager;
-            _MerchantManager = merchantManager;
-            _OrganizationManager = organizationManager;
+            _OrgManager = orgManager;
             _Logger = logger;
         }
 
@@ -49,8 +46,7 @@ namespace PowerLmsWebApi.Controllers
         readonly IMapper _Mapper;
         readonly EntityManager _EntityManager;
         readonly RoleManager _RoleManager;
-        readonly MerchantManager _MerchantManager;
-        readonly OrganizationManager _OrganizationManager;
+        readonly OrgManager<PowerLmsUserDbContext> _OrgManager;
         readonly ILogger<RoleController> _Logger;
 
         /// <summary>
@@ -89,45 +85,41 @@ namespace PowerLmsWebApi.Controllers
                 else if (context.User.IsMerchantAdmin)
                 {
                     // 商户管理员只能查看其所属商户下的角色
-                    var userMerchant = _MerchantManager.GetOrLoadByUser(context.User);
-                    if (userMerchant == null)
-                    {
-                        return BadRequest("无法确定您所属的商户");
-                    }
+                    var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
+                    if (!merchantId.HasValue) return Unauthorized("未找到用户所属商户");
 
+                    var allRoles = _RoleManager.GetOrLoadRolesByMerchantId(merchantId.Value);
+                    
                     // 获取商户下的所有机构ID
-                    var orgs = _OrganizationManager.GetOrLoadByMerchantId(userMerchant.Id);
-                    var orgIds = orgs.Keys.ToHashSet();
-                    orgIds.Add(userMerchant.Id); // 添加商户ID本身
+                    var orgIds = _OrgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs.Keys.ToHashSet();
+                    orgIds.Add(merchantId.Value); // 添加商户ID本身
 
                     query = _DbContext.PlRoles
                         .Where(r => r.OrgId.HasValue && orgIds.Contains(r.OrgId.Value))
                         .AsNoTracking();
 
                     _Logger.LogDebug("商户管理员查询角色: 商户 {MerchantId} 下找到 {Count} 个相关机构",
-                        userMerchant.Id, orgIds.Count);
+                        merchantId, orgIds.Count);
                 }
                 else
                 {
                     // 普通用户只能查看其当前有效机构下的角色
-                    var userMerchant = _MerchantManager.GetOrLoadByUser(context.User);
-                    if (userMerchant == null)
-                    {
-                        return BadRequest("无法确定您所属的商户");
-                    }
+                    var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
+                    if (!merchantId.HasValue) return Unauthorized("未找到用户所属商户");
 
+                    var roles = _RoleManager.GetOrLoadRolesByMerchantId(merchantId.Value);
+                    
                     // 获取用户当前有效的机构
-                    var userCurrentOrgs = _OrganizationManager.GetOrLoadCurrentOrgsByUser(context.User);
-                    var orgIds = userCurrentOrgs.Keys.ToHashSet();
-                    orgIds.Add(userMerchant.Id); // 支持直接归属商户的角色
-
-                    if (orgIds.Count == 0)
+                    var currentCompany = _OrgManager.GetCurrentCompanyByUser(context.User);
+                    if (currentCompany == null)
                     {
-                        // 如果用户没有关联任何机构，返回空结果
                         result.Result = new List<PlRole>();
                         _Logger.LogDebug("普通用户未关联任何机构，返回空角色列表");
                         return result;
                     }
+                    
+                    var orgIds = _OrgManager.GetOrgIdsByCompanyId(currentCompany.Id).ToHashSet();
+                    orgIds.Add(merchantId.Value); // 支持直接归属商户的角色
 
                     query = _DbContext.PlRoles
                         .Where(r => r.OrgId.HasValue && orgIds.Contains(r.OrgId.Value))

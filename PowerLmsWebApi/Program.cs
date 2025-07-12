@@ -151,6 +151,9 @@ internal class Program
 
         #endregion 配置数据库
 
+        // 添加组织管理服务（替代 OrganizationManager 和 MerchantManager）
+        services.AddOrgManager<PowerLmsUserDbContext>();
+
         services.AddSqlDependencyManager(); //添加SqlDependencyManager服务
         if (TimeSpan.TryParse(builder.Configuration.GetSection("WorldClockOffset").Value, out var offerset))
             OwHelper.Offset = offerset;  //配置游戏世界的时间。

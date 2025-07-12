@@ -38,14 +38,13 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="scope"></param>
         /// <param name="entityManager"></param>
         /// <param name="mapper"></param>
-        /// <param name="organizationManager"></param>
+        /// <param name="orgManager"></param>
         /// <param name="dataManager"></param>
         /// <param name="authorizationManager"></param>
-        /// <param name="merchantManager"></param>
         /// <param name="logger"></param>
         public AdminController(PowerLmsUserDbContext context, NpoiManager npoiManager, AccountManager accountManager, IServiceProvider scope, EntityManager entityManager,
-            IMapper mapper, OrganizationManager organizationManager, DataDicManager dataManager, AuthorizationManager authorizationManager,
-            MerchantManager merchantManager, ILogger<AdminController> logger)
+            IMapper mapper, OrgManager<PowerLmsUserDbContext> orgManager, DataDicManager dataManager, AuthorizationManager authorizationManager,
+            ILogger<AdminController> logger)
         {
             _DbContext = context;
             _NpoiManager = npoiManager;
@@ -53,10 +52,9 @@ namespace PowerLmsWebApi.Controllers
             _ServiceProvider = scope;
             _EntityManager = entityManager;
             _Mapper = mapper;
-            _OrganizationManager = organizationManager;
+            _OrgManager = orgManager;
             _DataManager = dataManager;
             _AuthorizationManager = authorizationManager;
-            _MerchantManager = merchantManager;
             _Logger = logger;
         }
 
@@ -66,10 +64,9 @@ namespace PowerLmsWebApi.Controllers
         readonly IServiceProvider _ServiceProvider;
         readonly EntityManager _EntityManager;
         readonly IMapper _Mapper;
-        readonly OrganizationManager _OrganizationManager;
+        readonly OrgManager<PowerLmsUserDbContext> _OrgManager;
         readonly DataDicManager _DataManager;
         readonly AuthorizationManager _AuthorizationManager;
-        readonly MerchantManager _MerchantManager;
         ILogger<AdminController> _Logger;
 
         #region 字典目录
@@ -94,10 +91,11 @@ namespace PowerLmsWebApi.Controllers
                 coll = coll.Where(c => c.OrgId == null);
             else
             {
-                if (!_MerchantManager.GetIdByUserId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
+                var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
+                if (!merchantId.HasValue) return BadRequest("未知的商户Id");
                 if (context.User.OrgId is null) //若没有指定机构
                 {
-                    coll = coll.Where(c => c.OrgId == merchId);
+                    coll = coll.Where(c => c.OrgId == merchantId);
                 }
                 else
                 {
@@ -368,10 +366,11 @@ namespace PowerLmsWebApi.Controllers
                 coll = coll.Where(c => c.OrgId == null);
             else
             {
-                if (!_MerchantManager.GetIdByUserId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
+                var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
+                if (!merchantId.HasValue) return BadRequest("未知的商户Id");
                 if (context.User.OrgId is null) //若没有指定机构
                 {
-                    coll = coll.Where(c => c.OrgId == merchId);
+                    coll = coll.Where(c => c.OrgId == merchantId);
                 }
                 else
                 {
@@ -421,7 +420,8 @@ namespace PowerLmsWebApi.Controllers
             }
             else if (context.User.IsMerchantAdmin)
             {
-                if (!_MerchantManager.GetIdByUserId(context.User.Id, out var merchId))
+                var merchId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
+                if (!merchId.HasValue)
                     return BadRequest("无法获取商户ID");
                 targetOrgId = merchId;
             }
@@ -460,10 +460,14 @@ namespace PowerLmsWebApi.Controllers
                     else if (context.User.IsMerchantAdmin && targetOrgId.HasValue)
                     {
                         // 商管：获取所属商户下所有公司型机构
-                        var allOrgs = _OrganizationManager.GetOrLoadByMerchantId(targetOrgId.Value);
-                        if (allOrgs != null)
+                        var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
+                        if (!merchantId.HasValue) return BadRequest("无法获取商户ID");
+                        
+                        var dictOrgs = _OrgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs;
+                        var allowOrgObjs = dictOrgs.Values.ToArray();
+                        if (allowOrgObjs != null)
                         {
-                            targetOrgs = allOrgs.Values
+                            targetOrgs = allowOrgObjs
                                 .Where(o => o.Otc == 2)
                                 .ToList();
                         }
@@ -688,10 +692,11 @@ namespace PowerLmsWebApi.Controllers
                 coll = coll.Where(c => c.OrgId == null);
             else
             {
-                if (!_MerchantManager.GetIdByUserId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
+                var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
+                if (!merchantId.HasValue) return BadRequest("未知的商户Id");
                 if (context.User.OrgId is null) //若没有指定机构
                 {
-                    coll = coll.Where(c => c.OrgId == merchId);
+                    coll = coll.Where(c => c.OrgId == merchantId);
                 }
                 else
                 {
@@ -838,10 +843,11 @@ namespace PowerLmsWebApi.Controllers
                 coll = coll.Where(c => c.OrgId == null);
             else
             {
-                if (!_MerchantManager.GetIdByUserId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
+                var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
+                if (!merchantId.HasValue) return BadRequest("未知的商户Id");
                 if (context.User.OrgId is null) //若没有指定机构
                 {
-                    coll = coll.Where(c => c.OrgId == merchId);
+                    coll = coll.Where(c => c.OrgId == merchantId);
                 }
                 else
                 {
@@ -1003,7 +1009,8 @@ namespace PowerLmsWebApi.Controllers
                 else
                 {
                     // 并根据用户的机构进行筛选
-                    if (!_MerchantManager.GetIdByUserId(context.User.Id, out var merchId))
+                    var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
+                    if (!merchantId.HasValue)
                         return BadRequest("未知的商户Id");
 
                     if (context.User.OrgId is null) // 若没有指定机构
@@ -1014,12 +1021,20 @@ namespace PowerLmsWebApi.Controllers
                     else // 若指定了机构
                     {
                         // 获取当前登录机构及其所有子机构包含下属公司的所有机构Id
-                        var allOrgs = _OrganizationManager.GetOrgsByMerchantId(merchId.Value);
+                        var allOrgs = _OrgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs.Values.ToArray();
 
-                        var allOrgIds = allOrgs.Values.Select(c => c.Id).ToList();  // 获取所有机构ID
+                        var allOrgIds = allOrgs.Select(c => c.Id).ToList();  // 获取所有机构ID
 
-                        var orgHierarchy = _OrganizationManager.GetOrLoadCurrentOrgsByUser(context.User);
-                        sourceColl = sourceColl.Where(c => c.OrgId.HasValue && allOrgIds.Contains(c.OrgId.Value));
+                        var currentCompany = _OrgManager.GetCurrentCompanyByUser(context.User);
+                        if (currentCompany != null)
+                        {
+                            var companyOrgIds = _OrgManager.GetOrgIdsByCompanyId(currentCompany.Id);
+                            sourceColl = sourceColl.Where(c => c.OrgId.HasValue && companyOrgIds.Contains(c.OrgId.Value));
+                        }
+                        else
+                        {
+                            sourceColl = sourceColl.Where(c => c.OrgId.HasValue && allOrgIds.Contains(c.OrgId.Value));
+                        }
                     }
                 }
 
@@ -1114,10 +1129,11 @@ namespace PowerLmsWebApi.Controllers
                 coll = coll.Where(c => c.OrgId == null);
             else
             {
-                if (!_MerchantManager.GetIdByUserId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
+                var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
+                if (!merchantId.HasValue) return BadRequest("未知的商户Id");
                 if (context.User.OrgId is null) //若没有指定机构
                 {
-                    coll = coll.Where(c => c.OrgId == merchId);
+                    coll = coll.Where(c => c.OrgId == merchantId);
                 }
                 else
                 {
@@ -1154,16 +1170,17 @@ namespace PowerLmsWebApi.Controllers
             coll = coll.Where(c => c.OrgId == context.User.OrgId);
             coll = coll.Where(c => c.BeginDate <= model.StartDateTime && c.EndData >= model.EndDateTime);
 
-            if (!_MerchantManager.GetIdByUserId(context.User.Id, out var merchId))
+            var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
+            if (!merchantId.HasValue)
                 return result;
 
-            var orgs = _OrganizationManager.GetOrLoadByMerchantId(merchId.Value);
-            if (!orgs.TryGetValue(context.User.OrgId.Value, out var org))
-                return BadRequest($"找不到指定的登录公司Id={merchId}");
+            var orgs = _OrgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs.Values.ToArray();
+            if (!orgs.Any(o => o.Id == context.User.OrgId.Value))
+                return BadRequest($"找不到指定的登录公司Id={merchantId}");
 
+            var org = orgs.First(o => o.Id == context.User.OrgId.Value);
             if (string.IsNullOrWhiteSpace(org.BaseCurrencyCode))
                 return BadRequest($"公司本币设置错误，本币代码为:{org.BaseCurrencyCode}");
-            //var curr = _DbContext.DD_PlCurrencys.Find(org.BaseCurrencyId.Value); if (curr is null) return result;
 
             coll = coll.Where(c => c.DCurrency == org.BaseCurrencyCode);
 
@@ -1244,10 +1261,11 @@ namespace PowerLmsWebApi.Controllers
                 coll = coll.Where(c => c.OrgId == null);
             else
             {
-                if (!_MerchantManager.GetIdByUserId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
+                var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
+                if (!merchantId.HasValue) return BadRequest("未知的商户Id");
                 if (context.User.OrgId is null) //若没有指定机构
                 {
-                    coll = coll.Where(c => c.OrgId == merchId);
+                    coll = coll.Where(c => c.OrgId == merchantId);
                 }
                 else
                 {
@@ -1392,8 +1410,18 @@ namespace PowerLmsWebApi.Controllers
             else
             {
                 // 获取用户管辖范围内的公司型组织机构ID
-                var companyIds = _OrganizationManager.GetCompanyIds(context.User);
-                coll = coll.Where(c => companyIds.Contains(c.OrgId));
+                var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
+                if (merchantId.HasValue)
+                {
+                    var allOrgs = _OrgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs.Values.ToArray();
+                    var companyIds = allOrgs.Where(o => o.Otc == 2).Select(o => (Guid?)o.Id).ToHashSet();
+                    companyIds.Add(merchantId); // 添加商户ID
+                    coll = coll.Where(c => companyIds.Contains(c.OrgId));
+                }
+                else
+                {
+                    coll = coll.Where(c => false); // 没有商户信息，返回空结果
+                }
             }
             coll = EfHelper.GenerateWhereAnd(coll, conditional);
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
@@ -1433,20 +1461,25 @@ namespace PowerLmsWebApi.Controllers
             if (model.CopyToChildren)
             {
                 // 获取用户管辖范围内的公司型组织机构ID
-                var companyIds = _OrganizationManager.GetCompanyIds(context.User, true);
-
-                foreach (var orgId in companyIds)
+                var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
+                if (merchantId.HasValue)
                 {
-                    // 检查是否已存在相同Code的记录
-                    if (_DbContext.DD_FeesTypes.Any(f => f.OrgId == orgId && f.Code == model.Item.Code))
-                        continue;
+                    var allOrgs = _OrgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs.Values.ToArray();
+                    var companyIds = allOrgs.Where(o => o.Otc == 2).Select(o => o.Id);
 
-                    // 使用Clone方法创建深表副本
-                    var newItem = (FeesType)model.Item.Clone();
-                    newItem.OrgId = orgId;
-                    newItem.GenerateNewId(); // 确保新记录有唯一ID
+                    foreach (var orgId in companyIds)
+                    {
+                        // 检查是否已存在相同Code的记录
+                        if (_DbContext.DD_FeesTypes.Any(f => f.OrgId == orgId && f.Code == model.Item.Code))
+                            continue;
 
-                    _DbContext.DD_FeesTypes.Add(newItem);
+                        // 使用Clone方法创建深表副本
+                        var newItem = (FeesType)model.Item.Clone();
+                        newItem.OrgId = orgId;
+                        newItem.GenerateNewId(); // 确保新记录有唯一ID
+
+                        _DbContext.DD_FeesTypes.Add(newItem);
+                    }
                 }
             }
 
@@ -1557,10 +1590,11 @@ namespace PowerLmsWebApi.Controllers
                 coll = coll.Where(c => c.OrgId == null);
             else
             {
-                if (!_MerchantManager.GetIdByUserId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
+                var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
+                if (!merchantId.HasValue) return BadRequest("未知的商户Id");
                 if (context.User.OrgId is null) //若没有指定机构
                 {
-                    coll = coll.Where(c => c.OrgId == merchId);
+                    coll = coll.Where(c => c.OrgId == merchantId);
                 }
                 else
                 {
@@ -1767,10 +1801,11 @@ namespace PowerLmsWebApi.Controllers
                 coll = coll.Where(c => c.OrgId == null);
             else
             {
-                if (!_MerchantManager.GetIdByUserId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
+                var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
+                if (!merchantId.HasValue) return BadRequest("未知的商户Id");
                 if (context.User.OrgId is null) //若没有指定机构
                 {
-                    coll = coll.Where(c => c.OrgId == merchId);
+                    coll = coll.Where(c => c.OrgId == merchantId);
                 }
                 else
                 {
@@ -1909,10 +1944,11 @@ namespace PowerLmsWebApi.Controllers
                 coll = coll.Where(c => c.OrgId == null);
             else
             {
-                if (!_MerchantManager.GetIdByUserId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
+                var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
+                if (!merchantId.HasValue) return BadRequest("未知的商户Id");
                 if (context.User.OrgId is null) //若没有指定机构
                 {
-                    coll = coll.Where(c => c.OrgId == merchId);
+                    coll = coll.Where(c => c.OrgId == merchantId);
                 }
                 else
                 {
@@ -2060,10 +2096,11 @@ namespace PowerLmsWebApi.Controllers
                 coll = coll.Where(c => c.OrgId == null);
             else
             {
-                if (!_MerchantManager.GetIdByUserId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
+                var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
+                if (!merchantId.HasValue) return BadRequest("未知的商户Id");
                 if (context.User.OrgId is null) //若没有指定机构
                 {
-                    coll = coll.Where(c => c.OrgId == merchId);
+                    coll = coll.Where(c => c.OrgId == merchantId);
                 }
                 else
                 {
@@ -2212,10 +2249,11 @@ namespace PowerLmsWebApi.Controllers
                 coll = coll.Where(c => c.OrgId == null);
             else
             {
-                if (!_MerchantManager.GetIdByUserId(context.User.Id, out var merchId)) return BadRequest("未知的商户Id");
+                var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
+                if (!merchantId.HasValue) return BadRequest("未知的商户Id");
                 if (context.User.OrgId is null) //若没有指定机构
                 {
-                    coll = coll.Where(c => c.OrgId == merchId);
+                    coll = coll.Where(c => c.OrgId == merchantId);
                 }
                 else
                 {
@@ -2369,179 +2407,5 @@ namespace PowerLmsWebApi.Controllers
         #endregion 日志相关
 
     }
-
-    /// <summary>
-    /// 恢复指定的简单数据字典的功能参数封装类。
-    /// </summary>
-    public class RestoreSimpleDataDicParamsDto : RestoreParamsDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 恢复指定的简单数据字典的功能返回值封装类。
-    /// </summary>
-    public class RestoreSimpleDataDicReturnDto : RestoreReturnDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 恢复指定的被删除港口字典的功能参数封装类。
-    /// </summary>
-    public class RestorePlPortParamsDto : RestoreParamsDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 恢复指定的被删除港口字典的功能返回值封装类。
-    /// </summary>
-    public class RestorePlPortReturnDto : RestoreReturnDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 恢复航线对象功能的参数封装类。
-    /// </summary>
-    public class RestorePlCargoRouteParamsDto : RestoreParamsDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 恢复航线对象功能的返回值封装类。
-    /// </summary>
-    public class RestorePlCargoRouteReturnDto : RestoreReturnDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 删除航线字典中的一项的功能参数封装类。
-    /// </summary>
-    public class RemoveCargoPlRouteParamsDto : RemoveParamsDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 删除航线字典中的一项的功能返回值封装类。
-    /// </summary>
-    public class RemovePlCargoRouteReturnDto : RemoveReturnDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 修改航线数据字典项的功能参数封装类。
-    /// </summary>
-    public class ModifyPlCargoRouteParamsDto : ModifyParamsDtoBase<PlCargoRoute>
-    {
-    }
-
-    /// <summary>
-    /// 修改航线数据字典项的功能返回值封装类。
-    /// </summary>
-    public class ModifyPlCargoRouteReturnDto : ModifyReturnDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 增加一个航线数据字典的功能参数封装类。
-    /// </summary>
-    public class AddPlCargoRouteParamsDto : AddParamsDtoBase<PlCargoRoute>
-    {
-    }
-
-    /// <summary>
-    /// 增加一个航线数据字典的功能返回值封装类。
-    /// </summary>
-    public class AddPlCargoRouteReturnDto : AddReturnDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 获取航线功能的返回值封装类。
-    /// </summary>
-    public class GetAllPlCargoRouteReturnDto : PagingReturnDtoBase<PlCargoRoute>
-    {
-        /// <summary>
-        /// 构造函数。
-        /// </summary>
-        public GetAllPlCargoRouteReturnDto()
-        {
-
-        }
-    }
-
-    /// <summary>
-    /// 删除港口字典中的一项的功能参数封装类。
-    /// </summary>
-    public class RemovePlPortParamsDto : RemoveParamsDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 删除港口字典中的一项的功能返回值封装类。
-    /// </summary>
-    public class RemovePlPortReturnDto : RemoveReturnDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 修改港口数据字典项的功能参数封装类。
-    /// </summary>
-    public class ModifyPlPortParamsDto : ModifyParamsDtoBase<PlPort>
-    {
-    }
-
-    /// <summary>
-    /// 修改港口数据字典项的功能返回值封装类。
-    /// </summary>
-    public class ModifyPlPortReturnDto : ModifyReturnDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 增加港口功能的参数封装类。
-    /// </summary>
-    public class AddPlPortParamsDto : AddParamsDtoBase<PlPort>
-    {
-    }
-
-    /// <summary>
-    /// 增加港口功能的返回值封装类。
-    /// </summary>
-    public class AddPlPortReturnDto : AddReturnDtoBase
-    {
-    }
-
-    /// <summary>
-    /// 用数据字典目录码获取所有字典项功能的参数封装类。
-    /// </summary>
-    public class GetDataDicByCatalogCodeParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 简单字典目录的Code。
-        /// </summary>
-        public string SimpleDicCatalogCode { get; set; }
-    }
-
-    /// <summary>
-    /// 用数据字典目录码获取所有字典项功能的返回值封装类。
-    /// </summary>
-    public class GetDataDicByCatalogCodeReturnDto : PagingReturnDtoBase<SimpleDataDic>
-    {
-    }
-
-
-    /// <summary>
-    /// 获取港口功能的返回值封装类。
-    /// </summary>
-    public class GetAllPortReturnDto : PagingReturnDtoBase<PlPort>
-    {
-    }
-
-    /// <summary>
-    /// 获取所有业务大类的数据的功能返回值封装类.
-    /// </summary>
-    public class GetAllBusinessTypeReturnDto : PagingReturnDtoBase<BusinessTypeDataDic>
-    {
-    }
-
 
 }

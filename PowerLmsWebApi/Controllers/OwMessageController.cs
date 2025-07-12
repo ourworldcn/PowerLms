@@ -20,7 +20,7 @@ namespace PowerLmsWebApi.Controllers
         /// 构造函数。
         /// </summary>
         public OwMessageController(AccountManager accountManager, IServiceProvider serviceProvider, EntityManager entityManager,
-            PowerLmsUserDbContext dbContext, ILogger<OwMessageController> logger, IMapper mapper, AuthorizationManager authorizationManager, OwSqlAppLogger sqlAppLogger)
+            PowerLmsUserDbContext dbContext, ILogger<OwMessageController> logger, IMapper mapper, AuthorizationManager authorizationManager, OwSqlAppLogger sqlAppLogger, OrgManager<PowerLmsUserDbContext> orgManager)
         {
             _AccountManager = accountManager;
             _ServiceProvider = serviceProvider;
@@ -30,6 +30,7 @@ namespace PowerLmsWebApi.Controllers
             _Mapper = mapper;
             _AuthorizationManager = authorizationManager;
             _SqlAppLogger = sqlAppLogger;
+            _OrgManager = orgManager;
         }
 
         private readonly AccountManager _AccountManager;
@@ -40,6 +41,7 @@ namespace PowerLmsWebApi.Controllers
         private readonly IMapper _Mapper;
         private readonly AuthorizationManager _AuthorizationManager;
         private readonly OwSqlAppLogger _SqlAppLogger;
+        private readonly OrgManager<PowerLmsUserDbContext> _OrgManager;
 
         #region 消息查询
 
@@ -150,12 +152,12 @@ namespace PowerLmsWebApi.Controllers
                 // 检查是否为超级管理员
                 bool isSuperAdmin = _AccountManager.IsAdmin(currentUser);
 
-                var merchantManager = _ServiceProvider.GetService<MerchantManager>();
+                var orgManager = _ServiceProvider.GetService<OrgManager<PowerLmsUserDbContext>>();
 
                 // 验证所有接收者都属于同一商户，除非是超级管理员
                 if (!isSuperAdmin && senderMerchantId.HasValue)
                 {
-                    // 获取所有接收者账号
+                    // 获取所有接收者账户
                     var receivers = _DbContext.Accounts
                         .Where(a => model.ReceiverIds.Contains(a.Id))
                         .ToList();
@@ -163,7 +165,7 @@ namespace PowerLmsWebApi.Controllers
                     // 检查每个接收者
                     foreach (var receiver in receivers)
                     {
-                        // 如果接收者不存在
+                        // 检查接收者不为空
                         if (receiver == null)
                         {
                             result.HasError = true;
@@ -171,8 +173,8 @@ namespace PowerLmsWebApi.Controllers
                             result.DebugMessage = "接收者不存在";
                             return BadRequest(result);
                         }
-                        merchantManager.GetIdByUserId(receiver.Id, out var merchantId);
-                        // 如果接收者不属于同一商户
+                        var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
+                        // 检查接收者不属于同一商户
                         if (merchantId != senderMerchantId)
                         {
                             result.HasError = true;
@@ -386,113 +388,4 @@ namespace PowerLmsWebApi.Controllers
         }
         #endregion 消息查询
     }
-
-    #region DTO类
-
-    /// <summary>
-    /// 获取未读消息数量的返回值封装类。
-    /// </summary>
-    public class GetUnreadMessageCountReturnDto : ReturnDtoBase
-    {
-        /// <summary>
-        /// 未读消息数量。
-        /// </summary>
-        public int UnreadCount { get; set; }
-    }
-
-    /// <summary>
-    /// 获取所有消息列表的返回值封装类。
-    /// </summary>
-    public class GetAllOwMessageReturnDto : PagingReturnDtoBase<OwMessage>
-    {
-    }
-
-    /// <summary>
-    /// 发送消息的参数封装类。
-    /// </summary>
-    public class SendOwMessageParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 接收者用户ID列表。
-        /// </summary>
-        [Required]
-        public List<Guid> ReceiverIds { get; set; } = new List<Guid>();
-
-        /// <summary>
-        /// 消息标题。
-        /// </summary>
-        [Required, MaxLength(64)]
-        public string Title { get; set; }
-
-        /// <summary>
-        /// 消息内容。HTML格式。
-        /// </summary>
-        [Required]
-        public string Content { get; set; }
-    }
-
-    /// <summary>
-    /// 发送消息的返回值封装类。
-    /// </summary>
-    public class SendOwMessageReturnDto : ReturnDtoBase
-    {
-        /// <summary>
-        /// 发送成功的消息ID列表。
-        /// </summary>
-        public List<Guid> MessageIds { get; set; } = new List<Guid>();
-    }
-
-    /// <summary>
-    /// 标记消息为已读的参数封装类。
-    /// </summary>
-    public class MarkMessagesAsReadParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 要标记为已读的消息ID列表。
-        /// 当 MarkAll 为 true 时，此列表可为空。
-        /// </summary>
-        public List<Guid> MessageIds { get; set; } = new List<Guid>();
-
-        /// <summary>
-        /// 是否标记所有未读消息为已读。
-        /// 当此值为 true 时，将忽略 MessageIds 列表，标记当前用户的所有未读消息为已读。
-        /// </summary>
-        public bool MarkAll { get; set; } = false;
-    }
-
-    /// <summary>
-    /// 标记消息为已读的返回值封装类。
-    /// </summary>
-    public class MarkMessagesAsReadReturnDto : ReturnDtoBase
-    {
-        /// <summary>
-        /// 成功标记为已读的消息数量。
-        /// </summary>
-        public int MarkedCount { get; set; }
-    }
-
-    /// <summary>
-    /// 批量删除消息的参数封装类。
-    /// </summary>
-    public class RemoveAllOwMessageParamsDto : TokenDtoBase
-    {
-        /// <summary>
-        /// 要删除的消息ID列表。
-        /// </summary>
-        [Required]
-        public List<Guid> Ids { get; set; } = new List<Guid>();
-    }
-
-    /// <summary>
-    /// 批量删除消息的返回值封装类。
-    /// </summary>
-    public class RemoveAllOwMessageReturnDto : ReturnDtoBase
-    {
-        /// <summary>
-        /// 成功删除的消息数量。
-        /// </summary>
-        public int RemovedCount { get; set; }
-    }
-
-    #endregion
 }

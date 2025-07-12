@@ -344,6 +344,38 @@ namespace PowerLmsWebApi.Controllers
     {
     }
 
+    /// <summary>
+    /// 用数据字典目录码获取所有字典项功能的参数封装类。
+    /// </summary>
+    public class GetDataDicByCatalogCodeParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 简单字典目录的Code。
+        /// </summary>
+        public string SimpleDicCatalogCode { get; set; }
+    }
+
+    /// <summary>
+    /// 用数据字典目录码获取所有字典项功能的返回值封装类。
+    /// </summary>
+    public class GetDataDicByCatalogCodeReturnDto : PagingReturnDtoBase<SimpleDataDic>
+    {
+    }
+
+    /// <summary>
+    /// 恢复指定的简单数据字典的功能参数封装类。
+    /// </summary>
+    public class RestoreSimpleDataDicParamsDto : RestoreParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 恢复指定的简单数据字典的功能返回值封装类。
+    /// </summary>
+    public class RestoreSimpleDataDicReturnDto : RestoreReturnDtoBase
+    {
+    }
+
     #endregion 基础数据字典及相关
 
     #region 换算单位及相关
@@ -503,16 +535,186 @@ namespace PowerLmsWebApi.Controllers
 
     #endregion 汇率及相关
 
+    #region 港口相关
+
+    /// <summary>
+    /// 恢复指定的被删除港口字典的功能参数封装类。
+    /// </summary>
+    public class RestorePlPortParamsDto : RestoreParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 恢复指定的被删除港口字典的功能返回值封装类。
+    /// </summary>
+    public class RestorePlPortReturnDto : RestoreReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 删除港口字典中的一项的功能参数封装类。
+    /// </summary>
+    public class RemovePlPortParamsDto : RemoveParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 删除港口字典中的一项的功能返回值封装类。
+    /// </summary>
+    public class RemovePlPortReturnDto : RemoveReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 修改港口数据字典项的功能参数封装类。
+    /// </summary>
+    public class ModifyPlPortParamsDto : ModifyParamsDtoBase<PlPort>
+    {
+    }
+
+    /// <summary>
+    /// 修改港口数据字典项的功能返回值封装类。
+    /// </summary>
+    public class ModifyPlPortReturnDto : ModifyReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 增加港口功能的参数封装类。
+    /// </summary>
+    public class AddPlPortParamsDto : AddParamsDtoBase<PlPort>
+    {
+    }
+
+    /// <summary>
+    /// 增加港口功能的返回值封装类。
+    /// </summary>
+    public class AddPlPortReturnDto : AddReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 获取港口功能的返回值封装类。
+    /// </summary>
+    public class GetAllPortReturnDto : PagingReturnDtoBase<PlPort>
+    {
+    }
+
+    #endregion 港口相关
+
+    #region 航线相关
+
+    /// <summary>
+    /// 恢复航线对象功能的参数封装类。
+    /// </summary>
+    public class RestorePlCargoRouteParamsDto : RestoreParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 恢复航线对象功能的返回值封装类。
+    /// </summary>
+    public class RestorePlCargoRouteReturnDto : RestoreReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 删除航线字典中的一项的功能参数封装类。
+    /// </summary>
+    public class RemoveCargoPlRouteParamsDto : RemoveParamsDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 删除航线字典中的一项的功能返回值封装类。
+    /// </summary>
+    public class RemovePlCargoRouteReturnDto : RemoveReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 修改航线数据字典项的功能参数封装类。
+    /// </summary>
+    public class ModifyPlCargoRouteParamsDto : ModifyParamsDtoBase<PlCargoRoute>
+    {
+    }
+
+    /// <summary>
+    /// 修改航线数据字典项的功能返回值封装类。
+    /// </summary>
+    public class ModifyPlCargoRouteReturnDto : ModifyReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 增加一个航线数据字典的功能参数封装类。
+    /// </summary>
+    public class AddPlCargoRouteParamsDto : AddParamsDtoBase<PlCargoRoute>
+    {
+    }
+
+    /// <summary>
+    /// 增加一个航线数据字典的功能返回值封装类。
+    /// </summary>
+    public class AddPlCargoRouteReturnDto : AddReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 获取航线功能的返回值封装类。
+    /// </summary>
+    public class GetAllPlCargoRouteReturnDto : PagingReturnDtoBase<PlCargoRoute>
+    {
+        /// <summary>
+        /// 构造函数。
+        /// </summary>
+        public GetAllPlCargoRouteReturnDto()
+        {
+
+        }
+    }
+
+    #endregion 航线相关
+
     #region 日志相关
 
     /// <summary>
     /// 获取系统日志功能的返回值封装类。
     /// </summary>
-    public class GetAllSystemLogReturnDto : PagingReturnDtoBase<ContainerKindCount>
+    public class GetAllSystemLogReturnDto : PagingReturnDtoBase<OwSystemLog>
     {
     }
 
     #endregion 日志相关
+
+    #region 其他系统相关
+
+    /// <summary>
+    /// 获取系统资源列表的功能返回值封装类。
+    /// </summary>
+    public class GetSystemResourceReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 系统资源列表。
+        /// </summary>
+        public List<SystemResource> Resources { get; set; } = new List<SystemResource>();
+    }
+
+    /// <summary>
+    /// 通用的导入数据字典的功能返回值封装类。
+    /// </summary>
+    public class ImportDataDicReturnDto : ReturnDtoBase
+    {
+    }
+
+    /// <summary>
+    /// 获取所有业务大类的数据的功能返回值封装类。
+    /// </summary>
+    public class GetAllBusinessTypeReturnDto : PagingReturnDtoBase<BusinessTypeDataDic>
+    {
+    }
+
+    #endregion 其他系统相关
 
     #region 箱型相关
 

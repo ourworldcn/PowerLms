@@ -22,16 +22,15 @@ namespace PowerLmsWebApi.Controllers
         /// 构造函数。
         /// </summary>
         public OrganizationController(AccountManager accountManager, IServiceProvider serviceProvider, PowerLmsUserDbContext dbContext,
-            OrganizationManager organizationManager, IMapper mapper, EntityManager entityManager, DataDicManager dataManager, MerchantManager merchantManager, AuthorizationManager authorizationManager, ILogger<OrganizationController> logger)
+            OrgManager<PowerLmsUserDbContext> orgManager, IMapper mapper, EntityManager entityManager, DataDicManager dataManager, AuthorizationManager authorizationManager, ILogger<OrganizationController> logger)
         {
             _AccountManager = accountManager;
             _ServiceProvider = serviceProvider;
             _DbContext = dbContext;
-            _OrganizationManager = organizationManager;
+            _OrgManager = orgManager;
             _Mapper = mapper;
             _EntityManager = entityManager;
             _DataManager = dataManager;
-            _MerchantManager = merchantManager;
             _AuthorizationManager = authorizationManager;
             _Logger = logger;
         }
@@ -39,12 +38,11 @@ namespace PowerLmsWebApi.Controllers
         readonly AccountManager _AccountManager;
         readonly IServiceProvider _ServiceProvider;
         readonly PowerLmsUserDbContext _DbContext;
-        readonly OrganizationManager _OrganizationManager;
+        readonly OrgManager<PowerLmsUserDbContext> _OrgManager;
         readonly IMapper _Mapper;
         readonly EntityManager _EntityManager;
         readonly DataDicManager _DataManager;
         readonly AuthorizationManager _AuthorizationManager;
-        readonly MerchantManager _MerchantManager;
         readonly ILogger<OrganizationController> _Logger;
 
         /// <summary>
@@ -109,12 +107,16 @@ namespace PowerLmsWebApi.Controllers
 
                 return result;
             }
-            if (_MerchantManager.GetOrLoadByUser(context.User) is not PlMerchant merch)    //若找不到商户
+            var merchantId = _OrgManager.GetMerchantIdByOrgId(context.User.OrgId.Value);
+            if (!merchantId.HasValue) return BadRequest("未知的商户Id");
+
+            var allOrgItems = _OrgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs;
+            if (_OrgManager.GetOrLoadOrgCacheItem(merchantId.Value).Merchant is not PlMerchant merch)    //若找不到商户
                 return BadRequest("找不到用户所属的商户");
-            var orgs = _OrganizationManager.GetOrLoadByMerchantId(merch.Id);  //获取其所有机构
+            var orgs = _OrgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs;  //获取其所有机构
             if (rootId.HasValue) //若指定了根机构
             {
-                if (!orgs.TryGetValue(rootId.Value, out var org) && rootId.Value != merch.Id) return BadRequest($"找不到指定的机构，Id={rootId}");
+                if (!orgs.TryGetValue(rootId.Value, out PlOrganization org) && rootId.Value != merch.Id) return BadRequest($"找不到指定的机构，Id={rootId}");
                 if (context.User.IsMerchantAdmin)    //若是商管
                 {
                     if (org is not null)
@@ -124,7 +126,7 @@ namespace PowerLmsWebApi.Controllers
                 }
                 else //非商管
                 {
-                    var currCo = _OrganizationManager.GetCurrentCompanyByUser(context.User);
+                    var currCo = _OrgManager.GetCurrentCompanyByUser(context.User);
                     if (currCo is null) return BadRequest("当前用户未登录到一个机构。");
                     if (OwHelper.GetAllSubItemsOfTree(currCo, c => c.Children).FirstOrDefault(c => c.Id == rootId.Value) is not PlOrganization currOrg)
                         return StatusCode((int)HttpStatusCode.Forbidden, "用户只能获取当前登录公司及其子机构");
@@ -139,7 +141,7 @@ namespace PowerLmsWebApi.Controllers
                 }
                 else //非商管
                 {
-                    var currCo = _OrganizationManager.GetCurrentCompanyByUser(context.User);
+                    var currCo = _OrgManager.GetCurrentCompanyByUser(context.User);
                     if (currCo is null) return BadRequest("当前用户未登录到一个机构。");
                     result.Result.Add(currCo);
                 }
@@ -268,14 +270,16 @@ namespace PowerLmsWebApi.Controllers
                 // 如果是顶层组织机构（ParentId为null），直接使用其MerchantId
                 if (model.Item.ParentId == null && model.Item.MerchantId.HasValue)
                 {
-                    _OrganizationManager.InvalidateOrgCache(model.Item.MerchantId.Value);
-                    _MerchantManager.InvalidateCache(model.Item.MerchantId.Value);
+                    _OrgManager.InvalidateOrgCaches(model.Item.MerchantId.Value);
                 }
                 // 如果有父级，则通过父级查找关联的商户ID
-                else if (model.Item.ParentId.HasValue && _MerchantManager.TryGetIdByOrgOrMerchantId(model.Item.ParentId.Value, out var merchantId) && merchantId.HasValue)
+                else if (model.Item.ParentId.HasValue)
                 {
-                    _OrganizationManager.InvalidateOrgCache(merchantId.Value);
-                    _MerchantManager.InvalidateCache(merchantId.Value);
+                    var merchantId = _OrgManager.GetMerchantIdByOrgId(model.Item.Id);
+                    if (merchantId.HasValue)
+                    {
+                        _OrgManager.InvalidateOrgCaches(merchantId.Value);
+                    }
                 }
 
                 if (model.IsCopyDataDic) //若需要复制字典
@@ -375,11 +379,7 @@ namespace PowerLmsWebApi.Controllers
 
                 // 使商户和组织机构缓存失效
                 var merchIds = list
-                    .Select(c =>
-                    {
-                        _MerchantManager.TryGetIdByOrgOrMerchantId(c.Id, out var r);
-                        return r;
-                    })
+                    .Select(c => _OrgManager.GetMerchantIdByOrgId(c.Id))
                     .Where(id => id.HasValue)
                     .Distinct()
                     .Select(id => id.Value)
@@ -387,8 +387,7 @@ namespace PowerLmsWebApi.Controllers
 
                 foreach (var merchId in merchIds)
                 {
-                    _MerchantManager.InvalidateCache(merchId);
-                    _OrganizationManager.InvalidateOrgCache(merchId);
+                    _OrgManager.InvalidateOrgCaches(merchId);
                 }
             }
             catch (Exception excp)
@@ -513,14 +512,17 @@ namespace PowerLmsWebApi.Controllers
                     _Logger.LogDebug("组织机构 {orgId} 是顶层组织机构，直接关联到商户 {merchantId}", id, merchantId);
                 }
                 // 否则尝试通过组织机构ID找到关联的商户ID
-                else if (_MerchantManager.TryGetIdByOrgOrMerchantId(id, out var merchId))
-                {
-                    merchantId = merchId;
-                    _Logger.LogDebug("组织机构 {orgId} 关联到商户 {merchantId}", id, merchantId);
-                }
                 else
                 {
-                    _Logger.LogWarning("无法确定组织机构 {orgId} 所属的商户ID", id);
+                    merchantId = _OrgManager.GetMerchantIdByOrgId(model.Id);
+                    if (merchantId.HasValue)
+                    {
+                        _Logger.LogDebug("组织机构 {orgId} 关联到商户 {merchantId}", id, merchantId);
+                    }
+                    else
+                    {
+                        _Logger.LogWarning("无法确定组织机构 {orgId} 所属的商户ID", id);
+                    }
                 }
 
                 // 记录删除前的组织机构信息
@@ -549,8 +551,7 @@ namespace PowerLmsWebApi.Controllers
                 if (merchantId.HasValue)
                 {
                     _Logger.LogDebug("正在使商户 {merchantId} 的缓存失效", merchantId.Value);
-                    _OrganizationManager.InvalidateOrgCache(merchantId.Value);
-                    _MerchantManager.InvalidateCache(merchantId.Value);
+                    _OrgManager.InvalidateOrgCaches(merchantId.Value);
                     _Logger.LogInformation("已成功使商户 {merchantId} 的缓存失效", merchantId.Value);
                 }
             }
@@ -632,9 +633,10 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetMerchantIdReturnDto();
-            if (!_MerchantManager.TryGetIdByOrgOrMerchantId(orgId, out var merchId))
+            var merchantId = _OrgManager.GetMerchantIdByOrgId(orgId);
+            if (!merchantId.HasValue)
                 return BadRequest();
-            result.Result = merchId;
+            result.Result = merchantId;
             return result;
         }
 

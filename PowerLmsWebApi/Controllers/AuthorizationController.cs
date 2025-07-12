@@ -24,7 +24,7 @@ namespace PowerLmsWebApi.Controllers
         /// 构造函数。
         /// </summary>
         public AuthorizationController(IServiceProvider serviceProvider, AccountManager accountManager, PowerLmsUserDbContext dbContext, EntityManager entityManager,
-            IMapper mapper, AuthorizationManager authorizationManager, OrganizationManager organizationManager, MerchantManager merchantManager,
+            IMapper mapper, AuthorizationManager authorizationManager, OrgManager<PowerLmsUserDbContext> orgManager,
             PermissionManager permissionManager, RoleManager roleManager, ILogger<AuthorizationController> logger)
         {
             _ServiceProvider = serviceProvider;
@@ -33,8 +33,7 @@ namespace PowerLmsWebApi.Controllers
             _EntityManager = entityManager;
             _Mapper = mapper;
             _AuthorizationManager = authorizationManager;
-            _OrganizationManager = organizationManager;
-            _MerchantManager = merchantManager;
+            _OrgManager = orgManager;
             _PermissionManager = permissionManager;
             _RoleManager = roleManager;
             _Logger = logger;
@@ -46,8 +45,7 @@ namespace PowerLmsWebApi.Controllers
         readonly EntityManager _EntityManager;
         readonly IMapper _Mapper;
         readonly AuthorizationManager _AuthorizationManager;
-        readonly OrganizationManager _OrganizationManager;
-        readonly MerchantManager _MerchantManager;
+        readonly OrgManager<PowerLmsUserDbContext> _OrgManager;
         readonly PermissionManager _PermissionManager;
         readonly RoleManager _RoleManager;
         ILogger<AuthorizationController> _Logger;
@@ -103,8 +101,9 @@ namespace PowerLmsWebApi.Controllers
             model.Item.GenerateNewId();
             if (!model.Item.OrgId.HasValue)
             {
-                if (_MerchantManager.GetIdByUserId(context.User.Id, out var mId))
-                    model.Item.OrgId = mId;
+                var merchantId = _OrgManager.GetMerchantIdByOrgId(context.User.OrgId.Value);
+                if (merchantId.HasValue)
+                    model.Item.OrgId = merchantId;
             }
             model.Item.CreateBy ??= context.User.Id;
             model.Item.CreateDateTime = OwHelper.WorldNow;
@@ -113,9 +112,13 @@ namespace PowerLmsWebApi.Controllers
             result.Id = model.Item.Id;
 
             // 更新以适应新的缓存管理接口
-            if (model.Item.OrgId.HasValue && _MerchantManager.TryGetIdByOrgOrMerchantId(model.Item.OrgId.Value, out var merchId) && merchId.HasValue)
+            if (model.Item.OrgId.HasValue)
             {
-                _RoleManager.InvalidateRoleCache(merchId.Value);
+                var merchantId = _OrgManager.GetMerchantIdByOrgId(model.Item.OrgId.Value);
+                if (merchantId.HasValue)
+                {
+                    _RoleManager.InvalidateRoleCache(merchantId.Value);
+                }
             }
 
             return result;
@@ -145,14 +148,22 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.SaveChanges();
 
             // 更新以适应新的缓存管理接口
-            if (oldOrgId.HasValue && _MerchantManager.GetIdByRoleId(oldOrgId.Value, out var oldMerchId) && oldMerchId.HasValue)
+            if (oldOrgId.HasValue)
             {
-                _MerchantManager.InvalidateCache(oldMerchId.Value);
+                var oldMerchId = _OrgManager.GetMerchantIdByOrgId(oldOrgId.Value);
+                if (oldMerchId.HasValue)
+                {
+                    _OrgManager.InvalidateOrgCaches(oldMerchId.Value);
+                }
             }
 
-            if (newOrgId.HasValue && _MerchantManager.GetIdByRoleId(newOrgId.Value, out var newMerchId) && newMerchId.HasValue)
+            if (newOrgId.HasValue)
             {
-                _MerchantManager.InvalidateCache(newMerchId.Value);
+                var newMerchId = _OrgManager.GetMerchantIdByOrgId(newOrgId.Value);
+                if (newMerchId.HasValue)
+                {
+                    _OrgManager.InvalidateOrgCaches(newMerchId.Value);
+                }
             }
 
             return result;
@@ -180,7 +191,7 @@ namespace PowerLmsWebApi.Controllers
             Guid? merchantId = null;
             if (item.OrgId.HasValue)
             {
-                _MerchantManager.TryGetIdByOrgOrMerchantId(item.OrgId.Value, out merchantId);
+                merchantId = _OrgManager.GetMerchantIdByOrgId(item.OrgId.Value);
             }
 
             try
@@ -208,7 +219,7 @@ namespace PowerLmsWebApi.Controllers
                 // 更新缓存
                 if (merchantId.HasValue)
                 {
-                    _OrganizationManager.InvalidateOrgCache(merchantId.Value);
+                    _OrgManager.InvalidateOrgCaches(merchantId.Value);
                 }
 
                 _Logger.LogInformation("成功删除角色: {roleName}(ID:{roleId})", item.Name, id);

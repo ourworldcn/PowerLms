@@ -29,32 +29,18 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 构造函数。
         /// </summary>
-        /// <param name="dbContext"></param>
-        /// <param name="accountManager"></param>
-        /// <param name="serviceProvider"></param>
-        /// <param name="mapper"></param>
-        /// <param name="entityManager"></param>
-        /// <param name="organizationManager"></param>
-        /// <param name="captchaManager"></param>
-        /// <param name="authorizationManager"></param>
-        /// <param name="merchantManager"></param>
-        /// <param name="roleManager"></param>
-        /// <param name="appLogger"></param>
-        /// <param name="cache"></param>
-        /// <param name="logger"></param>
         public AccountController(PowerLmsUserDbContext dbContext, AccountManager accountManager, IServiceProvider serviceProvider, IMapper mapper,
-            EntityManager entityManager, OrganizationManager organizationManager, CaptchaManager captchaManager, AuthorizationManager authorizationManager,
-            MerchantManager merchantManager, RoleManager roleManager, OwSqlAppLogger appLogger, IMemoryCache cache, ILogger<AccountController> logger, PermissionManager permissionManager)
+            EntityManager entityManager, OrgManager<PowerLmsUserDbContext> orgManager, CaptchaManager captchaManager, AuthorizationManager authorizationManager,
+            RoleManager roleManager, OwSqlAppLogger appLogger, IMemoryCache cache, ILogger<AccountController> logger, PermissionManager permissionManager)
         {
             _DbContext = dbContext;
             _AccountManager = accountManager;
             _ServiceProvider = serviceProvider;
             _Mapper = mapper;
             _EntityManager = entityManager;
-            _OrganizationManager = organizationManager;
+            _OrgManager = orgManager;
             _CaptchaManager = captchaManager;
             _AuthorizationManager = authorizationManager;
-            _MerchantManager = merchantManager;
             _RoleManager = roleManager;
             _AppLogger = appLogger;
             _Cache = cache;
@@ -68,9 +54,8 @@ namespace PowerLmsWebApi.Controllers
         readonly AuthorizationManager _AuthorizationManager;
         readonly IMapper _Mapper;
         readonly EntityManager _EntityManager;
-        readonly OrganizationManager _OrganizationManager;
+        readonly OrgManager<PowerLmsUserDbContext> _OrgManager;
         readonly CaptchaManager _CaptchaManager;
-        readonly MerchantManager _MerchantManager;
         readonly RoleManager _RoleManager;
         OwSqlAppLogger _AppLogger;
         IMemoryCache _Cache;
@@ -110,11 +95,13 @@ namespace PowerLmsWebApi.Controllers
                     // 超级管理员可以查看所有用户，不做限制
                     _Logger.LogDebug("超级管理员查询所有用户");
                 }
-                else if (_AccountManager.IsMerchantAdmin(context.User) && _MerchantManager.GetIdByUserId(context.User.Id, out var merchantId) && merchantId.HasValue)
+                else if (_AccountManager.IsMerchantAdmin(context.User))
                 {
                     // 商户管理员可以查看该商户下的所有用户
-                    var orgs = _OrganizationManager.GetOrLoadByMerchantId(merchantId.Value);
-                    var orgIds = orgs.Keys.ToArray();
+                    var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
+                    if (!merchantId.HasValue) return Unauthorized("未找到用户所属商户");
+
+                    var orgIds = _OrgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs.Keys.ToArray();
 
                     // 查找所有与这些组织机构关联的用户ID
                     var userIds = _DbContext.AccountPlOrganizations
@@ -131,13 +118,13 @@ namespace PowerLmsWebApi.Controllers
 
                     coll = coll.Where(c => userIds.Contains(c.Id));
                     _Logger.LogDebug("商户管理员查询用户: 找到 {count} 个用户关联到商户 {merchantId}",
-                        userIds.Length, merchantId.Value);
+                        userIds.Length, merchantId);
                 }
                 else
                 {
                     // 普通用户只能查看当前登录公司及其子机构内的用户
                     // 获取当前用户登录的公司
-                    var currentCompany = _OrganizationManager.GetCurrentCompanyByUser(context.User);
+                    var currentCompany = _OrgManager.GetCurrentCompanyByUser(context.User);
                     if (currentCompany == null)
                     {
                         // 如果用户未登录到任何公司，返回空结果
@@ -290,7 +277,7 @@ namespace PowerLmsWebApi.Controllers
             result.Orgs.AddRange(_DbContext.PlOrganizations.Where(c => orgIds.Contains(c.Id)));
             result.User = user;
 
-            if (_MerchantManager.GetIdByUserId(user.Id, out var merchId)) //若找到商户Id
+            if (_OrgManager.GetMerchantIdByUserId(user.Id) is Guid merchId) //若找到商户Id
             {
                 result.MerchantId = merchId;
                 if (result.User.IsMerchantAdmin)
@@ -357,21 +344,23 @@ namespace PowerLmsWebApi.Controllers
                     if (!context.User.IsAdmin()) return BadRequest("仅超管和商管才可创建用户");
                     
                     // 获取当前商管所属商户
-                    if (!_MerchantManager.GetIdByUserId(context.User.Id, out var currentMerchantId))
-                        return BadRequest("商管数据结构损坏——无法找到其所属商户");
-                    
+                    var currentMerchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
+                    if (!currentMerchantId.HasValue) return Unauthorized("未找到用户所属商户");
+
                     // 验证所有指定的组织机构ID都属于当前商户
-                    bool allBelongToMerchant = orgIds.All(c => _MerchantManager.TryGetIdByOrgOrMerchantId(c, out var mId) && mId == currentMerchantId);
+                    bool allBelongToMerchant = orgIds.All(c => _OrgManager.GetMerchantIdByOrgId(c) == currentMerchantId);
                     if (!allBelongToMerchant) return BadRequest("商户管理员仅可以设置商户和其下属的机构id");
                     
-                    merchantIdForNewAccount = currentMerchantId; // 记录商户ID供后续使用
+                    merchantIdForNewAccount = currentMerchantId.Value; // 记录商户ID供后续使用
                 }
             }
             else if (isCreatingMerchantAdmin && !context.User.IsSuperAdmin)
             {
                 // 商管创建商管但未指定组织机构时，自动关联到当前商户
-                if (!_MerchantManager.GetIdByUserId(context.User.Id, out merchantIdForNewAccount))
-                    return BadRequest("商管数据结构损坏——无法找到其所属商户");
+                var currentMerchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
+                if (!currentMerchantId.HasValue) return Unauthorized("未找到用户所属商户");
+
+                merchantIdForNewAccount = currentMerchantId.Value;
             }
 
             // 创建账户
@@ -481,14 +470,14 @@ namespace PowerLmsWebApi.Controllers
                 
                 if (isTargetMerchantAdmin) //商管修改商管需要验证同商户
                 {
-                    if (!_MerchantManager.GetIdByUserId(context.User.Id, out var operatorMerchantId)) //获取操作者商户
-                        return BadRequest("商管数据结构损坏——无法找到其所属商户");
+                    var operatorMerchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id); //获取操作者商户
+                    if (!operatorMerchantId.HasValue) return Unauthorized("未找到用户所属商户");
+
+                    var targetMerchantId = _OrgManager.GetMerchantIdByUserId(account.Id); //获取目标用户商户
+                    if (!targetMerchantId.HasValue) return Unauthorized("未找到目标用户所属商户");
                     
-                    if (!_MerchantManager.GetIdByUserId(account.Id, out var targetMerchantId)) //获取目标用户商户
-                        return BadRequest("目标用户商户数据结构损坏");
-                    
-                    if (operatorMerchantId != targetMerchantId) //验证是否同商户
-                        return StatusCode((int)HttpStatusCode.Forbidden, "商管只能修改同商户的商管");
+                    if (operatorMerchantId.Value != targetMerchantId.Value) //验证是否同商户
+                        return StatusCode((int)HttpStatusCode.Forbidden, "商管只能在同商户内设置商管权限");
                 }
                 // 商管可以修改普通用户，无需额外检查
             }
@@ -515,19 +504,6 @@ namespace PowerLmsWebApi.Controllers
                 if (!context.User.IsAdmin()) //只有超管或商管可以设置商管权限
                     return base.StatusCode((int)HttpStatusCode.UnavailableForLegalReasons, "只有管理员可以设置商管权限");
                 
-                // 商管设置商管权限时需要验证同商户
-                if (context.User.IsMerchantAdmin && !context.User.IsSuperAdmin && model.IsMerchantAdmin.Value)
-                {
-                    if (!_MerchantManager.GetIdByUserId(context.User.Id, out var operatorMerchantId)) //获取操作者商户
-                        return BadRequest("商管数据结构损坏——无法找到其所属商户");
-                    
-                    if (!_MerchantManager.GetIdByUserId(account.Id, out var targetMerchantId)) //获取目标用户商户
-                        return BadRequest("目标用户商户数据结构损坏");
-                    
-                    if (operatorMerchantId != targetMerchantId) //验证是否同商户
-                        return StatusCode((int)HttpStatusCode.Forbidden, "商管只能在同商户内设置商管权限");
-                }
-                
                 if (model.IsMerchantAdmin.Value)
                     account.State |= 8; //设置为商管
                 else
@@ -549,10 +525,9 @@ namespace PowerLmsWebApi.Controllers
                 _RoleManager.InvalidateUserRolesCache(account.Id); //失效用户角色缓存
                 _PermissionManager.InvalidateUserPermissionsCache(account.Id); //失效用户权限缓存
                 
-                if (_MerchantManager.GetIdByUserId(account.Id, out var merchantId)) //失效商户相关缓存
+                if (_OrgManager.GetMerchantIdByOrgId(account.OrgId.Value) is Guid merchantId) //若找到商户Id
                 {
-                    _MerchantManager.InvalidateCache(merchantId.Value);
-                    _OrganizationManager.InvalidateOrgCache(merchantId.Value);
+                    _OrgManager.InvalidateOrgCaches(merchantId); //失效商户缓存
                 }
             }
             catch (Exception ex)
@@ -599,13 +574,13 @@ namespace PowerLmsWebApi.Controllers
                 
                 if (isTargetMerchantAdmin) //商管删除商管需要验证同商户
                 {
-                    if (!_MerchantManager.GetIdByUserId(context.User.Id, out var operatorMerchantId)) //获取操作者商户
-                        return BadRequest("商管数据结构损坏——无法找到其所属商户");
+                    var operatorMerchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id); //获取操作者商户
+                    if (!operatorMerchantId.HasValue) return Unauthorized("未找到用户所属商户");
+
+                    var targetMerchantId = _OrgManager.GetMerchantIdByUserId(item.Id); //获取目标用户商户
+                    if (!targetMerchantId.HasValue) return Unauthorized("未找到目标用户所属商户");
                     
-                    if (!_MerchantManager.GetIdByUserId(item.Id, out var targetMerchantId)) //获取目标用户商户
-                        return BadRequest("目标用户商户数据结构损坏");
-                    
-                    if (operatorMerchantId != targetMerchantId) //验证是否同商户
+                    if (operatorMerchantId.Value != targetMerchantId.Value) //验证是否同商户
                         return StatusCode((int)HttpStatusCode.Forbidden, "商管只能删除同商户的商管");
                 }
             }
@@ -616,11 +591,7 @@ namespace PowerLmsWebApi.Controllers
             }
             
             // 删除前记录用户相关信息（用于缓存失效）
-            Guid? userMerchantId = null;
-            if (_MerchantManager.GetIdByUserId(id, out var merchantId)) //获取用户所属商户
-            {
-                userMerchantId = merchantId;
-            }
+            var userMerchantId = _OrgManager.GetMerchantIdByUserId(id); //获取用户所属商户
             
             _DbContext.Accounts.Remove(item); //删除账户
             _DbContext.AccountPlOrganizations.RemoveRange(_DbContext.AccountPlOrganizations.Where(c => c.UserId == id)); //删除组织机构关联
@@ -642,8 +613,7 @@ namespace PowerLmsWebApi.Controllers
                 // 如果用户属于某个商户，失效商户相关缓存
                 if (userMerchantId.HasValue)
                 {
-                    _MerchantManager.InvalidateCache(userMerchantId.Value); //失效商户缓存
-                    _OrganizationManager.InvalidateOrgCache(userMerchantId.Value); //失效组织机构缓存
+                    _OrgManager.InvalidateOrgCaches(userMerchantId.Value); //失效商户缓存
                 }
                 
                 // 失效当前用户的组织机构缓存
@@ -677,8 +647,9 @@ namespace PowerLmsWebApi.Controllers
 
             if (context.User.OrgId != model.CurrentOrgId)
             {
-                if (!_MerchantManager.TryGetIdByOrgOrMerchantId(model.CurrentOrgId, out var merchantId)) return BadRequest("错误的当前组织机构Id。");
-                var orgs = _OrganizationManager.GetOrLoadByMerchantId(merchantId.Value);
+                var merchantId = _OrgManager.GetMerchantIdByOrgId(model.CurrentOrgId);
+                if (!merchantId.HasValue) return BadRequest("错误的当前组织机构Id。");
+                var orgs = _OrgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs;
                 if (!orgs.TryGetValue(model.CurrentOrgId, out var currentOrg)) return BadRequest("错误的当前组织机构Id。");
                 if (currentOrg.Otc != 2)
                     return BadRequest("错误的当前组织机构Id——不是公司。");
@@ -802,7 +773,7 @@ namespace PowerLmsWebApi.Controllers
                 return BadRequest($"{nameof(model.OrgIds)}中至少有一个ID既不是有效的组织机构ID也不是有效的商户ID。");
 
             // 获取用户关联的商户ID
-            _MerchantManager.GetIdByUserId(model.UserId, out var userMerchantId);
+            var userMerchantId = _OrgManager.GetMerchantIdByUserId(model.UserId);
 
             // 同时处理组织机构ID和商户ID
             var allValidIds = new HashSet<Guid>(orgIds.Concat(merchantIds));
@@ -886,15 +857,15 @@ namespace PowerLmsWebApi.Controllers
                 if (!context.User.IsSuperAdmin)
                 {
                     // 获取当前用户所属商户
-                    if (!_MerchantManager.GetIdByUserId(context.User.Id, out var operatorMerchantId))
-                        return BadRequest("无法确定您所属的商户");
+                    var operatorMerchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
+                    if (!operatorMerchantId.HasValue) return Unauthorized("未找到用户所属商户");
 
                     // 检查目标用户所属商户
-                    if (!_MerchantManager.GetIdByUserId(model.UserId, out var targetUserMerchantId))
-                        return BadRequest("无法确定目标用户所属商户");
+                    var targetUserMerchantId = _OrgManager.GetMerchantIdByUserId(model.UserId);
+                    if (!targetUserMerchantId.HasValue) return Unauthorized("未找到目标用户所属商户");
 
                     // 非同一商户用户无权操作
-                    if (operatorMerchantId != targetUserMerchantId)
+                    if (operatorMerchantId.Value != targetUserMerchantId.Value)
                         return StatusCode((int)HttpStatusCode.Forbidden, "无权修改其他商户用户的角色");
 
                     // 验证角色的所属商户
@@ -905,8 +876,8 @@ namespace PowerLmsWebApi.Controllers
 
                     foreach (var role in rolesWithOrg)
                     {
-                        if (_MerchantManager.TryGetIdByOrgOrMerchantId(role.OrgId.Value, out var roleMerchantId) &&
-                            roleMerchantId != operatorMerchantId)
+                        var merchantId = _OrgManager.GetMerchantIdByOrgId(role.OrgId.Value);
+                        if (!merchantId.HasValue || merchantId.Value != operatorMerchantId.Value)
                         {
                             _Logger.LogWarning("尝试设置其他商户的角色 {RoleId}", role.Id);
                             return StatusCode((int)HttpStatusCode.Forbidden, "无权设置其他商户的角色");

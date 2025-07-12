@@ -24,7 +24,7 @@ namespace GY02.Controllers
         private readonly AccountManager _AccountManager;
         private readonly IServiceProvider _ServiceProvider;
         private readonly EntityManager _EntityManager;
-        MerchantManager _MerchantManager;
+        OrgManager<PowerLmsUserDbContext> _OrgManager;
         private readonly IMapper _Mapper;
         OwSqlAppLogger _AppLogger;
         PowerLmsUserDbContext _DbContext;
@@ -32,7 +32,7 @@ namespace GY02.Controllers
         /// <summary>
         /// 构造函数。
         /// </summary>
-        public AppLoggerController(AccountManager accountManager, IServiceProvider serviceProvider, OwSqlAppLogger appLogger, PowerLmsUserDbContext dbContext, EntityManager entityManager, IMapper mapper, MerchantManager merchantManager)
+        public AppLoggerController(AccountManager accountManager, IServiceProvider serviceProvider, OwSqlAppLogger appLogger, PowerLmsUserDbContext dbContext, EntityManager entityManager, IMapper mapper, OrgManager<PowerLmsUserDbContext> orgManager)
         {
             _AccountManager = accountManager;
             _ServiceProvider = serviceProvider;
@@ -40,7 +40,7 @@ namespace GY02.Controllers
             _DbContext = dbContext;
             _EntityManager = entityManager;
             _Mapper = mapper;
-            _MerchantManager = merchantManager;
+            _OrgManager = orgManager;
         }
 
         /// <summary>
@@ -65,7 +65,7 @@ namespace GY02.Controllers
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             if (context.User.IsMerchantAdmin)
             {
-                var merchantId = _MerchantManager.GetOrLoadByUser(context.User).Id;
+                var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
                 coll = coll.Where(c => c.MerchantId == merchantId);
             }
             var dic = new Dictionary<string, string>(conditional, StringComparer.OrdinalIgnoreCase);
@@ -133,7 +133,7 @@ namespace GY02.Controllers
             // 如果是商户管理员，只能导出自己商户的日志
             if (context.User.IsMerchantAdmin)
             {
-                var merchantId = _MerchantManager.GetOrLoadByUser(context.User).Id;
+                var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
                 query = query.Where(c => c.MerchantId == merchantId);
             }
 
@@ -164,66 +164,6 @@ namespace GY02.Controllers
 
             // 返回包含文件内容的 FileResult
             return File(fileBytes, contentType, fileName);
-        }
-
-        /// <summary>
-        /// 导出日志功能的参数封装类。
-        /// </summary>
-        public class ExportLoggerParamsDto : TokenDtoBase
-        {
-            /// <summary>
-            /// 指定下载文件的名字。不可以含路径。
-            /// </summary>
-            public string FileName { get; set; }
-        }
-
-        /// <summary>
-        /// 导出日志功能的返回值封装类。
-        /// </summary>
-        public class ExportLoggerReturnDto
-        {
-        }
-
-        /// <summary>
-        /// 清除日志项功能的参数封装类。
-        /// </summary>
-        public class RemoveAllLoggerItemParamsDto : TokenDtoBase
-        {
-        }
-
-        /// <summary>
-        /// 清除日志项功能的返回值封装类。
-        /// </summary>
-        public class RemoveAllLoggerItemReturnDto : ReturnDtoBase
-        {
-        }
-
-        /// <summary>
-        /// 返回日志项功能的参数封装类。
-        /// </summary>
-        public class GetAllAppLogItemParamsDto
-        {
-        }
-
-        /// <summary>
-        /// 返回日志项功能的返回值封装类。
-        /// </summary>
-        public class GetAllAppLogItemReturnDto : PagingReturnDtoBase<OwAppLogView>
-        {
-        }
-
-        /// <summary>
-        /// 追加一个日志项功能的参数封装类。
-        /// </summary>
-        public class AddLoggerItemParamsDto
-        {
-        }
-
-        /// <summary>
-        /// 追加一个日志项功能的返回值封装类。
-        /// </summary>
-        public class AddLoggerItemReturnDto
-        {
         }
     }
 }

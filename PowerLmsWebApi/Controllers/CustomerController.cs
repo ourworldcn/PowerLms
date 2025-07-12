@@ -25,15 +25,14 @@ namespace PowerLmsWebApi.Controllers
         /// 构造函数。
         /// </summary>
         public CustomerController(IServiceProvider serviceProvider, AccountManager accountManager, PowerLmsUserDbContext dbContext, EntityManager entityManager,
-            IMapper mapper, OrganizationManager organizationManager, MerchantManager merchantManager, AuthorizationManager authorizationManager)
+            IMapper mapper, OrgManager<PowerLmsUserDbContext> orgManager, AuthorizationManager authorizationManager)
         {
             _ServiceProvider = serviceProvider;
             _AccountManager = accountManager;
             _DbContext = dbContext;
             _EntityManager = entityManager;
             _Mapper = mapper;
-            _OrganizationManager = organizationManager;
-            _MerchantManager = merchantManager;
+            _OrgManager = orgManager;
             _AuthorizationManager = authorizationManager;
         }
 
@@ -41,11 +40,10 @@ namespace PowerLmsWebApi.Controllers
         readonly AccountManager _AccountManager;
 
         readonly PowerLmsUserDbContext _DbContext;
-        readonly OrganizationManager _OrganizationManager;
+        readonly OrgManager<PowerLmsUserDbContext> _OrgManager;
 
         readonly EntityManager _EntityManager;
         readonly IMapper _Mapper;
-        readonly MerchantManager _MerchantManager;
         readonly AuthorizationManager _AuthorizationManager;
 
         #region 客户资料本体的
@@ -68,9 +66,10 @@ namespace PowerLmsWebApi.Controllers
             if (!_AuthorizationManager.Demand(out err, "C.1.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new GetAllCustomerReturnDto();
             Guid[] allOrg = Array.Empty<Guid>();
-            if (_MerchantManager.GetIdByUserId(context.User.Id, out var merId))
+            var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
+            if (merchantId.HasValue)
             {
-                allOrg = _OrganizationManager.GetOrLoadByMerchantId(merId.Value).Keys.ToArray();
+                allOrg = _OrgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs.Keys.ToArray();
             }
             //var dbSet = _DbContext.PlCustomers.Where(c => c.OrgId.HasValue && allOrg.Contains(c.OrgId.Value));
             var dbSet = _DbContext.PlCustomers.Where(c => c.OrgId == context.User.OrgId);
@@ -215,9 +214,10 @@ namespace PowerLmsWebApi.Controllers
             if (!_AuthorizationManager.Demand(out err, "C.1.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new GetAllCustomer2ReturnDto();
             Guid[] allOrg = Array.Empty<Guid>();
-            if (_MerchantManager.GetIdByUserId(context.User.Id, out var merId))
+            var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
+            if (merchantId.HasValue)
             {
-                allOrg = _OrganizationManager.GetOrLoadByMerchantId(merId.Value).Keys.ToArray();
+                allOrg = _OrgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs.Keys.ToArray();
             }
             var dbSet = _DbContext.PlCustomers.Where(c => c.OrgId == context.User.OrgId);
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();

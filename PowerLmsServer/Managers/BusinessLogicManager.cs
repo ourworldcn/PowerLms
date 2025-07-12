@@ -12,7 +12,7 @@ namespace PowerLmsServer.Managers
     public class BusinessLogicManager
     {
         private readonly IServiceProvider _ServiceProvider;
-        private OrganizationManager _OrganizationManager => _ServiceProvider.GetRequiredService<OrganizationManager>();
+        private OrgManager<PowerLmsUserDbContext> _OrgManager => _ServiceProvider.GetRequiredService<OrgManager<PowerLmsUserDbContext>>();
         // 使用后期初始化避免重复解析
         private DbContext _DbContext;
         /// <summary>数据库上下文。</summary>
@@ -142,8 +142,13 @@ namespace PowerLmsServer.Managers
         /// <returns>本币编码</returns>
         private string GetCurrencyCode(Guid orgId)
         {
-            var orgs = _OrganizationManager.GetOrLoadByOrgId(orgId);
-            if (orgs == null || !orgs.TryGetValue(orgId, out var org))
+            var merchantId = _OrgManager.GetMerchantIdByOrgId(orgId);
+            if (!merchantId.HasValue)
+                throw new InvalidOperationException($"未找到 Id 为 {orgId} 的组织机构所属商户。");
+                
+            var cacheItem = _OrgManager.GetOrLoadOrgCacheItem(merchantId.Value);
+            
+            if (!cacheItem.Orgs.TryGetValue(orgId, out var org))
                 throw new InvalidOperationException($"未找到 Id 为 {orgId} 的组织机构。");
 
             if (!string.IsNullOrEmpty(org.BaseCurrencyCode))
