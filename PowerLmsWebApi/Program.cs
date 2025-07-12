@@ -21,6 +21,8 @@ internal class Program
 {
     static void Main(string[] args)
     {
+        const int timeout = 60; // 设置超时时间为60秒
+        var now = DateTime.Now;
         WebApplicationBuilder builder = ConfigService(args);
         var app = builder.Build();
 
@@ -28,16 +30,27 @@ internal class Program
 
         var config = app.Configuration;
 
+        var logger = app.Services.GetRequiredService<ILogger<Program>>();
         #region 自动迁移数据库所有挂起的迁移
         try
         {
             var dbContextFactory = app.Services.GetRequiredService<IDbContextFactory<PowerLmsUserDbContext>>();
-            var dbContext = dbContextFactory.CreateDbContext();
+            using var dbContext = dbContextFactory.CreateDbContext();
+            while (!dbContext.Database.CanConnect()) // 确保数据库连接正常
+            {
+                //若超时仍然无法连接，则抛出异常
+                if (DateTime.Now - now > TimeSpan.FromSeconds(timeout))
+                {
+                    throw new Exception($"启动时等待{timeout}秒仍无法连接到数据库，请检查数据库连接配置或机器性能。");
+                }
+                logger.LogError("启动时数据库连接失败，正在尝试重新连接...");
+                Thread.Sleep(500);
+            }
             dbContext.Database.Migrate(); //自动迁移数据库所有挂起的迁移
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"数据库迁移失败: {ex.Message}");
+            logger.LogError("数据库迁移失败: {Message}", ex.Message);
             throw; // 重新抛出异常以便调试
         }
         #endregion 自动迁移数据库所有挂起的迁移
