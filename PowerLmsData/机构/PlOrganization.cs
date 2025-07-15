@@ -143,12 +143,12 @@ namespace PowerLms.Data
     }
 
     /// <summary>
-    /// 开户行信息。
+    /// 机构开户行信息。
     /// </summary>
     public class BankInfo : GuidKeyObjectBase
     {
         /// <summary>
-        /// 所属实体Id。
+        /// 所属实体Id。关联到 <see cref="PlOrganization"/> 实体。
         /// </summary>
         [Comment("所属实体Id。")]
         public Guid? ParentId { get; set; }
@@ -179,5 +179,19 @@ namespace PowerLms.Data
         /// </summary>
         [Comment("币种Id。")]
         public Guid CurrencyId { get; set; }
+
+        /// <summary>
+        /// A账财务科目代码
+        /// </summary>
+        [MaxLength(32), Unicode(false)]
+        [Comment("A账财务科目代码")]
+        public string AAccountSubjectCode { get; set; }
+
+        /// <summary>
+        /// B账财务科目代码
+        /// </summary>
+        [MaxLength(32), Unicode(false)]
+        [Comment("B账财务科目代码")]
+        public string BAccountSubjectCode { get; set; }
     }
 }

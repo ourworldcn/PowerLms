@@ -19,7 +19,7 @@ namespace PowerLms.Data
         public Guid? OrgId { get; set; }
 
         /// <summary>
-        /// 服务器用此编码来标识该数据用于什么地方。支持以下科目编码（可能持续增加）：
+        /// 服务器用此编码来标识该数据用于什么地方。支持以下配置项编码（可能持续增加）：
         /// 
         /// 通用科目 (GEN):
         /// GEN_COGS - 主营业务成本
@@ -39,24 +39,38 @@ namespace PowerLms.Data
         /// 实付科目 (PF):
         /// PF_BANK_DEPOSIT - 银行存款（付款银行存款）
         /// PF_ACC_PAYABLE - 应付账款
+        /// 
+        /// A账应收计提科目 (ARAB):
+        /// ARAB_TOTAL - 计提总应收
+        /// ARAB_IN_CUS - 计提应收国内-客户
+        /// ARAB_IN_TAR - 计提应收国内-关税
+        /// ARAB_OUT_CUS - 计提应收国外-客户
+        /// ARAB_OUT_TAR - 计提应收国外-关税
+        /// 
+        /// A账应付计提科目 (APAB):
+        /// APAB_TOTAL - 计提总应付
+        /// APAB_IN_SUP - 计提应付国内-供应商
+        /// APAB_IN_TAR - 计提应付国内-关税
+        /// APAB_OUT_SUP - 计提应付国外-供应商
+        /// APAB_OUT_TAR - 计提应付国外-关税
         /// </summary>
-        [Comment("科目编码")]
+        [Comment("配置项编码")]
         [MaxLength(32), Unicode(false)]
         [Required(AllowEmptyStrings = false)]
         public string Code { get; set; }
 
         /// <summary>
-        /// 科目号（会计科目编号）
+        /// 会计科目编码。
         /// </summary>
-        [Comment("科目号（会计科目编号）")]
+        [Comment("会计科目编码")]
         [MaxLength(32), Unicode(false)]
         [Required(AllowEmptyStrings = false)]
         public string SubjectNumber { get; set; }
 
         /// <summary>
-        /// 显示名称
+        /// 显示名称。
         /// </summary>
-        [Comment("显示名称")]
+        [Comment("显示名称。")]
         [MaxLength(128)]
         [Required(AllowEmptyStrings = false)]
         public string DisplayName { get; set; }
@@ -76,6 +90,13 @@ namespace PowerLms.Data
         [Comment("核算类别")]
         [MaxLength(50)]
         public string AccountingCategory { get; set; }
+
+        /// <summary>
+        /// 制单人（金蝶制单人名称）
+        /// </summary>
+        [Comment("制单人（金蝶制单人名称）")]
+        [MaxLength(64)]
+        public string Preparer { get; set; }
 
         /// <summary>
         /// 备注
@@ -104,6 +125,6 @@ namespace PowerLms.Data
         [Comment("创建的时间")]
         [Precision(3)]
         public DateTime CreateDateTime { get; set; } = OwHelper.WorldNow;
-        #endregion
+        #endregion IMarkDelete
     }
 }

@@ -12,24 +12,24 @@ using DotNetDBF;
 namespace PowerLmsWebApi.Controllers
 {
     /// <summary>
-    /// 财务系统导出功能控制器 - ARAB(计提A账应收本位币挂账)模块。
-    /// 实现ARAB(计提A账应收本位币挂账)过程的导出功能。
+    /// 财务系统导出功能控制器 - APAB(计提A账应付本位币挂账)模块。
+    /// 实现APAB(计提A账应付本位币挂账)过程的导出功能。
     /// 根据费用数据按结算单位、国内外、代垫属性分组统计，生成金蝶凭证文件。
     /// </summary>
     public partial class FinancialSystemExportController
     {
-        #region HTTP接口 - ARAB(计提A账应收本位币挂账)
+        #region HTTP接口 - APAB(计提A账应付本位币挂账)
 
         /// <summary>
-        /// 导出A账应收本位币挂账(ARAB)数据为金蝶DBF格式文件。
+        /// 导出A账应付本位币挂账(APAB)数据为金蝶DBF格式文件。
         /// </summary>
         [HttpPost]
-        public ActionResult<ExportArabToDbfReturnDto> ExportArabToDbf(ExportArabToDbfParamsDto model)
+        public ActionResult<ExportApabToDbfReturnDto> ExportApabToDbf(ExportApabToDbfParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
                 return Unauthorized();
 
-            var result = new ExportArabToDbfReturnDto();
+            var result = new ExportApabToDbfReturnDto();
             try
             {
                 // 从ExportConditions中解析条件
@@ -45,7 +45,7 @@ namespace PowerLmsWebApi.Controllers
 
                 // 预检查费用数据
                 var feesQuery = _DbContext.DocFees
-                    .Where(f => f.IO == true && // 只统计收入
+                    .Where(f => f.IO == false && // 只统计支出
                                f.CreateDateTime >= startDate && 
                                f.CreateDateTime <= endDate);
 
@@ -73,13 +73,13 @@ namespace PowerLmsWebApi.Controllers
                 };
 
                 var taskId = taskService.CreateTask(typeof(FinancialSystemExportController),
-                    nameof(ProcessArabDbfExportTask),
+                    nameof(ProcessApabDbfExportTask),
                     taskParameters,
                     context.User.Id,
                     context.User.OrgId);
 
                 result.TaskId = taskId;
-                result.Message = "ARAB导出任务已创建";
+                result.Message = "APAB导出任务已创建";
                 result.ExpectedFeeCount = feeCount;
             }
             catch (Exception ex)
@@ -93,26 +93,26 @@ namespace PowerLmsWebApi.Controllers
 
         #endregion
 
-        #region 静态任务处理方法 - ARAB
+        #region 静态任务处理方法 - APAB
 
         /// <summary>
-        /// ARAB分组数据项
+        /// APAB分组数据项
         /// </summary>
-        public class ArabGroupDataItem
+        public class ApabGroupDataItem
         {
             public Guid? BalanceId { get; set; }
-            public string CustomerName { get; set; }
-            public string CustomerShortName { get; set; }
-            public string CustomerFinanceCode { get; set; }
+            public string SupplierName { get; set; }
+            public string SupplierShortName { get; set; }
+            public string SupplierFinanceCode { get; set; }
             public bool IsDomestic { get; set; }
             public bool IsAdvance { get; set; }
             public decimal TotalAmount { get; set; }
         }
 
         /// <summary>
-        /// 处理ARAB DBF导出任务
+        /// 处理APAB DBF导出任务
         /// </summary>
-        public static object ProcessArabDbfExportTask(Guid taskId, Dictionary<string, string> parameters, IServiceProvider serviceProvider)
+        public static object ProcessApabDbfExportTask(Guid taskId, Dictionary<string, string> parameters, IServiceProvider serviceProvider)
         {
             string currentStep = "参数验证";
             try
@@ -169,13 +169,13 @@ namespace PowerLmsWebApi.Controllers
                 using var dbContext = dbContextFactory.CreateDbContext();
 
                 currentStep = "加载科目配置";
-                var subjectConfigs = LoadArabSubjectConfigurations(dbContext, orgId);
+                var subjectConfigs = LoadApabSubjectConfigurations(dbContext, orgId);
                 if (!subjectConfigs.Any())
-                    throw new InvalidOperationException($"ARAB科目配置未找到，无法生成凭证。组织ID: {orgId}");
+                    throw new InvalidOperationException($"APAB科目配置未找到，无法生成凭证。组织ID: {orgId}");
 
                 currentStep = "查询费用数据";
                 var feesQuery = dbContext.DocFees
-                    .Where(f => f.IO == true && // 只统计收入
+                    .Where(f => f.IO == false && // 只统计支出
                                f.CreateDateTime >= startDate && 
                                f.CreateDateTime <= endDate);
 
@@ -193,40 +193,40 @@ namespace PowerLmsWebApi.Controllers
                 }
 
                 currentStep = "按业务规则分组统计";
-                // ARAB业务逻辑：IO=收入，sum(Amount*ExchangeRate) as Totalamount，按 费用.结算单位、结算单位.国别、费用种类.代垫 分组
-                var arabGroupData = (from fee in feesQuery
-                                   join customer in dbContext.PlCustomers on fee.BalanceId equals customer.Id into customerGroup
-                                   from cust in customerGroup.DefaultIfEmpty()
+                // APAB业务逻辑：IO=支出，sum(Amount*ExchangeRate) as Totalamount，按 费用.结算单位、结算单位.国别、费用种类.代垫 分组
+                var apabGroupData = (from fee in feesQuery
+                                   join supplier in dbContext.PlCustomers on fee.BalanceId equals supplier.Id into supplierGroup
+                                   from supp in supplierGroup.DefaultIfEmpty()
                                    join feeType in dbContext.DD_SimpleDataDics on fee.FeeTypeId equals feeType.Id into feeTypeGroup
                                    from feeTypeDict in feeTypeGroup.DefaultIfEmpty()
-                                   group new { fee, cust, feeTypeDict } by new
+                                   group new { fee, supp, feeTypeDict } by new
                                    {
                                        BalanceId = fee.BalanceId,
-                                       CustomerName = cust != null ? cust.Name_DisplayName : "未知客户",
-                                       CustomerShortName = cust != null ? cust.Name_ShortName : "",
-                                       CustomerFinanceCode = cust != null ? cust.TacCountNo : "",
-                                       IsDomestic = cust != null ? (cust.IsDomestic ?? true) : true,
+                                       SupplierName = supp != null ? supp.Name_DisplayName : "未知供应商",
+                                       SupplierShortName = supp != null ? supp.Name_ShortName : "",
+                                       SupplierFinanceCode = supp != null ? supp.TacCountNo : "",
+                                       IsDomestic = supp != null ? (supp.IsDomestic ?? true) : true,
                                        IsAdvance = feeTypeDict != null && feeTypeDict.Remark != null && feeTypeDict.Remark.Contains("代垫")
                                    } into g
-                                   select new ArabGroupDataItem
+                                   select new ApabGroupDataItem
                                    {
                                        BalanceId = g.Key.BalanceId,
-                                       CustomerName = g.Key.CustomerName,
-                                       CustomerShortName = g.Key.CustomerShortName,
-                                       CustomerFinanceCode = g.Key.CustomerFinanceCode,
+                                       SupplierName = g.Key.SupplierName,
+                                       SupplierShortName = g.Key.SupplierShortName,
+                                       SupplierFinanceCode = g.Key.SupplierFinanceCode,
                                        IsDomestic = g.Key.IsDomestic,
                                        IsAdvance = g.Key.IsAdvance,
                                        TotalAmount = g.Sum(x => x.fee.Amount * x.fee.ExchangeRate)
                                    }).ToList();
 
-                if (!arabGroupData.Any())
+                if (!apabGroupData.Any())
                     throw new InvalidOperationException("没有找到符合条件的费用数据");
 
                 currentStep = "生成金蝶凭证数据";
-                var kingdeeVouchers = GenerateArabKingdeeVouchers(arabGroupData, accountingDate, subjectConfigs);
+                var kingdeeVouchers = GenerateApabKingdeeVouchers(apabGroupData, accountingDate, subjectConfigs);
 
                 currentStep = "生成DBF文件";
-                var fileName = $"ARAB_Export_{DateTime.Now:yyyyMMdd_HHmmss}.dbf";
+                var fileName = $"APAB_Export_{DateTime.Now:yyyyMMdd_HHmmss}.dbf";
                 var kingdeeFieldMappings = new Dictionary<string, string>
                 {
                     {"FDATE", "FDATE"}, {"FTRANSDATE", "FTRANSDATE"}, {"FPERIOD", "FPERIOD"}, {"FGROUP", "FGROUP"}, {"FNUM", "FNUM"},
@@ -256,9 +256,9 @@ namespace PowerLmsWebApi.Controllers
                     memoryStream.Position = 0;
                     
                     var finalDisplayName = !string.IsNullOrWhiteSpace(displayName) ? 
-                        displayName : $"ARAB计提导出-{DateTime.Now:yyyy年MM月dd日}";
+                        displayName : $"APAB计提导出-{DateTime.Now:yyyy年MM月dd日}";
                     var finalRemark = !string.IsNullOrWhiteSpace(remark) ? 
-                        remark : $"ARAB计提DBF导出文件，共{arabGroupData.Count}个客户分组，{kingdeeVouchers.Count}条会计分录，导出时间：{DateTime.Now:yyyy-MM-dd HH:mm:ss}";
+                        remark : $"APAB计提DBF导出文件，共{apabGroupData.Count}个供应商分组，{kingdeeVouchers.Count}条会计分录，导出时间：{DateTime.Now:yyyy-MM-dd HH:mm:ss}";
                     
                     fileInfoRecord = fileService.CreateFile(
                         fileStream: memoryStream,
@@ -296,9 +296,9 @@ namespace PowerLmsWebApi.Controllers
                 {
                     FileId = fileInfoRecord.Id,
                     FileName = fileName,
-                    FeeGroupCount = arabGroupData.Count,
+                    FeeGroupCount = apabGroupData.Count,
                     VoucherCount = kingdeeVouchers.Count,
-                    TotalAmount = arabGroupData.Sum(g => g.TotalAmount),
+                    TotalAmount = apabGroupData.Sum(g => g.TotalAmount),
                     FilePath = fileInfoRecord.FilePath,
                     ExportDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
                     FileSize = actualFileSize,
@@ -308,7 +308,7 @@ namespace PowerLmsWebApi.Controllers
             }
             catch (Exception ex)
             {
-                var contextualError = $"ARAB DBF导出任务失败，当前步骤: {currentStep}, 任务ID: {taskId}";
+                var contextualError = $"APAB DBF导出任务失败，当前步骤: {currentStep}, 任务ID: {taskId}";
                 if (parameters != null)
                     contextualError += $"\n任务参数: {string.Join(", ", parameters.Select(kv => $"{kv.Key}={kv.Value}"))}";
 
@@ -317,17 +317,17 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// 加载ARAB科目配置（静态版本）
+        /// 加载APAB科目配置（静态版本）
         /// </summary>
-        private static Dictionary<string, SubjectConfiguration> LoadArabSubjectConfigurations(PowerLmsUserDbContext dbContext, Guid? orgId)
+        private static Dictionary<string, SubjectConfiguration> LoadApabSubjectConfigurations(PowerLmsUserDbContext dbContext, Guid? orgId)
         {
             var requiredCodes = new List<string>
             {
-                "ARAB_TOTAL",      // 计提总应收
-                "ARAB_IN_CUS",     // 计提应收国内-客户
-                "ARAB_IN_TAR",     // 计提应收国内-关税
-                "ARAB_OUT_CUS",    // 计提应收国外-客户
-                "ARAB_OUT_TAR",    // 计提应收国外-关税
+                "APAB_TOTAL",      // 计提总应付
+                "APAB_IN_SUP",     // 计提应付国内-供应商
+                "APAB_IN_TAR",     // 计提应付国内-关税
+                "APAB_OUT_SUP",    // 计提应付国外-供应商
+                "APAB_OUT_TAR",    // 计提应付国外-关税
                 "GEN_PREPARER",    // 制单人
                 "GEN_VOUCHER_GROUP" // 凭证类别字
             };
@@ -340,10 +340,10 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// 生成ARAB金蝶凭证数据
+        /// 生成APAB金蝶凭证数据
         /// </summary>
-        private static List<KingdeeVoucher> GenerateArabKingdeeVouchers(
-            List<ArabGroupDataItem> arabGroupData,
+        private static List<KingdeeVoucher> GenerateApabKingdeeVouchers(
+            List<ApabGroupDataItem> apabGroupData,
             DateTime accountingDate,
             Dictionary<string, SubjectConfiguration> subjectConfigs)
         {
@@ -357,12 +357,12 @@ namespace PowerLmsWebApi.Controllers
                 (subjectConfigs["GEN_VOUCHER_GROUP"]?.VoucherGroup ?? "转") : "转";
 
             // 计算总金额
-            var totalAmount = arabGroupData.Sum(g => g.TotalAmount);
+            var totalAmount = apabGroupData.Sum(g => g.TotalAmount);
 
             int entryId = 0;
 
             // 生成明细分录（借方）
-            foreach (var group in arabGroupData)
+            foreach (var group in apabGroupData)
             {
                 string subjectCode;
                 string description;
@@ -372,26 +372,26 @@ namespace PowerLmsWebApi.Controllers
                 {
                     if (group.IsAdvance)
                     {
-                        subjectCode = "ARAB_IN_TAR";
-                        description = $"计提应收国内-关税-{group.CustomerName} {group.TotalAmount:F2}元";
+                        subjectCode = "APAB_IN_TAR";
+                        description = $"计提应付国内-关税-{group.SupplierName} {group.TotalAmount:F2}元";
                     }
                     else
                     {
-                        subjectCode = "ARAB_IN_CUS";
-                        description = $"计提应收国内-客户-{group.CustomerName} {group.TotalAmount:F2}元";
+                        subjectCode = "APAB_IN_SUP";
+                        description = $"计提应付国内-供应商-{group.SupplierName} {group.TotalAmount:F2}元";
                     }
                 }
                 else
                 {
                     if (group.IsAdvance)
                     {
-                        subjectCode = "ARAB_OUT_TAR";
-                        description = $"计提应收国外-关税-{group.CustomerName} {group.TotalAmount:F2}元";
+                        subjectCode = "APAB_OUT_TAR";
+                        description = $"计提应付国外-关税-{group.SupplierName} {group.TotalAmount:F2}元";
                     }
                     else
                     {
-                        subjectCode = "ARAB_OUT_CUS";
-                        description = $"计提应收国外-客户-{group.CustomerName} {group.TotalAmount:F2}元";
+                        subjectCode = "APAB_OUT_SUP";
+                        description = $"计提应付国外-供应商-{group.SupplierName} {group.TotalAmount:F2}元";
                     }
                 }
 
@@ -408,10 +408,10 @@ namespace PowerLmsWebApi.Controllers
                         FENTRYID = entryId++,
                         FEXP = description,
                         FACCTID = config.SubjectNumber,
-                        FCLSNAME1 = config.AccountingCategory ?? "客户",
-                        FOBJID1 = group.CustomerShortName ?? group.CustomerFinanceCode ?? "CUSTOMER",
-                        FOBJNAME1 = group.CustomerName,
-                        FTRANSID = group.CustomerFinanceCode ?? "",
+                        FCLSNAME1 = config.AccountingCategory ?? "供应商",
+                        FOBJID1 = group.SupplierShortName ?? group.SupplierFinanceCode ?? "SUPPLIER",
+                        FOBJNAME1 = group.SupplierName,
+                        FTRANSID = group.SupplierFinanceCode ?? "",
                         FCYID = "RMB",
                         FEXCHRATE = 1.0000000m,
                         FDC = 0, // 借方
@@ -426,7 +426,7 @@ namespace PowerLmsWebApi.Controllers
             }
 
             // 生成总科目分录（贷方）
-            if (subjectConfigs.TryGetValue("ARAB_TOTAL", out var totalConfig) && totalConfig != null)
+            if (subjectConfigs.TryGetValue("APAB_TOTAL", out var totalConfig) && totalConfig != null)
             {
                 vouchers.Add(new KingdeeVoucher
                 {
@@ -437,7 +437,7 @@ namespace PowerLmsWebApi.Controllers
                     FGROUP = voucherGroup,
                     FNUM = voucherNumber,
                     FENTRYID = entryId,
-                    FEXP = $"计提{accountingDate:yyyy年MM月}总应收 {totalAmount:F2}元",
+                    FEXP = $"计提{accountingDate:yyyy年MM月}总应付 {totalAmount:F2}元",
                     FACCTID = totalConfig.SubjectNumber,
                     FCYID = "RMB",
                     FEXCHRATE = 1.0000000m,
@@ -452,65 +452,6 @@ namespace PowerLmsWebApi.Controllers
             }
 
             return vouchers;
-        }
-
-        /// <summary>
-        /// 针对费用数据的组织权限过滤方法（静态版本）
-        /// </summary>
-        private static IQueryable<DocFee> ApplyOrganizationFilterForFeesStatic(IQueryable<DocFee> feesQuery, Account user,
-            PowerLmsUserDbContext dbContext, IServiceProvider serviceProvider)
-        {
-            if (user == null)
-            {
-                return feesQuery.Where(f => false);
-            }
-
-            if (user.IsSuperAdmin)
-            {
-                return feesQuery;
-            }
-
-            var orgManager = serviceProvider.GetRequiredService<OrgManager<PowerLmsUserDbContext>>();
-
-            // 获取用户所属商户ID
-            var merchantId = orgManager.GetMerchantIdByUserId(user.Id);
-            if (!merchantId.HasValue)
-            {
-                return feesQuery.Where(f => false);
-            }
-
-            HashSet<Guid?> allowedOrgIds;
-
-            if (user.IsMerchantAdmin)
-            {
-                // 商户管理员可以访问整个商户下的所有组织机构
-                var allOrgIds = orgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs.Keys.ToList();
-                allowedOrgIds = new HashSet<Guid?>(allOrgIds.Cast<Guid?>());
-                allowedOrgIds.Add(merchantId.Value); // 添加商户ID本身
-            }
-            else
-            {
-                // 普通用户只能访问其当前登录的公司及下属机构
-                var companyId = user.OrgId.HasValue ? orgManager.GetCompanyIdByOrgId(user.OrgId.Value) : null;
-                if (!companyId.HasValue)
-                {
-                    return feesQuery.Where(f => false);
-                }
-                
-                var companyOrgIds = orgManager.GetOrgIdsByCompanyId(companyId.Value).ToList();
-                allowedOrgIds = new HashSet<Guid?>(companyOrgIds.Cast<Guid?>());
-                allowedOrgIds.Add(merchantId.Value); // 添加商户ID本身
-            }
-
-            // 通过关联的业务过滤费用
-            var filteredQuery = from fee in feesQuery
-                               join job in dbContext.PlJobs
-                                   on fee.JobId equals job.Id into jobGroup
-                               from plJob in jobGroup.DefaultIfEmpty()
-                               where allowedOrgIds.Contains(plJob.OrgId)
-                               select fee;
-
-            return filteredQuery.Distinct();
         }
 
         #endregion
