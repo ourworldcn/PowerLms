@@ -100,12 +100,39 @@ namespace PowerLmsWebApi.Controllers
         /// </summary>
         public class ApabGroupDataItem
         {
+            /// <summary>
+            /// 结算单位ID
+            /// </summary>
             public Guid? BalanceId { get; set; }
+            
+            /// <summary>
+            /// 供应商名称
+            /// </summary>
             public string SupplierName { get; set; }
+            
+            /// <summary>
+            /// 供应商简称
+            /// </summary>
             public string SupplierShortName { get; set; }
+            
+            /// <summary>
+            /// 供应商财务编码
+            /// </summary>
             public string SupplierFinanceCode { get; set; }
+            
+            /// <summary>
+            /// 是否国内供应商
+            /// </summary>
             public bool IsDomestic { get; set; }
+            
+            /// <summary>
+            /// 是否代垫费用
+            /// </summary>
             public bool IsAdvance { get; set; }
+            
+            /// <summary>
+            /// 总金额（本位币）
+            /// </summary>
             public decimal TotalAmount { get; set; }
         }
 

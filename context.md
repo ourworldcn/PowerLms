@@ -8,7 +8,8 @@
 - **¿ª·¢ÓïÑÔ**: C# 10
 - **¹¤×÷¿Õ¼ä**: `C:\Users\zc-home\source\ourworldcn\PowerLms\`
 
-### ¼¼ÊõÕ»¼Ü¹¹ºËĞÄ¼¼ÊõÕ»:
+### ºËĞÄ¼¼ÊõÕ»¼Ü¹¹
+```
 ©À©¤©¤ .NET 6                          # Ö÷¿ò¼ÜÆ½Ì¨
 ©À©¤©¤ Entity Framework Core           # ORMÊı¾İ·ÃÎÊ²ã
 ©À©¤©¤ DotNetDBF                      # DBFÎÄ¼ş´¦Àí¿â£¨½ğµûÆ¾Ö¤µ¼³ö£©
@@ -16,9 +17,13 @@
 ©À©¤©¤ Microsoft.Extensions.DI        # ÒÀÀµ×¢ÈëÈİÆ÷
 ©À©¤©¤ ASP.NET Core Web API           # RESTful API¿ò¼Ü
 ©¸©¤©¤ OwTaskService                  # Òì²½ÈÎÎñ´¦Àí·şÎñ
+```
+
 ## ??? ÏîÄ¿½á¹¹
 
-### ½â¾ö·½°¸×é³ÉPowerLms/
+### ½â¾ö·½°¸×é³É
+```
+PowerLms/
 ©À©¤©¤ PowerLmsData/                  # Êı¾İÄ£ĞÍ²ã
 ©¦   ©À©¤©¤ ¿Í»§×ÊÁÏ/                  # ¿Í»§Ïà¹ØÊµÌå (PlCustomer)
 ©¦   ©À©¤©¤ »ú¹¹/                     # ×éÖ¯»ú¹¹ÊµÌå (PlOrganization, BankInfo)
@@ -34,30 +39,39 @@
 ©¦   ©¦   ©À©¤©¤ FinancialSystemExportController.cs        # Ö÷¿ØÖÆÆ÷
 ©¦   ©¦   ©À©¤©¤ FinancialSystemExportController.Arab.cs   # ARAB·Ö²¿Àà
 ©¦   ©¦   ©À©¤©¤ FinancialSystemExportController.Apab.cs   # APAB·Ö²¿Àà
-©¦   ©¦   ©¸©¤©¤ FinancialSystemExportController.Dto.cs    # DTO¶¨Òå
+©¦   ©¦   ©À©¤©¤ FinancialSystemExportController.Dto.cs    # DTO¶¨Òå
+©¦   ©¦   ©¸©¤©¤ SubjectConfigurationController.cs         # ²ÆÎñ¿ÆÄ¿ÉèÖÃ¿ØÖÆÆ÷
 ©¦   ©¸©¤©¤ Dto/                      # Êı¾İ´«Êä¶ÔÏó
 ©¸©¤©¤ Bak/                          # »ù´¡×é¼ş
     ©À©¤©¤ OwDbBase/                 # Êı¾İ¿â»ù´¡×é¼ş (OwTaskService)
     ©¸©¤©¤ OwBaseCore/               # ºËĞÄ»ù´¡×é¼ş
+```
+
 ## ?? ºËĞÄÒµÎñÄ£¿é
 
 ### 1. ²ÆÎñ¿ÆÄ¿ÅäÖÃÏµÍ³ (SubjectConfiguration)
 
-#### ÊµÌå½á¹¹public class SubjectConfiguration : GuidKeyObjectBase, ISpecificOrg, IMarkDelete, ICreatorInfo
+#### ÊµÌå½á¹¹
+```csharp
+public class SubjectConfiguration : GuidKeyObjectBase, ISpecificOrg, IMarkDelete, ICreatorInfo
 {
     public Guid? OrgId { get; set; }                    // ËùÊô×éÖ¯»ú¹¹Id
     public string Code { get; set; }                    // ¿ÆÄ¿±àÂë [MaxLength(32), Unicode(false)]
     public string SubjectNumber { get; set; }           // »á¼Æ¿ÆÄ¿±àºÅ [Required]
     public string DisplayName { get; set; }             // ÏÔÊ¾Ãû³Æ [MaxLength(128)]
-    public string VoucherGroup { get; set; }            // Æ¾Ö¤Àà±ğ×Ö [MaxLength(10)]
-    public string AccountingCategory { get; set; }      // ºËËãÀà±ğ [MaxLength(50)]
-    public string Preparer { get; set; }                // ÖÆµ¥ÈË£¨½ğµûÖÆµ¥ÈËÃû³Æ£©[MaxLength(64)]
+    public string VoucherGroup { get; set; }            // Æ¾Ö¤Àà±ğ×Ö [MaxLength(10)] ?ĞÂÔö×Ö¶Î
+    public string AccountingCategory { get; set; }      // ºËËãÀà±ğ [MaxLength(50)] ?ĞÂÔö×Ö¶Î
+    public string Preparer { get; set; }                // ÖÆµ¥ÈË£¨½ğµûÖÆµ¥ÈËÃû³Æ£©[MaxLength(64)] ?ĞÂÔö×Ö¶Î
     public string Remark { get; set; }                  // ±¸×¢
     public bool IsDelete { get; set; }                  // ÈíÉ¾³ı±ê¼Ç
     public Guid? CreateBy { get; set; }                 // ´´½¨ÕßID
     public DateTime CreateDateTime { get; set; }        // ´´½¨Ê±¼ä
 }
-#### ¿ÆÄ¿±àÂë¹æ·¶ÌåÏµÍ¨ÓÃ¿ÆÄ¿ (GEN):
+```
+
+#### ¿ÆÄ¿±àÂë¹æ·¶ÌåÏµ
+```
+Í¨ÓÃ¿ÆÄ¿ (GEN):
 - GEN_PREPARER          # ÖÆµ¥ÈË£¨½ğµûÖÆµ¥ÈËÃû³Æ£©
 - GEN_VOUCHER_GROUP     # Æ¾Ö¤Àà±ğ×Ö£¨Èç£º×ª¡¢ÊÕ¡¢¸¶¡¢¼Ç£©
 
@@ -87,6 +101,8 @@ AÕËÓ¦¸¶¼ÆÌá¿ÆÄ¿ (APAB):
 - APAB_IN_TAR          # ¼ÆÌáÓ¦¸¶¹úÄÚ-¹ØË° (203.001.02)
 - APAB_OUT_SUP         # ¼ÆÌáÓ¦¸¶¹úÍâ-¹©Ó¦ÉÌ (203.002)
 - APAB_OUT_TAR         # ¼ÆÌáÓ¦¸¶¹úÍâ-¹ØË° (´ı²¹³ä)
+```
+
 ### 2. ½ğµû²ÆÎñÏµÍ³¼¯³ÉÄ£¿é
 
 #### 2.1 ²ÆÎñÆ¾Ö¤µ¼³öÒıÇæ¼Ü¹¹
@@ -98,6 +114,7 @@ AÕËÓ¦¸¶¼ÆÌá¿ÆÄ¿ (APAB):
 - `FinancialSystemExportController.Dto.cs` - DTO¶¨Òå
 
 #### 2.2 Æ¾Ö¤Éú³ÉÁ÷³ÌÌåÏµ
+```
 ²ÆÎñÆ¾Ö¤ÀàĞÍ:
 ©À©¤©¤ ·¢Æ±¹ÒÕË£¨BÕË£©- PBI
 ©¦   ©À©¤©¤ Ó¦ÊÕÕË¿î (½è·½) - ¼ÛË°ºÏ¼Æ
@@ -115,6 +132,8 @@ AÕËÓ¦¸¶¼ÆÌá¿ÆÄ¿ (APAB):
 ©¸©¤©¤ ¼ÆÌáAÕËÓ¦¸¶±¾Î»±Ò¹ÒÕË - APAB
     ©À©¤©¤ Ó¦¸¶ÕË¿îÃ÷Ï¸ (½è·½) - °´¹©Ó¦ÉÌ/µØÇø/´úµæ·Ö×é
     ©¸©¤©¤ ¼ÆÌá×ÜÓ¦¸¶ (´û·½) - Sum(Totalamount)
+```
+
 #### 2.3 ºËĞÄÒµÎñÂß¼­
 
 **ARAB£¨¼ÆÌáAÕËÓ¦ÊÕ£©ÒµÎñ¹æÔò:**
@@ -133,7 +152,9 @@ AÕËÓ¦¸¶¼ÆÌá¿ÆÄ¿ (APAB):
 
 #### 2.4 DBFÎÄ¼şµ¼³ö¹æ·¶
 
-**½ğµûÆ¾Ö¤×Ö¶ÎÓ³Éä:**// ºËĞÄ×Ö¶Î
+**½ğµûÆ¾Ö¤×Ö¶ÎÓ³Éä:**
+```
+// ºËĞÄ×Ö¶Î
 FDATE/FTRANSDATE    # Æ¾Ö¤ÈÕÆÚ
 FPERIOD             # »á¼ÆÆÚ¼ä
 FNUM                # Æ¾Ö¤ºÅ
@@ -147,6 +168,8 @@ FTRANSID            # ²ÆÎñ±àÂë
 FDC                 # ½è´û·½Ïò (0=½è·½, 1=´û·½)
 FDEBIT/FCREDIT      # ½è·½/´û·½½ğ¶î
 FPREPARE            # ÖÆµ¥ÈË
+```
+
 **Òì²½ÈÎÎñ´¦Àí»úÖÆ:**
 - Ê¹ÓÃ `OwTaskService` Í³Ò»ÈÎÎñµ÷¶È
 - Ö§³ÖÈÎÎñ½ø¶È¸ú×ÙºÍ×´Ì¬²éÑ¯
@@ -155,7 +178,9 @@ FPREPARE            # ÖÆµ¥ÈË
 
 ### 3. ¿Í»§×ÊÁÏ¹ÜÀíÏµÍ³ (PlCustomer)
 
-#### ºËĞÄÊôĞÔ·Ö×épublic class PlCustomer : GuidKeyObjectBase, ICreatorInfo
+#### ºËĞÄÊôĞÔ·Ö×é
+```csharp
+public class PlCustomer : GuidKeyObjectBase, ICreatorInfo
 {
     // »ù±¾ĞÅÏ¢
     public Guid? OrgId { get; set; }                    // ËùÊô×éÖ¯»ú¹¹Id
@@ -169,9 +194,12 @@ FPREPARE            # ÖÆµ¥ÈË
     // ¹úÄÚÍâ±êÊ¶£¨ÓÃÓÚ²ÆÎñÆ¾Ö¤Êä³ö£©
     public bool? IsDomestic { get; set; }               // true=¹úÄÚ£¬false=¹úÍâ
 }
+```
 ### 4. È¨ÏŞÓë°²È«ÌåÏµ
 
-#### 4.1 È¨ÏŞÑéÖ¤»úÖÆ// TokenÑéÖ¤
+#### 4.1 È¨ÏŞÑéÖ¤»úÖÆ
+```csharp
+// TokenÑéÖ¤
 if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
     return Unauthorized();
 
@@ -179,15 +207,23 @@ if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is no
 - ³¬¼¶¹ÜÀíÔ±: ·ÃÎÊËùÓĞÊı¾İ
 - ÉÌ»§¹ÜÀíÔ±: ·ÃÎÊ±¾ÉÌ»§ËùÓĞÊı¾İ
 - ÆÕÍ¨ÓÃ»§: ½ö·ÃÎÊËùÊô¹«Ë¾¼°ÏÂÊô»ú¹¹Êı¾İ
-#### 4.2 Êı¾İÈ¨ÏŞ¿ØÖÆ// ¾²Ì¬È¨ÏŞ¹ıÂË·½·¨
+```
+
+#### 4.2 Êı¾İÈ¨ÏŞ¿ØÖÆ
+```csharp
+// ¾²Ì¬È¨ÏŞ¹ıÂË·½·¨
 private static IQueryable<DocFee> ApplyOrganizationFilterForFeesStatic(
     IQueryable<DocFee> feesQuery, Account user, 
     PowerLmsUserDbContext dbContext, IServiceProvider serviceProvider)
+```
+
 ## ?? ¼¼ÊõÊµÏÖÏ¸½Ú
 
 ### 1. Òì²½ÈÎÎñ´¦Àí
 
-#### OwTaskService ¼¯³É// ÈÎÎñ´´½¨
+#### OwTaskService ¼¯³É
+```csharp
+// ÈÎÎñ´´½¨
 var taskId = taskService.CreateTask(
     typeof(FinancialSystemExportController),
     nameof(ProcessArabDbfExportTask),
@@ -200,9 +236,13 @@ public static object ProcessArabDbfExportTask(
     Guid taskId, 
     Dictionary<string, string> parameters, 
     IServiceProvider serviceProvider)
+```
+
 ### 2. ·Ö×éÊı¾İ´¦Àí
 
-#### ARAB·Ö×éÊı¾İ½á¹¹public class ArabGroupDataItem
+#### ARAB·Ö×éÊı¾İ½á¹¹
+```csharp
+public class ArabGroupDataItem
 {
     public Guid? BalanceId { get; set; }            // ½áËãµ¥Î»ID
     public string CustomerName { get; set; }        // ¿Í»§Ãû³Æ
@@ -212,7 +252,11 @@ public static object ProcessArabDbfExportTask(
     public bool IsAdvance { get; set; }             // ÊÇ·ñ´úµæ
     public decimal TotalAmount { get; set; }        // ×Ü½ğ¶î
 }
-#### APAB·Ö×éÊı¾İ½á¹¹public class ApabGroupDataItem
+```
+
+#### APAB·Ö×éÊı¾İ½á¹¹
+```csharp
+public class ApabGroupDataItem
 {
     public Guid? BalanceId { get; set; }             // ½áËãµ¥Î»ID
     public string SupplierName { get; set; }         // ¹©Ó¦ÉÌÃû³Æ
@@ -222,9 +266,13 @@ public static object ProcessArabDbfExportTask(
     public bool IsAdvance { get; set; }              // ÊÇ·ñ´úµæ
     public decimal TotalAmount { get; set; }         // ×Ü½ğ¶î
 }
+```
+
 ### 3. ¿ÆÄ¿ÅäÖÃ¼ÓÔØ
 
-#### ÅäÖÃÑéÖ¤»úÖÆ// ARAB¿ÆÄ¿ÅäÖÃÒªÇó
+#### ÅäÖÃÑéÖ¤»úÖÆ
+```csharp
+// ARAB¿ÆÄ¿ÅäÖÃÒªÇó
 var requiredCodes = new List<string>
 {
     "ARAB_TOTAL",      // ¼ÆÌá×ÜÓ¦ÊÕ
@@ -247,9 +295,13 @@ var requiredCodes = new List<string>
     "GEN_PREPARER",    // ÖÆµ¥ÈË
     "GEN_VOUCHER_GROUP" // Æ¾Ö¤Àà±ğ×Ö
 };
+```
+
 ### 4. Æ¾Ö¤Éú³ÉËã·¨
 
-#### ¿ÆÄ¿Ñ¡ÔñÂß¼­// ARAB/APAB¿ÆÄ¿Ñ¡Ôñ
+#### ¿ÆÄ¿Ñ¡ÔñÂß¼­
+```csharp
+// ARAB/APAB¿ÆÄ¿Ñ¡Ôñ
 if (group.IsDomestic)  // ¹úÄÚ
 {
     if (group.IsAdvance)  // ´úµæ
@@ -264,7 +316,11 @@ else  // ¹úÍâ
     else
         subjectCode = "ARAB_OUT_CUS";  // »ò "APAB_OUT_SUP"
 }
-#### ÕªÒªÉú³É¹æ·¶// ARABÕªÒª¸ñÊ½
+```
+
+#### ÕªÒªÉú³É¹æ·¶
+```csharp
+// ARABÕªÒª¸ñÊ½
 description = $"¼ÆÌáÓ¦ÊÕ¹úÄÚ-¿Í»§-{group.CustomerName} {group.TotalAmount:F2}Ôª";
 
 // APABÕªÒª¸ñÊ½
@@ -272,9 +328,12 @@ description = $"¼ÆÌáÓ¦¸¶¹úÄÚ-¹©Ó¦ÉÌ-{group.SupplierName} {group.TotalAmount:F2}Ô
 
 // ×Ü¼Æ·ÖÂ¼ÕªÒª
 description = $"¼ÆÌá{accountingDate:yyyyÄêMMÔÂ}×ÜÓ¦ÊÕ {totalAmount:F2}Ôª";
+```
+
 ## ?? API½Ó¿Ú¹æ·¶
 
 ### 1. ARABµ¼³ö½Ó¿Ú
+```http
 POST /FinancialSystemExport/ExportArabToDbf
 Content-Type: application/json
 
@@ -288,7 +347,10 @@ Content-Type: application/json
   "DisplayName": "×Ô¶¨ÒåÎÄ¼şÏÔÊ¾Ãû³Æ",
   "Remark": "×Ô¶¨ÒåÎÄ¼ş±¸×¢"
 }
+```
+
 ### 2. APABµ¼³ö½Ó¿Ú
+```http
 POST /FinancialSystemExport/ExportApabToDbf
 Content-Type: application/json
 
@@ -302,7 +364,10 @@ Content-Type: application/json
   "DisplayName": "×Ô¶¨ÒåÎÄ¼şÏÔÊ¾Ãû³Æ",
   "Remark": "×Ô¶¨ÒåÎÄ¼ş±¸×¢"
 }
+```
+
 ### 3. ·µ»Ø½á¹û¸ñÊ½
+```json
 {
   "TaskId": "ÈÎÎñÎ¨Ò»±êÊ¶ID",
   "Message": "ÈÎÎñ´´½¨³É¹¦µÄÌáÊ¾ÏûÏ¢",
@@ -311,9 +376,13 @@ Content-Type: application/json
   "ErrorCode": 0,
   "DebugMessage": "²Ù×÷³É¹¦"
 }
+```
+
 ## ?? ±à³Ì¹æ·¶Óë·ç¸ñ
 
-### C# ±àÂë±ê×¼// 1. .NET 6 ºÍ C# 10 Óï·¨ÌØĞÔ
+### C# ±àÂë±ê×¼
+```csharp
+// 1. .NET 6 ºÍ C# 10 Óï·¨ÌØĞÔ
 using System;  // È«¾ÖusingÓï¾ä
 
 // 2. ÊôĞÔ×¢ÊÍĞĞÎ²·ç¸ñ
@@ -333,7 +402,11 @@ public string DisplayName { get; set; }  // ÏÔÊ¾Ãû³Æ
 /// </summary>
 [HttpPost]
 public ActionResult<ExportArabToDbfReturnDto> ExportArabToDbf(ExportArabToDbfParamsDto model)
-### ´íÎó´¦Àí²ßÂÔ// ·Ö²½Öè´íÎó´¦Àí
+```
+
+### ´íÎó´¦Àí²ßÂÔ
+```csharp
+// ·Ö²½Öè´íÎó´¦Àí
 string currentStep = "²ÎÊıÑéÖ¤";
 try
 {
@@ -348,7 +421,11 @@ catch (Exception ex)
     var contextualError = $"ARAB DBFµ¼³öÈÎÎñÊ§°Ü£¬µ±Ç°²½Öè: {currentStep}, ÈÎÎñID: {taskId}";
     throw new InvalidOperationException(contextualError, ex);
 }
-### ×ÊÔ´¹ÜÀíÄ£Ê½// ÄÚ´æÁ÷°²È«´¦Àí
+```
+
+### ×ÊÔ´¹ÜÀíÄ£Ê½
+```csharp
+// ÄÚ´æÁ÷°²È«´¦Àí
 var memoryStream = new MemoryStream(1024 * 1024 * 1024);
 try
 {
@@ -359,21 +436,37 @@ finally
 {
     OwHelper.DisposeAndRelease(ref memoryStream);
 }
-## ?? Êı¾İ¿âÉè¼ÆÔ­Ôò
+```
 
-### Î¨Ò»Ë÷ÒıÔ¼Êø[Index(nameof(OrgId), nameof(Code), IsUnique = true)]
+## ??? Êı¾İ¿âÉè¼ÆÔ­Ôò
+
+### Î¨Ò»Ë÷ÒıÔ¼Êø
+```csharp
+[Index(nameof(OrgId), nameof(Code), IsUnique = true)]
 public class SubjectConfiguration
-### ×Ö¶Î×¢ÊÍÓëÏŞÖÆ[Comment("¿ÆÄ¿±àÂë")]
+```
+
+### ×Ö¶Î×¢ÊÍÓëÏŞÖÆ
+```csharp
+[Comment("¿ÆÄ¿±àÂë")]
 [MaxLength(32), Unicode(false)]
 [Required(AllowEmptyStrings = false)]
 public string Code { get; set; }
-### ÈíÉ¾³ı½Ó¿Úpublic class SubjectConfiguration : IMarkDelete
+```
+
+### ÈíÉ¾³ı½Ó¿Ú
+```csharp
+public class SubjectConfiguration : IMarkDelete
 {
     public bool IsDelete { get; set; }  // ÈíÉ¾³ı±ê¼Ç
 }
-## ?? ĞÔÄÜÓÅ»¯²ßÂÔ
+```
 
-### Êı¾İ¿â²éÑ¯ÓÅ»¯// ·Ö×éÍ³¼Æ²éÑ¯ÓÅ»¯
+## ? ĞÔÄÜÓÅ»¯²ßÂÔ
+
+### Êı¾İ¿â²éÑ¯ÓÅ»¯
+```csharp
+// ·Ö×éÍ³¼Æ²éÑ¯ÓÅ»¯
 var arabGroupData = (from fee in feesQuery
                    join customer in dbContext.PlCustomers on fee.BalanceId equals customer.Id into customerGroup
                    from cust in customerGroup.DefaultIfEmpty()
@@ -390,8 +483,14 @@ var arabGroupData = (from fee in feesQuery
                    {
                        TotalAmount = g.Sum(x => x.fee.Amount * x.fee.ExchangeRate)
                    }).ToList();
-### ´óÎÄ¼ş´¦ÀíÓÅ»¯// Ê¹ÓÃ´óĞÍÄÚ´æÁ÷±ÜÃâÁÙÊ±ÎÄ¼ş
+```
+
+### ´óÎÄ¼ş´¦ÀíÓÅ»¯
+```csharp
+// Ê¹ÓÃ´óĞÍÄÚ´æÁ÷±ÜÃâÁÙÊ±ÎÄ¼ş
 var memoryStream = new MemoryStream(1024 * 1024 * 1024);
+```
+
 ## ?? ÖØÒª¼¼Êõ¾ö²ß¼ÇÂ¼
 
 ### 1. ·Ö²¿Àà¼Ü¹¹¾ö²ß
@@ -416,18 +515,112 @@ var memoryStream = new MemoryStream(1024 * 1024 * 1024);
 
 ## ?? µ÷ÊÔÓë²âÊÔ
 
-### ÈÕÖ¾¼ÇÂ¼¹æ·¶// ĞÅÏ¢ÈÕÖ¾
+### ÈÕÖ¾¼ÇÂ¼¹æ·¶
+```csharp
+// ĞÅÏ¢ÈÕÖ¾
 _Logger.LogInformation("ÓÃ»§ {UserId} ´´½¨ÁËARABµ¼³öÈÎÎñ", context.User.Id);
 
 // ´íÎóÈÕÖ¾
 _Logger.LogError(ex, "ARAB DBFµ¼³öÈÎÎñÊ§°Ü£¬ÈÎÎñID: {TaskId}", taskId);
-### ÑéÖ¤»úÖÆ// ÎÄ¼şÉú³ÉÑéÖ¤
+```
+
+### ÑéÖ¤»úÖÆ
+```csharp
+// ÎÄ¼şÉú³ÉÑéÖ¤
 if (fileSize == 0)
     throw new InvalidOperationException("DBFÎÄ¼şÉú³ÉÊ§°Ü£¬ÎÄ¼şÎª¿Õ");
 
 // ÅäÖÃÍêÕûĞÔÑéÖ¤
 if (!subjectConfigs.Any())
     throw new InvalidOperationException("ARAB¿ÆÄ¿ÅäÖÃÎ´ÕÒµ½£¬ÎŞ·¨Éú³ÉÆ¾Ö¤");
+```
+
+## ?? ÖØÒªĞŞ¸´¼ÇÂ¼ (µ±Ç°»á»°ÌÖÂÛµÄºËĞÄÄÚÈİ)
+
+### 1. SubjectConfigurationĞÂÔö×Ö¶ÎÎÊÌâĞŞ¸´
+
+#### ÎÊÌâÃèÊö
+ÓÃ»§·´Ó³"ĞÂÔöµÄÕâÈı¸ö×Ö¶ÎModifyÊ±±¨¸æ³É¹¦£¬µ«ÊÇÃ»´æÉÏ"£¬Éæ¼°SubjectConfigurationÊµÌåµÄÈı¸öĞÂÔö×Ö¶Î£º
+- `VoucherGroup` - Æ¾Ö¤Àà±ğ×Ö£¨ÔÚÇ¨ÒÆ 20250703083639_25070301.cs ÖĞÌí¼Ó£©
+- `AccountingCategory` - ºËËãÀà±ğ£¨ÔÚÇ¨ÒÆ 20250703083639_25070301.cs ÖĞÌí¼Ó£©  
+- `Preparer` - ÖÆµ¥ÈË£¨ÔÚÇ¨ÒÆ 20250715072810_25071501.cs ÖĞÌí¼Ó£©
+
+#### ĞŞ¸´¹ı³Ì
+**Ô­Òò·ÖÎö**: SubjectConfigurationControllerµÄModifySubjectConfiguration·½·¨ÖĞÈ±ÉÙ¶ÔÕâÈı¸öĞÂÔö×Ö¶ÎµÄ¸üĞÂÂß¼­¡£
+
+**ĞŞ¸´·½·¨**: Ê¹ÓÃ¹¤×÷ÇøÒÑÓĞµÄ°²È«Ä£Ê½ÖØ¹¹Ôö¸Ä·½·¨£º
+
+#### °²È«µÄ¿ØÖÆÆ÷Ä£Ê½ (²Î¿¼ÆäËû¿ØÖÆÆ÷)
+
+**Ôö¼Ó·½·¨Ä£Ê½ (²Î¿¼PlJobController)**:
+```csharp
+// Ö±½ÓÊ¹ÓÃ´«ÈëµÄÊµÌå£¬ÉèÖÃÏµÍ³¹ÜÀí×Ö¶Î
+var entity = model.Item;
+entity.GenerateNewId();
+entity.CreateBy = context.User.Id;
+entity.CreateDateTime = OwHelper.WorldNow;
+entity.IsDelete = false;
+```
+
+**ĞŞ¸Ä·½·¨Ä£Ê½ (²Î¿¼AdminController)**:
+```csharp
+// Ê¹ÓÃEntityManager.ModifyWithMarkDelete
+if (!_EntityManager.ModifyWithMarkDelete(itemsToUpdate))
+{
+    var errorMsg = OwHelper.GetLastErrorMessage();
+    return BadRequest($"ĞŞ¸Ä²ÆÎñ¿ÆÄ¿ÉèÖÃÊ§°Ü£º{errorMsg}");
+}
+
+// ÊÖ¶¯±£»¤¹Ø¼ü×Ö¶Î
+foreach (var item in itemsToUpdate)
+{
+    var entry = _DbContext.Entry(item);
+    entry.Property(c => c.OrgId).IsModified = false;
+    entry.Property(c => c.CreateBy).IsModified = false;
+    entry.Property(c => c.CreateDateTime).IsModified = false;
+}
+```
+
+#### ¹Ø¼üÊÜ±£»¤×Ö¶Î¶¨Òå
+```csharp
+private static readonly string[] ProtectedFields = new[]
+{
+    nameof(SubjectConfiguration.Id),           // Ö÷¼üID£¬²»¿É¸´ÖÆ
+    nameof(SubjectConfiguration.OrgId),        // ×éÖ¯»ú¹¹ID£¬ĞèÒªÈ¨ÏŞ¿ØÖÆ
+    nameof(SubjectConfiguration.CreateBy),     // ´´½¨ÕßID£¬ÏµÍ³¹ÜÀí
+    nameof(SubjectConfiguration.CreateDateTime), // ´´½¨Ê±¼ä£¬ÏµÍ³¹ÜÀí
+    nameof(SubjectConfiguration.IsDelete)      // É¾³ı±ê¼Ç£¬ÏµÍ³¹ÜÀí
+};
+```
+
+### 2. VS2022 17.14.9 ĞÔÄÜ¸Ä½ø·ÖÎö
+
+#### ¹Û²ìÏÖÏó
+¿ª·¢Õß·´Ó³VS2022 17.14.9¸üĞÂºó±à¼­ÎÄ¼şËÙ¶È±ä¿ì
+
+#### ĞÔÄÜÌáÉıÔ­Òò·ÖÎö
+**Õë¶Ô .NET 6 ÏîÄ¿µÄÓÅ»¯**:
+- **C# 10ÓïÑÔ·şÎñÓÅ»¯**: ¸ü¸ßĞ§´¦ÀíÈ«¾Öusing¡¢ÎÄ¼ş·¶Î§ÃüÃû¿Õ¼ä¡¢¼ÇÂ¼ÀàĞÍµÈÌØĞÔ
+- **¸´ÔÓÏîÄ¿½á¹¹ÓÅ»¯**: PowerLmsµÄ5¸öÖ÷ÒªÏîÄ¿¡¢¶à²ã¼Ü¹¹´¦Àí¸üÁ÷³©
+- **IntelliSenseÏìÓ¦ËÙ¶È**: ÊµÌå¿ò¼Ü¡¢ÒÀÀµ×¢Èë¡¢AutoMapper¼¯³ÉµÄÖÇÄÜ¸ĞÖª¸ü¿ì
+- **´íÎó¼ì²âºÍĞŞ¸´½¨Òé**: ÊµÊ±´íÎó¼ì²âºÍ´úÂë·ÖÎö¹æÔòÖ´ĞĞ¸ü¸ßĞ§
+
+### 3. EntityManager·½·¨Ê¹ÓÃ°²È«ĞÔ·ÖÎö
+
+#### ÎÊÌâÊ¶±ğ
+Í¨¹ıËÑË÷·¢ÏÖ`CopyIgnoreCase`ºÍ`ModifyWithMarkDelete`ÔÚ¹¤×÷ÇøÖĞÊ¹ÓÃ½ÏÉÙ£¬¿ÉÄÜ´æÔÚÇ±ÔÚ·çÏÕ£º
+
+**ModifyWithMarkDeleteÎÊÌâ**:
+- ÀàĞÍÔ¼Êø¹ıÓÚÑÏ¸ñ£ºĞèÒª`IEntityWithSingleKey<Guid>`½Ó¿Ú
+- ¸´ÔÓÒÀÀµ£ºÄÚ²¿µ÷ÓÃ`Modify`·½·¨£¬ÓĞAutoMapperÒÀÀµ
+
+**CopyIgnoreCaseÎÊÌâ**:
+- AutoMapperÒÀÀµ£ºÒÀÀµÓ³ÉäÅäÖÃÍêÕûĞÔ
+- Òì³£´¦Àí£º¿ÉÄÜÓĞÎ´²¶»ñÒì³£
+
+#### ½â¾ö·½°¸
+²ÉÓÃ¹¤×÷ÇøÒÑÑéÖ¤µÄ°²È«Ä£Ê½£¬±ÜÃâÊ¹ÓÃ²»È·¶¨µÄEntityManager·½·¨£¬¸ÄÓÃÊÖ¶¯ÊôĞÔ¸´ÖÆºÍ±ê×¼µÄEF Core²Ù×÷¡£
+
 ## ?? ×î¼ÑÊµ¼ù×Ü½á
 
 1. **Ä£¿é»¯Éè¼Æ**: ·Ö²¿Àà×éÖ¯´óĞÍ¿ØÖÆÆ÷¹¦ÄÜ
@@ -438,11 +631,30 @@ if (!subjectConfigs.Any())
 6. **ÈÕÖ¾¼ÇÂ¼**: ÍêÕûµÄ²Ù×÷ÈÕÖ¾ºÍÒì³£¼ÇÂ¼
 7. **Êı¾İÑéÖ¤**: ¿ÆÄ¿ÅäÖÃºÍÒµÎñÊı¾İÍêÕûĞÔ¼ì²é
 8. **ĞÔÄÜÓÅ»¯**: ÅúÁ¿´¦ÀíºÍ²éÑ¯ÓÅ»¯
+9. **?? °²È«Ä£Ê½**: ²Î¿¼ÏÖÓĞ¿ØÖÆÆ÷Ä£Ê½£¬±ÜÃâÊ¹ÓÃ²»È·¶¨µÄ·½·¨
+10. **?? ´úÂëÒ»ÖÂĞÔ**: ±£³ÖÓë¹¤×÷ÇøÆäËû¿ØÖÆÆ÷ÏàÍ¬µÄ±à³Ì·ç¸ñºÍÄ£Ê½
+
+## ?? ¿ª·¢»·¾³Óë¹¤¾ß
+
+### ¿ª·¢¹¤¾ß°æ±¾
+- **Visual Studio 2022 17.14.9**: ±à¼­ĞÔÄÜÓÅ»¯£¬ÌØ±ğÊÇ¶Ô.NET 6´óĞÍÏîÄ¿
+- **Entity Framework Core**: ORMÊı¾İ·ÃÎÊ²ã
+- **AutoMapper**: ¶ÔÏóÓ³Éä£¨½÷É÷Ê¹ÓÃ¸´ÔÓÅäÖÃ£©
+
+### ´úÂëÖÊÁ¿±£Ö¤
+- **±àÒëÊ±¼ì²é**: ÀûÓÃC# 10ÀàĞÍ°²È«ÌØĞÔ
+- **¾²Ì¬·ÖÎö**: VS2022ÄÚÖÃ´úÂë·ÖÎö¸ü¸ßĞ§
+- **´íÎó»Ö¸´**: ¸ü¿ìµÄ´íÎó×´Ì¬»Ö¸´»úÖÆ
 
 ---
 
-**ÎÄµµ°æ±¾**: v3.0  
+**ÎÄµµ°æ±¾**: v4.0  
 **×îºó¸üĞÂ**: 2025-01-16  
 **ÊÊÓÃ·¶Î§**: PowerLms²ÆÎñ¹ÜÀíÏµÍ³¿ª·¢ÍÅ¶Ó  
 **Î¬»¤ÔğÈÎ**: ¼¼Êõ¼Ü¹¹×é  
-**Ö÷Òª¸üĞÂ**: ĞÂÔöARAB/APAB²ÆÎñÆ¾Ö¤µ¼³öÒıÇæÍêÕûÊµÏÖ
+**Ö÷Òª¸üĞÂ**: 
+- ĞÂÔöSubjectConfigurationÊµÌåĞÂÔö×Ö¶ÎĞŞ¸´¼ÇÂ¼
+- ĞÂÔöVS2022ĞÔÄÜÓÅ»¯·ÖÎö
+- ĞÂÔöEntityManager°²È«Ê¹ÓÃÖ¸ÄÏ
+- ĞÂÔö¿ØÖÆÆ÷°²È«Ä£Ê½×î¼ÑÊµ¼ù
+- ÍêÉÆ¿ª·¢»·¾³ºÍ¹¤¾ß°æ±¾ĞÅÏ¢

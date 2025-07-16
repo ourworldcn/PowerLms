@@ -100,12 +100,39 @@ namespace PowerLmsWebApi.Controllers
         /// </summary>
         public class ArabGroupDataItem
         {
+            /// <summary>
+            /// 结算单位ID
+            /// </summary>
             public Guid? BalanceId { get; set; }
+            
+            /// <summary>
+            /// 客户名称
+            /// </summary>
             public string CustomerName { get; set; }
+            
+            /// <summary>
+            /// 客户简称
+            /// </summary>
             public string CustomerShortName { get; set; }
+            
+            /// <summary>
+            /// 客户财务编码
+            /// </summary>
             public string CustomerFinanceCode { get; set; }
+            
+            /// <summary>
+            /// 是否国内客户
+            /// </summary>
             public bool IsDomestic { get; set; }
+            
+            /// <summary>
+            /// 是否代垫费用
+            /// </summary>
             public bool IsAdvance { get; set; }
+            
+            /// <summary>
+            /// 总金额（本位币）
+            /// </summary>
             public decimal TotalAmount { get; set; }
         }
 

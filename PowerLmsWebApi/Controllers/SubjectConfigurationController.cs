@@ -21,7 +21,8 @@ namespace PowerLmsWebApi.Controllers
         /// </summary>
         public SubjectConfigurationController(AccountManager accountManager, IServiceProvider serviceProvider,
             PowerLmsUserDbContext dbContext, EntityManager entityManager, IMapper mapper,
-            AuthorizationManager authorizationManager, ILogger<SubjectConfigurationController> logger)
+            AuthorizationManager authorizationManager, ILogger<SubjectConfigurationController> logger,
+            OrgManager<PowerLmsUserDbContext> orgManager)
         {
             _AccountManager = accountManager;
             _ServiceProvider = serviceProvider;
@@ -30,6 +31,7 @@ namespace PowerLmsWebApi.Controllers
             _Mapper = mapper;
             _AuthorizationManager = authorizationManager;
             _Logger = logger;
+            _OrgManager = orgManager;
         }
 
         readonly AccountManager _AccountManager;
@@ -39,6 +41,7 @@ namespace PowerLmsWebApi.Controllers
         readonly IMapper _Mapper;
         readonly AuthorizationManager _AuthorizationManager;
         readonly ILogger<SubjectConfigurationController> _Logger;
+        readonly OrgManager<PowerLmsUserDbContext> _OrgManager;
 
         #region 静态数据
 
@@ -95,12 +98,8 @@ namespace PowerLmsWebApi.Controllers
                 query = filteredQuery;
             }
 
-            // 权限控制：非超管只能查看自己组织机构的数据
-            if (!context.User.IsSuperAdmin)
-            {
-                var userOrgId = context.User.OrgId;
-                query = query.Where(c => c.OrgId == userOrgId);
-            }
+            // 权限控制：应用组织权限过滤
+            query = ApplyOrganizationFilter(query, context.User);
 
             var prb = _EntityManager.GetAll(query, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
@@ -108,7 +107,7 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// 增加财务科目设置
+        /// 增加财务科目设置（参考现有控制器的标准模式）
         /// </summary>
         /// <param name="model">财务科目设置信息</param>
         /// <returns>增加结果</returns>
@@ -132,34 +131,36 @@ namespace PowerLmsWebApi.Controllers
             if (model.Item == null)
                 return BadRequest("财务科目设置信息不能为空");
 
-            // 设置组织机构Id（非超管只能为自己的组织机构添加）
+            // 使用传入的实体并设置系统管理字段（参考PlJobController模式）
+            var entity = model.Item;
+            entity.GenerateNewId();
+            entity.CreateBy = context.User.Id;
+            entity.CreateDateTime = OwHelper.WorldNow;
+            entity.IsDelete = false;
+            
+            // 设置组织机构Id（应用权限控制）
             if (!context.User.IsSuperAdmin)
             {
-                model.Item.OrgId = context.User.OrgId;
+                entity.OrgId = context.User.OrgId;
             }
-
-            // 设置创建信息
-            model.Item.GenerateNewId();
-            model.Item.CreateBy = context.User.Id;
-            model.Item.CreateDateTime = OwHelper.WorldNow;
-            model.Item.IsDelete = false;
+            // 超管可以使用传入的OrgId，无需额外设置
 
             try
             {
-                _DbContext.SubjectConfigurations.Add(model.Item);
+                _DbContext.SubjectConfigurations.Add(entity);
                 _DbContext.SaveChanges();
-                result.Id = model.Item.Id;
+                result.Id = entity.Id;
 
                 _Logger.LogInformation("用户 {UserId} 成功添加财务科目设置：{SubjectCode} - {DisplayName}",
-                    context.User.Id, model.Item.Code, model.Item.DisplayName);
+                    context.User.Id, entity.Code, entity.DisplayName);
             }
             catch (DbUpdateException ex) when (ex.InnerException?.Message?.Contains("IX_SubjectConfigurations_OrgId_Code") == true ||
                                                ex.InnerException?.Message?.Contains("duplicate") == true ||
                                                ex.InnerException?.Message?.Contains("UNIQUE") == true)
             {
                 // 拦截唯一索引违反错误
-                _Logger.LogWarning("尝试添加重复的科目编码：OrgId={OrgId}, Code={Code}", model.Item.OrgId, model.Item.Code);
-                return BadRequest($"组织机构中已存在科目编码 '{model.Item.Code}'，请使用不同的编码");
+                _Logger.LogWarning("尝试添加重复的科目编码：OrgId={OrgId}, Code={Code}", entity.OrgId, entity.Code);
+                return BadRequest($"组织机构中已存在科目编码 '{entity.Code}'，请使用不同的编码");
             }
             catch (Exception ex)
             {
@@ -171,7 +172,8 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// 修改财务科目设置
+        /// 修改财务科目设置（支持商户管理员权限）
+        /// 超管可以修改所有科目配置，商户管理员可以修改同一商户下所有科目配置，普通用户只能修改自己组织机构的科目配置
         /// </summary>
         /// <param name="model">财务科目设置修改信息</param>
         /// <returns>修改结果</returns>
@@ -195,40 +197,72 @@ namespace PowerLmsWebApi.Controllers
             if (model.Items == null || !model.Items.Any())
                 return BadRequest("修改项不能为空");
 
-            var modifiedCount = 0;
+            // 预先过滤：只包含用户有权限修改的项
+            var itemsToUpdate = new List<SubjectConfiguration>();
+            var rejectedItems = new List<string>(); // 记录被拒绝的项目，用于日志
+
             foreach (var item in model.Items)
             {
                 var existing = _DbContext.SubjectConfigurations.Find(item.Id);
                 if (existing == null)
                 {
                     _Logger.LogWarning("尝试修改不存在的财务科目设置：{Id}", item.Id);
+                    rejectedItems.Add($"ID {item.Id} (不存在)");
                     continue;
                 }
 
-                // 权限检查：非超管只能修改自己组织机构的数据
-                if (!context.User.IsSuperAdmin && existing.OrgId != context.User.OrgId)
+                // 权限检查：应用组织权限控制
+                if (!HasPermissionToModify(context.User, existing))
                 {
-                    _Logger.LogWarning("用户 {UserId} 尝试修改其他组织机构的财务科目设置：{Id}", context.User.Id, item.Id);
+                    _Logger.LogWarning("用户 {UserId} 尝试修改无权限的财务科目设置：{Id} (OrgId: {OrgId})", 
+                        context.User.Id, item.Id, existing.OrgId);
+                    rejectedItems.Add($"ID {item.Id} (无权限)");
                     continue;
                 }
 
-                // 更新字段（保护关键字段）
-                existing.Code = item.Code;
-                existing.SubjectNumber = item.SubjectNumber;
-                existing.DisplayName = item.DisplayName;
-                existing.Remark = item.Remark;
-                // 不允许修改 OrgId、CreateBy、CreateDateTime
-
-                modifiedCount++;
+                itemsToUpdate.Add(item);
             }
 
-            if (modifiedCount == 0)
-                return NotFound("没有找到可修改的财务科目设置");
+            if (!itemsToUpdate.Any())
+            {
+                var errorMessage = rejectedItems.Any() 
+                    ? $"没有找到可修改的财务科目设置。被拒绝的项目：{string.Join(", ", rejectedItems)}"
+                    : "没有找到可修改的财务科目设置";
+                return NotFound(errorMessage);
+            }
+
+            // 使用EntityManager.ModifyWithMarkDelete方法（参考AdminController模式）
+            if (!_EntityManager.ModifyWithMarkDelete(itemsToUpdate))
+            {
+                var errorMsg = OwHelper.GetLastErrorMessage();
+                _Logger.LogError("修改财务科目设置失败：{Error}", errorMsg);
+                return BadRequest($"修改财务科目设置失败：{errorMsg}");
+            }
+
+            // 手动保护关键字段（参考AdminController模式）
+            foreach (var item in itemsToUpdate)
+            {
+                var entry = _DbContext.Entry(item);
+                entry.Property(c => c.OrgId).IsModified = false;        // 保护组织机构ID
+                entry.Property(c => c.CreateBy).IsModified = false;     // 保护创建者ID
+                entry.Property(c => c.CreateDateTime).IsModified = false; // 保护创建时间
+                // IsDelete字段已在ModifyWithMarkDelete中自动保护
+            }
 
             try
             {
                 _DbContext.SaveChanges();
-                _Logger.LogInformation("用户 {UserId} 成功修改了 {Count} 个财务科目设置", context.User.Id, modifiedCount);
+                
+                var logMessage = rejectedItems.Any() 
+                    ? $"用户 {context.User.Id} 成功修改了 {itemsToUpdate.Count} 个财务科目设置，拒绝了 {rejectedItems.Count} 个项目"
+                    : $"用户 {context.User.Id} 成功修改了 {itemsToUpdate.Count} 个财务科目设置";
+                
+                _Logger.LogInformation(logMessage);
+                
+                if (rejectedItems.Any())
+                {
+                    _Logger.LogInformation("被拒绝的项目详情：{RejectedItems}", string.Join(", ", rejectedItems));
+                }
             }
             catch (DbUpdateException ex) when (ex.InnerException?.Message?.Contains("IX_SubjectConfigurations_OrgId_Code") == true ||
                                                ex.InnerException?.Message?.Contains("duplicate") == true ||
@@ -273,9 +307,9 @@ namespace PowerLmsWebApi.Controllers
             if (item == null)
                 return NotFound("找不到指定的财务科目设置");
 
-            // 权限检查：非超管只能删除自己组织机构的数据
-            if (!context.User.IsSuperAdmin && item.OrgId != context.User.OrgId)
-                return StatusCode((int)HttpStatusCode.Forbidden, "只能删除本组织机构的财务科目设置");
+            // 权限检查：应用组织权限控制
+            if (!HasPermissionToModify(context.User, item))
+                return StatusCode((int)HttpStatusCode.Forbidden, "权限不足，无法删除该财务科目设置");
 
             try
             {
@@ -320,9 +354,9 @@ namespace PowerLmsWebApi.Controllers
             if (item == null || !item.IsDelete)
                 return NotFound("找不到指定的已删除财务科目设置");
 
-            // 权限检查：非超管只能恢复自己组织机构的数据
-            if (!context.User.IsSuperAdmin && item.OrgId != context.User.OrgId)
-                return StatusCode((int)HttpStatusCode.Forbidden, "只能恢复本组织机构的财务科目设置");
+            // 权限检查：应用组织权限控制
+            if (!HasPermissionToModify(context.User, item))
+                return StatusCode((int)HttpStatusCode.Forbidden, "权限不足，无法恢复该财务科目设置");
 
             try
             {
@@ -350,6 +384,78 @@ namespace PowerLmsWebApi.Controllers
         }
 
         #endregion 财务科目设置CRUD
+
+        #region 权限控制辅助方法
+
+        /// <summary>
+        /// 检查用户是否有权限修改指定的财务科目设置
+        /// 超管：可以修改所有科目配置
+        /// 商户管理员：可以修改同一商户下所有科目配置
+        /// 普通用户：只能修改自己组织机构的科目配置
+        /// </summary>
+        /// <param name="user">当前用户</param>
+        /// <param name="subjectConfig">要修改的科目配置</param>
+        /// <returns>是否有权限</returns>
+        private bool HasPermissionToModify(Account user, SubjectConfiguration subjectConfig)
+        {
+            if (user.IsSuperAdmin)
+            {
+                return true; // 超管可以修改所有科目配置
+            }
+
+            if (user.IsMerchantAdmin)
+            {
+                // 商户管理员可以修改同一商户下所有科目配置
+                var userMerchantId = _OrgManager.GetMerchantIdByUserId(user.Id);
+                if (!userMerchantId.HasValue) return false;
+
+                if (!subjectConfig.OrgId.HasValue) return false; // 科目配置没有组织机构ID时拒绝访问
+
+                var configMerchantId = _OrgManager.GetMerchantIdByOrgId(subjectConfig.OrgId.Value);
+                return configMerchantId.HasValue && userMerchantId.Value == configMerchantId.Value;
+            }
+
+            // 普通用户只能修改自己组织机构的科目配置
+            return subjectConfig.OrgId == user.OrgId;
+        }
+
+        /// <summary>
+        /// 应用组织权限过滤查询
+        /// 超管：可以查看所有科目配置
+        /// 商户管理员：可以查看同一商户下所有科目配置
+        /// 普通用户：只能查看自己组织机构的科目配置
+        /// </summary>
+        /// <param name="query">科目配置查询</param>
+        /// <param name="user">当前用户</param>
+        /// <returns>过滤后的查询</returns>
+        private IQueryable<SubjectConfiguration> ApplyOrganizationFilter(IQueryable<SubjectConfiguration> query, Account user)
+        {
+            if (user.IsSuperAdmin)
+            {
+                return query; // 超管可以查看所有科目配置
+            }
+
+            if (user.IsMerchantAdmin)
+            {
+                // 商户管理员可以查看同一商户下所有科目配置
+                var merchantId = _OrgManager.GetMerchantIdByUserId(user.Id);
+                if (!merchantId.HasValue)
+                {
+                    return query.Where(c => false); // 找不到商户ID时返回空结果
+                }
+
+                // 获取商户下所有组织机构ID
+                var merchantOrgIds = _OrgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs.Keys.ToList();
+                merchantOrgIds.Add(merchantId.Value); // 添加商户ID本身
+
+                return query.Where(c => c.OrgId.HasValue && merchantOrgIds.Contains(c.OrgId.Value));
+            }
+
+            // 普通用户只能查看自己组织机构的科目配置
+            return query.Where(c => c.OrgId == user.OrgId);
+        }
+
+        #endregion 权限控制辅助方法
 
         #region 辅助功能
 
