@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
-    <RootNamespace>OW</RootNamespace>
+    <RootNamespace></RootNamespace>
     <!--<LangVersion>7.3</LangVersion>-->
     <Authors>OW</Authors>
     <AssemblyName>OwBaseCore</AssemblyName>
