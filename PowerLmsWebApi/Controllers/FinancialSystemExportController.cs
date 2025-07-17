@@ -230,7 +230,7 @@ namespace PowerLmsWebApi.Controllers
                     .ToDictionary(g => g.Key, g => g.ToList());
 
                 currentStep = "转换为金蝶凭证格式";
-                var kingdeeVouchers = ConvertInvoicesToKingdeeVouchersWithConfig(invoices, invoiceItemsDict, subjectConfigs);
+                var kingdeeVouchers = ConvertInvoicesToKingdeeVouchersWithConfig(invoices, invoiceItemsDict, subjectConfigs, dbContext);
                 if (kingdeeVouchers == null)
                     throw new InvalidOperationException("ConvertInvoicesToKingdeeVouchersWithConfig 返回 null");
                 if (!kingdeeVouchers.Any())
@@ -364,12 +364,15 @@ namespace PowerLmsWebApi.Controllers
         private static List<KingdeeVoucher> ConvertInvoicesToKingdeeVouchersWithConfig(
             List<TaxInvoiceInfo> invoices,
             Dictionary<Guid, List<TaxInvoiceInfoItem>> invoiceItemsDict,
-            Dictionary<string, SubjectConfiguration> subjectConfigs)
+            Dictionary<string, SubjectConfiguration> subjectConfigs,
+            PowerLmsUserDbContext dbContext)
         {
             if (invoices == null)
                 throw new ArgumentNullException(nameof(invoices));
             if (subjectConfigs == null)
                 throw new ArgumentNullException(nameof(subjectConfigs));
+            if (dbContext == null)
+                throw new ArgumentNullException(nameof(dbContext));
 
             invoiceItemsDict ??= new Dictionary<Guid, List<TaxInvoiceInfoItem>>();
 
@@ -397,28 +400,57 @@ namespace PowerLmsWebApi.Controllers
                     var taxAmount = invoice.TaxInclusiveAmount - netAmount;
                     var invoiceDate = invoice.InvoiceDate ?? DateTime.Now;
 
+                    // 根据需求：客户财务编码应该是 发票.申请单号→申请单结算单位id→客户资料.TacCountNo
+                    // 摘要取开票项目第一个Goodsname
+                    string customerFinancialCode = "";
+                    string customerName = invoice.BuyerTitle ?? "未知客户";
+                    string summary = "";
+
+                    // 查询申请单信息
+                    if (invoice.DocFeeRequisitionId.HasValue)
+                    {
+                        var requisition = dbContext.DocFeeRequisitions
+                            .FirstOrDefault(r => r.Id == invoice.DocFeeRequisitionId.Value);
+                            
+                        if (requisition?.BalanceId.HasValue == true)
+                        {
+                            // 根据申请单的结算单位ID查询客户资料的财务编码
+                            var customer = dbContext.PlCustomers
+                                .FirstOrDefault(c => c.Id == requisition.BalanceId.Value);
+                                
+                            if (customer != null)
+                            {
+                                customerFinancialCode = customer.TacCountNo ?? "";
+                                customerName = customer.Name_DisplayName ?? customer.Name_Name ?? "未知客户";
+                            }
+                        }
+                    }
+                    
+                    // 获取开票项目第一个GoodsName作为摘要
+                    var firstItem = items.FirstOrDefault();
+                    if (firstItem != null)
+                    {
+                        summary = firstItem.GoodsName ?? "未知项目";
+                    }
+                    else
+                    {
+                        summary = invoice.InvoiceItemName ?? "未知项目";
+                    }
+
                     // 安全地处理字符串，确保不会超过DBF字段限制
-                    var buyerTitle = (invoice.BuyerTitle ?? "未知客户").Length > 200 ?
-                        (invoice.BuyerTitle ?? "未知客户").Substring(0, 200) :
-                        (invoice.BuyerTitle ?? "未知客户");
+                    customerName = customerName.Length > 200 ? customerName.Substring(0, 200) : customerName;
+                    summary = summary.Length > 200 ? summary.Substring(0, 200) : summary;
+                    customerFinancialCode = customerFinancialCode.Length > 50 ? customerFinancialCode.Substring(0, 50) : customerFinancialCode;
 
-                    var invoiceItemName = (invoice.InvoiceItemName ?? "未知项目").Length > 200 ?
-                        (invoice.InvoiceItemName ?? "未知项目").Substring(0, 200) :
-                        (invoice.InvoiceItemName ?? "未知项目");
-
-                    var buyerTaxNum = (invoice.BuyerTaxNum ?? "").Length > 50 ?
-                        (invoice.BuyerTaxNum ?? "").Substring(0, 50) :
-                        (invoice.BuyerTaxNum ?? "");
-
-                    var description = $"{buyerTitle}*{invoiceItemName}*{buyerTaxNum}";
+                    // 构建完整描述：客户名+摘要+客户财务编码
+                    var description = $"{customerName}*{summary}*{customerFinancialCode}";
                     if (description.Length > 500)
                     {
                         description = description.Substring(0, 500);
                     }
 
-                    var customerCode = string.IsNullOrEmpty(buyerTaxNum) ?
-                        "CUSTOMER" :
-                        buyerTaxNum.Substring(0, Math.Min(10, buyerTaxNum.Length));
+                    var customerCode = string.IsNullOrEmpty(customerFinancialCode) ?
+                        "CUSTOMER" : customerFinancialCode;
 
                     // 借方：应收账款（PBI_ACC_RECEIVABLE）
                     if (subjectConfigs.TryGetValue("PBI_ACC_RECEIVABLE", out var accReceivableConfig) && accReceivableConfig != null)
@@ -436,8 +468,8 @@ namespace PowerLmsWebApi.Controllers
                             FACCTID = accReceivableConfig.SubjectNumber ?? "122101",
                             FCLSNAME1 = accReceivableConfig.AccountingCategory ?? "客户",
                             FOBJID1 = customerCode,
-                            FOBJNAME1 = buyerTitle,
-                            FTRANSID = buyerTaxNum,
+                            FOBJNAME1 = customerName,
+                            FTRANSID = customerFinancialCode,
                             FCYID = "RMB",
                             FEXCHRATE = 1.0000000m,
                             FDC = 0, // 借方
@@ -482,8 +514,8 @@ namespace PowerLmsWebApi.Controllers
                             FACCTID = salesRevenueConfig.SubjectNumber ?? "601001",
                             FCLSNAME1 = salesRevenueConfig.AccountingCategory ?? "客户",
                             FOBJID1 = customerCode,
-                            FOBJNAME1 = buyerTitle,
-                            FTRANSID = buyerTaxNum,
+                            FOBJNAME1 = customerName,
+                            FTRANSID = customerFinancialCode,
                             FCYID = "RMB",
                             FEXCHRATE = 1.0000000m,
                             FDC = 1, // 贷方
@@ -528,8 +560,8 @@ namespace PowerLmsWebApi.Controllers
                             FACCTID = taxPayableConfig.SubjectNumber ?? "221001",
                             FCLSNAME1 = taxPayableConfig.AccountingCategory ?? "客户",
                             FOBJID1 = customerCode,
-                            FOBJNAME1 = buyerTitle,
-                            FTRANSID = buyerTaxNum,
+                            FOBJNAME1 = customerName,
+                            FTRANSID = customerFinancialCode,
                             FCYID = "RMB",
                             FEXCHRATE = 1.0000000m,
                             FDC = 1, // 贷方

@@ -139,11 +139,16 @@ namespace PowerLmsWebApi.Controllers
             entity.IsDelete = false;
             
             // 设置组织机构Id（应用权限控制）
-            if (!context.User.IsSuperAdmin)
+            if (context.User.IsSuperAdmin)
             {
+                // 超管创建的科目配置OrgId设置为null（全局科目配置）
+                entity.OrgId = null;
+            }
+            else
+            {
+                // 非超管用户创建的科目配置使用当前用户的组织机构Id
                 entity.OrgId = context.User.OrgId;
             }
-            // 超管可以使用传入的OrgId，无需额外设置
 
             try
             {
@@ -151,8 +156,8 @@ namespace PowerLmsWebApi.Controllers
                 _DbContext.SaveChanges();
                 result.Id = entity.Id;
 
-                _Logger.LogInformation("用户 {UserId} 成功添加财务科目设置：{SubjectCode} - {DisplayName}",
-                    context.User.Id, entity.Code, entity.DisplayName);
+                _Logger.LogInformation("用户 {UserId} 成功添加财务科目设置：{SubjectCode} - {DisplayName} (OrgId: {OrgId})",
+                    context.User.Id, entity.Code, entity.DisplayName, entity.OrgId);
             }
             catch (DbUpdateException ex) when (ex.InnerException?.Message?.Contains("IX_SubjectConfigurations_OrgId_Code") == true ||
                                                ex.InnerException?.Message?.Contains("duplicate") == true ||
@@ -160,7 +165,8 @@ namespace PowerLmsWebApi.Controllers
             {
                 // 拦截唯一索引违反错误
                 _Logger.LogWarning("尝试添加重复的科目编码：OrgId={OrgId}, Code={Code}", entity.OrgId, entity.Code);
-                return BadRequest($"组织机构中已存在科目编码 '{entity.Code}'，请使用不同的编码");
+                var scopeMessage = entity.OrgId.HasValue ? "组织机构中" : "全局范围内";
+                return BadRequest($"{scopeMessage}已存在科目编码 '{entity.Code}'，请使用不同的编码");
             }
             catch (Exception ex)
             {
@@ -173,7 +179,7 @@ namespace PowerLmsWebApi.Controllers
 
         /// <summary>
         /// 修改财务科目设置（支持商户管理员权限）
-        /// 超管可以修改所有科目配置，商户管理员可以修改同一商户下所有科目配置，普通用户只能修改自己组织机构的科目配置
+        /// 超管只能修改OrgId为null的全局科目配置，商户管理员可以修改同一商户下所有科目配置，普通用户只能修改自己组织机构的科目配置
         /// </summary>
         /// <param name="model">财务科目设置修改信息</param>
         /// <returns>修改结果</returns>
@@ -389,7 +395,7 @@ namespace PowerLmsWebApi.Controllers
 
         /// <summary>
         /// 检查用户是否有权限修改指定的财务科目设置
-        /// 超管：可以修改所有科目配置
+        /// 超管：只能修改OrgId为null的全局科目配置
         /// 商户管理员：可以修改同一商户下所有科目配置
         /// 普通用户：只能修改自己组织机构的科目配置
         /// </summary>
@@ -400,7 +406,8 @@ namespace PowerLmsWebApi.Controllers
         {
             if (user.IsSuperAdmin)
             {
-                return true; // 超管可以修改所有科目配置
+                // 超管只能修改OrgId为null的全局科目配置，不能修改其他机构的科目
+                return subjectConfig.OrgId == null;
             }
 
             if (user.IsMerchantAdmin)
@@ -421,7 +428,7 @@ namespace PowerLmsWebApi.Controllers
 
         /// <summary>
         /// 应用组织权限过滤查询
-        /// 超管：可以查看所有科目配置
+        /// 超管：只能查看OrgId为null的全局科目配置
         /// 商户管理员：可以查看同一商户下所有科目配置
         /// 普通用户：只能查看自己组织机构的科目配置
         /// </summary>
@@ -432,7 +439,8 @@ namespace PowerLmsWebApi.Controllers
         {
             if (user.IsSuperAdmin)
             {
-                return query; // 超管可以查看所有科目配置
+                // 超管只能查看OrgId为null的全局科目配置
+                return query.Where(c => c.OrgId == null);
             }
 
             if (user.IsMerchantAdmin)

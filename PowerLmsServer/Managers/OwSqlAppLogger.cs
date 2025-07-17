@@ -36,7 +36,6 @@ namespace PowerLmsServer.Managers
     {
         #region 私有字段
         private readonly IDbContextFactory<PowerLmsUserDbContext> _DbContextFactory;
-        private PowerLmsUserDbContext _DbContext;
         private readonly OwBatchDbWriter<PowerLmsUserDbContext> _BatchDbWriter;
         private readonly IHttpContextAccessor _HttpContextAccessor;
         private readonly IServiceProvider _ServiceProvider;
@@ -72,6 +71,7 @@ namespace PowerLmsServer.Managers
             _HttpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
             _ServiceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
             _MemoryCache = memoryCache ?? throw new ArgumentNullException(nameof(memoryCache));
+            _DbContextFactory = serviceProvider.GetRequiredService<IDbContextFactory<PowerLmsUserDbContext>>();
             Initializer();
             _Mapper = mapper;
         }
@@ -92,7 +92,7 @@ namespace PowerLmsServer.Managers
         /// <returns>包含所有 OwAppLogStore 对象的字典。</returns>
         private ConcurrentDictionary<Guid, OwAppLogStore> LoadLoggerStores()
         {
-            using var dbContext = _ServiceProvider.GetRequiredService<IDbContextFactory<PowerLmsUserDbContext>>().CreateDbContext();
+            using var dbContext = _DbContextFactory.CreateDbContext();
             var loggerStores = dbContext.OwAppLogStores.AsEnumerable().ToDictionary(c => c.Id);
             return new ConcurrentDictionary<Guid, OwAppLogStore>(loggerStores);
         }
@@ -190,7 +190,6 @@ namespace PowerLmsServer.Managers
         /// </summary>
         public void Dispose()
         {
-            _DbContext?.Dispose();
             GC.SuppressFinalize(this);
         }
         #endregion

@@ -28,6 +28,7 @@ namespace PowerLmsServer.Managers
         /// <param name="mapper"></param>
         /// <param name="memoryCache"></param>
         /// <param name="dbContextFactory"></param>
+        /// <param name="applicationLifetime">应用程序生命周期管理器</param>
         public AccountManager(PasswordGenerator passwordGenerator, IMapper mapper, IMemoryCache memoryCache, IDbContextFactory<PowerLmsUserDbContext> dbContextFactory, IHostApplicationLifetime applicationLifetime)
         {
             _PasswordGenerator = passwordGenerator;

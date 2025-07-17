@@ -876,7 +876,9 @@ namespace PowerLmsWebApi.Controllers
 
                     foreach (var role in rolesWithOrg)
                     {
-                        var merchantId = _OrgManager.GetMerchantIdByOrgId(role.OrgId.Value);
+#nullable enable
+                        var merchantId = _OrgManager.GetMerchantIdByOrgId(role.OrgId!.Value);
+#nullable disable
                         if (!merchantId.HasValue || merchantId.Value != operatorMerchantId.Value)
                         {
                             _Logger.LogWarning("尝试设置其他商户的角色 {RoleId}", role.Id);

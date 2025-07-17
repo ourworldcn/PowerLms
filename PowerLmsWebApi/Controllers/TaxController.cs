@@ -327,9 +327,6 @@ namespace PowerLmsWebApi.Controllers
                 return Unauthorized();
             }
 
-            string err;
-            //if (!_AuthorizationManager.Demand(out err, "F.3.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-
             var result = new AddTaxInvoiceInfoReturnDto();
             var entity = model.TaxInvoiceInfo;
 
@@ -379,8 +376,6 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<ModifyTaxInvoiceInfoReturnDto> ModifyTaxInvoiceInfo(ModifyTaxInvoiceInfoParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            string err;
-            //if (!_AuthorizationManager.Demand(out err, "F.3.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ModifyTaxInvoiceInfoReturnDto();
 
             // 检查发票状态
@@ -423,8 +418,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveTaxInvoiceInfoReturnDto();
-            string err;
-            //if (!_AuthorizationManager.Demand(out err, "F.3.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            //if (!_AuthorizationManager.Demand(out string err, "F.3.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var id = model.Id;
             var dbSet = _DbContext.TaxInvoiceInfos;
             var item = dbSet.Find(id);
@@ -688,8 +682,7 @@ namespace PowerLmsWebApi.Controllers
                 _Logger.LogWarning("无效的令牌{token}", model.Token);
                 return Unauthorized();
             }
-            string err;
-            //if (!_AuthorizationManager.Demand(out err, "F.3.1") && !_AuthorizationManager.Demand(out err, "F.3.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+
             var result = new AddTaxInvoiceInfoItemReturnDto();
             var entity = model.TaxInvoiceInfoItem;
             entity.GenerateNewId();
@@ -715,8 +708,6 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyTaxInvoiceInfoItemReturnDto();
-            string err;
-            //if (!_AuthorizationManager.Demand(out err, "F.3.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
 
             // 获取明细记录
             var item = _DbContext.TaxInvoiceInfoItems.Find(model.TaxInvoiceInfoItem.Id);
@@ -758,8 +749,6 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<RemoveTaxInvoiceInfoItemReturnDto> RemoveTaxInvoiceInfoItem(RemoveTaxInvoiceInfoItemParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            string err;
-            //if (!_AuthorizationManager.Demand(out err, "F.3.2") && !_AuthorizationManager.Demand(out err, "F.3.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new RemoveTaxInvoiceInfoItemReturnDto();
 
             // 获取明细记录

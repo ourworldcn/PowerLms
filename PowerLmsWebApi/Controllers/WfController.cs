@@ -152,14 +152,6 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
 
             var operatorId = context.User.Id;
-            byte state = 0;
-            switch (model.State)
-            {
-                case 2:
-                    break;
-                default:
-                    break;
-            };
             var collBase = _DbContext.OwWfNodeItems.Where(c => c.OpertorId == operatorId).Select(c => c.Parent.Parent).Where(c => c.State == model.State).Distinct()
                 .Include(c => c.Children).ThenInclude(c => c.Children);   //获取相关流程
             var coll = collBase.OrderBy(model.OrderFieldName, model.IsDesc);
