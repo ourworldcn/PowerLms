@@ -486,11 +486,38 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<CopyJobReturnDto> CopyJob(CopyJobParamsDto model)
         {
+            // 验证Token和获取上下文
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
+            {
+                _Logger.LogWarning("无效的令牌{token}", model.Token);
+                return Unauthorized();
+            }
+
             var result = new CopyJobReturnDto();
 
-            //处理任务对象本体
+            // 处理任务对象本体
             var srcJob = _DbContext.PlJobs.Find(model.SourceJobId);
             if (srcJob is null) return NotFound($"没找到指定任务对象，Id={model.SourceJobId}");
+
+            // 权限验证 - 基于源工作号的业务类型进行权限检查
+            string err;
+            if (srcJob.JobTypeId == ProjectContent.AeId)    // 空运出口业务
+            {
+                if (!_AuthorizationManager.Demand(out err, "D0.1.1.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            else if (srcJob.JobTypeId == ProjectContent.AiId)    // 空运进口业务
+            {
+                if (!_AuthorizationManager.Demand(out err, "D1.1.1.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            else if (srcJob.JobTypeId == ProjectContent.SeId)    // 海运出口业务
+            {
+                if (!_AuthorizationManager.Demand(out err, "D2.1.1.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+            else if (srcJob.JobTypeId == ProjectContent.SiId)    // 海运进口业务
+            {
+                if (!_AuthorizationManager.Demand(out err, "D3.1.1.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            }
+
             var destJob = new PlJob();
 
             // 确保NewValues是不区分大小写的，并且将所有键转为标准格式
@@ -512,9 +539,19 @@ namespace PowerLmsWebApi.Controllers
             {
                 return BadRequest($"无法复制新任务对象，Id={model.SourceJobId},错误：{OwHelper.GetLastErrorMessage()}");
             }
-            destJob.GenerateNewId();    //强制Id不可重
+            
+            // 强制设置新工作号的系统管理字段
+            destJob.GenerateNewId();    // 强制Id不可重
+            destJob.CreateBy = context.User.Id;    // 设置创建者
+            destJob.CreateDateTime = OwHelper.WorldNow;    // 设置创建时间
+            destJob.JobState = 2;    // 强制设置为初始状态（Operating正操作）
+            destJob.OperatingDateTime = OwHelper.WorldNow;    // 设置操作时间
+            destJob.OperatorId = context.User.Id;    // 设置操作人
+            destJob.OrgId = context.User.OrgId;    // 设置所属机构
+            destJob.AuditDateTime = null;    // 清空审核时间
+            destJob.AuditOperatorId = null;    // 清空审核人
 
-            //处理业务单对象
+            // 处理业务单对象
             var tmpDoc = _JobManager.GetBusinessDoc(srcJob.Id, _DbContext);
             if (tmpDoc is null) return NotFound($"没找到业务单据，DocId={srcJob.Id}");
 
@@ -523,7 +560,7 @@ namespace PowerLmsWebApi.Controllers
                 case PlEaDoc srcDoc:
                     {
                         var destDoc = new PlEaDoc();
-                        var typeName = destDoc.GetType().Name;  //类型名
+                        var typeName = destDoc.GetType().Name;  // 类型名
 
                         var nVals = normalizedNewValues
                             .Where(c => c.Key.StartsWith($"{typeName}.", StringComparison.OrdinalIgnoreCase))
@@ -542,13 +579,16 @@ namespace PowerLmsWebApi.Controllers
                         }
                         destDoc.GenerateNewId();
                         destDoc.JobId = destJob.Id;
+                        destDoc.CreateBy = context.User.Id;    // 设置创建者
+                        destDoc.CreateDateTime = OwHelper.WorldNow;    // 设置创建时间
+                        destDoc.Status = 0;    // 重置为初始状态
                         _DbContext.Add(destDoc);
                     }
                     break;
                 case PlIaDoc srcDoc:
                     {
                         var destDoc = new PlIaDoc();
-                        var typeName = destDoc.GetType().Name;  //类型名
+                        var typeName = destDoc.GetType().Name;  // 类型名
 
                         var nVals = normalizedNewValues
                             .Where(c => c.Key.StartsWith($"{typeName}.", StringComparison.OrdinalIgnoreCase))
@@ -567,13 +607,16 @@ namespace PowerLmsWebApi.Controllers
                         }
                         destDoc.GenerateNewId();
                         destDoc.JobId = destJob.Id;
+                        destDoc.CreateBy = context.User.Id;    // 设置创建者
+                        destDoc.CreateDateTime = OwHelper.WorldNow;    // 设置创建时间
+                        destDoc.Status = 0;    // 重置为初始状态
                         _DbContext.Add(destDoc);
                     }
                     break;
                 case PlEsDoc srcDoc:
                     {
                         var destDoc = new PlEsDoc();
-                        var typeName = destDoc.GetType().Name;  //类型名
+                        var typeName = destDoc.GetType().Name;  // 类型名
 
                         var nVals = normalizedNewValues
                             .Where(c => c.Key.StartsWith($"{typeName}.", StringComparison.OrdinalIgnoreCase))
@@ -592,13 +635,16 @@ namespace PowerLmsWebApi.Controllers
                         }
                         destDoc.GenerateNewId();
                         destDoc.JobId = destJob.Id;
+                        destDoc.CreateBy = context.User.Id;    // 设置创建者
+                        destDoc.CreateDateTime = OwHelper.WorldNow;    // 设置创建时间
+                        destDoc.Status = 0;    // 重置为初始状态
                         _DbContext.Add(destDoc);
                     }
                     break;
                 case PlIsDoc srcDoc:
                     {
                         var destDoc = new PlIsDoc();
-                        var typeName = destDoc.GetType().Name;  //类型名
+                        var typeName = destDoc.GetType().Name;  // 类型名
 
                         var nVals = normalizedNewValues
                             .Where(c => c.Key.StartsWith($"{typeName}.", StringComparison.OrdinalIgnoreCase))
@@ -617,6 +663,9 @@ namespace PowerLmsWebApi.Controllers
                         }
                         destDoc.GenerateNewId();
                         destDoc.JobId = destJob.Id;
+                        destDoc.CreateBy = context.User.Id;    // 设置创建者
+                        destDoc.CreateDateTime = OwHelper.WorldNow;    // 设置创建时间
+                        destDoc.Status = 0;    // 重置为初始状态
                         _DbContext.Add(destDoc);
                     }
                     break;
@@ -624,7 +673,7 @@ namespace PowerLmsWebApi.Controllers
                     return BadRequest($"不认识的业务单类型，Type={tmpDoc.GetType()}");
             }
 
-            //处理附属费用对象
+            // 处理附属费用对象
             var fees = _DbContext.DocFees.Where(c => c.JobId == srcJob.Id);
             var ignFeeName = nameof(DocFee);
 
@@ -657,6 +706,10 @@ namespace PowerLmsWebApi.Controllers
                     }
                     fee.GenerateNewId();
                     fee.JobId = destJob.Id;
+                    fee.CreateBy = context.User.Id;    // 设置创建者
+                    fee.CreateDateTime = OwHelper.WorldNow;    // 设置创建时间
+                    fee.AuditDateTime = null;    // 清空审核时间
+                    fee.AuditOperatorId = null;    // 清空审核人
 
                     _DbContext.Add(fee);
                 }
@@ -667,7 +720,7 @@ namespace PowerLmsWebApi.Controllers
                 return BadRequest($"复制费用时发生异常: {ex.Message}");
             }
 
-            //后处理
+            // 后处理
             _DbContext.Add(destJob);
             _DbContext.SaveChanges();
             result.Result = destJob.Id; // 设置返回结果的Id
