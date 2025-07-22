@@ -8,6 +8,7 @@ using OW.Data;
 using OW.DDD;
 using OW.EntityFrameworkCore;
 using PowerLms.Data;
+using PowerLms.Data.OA; // 添加OA命名空间
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -188,6 +189,11 @@ namespace PowerLmsServer.EfData
         /// 费用种类表。
         /// </summary>
         public DbSet<FeesType> DD_FeesTypes { get; set; }
+
+        /// <summary>
+        /// 日常费用种类字典表。
+        /// </summary>
+        public DbSet<DailyFeesType> DD_DailyFeesTypes { get; set; }
 
         /// <summary>
         /// 业务编码规则表。
@@ -522,6 +528,20 @@ namespace PowerLmsServer.EfData
         /// </summary>
         public DbSet<OwMessage> OwMessages { get; set; }
         #endregion 消息系统
+
+        #region OA系统相关
+
+        /// <summary>
+        /// OA日常费用申请单主表。
+        /// </summary>
+        public DbSet<OaExpenseRequisition> OaExpenseRequisitions { get; set; }
+
+        /// <summary>
+        /// OA费用申请单明细表。
+        /// </summary>
+        public DbSet<OaExpenseRequisitionItem> OaExpenseRequisitionItems { get; set; }
+
+        #endregion
 
         #region 任务系统
 

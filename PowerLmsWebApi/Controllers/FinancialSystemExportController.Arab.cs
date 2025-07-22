@@ -12,16 +12,16 @@ using DotNetDBF;
 namespace PowerLmsWebApi.Controllers
 {
     /// <summary>
-    /// 财务系统导出功能控制器 - ARAB(计提A账应收本位币挂账)模块。
-    /// 实现ARAB(计提A账应收本位币挂账)过程的导出功能。
-    /// 根据费用数据按结算单位、国内外、代垫属性分组统计，生成金蝶凭证文件。
+    /// 财务系统导出功能控制器 - ARAB(计提A账应收抵位币汇差)模块。
+    /// 实现ARAB(计提A账应收抵位币汇差)流程的导出功能。
+    /// 根据费用数据按结算单位、国别、代垫等分组统计，生成金蝶凭证文件。
     /// </summary>
     public partial class FinancialSystemExportController
     {
-        #region HTTP接口 - ARAB(计提A账应收本位币挂账)
+        #region HTTP接口 - ARAB(计提A账应收抵位币汇差)
 
         /// <summary>
-        /// 导出A账应收本位币挂账(ARAB)数据为金蝶DBF格式文件。
+        /// 计提A账应收抵位币汇差(ARAB)导出为金蝶DBF格式文件。
         /// </summary>
         [HttpPost]
         public ActionResult<ExportArabToDbfReturnDto> ExportArabToDbf(ExportArabToDbfParamsDto model)
@@ -43,18 +43,21 @@ namespace PowerLmsWebApi.Controllers
                 var accountingDate = conditions.TryGetValue("AccountingDate", out var accountingDateStr) && DateTime.TryParse(accountingDateStr, out var parsedAccountingDate) 
                     ? parsedAccountingDate : DateTime.Now.Date;
 
-                // 预检查费用数据
-                var feesQuery = _DbContext.DocFees
-                    .Where(f => f.IO == true && // 只统计收入
-                               f.CreateDateTime >= startDate && 
-                               f.CreateDateTime <= endDate);
+                // 预检查数据数量 - 修复：使用工作号的财务日期和状态过滤
+                var feesQuery = from fee in _DbContext.DocFees
+                               join job in _DbContext.PlJobs on fee.JobId equals job.Id
+                               where fee.IO == true && // 只统计收入
+                                     job.AccountDate >= startDate && 
+                                     job.AccountDate <= endDate &&
+                                     job.JobState == 16 // 工作号已关闭状态
+                               select fee;
 
                 var feeCount = feesQuery.Count();
                 if (feeCount == 0)
                 {
                     result.HasError = true;
                     result.ErrorCode = 404;
-                    result.DebugMessage = "没有找到符合条件的费用数据，请调整查询条件";
+                    result.DebugMessage = "没有找到符合条件的费用数据，请检查查询条件";
                     return result;
                 }
 
@@ -149,7 +152,7 @@ namespace PowerLmsWebApi.Controllers
                 if (parameters == null)
                     throw new ArgumentNullException(nameof(parameters), "任务参数不能为空");
 
-                currentStep = "解析服务依赖";
+                currentStep = "初始化服务";
                 var dbContextFactory = serviceProvider.GetService<IDbContextFactory<PowerLmsUserDbContext>>() ??
                     throw new InvalidOperationException("无法获取数据库上下文工厂");
                 var fileService = serviceProvider.GetService<OwFileService<PowerLmsUserDbContext>>() ??
@@ -198,13 +201,17 @@ namespace PowerLmsWebApi.Controllers
                 currentStep = "加载科目配置";
                 var subjectConfigs = LoadArabSubjectConfigurations(dbContext, orgId);
                 if (!subjectConfigs.Any())
-                    throw new InvalidOperationException($"ARAB科目配置未找到，无法生成凭证。组织ID: {orgId}");
+                    throw new InvalidOperationException($"ARAB科目配置未找到，无法生成凭证，组织ID: {orgId}");
 
                 currentStep = "查询费用数据";
-                var feesQuery = dbContext.DocFees
-                    .Where(f => f.IO == true && // 只统计收入
-                               f.CreateDateTime >= startDate && 
-                               f.CreateDateTime <= endDate);
+                // 修复：使用工作号的财务日期和状态过滤
+                var feesQuery = from fee in dbContext.DocFees
+                               join job in dbContext.PlJobs on fee.JobId equals job.Id
+                               where fee.IO == true && // 只统计收入
+                                     job.AccountDate >= startDate && 
+                                     job.AccountDate <= endDate &&
+                                     job.JobState == 16 // 工作号已关闭状态
+                               select fee;
 
                 // 应用额外的查询条件
                 if (conditions != null && conditions.Any())
@@ -219,7 +226,7 @@ namespace PowerLmsWebApi.Controllers
                     feesQuery = ApplyOrganizationFilterForFeesStatic(feesQuery, taskUser, dbContext, serviceProvider);
                 }
 
-                currentStep = "按业务规则分组统计";
+                currentStep = "业务数据聚合统计";
                 // ARAB业务逻辑：IO=收入，sum(Amount*ExchangeRate) as Totalamount，按 费用.结算单位、结算单位.国别、费用种类.代垫 分组
                 var arabGroupData = (from fee in feesQuery
                                    join customer in dbContext.PlCustomers on fee.BalanceId equals customer.Id into customerGroup
@@ -270,7 +277,7 @@ namespace PowerLmsWebApi.Controllers
                     {"FDEBIT", NativeDbType.Numeric}, {"FCREDIT", NativeDbType.Numeric}, {"FPREPARE", NativeDbType.Char}, {"FMODULE", NativeDbType.Char}, {"FDELETED", NativeDbType.Logical}
                 };
 
-                currentStep = "创建文件记录";
+                currentStep = "保存文件记录";
                 PlFileInfo fileInfoRecord;
                 long fileSize;
                 var memoryStream = new MemoryStream(1024 * 1024 * 1024);
@@ -283,9 +290,9 @@ namespace PowerLmsWebApi.Controllers
                     memoryStream.Position = 0;
                     
                     var finalDisplayName = !string.IsNullOrWhiteSpace(displayName) ? 
-                        displayName : $"ARAB计提导出-{DateTime.Now:yyyy年MM月dd日}";
+                        displayName : $"ARAB财务导出-{DateTime.Now:yyyy年MM月dd日}";
                     var finalRemark = !string.IsNullOrWhiteSpace(remark) ? 
-                        remark : $"ARAB计提DBF导出文件，共{arabGroupData.Count}个客户分组，{kingdeeVouchers.Count}条会计分录，导出时间：{DateTime.Now:yyyy-MM-dd HH:mm:ss}";
+                        remark : $"ARAB计提DBF导出文件，包含{arabGroupData.Count}个客户分组，{kingdeeVouchers.Count}条分录记录，生成时间：{DateTime.Now:yyyy-MM-dd HH:mm:ss}";
                     
                     fileInfoRecord = fileService.CreateFile(
                         fileStream: memoryStream,
@@ -306,7 +313,7 @@ namespace PowerLmsWebApi.Controllers
                 if (fileInfoRecord == null)
                     throw new InvalidOperationException("fileService.CreateFile 返回 null");
 
-                currentStep = "验证最终文件并返回结果";
+                currentStep = "验证输出文件并返回结果";
                 long actualFileSize = 0;
                 bool fileExists = false;
                 try

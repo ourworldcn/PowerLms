@@ -36,3 +36,132 @@
 
 请使用非简中资料回答问题，并将答案翻译为中文
 
+using System;
+using System.IO;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+
+/// <summary>
+/// 提供VTT（Web Video Text Tracks）文件流处理功能，具有更稳健的过滤逻辑。
+/// </summary>
+public static class VttCompressor
+{
+    // 预编译正则表达式以提高性能
+
+    /// <summary>
+    /// 匹配并提取发言人和对话内容的行。
+    /// 格式: <v Speaker>Dialogue</v>
+    /// </summary>
+    private static readonly Regex DialogueRegex = 
+        new Regex(@"<v\s+([^>]+)>(.*?)</v>", RegexOptions.Compiled);
+
+    /// <summary>
+    /// 匹配时间戳行。
+    /// 格式: 00:00:04.169 --> 00:00:06.569
+    /// </summary>
+    private static readonly Regex TimestampRegex = 
+        new Regex(@"^\d{2}:\d{2}:\d{2}\.\d{3}\s+-->\s+\d{2}:\d{2}:\d{2}\.\d{3}", RegexOptions.Compiled);
+
+    /// <summary>
+    /// 匹配常见的技术ID行。
+    /// 格式: 70fc6759-7226-4261-abbd-6fd5bafedee4/1493-0
+    /// </summary>
+    private static readonly Regex IdRegex = 
+        new Regex(@"^[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}/\d+-\d+$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+    /// <summary>
+    /// 异步地从源VTT流中提取对话内容，并将其“压缩”后写入目标流。
+    /// 新逻辑：
+    /// 1. 转换对话行。
+    /// 2. 忽略已知的元数据行（时间戳, ID）。
+    /// 3. 保留所有无法识别的行。
+    /// </summary>
+    /// <param name="sourceStream">包含原始VTT内容的源流。</param>
+    /// <param name="destinationStream">用于写入处理后内容的目标流。</param>
+    public static async Task CompressVttStreamAsync(Stream sourceStream, Stream destinationStream)
+    {
+        if (sourceStream == null) throw new ArgumentNullException(nameof(sourceStream));
+        if (destinationStream == null) throw new ArgumentNullException(nameof(destinationStream));
+        if (!sourceStream.CanRead) throw new ArgumentException("Source stream must be readable.", nameof(sourceStream));
+        if (!destinationStream.CanWrite) throw new ArgumentException("Destination stream must be writable.", nameof(destinationStream));
+
+        using (var reader = new StreamReader(sourceStream, Encoding.UTF8, true, 1024, leaveOpen: true))
+        using (var writer = new StreamWriter(destinationStream, Encoding.UTF8, 1024, leaveOpen: true))
+        {
+            string line;
+            while ((line = await reader.ReadLineAsync()) != null)
+            {
+                // 尝试匹配对话行
+                var dialogueMatch = DialogueRegex.Match(line);
+                if (dialogueMatch.Success)
+                {
+                    string speaker = dialogueMatch.Groups[1].Value.Trim();
+                    string dialogue = dialogueMatch.Groups[2].Value.Trim();
+                    await writer.WriteLineAsync($"{speaker}: {dialogue}");
+                    continue; // 处理完毕，进入下一行
+                }
+
+                // 如果不是对话行，则检查是否为应忽略的元数据行
+                if (line.Trim().StartsWith("WEBVTT", StringComparison.OrdinalIgnoreCase) ||
+                    string.IsNullOrWhiteSpace(line) ||
+                    TimestampRegex.IsMatch(line) ||
+                    IdRegex.IsMatch(line))
+                {
+                    // 是已知无用行，忽略它
+                    continue;
+                }
+
+                // 如果以上都不是，说明是未知行，原样保留
+                await writer.WriteLineAsync(line);
+            }
+            await writer.FlushAsync();
+        }
+    }
+
+    /// <summary>
+    /// 示例方法：演示如何使用改进后的 VttCompressor。
+    /// </summary>
+    public static async Task RunExampleAsync()
+    {
+        Console.WriteLine("Running Improved VTT Compressor Example...");
+
+        // 1. 准备包含“未知格式”的源数据
+        string vttContent = @"WEBVTT
+
+NOTE This is a comment that should be ignored by the old code, but preserved by the new code.
+
+70fc6759-7226-4261-abbd-6fd5bafedee4/1493-0
+00:00:04.169 --> 00:00:06.569
+<v 永昌 石>微信上不去了。</v>
+
+--- UNEXPECTED SEPARATOR ---
+
+70fc6759-7226-4261-abbd-6fd5bafedee4/1510-0
+00:00:15.123 --> 00:00:16.456
+<v cyx>然后呢？</v>
+
+This line has no special format and should be preserved.
+";
+        byte[] vttBytes = Encoding.UTF8.GetBytes(vttContent);
+
+        // 2. 创建内存流
+        using (var sourceMemoryStream = new MemoryStream(vttBytes))
+        using (var destinationMemoryStream = new MemoryStream())
+        {
+            // 3. 调用压缩方法
+            await CompressVttStreamAsync(sourceMemoryStream, destinationMemoryStream);
+
+            // 4. 读取并显示结果
+            destinationMemoryStream.Position = 0;
+            using (var resultReader = new StreamReader(destinationMemoryStream, Encoding.UTF8))
+            {
+                string compressedContent = await resultReader.ReadToEndAsync();
+                Console.WriteLine("\n--- Original VTT Content ---");
+                Console.WriteLine(vttContent);
+                Console.WriteLine("\n--- Robustly Compressed Output ---");
+                Console.WriteLine(compressedContent);
+            }
+        }
+    }
+}
