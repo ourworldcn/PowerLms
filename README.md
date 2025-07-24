@@ -1,81 +1,96 @@
 # PowerLms
-本助手将始终使用中文进行回复。
-PowerLms 是一个专注于货代行业的管理系统（LMS），基于 C# 和 .NET6 技术栈开发。  
-本项目旨在为货代企业提供高效、安全、可扩展的学习与培训解决方案。
+货运物流业务管理系统，基于 .NET 6 构建。
 
----
+## 核心特性
+- ?? **货运物流专业**: 海运、空运、陆运、铁路等全流程管理
+- ? **现代架构体系**: 前后端分离、RESTful API、微服务架构
+- ?? **细粒级权限**: 角色管理、组织隔离、精细操作权限控制
+- ?? **业务流程**: 工作号、费用、结算、发票等多运输方式
+- ?? **财务集成**: 自动生成凭证、金蝶接口
+- ?? **数据分析**: 集成化统计和业务数据分析
 
-## 项目特性
-
-- 货代行业专属业务流程支持
-- 现代化前后端分离架构
-- 支持多角色、多组织
-- 灵活的课程与考试管理系统
-- 数据可视化与统计分析
-
----
+## 项目结构
+```
+PowerLms/
+├── PowerLmsWebApi/     # API层 - RESTful接口
+├── PowerLmsServer/     # 业务层 - 核心服务
+├── PowerLmsData/       # 数据层 - EF模型
+└── Docs/              # 设计文档
+```
 
 ## 快速开始
 
-1. 克隆代码仓库  
-   ```bash
-   git clone https://github.com/ourworldcn/PowerLms.git
-   ```
+### 环境要求
+- .NET 6.0+
+- Visual Studio 2022 / VS Code
+- SQL Server 2016+
 
-2. 打开 `PowerLms.sln`，使用 Visual Studio 2022 进行编译和运行。
+### 启动步骤
+```bash
+# 1. 获取代码
+git clone https://github.com/ourworldcn/PowerLms.git
 
-3. 配置数据库连接等参数（详见 docs/INSTALL.md 或项目内注释）。
+# 2. 配置数据库连接字符串 (PowerLmsWebApi/appsettings.json)
+# 3. 数据库迁移 (用户手动执行)
+#    注意：请在实际环境配置后再执行数据库迁移操作
+#    Add-Migration InitialCreate -Context PowerLmsUserDbContext
+#    Update-Database -Context PowerLmsUserDbContext
 
----
-
-## 开发文档与规范
-
-### ?? 核心开发文档
-- **[代码惯例（CODE_CONVENTIONS）](Docs/CODE_CONVENTIONS.md)**  
-  详细的代码规范、架构设计、业务规则实现指南，开发人员必读。
-
-- **[编码规范（CODE_STYLE）](Docs/CODE_STYLE.md)**  
-  基础编码风格和命名规范，请所有贡献者务必遵守。
-
-- **[设计偏好指南（DESIGN_PREFERENCE_GUIDE）](Docs/DESIGN_PREFERENCE_GUIDE.md)**  
-  了解团队在架构和设计上的主要偏好和原则。
-
-### ?? 其他文档
-- 更多技术文档详见 [Docs/](Docs/) 目录
-- API文档和接口说明
-- 数据库设计文档
-
----
-
-## 贡献指南
-
-欢迎各位参与贡献！请先阅读相关文档以了解开发规范：
-
-### 开发准备
-1. **必读**: [代码惯例](Docs/CODE_CONVENTIONS.md) - 了解项目的完整开发规范
-2. **必读**: [编码规范](Docs/CODE_STYLE.md) - 掌握基础编码风格
-3. **推荐**: [设计偏好指南](Docs/DESIGN_PREFERENCE_GUIDE.md) - 理解设计原则
-
-### 贡献流程
-1. Fork 这个仓库
-2. 创建您的特性分支 (`git checkout -b feature/YourFeature`)
-3. 遵循代码惯例进行开发
-4. 提交您的更改 (`git commit -m 'Add some feature'`)
-5. 推送到分支 (`git push origin feature/YourFeature`)
-6. 创建一个新的 Pull Request
-
----
+# 4. 启动项目 (F5)
+# 5. 访问 https://localhost:5001/swagger
+```
 
 ## 技术栈
+- **.NET 6** + ASP.NET Core Web API
+- **Entity Framework Core** + SQL Server
+- **AutoMapper** + Dependency Injection
+- **Serilog** + Swagger/OpenAPI
 
-- **.NET 6**: 核心开发框架
-- **Entity Framework Core**: ORM数据访问
-- **ASP.NET Core Web API**: RESTful API服务
-- **AutoMapper**: 对象映射
-- **Microsoft.Extensions.DI**: 依赖注入
+## 业务模块
+- **海运管理**: 海运出口、进口业务维护
+- **基础数据**: 客户资料、港口、航线、汇率等数据
+- **客户管理**: 客户信息、市场计划、投诉处理
+- **业务操作**: 工作号、费用、结算、发票等执行业务流程
+- **业务审批**: 工作流引擎审批
+- **财务管理**: 费单管理、业务结算、财务发票
+- **统计报表**: 多维度业务数据统计
+
+## 开发规范
+> ?? **重点文档**: [开发设计规范](Docs/)
+- [架构设计](Docs/CODE_CONVENTIONS.md) - 总体架构和业务设计
+- [编码规范](Docs/CODE_STYLE.md) - 代码风格和命名
+- [设计原则](Docs/DESIGN_PREFERENCE_GUIDE.md) - 总体原则和技术选型
+
+## ?? 当前开发状态
+
+### OA日常费用申请单模块 (最新)
+- ? **基础CRUD**: 申请单创建、查询、修改、删除、审核
+- ? **明细管理**: 财务人员专业费用拆分功能
+- ? **金额校验**: 明细合计与主单金额强制一致性验证
+- ? **凭证生成**: 期间-凭证字-序号格式，支持重号警告
+- ? **工作流集成**: 复用现有OwWf审批流程框架
+- ?? **数据结构**: 需移除明细表币种/汇率字段
+- ? **文件上传**: 申请阶段发票文件上传功能
+- ? **流程模板**: 日常费用收/付款审批流程配置
+
+### 核心基础设施
+- ? **文件管理**: OwFileService完整文件存储和权限控制
+- ? **流程管理**: OwWfManager工作流框架，支持多级审批
+- ? **权限系统**: 基于角色和组织的细粒度访问控制
+- ? **金蝶接口**: 财务系统凭证数据导出
+
+## 贡献指南
+```bash
+# 标准流程
+git checkout -b feature/新功能描述
+# 遵循编码规范开发
+git commit -m 'feat: 添加新功能'
+git push origin feature/新功能描述
+# 提交 Pull Request
+```
+
+## 许可证
+MIT License - 参见 [LICENSE](LICENSE)
 
 ---
-
-## License
-
-本项目采用 MIT License，详情见 [LICENSE](LICENSE) 文件。
+*PowerLms - 专业的货运物流业务管理系统*

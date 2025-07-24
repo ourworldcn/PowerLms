@@ -46,11 +46,11 @@ namespace PowerLmsWebApi.Controllers
         #region 日常费用种类相关
 
         /// <summary>
-        /// 获取日常费用种类。超管可以不受限制，其他用户最多仅能看到其所属公司/机构下的实体。
+        /// 获取日常费用类型。超管可以查看系统级，其他用户只能看到公司/组织下的实体。
         /// </summary>
         /// <param name="model">分页参数</param>
-        /// <param name="conditional">支持通用查询的条件</param>
-        /// <returns>日常费用种类列表</returns>
+        /// <param name="conditional">支持通用查询条件</param>
+        /// <returns>日常费用类型列表</returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定类别Id无效。</response>  
         /// <response code="401">无效令牌。</response>  
@@ -61,24 +61,11 @@ namespace PowerLmsWebApi.Controllers
             var result = new GetAllDailyFeesTypeReturnDto();
             var dbSet = _DbContext.DD_DailyFeesTypes;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-            if (_AccountManager.IsAdmin(context.User))  //若是超管
-                coll = coll.Where(c => c.OrgId == null);
-            else
-            {
-                // 获取用户管辖范围内的公司型组织机构ID
-                var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
-                if (merchantId.HasValue)
-                {
-                    var allOrgs = _OrgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs.Values.ToArray();
-                    var companyIds = allOrgs.Where(o => o.Otc == 2).Select(o => (Guid?)o.Id).ToHashSet();
-                    companyIds.Add(merchantId); // 添加商户ID
-                    coll = coll.Where(c => companyIds.Contains(c.OrgId));
-                }
-                else
-                {
-                    coll = coll.Where(c => false); // 没有商户信息，返回空结果
-                }
-            }
+            
+            // 使用统一的组织权限控制方法
+            var allowedOrgIds = GetOrgIds(context.User, _OrgManager);
+            coll = coll.Where(c => allowedOrgIds.Contains(c.OrgId));
+            
             coll = EfHelper.GenerateWhereAnd(coll, conditional);
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);

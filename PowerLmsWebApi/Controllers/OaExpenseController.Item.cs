@@ -55,12 +55,12 @@ namespace PowerLmsWebApi.Controllers
                 if (!context.User.IsSuperAdmin)
                 {
                     var accessibleRequisitionIds = _DbContext.OaExpenseRequisitions
-                        .Where(r => r.OrgId == context.User.OrgId && 
+                        .Where(r => r.OrgId == context.User.OrgId &&
                                    (r.ApplicantId == context.User.Id || r.CreateBy == context.User.Id))
                         .Select(r => r.Id)
                         .ToList();
 
-                    coll = coll.Where(i => accessibleRequisitionIds.Contains(i.ParentId));
+                    coll = coll.Where(i => i.ParentId != null && accessibleRequisitionIds.Contains(i.ParentId.Value));
                 }
 
                 // 排序
@@ -101,7 +101,7 @@ namespace PowerLmsWebApi.Controllers
             try
             {
                 // 检查申请单是否存在和权限
-                var requisition = _DbContext.OaExpenseRequisitions.Find(model.OaExpenseRequisitionItem.ParentId);
+                var requisition = _DbContext.OaExpenseRequisitions.Find(model.Item.ParentId); // 更新为使用 Item 属性
                 if (requisition == null)
                 {
                     result.HasError = true;
@@ -119,9 +119,9 @@ namespace PowerLmsWebApi.Controllers
                     return result;
                 }
 
-                // 检查用户权限
-                if (requisition.ApplicantId != context.User.Id && 
-                    requisition.CreateBy != context.User.Id && 
+                // 检查用户权限 - 更新为可空类型处理
+                if ((requisition.ApplicantId.HasValue && requisition.ApplicantId.Value != context.User.Id) &&
+                    (requisition.CreateBy.HasValue && requisition.CreateBy.Value != context.User.Id) &&
                     !context.User.IsSuperAdmin)
                 {
                     result.HasError = true;
@@ -130,7 +130,7 @@ namespace PowerLmsWebApi.Controllers
                     return result;
                 }
 
-                var entity = model.OaExpenseRequisitionItem;
+                var entity = model.Item; // 更新为使用 Item 属性
                 entity.GenerateNewId(); // 强制生成Id
 
                 _DbContext.OaExpenseRequisitionItems.Add(entity);
@@ -167,38 +167,42 @@ namespace PowerLmsWebApi.Controllers
 
             try
             {
-                var existing = _DbContext.OaExpenseRequisitionItems.Find(model.OaExpenseRequisitionItem.Id);
-                if (existing == null)
+                // 检查所有明细项是否存在和权限
+                foreach (var item in model.Items)
                 {
-                    result.HasError = true;
-                    result.ErrorCode = 404;
-                    result.DebugMessage = "指定的OA费用申请单明细不存在";
-                    return result;
+                    var existing = _DbContext.OaExpenseRequisitionItems.Find(item.Id);
+                    if (existing == null)
+                    {
+                        result.HasError = true;
+                        result.ErrorCode = 404;
+                        result.DebugMessage = $"指定的OA费用申请单明细 {item.Id} 不存在";
+                        return result;
+                    }
+
+                    // 检查申请单状态和权限
+                    var requisition = _DbContext.OaExpenseRequisitions.Find(existing.ParentId);
+                    if (requisition == null || !requisition.CanEdit(_DbContext))
+                    {
+                        result.HasError = true;
+                        result.ErrorCode = 403;
+                        result.DebugMessage = "申请单当前状态不允许修改明细";
+                        return result;
+                    }
+
+                    // 检查用户权限 - 更新为可空类型处理
+                    if ((requisition.ApplicantId.HasValue && requisition.ApplicantId.Value != context.User.Id) &&
+                        (requisition.CreateBy.HasValue && requisition.CreateBy.Value != context.User.Id) &&
+                        !context.User.IsSuperAdmin)
+                    {
+                        result.HasError = true;
+                        result.ErrorCode = 403;
+                        result.DebugMessage = "权限不足，无法修改此明细";
+                        return result;
+                    }
                 }
 
-                // 检查申请单状态和权限
-                var requisition = _DbContext.OaExpenseRequisitions.Find(existing.ParentId);
-                if (requisition == null || !requisition.CanEdit(_DbContext))
-                {
-                    result.HasError = true;
-                    result.ErrorCode = 403;
-                    result.DebugMessage = "申请单当前状态不允许修改明细";
-                    return result;
-                }
-
-                // 检查用户权限
-                if (requisition.ApplicantId != context.User.Id && 
-                    requisition.CreateBy != context.User.Id && 
-                    !context.User.IsSuperAdmin)
-                {
-                    result.HasError = true;
-                    result.ErrorCode = 403;
-                    result.DebugMessage = "权限不足，无法修改此明细";
-                    return result;
-                }
-
-                // 使用EntityManager进行修改
-                if (!_EntityManager.Modify(new[] { model.OaExpenseRequisitionItem }))
+                // 使用EntityManager进行批量修改
+                if (!_EntityManager.Modify(model.Items))
                 {
                     result.HasError = true;
                     result.ErrorCode = 404;
@@ -224,7 +228,7 @@ namespace PowerLmsWebApi.Controllers
         /// </summary>
         /// <param name="model">删除参数</param>
         /// <returns>删除结果</returns>
-        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode。</response>
+        /// <response code="200">未发生系统级错误。如有应用错误，具体参见 HasError 和 ErrorCode。</response>
         /// <response code="401">无效令牌。</response>
         /// <response code="404">指定Id的明细不存在。</response>
         [HttpDelete]
@@ -251,9 +255,9 @@ namespace PowerLmsWebApi.Controllers
                         return result;
                     }
 
-                    // 检查用户权限
-                    if (requisition.ApplicantId != context.User.Id && 
-                        requisition.CreateBy != context.User.Id && 
+                    // 检查用户权限 - 更新为可空类型处理
+                    if ((requisition.ApplicantId.HasValue && requisition.ApplicantId.Value != context.User.Id) &&
+                        (requisition.CreateBy.HasValue && requisition.CreateBy.Value != context.User.Id) &&
                         !context.User.IsSuperAdmin)
                     {
                         result.HasError = true;
@@ -276,6 +280,194 @@ namespace PowerLmsWebApi.Controllers
             }
 
             return result;
+        }
+
+        #endregion
+
+        #region 凭证号生成功能
+
+        /// <summary>
+        /// 生成凭证号。
+        /// 根据结算时间和结算账号生成符合财务要求的凭证号。
+        /// </summary>
+        /// <param name="model">凭证号生成参数</param>
+        /// <returns>生成的凭证号信息</returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode。</response>
+        /// <response code="201">生成成功但存在重号警告。</response>
+        /// <response code="401">无效令牌。</response>
+        /// <response code="403">权限不足。</response>
+        /// <response code="404">指定的申请单或结算账号不存在。</response>
+        [HttpPost]
+        public ActionResult<GenerateVoucherNumberReturnDto> GenerateVoucherNumber(GenerateVoucherNumberParamsDto model)
+        {
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
+                return Unauthorized();
+
+            var result = new GenerateVoucherNumberReturnDto();
+
+            try
+            {
+                // 检查申请单是否存在
+                var requisition = _DbContext.OaExpenseRequisitions.Find(model.RequisitionId);
+                if (requisition == null)
+                {
+                    result.HasError = true;
+                    result.ErrorCode = 404;
+                    result.DebugMessage = "指定的OA费用申请单不存在";
+                    return result;
+                }
+
+                // 检查申请单是否已审核
+                if (!requisition.IsAudited())
+                {
+                    result.HasError = true;
+                    result.ErrorCode = 400;
+                    result.DebugMessage = "申请单必须先审核通过才能生成凭证号";
+                    return result;
+                }
+
+                // 检查权限：财务人员或超管
+                if (!context.User.IsSuperAdmin && requisition.OrgId != context.User.OrgId)
+                {
+                    result.HasError = true;
+                    result.ErrorCode = 403;
+                    result.DebugMessage = "权限不足，无法为此申请单生成凭证号";
+                    return result;
+                }
+
+                // 检查结算账号是否存在
+                var settlementAccount = _DbContext.BankInfos.Find(model.SettlementAccountId);
+                if (settlementAccount == null)
+                {
+                    result.HasError = true;
+                    result.ErrorCode = 404;
+                    result.DebugMessage = "指定的结算账号不存在";
+                    return result;
+                }
+
+                // 检查凭证字是否配置
+                if (string.IsNullOrEmpty(settlementAccount.VoucherCharacter))
+                {
+                    result.HasError = true;
+                    result.ErrorCode = 400;
+                    result.DebugMessage = "结算账号未配置凭证字，无法生成凭证号";
+                    return result;
+                }
+
+                // 生成凭证号
+                var period = model.SettlementDateTime.Month;
+                var voucherCharacter = settlementAccount.VoucherCharacter;
+
+                // 获取当月该凭证字的最大序号
+                var currentMaxSequence = GetMaxVoucherSequence(period, voucherCharacter, model.SettlementDateTime.Year);
+                var nextSequence = currentMaxSequence + 1;
+
+                // 生成凭证号：格式为"期间-凭证字-序号"
+                var voucherNumber = $"{period}-{voucherCharacter}-{nextSequence}";
+
+                // 检查是否存在重号
+                var duplicateExists = CheckVoucherNumberDuplicate(voucherNumber, model.SettlementDateTime.Year);
+
+                result.VoucherNumber = voucherNumber;
+                result.VoucherCharacter = voucherCharacter;
+                result.Period = period;
+                result.SequenceNumber = nextSequence;
+                result.HasDuplicateWarning = duplicateExists;
+
+                if (duplicateExists)
+                {
+                    result.DuplicateWarningMessage = $"凭证号 {voucherNumber} 已存在，请核查是否重复";
+                    _Logger.LogWarning("生成的凭证号存在重复: {VoucherNumber}", voucherNumber);
+                    
+                    // 返回201状态码表示成功但有警告
+                    return StatusCode(201, result);
+                }
+
+                _Logger.LogInformation("成功生成凭证号: {VoucherNumber}，申请单: {RequisitionId}", 
+                    voucherNumber, model.RequisitionId);
+            }
+            catch (Exception ex)
+            {
+                _Logger.LogError(ex, "生成凭证号时发生错误");
+                result.HasError = true;
+                result.ErrorCode = 500;
+                result.DebugMessage = $"生成凭证号时发生错误: {ex.Message}";
+            }
+
+            return result;
+        }
+
+        #endregion
+
+        #region 私有辅助方法
+
+        /// <summary>
+        /// 获取指定期间和凭证字的最大序号。
+        /// </summary>
+        /// <param name="period">期间（月份）</param>
+        /// <param name="voucherCharacter">凭证字</param>
+        /// <param name="year">年份</param>
+        /// <returns>最大序号</returns>
+        private int GetMaxVoucherSequence(int period, string voucherCharacter, int year)
+        {
+            try
+            {
+                // 查询当月所有使用该凭证字的明细记录
+                var voucherPattern = $"{period}-{voucherCharacter}-";
+                
+                var maxSequence = _DbContext.OaExpenseRequisitionItems
+                    .Where(item => item.VoucherNumber != null && 
+                                   item.VoucherNumber.StartsWith(voucherPattern) &&
+                                   item.SettlementDateTime.Year == year)
+                    .AsEnumerable() // 切换到客户端评估以支持复杂的字符串操作
+                    .Select(item => ExtractSequenceFromVoucherNumber(item.VoucherNumber, voucherPattern))
+                    .Where(seq => seq.HasValue)
+                    .DefaultIfEmpty(0)
+                    .Max();
+
+                return maxSequence ?? 0;
+            }
+            catch (Exception ex)
+            {
+                _Logger.LogError(ex, "获取最大凭证序号时发生错误");
+                return 0; // 出错时返回0，从1开始
+            }
+        }
+
+        /// <summary>
+        /// 从凭证号中提取序号。
+        /// </summary>
+        /// <param name="voucherNumber">凭证号</param>
+        /// <param name="pattern">模式前缀</param>
+        /// <returns>序号</returns>
+        private int? ExtractSequenceFromVoucherNumber(string voucherNumber, string pattern)
+        {
+            if (string.IsNullOrEmpty(voucherNumber) || !voucherNumber.StartsWith(pattern))
+                return null;
+
+            var sequencePart = voucherNumber.Substring(pattern.Length);
+            return int.TryParse(sequencePart, out var sequence) ? sequence : (int?)null;
+        }
+
+        /// <summary>
+        /// 检查凭证号是否存在重复。
+        /// </summary>
+        /// <param name="voucherNumber">凭证号</param>
+        /// <param name="year">年份</param>
+        /// <returns>是否存在重复</returns>
+        private bool CheckVoucherNumberDuplicate(string voucherNumber, int year)
+        {
+            try
+            {
+                return _DbContext.OaExpenseRequisitionItems
+                    .Any(item => item.VoucherNumber == voucherNumber && 
+                                item.SettlementDateTime.Year == year);
+            }
+            catch (Exception ex)
+            {
+                _Logger.LogError(ex, "检查凭证号重复时发生错误");
+                return false; // 出错时返回false，避免阻塞流程
+            }
         }
 
         #endregion

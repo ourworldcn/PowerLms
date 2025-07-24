@@ -2,6 +2,9 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using OW.EntityFrameworkCore;
+using PowerLms.Data;
+using PowerLmsServer.Managers;
 
 namespace PowerLmsWebApi.Controllers
 {
@@ -19,6 +22,73 @@ namespace PowerLmsWebApi.Controllers
         {
             // 基类构造函数，目前为空实现
             // 子类可通过依赖注入获取所需服务
+        }
+
+        /// <summary>
+        /// 获取指定账号可管理的机构ID列表。
+        /// 普通账只能管理当前登录机构（不含下属机构）。
+        /// 商管能管理所属商户及其下属机构。
+        /// 超管只能管理一种OrgId就是null。
+        /// </summary>
+        /// <param name="account">用户账号</param>
+        /// <param name="orgManager">组织机构管理器</param>
+        /// <returns>可管理的机构ID列表，超管返回包含null的列表</returns>
+        protected List<Guid?> GetOrgIds<T>(Account account, OrgManager<T> orgManager) where T : OwDbContext
+        {
+            var result = new List<Guid?>();
+
+            try
+            {
+                // 超级管理员只能管理全局数据（OrgId = null）
+                if (account.IsSuperAdmin)
+                {
+                    result.Add(null);
+                    return result;
+                }
+
+                // 商户管理员可以管理所属商户及其下属所有机构
+                if (account.IsMerchantAdmin)
+                {
+                    var merchantId = orgManager.GetMerchantIdByUserId(account.Id);
+                    if (merchantId.HasValue)
+                    {
+                        // 添加商户ID
+                        result.Add(merchantId.Value);
+
+                        // 获取商户下的所有组织机构
+                        var orgCacheItem = orgManager.GetOrLoadOrgCacheItem(merchantId.Value);
+                        if (orgCacheItem?.Orgs != null)
+                        {
+                            // 添加所有组织机构ID
+                            result.AddRange(orgCacheItem.Orgs.Keys.Cast<Guid?>());
+                        }
+                    }
+                    return result;
+                }
+
+                // 普通用户只能管理当前登录的机构（不含下属机构）
+                if (account.OrgId.HasValue)
+                {
+                    // 只添加用户直接关联的机构ID，不包含子机构
+                    result.Add(account.OrgId.Value);
+                }
+
+                return result;
+            }
+            catch (Exception)
+            {
+                // 发生异常时，根据用户类型返回最小权限
+                if (account.IsSuperAdmin)
+                {
+                    result.Add(null);
+                }
+                else if (account.OrgId.HasValue)
+                {
+                    result.Add(account.OrgId.Value);
+                }
+
+                return result;
+            }
         }
     }
 

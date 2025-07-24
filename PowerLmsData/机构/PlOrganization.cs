@@ -193,5 +193,12 @@ namespace PowerLms.Data
         [MaxLength(32), Unicode(false)]
         [Comment("B账财务科目代码")]
         public string BAccountSubjectCode { get; set; }
+
+        /// <summary>
+        /// 凭证字。专用于OA日常费用申请单的凭证号生成，如：银、现、转、记等。
+        /// </summary>
+        [MaxLength(4)]
+        [Comment("凭证字。专用于OA日常费用申请单的凭证号生成，如：银、现、转、记等。")]
+        public string VoucherCharacter { get; set; }
     }
 }
