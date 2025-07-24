@@ -54,36 +54,16 @@ namespace OW
             char[] chars = includeSpecialChars ? _charsWithSpecial : _defaultChars;
             int charSetLength = chars.Length;
 
-            // 创建缓冲区
-            char[] rentedArray = null;
-            Span<char> password = length < 1024
-                ? stackalloc char[length]
-                : (rentedArray = ArrayPool<char>.Shared.Rent(length));
-
-            try
+            // 使用 string.Create 避免内存复制，直接在 string 的内部缓冲区中构建
+            return string.Create(length, (chars, charSetLength), (span, state) =>
             {
-                // 使用Random.Shared生成随机字节序列
-                Span<byte> randomIndices = length <= 512
-                    ? stackalloc byte[length]
-                    : new byte[length];
-
-                OwHelper.Random.NextBytes(randomIndices);
-
-                // 将随机字节映射到字符集索引
-                for (int i = 0; i < length; i++)
+                var (sourceChars, setLength) = state;
+                for (int i = 0; i < span.Length; i++)
                 {
-                    // 使用取模操作将随机字节映射到字符集范围内
-                    int index = randomIndices[i] % charSetLength;
-                    password[i] = chars[index];
+                    int index = OwHelper.Random.Next(setLength);
+                    span[i] = sourceChars[index];
                 }
-
-                return new string(password[..length]);
-            }
-            finally
-            {
-                if (rentedArray != null)
-                    ArrayPool<char>.Shared.Return(rentedArray);
-            }
+            });
         }
 
         #endregion 密码生成功能
