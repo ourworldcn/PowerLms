@@ -63,7 +63,15 @@ git clone https://github.com/ourworldcn/PowerLms.git
 
 ## ?? 当前开发状态
 
-### OA日常费用申请单模块 (最新)
+### 基础工具类重构 (最新)
+- ? **OwStringUtils 类**: 在 OwBaseCore 项目中创建统一的字符串工具类
+- ? **密码生成优化**: 使用内存池和栈分配提升性能，支持无混淆字符
+- ? **兼容性保持**: PasswordGenerator 类标记为过时但保持向后兼容
+- ? **依赖解耦**: 移除 AccountManager 对 PasswordGenerator 的依赖注入
+- ? **代码统一**: PowerLmsServer 的 StringUtils 委托给 OwBaseCore 实现
+- ? **功能扩展**: 新增命名转换、安全截取、字符串格式化等实用方法
+
+### OA日常费用申请单模块
 - ? **基础CRUD**: 申请单创建、查询、修改、删除、审核
 - ? **明细管理**: 财务人员专业费用拆分功能
 - ? **金额校验**: 明细合计与主单金额强制一致性验证
@@ -78,6 +86,7 @@ git clone https://github.com/ourworldcn/PowerLms.git
 - ? **流程管理**: OwWfManager工作流框架，支持多级审批
 - ? **权限系统**: 基于角色和组织的细粒度访问控制
 - ? **金蝶接口**: 财务系统凭证数据导出
+- ? **工具类库**: StringUtils提供常用字符串处理和密码生成功能
 
 ## 贡献指南
 ```bash

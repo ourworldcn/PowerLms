@@ -7,6 +7,7 @@ using Microsoft.Extensions.Primitives;
 using OW;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
+using PowerLmsServer.Utils;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -24,14 +25,12 @@ namespace PowerLmsServer.Managers
         /// <summary>
         /// 构造函数。
         /// </summary>
-        /// <param name="passwordGenerator"></param>
         /// <param name="mapper"></param>
         /// <param name="memoryCache"></param>
         /// <param name="dbContextFactory"></param>
         /// <param name="applicationLifetime">应用程序生命周期管理器</param>
-        public AccountManager(PasswordGenerator passwordGenerator, IMapper mapper, IMemoryCache memoryCache, IDbContextFactory<PowerLmsUserDbContext> dbContextFactory, IHostApplicationLifetime applicationLifetime)
+        public AccountManager(IMapper mapper, IMemoryCache memoryCache, IDbContextFactory<PowerLmsUserDbContext> dbContextFactory, IHostApplicationLifetime applicationLifetime)
         {
-            _PasswordGenerator = passwordGenerator;
             _Mapper = mapper;
             _MemoryCache = memoryCache;
             _DbContextFactory = dbContextFactory;
@@ -39,7 +38,6 @@ namespace PowerLmsServer.Managers
             TaskDispatcher = new TaskDispatcher(new TaskDispatcherOptions { CancellationToken = _ApplicationLifetime.ApplicationStopped });
         }
 
-        readonly PasswordGenerator _PasswordGenerator;
         readonly IMapper _Mapper;
         readonly IMemoryCache _MemoryCache;
         readonly IDbContextFactory<PowerLmsUserDbContext> _DbContextFactory;
@@ -150,7 +148,7 @@ namespace PowerLmsServer.Managers
                     return false;
                 }
 
-                if (string.IsNullOrEmpty(pwd)) pwd = _PasswordGenerator.Generate(6); // 若需要生成密码
+                if (string.IsNullOrEmpty(pwd)) pwd = OwStringUtils.GeneratePassword(6); // 若需要生成密码，使用OwStringUtils
 
                 var user = _Mapper.Map<Account>(template);
                 user.GenerateNewId();
