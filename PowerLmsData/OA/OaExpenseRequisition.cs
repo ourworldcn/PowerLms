@@ -238,9 +238,13 @@ namespace PowerLms.Data.OA
         public Guid? EmployeeId { get; set; }
 
         /// <summary>
-        /// 部门Id。选择系统中的组织架构部门，关联到 <see cref="PlOrganization"/> 的Id。
+        /// 财务部门Id。关联简单字典finance-depart类型，用于金蝶核算部门（不代表真实的组织架构）。
+        /// 
+        /// 背景：财务核算需要的部门概念与实际的组织架构部门可能不同，财务部门是虚拟的核算维度。
+        /// 设计：关联SimpleDataDic的finance-depart类型字典，由用户手工创建和维护财务部门数据。
+        /// 用途：在生成金蝶凭证时提供部门核算信息，支持费用的部门维度分摊和统计。
         /// </summary>
-        [Comment("部门Id，选择系统中的组织架构部门，关联到PlOrganization的Id")]
+        [Comment("财务部门Id。关联简单字典finance-depart类型，用于金蝶核算部门")]
         public Guid? DepartmentId { get; set; }
 
         /// <summary>
@@ -431,14 +435,14 @@ namespace PowerLms.Data.OA
         }
 
         /// <summary>
-        /// 获取明细项的部门信息。
+        /// 获取明细项的财务部门信息。
         /// </summary>
         /// <param name="item">明细项</param>
         /// <param name="context">数据库上下文</param>
-        /// <returns>部门信息</returns>
-        public static PlOrganization GetDepartment(this OaExpenseRequisitionItem item, DbContext context)
+        /// <returns>财务部门信息</returns>
+        public static SimpleDataDic GetFinanceDepartment(this OaExpenseRequisitionItem item, DbContext context)
         {
-            return item.DepartmentId.HasValue ? context.Set<PlOrganization>().Find(item.DepartmentId.Value) : null;
+            return item.DepartmentId.HasValue ? context.Set<SimpleDataDic>().Find(item.DepartmentId.Value) : null;
         }
     }
 }

@@ -13,6 +13,16 @@ namespace PowerLms.Data
 {
     /// <summary>
     /// 客户资料。
+    /// 
+    /// 财务系统对接说明：
+    /// PowerLms与金蝶是两套独立的客户管理系统，存在数据对接问题：
+    /// 1. 两边的客户ID/主键完全不同，无法直接关联
+    /// 2. 唯一一致的是客户名称（建档时保持一致）  
+    /// 3. 但金蝶在处理DBF凭证时只认财务编码，不认客户名称
+    /// 4. 同一往来单位可能既是客户又是供应商，需要不同的财务编码
+    /// 
+    /// 解决方案：通过FinanceCodeAR/AP字段建立PowerLms与金蝶的精确编码映射，
+    /// 确保生成的DBF凭证能被金蝶系统正确识别和处理。
     /// </summary>
     public class PlCustomer : GuidKeyObjectBase, ICreatorInfo
     {
@@ -263,11 +273,33 @@ namespace PowerLms.Data
         #endregion Airlines 相关属性
 
         /// <summary>
-        /// 财务编码。
+        /// 财务编码。原有字段，B账（外账）输出金蝶时的对接。
         /// </summary>
         [MaxLength(32)]
-        [Comment("财务编码")]
+        [Comment("财务编码。B账（外账）输出金蝶时的对接。")]
         public string TacCountNo { get; set; }
+
+        /// <summary>
+        /// 财务编码(AR)。该客户在金蝶系统中的客户编码，用于应收类业务凭证生成。
+        /// 
+        /// 背景：PowerLms与金蝶是两套独立的客户资料系统，唯一能对应的是客户名称，但金蝶在导入凭证时只认编码不认名称。
+        /// 解决方案：在PowerLms客户资料中预存该客户在金蝶系统中的客户编码，建立精确的数据映射关系。
+        /// 应用场景：生成实收(RF)、应收账款等凭证时，通过此编码填写FTRANSID字段，确保金蝶能准确识别客户。
+        /// </summary>
+        [MaxLength(32)]
+        [Comment("财务编码(AR)。该客户在金蝶系统中的客户编码，用于应收类业务凭证生成。")]
+        public string FinanceCodeAR { get; set; }
+
+        /// <summary>
+        /// 财务编码(AP)。该客户在金蝶系统中的供应商编码，用于应付类业务凭证生成。
+        /// 
+        /// 背景：同一往来单位可能既是客户又是供应商，在金蝶中有不同的编码体系。
+        /// 解决方案：分别存储该单位作为客户(AR)和供应商(AP)时在金蝶中的编码。
+        /// 应用场景：生成实付(PF)、应付账款等凭证时，通过此编码填写FTRANSID字段，确保金蝶能准确识别供应商。
+        /// </summary>
+        [MaxLength(32)]
+        [Comment("财务编码(AP)。该客户在金蝶系统中的供应商编码，用于应付类业务凭证生成。")]
+        public string FinanceCodeAP { get; set; }
 
         /// <summary>
         /// 是否海关检疫。

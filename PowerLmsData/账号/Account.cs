@@ -124,6 +124,17 @@ namespace PowerLms.Data
         [Range(1, 4)]
         public byte JobPermission { get; set; }
 
+        /// <summary>
+        /// 财务编码。金蝶系统中该员工的唯一编码，用于员工核算相关凭证生成。
+        /// 
+        /// 背景：PowerLms与金蝶是两套独立的员工信息系统，唯一能对应的是姓名，但金蝶只认编码不认姓名。
+        /// 解决方案：在PowerLms员工资料中预存该员工在金蝶系统中的员工编码，就像一个"扣子"让金蝶能识别。
+        /// 应用场景：生成涉及员工核算的DBF凭证时，通过此编码填写FTRANSID字段，确保金蝶能准确识别员工。
+        /// </summary>
+        [Comment("财务编码。金蝶系统中该员工的唯一编码，用于员工核算相关凭证生成。")]
+        [MaxLength(32)]
+        public string FinanceCode { get; set; }
+
         #region 瞬时属性
         ConcurrentDictionary<string, object> _RuntimeProperties = new ConcurrentDictionary<string, object>();
 
