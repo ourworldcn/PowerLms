@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+ï»¿using Microsoft.EntityFrameworkCore;
 using OW.Data;
 using System;
 using System.ComponentModel.DataAnnotations;
@@ -8,31 +8,31 @@ using System.Linq;
 namespace PowerLms.Data.OA
 {
     /// <summary>
-    /// ÊÕÖ§ÀàĞÍÃ¶¾Ù¡£
+    /// æ”¶æ”¯ç±»å‹æšä¸¾ã€‚
     /// </summary>
     public enum IncomeExpenseType : byte
     {
         /// <summary>
-        /// ÊÕ¿î¡£
+        /// æ”¶æ¬¾
         /// </summary>
         Income = 0,
 
         /// <summary>
-        /// ¸¶¿î¡£
+        /// ä»˜æ¬¾
         /// </summary>
         Expense = 1
     }
 
     /// <summary>
-    /// OAÈÕ³£·ÑÓÃÉêÇëµ¥Ö÷±í¡£
-    /// ÓÃÓÚ´¦ÀíÈÕ³£·ÑÓÃ£¨Èç²îÂÃ¡¢±¨Ïú£©£¬¶ÀÁ¢ÓÚÖ÷ÓªÒµÎñµÄ·ÑÓÃÉêÇë¡£
+    /// OAæ—¥å¸¸è´¹ç”¨ç”³è¯·å•ä¸»è¡¨ã€‚
+    /// ç”¨äºå¤„ç†æ—¥å¸¸è´¹ç”¨ï¼ˆæŠ¥é”€ã€å€Ÿæ¬¾ï¼‰ç”³è¯·ï¼Œç‹¬ç«‹äºä¸»è¥ä¸šåŠ¡çš„è´¹ç”¨ç”³è¯·ã€‚
     /// </summary>
-    [Comment("OAÈÕ³£·ÑÓÃÉêÇëµ¥Ö÷±í")]
+    [Comment("OAæ—¥å¸¸è´¹ç”¨ç”³è¯·å•ä¸»è¡¨")]
     [Index(nameof(OrgId), IsUnique = false)]
     public class OaExpenseRequisition : GuidKeyObjectBase, ISpecificOrg, ICreatorInfo
     {
         /// <summary>
-        /// ¹¹Ôìº¯Êı¡£
+        /// æ„é€ å‡½æ•°ã€‚
         /// </summary>
         public OaExpenseRequisition()
         {
@@ -42,136 +42,129 @@ namespace PowerLms.Data.OA
         }
 
         /// <summary>
-        /// ËùÊô»ú¹¹Id¡£¸Ãµ¥¾İ¹éÊôµÄ»ú¹¹Id,¼´µÇ¼ÇÈËµ±Ç°µÇÂ¼µÄ»ú¹¹Id¡£Ôö¼ÓÊ±È·¶¨£¬²»¿ÉĞŞ¸Ä¡£
+        /// æ‰€å±æœºæ„Idã€‚è®¾ç½®æ•°æ®éš”ç¦»çš„æœºæ„Id,å³è®°å½•å½“å‰è®°å½•çš„æœºæ„Idï¼Œè¿è¡Œæ—¶ç¡®å®šï¼Œä¸å¯ä¿®æ”¹ã€‚
         /// </summary>
-        [Comment("ËùÊô»ú¹¹Id")]
+        [Comment("æ‰€å±æœºæ„Id")]
         public Guid? OrgId { get; set; }
 
         /// <summary>
-        /// ÉêÇëÈËId¡£Ô±¹¤ÕËºÅId¡£
+        /// ç”³è¯·äººIdï¼ˆå‘˜å·¥è´¦å·Idï¼‰ã€‚
         /// </summary>
-        [Comment("ÉêÇëÈËId£¬Ô±¹¤ÕËºÅId")]
+        [Comment("ç”³è¯·äººIdï¼ˆå‘˜å·¥è´¦å·Idï¼‰")]
         public Guid? ApplicantId { get; set; }
 
         /// <summary>
-        /// ÉêÇëÊ±¼ä¡£
+        /// æ˜¯å¦å€Ÿæ¬¾ã€‚trueè¡¨ç¤ºå€Ÿæ¬¾ç”³è¯·ï¼Œfalseè¡¨ç¤ºæŠ¥é”€ç”³è¯·ã€‚
         /// </summary>
-        [Comment("ÉêÇëÊ±¼ä")]
-        [Precision(3)]
-        public DateTime? ApplyDateTime { get; set; }
-
-        /// <summary>
-        /// ÊÇ·ñ½è¿î¡£true±íÊ¾½è¿îÉêÇë£¬false±íÊ¾±¨ÏúÉêÇë¡£
-        /// </summary>
-        [Comment("ÊÇ·ñ½è¿î£¬true±íÊ¾½è¿îÉêÇë£¬false±íÊ¾±¨ÏúÉêÇë")]
+        [Comment("æ˜¯å¦å€Ÿæ¬¾ã€‚trueè¡¨ç¤ºå€Ÿæ¬¾ç”³è¯·ï¼Œfalseè¡¨ç¤ºæŠ¥é”€ç”³è¯·")]
         public bool IsLoan { get; set; }
 
         /// <summary>
-        /// ÊÇ·ñµ¼Èë²ÆÎñÈí¼ş¡£×÷ÎªºóÆÚ½ğµû²ÆÎñÈí¼şµ¼ÈëÌõ¼ş¡£
+        /// æ˜¯å¦å¯¼å…¥è´¢åŠ¡è½¯ä»¶ã€‚ä½œä¸ºåæœŸå¯¼å…¥è´¢åŠ¡è½¯ä»¶çš„å¯¼å…¥æ¡ä»¶ã€‚
         /// </summary>
-        [Comment("ÊÇ·ñµ¼Èë²ÆÎñÈí¼ş£¬×÷ÎªºóÆÚ½ğµû²ÆÎñÈí¼şµ¼ÈëÌõ¼ş")]
+        [Comment("æ˜¯å¦å¯¼å…¥è´¢åŠ¡è½¯ä»¶ã€‚ä½œä¸ºåæœŸå¯¼å…¥è´¢åŠ¡è½¯ä»¶çš„å¯¼å…¥æ¡ä»¶")]
         public bool IsImportFinancialSoftware { get; set; }
 
         /// <summary>
-        /// Ïà¹Ø¿Í»§¡£×Ö·û´®¼´¿É£¬²»ÓÃ´Ó¿Í»§×ÊÁÏÖĞÑ¡Ôñ¡£
+        /// ç›¸å…³å®¢æˆ·ã€‚å­—ç¬¦ä¸²å¡«å†™ï¼Œå¯ä»¥ä»å®¢æˆ·åˆ—è¡¨ä¸­é€‰æ‹©ã€‚
         /// </summary>
-        [Comment("Ïà¹Ø¿Í»§£¬×Ö·û´®¼´¿É£¬²»ÓÃ´Ó¿Í»§×ÊÁÏÖĞÑ¡Ôñ")]
+        [Comment("ç›¸å…³å®¢æˆ·ã€‚å­—ç¬¦ä¸²å¡«å†™ï¼Œå¯ä»¥ä»å®¢æˆ·åˆ—è¡¨ä¸­é€‰æ‹©")]
         [MaxLength(128)]
         public string RelatedCustomer { get; set; }
 
         /// <summary>
-        /// ÊÕ¿îÒøĞĞ¡£
+        /// æ”¶æ¬¾é“¶è¡Œã€‚
         /// </summary>
-        [Comment("ÊÕ¿îÒøĞĞ")]
+        [Comment("æ”¶æ¬¾é“¶è¡Œ")]
         [MaxLength(128)]
         public string ReceivingBank { get; set; }
 
         /// <summary>
-        /// ÊÕ¿î»§Ãû¡£
+        /// æ”¶æ¬¾æˆ·å
         /// </summary>
-        [Comment("ÊÕ¿î»§Ãû")]
+        [Comment("æ”¶æ¬¾æˆ·å")]
         [MaxLength(128)]
         public string ReceivingAccountName { get; set; }
 
         /// <summary>
-        /// ÊÕ¿îÕË»§¡£
+        /// æ”¶æ¬¾äººè´¦å·
         /// </summary>
-        [Comment("ÊÕ¿îÕË»§")]
+        [Comment("æ”¶æ¬¾äººè´¦å·")]
         [MaxLength(64)]
         public string ReceivingAccountNumber { get; set; }
 
         /// <summary>
-        /// ËùÌ¸ÊÂÏî¡£´óÎÄ±¾¡£
+        /// æ´½è°ˆäº‹é¡¹ã€‚é•¿æ–‡æœ¬ã€‚
         /// </summary>
-        [Comment("ËùÌ¸ÊÂÏî£¬´óÎÄ±¾")]
+        [Comment("æ´½è°ˆäº‹é¡¹ã€‚é•¿æ–‡æœ¬")]
         public string DiscussedMatters { get; set; }
 
         /// <summary>
-        /// ±¸×¢¡£´óÎÄ±¾¡£
+        /// å¤‡æ³¨ã€‚é•¿æ–‡æœ¬ã€‚
         /// </summary>
-        [Comment("±¸×¢£¬´óÎÄ±¾")]
+        [Comment("å¤‡æ³¨ã€‚é•¿æ–‡æœ¬")]
         public string Remark { get; set; }
 
         /// <summary>
-        /// ÊÕÖ§ÀàĞÍ¡£ÊÕ¿î/¸¶¿î¡£
+        /// æ”¶æ”¯ç±»å‹ã€‚æ”¶æ¬¾/ä»˜æ¬¾
         /// </summary>
-        [Comment("ÊÕÖ§ÀàĞÍ£¬ÊÕ¿î/¸¶¿î")]
+        [Comment("æ”¶æ”¯ç±»å‹ï¼ˆæ”¶æ¬¾/ä»˜æ¬¾ï¼‰")]
         public IncomeExpenseType? IncomeExpenseType { get; set; }
 
         /// <summary>
-        /// ·ÑÓÃÖÖÀà¡£Ñ¡ÔñÈÕ³£·ÑÓÃÖÖÀà£¬ÉêÇëµÄ·ÑÓÃÖÖÀàÉêÇëÈËÌîĞ´£¬²»¹ØÁª¿ÆÄ¿´úÂë¡£
+        /// è´¹ç”¨ç±»åˆ«ã€‚é€‰æ‹©æ—¥å¸¸è´¹ç”¨çš„ç±»åˆ«ï¼Œç”±åå°è´¹ç”¨ç±»åˆ«ç®¡ç†é…ç½®ç»´æŠ¤ï¼Œå¯ä»¥ç±»åˆ«ç¼–ç é¡¹ã€‚
         /// </summary>
-        [Comment("·ÑÓÃÖÖÀà£¬Ñ¡ÔñÈÕ³£·ÑÓÃÖÖÀà£¬ÉêÇëµÄ·ÑÓÃÖÖÀàÉêÇëÈËÌîĞ´£¬²»¹ØÁª¿ÆÄ¿´úÂë")]
+        [Comment("è´¹ç”¨ç±»åˆ«ã€‚é€‰æ‹©æ—¥å¸¸è´¹ç”¨çš„ç±»åˆ«ï¼Œç”±åå°è´¹ç”¨ç±»åˆ«ç®¡ç†é…ç½®ç»´æŠ¤ï¼Œå¯ä»¥ç±»åˆ«ç¼–ç é¡¹")]
         [MaxLength(128)]
         public string ExpenseCategory { get; set; }
 
         /// <summary>
-        /// ±ÒÖÖ´úÂë¡£±ÒÖÖcode¡£
+        /// å¸ç§ä»£ç ã€‚
         /// </summary>
-        [Comment("±ÒÖÖ´úÂë")]
+        [Comment("å¸ç§ä»£ç ")]
         [MaxLength(4)]
         [Unicode(false)]
         public string CurrencyCode { get; set; } = "CNY";
 
         /// <summary>
-        /// »ãÂÊ¡£ËÄÎ»Ğ¡Êı¡£
+        /// æ±‡ç‡ã€‚ä¸¤ä½å°æ•°ã€‚
         /// </summary>
-        [Comment("»ãÂÊ£¬ËÄÎ»Ğ¡Êı")]
+        [Comment("æ±‡ç‡ï¼ˆä¸¤ä½å°æ•°ï¼‰")]
         [Precision(18, 4)]
         public decimal ExchangeRate { get; set; } = 1.0000m;
 
         /// <summary>
-        /// ½ğ¶î¡£Á½Î»Ğ¡Êı¡£
+        /// é‡‘é¢ã€‚ä¸¤ä½å°æ•°ã€‚
         /// </summary>
-        [Comment("½ğ¶î£¬Á½Î»Ğ¡Êı")]
+        [Comment("é‡‘é¢ï¼ˆä¸¤ä½å°æ•°ï¼‰")]
         [Precision(18, 2)]
         public decimal Amount { get; set; }
 
         /// <summary>
-        /// ÉóºËÊ±¼ä¡£Îª¿ÕÔò±íÊ¾Î´ÉóºË¡£ÉóºËÍ¨¹ıºóÌîĞ´ÉóºËÊ±¼ä¡£ÔÚÉóÅúÁ÷×ªÖĞ²»¿ÉĞŞ¸Ä¡£
+        /// å®¡æ ¸æ—¶é—´ã€‚ä¸ºç©ºè¡¨ç¤ºæœªå®¡æ ¸ã€‚ä¸€èˆ¬é€šè¿‡åå°å¡«å†™å®¡æ ¸æ—¶é—´ã€‚æ•°æ®åº“è¿ç§»åä¸å¯ä¿®æ”¹ã€‚
         /// </summary>
-        [Comment("ÉóºËÊ±¼ä¡£Îª¿ÕÔò±íÊ¾Î´ÉóºË¡£ÉóºËÍ¨¹ıºóÌîĞ´ÉóºËÊ±¼ä¡£")]
+        [Comment("å®¡æ ¸æ—¶é—´ã€‚ä¸ºç©ºè¡¨ç¤ºæœªå®¡æ ¸ã€‚ä¸€èˆ¬é€šè¿‡åå°å¡«å†™å®¡æ ¸æ—¶é—´")]
         [Precision(3)]
         public DateTime? AuditDateTime { get; set; }
 
         /// <summary>
-        /// ÉóºË²Ù×÷ÕßId¡£Îª¿ÕÔò±íÊ¾Î´ÉóºË¡£ÔÚÉóÅúÁ÷×ªÖĞ²»¿ÉĞŞ¸Ä¡£
+        /// å®¡æ ¸æ“ä½œå‘˜Idã€‚ä¸ºç©ºè¡¨ç¤ºæœªå®¡æ ¸ã€‚æ•°æ®åº“è¿ç§»åä¸å¯ä¿®æ”¹ã€‚
         /// </summary>
-        [Comment("ÉóºË²Ù×÷ÕßId¡£Îª¿ÕÔò±íÊ¾Î´ÉóºË¡£")]
+        [Comment("å®¡æ ¸æ“ä½œå‘˜Idã€‚ä¸ºç©ºè¡¨ç¤ºæœªå®¡æ ¸")]
         public Guid? AuditOperatorId { get; set; }
 
         #region ICreatorInfo
 
         /// <summary>
-        /// ´´½¨ÕßId¡£µÇ¼ÇÈËId¡£Ö÷¶¯ÉêÇëÊ±£¬µÇ¼ÇÈË=ÉêÇëÈË£¨ÉêÇëÈË¡¢µÇ¼ÇÈË²»¿ÉÑ¡Ôñ£¬ÎªµÇÂ¼ÈË£©£¬²ÆÎñ°ïµÇ¼ÇÊ±Ñ¡ÔñÉêÇëÈË£¬µÇ¼ÇÈËÎªµÇÂ¼ÈË¡£
+        /// åˆ›å»ºè€…Idï¼ˆå³ç™»è®°äººIdï¼‰ã€‚ç”³è¯·äººç”³è¯·æ—¶ï¼Œè®°å½•äºº=ç”³è¯·äººï¼ˆç”³è¯·äººï¼‰ï¼›ç™»è®°äººä¸é€‰æ‹©ä¸ºç”³è¯·äººï¼Œç”³è¯·æ—¶ç™»è®°äººé€‰æ‹©ç”³è¯·äººï¼Œç™»è®°äººä¸ºç”³è¯·äººã€‚
         /// </summary>
-        [Comment("´´½¨ÕßId£¬¼´µÇ¼ÇÈËId")]
+        [Comment("åˆ›å»ºè€…Idï¼ˆå³ç™»è®°äººIdï¼‰")]
         public Guid? CreateBy { get; set; }
 
         /// <summary>
-        /// ´´½¨Ê±¼ä¡£
+        /// åˆ›å»ºæ—¶é—´ï¼ˆå³ç”³è¯·æ—¶é—´ï¼‰ã€‚ç³»ç»Ÿè‡ªåŠ¨è®°å½•ç”³è¯·å•çš„åˆ›å»ºæ—¶é—´ä½œä¸ºç”³è¯·æ—¶é—´ã€‚
         /// </summary>
-        [Comment("´´½¨µÄÊ±¼ä")]
+        [Comment("åˆ›å»ºæ—¶é—´ï¼ˆå³ç”³è¯·æ—¶é—´ï¼‰")]
         [Precision(3)]
         public DateTime CreateDateTime { get; set; }
 
@@ -179,15 +172,15 @@ namespace PowerLms.Data.OA
     }
 
     /// <summary>
-    /// OA·ÑÓÃÉêÇëµ¥Ã÷Ï¸±í¡£
-    /// ´Ë±íÓÉ²ÆÎñÈËÔ±ÌîĞ´£¬ÓÃÓÚ×¨Òµ²ğ·Ö·ÑÓÃ¡£Ö§³Ö¶àÌõÃ÷Ï¸¼ÇÂ¼¡£
+    /// OAè´¹ç”¨ç”³è¯·å•æ˜ç»†è¡¨ã€‚
+    /// æ­¤è¡¨ç”±è´¢åŠ¡äººå‘˜å¡«å†™ï¼Œç”¨äºä¸“ä¸šæ‹†åˆ†è´¹ç”¨ã€‚æ”¯æŒå¤šæ¡æ˜ç»†è®°å½•ã€‚
     /// </summary>
-    [Comment("OA·ÑÓÃÉêÇëµ¥Ã÷Ï¸±í")]
+    [Comment("OAè´¹ç”¨ç”³è¯·å•æ˜ç»†è¡¨")]
     [Index(nameof(ParentId), IsUnique = false)]
     public class OaExpenseRequisitionItem : GuidKeyObjectBase
     {
         /// <summary>
-        /// ¹¹Ôìº¯Êı¡£
+        /// æ„é€ å‡½æ•°ã€‚
         /// </summary>
         public OaExpenseRequisitionItem()
         {
@@ -195,201 +188,201 @@ namespace PowerLms.Data.OA
         }
 
         /// <summary>
-        /// ÉêÇëµ¥Id¡£ËùÊôÉêÇëµ¥Id£¬¹ØÁªµ½ <see cref="OaExpenseRequisition"/> µÄId¡£
+        /// ç”³è¯·å•Idã€‚æ‰€å±ç”³è¯·å•Idï¼Œå…³è”åˆ° <see cref="OaExpenseRequisition"/> çš„Idã€‚
         /// </summary>
-        [Comment("ÉêÇëµ¥Id£¬ËùÊôÉêÇëµ¥Id£¬¹ØÁªµ½OaExpenseRequisitionµÄId")]
+        [Comment("ç”³è¯·å•Idï¼Œæ‰€å±ç”³è¯·å•Idï¼Œå…³è”åˆ°OaExpenseRequisitionçš„Id")]
         public Guid? ParentId { get; set; }
 
         /// <summary>
-        /// ĞòºÅ¡£ÓÃÓÚÃ÷Ï¸±íµÄÅÅĞòÏÔÊ¾¡£
+        /// åºå·ã€‚ç”¨äºæ˜ç»†è¡¨çš„æ’åºæ˜¾ç¤ºã€‚
         /// </summary>
-        [Comment("ĞòºÅ£¬ÓÃÓÚÃ÷Ï¸±íµÄÅÅĞòÏÔÊ¾")]
+        [Comment("åºå·ï¼Œç”¨äºæ˜ç»†è¡¨çš„æ’åºæ˜¾ç¤º")]
         public int SequenceNumber { get; set; }
 
         /// <summary>
-        /// ½áËãÊ±¼ä¡£²ÆÎñÈËÔ±´¦ÀíÊ±µÄ½áËãÊ±¼ä£¬¿É¿ØÖÆÆ¾Ö¤ÆÚ¼ä¡£
+        /// ç»“ç®—æ—¶é—´ã€‚è´¢åŠ¡äººå‘˜å¤„ç†æ—¶çš„ç»“ç®—æ—¶é—´ï¼Œå¯æ§åˆ¶å‡­è¯æœŸé—´ã€‚
         /// </summary>
-        [Comment("½áËãÊ±¼ä£¬²ÆÎñÈËÔ±´¦ÀíÊ±µÄ½áËãÊ±¼ä£¬¿É¿ØÖÆÆ¾Ö¤ÆÚ¼ä")]
+        [Comment("ç»“ç®—æ—¶é—´ï¼Œè´¢åŠ¡äººå‘˜å¤„ç†æ—¶çš„ç»“ç®—æ—¶é—´ï¼Œå¯æ§åˆ¶å‡­è¯æœŸé—´")]
         public DateTime SettlementDateTime { get; set; }
 
         /// <summary>
-        /// ½áËãÕËºÅId¡£¹ØÁªµ½ <see cref="BankInfo"/> µÄId£¬Í³Ò»µÄÕËºÅÑ¡Ôñ¡£
+        /// ç»“ç®—è´¦å·Idã€‚å…³è”åˆ° <see cref="BankInfo"/> çš„Idï¼Œç»Ÿä¸€çš„è´¦å·é€‰æ‹©ã€‚
         /// </summary>
-        [Comment("½áËãÕËºÅId£¬¹ØÁªµ½BankInfoµÄId£¬Í³Ò»µÄÕËºÅÑ¡Ôñ")]
+        [Comment("ç»“ç®—è´¦å·Idï¼Œå…³è”åˆ°BankInfoçš„Idï¼Œç»Ÿä¸€çš„è´¦å·é€‰æ‹©")]
         public Guid? SettlementAccountId { get; set; }
 
         /// <summary>
-        /// ÈÕ³£·ÑÓÃÖÖÀàId¡£¹ØÁªµ½ <see cref="DailyFeesType"/> µÄId£¬²ÆÎñÑ¡ÔñÕıÈ·µÄ·ÑÓÃÖÖÀà¡£
+        /// æ—¥å¸¸è´¹ç”¨ç§ç±»Idã€‚å…³è”åˆ° <see cref="DailyFeesType"/> çš„Idï¼Œè´¢åŠ¡é€‰æ‹©æ­£ç¡®çš„è´¹ç”¨ç§ç±»ã€‚
         /// </summary>
-        [Comment("ÈÕ³£·ÑÓÃÖÖÀàId£¬¹ØÁªµ½DailyFeesTypeµÄId£¬²ÆÎñÑ¡ÔñÕıÈ·µÄ·ÑÓÃÖÖÀà")]
+        [Comment("æ—¥å¸¸è´¹ç”¨ç§ç±»Idï¼Œå…³è”åˆ°DailyFeesTypeçš„Idï¼Œè´¢åŠ¡é€‰æ‹©æ­£ç¡®çš„è´¹ç”¨ç§ç±»")]
         public Guid? DailyFeesTypeId { get; set; }
 
         /// <summary>
-        /// ½ğ¶î¡£´ËÃ÷Ï¸ÏîµÄ½ğ¶î£¬Á½Î»Ğ¡Êı¡£
+        /// é‡‘é¢ã€‚æ­¤æ˜ç»†é¡¹çš„é‡‘é¢ï¼Œä¸¤ä½å°æ•°ã€‚
         /// </summary>
-        [Comment("½ğ¶î£¬´ËÃ÷Ï¸ÏîµÄ½ğ¶î£¬Á½Î»Ğ¡Êı")]
+        [Comment("é‡‘é¢ï¼Œæ­¤æ˜ç»†é¡¹çš„é‡‘é¢ï¼Œä¸¤ä½å°æ•°")]
         [Precision(18, 2)]
         public decimal Amount { get; set; }
 
         /// <summary>
-        /// Ô±¹¤Id¡£·ÑÓÃ¿ÉÄÜºËËãµ½²»Í¬Ô±¹¤ÃûÏÂ£¨·Ç½öÉêÇëÈË£©£¬¹ØÁªµ½ <see cref="Account"/> µÄId¡£
+        /// å‘˜å·¥Idã€‚è´¹ç”¨å¯èƒ½æ ¸ç®—åˆ°ä¸åŒå‘˜å·¥åä¸‹ï¼ˆéä»…ç”³è¯·äººï¼‰ï¼Œå…³è”åˆ° <see cref="Account"/> çš„Idã€‚
         /// </summary>
-        [Comment("Ô±¹¤Id£¬·ÑÓÃ¿ÉÄÜºËËãµ½²»Í¬Ô±¹¤ÃûÏÂ£¬¹ØÁªµ½AccountµÄId")]
+        [Comment("å‘˜å·¥Idï¼Œè´¹ç”¨å¯èƒ½æ ¸ç®—åˆ°ä¸åŒå‘˜å·¥åä¸‹ï¼Œå…³è”åˆ°Accountçš„Id")]
         public Guid? EmployeeId { get; set; }
 
         /// <summary>
-        /// ²ÆÎñ²¿ÃÅId¡£¹ØÁª¼òµ¥×Öµäfinance-departÀàĞÍ£¬ÓÃÓÚ½ğµûºËËã²¿ÃÅ£¨²»´ú±íÕæÊµµÄ×éÖ¯¼Ü¹¹£©¡£
+        /// è´¢åŠ¡éƒ¨é—¨Idã€‚å…³è”ç®€å•å­—å…¸finance-departç±»å‹ï¼Œç”¨äºé‡‘è¶æ ¸ç®—éƒ¨é—¨ï¼ˆä¸ä»£è¡¨çœŸå®çš„ç»„ç»‡æ¶æ„ï¼‰ã€‚
         /// 
-        /// ±³¾°£º²ÆÎñºËËãĞèÒªµÄ²¿ÃÅ¸ÅÄîÓëÊµ¼ÊµÄ×éÖ¯¼Ü¹¹²¿ÃÅ¿ÉÄÜ²»Í¬£¬²ÆÎñ²¿ÃÅÊÇĞéÄâµÄºËËãÎ¬¶È¡£
-        /// Éè¼Æ£º¹ØÁªSimpleDataDicµÄfinance-departÀàĞÍ×Öµä£¬ÓÉÓÃ»§ÊÖ¹¤´´½¨ºÍÎ¬»¤²ÆÎñ²¿ÃÅÊı¾İ¡£
-        /// ÓÃÍ¾£ºÔÚÉú³É½ğµûÆ¾Ö¤Ê±Ìá¹©²¿ÃÅºËËãĞÅÏ¢£¬Ö§³Ö·ÑÓÃµÄ²¿ÃÅÎ¬¶È·ÖÌ¯ºÍÍ³¼Æ¡£
+        /// èƒŒæ™¯ï¼šè´¢åŠ¡æ ¸ç®—éœ€è¦çš„éƒ¨é—¨æ¦‚å¿µä¸å®é™…çš„ç»„ç»‡æ¶æ„éƒ¨é—¨å¯èƒ½ä¸åŒï¼Œè´¢åŠ¡éƒ¨é—¨æ˜¯è™šæ‹Ÿçš„æ ¸ç®—ç»´åº¦ã€‚
+        /// è®¾è®¡ï¼šå…³è”SimpleDataDicçš„finance-departç±»å‹å­—å…¸ï¼Œç”±ç”¨æˆ·æ‰‹å·¥åˆ›å»ºå’Œç»´æŠ¤è´¢åŠ¡éƒ¨é—¨æ•°æ®ã€‚
+        /// ç”¨é€”ï¼šåœ¨ç”Ÿæˆé‡‘è¶å‡­è¯æ—¶æä¾›éƒ¨é—¨æ ¸ç®—ä¿¡æ¯ï¼Œæ”¯æŒè´¹ç”¨çš„éƒ¨é—¨ç»´åº¦åˆ†æ‘Šå’Œç»Ÿè®¡ã€‚
         /// </summary>
-        [Comment("²ÆÎñ²¿ÃÅId¡£¹ØÁª¼òµ¥×Öµäfinance-departÀàĞÍ£¬ÓÃÓÚ½ğµûºËËã²¿ÃÅ")]
+        [Comment("è´¢åŠ¡éƒ¨é—¨Idã€‚å…³è”ç®€å•å­—å…¸finance-departç±»å‹ï¼Œç”¨äºé‡‘è¶æ ¸ç®—éƒ¨é—¨")]
         public Guid? DepartmentId { get; set; }
 
         /// <summary>
-        /// Æ¾Ö¤ºÅ¡£ºóÌ¨×Ô¶¯Éú³É£¬¸ñÊ½£ºÆÚ¼ä-Æ¾Ö¤×Ö-ĞòºÅ£¨Èç£º7-Òø-1£©¡£
+        /// å‡­è¯å·ã€‚åå°è‡ªåŠ¨ç”Ÿæˆï¼Œæ ¼å¼ï¼šæœŸé—´-å‡­è¯å­—-åºå·ï¼ˆå¦‚ï¼š7-é“¶-1ï¼‰ã€‚
         /// </summary>
-        [Comment("Æ¾Ö¤ºÅ£¬ºóÌ¨×Ô¶¯Éú³É£¬¸ñÊ½£ºÆÚ¼ä-Æ¾Ö¤×Ö-ĞòºÅ")]
+        [Comment("å‡­è¯å·ï¼Œåå°è‡ªåŠ¨ç”Ÿæˆï¼Œæ ¼å¼ï¼šæœŸé—´-å‡­è¯å­—-åºå·")]
         [MaxLength(32)]
         public string VoucherNumber { get; set; }
 
         /// <summary>
-        /// ÕªÒª¡£²ÆÎñÌîĞ´µÄ·ÑÓÃÕªÒªËµÃ÷£¬Èç"Çë¿Í³Ô·¹"¡£
+        /// æ‘˜è¦ã€‚è´¢åŠ¡å¡«å†™çš„è´¹ç”¨æ‘˜è¦è¯´æ˜ï¼Œå¦‚"è¯·å®¢åƒé¥­"ã€‚
         /// </summary>
-        [Comment("ÕªÒª£¬²ÆÎñÌîĞ´µÄ·ÑÓÃÕªÒªËµÃ÷")]
+        [Comment("æ‘˜è¦ï¼Œè´¢åŠ¡å¡«å†™çš„è´¹ç”¨æ‘˜è¦è¯´æ˜")]
         [MaxLength(256)]
         public string Summary { get; set; }
 
         /// <summary>
-        /// ·¢Æ±ºÅ¡£
+        /// å‘ç¥¨å·ã€‚
         /// </summary>
-        [Comment("·¢Æ±ºÅ")]
+        [Comment("å‘ç¥¨å·")]
         [MaxLength(64)]
         public string InvoiceNumber { get; set; }
 
         /// <summary>
-        /// ±¸×¢¡£
+        /// å¤‡æ³¨ã€‚
         /// </summary>
-        [Comment("±¸×¢")]
+        [Comment("å¤‡æ³¨")]
         [MaxLength(512)]
         public string Remark { get; set; }
     }
 
     /// <summary>
-    /// OA·ÑÓÃÉêÇëµ¥À©Õ¹·½·¨¡£
+    /// OAè´¹ç”¨ç”³è¯·å•æ‰©å±•æ–¹æ³•ã€‚
     /// </summary>
     public static class OaExpenseRequisitionExtensions
     {
         /// <summary>
-        /// »ñÈ¡ÉêÇëµ¥µÄ·ÑÓÃÃ÷Ï¸Ïî¡£
+        /// è·å–ç”³è¯·å•çš„è´¹ç”¨æ˜ç»†é¡¹ã€‚
         /// </summary>
-        /// <param name="requisition">ÉêÇëµ¥</param>
-        /// <param name="context">Êı¾İ¿âÉÏÏÂÎÄ</param>
-        /// <returns>·ÑÓÃÃ÷Ï¸Ïî²éÑ¯</returns>
+        /// <param name="requisition">ç”³è¯·å•</param>
+        /// <param name="context">æ•°æ®åº“ä¸Šä¸‹æ–‡</param>
+        /// <returns>è´¹ç”¨æ˜ç»†é¡¹æŸ¥è¯¢</returns>
         public static IQueryable<OaExpenseRequisitionItem> GetItems(this OaExpenseRequisition requisition, DbContext context)
         {
             return context.Set<OaExpenseRequisitionItem>().Where(x => x.ParentId == requisition.Id);
         }
 
         /// <summary>
-        /// »ñÈ¡ÉêÇëÈËĞÅÏ¢¡£
+        /// è·å–ç”³è¯·äººä¿¡æ¯ã€‚
         /// </summary>
-        /// <param name="requisition">ÉêÇëµ¥</param>
-        /// <param name="context">Êı¾İ¿âÉÏÏÂÎÄ</param>
-        /// <returns>ÉêÇëÈËÕËºÅ¶ÔÏó</returns>
+        /// <param name="requisition">ç”³è¯·å•</param>
+        /// <param name="context">æ•°æ®åº“ä¸Šä¸‹æ–‡</param>
+        /// <returns>ç”³è¯·äººè´¦å·å¯¹è±¡</returns>
         public static Account GetApplicant(this OaExpenseRequisition requisition, DbContext context)
         {
             return requisition.ApplicantId.HasValue ? context.Set<Account>().Find(requisition.ApplicantId.Value) : null;
         }
 
         /// <summary>
-        /// »ñÈ¡µÇ¼ÇÈËĞÅÏ¢¡£CreateBy¾ÍÊÇµÇ¼ÇÈËId¡£
+        /// è·å–ç™»è®°äººä¿¡æ¯ã€‚CreateByå°±æ˜¯ç™»è®°äººIdã€‚
         /// </summary>
-        /// <param name="requisition">ÉêÇëµ¥</param>
-        /// <param name="context">Êı¾İ¿âÉÏÏÂÎÄ</param>
-        /// <returns>µÇ¼ÇÈËÕËºÅ¶ÔÏó</returns>
+        /// <param name="requisition">ç”³è¯·å•</param>
+        /// <param name="context">æ•°æ®åº“ä¸Šä¸‹æ–‡</param>
+        /// <returns>ç™»è®°äººè´¦å·å¯¹è±¡</returns>
         public static Account GetRegistrar(this OaExpenseRequisition requisition, DbContext context)
         {
             return requisition.CreateBy.HasValue ? context.Set<Account>().Find(requisition.CreateBy.Value) : null;
         }
 
         /// <summary>
-        /// »ñÈ¡ÉóºËÈËĞÅÏ¢¡£
+        /// è·å–å®¡æ ¸äººä¿¡æ¯ã€‚
         /// </summary>
-        /// <param name="requisition">ÉêÇëµ¥</param>
-        /// <param name="context">Êı¾İ¿âÉÏÏÂÎÄ</param>
-        /// <returns>ÉóºËÈËÕËºÅ¶ÔÏó</returns>
+        /// <param name="requisition">ç”³è¯·å•</param>
+        /// <param name="context">æ•°æ®åº“ä¸Šä¸‹æ–‡</param>
+        /// <returns>å®¡æ ¸äººè´¦å·å¯¹è±¡</returns>
         public static Account GetAuditor(this OaExpenseRequisition requisition, DbContext context)
         {
             return requisition.AuditOperatorId.HasValue ? context.Set<Account>().Find(requisition.AuditOperatorId.Value) : null;
         }
 
         /// <summary>
-        /// ÅĞ¶ÏÉêÇëµ¥ÊÇ·ñ¿ÉÒÔ±à¼­¡£ÒÑÉóºËµÄÉêÇëµ¥²»¿É±à¼­¡£
+        /// åˆ¤æ–­ç”³è¯·å•æ˜¯å¦å¯ä»¥ç¼–è¾‘ã€‚å·²å®¡æ ¸çš„ç”³è¯·å•ä¸å¯ç¼–è¾‘ã€‚
         /// </summary>
-        /// <param name="requisition">ÉêÇëµ¥</param>
-        /// <param name="context">Êı¾İ¿âÉÏÏÂÎÄ£¨¿ÉÑ¡£©</param>
-        /// <returns>¿ÉÒÔ±à¼­·µ»Øtrue£¬·ñÔò·µ»Øfalse</returns>
+        /// <param name="requisition">ç”³è¯·å•</param>
+        /// <param name="context">æ•°æ®åº“ä¸Šä¸‹æ–‡ï¼ˆå¯é€‰ï¼‰</param>
+        /// <returns>å¯ä»¥ç¼–è¾‘è¿”å›trueï¼Œå¦åˆ™è¿”å›false</returns>
         public static bool CanEdit(this OaExpenseRequisition requisition, DbContext context = null)
         {
-            return !requisition.AuditDateTime.HasValue; // Î´ÉóºËµÄ¿ÉÒÔ±à¼­
+            return !requisition.AuditDateTime.HasValue; // æœªå®¡æ ¸çš„å¯ä»¥ç¼–è¾‘
         }
 
         /// <summary>
-        /// ÅĞ¶ÏÉêÇëµ¥ÊÇ·ñÒÑÉóºË¡£
+        /// åˆ¤æ–­ç”³è¯·å•æ˜¯å¦å·²å®¡æ ¸ã€‚
         /// </summary>
-        /// <param name="requisition">ÉêÇëµ¥</param>
-        /// <returns>ÒÑÉóºË·µ»Øtrue£¬·ñÔò·µ»Øfalse</returns>
+        /// <param name="requisition">ç”³è¯·å•</param>
+        /// <returns>å·²å®¡æ ¸è¿”å›trueï¼Œå¦åˆ™è¿”å›false</returns>
         public static bool IsAudited(this OaExpenseRequisition requisition)
         {
             return requisition.AuditDateTime.HasValue;
         }
 
         /// <summary>
-        /// »ñÈ¡ÉêÇëµ¥µÄÉóÅú×´Ì¬¡£
+        /// è·å–ç”³è¯·å•çš„å®¡æ‰¹çŠ¶æ€ã€‚
         /// </summary>
-        /// <param name="requisition">ÉêÇëµ¥</param>
-        /// <param name="context">Êı¾İ¿âÉÏÏÂÎÄ</param>
-        /// <returns>ÉóÅú×´Ì¬ÃèÊö</returns>
+        /// <param name="requisition">ç”³è¯·å•</param>
+        /// <param name="context">æ•°æ®åº“ä¸Šä¸‹æ–‡</param>
+        /// <returns>å®¡æ‰¹çŠ¶æ€æè¿°</returns>
         public static string GetApprovalStatus(this OaExpenseRequisition requisition, DbContext context = null)
         {
-            return requisition.AuditDateTime.HasValue ? "ÒÑÉóºË" : "²İ¸å";
+            return requisition.AuditDateTime.HasValue ? "å·²å®¡æ ¸" : "è‰ç¨¿";
         }
 
         /// <summary>
-        /// »ñÈ¡ÊÕÖ§ÀàĞÍµÄÏÔÊ¾Ãû³Æ¡£
+        /// è·å–æ”¶æ”¯ç±»å‹çš„æ˜¾ç¤ºåç§°ã€‚
         /// </summary>
-        /// <param name="requisition">ÉêÇëµ¥</param>
-        /// <returns>ÊÕÖ§ÀàĞÍÏÔÊ¾Ãû³Æ</returns>
+        /// <param name="requisition">ç”³è¯·å•</param>
+        /// <returns>æ”¶æ”¯ç±»å‹æ˜¾ç¤ºåç§°</returns>
         public static string GetIncomeExpenseTypeDisplayName(this OaExpenseRequisition requisition)
         {
             return requisition.IncomeExpenseType switch
             {
-                Data.OA.IncomeExpenseType.Income => "ÊÕ¿î",
-                Data.OA.IncomeExpenseType.Expense => "¸¶¿î",
-                _ => "Î´ÉèÖÃ"
+                Data.OA.IncomeExpenseType.Income => "æ”¶æ¬¾",
+                Data.OA.IncomeExpenseType.Expense => "ä»˜æ¬¾",
+                _ => "æœªè®¾ç½®"
             };
         }
 
         /// <summary>
-        /// ÑéÖ¤Ã÷Ï¸½ğ¶îºÏ¼ÆÊÇ·ñÓëÖ÷µ¥½ğ¶îÒ»ÖÂ¡£
+        /// éªŒè¯æ˜ç»†é‡‘é¢åˆè®¡æ˜¯å¦ä¸ä¸»å•é‡‘é¢ä¸€è‡´ã€‚
         /// </summary>
-        /// <param name="requisition">ÉêÇëµ¥</param>
-        /// <param name="context">Êı¾İ¿âÉÏÏÂÎÄ</param>
-        /// <returns>½ğ¶îÒ»ÖÂ·µ»Øtrue£¬·ñÔò·µ»Øfalse</returns>
+        /// <param name="requisition">ç”³è¯·å•</param>
+        /// <param name="context">æ•°æ®åº“ä¸Šä¸‹æ–‡</param>
+        /// <returns>é‡‘é¢ä¸€è‡´è¿”å›trueï¼Œå¦åˆ™è¿”å›false</returns>
         public static bool ValidateAmountConsistency(this OaExpenseRequisition requisition, DbContext context)
         {
             var itemsSum = requisition.GetItems(context).Sum(x => x.Amount);
-            return Math.Abs(itemsSum - requisition.Amount) < 0.01m; // ÔÊĞí0.01µÄÎó²î
+            return Math.Abs(itemsSum - requisition.Amount) < 0.01m; // å…è®¸0.01çš„è¯¯å·®
         }
 
         /// <summary>
-        /// »ñÈ¡Ã÷Ï¸½ğ¶îºÏ¼Æ¡£
+        /// è·å–æ˜ç»†é‡‘é¢åˆè®¡ã€‚
         /// </summary>
-        /// <param name="requisition">ÉêÇëµ¥</param>
-        /// <param name="context">Êı¾İ¿âÉÏÏÂÎÄ</param>
-        /// <returns>Ã÷Ï¸½ğ¶îºÏ¼Æ</returns>
+        /// <param name="requisition">ç”³è¯·å•</param>
+        /// <param name="context">æ•°æ®åº“ä¸Šä¸‹æ–‡</param>
+        /// <returns>æ˜ç»†é‡‘é¢åˆè®¡</returns>
         public static decimal GetItemsAmountSum(this OaExpenseRequisition requisition, DbContext context)
         {
             return requisition.GetItems(context).Sum(x => x.Amount);
@@ -397,49 +390,49 @@ namespace PowerLms.Data.OA
     }
 
     /// <summary>
-    /// OA·ÑÓÃÉêÇëµ¥Ã÷Ï¸À©Õ¹·½·¨¡£
+    /// OAè´¹ç”¨ç”³è¯·å•æ˜ç»†æ‰©å±•æ–¹æ³•ã€‚
     /// </summary>
     public static class OaExpenseRequisitionItemExtensions
     {
         /// <summary>
-        /// »ñÈ¡Ã÷Ï¸ÏîµÄ½áËãÕËºÅĞÅÏ¢¡£
+        /// è·å–æ˜ç»†é¡¹çš„ç»“ç®—è´¦å·ä¿¡æ¯ã€‚
         /// </summary>
-        /// <param name="item">Ã÷Ï¸Ïî</param>
-        /// <param name="context">Êı¾İ¿âÉÏÏÂÎÄ</param>
-        /// <returns>½áËãÕËºÅĞÅÏ¢</returns>
+        /// <param name="item">æ˜ç»†é¡¹</param>
+        /// <param name="context">æ•°æ®åº“ä¸Šä¸‹æ–‡</param>
+        /// <returns>ç»“ç®—è´¦å·ä¿¡æ¯</returns>
         public static BankInfo GetSettlementAccount(this OaExpenseRequisitionItem item, DbContext context)
         {
             return item.SettlementAccountId.HasValue ? context.Set<BankInfo>().Find(item.SettlementAccountId.Value) : null;
         }
 
         /// <summary>
-        /// »ñÈ¡Ã÷Ï¸ÏîµÄ·ÑÓÃÖÖÀàĞÅÏ¢¡£
+        /// è·å–æ˜ç»†é¡¹çš„è´¹ç”¨ç§ç±»ä¿¡æ¯ã€‚
         /// </summary>
-        /// <param name="item">Ã÷Ï¸Ïî</param>
-        /// <param name="context">Êı¾İ¿âÉÏÏÂÎÄ</param>
-        /// <returns>·ÑÓÃÖÖÀàĞÅÏ¢</returns>
+        /// <param name="item">æ˜ç»†é¡¹</param>
+        /// <param name="context">æ•°æ®åº“ä¸Šä¸‹æ–‡</param>
+        /// <returns>è´¹ç”¨ç§ç±»ä¿¡æ¯</returns>
         public static DailyFeesType GetDailyFeesType(this OaExpenseRequisitionItem item, DbContext context)
         {
             return item.DailyFeesTypeId.HasValue ? context.Set<DailyFeesType>().Find(item.DailyFeesTypeId.Value) : null;
         }
 
         /// <summary>
-        /// »ñÈ¡Ã÷Ï¸ÏîµÄÔ±¹¤ĞÅÏ¢¡£
+        /// è·å–æ˜ç»†é¡¹çš„å‘˜å·¥ä¿¡æ¯ã€‚
         /// </summary>
-        /// <param name="item">Ã÷Ï¸Ïî</param>
-        /// <param name="context">Êı¾İ¿âÉÏÏÂÎÄ</param>
-        /// <returns>Ô±¹¤ĞÅÏ¢</returns>
+        /// <param name="item">æ˜ç»†é¡¹</param>
+        /// <param name="context">æ•°æ®åº“ä¸Šä¸‹æ–‡</param>
+        /// <returns>å‘˜å·¥ä¿¡æ¯</returns>
         public static Account GetEmployee(this OaExpenseRequisitionItem item, DbContext context)
         {
             return item.EmployeeId.HasValue ? context.Set<Account>().Find(item.EmployeeId.Value) : null;
         }
 
         /// <summary>
-        /// »ñÈ¡Ã÷Ï¸ÏîµÄ²ÆÎñ²¿ÃÅĞÅÏ¢¡£
+        /// è·å–æ˜ç»†é¡¹çš„è´¢åŠ¡éƒ¨é—¨ä¿¡æ¯ã€‚
         /// </summary>
-        /// <param name="item">Ã÷Ï¸Ïî</param>
-        /// <param name="context">Êı¾İ¿âÉÏÏÂÎÄ</param>
-        /// <returns>²ÆÎñ²¿ÃÅĞÅÏ¢</returns>
+        /// <param name="item">æ˜ç»†é¡¹</param>
+        /// <param name="context">æ•°æ®åº“ä¸Šä¸‹æ–‡</param>
+        /// <returns>è´¢åŠ¡éƒ¨é—¨ä¿¡æ¯</returns>
         public static SimpleDataDic GetFinanceDepartment(this OaExpenseRequisitionItem item, DbContext context)
         {
             return item.DepartmentId.HasValue ? context.Set<SimpleDataDic>().Find(item.DepartmentId.Value) : null;

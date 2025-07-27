@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+ï»¿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OW.Data;
 using PowerLms.Data;
@@ -15,8 +15,8 @@ using System.Linq;
 namespace PowerLmsWebApi.Controllers
 {
     /// <summary>
-    /// OA·ÑÓÃÉêÇëµ¥¿ØÖÆÆ÷¡£
-    /// ´¦ÀíOAÈÕ³£·ÑÓÃÉêÇëµ¥µÄÔöÉ¾¸Ä²é²Ù×÷¡£
+    /// OAè´¹ç”¨ç”³è¯·å•æ§åˆ¶å™¨ã€‚
+    /// å¤„ç†OAæ—¥å¸¸è´¹ç”¨ç”³è¯·å•çš„å¢åˆ æ”¹æŸ¥æ“ä½œã€‚
     /// </summary>
     public partial class OaExpenseController : PlControllerBase
     {
@@ -29,7 +29,7 @@ namespace PowerLmsWebApi.Controllers
         private readonly IMapper _Mapper;
 
         /// <summary>
-        /// ¹¹Ôìº¯Êı¡£
+        /// æ„é€ å‡½æ•°ã€‚
         /// </summary>
         public OaExpenseController(PowerLmsUserDbContext dbContext, 
             IServiceProvider serviceProvider, 
@@ -48,19 +48,19 @@ namespace PowerLmsWebApi.Controllers
             _Mapper = mapper;
         }
 
-        #region OA·ÑÓÃÉêÇëµ¥Ö÷±í²Ù×÷
+        #region OAè´¹ç”¨ç”³è¯·å•ä¸»è¡¨æ“ä½œ
 
         /// <summary>
-        /// »ñÈ¡ËùÓĞOA·ÑÓÃÉêÇëµ¥¡£
+        /// è·å–æ‰€æœ‰OAè´¹ç”¨ç”³è¯·å•ã€‚
         /// </summary>
-        /// <param name="model">·ÖÒ³ºÍ²éÑ¯²ÎÊı</param>
-        /// <param name="conditional">²éÑ¯µÄÌõ¼ş¡£ÊµÌåÊôĞÔÃû²»Çø·Ö´óĞ¡Ğ´¡£
-        /// Í¨ÓÃÌõ¼şĞ´·¨:ËùÓĞÌõ¼ş¶¼ÊÇ×Ö·û´®£¬¶ÔÇø¼äµÄĞ´·¨ÊÇÓÃ¶ººÅ·Ö¸ô£¨×Ö·û´®ÀàĞÍÔİÊ±²»Ö§³ÖÇø¼äÇÒ¶¼ÊÇÄ£ºı²éÑ¯£©Èç"2024-1-1,2024-1-2"¡£
-        /// ¶ÔÇ¿ÖÆÈ¡nullµÄÔ¼Êø£¬ÔòĞ´"null"¡£</param>
-        /// <returns>OA·ÑÓÃÉêÇëµ¥ÁĞ±í</returns>
-        /// <response code="200">Î´·¢ÉúÏµÍ³¼¶´íÎó¡£µ«¿ÉÄÜ³öÏÖÓ¦ÓÃ´íÎó£¬¾ßÌå²Î¼û HasError ºÍ ErrorCode¡£</response>
-        /// <response code="401">ÎŞĞ§ÁîÅÆ¡£</response>
-        /// <response code="403">È¨ÏŞ²»×ã¡£</response>
+        /// <param name="model">åˆ†é¡µå’ŒæŸ¥è¯¢å‚æ•°</param>
+        /// <param name="conditional">æŸ¥è¯¢çš„æ¡ä»¶ã€‚å®ä½“å±æ€§åä¸åŒºåˆ†å¤§å°å†™ã€‚
+        /// é€šç”¨æ¡ä»¶å†™æ³•:æ‰€æœ‰æ¡ä»¶éƒ½æ˜¯å­—ç¬¦ä¸²ï¼Œå¯¹åŒºé—´çš„å†™æ³•æ˜¯ç”¨é€—å·åˆ†éš”ï¼ˆå­—ç¬¦ä¸²ç±»å‹æš‚æ—¶ä¸æ”¯æŒåŒºé—´ä¸”éƒ½æ˜¯æ¨¡ç³ŠæŸ¥è¯¢ï¼‰å¦‚"2024-1-1,2024-1-2"ã€‚
+        /// å¯¹å¼ºåˆ¶å–nullçš„çº¦æŸï¼Œåˆ™å†™"null"ã€‚</param>
+        /// <returns>OAè´¹ç”¨ç”³è¯·å•åˆ—è¡¨</returns>
+        /// <response code="200">æœªå‘ç”Ÿç³»ç»Ÿçº§é”™è¯¯ã€‚ä½†å¯èƒ½å‡ºç°åº”ç”¨é”™è¯¯ï¼Œå…·ä½“å‚è§ HasError å’Œ ErrorCodeã€‚</response>
+        /// <response code="401">æ— æ•ˆä»¤ç‰Œã€‚</response>
+        /// <response code="403">æƒé™ä¸è¶³ã€‚</response>
         [HttpGet]
         public ActionResult<GetAllOaExpenseRequisitionReturnDto> GetAllOaExpenseRequisition([FromQuery] GetAllOaExpenseRequisitionParamsDto model,
             [FromQuery][ModelBinder(typeof(DotKeyDictionaryModelBinder))] Dictionary<string, string> conditional = null)
@@ -74,65 +74,54 @@ namespace PowerLmsWebApi.Controllers
             {
                 var dbSet = _DbContext.OaExpenseRequisitions.Where(c => c.OrgId == context.User.OrgId);
 
-                // ·Ç³¬¹ÜÓÃ»§È¨ÏŞ¹ıÂË
+                // éè¶…ç®¡ç”¨æˆ·æƒé™è¿‡æ»¤
                 if (!context.User.IsSuperAdmin)
                 {
-                    // ·Ç³¬¹ÜÖ»ÄÜ¿´×Ô¼ºÉêÇëµÄ»ò×Ô¼ºµÇ¼ÇµÄ
+                    // éè¶…ç®¡åªèƒ½çœ‹è‡ªå·±ç”³è¯·çš„æˆ–è‡ªå·±ç™»è®°çš„
                     dbSet = dbSet.Where(r => r.ApplicantId == context.User.Id || r.CreateBy == context.User.Id);
                 }
 
-                // È·±£Ìõ¼ş×Öµä²»Çø·Ö´óĞ¡Ğ´
+                // ç¡®ä¿æ¡ä»¶å­—å…¸ä¸åŒºåˆ†å¤§å°å†™
                 var normalizedConditional = conditional != null ?
                     new Dictionary<string, string>(conditional, StringComparer.OrdinalIgnoreCase) :
                     null;
 
-                // Ó¦ÓÃÍ¨ÓÃÌõ¼ş²éÑ¯
+                // åº”ç”¨é€šç”¨æ¡ä»¶æŸ¥è¯¢
                 var coll = EfHelper.GenerateWhereAnd(dbSet, normalizedConditional);
 
-                // Ó¦ÓÃËÑË÷ÎÄ±¾£¨Õë¶ÔÏà¹Ø¿Í»§ºÍ±¸×¢£©
-                if (!string.IsNullOrEmpty(model.SearchText))
-                {
-                    coll = coll.Where(r => r.RelatedCustomer.Contains(model.SearchText) ||
-                                         r.Remark.Contains(model.SearchText));
-                }
+                // ç§»é™¤äº†ä¸“ç”¨çš„æœç´¢æ–‡æœ¬å¤„ç†ï¼Œæ”¹ä¸ºå®Œå…¨ä¾èµ– conditional å‚æ•°
+                // æ–‡æœ¬æœç´¢ç¤ºä¾‹ï¼š
+                // - conditional["RelatedCustomer"] = "*å®¢æˆ·åç§°*"  
+                // - conditional["Remark"] = "*å¤‡æ³¨å…³é”®è¯*"
+                // - å¤åˆæ¡ä»¶å¯ç»„åˆä½¿ç”¨ï¼Œæ›´åŠ çµæ´»å’Œå¼ºå¤§
 
-                // ÈÕÆÚÊ±¼ä·¶Î§¹ıÂË
-                if (model.StartDate.HasValue)
-                {
-                    coll = coll.Where(r => r.ApplyDateTime >= model.StartDate.Value);
-                }
-                if (model.EndDate.HasValue)
-                {
-                    coll = coll.Where(r => r.ApplyDateTime <= model.EndDate.Value);
-                }
-
-                // ÅÅĞòÓ¦ÓÃÔÚĞŞ¸ÄµÄ²éÑ¯
+                // æ’åºåº”ç”¨åœ¨ä¿®æ”¹çš„æŸ¥è¯¢
                 coll = coll.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
 
-                // Ê¹ÓÃEntityManager½øĞĞ·ÖÒ³
+                // ä½¿ç”¨EntityManagerè¿›è¡Œåˆ†é¡µ
                 var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
                 result.Total = prb.Total;
                 result.Result.AddRange(prb.Result);
             }
             catch (Exception ex)
             {
-                _Logger.LogError(ex, "»ñÈ¡OA·ÑÓÃÉêÇëµ¥ÁĞ±íÊ±·¢Éú´íÎó");
+                _Logger.LogError(ex, "è·å–OAè´¹ç”¨ç”³è¯·å•åˆ—è¡¨æ—¶å‘ç”Ÿé”™è¯¯");
                 result.HasError = true;
                 result.ErrorCode = 500;
-                result.DebugMessage = $"»ñÈ¡OA·ÑÓÃÉêÇëµ¥ÁĞ±íÊ±·¢Éú´íÎó: {ex.Message}";
+                result.DebugMessage = $"è·å–OAè´¹ç”¨ç”³è¯·å•åˆ—è¡¨æ—¶å‘ç”Ÿé”™è¯¯: {ex.Message}";
             }
 
             return result;
         }
 
         /// <summary>
-        /// ´´½¨ĞÂµÄOA·ÑÓÃÉêÇëµ¥¡£
+        /// åˆ›å»ºæ–°çš„OAè´¹ç”¨ç”³è¯·å•ã€‚
         /// </summary>
-        /// <param name="model">ÉêÇëµ¥ĞÅÏ¢</param>
-        /// <returns>´´½¨½á¹û</returns>
-        /// <response code="200">Î´·¢ÉúÏµÍ³¼¶´íÎó¡£µ«¿ÉÄÜ³öÏÖÓ¦ÓÃ´íÎó£¬¾ßÌå²Î¼û HasError ºÍ ErrorCode¡£</response>
-        /// <response code="401">ÎŞĞ§ÁîÅÆ¡£</response>
-        /// <response code="403">È¨ÏŞ²»×ã¡£</response>
+        /// <param name="model">ç”³è¯·å•ä¿¡æ¯</param>
+        /// <returns>åˆ›å»ºç»“æœ</returns>
+        /// <response code="200">æœªå‘ç”Ÿç³»ç»Ÿçº§é”™è¯¯ã€‚ä½†å¯èƒ½å‡ºç°åº”ç”¨é”™è¯¯ï¼Œå…·ä½“å‚è§ HasError å’Œ ErrorCodeã€‚</response>
+        /// <response code="401">æ— æ•ˆä»¤ç‰Œã€‚</response>
+        /// <response code="403">æƒé™ä¸è¶³ã€‚</response>
         [HttpPost]
         public ActionResult<AddOaExpenseRequisitionReturnDto> AddOaExpenseRequisition(AddOaExpenseRequisitionParamsDto model)
         {
@@ -143,25 +132,25 @@ namespace PowerLmsWebApi.Controllers
 
             try
             {
-                var entity = model.Item; // ¸üĞÂÎªÊ¹ÓÃ Item ÊôĞÔ
-                entity.GenerateNewId(); // Ç¿ÖÆÉú³ÉId
+                var entity = model.Item; // æ›´æ–°ä¸ºä½¿ç”¨ Item å±æ€§
+                entity.GenerateNewId(); // å¼ºåˆ¶ç”ŸæˆId
                 entity.OrgId = context.User.OrgId;
-                entity.CreateBy = context.User.Id; // CreateBy¾ÍÊÇµÇ¼ÇÈË
+                entity.CreateBy = context.User.Id; // CreateByå°±æ˜¯ç™»è®°äºº
                 entity.CreateDateTime = OwHelper.WorldNow;
 
-                // ´¦ÀíÉêÇëÄ£Ê½£º´úÈËµÇ¼Ç
+                // å¤„ç†ç”³è¯·æ¨¡å¼ï¼šä»£äººç™»è®°
                 if (model.IsRegisterForOthers)
                 {
-                    // ´úÎªµÇ¼ÇÄ£Ê½£ºµÇ¼ÇÈËÎªµ±Ç°ÓÃ»§£¨CreateBy£©£¬ÉêÇëÈËÓÉÓÃ»§Ñ¡Ôñ
-                    // ÉêÇëÈËIdÓ¦ÓÉÇ°¶Ë´«Èë
+                    // ä»£ä¸ºç™»è®°æ¨¡å¼ï¼šç™»è®°äººä¸ºå½“å‰ç”¨æˆ·ï¼ˆCreateByï¼‰ï¼Œç”³è¯·äººç”±ç”¨æˆ·é€‰æ‹©
+                    // ç”³è¯·äººIdåº”ç”±å‰ç«¯ä¼ å…¥
                 }
                 else
                 {
-                    // ×Ô¼ºÉêÇëÄ£Ê½£ºÉêÇëÈËºÍµÇ¼ÇÈË¶¼ÊÇµ±Ç°ÓÃ»§
+                    // è‡ªå·±ç”³è¯·æ¨¡å¼ï¼šç”³è¯·äººå’Œç™»è®°äººéƒ½æ˜¯å½“å‰ç”¨æˆ·
                     entity.ApplicantId = context.User.Id;
                 }
 
-                // ³õÊ¼»¯ÉóºË×Ö¶Î
+                // åˆå§‹åŒ–å®¡æ ¸å­—æ®µ
                 entity.AuditDateTime = null;
                 entity.AuditOperatorId = null;
 
@@ -172,23 +161,23 @@ namespace PowerLmsWebApi.Controllers
             }
             catch (Exception ex)
             {
-                _Logger.LogError(ex, "´´½¨OA·ÑÓÃÉêÇëµ¥Ê±·¢Éú´íÎó");
+                _Logger.LogError(ex, "åˆ›å»ºOAè´¹ç”¨ç”³è¯·å•æ—¶å‘ç”Ÿé”™è¯¯");
                 result.HasError = true;
                 result.ErrorCode = 500;
-                result.DebugMessage = $"´´½¨OA·ÑÓÃÉêÇëµ¥Ê±·¢Éú´íÎó: {ex.Message}";
+                result.DebugMessage = $"åˆ›å»ºOAè´¹ç”¨ç”³è¯·å•æ—¶å‘ç”Ÿé”™è¯¯: {ex.Message}";
             }
 
             return result;
         }
 
         /// <summary>
-        /// ĞŞ¸ÄOA·ÑÓÃÉêÇëµ¥ĞÅÏ¢¡£
+        /// ä¿®æ”¹OAè´¹ç”¨ç”³è¯·å•ä¿¡æ¯ã€‚
         /// </summary>
-        /// <param name="model">ÉêÇëµ¥ĞÅÏ¢</param>
-        /// <returns>ĞŞ¸Ä½á¹û</returns>
-        /// <response code="200">Î´·¢ÉúÏµÍ³¼¶´íÎó¡£µ«¿ÉÄÜ³öÏÖÓ¦ÓÃ´íÎó£¬¾ßÌå²Î¼û HasError ºÍ ErrorCode¡£</response>
-        /// <response code="401">ÎŞĞ§ÁîÅÆ¡£</response>
-        /// <response code="404">Ö¸¶¨IdµÄÉêÇëµ¥²»´æÔÚ¡£</response>
+        /// <param name="model">ç”³è¯·å•ä¿¡æ¯</param>
+        /// <returns>ä¿®æ”¹ç»“æœ</returns>
+        /// <response code="200">æœªå‘ç”Ÿç³»ç»Ÿçº§é”™è¯¯ã€‚ä½†å¯èƒ½å‡ºç°åº”ç”¨é”™è¯¯ï¼Œå…·ä½“å‚è§ HasError å’Œ ErrorCodeã€‚</response>
+        /// <response code="401">æ— æ•ˆä»¤ç‰Œã€‚</response>
+        /// <response code="404">æŒ‡å®šIdçš„ç”³è¯·å•ä¸å­˜åœ¨ã€‚</response>
         [HttpPut]
         public ActionResult<ModifyOaExpenseRequisitionReturnDto> ModifyOaExpenseRequisition(ModifyOaExpenseRequisitionParamsDto model)
         {
@@ -199,7 +188,7 @@ namespace PowerLmsWebApi.Controllers
 
             try
             {
-                // ¼ì²éËùÓĞÊµÌåÊÇ·ñ´æÔÚºÍÈ¨ÏŞ
+                // æ£€æŸ¥æ‰€æœ‰å®ä½“æ˜¯å¦å­˜åœ¨å’Œæƒé™
                 foreach (var item in model.Items)
                 {
                     var existing = _DbContext.OaExpenseRequisitions.Find(item.Id);
@@ -207,45 +196,45 @@ namespace PowerLmsWebApi.Controllers
                     {
                         result.HasError = true;
                         result.ErrorCode = 404;
-                        result.DebugMessage = $"Ö¸¶¨µÄOA·ÑÓÃÉêÇëµ¥ {item.Id} ²»´æÔÚ";
+                        result.DebugMessage = $"æŒ‡å®šçš„OAè´¹ç”¨ç”³è¯·å• {item.Id} ä¸å­˜åœ¨";
                         return result;
                     }
 
-                    // ¼ì²éÈ¨ÏŞºÍ×´Ì¬
+                    // æ£€æŸ¥æƒé™å’ŒçŠ¶æ€
                     if (!existing.CanEdit(_DbContext))
                     {
                         result.HasError = true;
                         result.ErrorCode = 403;
-                        result.DebugMessage = "ÉêÇëµ¥ÒÑÉóºË£¬ÎŞ·¨ĞŞ¸Ä";
+                        result.DebugMessage = "ç”³è¯·å•å·²å®¡æ ¸ï¼Œæ— æ³•ä¿®æ”¹";
                         return result;
                     }
 
-                    // ¼ì²éÓÃ»§È¨ÏŞ£ºÖ»ÄÜĞŞ¸Ä×Ô¼ºÉêÇëµÄÉêÇëµ¥»ò×Ô¼ºµÇ¼ÇµÄÉêÇëµ¥
+                    // æ£€æŸ¥ç”¨æˆ·æƒé™ï¼šåªèƒ½ä¿®æ”¹è‡ªå·±ç”³è¯·çš„ç”³è¯·å•æˆ–è‡ªå·±ç™»è®°çš„ç”³è¯·å•
                     if ((existing.ApplicantId.HasValue && existing.ApplicantId.Value != context.User.Id) && 
                         (existing.CreateBy.HasValue && existing.CreateBy.Value != context.User.Id) && 
                         !context.User.IsSuperAdmin)
                     {
                         result.HasError = true;
                         result.ErrorCode = 403;
-                        result.DebugMessage = "È¨ÏŞ²»×ã£¬ÎŞ·¨ĞŞ¸Ä´ËÉêÇëµ¥";
+                        result.DebugMessage = "æƒé™ä¸è¶³ï¼Œæ— æ³•ä¿®æ”¹æ­¤ç”³è¯·å•";
                         return result;
                     }
                 }
 
-                // Ê¹ÓÃEntityManager½øĞĞĞŞ¸Ä
+                // ä½¿ç”¨EntityManagerè¿›è¡Œä¿®æ”¹
                 if (!_EntityManager.Modify(model.Items))
                 {
                     result.HasError = true;
                     result.ErrorCode = 404;
-                    result.DebugMessage = "ĞŞ¸ÄÊ§°Ü£¬Çë¼ì²éÊı¾İ";
+                    result.DebugMessage = "ä¿®æ”¹å¤±è´¥ï¼Œè¯·æ£€æŸ¥æ•°æ®";
                     return result;
                 }
 
-                // È·±£ºËĞÄ×Ö¶Î²»±»ĞŞ¸Ä
+                // ç¡®ä¿æ ¸å¿ƒå­—æ®µä¸è¢«ä¿®æ”¹
                 foreach (var item in model.Items)
                 {
                     var entry = _DbContext.Entry(item);
-                    entry.Property(e => e.OrgId).IsModified = false; // »ú¹¹Id´´½¨Ê±È·¶¨£¬²»¿ÉĞŞ¸Ä
+                    entry.Property(e => e.OrgId).IsModified = false; // æœºæ„Idåˆ›å»ºæ—¶ç¡®å®šï¼Œä¸å¯ä¿®æ”¹
                     entry.Property(e => e.CreateBy).IsModified = false;
                     entry.Property(e => e.CreateDateTime).IsModified = false;
                     entry.Property(e => e.AuditDateTime).IsModified = false;
@@ -256,23 +245,23 @@ namespace PowerLmsWebApi.Controllers
             }
             catch (Exception ex)
             {
-                _Logger.LogError(ex, "ĞŞ¸ÄOA·ÑÓÃÉêÇëµ¥Ê±·¢Éú´íÎó");
+                _Logger.LogError(ex, "ä¿®æ”¹OAè´¹ç”¨ç”³è¯·å•æ—¶å‘ç”Ÿé”™è¯¯");
                 result.HasError = true;
                 result.ErrorCode = 500;
-                result.DebugMessage = $"ĞŞ¸ÄOA·ÑÓÃÉêÇëµ¥Ê±·¢Éú´íÎó: {ex.Message}";
+                result.DebugMessage = $"ä¿®æ”¹OAè´¹ç”¨ç”³è¯·å•æ—¶å‘ç”Ÿé”™è¯¯: {ex.Message}";
             }
 
             return result;
         }
 
         /// <summary>
-        /// É¾³ıOA·ÑÓÃÉêÇëµ¥¡£
+        /// åˆ é™¤OAè´¹ç”¨ç”³è¯·å•ã€‚
         /// </summary>
-        /// <param name="model">É¾³ı²ÎÊı</param>
-        /// <returns>É¾³ı½á¹û</returns>
-        /// <response code="200">Î´·¢ÉúÏµÍ³¼¶´íÎó¡£µ«¿ÉÄÜ³öÏÖÓ¦ÓÃ´íÎó£¬¾ßÌå²Î¼û HasError ºÍ ErrorCode¡£</response>
-        /// <response code="401">ÎŞĞ§ÁîÅÆ¡£</response>
-        /// <response code="404">Ö¸¶¨IdµÄÉêÇëµ¥²»´æÔÚ¡£</response>
+        /// <param name="model">åˆ é™¤å‚æ•°</param>
+        /// <returns>åˆ é™¤ç»“æœ</returns>
+        /// <response code="200">æœªå‘ç”Ÿç³»ç»Ÿçº§é”™è¯¯ã€‚ä½†å¯èƒ½å‡ºç°åº”ç”¨é”™è¯¯ï¼Œå…·ä½“å‚è§ HasError å’Œ ErrorCodeã€‚</response>
+        /// <response code="401">æ— æ•ˆä»¤ç‰Œã€‚</response>
+        /// <response code="404">æŒ‡å®šIdçš„ç”³è¯·å•ä¸å­˜åœ¨ã€‚</response>
         [HttpDelete]
         public ActionResult<RemoveOaExpenseRequisitionReturnDto> RemoveOaExpenseRequisition(RemoveOaExpenseRequisitionParamsDto model)
         {
@@ -287,31 +276,31 @@ namespace PowerLmsWebApi.Controllers
 
                 foreach (var entity in entities)
                 {
-                    // ¼ì²éÈ¨ÏŞºÍ×´Ì¬
+                    // æ£€æŸ¥æƒé™å’ŒçŠ¶æ€
                     if (!entity.CanEdit(_DbContext))
                     {
                         result.HasError = true;
                         result.ErrorCode = 403;
-                        result.DebugMessage = $"ÉêÇëµ¥ÒÑÉóºË£¬ÎŞ·¨É¾³ı";
+                        result.DebugMessage = $"ç”³è¯·å•å·²å®¡æ ¸ï¼Œæ— æ³•åˆ é™¤";
                         return result;
                     }
 
-                    // ¼ì²éÓÃ»§È¨ÏŞ
+                    // æ£€æŸ¥ç”¨æˆ·æƒé™
                     if ((entity.ApplicantId.HasValue && entity.ApplicantId.Value != context.User.Id) && 
                         (entity.CreateBy.HasValue && entity.CreateBy.Value != context.User.Id) && 
                         !context.User.IsSuperAdmin)
                     {
                         result.HasError = true;
                         result.ErrorCode = 403;
-                        result.DebugMessage = $"È¨ÏŞ²»×ã£¬ÎŞ·¨É¾³ıÉêÇëµ¥";
+                        result.DebugMessage = $"æƒé™ä¸è¶³ï¼Œæ— æ³•åˆ é™¤ç”³è¯·å•";
                         return result;
                     }
 
-                    // É¾³ı¹ØÁªµÄÃ÷Ï¸¼ÇÂ¼
+                    // åˆ é™¤å…³è”çš„æ˜ç»†è®°å½•
                     var items = _DbContext.OaExpenseRequisitionItems.Where(i => i.ParentId == entity.Id);
                     _DbContext.OaExpenseRequisitionItems.RemoveRange(items);
 
-                    // Ê¹ÓÃEntityManager½øĞĞÉ¾³ı£¨Ö§³Ö¼¶ÁªÉ¾³ı£©
+                    // ä½¿ç”¨EntityManagerè¿›è¡Œåˆ é™¤ï¼ˆæ”¯æŒçº§è”åˆ é™¤ï¼‰
                     _EntityManager.Remove(entity);
                 }
 
@@ -319,24 +308,24 @@ namespace PowerLmsWebApi.Controllers
             }
             catch (Exception ex)
             {
-                _Logger.LogError(ex, "É¾³ıOA·ÑÓÃÉêÇëµ¥Ê±·¢Éú´íÎó");
+                _Logger.LogError(ex, "åˆ é™¤OAè´¹ç”¨ç”³è¯·å•æ—¶å‘ç”Ÿé”™è¯¯");
                 result.HasError = true;
                 result.ErrorCode = 500;
-                result.DebugMessage = $"É¾³ıOA·ÑÓÃÉêÇëµ¥Ê±·¢Éú´íÎó: {ex.Message}";
+                result.DebugMessage = $"åˆ é™¤OAè´¹ç”¨ç”³è¯·å•æ—¶å‘ç”Ÿé”™è¯¯: {ex.Message}";
             }
 
             return result;
         }
 
         /// <summary>
-        /// ÉóºË»òÈ¡ÏûÉóºËOA·ÑÓÃÉêÇëµ¥¡£
+        /// å®¡æ ¸æˆ–å–æ¶ˆå®¡æ ¸OAè´¹ç”¨ç”³è¯·å•ã€‚
         /// </summary>
-        /// <param name="model">ÉóºË²ÎÊı</param>
-        /// <returns>ÉóºË½á¹û</returns>
-        /// <response code="200">Î´·¢ÉúÏµÍ³¼¶´íÎó¡£µ«¿ÉÄÜ³öÏÖÓ¦ÓÃ´íÎó£¬¾ßÌå²Î¼û HasError ºÍ ErrorCode¡£</response>
-        /// <response code="401">ÎŞĞ§ÁîÅÆ¡£</response>
-        /// <response code="403">È¨ÏŞ²»×ã¡£</response>
-        /// <response code="404">Ö¸¶¨IdµÄÉêÇëµ¥²»´æÔÚ¡£</response>
+        /// <param name="model">å®¡æ ¸å‚æ•°</param>
+        /// <returns>å®¡æ ¸ç»“æœ</returns>
+        /// <response code="200">æœªå‘ç”Ÿç³»ç»Ÿçº§é”™è¯¯ã€‚ä½†å¯èƒ½å‡ºç°åº”ç”¨é”™è¯¯ï¼Œå…·ä½“å‚è§ HasError å’Œ ErrorCodeã€‚</response>
+        /// <response code="401">æ— æ•ˆä»¤ç‰Œã€‚</response>
+        /// <response code="403">æƒé™ä¸è¶³ã€‚</response>
+        /// <response code="404">æŒ‡å®šIdçš„ç”³è¯·å•ä¸å­˜åœ¨ã€‚</response>
         [HttpPost]
         public ActionResult<AuditOaExpenseRequisitionReturnDto> AuditOaExpenseRequisition(AuditOaExpenseRequisitionParamsDto model)
         {
@@ -352,58 +341,58 @@ namespace PowerLmsWebApi.Controllers
                 {
                     result.HasError = true;
                     result.ErrorCode = 404;
-                    result.DebugMessage = "Ö¸¶¨µÄOA·ÑÓÃÉêÇëµ¥²»´æÔÚ";
+                    result.DebugMessage = "æŒ‡å®šçš„OAè´¹ç”¨ç”³è¯·å•ä¸å­˜åœ¨";
                     return result;
                 }
 
-                // TODO: ÕâÀïĞèÒªÌí¼Ó¸ü¸´ÔÓµÄÉóºËÈ¨ÏŞ¼ì²é
-                // ÔİÊ±Ö»ÔÊĞí³¬¹ÜºÍÉêÇëµ¥ËùÊô×éÖ¯µÄÓÃ»§ÉóºË
+                // TODO: è¿™é‡Œéœ€è¦æ·»åŠ æ›´å¤æ‚çš„å®¡æ ¸æƒé™æ£€æŸ¥
+                // æš‚æ—¶åªå…è®¸è¶…ç®¡å’Œç”³è¯·å•æ‰€å±ç»„ç»‡çš„ç”¨æˆ·å®¡æ ¸
                 if (!context.User.IsSuperAdmin && existing.OrgId != context.User.OrgId)
                 {
                     result.HasError = true;
                     result.ErrorCode = 403;
-                    result.DebugMessage = "È¨ÏŞ²»×ã£¬ÎŞ·¨ÉóºË´ËÉêÇëµ¥";
+                    result.DebugMessage = "æƒé™ä¸è¶³ï¼Œæ— æ³•å®¡æ ¸æ­¤ç”³è¯·å•";
                     return result;
                 }
 
                 if (model.IsAudit)
                 {
-                    // ÉóºËÍ¨¹ıÇ°½øĞĞ½ğ¶îÒ»ÖÂĞÔĞ£Ñé
+                    // å®¡æ ¸é€šè¿‡å‰è¿›è¡Œé‡‘é¢ä¸€è‡´æ€§æ ¡éªŒ
                     if (!existing.ValidateAmountConsistency(_DbContext))
                     {
                         var itemsSum = existing.GetItemsAmountSum(_DbContext);
                         result.HasError = true;
                         result.ErrorCode = 400;
-                        result.DebugMessage = $"Ã÷Ï¸½ğ¶îºÏ¼Æ({itemsSum:F2})ÓëÖ÷µ¥½ğ¶î({existing.Amount:F2})²»Ò»ÖÂ£¬Çë¼ì²éÃ÷Ï¸ÏîºóÔÙÌá½»ÉóºË";
-                        _Logger.LogWarning("ÉêÇëµ¥{RequisitionId}½ğ¶îĞ£ÑéÊ§°Ü: Ö÷µ¥½ğ¶î={MainAmount:F2}, Ã÷Ï¸ºÏ¼Æ={ItemsSum:F2}", 
+                        result.DebugMessage = $"æ˜ç»†é‡‘é¢åˆè®¡({itemsSum:F2})ä¸ä¸»å•é‡‘é¢({existing.Amount:F2})ä¸ä¸€è‡´ï¼Œè¯·æ£€æŸ¥æ˜ç»†é¡¹åå†æäº¤å®¡æ ¸";
+                        _Logger.LogWarning("ç”³è¯·å•{RequisitionId}é‡‘é¢æ ¡éªŒå¤±è´¥: ä¸»å•é‡‘é¢={MainAmount:F2}, æ˜ç»†åˆè®¡={ItemsSum:F2}", 
                             model.RequisitionId, existing.Amount, itemsSum);
                         return result;
                     }
 
-                    // ¼ì²éÊÇ·ñÓĞÃ÷Ï¸Ïî£¨Èç¹ûĞèÒªµÄ»°£©
+                    // æ£€æŸ¥æ˜¯å¦æœ‰æ˜ç»†é¡¹ï¼ˆå¦‚æœéœ€è¦çš„è¯ï¼‰
                     var itemsCount = existing.GetItems(_DbContext).Count();
                     if (itemsCount == 0)
                     {
                         result.HasError = true;
                         result.ErrorCode = 400;
-                        result.DebugMessage = "ÉêÇëµ¥±ØĞë°üº¬ÖÁÉÙÒ»¸öÃ÷Ï¸Ïî²ÅÄÜÉóºË";
-                        _Logger.LogWarning("ÉêÇëµ¥{RequisitionId}ÉóºËÊ§°Ü: Ã»ÓĞÃ÷Ï¸Ïî", model.RequisitionId);
+                        result.DebugMessage = "ç”³è¯·å•å¿…é¡»åŒ…å«è‡³å°‘ä¸€ä¸ªæ˜ç»†é¡¹æ‰èƒ½å®¡æ ¸";
+                        _Logger.LogWarning("ç”³è¯·å•{RequisitionId}å®¡æ ¸å¤±è´¥: æ²¡æœ‰æ˜ç»†é¡¹", model.RequisitionId);
                         return result;
                     }
 
-                    // ÉóºËÍ¨¹ı
+                    // å®¡æ ¸é€šè¿‡
                     existing.AuditDateTime = OwHelper.WorldNow;
                     existing.AuditOperatorId = context.User.Id;
                     
-                    _Logger.LogInformation("ÉêÇëµ¥ÉóºËÍ¨¹ı£¬ÉóºËÈË: {UserId}, ÉêÇëµ¥ID: {RequisitionId}, Ö÷µ¥½ğ¶î: {Amount:F2}, Ã÷Ï¸ÏîÊı: {ItemsCount}", 
+                    _Logger.LogInformation("ç”³è¯·å•å®¡æ ¸é€šè¿‡ï¼Œå®¡æ ¸äºº: {UserId}, ç”³è¯·å•ID: {RequisitionId}, ä¸»å•é‡‘é¢: {Amount:F2}, æ˜ç»†é¡¹æ•°: {ItemsCount}", 
                         context.User.Id, model.RequisitionId, existing.Amount, itemsCount);
                 }
                 else
                 {
-                    // È¡ÏûÉóºË
+                    // å–æ¶ˆå®¡æ ¸
                     existing.AuditDateTime = null;
                     existing.AuditOperatorId = null;
-                    _Logger.LogInformation("ÉêÇëµ¥È¡ÏûÉóºË£¬²Ù×÷ÈË: {UserId}, ÉêÇëµ¥ID: {RequisitionId}", 
+                    _Logger.LogInformation("ç”³è¯·å•å–æ¶ˆå®¡æ ¸ï¼Œæ“ä½œäºº: {UserId}, ç”³è¯·å•ID: {RequisitionId}", 
                         context.User.Id, model.RequisitionId);
                 }
 
@@ -411,30 +400,30 @@ namespace PowerLmsWebApi.Controllers
             }
             catch (Exception ex)
             {
-                _Logger.LogError(ex, "ÉóºËOA·ÑÓÃÉêÇëµ¥Ê±·¢Éú´íÎó");
+                _Logger.LogError(ex, "å®¡æ ¸OAè´¹ç”¨ç”³è¯·å•æ—¶å‘ç”Ÿé”™è¯¯");
                 result.HasError = true;
                 result.ErrorCode = 500;
-                result.DebugMessage = $"ÉóºËOA·ÑÓÃÉêÇëµ¥Ê±·¢Éú´íÎó: {ex.Message}";
+                result.DebugMessage = $"å®¡æ ¸OAè´¹ç”¨ç”³è¯·å•æ—¶å‘ç”Ÿé”™è¯¯: {ex.Message}";
             }
 
             return result;
         }
 
         /// <summary>
-        /// »ñÈ¡µ±Ç°ÓÃ»§Ïà¹ØµÄOA·ÑÓÃÉêÇëµ¥ºÍÉóÅúÁ÷×´Ì¬¡£
-        /// ÅÜÍê±ê×¼ÉóÅúÁ÷³Ìºó¿ÉÉóºË¡£
+        /// è·å–å½“å‰ç”¨æˆ·ç›¸å…³çš„OAè´¹ç”¨ç”³è¯·å•å’Œå®¡æ‰¹æµçŠ¶æ€ã€‚
+        /// è·‘å®Œæ ‡å‡†å®¡æ‰¹æµç¨‹åå¯å®¡æ ¸ã€‚
         /// </summary>
-        /// <param name="model">·ÖÒ³ºÍÅÅĞò²ÎÊı</param>
-        /// <param name="conditional">²éÑ¯µÄÌõ¼ş¡£Ö§³ÖÈıÖÖ¸ñÊ½µÄÌõ¼ş£º
-        /// 1. ÎŞÇ°×ºµÄÌõ¼ş£ºÖ±½Ó×÷ÎªÉêÇëµ¥(OaExpenseRequisition)µÄÉ¸Ñ¡Ìõ¼ş
-        /// 2. "OwWf.×Ö¶ÎÃû" ¸ñÊ½µÄÌõ¼ş£ºÓÃÓÚÉ¸Ñ¡¹ØÁªµÄ¹¤×÷Á÷(OwWf)¶ÔÏó
-        /// ËùÓĞ¼ü²»Çø·Ö´óĞ¡Ğ´¡£ÆäÖĞ£¬OwWf.State»áÌØÊâ´¦Àí£¬ÓëOwWfManager.GetWfNodeItemByOpertorId·½·¨µÄstate²ÎÊıÓ³Éä¹ØÏµ£º
-        /// 0(Á÷×ªÖĞ)¡ú3, 1(³É¹¦Íê³É)¡ú4, 2(ÒÑ±»ÖÕÖ¹)¡ú8
-        /// Í¨ÓÃÌõ¼şĞ´·¨:ËùÓĞÌõ¼ş¶¼ÊÇ×Ö·û´®£¬¶ÔÇø¼äµÄĞ´·¨ÊÇÓÃ¶ººÅ·Ö¸ô£¨×Ö·û´®ÀàĞÍÔİÊ±²»Ö§³ÖÇø¼äÇÒ¶¼ÊÇÄ£ºı²éÑ¯£©Èç"2024-1-1,2024-1-2"¡£
-        /// ¶ÔÇ¿ÖÆÈ¡nullµÄÔ¼Êø£¬ÔòĞ´"null"¡£</param>
-        /// <returns>°üº¬ÉêÇëµ¥ºÍ¶ÔÓ¦¹¤×÷Á÷ĞÅÏ¢µÄ½á¹û¼¯</returns>
-        /// <response code="200">Î´·¢ÉúÏµÍ³¼¶´íÎó¡£µ«¿ÉÄÜ³öÏÖÓ¦ÓÃ´íÎó£¬¾ßÌå²Î¼û HasError ºÍ ErrorCode ¡£</response>  
-        /// <response code="401">ÎŞĞ§ÁîÅÆ¡£</response>  
+        /// <param name="model">åˆ†é¡µå’Œæ’åºå‚æ•°</param>
+        /// <param name="conditional">æŸ¥è¯¢çš„æ¡ä»¶ã€‚æ”¯æŒä¸‰ç§æ ¼å¼çš„æ¡ä»¶ï¼š
+        /// 1. æ— å‰ç¼€çš„æ¡ä»¶ï¼šç›´æ¥ä½œä¸ºç”³è¯·å•(OaExpenseRequisition)çš„ç­›é€‰æ¡ä»¶
+        /// 2. "OwWf.å­—æ®µå" æ ¼å¼çš„æ¡ä»¶ï¼šç”¨äºç­›é€‰å…³è”çš„å·¥ä½œæµ(OwWf)å¯¹è±¡
+        /// æ‰€æœ‰é”®ä¸åŒºåˆ†å¤§å°å†™ã€‚å…¶ä¸­ï¼ŒOwWf.Stateä¼šç‰¹æ®Šå¤„ç†ï¼Œä¸OwWfManager.GetWfNodeItemByOpertorIdæ–¹æ³•çš„stateå‚æ•°æ˜ å°„å…³ç³»ï¼š
+        /// 0(æµè½¬ä¸­)â†’3, 1(æˆåŠŸå®Œæˆ)â†’4, 2(å·²è¢«ç»ˆæ­¢)â†’8
+        /// é€šç”¨æ¡ä»¶å†™æ³•:æ‰€æœ‰æ¡ä»¶éƒ½æ˜¯å­—ç¬¦ä¸²ï¼Œå¯¹åŒºé—´çš„å†™æ³•æ˜¯ç”¨é€—å·åˆ†éš”ï¼ˆå­—ç¬¦ä¸²ç±»å‹æš‚æ—¶ä¸æ”¯æŒåŒºé—´ä¸”éƒ½æ˜¯æ¨¡ç³ŠæŸ¥è¯¢ï¼‰å¦‚"2024-1-1,2024-1-2"ã€‚
+        /// å¯¹å¼ºåˆ¶å–nullçš„çº¦æŸï¼Œåˆ™å†™"null"ã€‚</param>
+        /// <returns>åŒ…å«ç”³è¯·å•å’Œå¯¹åº”å·¥ä½œæµä¿¡æ¯çš„ç»“æœé›†</returns>
+        /// <response code="200">æœªå‘ç”Ÿç³»ç»Ÿçº§é”™è¯¯ã€‚ä½†å¯èƒ½å‡ºç°åº”ç”¨é”™è¯¯ï¼Œå…·ä½“å‚è§ HasError å’Œ ErrorCode ã€‚</response>  
+        /// <response code="401">æ— æ•ˆä»¤ç‰Œã€‚</response>  
         [HttpGet]
         public ActionResult<GetAllOaExpenseRequisitionWithWfReturnDto> GetAllOaExpenseRequisitionWithWf([FromQuery] GetAllOaExpenseRequisitionWithWfParamsDto model,
             [FromQuery][ModelBinder(typeof(DotKeyDictionaryModelBinder))] Dictionary<string, string> conditional = null)
@@ -446,12 +435,12 @@ namespace PowerLmsWebApi.Controllers
 
             try
             {
-                // ´ÓÌõ¼şÖĞ·ÖÀë³ö²»Í¬Ç°×ºµÄÌõ¼ş
+                // ä»æ¡ä»¶ä¸­åˆ†ç¦»å‡ºä¸åŒå‰ç¼€çš„æ¡ä»¶
                 Dictionary<string, string> wfConditions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 Dictionary<string, string> reqConditions = conditional != null
                     ? new Dictionary<string, string>(conditional, StringComparer.OrdinalIgnoreCase)
                     : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                byte wfState = 15; // Ä¬ÈÏÖµ£¬ÒâÎ¶×Å»ñÈ¡Ö¸¶¨²Ù×÷ÈËÏà¹ØµÄËùÓĞ¹¤×÷Á÷½ÚµãÏî
+                byte wfState = 15; // é»˜è®¤å€¼ï¼Œæ„å‘³ç€è·å–æŒ‡å®šæ“ä½œäººç›¸å…³çš„æ‰€æœ‰å·¥ä½œæµèŠ‚ç‚¹é¡¹
 
                 if (reqConditions.Count > 0)
                 {
@@ -459,34 +448,34 @@ namespace PowerLmsWebApi.Controllers
 
                     foreach (var pair in reqConditions)
                     {
-                        // ´¦Àí¹¤×÷Á÷Ìõ¼ş
+                        // å¤„ç†å·¥ä½œæµæ¡ä»¶
                         if (pair.Key.StartsWith("OwWf.", StringComparison.OrdinalIgnoreCase))
                         {
-                            string wfFieldName = pair.Key.Substring(5); // È¥µô"OwWf."Ç°×º
+                            string wfFieldName = pair.Key.Substring(5); // å»æ‰"OwWf."å‰ç¼€
 
-                            // ´¦Àí State µÄÌØÊâÇé¿ö
+                            // å¤„ç† State çš„ç‰¹æ®Šæƒ…å†µ
                             if (string.Equals(wfFieldName, "State", StringComparison.OrdinalIgnoreCase))
                             {
                                 if (byte.TryParse(pair.Value, out var state))
                                 {
                                     switch (state)
                                     {
-                                        case 0: // Á÷×ªÖĞ - µÈ¼ÛÓÚ¾ÉµÄ"3"£¨1|2£©
-                                            wfState = 3; // Ê¹ÓÃOwWfManagerÖĞµÄÖµ3£ºÁ÷×ªÖĞµÄ½ÚµãÏî
+                                        case 0: // æµè½¬ä¸­ - ç­‰ä»·äºæ—§çš„"3"ï¼ˆ1|2ï¼‰
+                                            wfState = 3; // ä½¿ç”¨OwWfManagerä¸­çš„å€¼3ï¼šæµè½¬ä¸­çš„èŠ‚ç‚¹é¡¹
                                             break;
-                                        case 1: // ³É¹¦Íê³É - µÈ¼ÛÓÚ¾ÉµÄ"4"
-                                            wfState = 4; // Ê¹ÓÃOwWfManagerÖĞµÄÖµ4£º³É¹¦½áÊøµÄÁ÷³Ì
+                                        case 1: // æˆåŠŸå®Œæˆ - ç­‰ä»·äºæ—§çš„"4"
+                                            wfState = 4; // ä½¿ç”¨OwWfManagerä¸­çš„å€¼4ï¼šæˆåŠŸç»“æŸçš„æµç¨‹
                                             break;
-                                        case 2: // ÒÑ±»ÖÕÖ¹ - µÈ¼ÛÓÚ¾ÉµÄ"8"
-                                            wfState = 8; // Ê¹ÓÃOwWfManagerÖĞµÄÖµ8£ºÒÑÊ§°Ü½áÊøµÄÁ÷³Ì
+                                        case 2: // å·²è¢«ç»ˆæ­¢ - ç­‰ä»·äºæ—§çš„"8"
+                                            wfState = 8; // ä½¿ç”¨OwWfManagerä¸­çš„å€¼8ï¼šå·²å¤±è´¥ç»“æŸçš„æµç¨‹
                                             break;
                                         default:
-                                            wfState = 15; // Ê¹ÓÃÄ¬ÈÏÖµ15£º²»ÏŞ¶¨×´Ì¬
+                                            wfState = 15; // ä½¿ç”¨é»˜è®¤å€¼15ï¼šä¸é™å®šçŠ¶æ€
                                             break;
                                     }
                                 }
                             }
-                            else // ÆäËû¹¤×÷Á÷Ìõ¼ş
+                            else // å…¶ä»–å·¥ä½œæµæ¡ä»¶
                             {
                                 wfConditions[wfFieldName] = pair.Value;
                             }
@@ -494,59 +483,59 @@ namespace PowerLmsWebApi.Controllers
                         }
                     }
 
-                    // ´ÓÔ­Ê¼Ìõ¼şÖĞÒÆ³ıÌØÊâÇ°×ºµÄÌõ¼ş
+                    // ä»åŸå§‹æ¡ä»¶ä¸­ç§»é™¤ç‰¹æ®Šå‰ç¼€çš„æ¡ä»¶
                     foreach (var key in keysToRemove)
                     {
                         reqConditions.Remove(key);
                     }
                 }
 
-                // ²éÑ¯¹ØÁªµÄ¹¤×÷Á÷
+                // æŸ¥è¯¢å…³è”çš„å·¥ä½œæµ
                 var docIdsQuery = _WfManager.GetWfNodeItemByOpertorId(context.User.Id, wfState)
                     .Select(c => c.Parent.Parent);
 
-                // Èç¹ûÓĞÆäËû¹¤×÷Á÷Ìõ¼ş£¬ÏÈÓ¦ÓÃËüÃÇ
+                // å¦‚æœæœ‰å…¶ä»–å·¥ä½œæµæ¡ä»¶ï¼Œå…ˆåº”ç”¨å®ƒä»¬
                 if (wfConditions.Count > 0)
                 {
-                    _Logger.LogDebug("Ó¦ÓÃ¹¤×÷Á÷¹ıÂËÌõ¼ş: {conditions}",
+                    _Logger.LogDebug("åº”ç”¨å·¥ä½œæµè¿‡æ»¤æ¡ä»¶: {conditions}",
                         string.Join(", ", wfConditions.Select(kv => $"{kv.Key}={kv.Value}")));
 
-                    // Ó¦ÓÃ¹¤×÷Á÷É¸Ñ¡Ìõ¼ş
+                    // åº”ç”¨å·¥ä½œæµç­›é€‰æ¡ä»¶
                     docIdsQuery = EfHelper.GenerateWhereAnd(docIdsQuery, wfConditions);
                 }
 
-                // »ñÈ¡·ûºÏÌõ¼şµÄÎÄµµID
+                // è·å–ç¬¦åˆæ¡ä»¶çš„æ–‡æ¡£ID
                 var docIds = docIdsQuery.Select(wf => wf.DocId.Value).Distinct();
 
-                // ¹¹½¨ÉêÇëµ¥²éÑ¯
+                // æ„å»ºç”³è¯·å•æŸ¥è¯¢
                 var dbSet = _DbContext.OaExpenseRequisitions.Where(r => docIds.Contains(r.Id));
 
-                // È¨ÏŞ¹ıÂË£º·Ç³¬¹ÜÓÃ»§Ö»ÄÜ¿´µ½×Ô¼ºÓĞÈ¨ÏŞµÄÉêÇëµ¥
+                // æƒé™è¿‡æ»¤ï¼šéè¶…ç®¡ç”¨æˆ·åªèƒ½çœ‹åˆ°è‡ªå·±æœ‰æƒé™çš„ç”³è¯·å•
                 if (!context.User.IsSuperAdmin)
                 {
                     dbSet = dbSet.Where(r => r.OrgId == context.User.OrgId &&
                                            (r.ApplicantId == context.User.Id || r.CreateBy == context.User.Id));
                 }
 
-                // Ó¦ÓÃÉêÇëµ¥Ìõ¼ş
+                // åº”ç”¨ç”³è¯·å•æ¡ä»¶
                 if (reqConditions.Count > 0)
                 {
                     dbSet = EfHelper.GenerateWhereAnd(dbSet, reqConditions);
                 }
 
-                // Ó¦ÓÃ·ÖÒ³ºÍÅÅĞò
+                // åº”ç”¨åˆ†é¡µå’Œæ’åº
                 var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
                 var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
 
-                // »ñÈ¡½á¹ûID¼¯ºÏ
+                // è·å–ç»“æœIDé›†åˆ
                 var resultIds = prb.Result.Select(c => c.Id).ToList();
 
-                // Ö»²éÑ¯½á¹ûÏà¹ØµÄ¹¤×÷Á÷
+                // åªæŸ¥è¯¢ç»“æœç›¸å…³çš„å·¥ä½œæµ
                 var wfsArray = _DbContext.OwWfs
                     .Where(c => resultIds.Contains(c.DocId.Value))
                     .ToArray();
 
-                // ×é×°½á¹û
+                // ç»„è£…ç»“æœ
                 foreach (var requisition in prb.Result)
                 {
                     var wf = wfsArray.FirstOrDefault(d => d.DocId == requisition.Id);
@@ -561,10 +550,10 @@ namespace PowerLmsWebApi.Controllers
             }
             catch (Exception ex)
             {
-                _Logger.LogError(ex, "»ñÈ¡OA·ÑÓÃÉêÇëµ¥ÉóÅúÁ÷³ÌÁĞ±íÊ±·¢Éú´íÎó");
+                _Logger.LogError(ex, "è·å–OAè´¹ç”¨ç”³è¯·å•å®¡æ‰¹æµç¨‹åˆ—è¡¨æ—¶å‘ç”Ÿé”™è¯¯");
                 result.HasError = true;
                 result.ErrorCode = 500;
-                result.DebugMessage = $"»ñÈ¡OA·ÑÓÃÉêÇëµ¥ÉóÅúÁ÷³ÌÁĞ±íÊ±·¢Éú´íÎó: {ex.Message}";
+                result.DebugMessage = $"è·å–OAè´¹ç”¨ç”³è¯·å•å®¡æ‰¹æµç¨‹åˆ—è¡¨æ—¶å‘ç”Ÿé”™è¯¯: {ex.Message}";
             }
 
             return result;

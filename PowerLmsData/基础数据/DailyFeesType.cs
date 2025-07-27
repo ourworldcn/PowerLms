@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+ï»¿using Microsoft.EntityFrameworkCore;
 using PowerLms.Data;
 using System;
 using System.ComponentModel.DataAnnotations;
@@ -6,31 +6,31 @@ using System.ComponentModel.DataAnnotations;
 namespace PowerLms.Data
 {
     /// <summary>
-    /// ÈÕ³£·ÑÓÃÖÖÀà×Öµä¡£ÓÃÓÚOA·ÑÓÃÉêÇëµ¥µÄ·ÑÓÃ·ÖÀà£¬Èç²îÂÃ·Ñ¡¢°ì¹«·Ñ¡¢µç»°·ÑµÈ¡£
-    /// ÓëÖ÷ÓªÒµÎñ·ÑÓÃÖÖÀà£¨FeesType£©·Ö¿ª¹ÜÀí¡£
-    /// CodeÊÇ·ÑÓÃ´úÂë£¬DisplayNameÊÇ·ÑÓÃÃû³Æ£¬ShortNameÊÇÓ¢ÎÄÃû³Æ£¬RemarkÊÇ¸½¼ÓËµÃ÷¡£
+    /// æ—¥å¸¸è´¹ç”¨ç§ç±»å­—å…¸ã€‚ç”¨äºOAè´¹ç”¨ç”³è¯·å•çš„è´¹ç”¨åˆ†ç±»ï¼Œå¦‚å·®æ—…è´¹ã€åŠå…¬è´¹ã€ç”µè¯è´¹ç­‰ã€‚
+    /// ä¸ä¸»è¥ä¸šåŠ¡è´¹ç”¨ç§ç±»ï¼ˆFeesTypeï¼‰åˆ†å¼€ç®¡ç†ã€‚
+    /// Codeæ˜¯è´¹ç”¨ä»£ç ï¼ŒDisplayNameæ˜¯è´¹ç”¨åç§°ï¼ŒShortNameæ˜¯è‹±æ–‡åç§°ï¼ŒRemarkæ˜¯é™„åŠ è¯´æ˜ã€‚
     /// </summary>
-    [Comment("ÈÕ³£·ÑÓÃÖÖÀà×Öµä")]
+    [Comment("æ—¥å¸¸è´¹ç”¨ç§ç±»å­—å…¸")]
     public class DailyFeesType : NamedSpecialDataDicBase, IMarkDelete, ICloneable
     {
         /// <summary>
-        /// »á¼Æ¿ÆÄ¿´úÂë¡£ÓÃÓÚ²ÆÎñºËËãºÍ½ğµûµ¼Èë¡£
+        /// ä¼šè®¡ç§‘ç›®ä»£ç ã€‚ç”¨äºè´¢åŠ¡æ ¸ç®—å’Œé‡‘è¶å¯¼å…¥ã€‚
         /// </summary>
-        [Comment("»á¼Æ¿ÆÄ¿´úÂë")]
+        [Comment("ä¼šè®¡ç§‘ç›®ä»£ç ")]
         [Unicode(false), MaxLength(32)]
         public string SubjectCode { get; set; }
     }
 
     /// <summary>
-    /// ÈÕ³£·ÑÓÃÖÖÀà×ÖµäÀ©Õ¹·½·¨¡£
+    /// æ—¥å¸¸è´¹ç”¨ç§ç±»å­—å…¸æ‰©å±•æ–¹æ³•ã€‚
     /// </summary>
     public static class DailyFeesTypeExtensions
     {
         /// <summary>
-        /// »ñÈ¡·ÑÓÃÖÖÀàµÄÍêÕûÏÔÊ¾Ãû³Æ¡£
+        /// è·å–è´¹ç”¨ç§ç±»çš„å®Œæ•´æ˜¾ç¤ºåç§°ã€‚
         /// </summary>
-        /// <param name="dailyFeesType">ÈÕ³£·ÑÓÃÖÖÀà</param>
-        /// <returns>¸ñÊ½£º"´úÂë-ÏÔÊ¾Ãû³Æ"</returns>
+        /// <param name="dailyFeesType">æ—¥å¸¸è´¹ç”¨ç§ç±»</param>
+        /// <returns>æ ¼å¼ï¼š"ä»£ç -æ˜¾ç¤ºåç§°"</returns>
         public static string GetFullDisplayName(this DailyFeesType dailyFeesType)
         {
             if (string.IsNullOrEmpty(dailyFeesType.Code) || string.IsNullOrEmpty(dailyFeesType.DisplayName))

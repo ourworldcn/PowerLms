@@ -1,4 +1,4 @@
-using PowerLms.Data;
+ï»¿using PowerLms.Data;
 using PowerLms.Data.OA;
 using PowerLmsWebApi.Dto;
 using OW.Data;
@@ -8,101 +8,99 @@ using System.ComponentModel.DataAnnotations;
 
 namespace PowerLmsWebApi.Controllers
 {
-    #region OA·ÑÓÃÉêÇëµ¥Ö÷±í
+    #region OAè´¹ç”¨ç”³è¯·å•ä¸»è¡¨
 
     /// <summary>
-    /// »ñÈ¡ËùÓĞOA·ÑÓÃÉêÇëµ¥¹¦ÄÜµÄ²ÎÊı·â×°Àà¡£
+    /// è·å–æ‰€æœ‰OAè´¹ç”¨ç”³è¯·å•åŠŸèƒ½çš„å‚æ•°å°è£…ç±»ã€‚
     /// </summary>
     public class GetAllOaExpenseRequisitionParamsDto : PagingParamsDtoBase
     {
-        /// <summary>
-        /// ËÑË÷ÎÄ±¾£¬Æ¥ÅäÏà¹Ø¿Í»§ºÍ±¸×¢µÈ¡£
-        /// </summary>
-        public string SearchText { get; set; }
-
-        /// <summary>
-        /// ¿ªÊ¼ÈÕÆÚ¹ıÂË¡£
-        /// </summary>
-        public DateTime? StartDate { get; set; }
-
-        /// <summary>
-        /// ½áÊøÈÕÆÚ¹ıÂË¡£
-        /// </summary>
-        public DateTime? EndDate { get; set; }
+        // ç§»é™¤äº†æ‰€æœ‰ä¸“ç”¨è¿‡æ»¤å­—æ®µï¼Œæ”¹ä¸ºå®Œå…¨ä½¿ç”¨ conditional å‚æ•°
+        // 
+        // è¿‡æ»¤ç¤ºä¾‹ï¼š
+        // - æ–‡æœ¬æœç´¢ï¼šä½¿ç”¨ conditional å‚æ•°çš„é€šé…ç¬¦åŒ¹é…åŠŸèƒ½
+        //   conditional["RelatedCustomer"] = "*å…³é”®è¯*" æˆ– conditional["Remark"] = "*å…³é”®è¯*"
+        // - æ—¶é—´èŒƒå›´ï¼šconditional["CreateDateTime"] = "2024-1-1,2024-12-31"
+        // - å®¡æ ¸çŠ¶æ€ï¼šconditional["AuditDateTime"] = "null" (æœªå®¡æ ¸) æˆ– conditional["AuditDateTime"] = "!null" (å·²å®¡æ ¸)
+        // - ç”³è¯·äººï¼šconditional["ApplicantId"] = "guidå€¼"
+        // - å¸ç§ï¼šconditional["CurrencyCode"] = "USD"
+        // - é‡‘é¢èŒƒå›´ï¼šconditional["Amount"] = "100,1000"
+        //
+        // è¿™ç§è®¾è®¡ä¿æŒäº†ç³»ç»Ÿçš„ä¸€è‡´æ€§ï¼Œæ‰€æœ‰æ§åˆ¶å™¨éƒ½ä½¿ç”¨ç›¸åŒçš„æŸ¥è¯¢æ¨¡å¼
     }
 
     /// <summary>
-    /// »ñÈ¡ËùÓĞOA·ÑÓÃÉêÇëµ¥¹¦ÄÜµÄ·µ»ØÖµ·â×°Àà¡£
+    /// è·å–æ‰€æœ‰OAè´¹ç”¨ç”³è¯·å•åŠŸèƒ½çš„è¿”å›å€¼å°è£…ç±»ã€‚
     /// </summary>
     public class GetAllOaExpenseRequisitionReturnDto : PagingReturnDtoBase<OaExpenseRequisition>
     {
     }
 
     /// <summary>
-    /// Ôö¼ÓĞÂOA·ÑÓÃÉêÇëµ¥¹¦ÄÜ²ÎÊı·â×°Àà¡£
+    /// å¢åŠ æ–°OAè´¹ç”¨ç”³è¯·å•åŠŸèƒ½å‚æ•°å°è£…ç±»ã€‚
     /// </summary>
     public class AddOaExpenseRequisitionParamsDto : AddParamsDtoBase<OaExpenseRequisition>
     {
         /// <summary>
-        /// ÊÇ·ñÎª´ú¼Ç¡£true±íÊ¾´úËûÈËµÇ¼Ç£¬false±íÊ¾ÓÃ»§×Ô¼ºÉêÇë¡£
+        /// æ˜¯å¦ä¸ºä»£è®°ã€‚trueè¡¨ç¤ºä»£ä»–äººç™»è®°ï¼Œfalseè¡¨ç¤ºç”¨æˆ·è‡ªå·±ç”³è¯·ã€‚
         /// </summary>
         public bool IsRegisterForOthers { get; set; }
     }
 
     /// <summary>
-    /// Ôö¼ÓĞÂOA·ÑÓÃÉêÇëµ¥¹¦ÄÜ·µ»ØÖµ·â×°Àà¡£
+    /// å¢åŠ æ–°OAè´¹ç”¨ç”³è¯·å•åŠŸèƒ½è¿”å›å€¼å°è£…ç±»ã€‚
     /// </summary>
     public class AddOaExpenseRequisitionReturnDto : AddReturnDtoBase
     {
     }
 
     /// <summary>
-    /// ĞŞ¸ÄOA·ÑÓÃÉêÇëµ¥ĞÅÏ¢¹¦ÄÜ²ÎÊı·â×°Àà¡£
+    /// ä¿®æ”¹OAè´¹ç”¨ç”³è¯·å•ä¿¡æ¯åŠŸèƒ½å‚æ•°å°è£…ç±»ã€‚
     /// </summary>
     public class ModifyOaExpenseRequisitionParamsDto : ModifyParamsDtoBase<OaExpenseRequisition>
     {
     }
 
     /// <summary>
-    /// ĞŞ¸ÄOA·ÑÓÃÉêÇëµ¥ĞÅÏ¢¹¦ÄÜ·µ»ØÖµ·â×°Àà¡£
+    /// ä¿®æ”¹OAè´¹ç”¨ç”³è¯·å•ä¿¡æ¯åŠŸèƒ½è¿”å›å€¼å°è£…ç±»ã€‚
     /// </summary>
     public class ModifyOaExpenseRequisitionReturnDto : ModifyReturnDtoBase
     {
     }
 
     /// <summary>
-    /// É¾³ıOA·ÑÓÃÉêÇëµ¥¹¦ÄÜµÄ²ÎÊı·â×°Àà¡£
+    /// åˆ é™¤OAè´¹ç”¨ç”³è¯·å•åŠŸèƒ½çš„å‚æ•°å°è£…ç±»ã€‚
     /// </summary>
     public class RemoveOaExpenseRequisitionParamsDto : RemoveItemsParamsDtoBase
     {
     }
 
     /// <summary>
-    /// É¾³ıOA·ÑÓÃÉêÇëµ¥¹¦ÄÜµÄ·µ»ØÖµ·â×°Àà¡£
+    /// åˆ é™¤OAè´¹ç”¨ç”³è¯·å•åŠŸèƒ½çš„è¿”å›å€¼å°è£…ç±»ã€‚
     /// </summary>
     public class RemoveOaExpenseRequisitionReturnDto : RemoveReturnDtoBase
     {
     }
 
     /// <summary>
-    /// ÉóºËOA·ÑÓÃÉêÇëµ¥¹¦ÄÜµÄ²ÎÊı·â×°Àà¡£
+    /// å®¡æ ¸OAè´¹ç”¨ç”³è¯·å•åŠŸèƒ½çš„å‚æ•°å°è£…ç±»ã€‚
     /// </summary>
     public class AuditOaExpenseRequisitionParamsDto : TokenDtoBase
     {
         /// <summary>
-        /// ÉêÇëµ¥ID¡£
+        /// ç”³è¯·å•IDã€‚
         /// </summary>
         [Required]
         public Guid RequisitionId { get; set; }
 
         /// <summary>
-        /// ÊÇ·ñÉóºËÍ¨¹ı¡£true±íÊ¾ÉóºËÍ¨¹ı£¬false±íÊ¾È¡ÏûÉóºË¡£
+        /// æ˜¯å¦å®¡æ ¸é€šè¿‡ã€‚trueè¡¨ç¤ºå®¡æ ¸é€šè¿‡ï¼Œfalseè¡¨ç¤ºå–æ¶ˆå®¡æ ¸ã€‚
         /// </summary>
         public bool IsAudit { get; set; }
     }
 
     /// <summary>
-    /// ÉóºËOA·ÑÓÃÉêÇëµ¥¹¦ÄÜµÄ·µ»ØÖµ·â×°Àà¡£
+    /// å®¡æ ¸OAè´¹ç”¨ç”³è¯·å•åŠŸèƒ½çš„è¿”å›å€¼å°è£…ç±»ã€‚
     /// </summary>
     public class AuditOaExpenseRequisitionReturnDto : ReturnDtoBase
     {
@@ -110,52 +108,52 @@ namespace PowerLmsWebApi.Controllers
 
     #endregion
 
-    #region OA·ÑÓÃÉêÇëµ¥Ã÷Ï¸
+    #region OAè´¹ç”¨ç”³è¯·å•æ˜ç»†
 
     /// <summary>
-    /// »ñÈ¡ËùÓĞOA·ÑÓÃÉêÇëµ¥Ã÷Ï¸¹¦ÄÜµÄ·µ»ØÖµ·â×°Àà¡£
+    /// è·å–æ‰€æœ‰OAè´¹ç”¨ç”³è¯·å•æ˜ç»†åŠŸèƒ½çš„è¿”å›å€¼å°è£…ç±»ã€‚
     /// </summary>
     public class GetAllOaExpenseRequisitionItemReturnDto : PagingReturnDtoBase<OaExpenseRequisitionItem>
     {
     }
 
     /// <summary>
-    /// Ôö¼ÓĞÂOA·ÑÓÃÉêÇëµ¥Ã÷Ï¸¹¦ÄÜ²ÎÊı·â×°Àà¡£
+    /// å¢åŠ æ–°OAè´¹ç”¨ç”³è¯·å•æ˜ç»†åŠŸèƒ½å‚æ•°å°è£…ç±»ã€‚
     /// </summary>
     public class AddOaExpenseRequisitionItemParamsDto : AddParamsDtoBase<OaExpenseRequisitionItem>
     {
     }
 
     /// <summary>
-    /// Ôö¼ÓĞÂOA·ÑÓÃÉêÇëµ¥Ã÷Ï¸¹¦ÄÜ·µ»ØÖµ·â×°Àà¡£
+    /// å¢åŠ æ–°OAè´¹ç”¨ç”³è¯·å•æ˜ç»†åŠŸèƒ½è¿”å›å€¼å°è£…ç±»ã€‚
     /// </summary>
     public class AddOaExpenseRequisitionItemReturnDto : AddReturnDtoBase
     {
     }
 
     /// <summary>
-    /// ĞŞ¸ÄOA·ÑÓÃÉêÇëµ¥Ã÷Ï¸ĞÅÏ¢¹¦ÄÜ²ÎÊı·â×°Àà¡£
+    /// ä¿®æ”¹OAè´¹ç”¨ç”³è¯·å•æ˜ç»†ä¿¡æ¯åŠŸèƒ½å‚æ•°å°è£…ç±»ã€‚
     /// </summary>
     public class ModifyOaExpenseRequisitionItemParamsDto : ModifyParamsDtoBase<OaExpenseRequisitionItem>
     {
     }
 
     /// <summary>
-    /// ĞŞ¸ÄOA·ÑÓÃÉêÇëµ¥Ã÷Ï¸ĞÅÏ¢¹¦ÄÜ·µ»ØÖµ·â×°Àà¡£
+    /// ä¿®æ”¹OAè´¹ç”¨ç”³è¯·å•æ˜ç»†ä¿¡æ¯åŠŸèƒ½è¿”å›å€¼å°è£…ç±»ã€‚
     /// </summary>
     public class ModifyOaExpenseRequisitionItemReturnDto : ModifyReturnDtoBase
     {
     }
 
     /// <summary>
-    /// É¾³ıOA·ÑÓÃÉêÇëµ¥Ã÷Ï¸¹¦ÄÜµÄ²ÎÊı·â×°Àà¡£
+    /// åˆ é™¤OAè´¹ç”¨ç”³è¯·å•æ˜ç»†åŠŸèƒ½çš„å‚æ•°å°è£…ç±»ã€‚
     /// </summary>
     public class RemoveOaExpenseRequisitionItemParamsDto : RemoveItemsParamsDtoBase
     {
     }
 
     /// <summary>
-    /// É¾³ıOA·ÑÓÃÉêÇëµ¥Ã÷Ï¸¹¦ÄÜµÄ·µ»ØÖµ·â×°Àà¡£
+    /// åˆ é™¤OAè´¹ç”¨ç”³è¯·å•æ˜ç»†åŠŸèƒ½çš„è¿”å›å€¼å°è£…ç±»ã€‚
     /// </summary>
     public class RemoveOaExpenseRequisitionItemReturnDto : RemoveReturnDtoBase
     {
@@ -163,53 +161,53 @@ namespace PowerLmsWebApi.Controllers
 
     #endregion
 
-    #region ÏêÏ¸ĞÅÏ¢DTO
+    #region è¯¦ç»†ä¿¡æ¯DTO
 
     /// <summary>
-    /// OA·ÑÓÃÉêÇëµ¥ÏêÏ¸ĞÅÏ¢DTOÀà¡£
-    /// °üº¬ÉêÇëµ¥»ù±¾ºÍÃ÷Ï¸µÄ¾ÛºÏĞÅÏ¢¡£
+    /// OAè´¹ç”¨ç”³è¯·å•è¯¦ç»†ä¿¡æ¯DTOç±»ã€‚
+    /// åŒ…å«ç”³è¯·å•åŸºæœ¬å’Œæ˜ç»†çš„èšåˆä¿¡æ¯ã€‚
     /// </summary>
     public class OaExpenseRequisitionDetailDto
     {
         /// <summary>
-        /// ÉêÇëµ¥»ù±¾ĞÅÏ¢¡£
+        /// ç”³è¯·å•åŸºæœ¬ä¿¡æ¯ã€‚
         /// </summary>
         public OaExpenseRequisition Requisition { get; set; }
 
         /// <summary>
-        /// ÉêÇëÃ÷Ï¸ÏîÁĞ±í¡£
+        /// ç”³è¯·æ˜ç»†é¡¹åˆ—è¡¨ã€‚
         /// </summary>
         public List<OaExpenseRequisitionItem> Items { get; set; } = new List<OaExpenseRequisitionItem>();
 
         /// <summary>
-        /// ÉêÇëÈËĞÅÏ¢¡£
+        /// ç”³è¯·äººä¿¡æ¯ã€‚
         /// </summary>
         public Account Applicant { get; set; }
 
         /// <summary>
-        /// µÇ¼ÇÈËĞÅÏ¢¡£
+        /// ç™»è®°äººä¿¡æ¯ã€‚
         /// </summary>
         public Account Registrar { get; set; }
     }
 
     #endregion
 
-    #region ÉóÅúÁ÷³ÌÏà¹ØDTO
+    #region å®¡æ‰¹æµç¨‹ç›¸å…³DTO
 
     /// <summary>
-    /// »ñÈ¡µ±Ç°ÓÃ»§Ïà¹ØµÄOA·ÑÓÃÉêÇëµ¥ºÍÉóÅúÁ÷×´Ì¬µÄ²ÎÊı·â×°Àà¡£
+    /// è·å–å½“å‰ç”¨æˆ·ç›¸å…³çš„OAè´¹ç”¨ç”³è¯·å•å’Œå®¡æ‰¹æµçŠ¶æ€çš„å‚æ•°å°è£…ç±»ã€‚
     /// </summary>
     public class GetAllOaExpenseRequisitionWithWfParamsDto : PagingParamsDtoBase
     {
     }
 
     /// <summary>
-    /// »ñÈ¡µ±Ç°ÓÃ»§Ïà¹ØµÄOA·ÑÓÃÉêÇëµ¥ºÍÉóÅúÁ÷×´Ì¬µÄ·µ»ØÖµ·â×°Àà¡£
+    /// è·å–å½“å‰ç”¨æˆ·ç›¸å…³çš„OAè´¹ç”¨ç”³è¯·å•å’Œå®¡æ‰¹æµçŠ¶æ€çš„è¿”å›å€¼å°è£…ç±»ã€‚
     /// </summary>
     public class GetAllOaExpenseRequisitionWithWfReturnDto : ReturnDtoBase
     {
         /// <summary>
-        /// ¹¹Ôìº¯Êı¡£
+        /// æ„é€ å‡½æ•°ã€‚
         /// </summary>
         public GetAllOaExpenseRequisitionWithWfReturnDto()
         {
@@ -217,92 +215,92 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// ·µ»ØµÄÉêÇëµ¥ºÍ¹¤×÷Á÷ĞÅÏ¢¼¯ºÏ¡£
+        /// è¿”å›çš„ç”³è¯·å•å’Œå·¥ä½œæµä¿¡æ¯é›†åˆã€‚
         /// </summary>
         public List<GetAllOaExpenseRequisitionWithWfItemDto> Result { get; set; }
 
         /// <summary>
-        /// ×ÜÊıÁ¿¡£
+        /// æ€»æ•°é‡ã€‚
         /// </summary>
         public int Total { get; set; }
     }
 
     /// <summary>
-    /// OA·ÑÓÃÉêÇëµ¥ºÍ¹¤×÷Á÷ĞÅÏ¢µÄ×éºÏÏî¡£
+    /// OAè´¹ç”¨ç”³è¯·å•å’Œå·¥ä½œæµä¿¡æ¯çš„ç»„åˆé¡¹ã€‚
     /// </summary>
     public class GetAllOaExpenseRequisitionWithWfItemDto
     {
         /// <summary>
-        /// ÉêÇëµ¥ĞÅÏ¢¡£
+        /// ç”³è¯·å•ä¿¡æ¯ã€‚
         /// </summary>
         public OaExpenseRequisition Requisition { get; set; }
 
         /// <summary>
-        /// ¹ØÁªµÄ¹¤×÷Á÷ĞÅÏ¢¡£
+        /// å…³è”çš„å·¥ä½œæµä¿¡æ¯ã€‚
         /// </summary>
         public OwWfDto Wf { get; set; }
     }
 
     #endregion
 
-    #region Æ¾Ö¤ºÅÉú³ÉÏà¹ØDTO
+    #region å‡­è¯å·ç”Ÿæˆç›¸å…³DTO
 
     /// <summary>
-    /// Éú³ÉÆ¾Ö¤ºÅ¹¦ÄÜµÄ²ÎÊı·â×°Àà¡£
+    /// ç”Ÿæˆå‡­è¯å·åŠŸèƒ½çš„å‚æ•°å°è£…ç±»ã€‚
     /// </summary>
     public class GenerateVoucherNumberParamsDto : TokenDtoBase
     {
         /// <summary>
-        /// ÉêÇëµ¥ID¡£
+        /// ç”³è¯·å•IDã€‚
         /// </summary>
         [Required]
         public Guid RequisitionId { get; set; }
 
         /// <summary>
-        /// ½áËãÕËºÅID¡£
+        /// ç»“ç®—è´¦å·IDã€‚
         /// </summary>
         [Required]
         public Guid SettlementAccountId { get; set; }
 
         /// <summary>
-        /// ½áËãÊ±¼ä¡£
+        /// ç»“ç®—æ—¶é—´ã€‚
         /// </summary>
         [Required]
         public DateTime SettlementDateTime { get; set; }
     }
 
     /// <summary>
-    /// Éú³ÉÆ¾Ö¤ºÅ¹¦ÄÜµÄ·µ»ØÖµ·â×°Àà¡£
+    /// ç”Ÿæˆå‡­è¯å·åŠŸèƒ½çš„è¿”å›å€¼å°è£…ç±»ã€‚
     /// </summary>
     public class GenerateVoucherNumberReturnDto : ReturnDtoBase
     {
         /// <summary>
-        /// Éú³ÉµÄÆ¾Ö¤ºÅ¡£
+        /// ç”Ÿæˆçš„å‡­è¯å·ã€‚
         /// </summary>
         public string VoucherNumber { get; set; }
 
         /// <summary>
-        /// Æ¾Ö¤×Ö¡£
+        /// å‡­è¯å­—ã€‚
         /// </summary>
         public string VoucherCharacter { get; set; }
 
         /// <summary>
-        /// ÆÚ¼ä£¨ÔÂ·İ£©¡£
+        /// æœŸé—´ï¼ˆæœˆä»½ï¼‰ã€‚
         /// </summary>
         public int Period { get; set; }
 
         /// <summary>
-        /// ĞòºÅ¡£
+        /// åºå·ã€‚
         /// </summary>
         public int SequenceNumber { get; set; }
 
         /// <summary>
-        /// ÊÇ·ñ´æÔÚÖØºÅ¾¯¸æ¡£
+        /// æ˜¯å¦å­˜åœ¨é‡å·è­¦å‘Šã€‚
         /// </summary>
         public bool HasDuplicateWarning { get; set; }
 
         /// <summary>
-        /// ÖØºÅ¾¯¸æÏûÏ¢¡£
+        /// é‡å·è­¦å‘Šæ¶ˆæ¯ã€‚
         /// </summary>
         public string DuplicateWarningMessage { get; set; }
     }

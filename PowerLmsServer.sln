@@ -18,8 +18,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "解决方案项", "解决�
 		会议转录.txt = 会议转录.txt
 		删除工作任务需求.md = 删除工作任务需求.md
 		杂记.txt = 杂记.txt
+		对比1.md = 对比1.md
 		权限.md = 权限.md
-		遗留权限问题.txt = 遗留权限问题.txt
 		部署指南.txt = 部署指南.txt
 		项目评估.md = 项目评估.md
 	EndProjectSection
@@ -71,6 +71,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Docs", "Docs", "{02EA681E-C
 		Docs\CODE_STYLE.md = Docs\CODE_STYLE.md
 		Docs\DESIGN_PREFERENCE_GUIDE.md = Docs\DESIGN_PREFERENCE_GUIDE.md
 		Docs\DIRECTORY_STRUCTURE_GUIDE.md = Docs\DIRECTORY_STRUCTURE_GUIDE.md
+		Docs\服务器配置.md = Docs\服务器配置.md
 	EndProjectSection
 EndProject
 Global
