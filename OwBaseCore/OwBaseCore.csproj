@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <RootNamespace></RootNamespace>
@@ -15,6 +15,11 @@
     <NoWarn>1701;1702;CS1591</NoWarn>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="Microsoft.Extensions\**" />
+    <EmbeddedResource Remove="Microsoft.Extensions\**" />
+    <None Remove="Microsoft.Extensions\**" />
+  </ItemGroup>
+  <ItemGroup>
     <Compile Remove="System.Net.Sockets\SocketAsynServerDemo.cs" />
   </ItemGroup>
 
@@ -22,10 +27,7 @@
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="6.0.3" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="6.0.1" />
     <PackageReference Include="Microsoft.Extensions.ObjectPool" Version="6.0.36" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Microsoft.Extensions\" />
+    <PackageReference Include="NPOI" Version="2.6.2" />
   </ItemGroup>
 
   <ItemGroup>

@@ -452,96 +452,27 @@ namespace OW.Data
         /// <returns></returns>
         public static Expression Constant(string value, Type type)
         {
-            Expression result;
-            var innerType = type;
-            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))  //可空类型
-                innerType = type.GetGenericArguments()[0];
-            switch (Type.GetTypeCode(innerType))
+            // null 值处理
+            if (string.Equals(value, "null", StringComparison.OrdinalIgnoreCase))
             {
-                case TypeCode.Empty:
-                case TypeCode.DBNull:
-                    result = Expression.Constant(null, type);
-                    break;
-                case TypeCode.Object:
-                    if (innerType == typeof(Guid))
-                    {
-                        if (string.Equals(value, "null", StringComparison.OrdinalIgnoreCase))
-                            result = Expression.Constant(null, type);
-                        else if (!Guid.TryParse(value, out Guid guidValue))
-                        {
-                            OwHelper.SetLastErrorAndMessage(404, $"不能转换为类型{type}, {value}");
-                            return null;
-                        }
-                        else
-                            result = Expression.Constant(guidValue, type);
-                    }
-                    else
-                    {
-                        OwHelper.SetLastErrorAndMessage(404, $"不能转换为类型{type}, {value}");
-                        return null;
-                    }
-                    break;
-                case TypeCode.Boolean:
-                    if (string.Equals(value, "null", StringComparison.OrdinalIgnoreCase))
-                        result = Expression.Constant(null, type);
-                    else if (!bool.TryParse(value, out bool boolValue))
-                    {
-                        OwHelper.SetLastErrorAndMessage(404, $"不能转换为类型{type}, {value}");
-                        return null;
-                    }
-                    else
-                        result = Expression.Constant(boolValue, type);
-                    break;
-                case TypeCode.Char:
-                    if (string.Equals(value, "null", StringComparison.OrdinalIgnoreCase))
-                        result = Expression.Constant(null, type);
-                    else if (!char.TryParse(value, out char charValue))
-                    {
-                        OwHelper.SetLastErrorAndMessage(404, $"不能转换为类型{type}, {value}");
-                        return null;
-                    }
-                    else result = Expression.Constant(charValue, type);
-                    break;
-                case TypeCode.SByte:
-                case TypeCode.Byte:
-                case TypeCode.Int16:
-                case TypeCode.UInt16:
-                case TypeCode.Int32:
-                case TypeCode.UInt32:
-                case TypeCode.Int64:
-                case TypeCode.UInt64:
-                case TypeCode.Single:
-                case TypeCode.Double:
-                case TypeCode.Decimal:
-                    if (string.Equals(value, "null", StringComparison.OrdinalIgnoreCase))
-                        result = Expression.Constant(null, type);
-                    else if (!decimal.TryParse(value, out decimal decimalValue))
-                    {
-                        OwHelper.SetLastErrorAndMessage(404, $"不能转换为类型{type}, {value}");
-                        return null;
-                    }
-                    else result = Expression.Convert(Expression.Constant(decimalValue), type);
-                    break;
-                case TypeCode.DateTime:
-                    if (string.Equals(value, "null", StringComparison.OrdinalIgnoreCase))
-                        result = Expression.Constant(null, type);
-                    else if (!DateTime.TryParse(value, out DateTime dateTimeValue))
-                    {
-                        OwHelper.SetLastErrorAndMessage(404, $"不能转换为类型{type}, {value}");
-                        return null;
-                    }
-                    else result = Expression.Constant(dateTimeValue, type);
-                    break;
-                case TypeCode.String:
-                    if (string.Equals(value, "null", StringComparison.OrdinalIgnoreCase))
-                        result = Expression.Constant(null, type);
-                    else result = Expression.Constant(value, type);
-                    break;
-                default:
-                    OwHelper.SetLastErrorAndMessage(404, $"不能转换为类型{type}, {value}");
-                    return null;
+                return Expression.Constant(null, type);
             }
-            return result;
+
+            // 使用统一的类型转换逻辑
+            if (OwConvert.TryChangeType(value, type, out var convertedValue, out var errorMessage))
+            {
+                return Expression.Constant(convertedValue, type);
+            }
+
+            // 转换失败，设置详细错误信息
+            var detailedError = $"动态查询条件转换失败：无法将值 '{value}' 转换为类型 '{type.Name}'";
+            if (!string.IsNullOrEmpty(errorMessage))
+            {
+                detailedError += $"。{errorMessage}";
+            }
+            
+            OwHelper.SetLastErrorAndMessage(404, detailedError);
+            return null;
         }
 
         /// <summary>
