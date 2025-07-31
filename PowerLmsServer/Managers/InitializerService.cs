@@ -1,4 +1,4 @@
-using AutoMapper;
+ï»¿using AutoMapper;
 using DotNetDBF;
 using Microsoft.Data.Sql;
 using Microsoft.Data.SqlClient;
@@ -34,12 +34,12 @@ using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 namespace PowerLmsServer.Managers
 {
     /// <summary>
-    /// ³õÊ¼»¯·şÎñ¡£
+    /// åˆå§‹åŒ–æœåŠ¡ã€‚
     /// </summary>
     public partial class InitializerService : BackgroundService
     {
         /// <summary>
-        /// ¹¹Ôìº¯Êı¡£
+        /// æ„é€ å‡½æ•°ã€‚
         /// </summary>
         /// <param name="logger"></param>
         /// <param name="serviceScopeFactory"></param>
@@ -54,7 +54,7 @@ namespace PowerLmsServer.Managers
         }
 
         /// <summary>
-        /// ³¬¼¶¹ÜÀíÔ±µÇÂ¼Ãû¡£
+        /// è¶…çº§ç®¡ç†å‘˜ç™»å½•åã€‚
         /// </summary>
         private const string SuperAdminLoginName = "868d61ae-3a86-42a8-8a8c-1ed6cfa90817";
         readonly ILogger<InitializerService> _Logger;
@@ -81,25 +81,25 @@ namespace PowerLmsServer.Managers
                 CleanupInvalidRelationships(svc);
                 Test(svc);
             }, CancellationToken.None);
-            _Logger.LogInformation("Plms·şÎñ³É¹¦ÉÏÏß");
+            _Logger.LogInformation("PlmsæœåŠ¡æˆåŠŸä¸Šçº¿");
             return task;
         }
 
         /// <summary>
-        /// ÇåÀíÎŞĞ§µÄÓÃ»§-½ÇÉ«¡¢½ÇÉ«-È¨ÏŞ¡¢ÓÃ»§-»ú¹¹¹ØÏµÊı¾İ
+        /// æ¸…ç†æ— æ•ˆçš„ç”¨æˆ·-è§’è‰²ã€è§’è‰²-æƒé™ã€ç”¨æˆ·-æœºæ„å…³ç³»æ•°æ®
         /// </summary>
-        /// <param name="svc">·şÎñÌá¹©Õß</param>
+        /// <param name="svc">æœåŠ¡æä¾›è€…</param>
         private void CleanupInvalidRelationships(IServiceProvider svc)
         {
             var db = svc.GetRequiredService<PowerLmsUserDbContext>();
             var stopwatch = new Stopwatch();
             stopwatch.Start();
 
-            _Logger.LogInformation("¿ªÊ¼ÇåÀíÎŞĞ§µÄ¹ØÁª¹ØÏµÊı¾İ...");
+            _Logger.LogInformation("å¼€å§‹æ¸…ç†æ— æ•ˆçš„å…³è”å…³ç³»æ•°æ®...");
 
             try
             {
-                // Ê¹ÓÃEF CoreÉ¾³ıÎŞĞ§µÄÓÃ»§-½ÇÉ«¹ØÏµ
+                // ä½¿ç”¨EF Coreåˆ é™¤æ— æ•ˆçš„ç”¨æˆ·-è§’è‰²å…³ç³»
                 var invalidUserRoles = db.PlAccountRoles
                     .Where(ur => !db.Accounts.Any(u => u.Id == ur.UserId) ||
                                  !db.PlRoles.Any(r => r.Id == ur.RoleId))
@@ -108,10 +108,10 @@ namespace PowerLmsServer.Managers
                 if (invalidUserRoles.Count > 0)
                 {
                     db.PlAccountRoles.RemoveRange(invalidUserRoles);
-                    _Logger.LogInformation("×¼±¸ÇåÀí {count} ÌõÎŞĞ§µÄÓÃ»§-½ÇÉ«¹ØÏµ", invalidUserRoles.Count);
+                    _Logger.LogInformation("å‡†å¤‡æ¸…ç† {count} æ¡æ— æ•ˆçš„ç”¨æˆ·-è§’è‰²å…³ç³»", invalidUserRoles.Count);
                 }
 
-                // Ê¹ÓÃEF CoreÉ¾³ıÎŞĞ§µÄ½ÇÉ«-È¨ÏŞ¹ØÏµ
+                // ä½¿ç”¨EF Coreåˆ é™¤æ— æ•ˆçš„è§’è‰²-æƒé™å…³ç³»
                 var invalidRolePermissions = db.PlRolePermissions
                     .Where(rp => !db.PlRoles.Any(r => r.Id == rp.RoleId) ||
                                  !db.PlPermissions.Any(p => p.Name == rp.PermissionId))
@@ -120,10 +120,10 @@ namespace PowerLmsServer.Managers
                 if (invalidRolePermissions.Count > 0)
                 {
                     db.PlRolePermissions.RemoveRange(invalidRolePermissions);
-                    _Logger.LogInformation("×¼±¸ÇåÀí {count} ÌõÎŞĞ§µÄ½ÇÉ«-È¨ÏŞ¹ØÏµ", invalidRolePermissions.Count);
+                    _Logger.LogInformation("å‡†å¤‡æ¸…ç† {count} æ¡æ— æ•ˆçš„è§’è‰²-æƒé™å…³ç³»", invalidRolePermissions.Count);
                 }
 
-                // Ê¹ÓÃEF CoreÉ¾³ıÎŞĞ§µÄÓÃ»§-»ú¹¹¹ØÏµ
+                // ä½¿ç”¨EF Coreåˆ é™¤æ— æ•ˆçš„ç”¨æˆ·-æœºæ„å…³ç³»
                 var invalidUserOrgs = db.AccountPlOrganizations
                     .Where(uo => !db.Accounts.Any(u => u.Id == uo.UserId) ||
                                 (!db.PlOrganizations.Any(o => o.Id == uo.OrgId) && !db.Merchants.Any(c => c.Id == uo.OrgId)))
@@ -132,24 +132,24 @@ namespace PowerLmsServer.Managers
                 if (invalidUserOrgs.Count > 0)
                 {
                     db.AccountPlOrganizations.RemoveRange(invalidUserOrgs);
-                    _Logger.LogInformation("×¼±¸ÇåÀí {count} ÌõÎŞĞ§µÄÓÃ»§-»ú¹¹¹ØÏµ", invalidUserOrgs.Count);
+                    _Logger.LogInformation("å‡†å¤‡æ¸…ç† {count} æ¡æ— æ•ˆçš„ç”¨æˆ·-æœºæ„å…³ç³»", invalidUserOrgs.Count);
                 }
 
-                // ±£´æËùÓĞ¸ü¸Ä
+                // ä¿å­˜æ‰€æœ‰æ›´æ”¹
                 var totalRemoved = db.SaveChanges();
 
                 stopwatch.Stop();
-                _Logger.LogInformation("¹ØÏµÇåÀíÍê³É£¬¹²É¾³ı {total} ÌõÎŞĞ§Êı¾İ£¬ºÄÊ±: {elapsed}ms",
+                _Logger.LogInformation("å…³ç³»æ¸…ç†å®Œæˆï¼Œå…±åˆ é™¤ {total} æ¡æ— æ•ˆæ•°æ®ï¼Œè€—æ—¶: {elapsed}ms",
                     totalRemoved, stopwatch.ElapsedMilliseconds);
             }
             catch (Exception ex)
             {
-                _Logger.LogError(ex, "ÇåÀíÎŞĞ§¹ØÁª¹ØÏµÊ±·¢Éú´íÎó");
+                _Logger.LogError(ex, "æ¸…ç†æ— æ•ˆå…³è”å…³ç³»æ—¶å‘ç”Ÿé”™è¯¯");
             }
         }
 
         /// <summary>
-        /// Éú³ÉÖÖ×ÓÊı¾İ¡£
+        /// ç”Ÿæˆç§å­æ•°æ®ã€‚
         /// </summary>
         /// <exception cref="NotImplementedException"></exception>
         [Conditional("DEBUG")]
@@ -159,13 +159,13 @@ namespace PowerLmsServer.Managers
             var merch = new PlMerchant
             {
                 Id = Guid.Parse("{073E65D6-EA0F-4D13-9510-3973F5A47526}"),
-                Name = new PlOwnedName { DisplayName = "ÖÖ×ÓÉÌ»§", Name = "ÖÖ×ÓÉÌ»§", },
+                Name = new PlOwnedName { DisplayName = "ç§å­å•†æˆ·", Name = "ç§å­å•†æˆ·", },
             };
             db.AddOrUpdate(merch);
             var org = new PlOrganization
             {
                 Id = Guid.Parse("{FB069576-3E3D-46DF-9F13-B7D5FBA84717}"),
-                Name = new PlOwnedName() { DisplayName = "ÖÖ×Ó»ú¹¹" },
+                Name_DisplayName = "ç§å­æœºæ„",
                 MerchantId = Guid.Parse("{073E65D6-EA0F-4D13-9510-3973F5A47526}"),
                 Otc = 2,
             };
@@ -175,7 +175,7 @@ namespace PowerLmsServer.Managers
             {
                 Id = Guid.Parse("{61810FEA-7CE1-4458-BD2E-436BD22C894E}"),
                 LoginName = "SeedUser",
-                DisplayName = "ÖÖ×ÓÓÃ»§",
+                DisplayName = "ç§å­ç”¨æˆ·",
                 OrgId = org.Id,
                 Token = Guid.Parse("{7B823D05-F7CD-4A0C-9EA8-5D2D8CA630EB}"),
             };
@@ -185,7 +185,7 @@ namespace PowerLmsServer.Managers
             var role = new PlRole
             {
                 Id = Guid.Parse("{310319E1-39EE-4140-8100-1E598113E1FE}"),
-                Name = new PlOwnedName() { DisplayName = "ÖÖ×Ó½ÇÉ«" },
+                Name_DisplayName =  "ç§å­è§’è‰²",
                 OrgId = org.Id,
             };
             db.AddOrUpdate(role);
@@ -205,7 +205,7 @@ namespace PowerLmsServer.Managers
                 rolePermission = new RolePermission { RoleId = role.Id, PermissionId = "D0.1.1.10" };
                 db.Add(rolePermission);
             }
-            //·ÑÓÃ½áËãµ¥
+            //è´¹ç”¨ç»“ç®—å•
             var inv = new PlInvoices
             {
                 Id = Guid.Parse("{AAE637AE-88B9-45F6-8925-4A9EF1B75F88}")
@@ -231,7 +231,7 @@ namespace PowerLmsServer.Managers
         }
 
         /// <summary>
-        /// ´´½¨±ØÒªµÄÏµÍ³×ÊÔ´¡£
+        /// åˆ›å»ºå¿…è¦çš„ç³»ç»Ÿèµ„æºã€‚
         /// </summary>
         /// <param name="svc"></param>
         /// <exception cref="NotImplementedException"></exception>
@@ -239,7 +239,7 @@ namespace PowerLmsServer.Managers
         {
             var db = svc.GetRequiredService<PowerLmsUserDbContext>();
 
-            var filePath = Path.Combine(AppContext.BaseDirectory, "ÏµÍ³×ÊÔ´", "ÏµÍ³×ÊÔ´.xlsx");
+            var filePath = Path.Combine(AppContext.BaseDirectory, "ç³»ç»Ÿèµ„æº", "ç³»ç»Ÿèµ„æº.xlsx");
             using var file = File.OpenRead(filePath);
 
             using var workbook = _NpoiManager.GetWorkbookFromStream(file);
@@ -252,13 +252,13 @@ namespace PowerLmsServer.Managers
         }
 
         /// <summary>
-        /// ³õÊ¼»¯Êı¾İ×Öµä¡£
+        /// åˆå§‹åŒ–æ•°æ®å­—å…¸ã€‚
         /// </summary>
-        /// <param name="svc">·¶Î§ĞÔ·şÎñÈİÆ÷</param>
+        /// <param name="svc">èŒƒå›´æ€§æœåŠ¡å®¹å™¨</param>
         private void InitializeDataDic(IServiceProvider svc)
         {
             var db = svc.GetRequiredService<PowerLmsUserDbContext>();
-            var filePath = Path.Combine(AppContext.BaseDirectory, "ÏµÍ³×ÊÔ´", "Ô¤³õÊ¼»¯Êı¾İ×Öµä.xlsx");
+            var filePath = Path.Combine(AppContext.BaseDirectory, "ç³»ç»Ÿèµ„æº", "é¢„åˆå§‹åŒ–æ•°æ®å­—å…¸.xlsx");
             using var file = File.OpenRead(filePath);
             using var workbook = _NpoiManager.GetWorkbookFromStream(file);
 
@@ -293,12 +293,12 @@ namespace PowerLmsServer.Managers
             //sheet = workbook.GetSheet(nameof(db.DD_JobNumberRules));
             //_NpoiManager.WriteToDb(sheet, db, db.DD_JobNumberRules);
 
-            // ±£´æËùÓĞ¸ü¸Ä
+            // ä¿å­˜æ‰€æœ‰æ›´æ”¹
             db.SaveChanges();
         }
 
         /// <summary>
-        /// ´´½¨¹ÜÀíÔ±¡£
+        /// åˆ›å»ºç®¡ç†å‘˜ã€‚
         /// </summary>
         /// <param name="svc"></param>
         /// <exception cref="NotImplementedException"></exception>
@@ -306,7 +306,7 @@ namespace PowerLmsServer.Managers
         {
             var db = svc.GetRequiredService<PowerLmsUserDbContext>();
             var admin = db.Accounts.FirstOrDefault(c => c.LoginName == SuperAdminLoginName);
-            if (admin == null)  //ÈôÃ»ÓĞ´´½¨³¬¹Ü
+            if (admin == null)  //è‹¥æ²¡æœ‰åˆ›å»ºè¶…ç®¡
             {
                 admin = new Account
                 {
@@ -335,17 +335,17 @@ namespace PowerLmsServer.Managers
                 {
                     new DBFField("Name", NativeDbType.Char, 50, 0),
                 };
-                // Ğ´ÈëÒ»Ğ©Êı¾İ
+                // å†™å…¥ä¸€äº›æ•°æ®
             }
-            // ²âÊÔÁ÷ÊÇ·ñ»¹¿ÉÓÃ
+            // æµ‹è¯•æµæ˜¯å¦è¿˜å¯ç”¨
             try
             {
-                stream.Position = 0; // Èç¹ûÅ×Òì³££¬ËµÃ÷Á÷±»¹Ø±ÕÁË
-                Console.WriteLine("Á÷ÈÔÈ»´ò¿ª");
+                stream.Position = 0; // å¦‚æœæŠ›å¼‚å¸¸ï¼Œè¯´æ˜æµè¢«å…³é—­äº†
+                Console.WriteLine("æµä»ç„¶æ‰“å¼€");
             }
             catch (ObjectDisposedException)
             {
-                Console.WriteLine("Á÷ÒÑ±»¹Ø±Õ");
+                Console.WriteLine("æµå·²è¢«å…³é—­");
             }
         }
 

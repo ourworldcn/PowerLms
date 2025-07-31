@@ -1,4 +1,4 @@
-using AutoMapper;
+ï»¿using AutoMapper;
 using DotNetDBF;
 using Microsoft.Data.Sql;
 using Microsoft.Data.SqlClient;
@@ -34,79 +34,79 @@ using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 namespace PowerLmsServer.Managers
 {
     /// <summary>
-    /// ³õÊ¼»¯·şÎñ¡£
+    /// åˆå§‹åŒ–æœåŠ¡ã€‚
     /// </summary>
     public partial class InitializerService : BackgroundService
     {
         /// <summary>
-        /// ³õÊ¼»¯ËùÓĞÊı¾İ¿âËùĞèµÄÊı¾İ¡£
+        /// åˆå§‹åŒ–æ‰€æœ‰æ•°æ®åº“æ‰€éœ€çš„æ•°æ®ã€‚
         /// </summary>
         /// <param name="svc"></param>
         private void InitDb(IServiceProvider svc)
         {
             var db = svc.GetRequiredService<PowerLmsUserDbContext>();
 
-            #region Ë°Îñ·¢Æ±Í¨µÀ³õÊ¼Êı¾İ
-            // ¼ì²éÅµÅµ·¢Æ±Í¨µÀÊÇ·ñÒÑ´æÔÚ£¬Èç²»´æÔÚÔòÌí¼Ó
+            #region ç¨åŠ¡å‘ç¥¨é€šé“åˆå§‹æ•°æ®
+            // æ£€æŸ¥è¯ºè¯ºå‘ç¥¨é€šé“æ˜¯å¦å·²å­˜åœ¨ï¼Œå¦‚ä¸å­˜åœ¨åˆ™æ·»åŠ 
             var nuoNuoChannelId = typeof(NuoNuoManager).GUID;
             if (!db.TaxInvoiceChannels.Any(c => c.Id == nuoNuoChannelId))
             {
                 db.TaxInvoiceChannels.Add(new TaxInvoiceChannel
                 {
                     Id = nuoNuoChannelId,
-                    DisplayName = "ÅµÅµ·¢Æ±",
+                    DisplayName = "è¯ºè¯ºå‘ç¥¨",
                     InvoiceChannel = nameof(NuoNuoManager),
                     InvoiceChannelParams = "{}",
                 });
-                _Logger.LogInformation("Ìí¼ÓÅµÅµ·¢Æ±Í¨µÀÅäÖÃ");
+                _Logger.LogInformation("æ·»åŠ è¯ºè¯ºå‘ç¥¨é€šé“é…ç½®");
             }
-            // ¼ì²éÊÖ¹¤¿ªÆ±Í¨µÀÊÇ·ñÒÑ´æÔÚ£¬Èç²»´æÔÚÔòÌí¼Ó
+            // æ£€æŸ¥æ‰‹å·¥å¼€ç¥¨é€šé“æ˜¯å¦å·²å­˜åœ¨ï¼Œå¦‚ä¸å­˜åœ¨åˆ™æ·»åŠ 
             var manualChannelId = typeof(ManualInvoicingManager).GUID;
             if (!db.TaxInvoiceChannels.Any(c => c.Id == manualChannelId))
             {
                 db.TaxInvoiceChannels.Add(new TaxInvoiceChannel
                 {
                     Id = manualChannelId,
-                    DisplayName = "ÊÖ¹¤¿ªÆ±",
+                    DisplayName = "æ‰‹å·¥å¼€ç¥¨",
                     InvoiceChannel = nameof(ManualInvoicingManager),
                     InvoiceChannelParams = "{}",
                 });
-                _Logger.LogInformation("Ìí¼ÓÊÖ¹¤¿ªÆ±Í¨µÀÅäÖÃ");
+                _Logger.LogInformation("æ·»åŠ æ‰‹å·¥å¼€ç¥¨é€šé“é…ç½®");
             }
-            #endregion Ë°Îñ·¢Æ±Í¨µÀ³õÊ¼Êı¾İ
+            #endregion ç¨åŠ¡å‘ç¥¨é€šé“åˆå§‹æ•°æ®
 
-            #region ³õÊ¼»¯¿ÆÄ¿ÅäÖÃĞÅÏ¢£¨ÑÏ¸ñ°´ÕÕÉè¼ÆÎÄµµ£©
-            // ¼ì²éÅµÅµ·¢Æ±Í¨µÀÊÇ·ñÒÑ´æÔÚ£¬Èç²»´æÔÚÔòÌí¼Ó
+            #region åˆå§‹åŒ–ç§‘ç›®é…ç½®ä¿¡æ¯ï¼ˆä¸¥æ ¼æŒ‰ç…§è®¾è®¡æ–‡æ¡£ï¼‰
+            // æ£€æŸ¥è¯ºè¯ºå‘ç¥¨é€šé“æ˜¯å¦å·²å­˜åœ¨ï¼Œå¦‚ä¸å­˜åœ¨åˆ™æ·»åŠ 
             nuoNuoChannelId = typeof(NuoNuoManager).GUID;
             if (!db.TaxInvoiceChannels.Any(c => c.Id == nuoNuoChannelId))
             {
                 db.TaxInvoiceChannels.Add(new TaxInvoiceChannel
                 {
                     Id = nuoNuoChannelId,
-                    DisplayName = "ÅµÅµ·¢Æ±",
+                    DisplayName = "è¯ºè¯ºå‘ç¥¨",
                     InvoiceChannel = nameof(NuoNuoManager),
                     InvoiceChannelParams = "{}",
                 });
-                _Logger.LogInformation("Ìí¼ÓÅµÅµ·¢Æ±Í¨µÀÅäÖÃ");
+                _Logger.LogInformation("æ·»åŠ è¯ºè¯ºå‘ç¥¨é€šé“é…ç½®");
             }
 
-            // ¼ì²éÊÖ¹¤¿ªÆ±Í¨µÀÊÇ·ñÒÑ´æÔÚ£¬Èç²»´æÔÚÔòÌí¼Ó
+            // æ£€æŸ¥æ‰‹å·¥å¼€ç¥¨é€šé“æ˜¯å¦å·²å­˜åœ¨ï¼Œå¦‚ä¸å­˜åœ¨åˆ™æ·»åŠ 
             manualChannelId = typeof(ManualInvoicingManager).GUID;
             if (!db.TaxInvoiceChannels.Any(c => c.Id == manualChannelId))
             {
                 db.TaxInvoiceChannels.Add(new TaxInvoiceChannel
                 {
                     Id = manualChannelId,
-                    DisplayName = "ÊÖ¹¤¿ªÆ±",
+                    DisplayName = "æ‰‹å·¥å¼€ç¥¨",
                     InvoiceChannel = nameof(ManualInvoicingManager),
                     InvoiceChannelParams = "{}",
                 });
-                _Logger.LogInformation("Ìí¼ÓÊÖ¹¤¿ªÆ±Í¨µÀÅäÖÃ");
+                _Logger.LogInformation("æ·»åŠ æ‰‹å·¥å¼€ç¥¨é€šé“é…ç½®");
             }
-            #endregion Ë°Îñ·¢Æ±Í¨µÀ³õÊ¼Êı¾İ
+            #endregion ç¨åŠ¡å‘ç¥¨é€šé“åˆå§‹æ•°æ®
 
-            #region ³õÊ¼»¯¿ÆÄ¿ÅäÖÃĞÅÏ¢
-            // PBI_SALES_REVENUE - Ö÷ÓªÒµÎñÊÕÈë¿ÆÄ¿ÅäÖÃ
+            #region åˆå§‹åŒ–ç§‘ç›®é…ç½®ä¿¡æ¯
+            // PBI_SALES_REVENUE - ä¸»è¥ä¸šåŠ¡æ”¶å…¥ç§‘ç›®é…ç½®
             var salesRevenueId = Guid.Parse("{E8B5C4D7-3F1A-4C2E-8D9A-1B5E7F9C3A6D}");
             if (!db.SubjectConfigurations.Any(c => c.Id == salesRevenueId))
             {
@@ -115,22 +115,22 @@ namespace PowerLmsServer.Managers
                     Id = salesRevenueId,
                     Code = "PBI_SALES_REVENUE",
                     SubjectNumber = "6001",
-                    DisplayName = "Ö÷ÓªÒµÎñÊÕÈë",
-                    VoucherGroup = "×ª", // ×ªÕËÆ¾Ö¤
-                    AccountingCategory = "¿Í»§", // ºËËãÀà±ğÎª¿Í»§
-                    Remark = "·¢Æ±¹ÒÕËÊ¹ÓÃµÄÖ÷ÓªÒµÎñÊÕÈë¿ÆÄ¿£¬ÓÃÓÚ¼ÇÂ¼¿ªÆ±²úÉúµÄÊÕÈë½ğ¶î£¨¼ÛË°ºÏ¼Æ¼õÈ¥Ë°¶î£©",
-                    CreateBy = null, // ÏµÍ³³õÊ¼»¯£¬ÎŞ¾ßÌå´´½¨ÈË
+                    DisplayName = "ä¸»è¥ä¸šåŠ¡æ”¶å…¥",
+                    VoucherGroup = "è½¬", // è½¬è´¦å‡­è¯
+                    AccountingCategory = "å®¢æˆ·", // æ ¸ç®—ç±»åˆ«ä¸ºå®¢æˆ·
+                    Remark = "å‘ç¥¨æŒ‚è´¦ä½¿ç”¨çš„ä¸»è¥ä¸šåŠ¡æ”¶å…¥ç§‘ç›®ï¼Œç”¨äºè®°å½•å¼€ç¥¨äº§ç”Ÿçš„æ”¶å…¥é‡‘é¢ï¼ˆä»·ç¨åˆè®¡å‡å»ç¨é¢ï¼‰",
+                    CreateBy = null, // ç³»ç»Ÿåˆå§‹åŒ–ï¼Œæ— å…·ä½“åˆ›å»ºäºº
                     CreateDateTime = OwHelper.WorldNow,
                     IsDelete = false
                 });
-                _Logger.LogInformation("Ìí¼ÓPBIÖ÷ÓªÒµÎñÊÕÈë¿ÆÄ¿ÅäÖÃ");
+                _Logger.LogInformation("æ·»åŠ PBIä¸»è¥ä¸šåŠ¡æ”¶å…¥ç§‘ç›®é…ç½®");
             }
             else
             {
-                _Logger.LogDebug("PBIÖ÷ÓªÒµÎñÊÕÈë¿ÆÄ¿ÅäÖÃÒÑ´æÔÚ£¬Ìø¹ı³õÊ¼»¯");
+                _Logger.LogDebug("PBIä¸»è¥ä¸šåŠ¡æ”¶å…¥ç§‘ç›®é…ç½®å·²å­˜åœ¨ï¼Œè·³è¿‡åˆå§‹åŒ–");
             }
 
-            // PBI_TAX_PAYABLE - Ó¦½»Ë°½ğ¿ÆÄ¿ÅäÖÃ
+            // PBI_TAX_PAYABLE - åº”äº¤ç¨é‡‘ç§‘ç›®é…ç½®
             var taxPayableId = Guid.Parse("{F2A6D8E9-4B7C-5E3F-9A1B-2C6F8E0D4A7C}");
             if (!db.SubjectConfigurations.Any(c => c.Id == taxPayableId))
             {
@@ -139,22 +139,22 @@ namespace PowerLmsServer.Managers
                     Id = taxPayableId,
                     Code = "PBI_TAX_PAYABLE",
                     SubjectNumber = "2221",
-                    DisplayName = "Ó¦½»Ë°½ğ",
-                    VoucherGroup = "×ª", // ×ªÕËÆ¾Ö¤
-                    AccountingCategory = "¿Í»§", // ºËËãÀà±ğÎª¿Í»§
-                    Remark = "·¢Æ±¹ÒÕËÊ¹ÓÃµÄÓ¦½»Ë°½ğ¿ÆÄ¿£¬ÓÃÓÚ¼ÇÂ¼¿ªÆ±²úÉúµÄË°¶î²¿·Ö",
-                    CreateBy = null, // ÏµÍ³³õÊ¼»¯£¬ÎŞ¾ßÌå´´½¨ÈË
+                    DisplayName = "åº”äº¤ç¨é‡‘",
+                    VoucherGroup = "è½¬", // è½¬è´¦å‡­è¯
+                    AccountingCategory = "å®¢æˆ·", // æ ¸ç®—ç±»åˆ«ä¸ºå®¢æˆ·
+                    Remark = "å‘ç¥¨æŒ‚è´¦ä½¿ç”¨çš„åº”äº¤ç¨é‡‘ç§‘ç›®ï¼Œç”¨äºè®°å½•å¼€ç¥¨äº§ç”Ÿçš„ç¨é¢éƒ¨åˆ†",
+                    CreateBy = null, // ç³»ç»Ÿåˆå§‹åŒ–ï¼Œæ— å…·ä½“åˆ›å»ºäºº
                     CreateDateTime = OwHelper.WorldNow,
                     IsDelete = false
                 });
-                _Logger.LogInformation("Ìí¼ÓPBIÓ¦½»Ë°½ğ¿ÆÄ¿ÅäÖÃ");
+                _Logger.LogInformation("æ·»åŠ PBIåº”äº¤ç¨é‡‘ç§‘ç›®é…ç½®");
             }
             else
             {
-                _Logger.LogDebug("PBIÓ¦½»Ë°½ğ¿ÆÄ¿ÅäÖÃÒÑ´æÔÚ£¬Ìø¹ı³õÊ¼»¯");
+                _Logger.LogDebug("PBIåº”äº¤ç¨é‡‘ç§‘ç›®é…ç½®å·²å­˜åœ¨ï¼Œè·³è¿‡åˆå§‹åŒ–");
             }
 
-            // PBI_ACC_RECEIVABLE - Ó¦ÊÕÕË¿î¿ÆÄ¿ÅäÖÃ
+            // PBI_ACC_RECEIVABLE - åº”æ”¶è´¦æ¬¾ç§‘ç›®é…ç½®
             var accReceivableId = Guid.Parse("{A3B7E1F5-6C8D-7A2B-3E4F-9D1C5B8A7E6F}");
             if (!db.SubjectConfigurations.Any(c => c.Id == accReceivableId))
             {
@@ -163,88 +163,88 @@ namespace PowerLmsServer.Managers
                     Id = accReceivableId,
                     Code = "PBI_ACC_RECEIVABLE",
                     SubjectNumber = "1122",
-                    DisplayName = "Ó¦ÊÕÕË¿î",
-                    VoucherGroup = "×ª", // ×ªÕËÆ¾Ö¤
-                    AccountingCategory = "¿Í»§", // ºËËãÀà±ğÎª¿Í»§
-                    Remark = "·¢Æ±¹ÒÕËÊ¹ÓÃµÄÓ¦ÊÕÕË¿î¿ÆÄ¿£¬ÓÃÓÚ¼ÇÂ¼¿ªÆ±²úÉúµÄÓ¦ÊÕ¿îÏî£¨¼ÛË°ºÏ¼Æ£©",
-                    CreateBy = null, // ÏµÍ³³õÊ¼»¯£¬ÎŞ¾ßÌå´´½¨ÈË
+                    DisplayName = "åº”æ”¶è´¦æ¬¾",
+                    VoucherGroup = "è½¬", // è½¬è´¦å‡­è¯
+                    AccountingCategory = "å®¢æˆ·", // æ ¸ç®—ç±»åˆ«ä¸ºå®¢æˆ·
+                    Remark = "å‘ç¥¨æŒ‚è´¦ä½¿ç”¨çš„åº”æ”¶è´¦æ¬¾ç§‘ç›®ï¼Œç”¨äºè®°å½•å¼€ç¥¨äº§ç”Ÿçš„åº”æ”¶æ¬¾é¡¹ï¼ˆä»·ç¨åˆè®¡ï¼‰",
+                    CreateBy = null, // ç³»ç»Ÿåˆå§‹åŒ–ï¼Œæ— å…·ä½“åˆ›å»ºäºº
                     CreateDateTime = OwHelper.WorldNow,
                     IsDelete = false
                 });
-                _Logger.LogInformation("Ìí¼ÓPBIÓ¦ÊÕÕË¿î¿ÆÄ¿ÅäÖÃ");
+                _Logger.LogInformation("æ·»åŠ PBIåº”æ”¶è´¦æ¬¾ç§‘ç›®é…ç½®");
             }
             else
             {
-                _Logger.LogDebug("PBIÓ¦ÊÕÕË¿î¿ÆÄ¿ÅäÖÃÒÑ´æÔÚ£¬Ìø¹ı³õÊ¼»¯");
+                _Logger.LogDebug("PBIåº”æ”¶è´¦æ¬¾ç§‘ç›®é…ç½®å·²å­˜åœ¨ï¼Œè·³è¿‡åˆå§‹åŒ–");
             }
 
             bool hasNewConfigurations = false;
 
-            #region Ö÷ÈÎÎñ/Á÷³Ì¿ÆÄ¿
-            // SETTLEMENT_RECEIPT - ÊµÊÕ
+            #region ä¸»ä»»åŠ¡/æµç¨‹ç§‘ç›®
+            // SETTLEMENT_RECEIPT - å®æ”¶
             if (!db.SubjectConfigurations.Any(c => c.Code == "SETTLEMENT_RECEIPT"))
             {
                 db.SubjectConfigurations.Add(new SubjectConfiguration
                 {
                     Id = Guid.Parse("{F5A6B7C8-9D0E-1F2A-3B4C-5D6E7F8A9B0C}"),
                     Code = "SETTLEMENT_RECEIPT",
-                    SubjectNumber = "", // ´ı¶¨
-                    DisplayName = "ÊµÊÕ",
-                    VoucherGroup = "ÊÕ",
+                    SubjectNumber = "", // å¾…å®š
+                    DisplayName = "å®æ”¶",
+                    VoucherGroup = "æ”¶",
                     AccountingCategory = "",
-                    Preparer = "ÏµÍ³µ¼³ö",
-                    Remark = "ÊµÊÕ½áËãµ¥µ¼³ö¿ÆÄ¿ÅäÖÃ",
+                    Preparer = "ç³»ç»Ÿå¯¼å‡º",
+                    Remark = "å®æ”¶ç»“ç®—å•å¯¼å‡ºç§‘ç›®é…ç½®",
                     CreateBy = null,
                     CreateDateTime = OwHelper.WorldNow,
                     IsDelete = false
                 });
-                _Logger.LogInformation("Ìí¼ÓÊµÊÕ¿ÆÄ¿ÅäÖÃ");
+                _Logger.LogInformation("æ·»åŠ å®æ”¶ç§‘ç›®é…ç½®");
                 hasNewConfigurations = true;
             }
-            // SETTLEMENT_PAYMENT - Êµ¸¶
+            // SETTLEMENT_PAYMENT - å®ä»˜
             if (!db.SubjectConfigurations.Any(c => c.Code == "SETTLEMENT_PAYMENT"))
             {
                 db.SubjectConfigurations.Add(new SubjectConfiguration
                 {
                     Id = Guid.Parse("{A6B7C8D9-0E1F-2A3B-4C5D-6E7F8A9B0C1D}"),
                     Code = "SETTLEMENT_PAYMENT",
-                    SubjectNumber = "", // ´ı¶¨
-                    DisplayName = "Êµ¸¶",
-                    VoucherGroup = "¸¶",
+                    SubjectNumber = "", // å¾…å®š
+                    DisplayName = "å®ä»˜",
+                    VoucherGroup = "ä»˜",
                     AccountingCategory = "",
-                    Preparer = "ÏµÍ³µ¼³ö",
-                    Remark = "Êµ¸¶½áËãµ¥µ¼³ö¿ÆÄ¿ÅäÖÃ",
+                    Preparer = "ç³»ç»Ÿå¯¼å‡º",
+                    Remark = "å®ä»˜ç»“ç®—å•å¯¼å‡ºç§‘ç›®é…ç½®",
                     CreateBy = null,
                     CreateDateTime = OwHelper.WorldNow,
                     IsDelete = false
                 });
-                _Logger.LogInformation("Ìí¼ÓÊµ¸¶¿ÆÄ¿ÅäÖÃ");
+                _Logger.LogInformation("æ·»åŠ å®ä»˜ç§‘ç›®é…ç½®");
                 hasNewConfigurations = true;
             }
-            // ACCRUAL_TAX_REVENUE - ¼ÆÌáË°½ğ¼°Ö÷ÓªÒµÎñÊÕÈë
+            // ACCRUAL_TAX_REVENUE - è®¡æç¨é‡‘åŠä¸»è¥ä¸šåŠ¡æ”¶å…¥
             if (!db.SubjectConfigurations.Any(c => c.Code == "ACCRUAL_TAX_REVENUE"))
             {
                 db.SubjectConfigurations.Add(new SubjectConfiguration
                 {
                     Id = Guid.Parse("{A8B9C0D1-2E3F-4A5B-6C7D-8E9F0A1B2C3D}"),
                     Code = "ACCRUAL_TAX_REVENUE",
-                    SubjectNumber = "", // ´ı¶¨
-                    DisplayName = "¼ÆÌáË°½ğ¼°Ö÷ÓªÒµÎñÊÕÈë",
-                    VoucherGroup = "×ª",
+                    SubjectNumber = "", // å¾…å®š
+                    DisplayName = "è®¡æç¨é‡‘åŠä¸»è¥ä¸šåŠ¡æ”¶å…¥",
+                    VoucherGroup = "è½¬",
                     AccountingCategory = "",
-                    Preparer = "ÏµÍ³µ¼³ö",
-                    Remark = "¼ÆÌáË°½ğ¼°Ö÷ÓªÒµÎñÊÕÈëÁ÷³ÌÅäÖÃ",
+                    Preparer = "ç³»ç»Ÿå¯¼å‡º",
+                    Remark = "è®¡æç¨é‡‘åŠä¸»è¥ä¸šåŠ¡æ”¶å…¥æµç¨‹é…ç½®",
                     CreateBy = null,
                     CreateDateTime = OwHelper.WorldNow,
                     IsDelete = false
                 });
-                _Logger.LogInformation("Ìí¼Ó¼ÆÌáË°½ğ¼°Ö÷ÓªÒµÎñÊÕÈëÅäÖÃ");
+                _Logger.LogInformation("æ·»åŠ è®¡æç¨é‡‘åŠä¸»è¥ä¸šåŠ¡æ”¶å…¥é…ç½®");
                 hasNewConfigurations = true;
             }
             #endregion
 
-            #region »ù´¡¿ÆÄ¿
-            // AR_CODE - Ó¦ÊÕÕË¿î
+            #region åŸºç¡€ç§‘ç›®
+            // AR_CODE - åº”æ”¶è´¦æ¬¾
             if (!db.SubjectConfigurations.Any(c => c.Code == "AR_CODE"))
             {
                 db.SubjectConfigurations.Add(new SubjectConfiguration
@@ -252,19 +252,19 @@ namespace PowerLmsServer.Managers
                     Id = Guid.Parse("{C2D3E4F5-6A7B-8C9D-0E1F-2A3B4C5D6E7F}"),
                     Code = "AR_CODE",
                     SubjectNumber = "1131",
-                    DisplayName = "Ó¦ÊÕÕË¿î",
+                    DisplayName = "åº”æ”¶è´¦æ¬¾",
                     VoucherGroup = "",
                     AccountingCategory = "",
-                    Preparer = "ÏµÍ³µ¼³ö",
-                    Remark = "»ù´¡¿ÆÄ¿-Ó¦ÊÕÕË¿î",
+                    Preparer = "ç³»ç»Ÿå¯¼å‡º",
+                    Remark = "åŸºç¡€ç§‘ç›®-åº”æ”¶è´¦æ¬¾",
                     CreateBy = null,
                     CreateDateTime = OwHelper.WorldNow,
                     IsDelete = false
                 });
-                _Logger.LogInformation("Ìí¼Ó»ù´¡Ó¦ÊÕÕË¿î¿ÆÄ¿ÅäÖÃ");
+                _Logger.LogInformation("æ·»åŠ åŸºç¡€åº”æ”¶è´¦æ¬¾ç§‘ç›®é…ç½®");
                 hasNewConfigurations = true;
             }
-            // REVENUE_CODE - Ö÷ÓªÒµÎñÊÕÈë
+            // REVENUE_CODE - ä¸»è¥ä¸šåŠ¡æ”¶å…¥
             if (!db.SubjectConfigurations.Any(c => c.Code == "REVENUE_CODE"))
             {
                 db.SubjectConfigurations.Add(new SubjectConfiguration
@@ -272,19 +272,19 @@ namespace PowerLmsServer.Managers
                     Id = Guid.Parse("{B1C2D3E4-5F6A-7B8C-9D0E-1F2A3B4C5D6E}"),
                     Code = "REVENUE_CODE",
                     SubjectNumber = "5101",
-                    DisplayName = "Ö÷ÓªÒµÎñÊÕÈë",
+                    DisplayName = "ä¸»è¥ä¸šåŠ¡æ”¶å…¥",
                     VoucherGroup = "",
                     AccountingCategory = "",
-                    Preparer = "ÏµÍ³µ¼³ö",
-                    Remark = "»ù´¡¿ÆÄ¿-Ö÷ÓªÒµÎñÊÕÈë",
+                    Preparer = "ç³»ç»Ÿå¯¼å‡º",
+                    Remark = "åŸºç¡€ç§‘ç›®-ä¸»è¥ä¸šåŠ¡æ”¶å…¥",
                     CreateBy = null,
                     CreateDateTime = OwHelper.WorldNow,
                     IsDelete = false
                 });
-                _Logger.LogInformation("Ìí¼Ó»ù´¡Ö÷ÓªÒµÎñÊÕÈë¿ÆÄ¿ÅäÖÃ");
+                _Logger.LogInformation("æ·»åŠ åŸºç¡€ä¸»è¥ä¸šåŠ¡æ”¶å…¥ç§‘ç›®é…ç½®");
                 hasNewConfigurations = true;
             }
-            // TAX_CODE - Ó¦½»Ë°½ğ
+            // TAX_CODE - åº”äº¤ç¨é‡‘
             if (!db.SubjectConfigurations.Any(c => c.Code == "TAX_CODE"))
             {
                 db.SubjectConfigurations.Add(new SubjectConfiguration
@@ -292,19 +292,19 @@ namespace PowerLmsServer.Managers
                     Id = Guid.Parse("{D3E4F5A6-7B8C-9D0E-1F2A-3B4C5D6E7F8A}"),
                     Code = "TAX_CODE",
                     SubjectNumber = "2171.01.05",
-                    DisplayName = "Ó¦½»Ë°½ğ",
+                    DisplayName = "åº”äº¤ç¨é‡‘",
                     VoucherGroup = "",
                     AccountingCategory = "",
-                    Preparer = "ÏµÍ³µ¼³ö",
-                    Remark = "»ù´¡¿ÆÄ¿-Ó¦½»Ë°½ğ",
+                    Preparer = "ç³»ç»Ÿå¯¼å‡º",
+                    Remark = "åŸºç¡€ç§‘ç›®-åº”äº¤ç¨é‡‘",
                     CreateBy = null,
                     CreateDateTime = OwHelper.WorldNow,
                     IsDelete = false
                 });
-                _Logger.LogInformation("Ìí¼Ó»ù´¡Ó¦½»Ë°½ğ¿ÆÄ¿ÅäÖÃ");
+                _Logger.LogInformation("æ·»åŠ åŸºç¡€åº”äº¤ç¨é‡‘ç§‘ç›®é…ç½®");
                 hasNewConfigurations = true;
             }
-            // BANK_CODE - ÒøĞĞ´æ¿î
+            // BANK_CODE - é“¶è¡Œå­˜æ¬¾
             if (!db.SubjectConfigurations.Any(c => c.Code == "BANK_CODE"))
             {
                 db.SubjectConfigurations.Add(new SubjectConfiguration
@@ -312,42 +312,42 @@ namespace PowerLmsServer.Managers
                     Id = Guid.Parse("{E4F5A6B7-8C9D-0E1F-2A3B-4C5D6E7F8A9B}"),
                     Code = "BANK_CODE",
                     SubjectNumber = "1002",
-                    DisplayName = "ÒøĞĞ´æ¿î",
+                    DisplayName = "é“¶è¡Œå­˜æ¬¾",
                     VoucherGroup = "",
                     AccountingCategory = "",
-                    Preparer = "ÏµÍ³µ¼³ö",
-                    Remark = "»ù´¡¿ÆÄ¿-ÒøĞĞ´æ¿î",
+                    Preparer = "ç³»ç»Ÿå¯¼å‡º",
+                    Remark = "åŸºç¡€ç§‘ç›®-é“¶è¡Œå­˜æ¬¾",
                     CreateBy = null,
                     CreateDateTime = OwHelper.WorldNow,
                     IsDelete = false
                 });
-                _Logger.LogInformation("Ìí¼Ó»ù´¡ÒøĞĞ´æ¿î¿ÆÄ¿ÅäÖÃ");
+                _Logger.LogInformation("æ·»åŠ åŸºç¡€é“¶è¡Œå­˜æ¬¾ç§‘ç›®é…ç½®");
                 hasNewConfigurations = true;
             }
-            // FPREPARE - ÖÆµ¥ÈË
+            // FPREPARE - åˆ¶å•äºº
             if (!db.SubjectConfigurations.Any(c => c.Code == "FPREPARE"))
             {
                 db.SubjectConfigurations.Add(new SubjectConfiguration
                 {
                     Id = Guid.Parse("{F7A8B9C0-1D2E-3F4A-5B6C-7D8E9F0A1B2C}"),
                     Code = "FPREPARE",
-                    SubjectNumber = "", // ¸ÃÏîÎŞ¿ÆÄ¿
-                    DisplayName = "ÖÆµ¥ÈË",
+                    SubjectNumber = "", // è¯¥é¡¹æ— ç§‘ç›®
+                    DisplayName = "åˆ¶å•äºº",
                     VoucherGroup = "",
                     AccountingCategory = "",
-                    Preparer = "ÏµÍ³µ¼³ö",
-                    Remark = "ÖÆµ¥ÈËÅäÖÃ",
+                    Preparer = "ç³»ç»Ÿå¯¼å‡º",
+                    Remark = "åˆ¶å•äººé…ç½®",
                     CreateBy = null,
                     CreateDateTime = OwHelper.WorldNow,
                     IsDelete = false
                 });
-                _Logger.LogInformation("Ìí¼ÓÖÆµ¥ÈËÅäÖÃ");
+                _Logger.LogInformation("æ·»åŠ åˆ¶å•äººé…ç½®");
                 hasNewConfigurations = true;
             }
             #endregion
 
-            #region AÕËÓ¦ÊÕ¼ÆÌá¿ÆÄ¿
-            // ARAB_TOTAL - ¼ÆÌá×ÜÓ¦ÊÕ
+            #region Aè´¦åº”æ”¶è®¡æç§‘ç›®
+            // ARAB_TOTAL - è®¡ææ€»åº”æ”¶
             if (!db.SubjectConfigurations.Any(c => c.Code == "ARAB_TOTAL"))
             {
                 db.SubjectConfigurations.Add(new SubjectConfiguration
@@ -355,19 +355,19 @@ namespace PowerLmsServer.Managers
                     Id = Guid.Parse("{B7C8D9E0-1F2A-3B4C-5D6E-7F8A9B0C1D2E}"),
                     Code = "ARAB_TOTAL",
                     SubjectNumber = "531",
-                    DisplayName = "¼ÆÌá×ÜÓ¦ÊÕ",
-                    VoucherGroup = "×ª",
+                    DisplayName = "è®¡ææ€»åº”æ”¶",
+                    VoucherGroup = "è½¬",
                     AccountingCategory = "",
-                    Preparer = "ÏµÍ³µ¼³ö",
-                    Remark = "AÕËÓ¦ÊÕ¼ÆÌá-×ÜÓ¦ÊÕ¿ÆÄ¿",
+                    Preparer = "ç³»ç»Ÿå¯¼å‡º",
+                    Remark = "Aè´¦åº”æ”¶è®¡æ-æ€»åº”æ”¶ç§‘ç›®",
                     CreateBy = null,
                     CreateDateTime = OwHelper.WorldNow,
                     IsDelete = false
                 });
-                _Logger.LogInformation("Ìí¼ÓARAB¼ÆÌá×ÜÓ¦ÊÕ¿ÆÄ¿ÅäÖÃ");
+                _Logger.LogInformation("æ·»åŠ ARABè®¡ææ€»åº”æ”¶ç§‘ç›®é…ç½®");
                 hasNewConfigurations = true;
             }
-            // ARAB_IN_CUS - ¼ÆÌáÓ¦ÊÕ¹úÄÚ-¿Í»§
+            // ARAB_IN_CUS - è®¡æåº”æ”¶å›½å†…-å®¢æˆ·
             if (!db.SubjectConfigurations.Any(c => c.Code == "ARAB_IN_CUS"))
             {
                 db.SubjectConfigurations.Add(new SubjectConfiguration
@@ -375,19 +375,19 @@ namespace PowerLmsServer.Managers
                     Id = Guid.Parse("{C8D9E0F1-2A3B-4C5D-6E7F-8A9B0C1D2E3F}"),
                     Code = "ARAB_IN_CUS",
                     SubjectNumber = "113.001.01",
-                    DisplayName = "¼ÆÌáÓ¦ÊÕ¹úÄÚ-¿Í»§",
-                    VoucherGroup = "×ª",
-                    AccountingCategory = "¿Í»§",
-                    Preparer = "ÏµÍ³µ¼³ö",
-                    Remark = "AÕËÓ¦ÊÕ¼ÆÌá-¹úÄÚ¿Í»§¿ÆÄ¿",
+                    DisplayName = "è®¡æåº”æ”¶å›½å†…-å®¢æˆ·",
+                    VoucherGroup = "è½¬",
+                    AccountingCategory = "å®¢æˆ·",
+                    Preparer = "ç³»ç»Ÿå¯¼å‡º",
+                    Remark = "Aè´¦åº”æ”¶è®¡æ-å›½å†…å®¢æˆ·ç§‘ç›®",
                     CreateBy = null,
                     CreateDateTime = OwHelper.WorldNow,
                     IsDelete = false
                 });
-                _Logger.LogInformation("Ìí¼ÓARAB¼ÆÌáÓ¦ÊÕ¹úÄÚ-¿Í»§¿ÆÄ¿ÅäÖÃ");
+                _Logger.LogInformation("æ·»åŠ ARABè®¡æåº”æ”¶å›½å†…-å®¢æˆ·ç§‘ç›®é…ç½®");
                 hasNewConfigurations = true;
             }
-            // ARAB_IN_TAR - ¼ÆÌáÓ¦ÊÕ¹úÄÚ-¹ØË°
+            // ARAB_IN_TAR - è®¡æåº”æ”¶å›½å†…-å…³ç¨
             if (!db.SubjectConfigurations.Any(c => c.Code == "ARAB_IN_TAR"))
             {
                 db.SubjectConfigurations.Add(new SubjectConfiguration
@@ -395,19 +395,19 @@ namespace PowerLmsServer.Managers
                     Id = Guid.Parse("{D9E0F1A2-3B4C-5D6E-7F8A-9B0C1D2E3F4A}"),
                     Code = "ARAB_IN_TAR",
                     SubjectNumber = "113.001.02",
-                    DisplayName = "¼ÆÌáÓ¦ÊÕ¹úÄÚ-¹ØË°",
-                    VoucherGroup = "×ª",
-                    AccountingCategory = "¿Í»§",
-                    Preparer = "ÏµÍ³µ¼³ö",
-                    Remark = "AÕËÓ¦ÊÕ¼ÆÌá-¹úÄÚ¹ØË°¿ÆÄ¿",
+                    DisplayName = "è®¡æåº”æ”¶å›½å†…-å…³ç¨",
+                    VoucherGroup = "è½¬",
+                    AccountingCategory = "å®¢æˆ·",
+                    Preparer = "ç³»ç»Ÿå¯¼å‡º",
+                    Remark = "Aè´¦åº”æ”¶è®¡æ-å›½å†…å…³ç¨ç§‘ç›®",
                     CreateBy = null,
                     CreateDateTime = OwHelper.WorldNow,
                     IsDelete = false
                 });
-                _Logger.LogInformation("Ìí¼ÓARAB¼ÆÌáÓ¦ÊÕ¹úÄÚ-¹ØË°¿ÆÄ¿ÅäÖÃ");
+                _Logger.LogInformation("æ·»åŠ ARABè®¡æåº”æ”¶å›½å†…-å…³ç¨ç§‘ç›®é…ç½®");
                 hasNewConfigurations = true;
             }
-            // ARAB_OUT_CUS - ¼ÆÌáÓ¦ÊÕ¹úÍâ-¿Í»§
+            // ARAB_OUT_CUS - è®¡æåº”æ”¶å›½å¤–-å®¢æˆ·
             if (!db.SubjectConfigurations.Any(c => c.Code == "ARAB_OUT_CUS"))
             {
                 db.SubjectConfigurations.Add(new SubjectConfiguration
@@ -415,42 +415,42 @@ namespace PowerLmsServer.Managers
                     Id = Guid.Parse("{E0F1A2B3-4C5D-6E7F-8A9B-0C1D2E3F4A5B}"),
                     Code = "ARAB_OUT_CUS",
                     SubjectNumber = "113.002",
-                    DisplayName = "¼ÆÌáÓ¦ÊÕ¹úÍâ-¿Í»§",
-                    VoucherGroup = "×ª",
-                    AccountingCategory = "¿Í»§",
-                    Preparer = "ÏµÍ³µ¼³ö",
-                    Remark = "AÕËÓ¦ÊÕ¼ÆÌá-¹úÍâ¿Í»§¿ÆÄ¿",
+                    DisplayName = "è®¡æåº”æ”¶å›½å¤–-å®¢æˆ·",
+                    VoucherGroup = "è½¬",
+                    AccountingCategory = "å®¢æˆ·",
+                    Preparer = "ç³»ç»Ÿå¯¼å‡º",
+                    Remark = "Aè´¦åº”æ”¶è®¡æ-å›½å¤–å®¢æˆ·ç§‘ç›®",
                     CreateBy = null,
                     CreateDateTime = OwHelper.WorldNow,
                     IsDelete = false
                 });
-                _Logger.LogInformation("Ìí¼ÓARAB¼ÆÌáÓ¦ÊÕ¹úÍâ-¿Í»§¿ÆÄ¿ÅäÖÃ");
+                _Logger.LogInformation("æ·»åŠ ARABè®¡æåº”æ”¶å›½å¤–-å®¢æˆ·ç§‘ç›®é…ç½®");
                 hasNewConfigurations = true;
             }
-            // ARAB_OUT_TAR - ¼ÆÌáÓ¦ÊÕ¹úÍâ-¹ØË°
+            // ARAB_OUT_TAR - è®¡æåº”æ”¶å›½å¤–-å…³ç¨
             if (!db.SubjectConfigurations.Any(c => c.Code == "ARAB_OUT_TAR"))
             {
                 db.SubjectConfigurations.Add(new SubjectConfiguration
                 {
                     Id = Guid.Parse("{F1A2B3C4-5D6E-7F8A-9B0C-1D2E3F4A5B6C}"),
                     Code = "ARAB_OUT_TAR",
-                    SubjectNumber = "", // ´ı²¹³ä
-                    DisplayName = "¼ÆÌáÓ¦ÊÕ¹úÍâ-¹ØË°",
-                    VoucherGroup = "×ª",
-                    AccountingCategory = "¿Í»§",
-                    Preparer = "ÏµÍ³µ¼³ö",
-                    Remark = "AÕËÓ¦ÊÕ¼ÆÌá-¹úÍâ¹ØË°¿ÆÄ¿£¨´ı²¹³ä¿ÆÄ¿ºÅ£©",
+                    SubjectNumber = "", // å¾…è¡¥å……
+                    DisplayName = "è®¡æåº”æ”¶å›½å¤–-å…³ç¨",
+                    VoucherGroup = "è½¬",
+                    AccountingCategory = "å®¢æˆ·",
+                    Preparer = "ç³»ç»Ÿå¯¼å‡º",
+                    Remark = "Aè´¦åº”æ”¶è®¡æ-å›½å¤–å…³ç¨ç§‘ç›®ï¼ˆå¾…è¡¥å……ç§‘ç›®å·ï¼‰",
                     CreateBy = null,
                     CreateDateTime = OwHelper.WorldNow,
                     IsDelete = false
                 });
-                _Logger.LogInformation("Ìí¼ÓARAB¼ÆÌáÓ¦ÊÕ¹úÍâ-¹ØË°¿ÆÄ¿ÅäÖÃ");
+                _Logger.LogInformation("æ·»åŠ ARABè®¡æåº”æ”¶å›½å¤–-å…³ç¨ç§‘ç›®é…ç½®");
                 hasNewConfigurations = true;
             }
             #endregion
 
-            #region AÕËÓ¦¸¶¼ÆÌá¿ÆÄ¿
-            // APAB_TOTAL - ¼ÆÌá×ÜÓ¦¸¶
+            #region Aè´¦åº”ä»˜è®¡æç§‘ç›®
+            // APAB_TOTAL - è®¡ææ€»åº”ä»˜
             if (!db.SubjectConfigurations.Any(c => c.Code == "APAB_TOTAL"))
             {
                 db.SubjectConfigurations.Add(new SubjectConfiguration
@@ -458,19 +458,19 @@ namespace PowerLmsServer.Managers
                     Id = Guid.Parse("{A2B3C4D5-6E7F-8A9B-0C1D-2E3F4A5B6C7D}"),
                     Code = "APAB_TOTAL",
                     SubjectNumber = "532",
-                    DisplayName = "¼ÆÌá×ÜÓ¦¸¶",
-                    VoucherGroup = "×ª",
+                    DisplayName = "è®¡ææ€»åº”ä»˜",
+                    VoucherGroup = "è½¬",
                     AccountingCategory = "",
-                    Preparer = "ÏµÍ³µ¼³ö",
-                    Remark = "AÕËÓ¦¸¶¼ÆÌá-×ÜÓ¦¸¶¿ÆÄ¿",
+                    Preparer = "ç³»ç»Ÿå¯¼å‡º",
+                    Remark = "Aè´¦åº”ä»˜è®¡æ-æ€»åº”ä»˜ç§‘ç›®",
                     CreateBy = null,
                     CreateDateTime = OwHelper.WorldNow,
                     IsDelete = false
                 });
-                _Logger.LogInformation("Ìí¼ÓAPAB¼ÆÌá×ÜÓ¦¸¶¿ÆÄ¿ÅäÖÃ");
+                _Logger.LogInformation("æ·»åŠ APABè®¡ææ€»åº”ä»˜ç§‘ç›®é…ç½®");
                 hasNewConfigurations = true;
             }
-            // APAB_IN_SUP - ¼ÆÌáÓ¦¸¶¹úÄÚ-¹©Ó¦ÉÌ
+            // APAB_IN_SUP - è®¡æåº”ä»˜å›½å†…-ä¾›åº”å•†
             if (!db.SubjectConfigurations.Any(c => c.Code == "APAB_IN_SUP"))
             {
                 db.SubjectConfigurations.Add(new SubjectConfiguration
@@ -478,19 +478,19 @@ namespace PowerLmsServer.Managers
                     Id = Guid.Parse("{B3C4D5E6-7F8A-9B0C-1D2E-3F4A5B6C7D8E}"),
                     Code = "APAB_IN_SUP",
                     SubjectNumber = "203.001.01",
-                    DisplayName = "¼ÆÌáÓ¦¸¶¹úÄÚ-¹©Ó¦ÉÌ",
-                    VoucherGroup = "×ª",
-                    AccountingCategory = "¹©Ó¦ÉÌ",
-                    Preparer = "ÏµÍ³µ¼³ö",
-                    Remark = "AÕËÓ¦¸¶¼ÆÌá-¹úÄÚ¹©Ó¦ÉÌ¿ÆÄ¿",
+                    DisplayName = "è®¡æåº”ä»˜å›½å†…-ä¾›åº”å•†",
+                    VoucherGroup = "è½¬",
+                    AccountingCategory = "ä¾›åº”å•†",
+                    Preparer = "ç³»ç»Ÿå¯¼å‡º",
+                    Remark = "Aè´¦åº”ä»˜è®¡æ-å›½å†…ä¾›åº”å•†ç§‘ç›®",
                     CreateBy = null,
                     CreateDateTime = OwHelper.WorldNow,
                     IsDelete = false
                 });
-                _Logger.LogInformation("Ìí¼ÓAPAB¼ÆÌáÓ¦¸¶¹úÄÚ-¹©Ó¦ÉÌ¿ÆÄ¿ÅäÖÃ");
+                _Logger.LogInformation("æ·»åŠ APABè®¡æåº”ä»˜å›½å†…-ä¾›åº”å•†ç§‘ç›®é…ç½®");
                 hasNewConfigurations = true;
             }
-            // APAB_IN_TAR - ¼ÆÌáÓ¦¸¶¹úÄÚ-¹ØË°
+            // APAB_IN_TAR - è®¡æåº”ä»˜å›½å†…-å…³ç¨
             if (!db.SubjectConfigurations.Any(c => c.Code == "APAB_IN_TAR"))
             {
                 db.SubjectConfigurations.Add(new SubjectConfiguration
@@ -498,19 +498,19 @@ namespace PowerLmsServer.Managers
                     Id = Guid.Parse("{C4D5E6F7-8A9B-0C1D-2E3F-4A5B6C7D8E9F}"),
                     Code = "APAB_IN_TAR",
                     SubjectNumber = "203.001.02",
-                    DisplayName = "¼ÆÌáÓ¦¸¶¹úÄÚ-¹ØË°",
-                    VoucherGroup = "×ª",
-                    AccountingCategory = "¹©Ó¦ÉÌ",
-                    Preparer = "ÏµÍ³µ¼³ö",
-                    Remark = "AÕËÓ¦¸¶¼ÆÌá-¹úÄÚ¹ØË°¿ÆÄ¿",
+                    DisplayName = "è®¡æåº”ä»˜å›½å†…-å…³ç¨",
+                    VoucherGroup = "è½¬",
+                    AccountingCategory = "ä¾›åº”å•†",
+                    Preparer = "ç³»ç»Ÿå¯¼å‡º",
+                    Remark = "Aè´¦åº”ä»˜è®¡æ-å›½å†…å…³ç¨ç§‘ç›®",
                     CreateBy = null,
                     CreateDateTime = OwHelper.WorldNow,
                     IsDelete = false
                 });
-                _Logger.LogInformation("Ìí¼ÓAPAB¼ÆÌáÓ¦¸¶¹úÄÚ-¹ØË°¿ÆÄ¿ÅäÖÃ");
+                _Logger.LogInformation("æ·»åŠ APABè®¡æåº”ä»˜å›½å†…-å…³ç¨ç§‘ç›®é…ç½®");
                 hasNewConfigurations = true;
             }
-            // APAB_OUT_SUP - ¼ÆÌáÓ¦¸¶¹úÍâ-¹©Ó¦ÉÌ
+            // APAB_OUT_SUP - è®¡æåº”ä»˜å›½å¤–-ä¾›åº”å•†
             if (!db.SubjectConfigurations.Any(c => c.Code == "APAB_OUT_SUP"))
             {
                 db.SubjectConfigurations.Add(new SubjectConfiguration
@@ -518,51 +518,51 @@ namespace PowerLmsServer.Managers
                     Id = Guid.Parse("{D5E6F7A8-9B0C-1D2E-3F4A-5B6C7D8E9F0A}"),
                     Code = "APAB_OUT_SUP",
                     SubjectNumber = "203.002",
-                    DisplayName = "¼ÆÌáÓ¦¸¶¹úÍâ-¹©Ó¦ÉÌ",
-                    VoucherGroup = "×ª",
-                    AccountingCategory = "¹©Ó¦ÉÌ",
-                    Preparer = "ÏµÍ³µ¼³ö",
-                    Remark = "AÕËÓ¦¸¶¼ÆÌá-¹úÍâ¹©Ó¦ÉÌ¿ÆÄ¿",
+                    DisplayName = "è®¡æåº”ä»˜å›½å¤–-ä¾›åº”å•†",
+                    VoucherGroup = "è½¬",
+                    AccountingCategory = "ä¾›åº”å•†",
+                    Preparer = "ç³»ç»Ÿå¯¼å‡º",
+                    Remark = "Aè´¦åº”ä»˜è®¡æ-å›½å¤–ä¾›åº”å•†ç§‘ç›®",
                     CreateBy = null,
                     CreateDateTime = OwHelper.WorldNow,
                     IsDelete = false
                 });
-                _Logger.LogInformation("Ìí¼ÓAPAB¼ÆÌáÓ¦¸¶¹úÍâ-¹©Ó¦ÉÌ¿ÆÄ¿ÅäÖÃ");
+                _Logger.LogInformation("æ·»åŠ APABè®¡æåº”ä»˜å›½å¤–-ä¾›åº”å•†ç§‘ç›®é…ç½®");
                 hasNewConfigurations = true;
             }
-            // APAB_OUT_TAR - ¼ÆÌáÓ¦¸¶¹úÍâ-¹ØË°
+            // APAB_OUT_TAR - è®¡æåº”ä»˜å›½å¤–-å…³ç¨
             if (!db.SubjectConfigurations.Any(c => c.Code == "APAB_OUT_TAR"))
             {
                 db.SubjectConfigurations.Add(new SubjectConfiguration
                 {
                     Id = Guid.Parse("{E6F7A8B9-0C1D-2E3F-4A5B-6C7D8E9F0A1B}"),
                     Code = "APAB_OUT_TAR",
-                    SubjectNumber = "", // ´ı²¹³ä
-                    DisplayName = "¼ÆÌáÓ¦¸¶¹úÍâ-¹ØË°",
-                    VoucherGroup = "×ª",
-                    AccountingCategory = "¹©Ó¦ÉÌ",
-                    Preparer = "ÏµÍ³µ¼³ö",
-                    Remark = "AÕËÓ¦¸¶¼ÆÌá-¹úÍâ¹ØË°¿ÆÄ¿£¨´ı²¹³ä¿ÆÄ¿ºÅ£©",
+                    SubjectNumber = "", // å¾…è¡¥å……
+                    DisplayName = "è®¡æåº”ä»˜å›½å¤–-å…³ç¨",
+                    VoucherGroup = "è½¬",
+                    AccountingCategory = "ä¾›åº”å•†",
+                    Preparer = "ç³»ç»Ÿå¯¼å‡º",
+                    Remark = "Aè´¦åº”ä»˜è®¡æ-å›½å¤–å…³ç¨ç§‘ç›®ï¼ˆå¾…è¡¥å……ç§‘ç›®å·ï¼‰",
                     CreateBy = null,
                     CreateDateTime = OwHelper.WorldNow,
                     IsDelete = false
                 });
-                _Logger.LogInformation("Ìí¼ÓAPAB¼ÆÌáÓ¦¸¶¹úÍâ-¹ØË°¿ÆÄ¿ÅäÖÃ");
+                _Logger.LogInformation("æ·»åŠ APABè®¡æåº”ä»˜å›½å¤–-å…³ç¨ç§‘ç›®é…ç½®");
                 hasNewConfigurations = true;
             }
             #endregion
 
-            // Èç¹ûÓĞĞÂÔöÅäÖÃ£¬Ôò±£´æ¸ü¸Ä
+            // å¦‚æœæœ‰æ–°å¢é…ç½®ï¼Œåˆ™ä¿å­˜æ›´æ”¹
             if (hasNewConfigurations)
             {
                 db.SaveChanges();
-                _Logger.LogInformation("¿ÆÄ¿ÅäÖÃ³õÊ¼»¯Íê³É£¬ÒÑ±£´æËùÓĞĞÂÔöÅäÖÃ");
+                _Logger.LogInformation("ç§‘ç›®é…ç½®åˆå§‹åŒ–å®Œæˆï¼Œå·²ä¿å­˜æ‰€æœ‰æ–°å¢é…ç½®");
             }
             else
             {
-                _Logger.LogDebug("ËùÓĞ¿ÆÄ¿ÅäÖÃ¾ùÒÑ´æÔÚ£¬Ìø¹ı³õÊ¼»¯");
+                _Logger.LogDebug("æ‰€æœ‰ç§‘ç›®é…ç½®å‡å·²å­˜åœ¨ï¼Œè·³è¿‡åˆå§‹åŒ–");
             }
-            #endregion ³õÊ¼»¯¿ÆÄ¿ÅäÖÃĞÅÏ¢
+            #endregion åˆå§‹åŒ–ç§‘ç›®é…ç½®ä¿¡æ¯
         }
     }
 }

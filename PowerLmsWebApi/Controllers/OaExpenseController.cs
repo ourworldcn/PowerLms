@@ -510,11 +510,12 @@ namespace PowerLmsWebApi.Controllers
                 // 构建申请单查询
                 var dbSet = _DbContext.OaExpenseRequisitions.Where(r => docIds.Contains(r.Id));
 
-                // 权限过滤：非超管用户只能看到自己有权限的申请单
+                // 🔥 修复Bug：工作流查询已经包含权限控制，只需保留组织隔离
+                // 移除 (r.ApplicantId == context.User.Id || r.CreateBy == context.User.Id) 条件
+                // 这样审批人就能看到分配给自己审批的申请单了
                 if (!context.User.IsSuperAdmin)
                 {
-                    dbSet = dbSet.Where(r => r.OrgId == context.User.OrgId &&
-                                           (r.ApplicantId == context.User.Id || r.CreateBy == context.User.Id));
+                    dbSet = dbSet.Where(r => r.OrgId == context.User.OrgId);
                 }
 
                 // 应用申请单条件

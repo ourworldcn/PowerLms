@@ -153,7 +153,7 @@ namespace PowerLmsWebApi.Controllers
 
                     coll = coll.Where(c => userIds.Contains(c.Id));
                     _Logger.LogDebug("普通用户查询: 当前公司 {companyName}(ID:{companyId}) 下找到 {count} 个用户",
-                        currentCompany.Name?.DisplayName, currentCompany.Id, userIds.Length);
+                        currentCompany.Name_DisplayName, currentCompany.Id, userIds.Length);
                 }
 
                 // 处理条件查询

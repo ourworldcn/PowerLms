@@ -479,8 +479,8 @@ namespace PowerLmsWebApi.Controllers
             if (item.Children != null && item.Children.Count > 0)
             {
                 _Logger.LogWarning("删除组织机构失败：组织机构 {orgId} ({orgName}) 包含 {childCount} 个子组织机构，需要先删除子组织机构",
-                    id, item.Name?.DisplayName, item.Children.Count);
-                return BadRequest($"组织机构 '{item.Name?.DisplayName}' 包含子组织机构，请先删除子组织机构");
+                    id, item.Name_DisplayName, item.Children.Count);
+                return BadRequest($"组织机构 '{item.Name_DisplayName}' 包含子组织机构，请先删除子组织机构");
             }
 
             // 检查是否有角色指向该组织机构
@@ -488,16 +488,16 @@ namespace PowerLmsWebApi.Controllers
             if (rolesPointingToOrg.Any())
             {
                 _Logger.LogWarning("删除组织机构失败：存在 {count} 个角色指向组织机构 {orgId} ({orgName})",
-                    rolesPointingToOrg.Count, id, item.Name?.DisplayName);
-                return BadRequest($"组织机构 '{item.Name?.DisplayName}' 有 {rolesPointingToOrg.Count} 个角色与其关联，请先删除这些角色");
+                    rolesPointingToOrg.Count, id, item.Name_DisplayName);
+                return BadRequest($"组织机构 '{item.Name_DisplayName}' 有 {rolesPointingToOrg.Count} 个角色与其关联，请先删除这些角色");
             }
 
             // 检查是否有关联业务
             if (HasBusinessRelatedToOrg(id))
             {
                 _Logger.LogWarning("删除组织机构失败：组织机构 {orgId} ({orgName}) 存在关联业务，无法删除",
-                    id, item.Name?.DisplayName);
-                return BadRequest($"组织机构 '{item.Name?.DisplayName}' 存在关联业务，无法删除");
+                    id, item.Name_DisplayName);
+                return BadRequest($"组织机构 '{item.Name_DisplayName}' 存在关联业务，无法删除");
             }
 
             try
@@ -527,7 +527,7 @@ namespace PowerLmsWebApi.Controllers
 
                 // 记录删除前的组织机构信息
                 _Logger.LogInformation("准备删除组织机构: ID={orgId}, 名称='{orgName}', 父ID={parentId}, 商户ID={merchantId}",
-                    item.Id, item.Name?.DisplayName, item.ParentId, merchantId);
+                    item.Id, item.Name_DisplayName, item.ParentId, merchantId);
 
                 // 1. 删除用户-机构关系
                 var userOrgRelations = _DbContext.AccountPlOrganizations
@@ -562,7 +562,7 @@ namespace PowerLmsWebApi.Controllers
 
                 // 记录更详细的上下文信息
                 _Logger.LogError("异常上下文: 用户={userId}, 组织机构ID={orgId}, 组织机构名称='{orgName}'",
-                    context.User.Id, id, item.Name?.DisplayName);
+                    context.User.Id, id, item.Name_DisplayName);
 
                 // 返回带有详细错误信息的BadRequest结果
                 return BadRequest(new

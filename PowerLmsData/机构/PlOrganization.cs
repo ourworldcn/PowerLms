@@ -26,10 +26,24 @@ namespace PowerLms.Data
         public Guid? MerchantId { get; set; }
 
         /// <summary>
-        /// 名称类。
+        /// 正式名称，拥有相对稳定性。
         /// </summary>
-        [Comment("名称嵌入类")]
-        public PlOwnedName Name { get; set; }
+        [Comment("正式名称，拥有相对稳定性")]
+        [MaxLength(64)]
+        public string Name_Name { get; set; }
+
+        /// <summary>
+        /// 正式简称。对正式的组织机构通常简称也是规定的。
+        /// </summary>
+        [Comment("正式简称，对正式的组织机构通常简称也是规定的")]
+        [MaxLength(32)]
+        public string Name_ShortName { get; set; }
+
+        /// <summary>
+        /// 显示名，有时它是昵称或简称(系统内)的意思。
+        /// </summary>
+        [Comment("显示名，有时它是昵称或简称(系统内)的意思")]
+        public string Name_DisplayName { get; set; }
 
         /// <summary>
         /// 组织机构描述。

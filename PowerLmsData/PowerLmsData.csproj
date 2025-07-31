@@ -36,7 +36,7 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="系统资源\预初始化数据字典.xlsx">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="系统资源\系统资源.xlsx">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

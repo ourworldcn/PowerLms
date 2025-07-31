@@ -31,11 +31,30 @@ namespace PowerLms.Data
         [Comment("所属组织机构Id或商户Id。")]
         public Guid? OrgId { get; set; }
 
-        /// <summary>
-        /// 封装名称的对象。
-        /// </summary>
-        public PlOwnedName Name { get; set; }
+        #region 原Name
 
+        /// <summary>
+        /// 正式名称，拥有相对稳定性。
+        /// </summary>
+        [Comment("正式名称，拥有相对稳定性")]
+        [MaxLength(64)]
+        public string Name_Name { get; set; }
+
+
+        /// <summary>
+        /// 正式简称。对正式的组织机构通常简称也是规定的。
+        /// </summary>
+        [Comment("正式简称，对正式的组织机构通常简称也是规定的")]
+        [MaxLength(32)]
+        public string Name_ShortName { get; set; }
+
+        /// <summary>
+        /// 显示名，有时它是昵称或简称(系统内)的意思。
+        /// </summary>
+        [Comment("显示名，有时它是昵称或简称(系统内)的意思")]
+        public string Name_DisplayName { get; set; }
+
+        #endregion  原Name
         #region ICreatorInfo接口相关
 
         /// <summary>

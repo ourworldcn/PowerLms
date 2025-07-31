@@ -222,7 +222,7 @@ namespace PowerLmsWebApi.Controllers
                     _OrgManager.InvalidateOrgCaches(merchantId.Value);
                 }
 
-                _Logger.LogInformation("成功删除角色: {roleName}(ID:{roleId})", item.Name, id);
+                _Logger.LogInformation("成功删除角色: {roleName}(ID:{roleId})", item.Name_Name, id);
             }
             catch (Exception ex)
             {
