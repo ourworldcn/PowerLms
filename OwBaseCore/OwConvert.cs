@@ -233,31 +233,13 @@ namespace System
         /// <returns>true转换成功，false转换失败</returns>
         public static bool TryChangeType(string val, Type type, out object result)
         {
-            return TryChangeType(val, type, out result, out _); // 委托给详细版本，忽略错误信息
-        }
-
-        /// <summary>
-        /// 使用指定类型的静态函数 TryParse 转换为指定类型。
-        /// 返回详细的错误信息，供非底层调用者使用。
-        /// </summary>
-        /// <param name="val">可以是字符串等基元类型，
-        /// 也可以是任何有类似静态公开方法<see cref="DateTime.TryParse(string?, out DateTime)"/>的类型。</param>
-        /// <param name="type">目标转换类型</param>
-        /// <param name="result">封装(可能装箱)为Object类型的返回值。</param>
-        /// <param name="errorMessage">转换失败时的详细错误信息。成功时为null。</param>
-        /// <returns>true转换成功，false转换失败</returns>
-        public static bool TryChangeType(string val, Type type, out object result, out string errorMessage)
-        {
             result = null;
-            errorMessage = null;
-            
             // 字符串类型快速路径
             if (type == typeof(string))
             {
                 result = val;
                 return true;
             }
-            
             // null 值处理
             if (val is null || string.Equals(val, "null", StringComparison.OrdinalIgnoreCase))
             {
@@ -266,30 +248,26 @@ namespace System
                     result = null;
                     return true;
                 }
-                errorMessage = $"不可空类型 '{type.Name}' 不能接受 null 值";
-                return false;
+                return false; // 不可空类型不能接受 null 值，基础库不提供详细错误信息
             }
-            
             // 可空类型处理
             if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
             {
                 var underlyingType = Nullable.GetUnderlyingType(type);
-                if (TryChangeType(val, underlyingType, out var underlyingResult, out errorMessage))
+                if (TryChangeType(val, underlyingType, out var underlyingResult))
                 {
                     result = Activator.CreateInstance(type, underlyingResult);
                     return true;
                 }
-                return false; // errorMessage 已由递归调用设置
+                return false; // 递归转换失败
             }
-            
             // 直接转换
-            if (TryDirectConvert(val, type, out result, out errorMessage))
+            if (TryDirectConvert(val, type, out result))
             {
                 return true;
             }
-            
-            // 反射转换
-            return TryConvertUsingReflection(val, type, out result, out errorMessage);
+            // 反射转换（兜底方案）
+            return TryConvertUsingReflection(val, type, out result);
         }
 
         /// <summary>
@@ -298,77 +276,49 @@ namespace System
         /// <param name="val">要转换的字符串值</param>
         /// <param name="type">目标类型</param>
         /// <param name="result">转换结果</param>
+        /// 
         /// <returns>是否转换成功</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         private static bool TryDirectConvert(string val, Type type, out object result)
         {
-            return TryDirectConvert(val, type, out result, out _); // 委托给详细版本，忽略错误信息
-        }
-
-        /// <summary>
-        /// 高性能直接转换层：使用 TypeCode 和内联优化，覆盖95%+的使用场景
-        /// </summary>
-        /// <param name="val">要转换的字符串值</param>
-        /// <param name="type">目标类型</param>
-        /// <param name="result">转换结果</param>
-        /// <param name="errorMessage">转换失败时的详细错误信息</param>
-        /// <returns>是否转换成功</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        private static bool TryDirectConvert(string val, Type type, out object result, out string errorMessage)
-        {
             result = null;
-            errorMessage = null;
-            
-            try
-            {
-                // 使用 TypeCode 优化分支预测，直接静态调用获得最佳性能
-                var typeCode = Type.GetTypeCode(type);
-                var success = typeCode switch
-                {
-                    // 空值类型
-                    TypeCode.Empty => (result = null, true).Item2,
-                    TypeCode.DBNull => (result = DBNull.Value, true).Item2,
-                    
-                    // 常用数值类型（按使用频率排序）
-                    TypeCode.Int32 => TryParseAndAssign(int.TryParse(val, out var r), r, out result),
-                    TypeCode.Decimal => TryParseAndAssign(decimal.TryParse(val, out var r), r, out result),
-                    TypeCode.Double => TryParseAndAssign(double.TryParse(val, out var r), r, out result),
-                    TypeCode.Single => TryParseAndAssign(float.TryParse(val, out var r), r, out result),
-                    TypeCode.Int64 => TryParseAndAssign(long.TryParse(val, out var r), r, out result),
-                    TypeCode.Boolean => TryParseAndAssign(bool.TryParse(val, out var r), r, out result),
-                    TypeCode.DateTime => TryParseAndAssign(DateTime.TryParse(val, out var r), r, out result),
-                    
-                    // 整数类型（完整覆盖）
-                    TypeCode.Byte => TryParseAndAssign(byte.TryParse(val, out var r), r, out result),
-                    TypeCode.SByte => TryParseAndAssign(sbyte.TryParse(val, out var r), r, out result),
-                    TypeCode.Int16 => TryParseAndAssign(short.TryParse(val, out var r), r, out result),
-                    TypeCode.UInt16 => TryParseAndAssign(ushort.TryParse(val, out var r), r, out result),
-                    TypeCode.UInt32 => TryParseAndAssign(uint.TryParse(val, out var r), r, out result),
-                    TypeCode.UInt64 => TryParseAndAssign(ulong.TryParse(val, out var r), r, out result),
-                    
-                    // 字符和字符串类型
-                    TypeCode.Char => TryParseAndAssign(char.TryParse(val, out var r), r, out result),
-                    TypeCode.String => (result = val, true).Item2, // 字符串直接返回
-                    
-                    // 复杂对象类型
-                    TypeCode.Object => TryConvertObjectType(val, type, out result), // 处理 Guid 和枚举
-                    
-                    // 其他未知类型交给反射层处理
-                    _ => false
-                };
 
-                if (!success && result == null)
-                {
-                    errorMessage = $"无法将字符串 '{val}' 转换为 {type.Name} 类型";
-                }
-
-                return success;
-            }
-            catch (Exception ex)
+            // 使用 TypeCode 优化分支预测，直接静态调用获得最佳性能
+            var typeCode = Type.GetTypeCode(type);
+            var success = typeCode switch
             {
-                errorMessage = $"转换过程中发生异常：{ex.Message}";
-                return false;
-            }
+                // 空值类型
+                TypeCode.Empty => (result = null, true).Item2,
+                TypeCode.DBNull => (result = DBNull.Value, true).Item2,
+
+                // 常用数值类型（按使用频率排序）
+                TypeCode.Int32 => TryParseAndAssign(int.TryParse(val, out var r), r, out result),
+                TypeCode.Decimal => TryParseAndAssign(decimal.TryParse(val, out var r), r, out result),
+                TypeCode.Double => TryParseAndAssign(double.TryParse(val, out var r), r, out result),
+                TypeCode.Single => TryParseAndAssign(float.TryParse(val, out var r), r, out result),
+                TypeCode.Int64 => TryParseAndAssign(long.TryParse(val, out var r), r, out result),
+                TypeCode.Boolean => TryParseAndAssign(bool.TryParse(val, out var r), r, out result),
+                TypeCode.DateTime => TryParseAndAssign(DateTime.TryParse(val, out var r), r, out result),
+
+                // 整数类型（完整覆盖）
+                TypeCode.Byte => TryParseAndAssign(byte.TryParse(val, out var r), r, out result),
+                TypeCode.SByte => TryParseAndAssign(sbyte.TryParse(val, out var r), r, out result),
+                TypeCode.Int16 => TryParseAndAssign(short.TryParse(val, out var r), r, out result),
+                TypeCode.UInt16 => TryParseAndAssign(ushort.TryParse(val, out var r), r, out result),
+                TypeCode.UInt32 => TryParseAndAssign(uint.TryParse(val, out var r), r, out result),
+                TypeCode.UInt64 => TryParseAndAssign(ulong.TryParse(val, out var r), r, out result),
+
+                // 字符和字符串类型
+                TypeCode.Char => TryParseAndAssign(char.TryParse(val, out var r), r, out result),
+                TypeCode.String => (result = val, true).Item2, // 字符串直接返回
+
+                // 复杂对象类型
+                TypeCode.Object => TryConvertObjectType(val, type, out result), // 处理 Guid 和枚举
+
+                // 其他未知类型交给反射层处理
+                _ => false,
+            };
+            return success;
         }
 
         /// <summary>
@@ -386,12 +336,12 @@ namespace System
             {
                 return TryParseAndAssign(Guid.TryParse(val, out var guidResult), guidResult, out result);
             }
-            
+
             if (type.IsEnum)
             {
                 return TryParseAndAssign(Enum.TryParse(type, val, true, out var enumResult), enumResult, out result);
             }
-            
+
             result = null;
             return false; // 不支持的 Object 类型交给反射层
         }
@@ -430,53 +380,31 @@ namespace System
         /// <returns>是否转换成功</returns>
         private static bool TryConvertUsingReflection(string val, Type type, out object result)
         {
-            return TryConvertUsingReflection(val, type, out result, out _); // 委托给详细版本，忽略错误信息
-        }
-
-        /// <summary>
-        /// 使用缓存反射转换类型（优化版兜底方案）
-        /// </summary>
-        /// <param name="val">要转换的字符串值</param>
-        /// <param name="type">目标类型</param>
-        /// <param name="result">转换结果</param>
-        /// <param name="errorMessage">转换失败时的详细错误信息</param>
-        /// <returns>是否转换成功</returns>
-        private static bool TryConvertUsingReflection(string val, Type type, out object result, out string errorMessage)
-        {
             result = default;
-            errorMessage = null;
-            
             try
             {
                 // 从缓存获取或创建 TryParse 方法信息
                 var tryParseMethod = _tryParseMethodCache.GetOrAdd(type, t =>
                 {
-                    return t.GetMethod("TryParse", BindingFlags.Static | BindingFlags.Public | BindingFlags.FlattenHierarchy, 
+                    return t.GetMethod("TryParse", BindingFlags.Static | BindingFlags.Public | BindingFlags.FlattenHierarchy,
                         null, new[] { typeof(string), t.MakeByRefType() }, null);
                 });
-
                 if (tryParseMethod == null)
                 {
-                    errorMessage = $"类型 '{type.Name}' 不支持 TryParse 方法";
-                    return false;
+                    return false; // 不支持 TryParse 方法
                 }
-
                 var parameters = new object[] { val, null }; // 准备参数数组
                 var success = (bool)tryParseMethod.Invoke(null, parameters); // 调用 TryParse
-
                 if (success)
                 {
                     result = parameters[1]; // 获取解析结果
                     return true;
                 }
-
-                errorMessage = $"无法将字符串 '{val}' 转换为 {type.Name} 类型";
-                return false;
+                return false; // 转换失败
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                errorMessage = $"反射转换失败：{ex.Message}";
-                return false;
+                return false; // 反射转换失败
             }
         }
         #endregion 试图转换类型

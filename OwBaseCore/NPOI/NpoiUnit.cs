@@ -181,20 +181,15 @@ namespace NPOI
             }
             
             // 使用项目统一的类型转换逻辑
-            if (OwConvert.TryChangeType(cellStringValue, targetType, out var result, out var errorMessage))
+            if (OwConvert.TryChangeType(cellStringValue, targetType, out var result))
             {
                 return result;
             }
             
-            // 如果通用转换失败，抛出详细异常
+            // 如果通用转换失败，抛出简洁异常（基础库不提供详细错误信息）
             var detailedError = isNullableType 
                 ? $"无法将单元格值'{cellStringValue}'转换为可空类型'{targetType.Name}'"
                 : $"无法将单元格值'{cellStringValue}'转换为类型'{targetType.Name}'";
-            
-            if (!string.IsNullOrEmpty(errorMessage))
-            {
-                detailedError += $"。错误详情：{errorMessage}";
-            }
             
             throw new InvalidCastException(detailedError);
         }
