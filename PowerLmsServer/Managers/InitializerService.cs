@@ -349,5 +349,131 @@ namespace PowerLmsServer.Managers
             }
         }
 
+        #region 数据初始化相关方法
+
+        /// <summary>
+        /// 从Excel工作簿批量初始化数据库表。遍历工作簿中的每个工作表，将数据写入对应的数据库表。
+        /// </summary>
+        /// <param name="workbook">Excel工作簿，每个工作表名称对应数据库表名</param>
+        /// <param name="svc">服务提供者，用于获取数据库上下文</param>
+        /// <exception cref="ArgumentNullException">当workbook或svc为null时抛出</exception>
+        /// <exception cref="InvalidOperationException">当找不到对应的DbSet属性时抛出</exception>
+        public void InitializeDataFromWorkbook(IWorkbook workbook, IServiceProvider svc)
+        {
+            if (workbook == null) throw new ArgumentNullException(nameof(workbook)); // 参数验证
+            if (svc == null) throw new ArgumentNullException(nameof(svc)); // 参数验证
+            var db = svc.GetRequiredService<PowerLmsUserDbContext>(); // 获取数据库上下文
+            var dbType = typeof(PowerLmsUserDbContext); // 获取数据库上下文类型
+            int processedSheets = 0; // 处理的工作表计数
+            int totalSheets = workbook.NumberOfSheets; // 总工作表数量
+            _Logger.LogInformation("开始从Excel工作簿初始化数据，总计{totalSheets}个工作表", totalSheets); // 记录开始日志
+            for (int i = 0; i < totalSheets; i++) // 遍历所有工作表
+            {
+                var sheet = workbook.GetSheetAt(i); // 获取当前工作表
+                var sheetName = sheet.SheetName; // 获取工作表名称
+                try
+                {
+                    var dbSetProperty = dbType.GetProperty(sheetName); // 根据工作表名称查找对应的DbSet属性
+                    if (dbSetProperty == null) // 如果找不到对应的DbSet属性
+                    {
+                        _Logger.LogWarning("跳过工作表：{sheetName}，未找到对应的数据库表", sheetName); // 记录警告日志
+                        continue; // 跳过当前工作表
+                    }
+                    var dbSetPropertyType = dbSetProperty.PropertyType; // 获取DbSet属性类型
+                    if (!dbSetPropertyType.IsGenericType || dbSetPropertyType.GetGenericTypeDefinition() != typeof(DbSet<>)) // 验证是否为DbSet类型
+                    {
+                        _Logger.LogWarning("跳过工作表：{sheetName}，对应属性不是DbSet类型", sheetName); // 记录警告日志
+                        continue; // 跳过当前工作表
+                    }
+                    var entityType = dbSetPropertyType.GetGenericArguments()[0]; // 获取实体类型
+                    var dbSetValue = dbSetProperty.GetValue(db); // 获取DbSet实例
+                    if (dbSetValue == null) // 验证DbSet实例是否有效
+                    {
+                        _Logger.LogWarning("跳过工作表：{sheetName}，DbSet实例为null", sheetName); // 记录警告日志
+                        continue; // 跳过当前工作表
+                    }
+                    // 使用反射调用NpoiManager.WriteToDb泛型方法
+                    var writeToDbMethod = typeof(NpoiManager).GetMethod(nameof(NpoiManager.WriteToDb), new[] { typeof(ISheet), typeof(DbContext), dbSetPropertyType }); // 获取WriteToDb方法
+                    if (writeToDbMethod == null) // 验证方法是否找到
+                    {
+                        _Logger.LogError("未找到NpoiManager.WriteToDb方法，工作表：{sheetName}", sheetName); // 记录错误日志
+                        continue; // 跳过当前工作表
+                    }
+                    var genericWriteToDbMethod = writeToDbMethod.MakeGenericMethod(entityType); // 构造泛型方法
+                    genericWriteToDbMethod.Invoke(_NpoiManager, new object[] { sheet, db, dbSetValue }); // 调用WriteToDb方法写入数据
+                    processedSheets++; // 增加处理计数
+                    _Logger.LogInformation("成功处理工作表：{sheetName}，实体类型：{entityType}", sheetName, entityType.Name); // 记录成功日志
+                }
+                catch (Exception ex) // 捕获处理异常
+                {
+                    _Logger.LogError(ex, "处理工作表失败：{sheetName}", sheetName); // 记录错误日志
+                    // 继续处理下一个工作表，不中断整个初始化过程
+                }
+            }
+            try
+            {
+                var affectedRows = db.SaveChanges(); // 保存所有更改到数据库
+                _Logger.LogInformation("数据初始化完成，成功处理{processedSheets}/{totalSheets}个工作表，影响{affectedRows}行数据", processedSheets, totalSheets, affectedRows); // 记录完成日志
+            }
+            catch (Exception ex) // 捕获保存异常
+            {
+                _Logger.LogError(ex, "保存数据库更改时发生错误"); // 记录保存错误
+                throw; // 重新抛出异常，因为保存失败是严重错误
+            }
+        }
+
+        /// <summary>
+        /// 从指定Excel文件批量初始化数据库表。这是InitializeDataFromWorkbook的便捷重载方法。
+        /// </summary>
+        /// <param name="excelFilePath">Excel文件的完整路径</param>
+        /// <param name="svc">服务提供者，用于获取数据库上下文</param>
+        /// <exception cref="ArgumentNullException">当excelFilePath或svc为null时抛出</exception>
+        /// <exception cref="FileNotFoundException">当Excel文件不存在时抛出</exception>
+        public void InitializeDataFromExcelFile(string excelFilePath, IServiceProvider svc)
+        {
+            if (string.IsNullOrWhiteSpace(excelFilePath)) throw new ArgumentNullException(nameof(excelFilePath)); // 参数验证
+            if (svc == null) throw new ArgumentNullException(nameof(svc)); // 参数验证
+            if (!File.Exists(excelFilePath)) throw new FileNotFoundException($"Excel文件不存在: {excelFilePath}"); // 文件存在性验证
+            _Logger.LogInformation("开始从Excel文件初始化数据: {excelFilePath}", excelFilePath); // 记录开始日志
+            using var fileStream = File.OpenRead(excelFilePath); // 打开Excel文件流
+            using var workbook = _NpoiManager.GetWorkbookFromStream(fileStream); // 从流创建工作簿
+            InitializeDataFromWorkbook(workbook, svc); // 调用核心初始化方法
+        }
+
+        /// <summary>
+        /// 从指定Excel文件初始化数据库表的示例方法。
+        /// 使用方法：将Excel文件放在指定路径，确保工作表名称与数据库表名一致。
+        /// </summary>
+        /// <param name="svc">服务提供者</param>
+        /// <example>
+        /// 使用示例：
+        /// var filePath = Path.Combine(AppContext.BaseDirectory, "数据初始化", "业务数据.xlsx");
+        /// InitializeFromCustomExcel(serviceProvider);
+        /// </example>
+        [Conditional("DEBUG")]
+        private void InitializeFromCustomExcel(IServiceProvider svc)
+        {
+            var excelFilePath = Path.Combine(AppContext.BaseDirectory, "数据初始化", "业务数据.xlsx"); // 自定义Excel文件路径
+            if (File.Exists(excelFilePath)) // 检查文件是否存在
+            {
+                try
+                {
+                    using var fileStream = File.OpenRead(excelFilePath); // 打开Excel文件
+                    using var workbook = _NpoiManager.GetWorkbookFromStream(fileStream); // 获取工作簿
+                    InitializeDataFromWorkbook(workbook, svc); // 调用通用初始化方法
+                    _Logger.LogInformation("自定义Excel数据初始化完成：{excelFilePath}", excelFilePath); // 记录完成日志
+                }
+                catch (Exception ex) // 捕获异常
+                {
+                    _Logger.LogError(ex, "自定义Excel数据初始化失败：{excelFilePath}", excelFilePath); // 记录错误日志
+                }
+            }
+            else
+            {
+                _Logger.LogInformation("跳过自定义Excel初始化，文件不存在：{excelFilePath}", excelFilePath); // 记录跳过日志
+            }
+        }
+
+        #endregion 数据初始化相关方法
     }
 }

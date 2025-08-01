@@ -341,7 +341,12 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new SetContainerKindCountReturnDto();
-            EfHelper.NormalizeChildren(model.Items, model.ParentId);
+            // 标准化子实体数据：生成ID并设置父ID
+            model.Items.ForEach(c =>
+            {
+                c.GenerateIdIfEmpty();
+                c.ParentId = model.ParentId;
+            });
             List<ContainerKindCount> list = new List<ContainerKindCount>();
             if (!EfHelper.SetChildren(model.Items, model.ParentId, _DbContext, list))
             {
