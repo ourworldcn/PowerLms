@@ -17,16 +17,12 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 
         /// </summary>
-        public MultilingualController(PowerLmsUserDbContext db, MultilingualManager multilingualManager, NpoiManager npoiManager)
+        public MultilingualController(PowerLmsUserDbContext db)
         {
             _Db = db;
-            _MultilingualManager = multilingualManager;
-            _NpoiManager = npoiManager;
         }
 
         PowerLmsUserDbContext _Db;
-        MultilingualManager _MultilingualManager;
-        NpoiManager _NpoiManager;
 
         /// <summary>
         /// 获取一组语言资源。

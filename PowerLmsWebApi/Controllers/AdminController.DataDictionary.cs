@@ -1,6 +1,8 @@
-using Microsoft.AspNetCore.Mvc;
+ï»¿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NPOI.HSSF.UserModel;
+using NPOI; // æ·»åŠ NPOIå¼•ç”¨ä»¥ä½¿ç”¨NpoiUnit.WriteToExcel
+using NPOI.SS.UserModel; // æ·»åŠ WorkbookFactoryå¼•ç”¨
 using PowerLms.Data;
 using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
@@ -9,21 +11,21 @@ using System.Net;
 namespace PowerLmsWebApi.Controllers
 {
     /// <summary>
-    /// ¹ÜÀíÔ±¹¦ÄÜ¿ØÖÆÆ÷¡£
+    /// ç®¡ç†å‘˜åŠŸèƒ½æ§åˆ¶å™¨â€”â€”æ•°æ®å­—å…¸éƒ¨åˆ†
     /// </summary>
     public partial class AdminController : PlControllerBase
     {
-        #region Êı¾İ×ÖµäÏà¹Ø
-        #region ×ÖµäÄ¿Â¼
+        #region æ•°æ®å­—å…¸ç®¡ç†
+        #region å­—å…¸ç›®å½•
 
         /// <summary>
-        /// »ñÈ¡ËùÓĞÊı¾İ×ÖµäµÄÄ¿Â¼ÁĞ±í¡£
+        /// è·å–æ‰€æœ‰çš„æ•°æ®å­—å…¸ç›®å½•åˆ—è¡¨
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">Ö§³ÖÍ¨ÓÃ²éÑ¯¡£</param>
+        /// <param name="conditional">æ”¯æŒé€šç”¨æŸ¥è¯¢æ¡ä»¶</param>
         /// <returns></returns>
-        /// <response code="200">Î´·¢ÉúÏµÍ³¼¶´íÎó¡£µ«¿ÉÄÜ³öÏÖÓ¦ÓÃ´íÎó£¬¾ßÌå²Î¼û HasError ºÍ ErrorCode ¡£</response>  
-        /// <response code="401">ÎŞĞ§ÁîÅÆ¡£</response>  
+        /// <response code="200">æœªå‘ç”Ÿç³»ç»Ÿçº§é”™è¯¯ã€‚ä½†å¯èƒ½å‡ºç°åº”ç”¨é”™è¯¯ï¼Œå…·ä½“å‚è§ HasError å’Œ ErrorCode ã€‚</response>  
+        /// <response code="401">æ— æ•ˆä»¤ç‰Œã€‚</response>  
         [HttpGet]
         public ActionResult<GetAllDataDicCatalogReturnDto> GetAllDataDicCatalog([FromQuery] PagingParamsDtoBase model, [FromQuery] Dictionary<string, string> conditional = null)
         {
@@ -32,13 +34,13 @@ namespace PowerLmsWebApi.Controllers
 
             var dbSet = _DbContext.DD_DataDicCatalogs;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-            if (_AccountManager.IsAdmin(context.User))  //ÈôÊÇ³¬¹Ü
+            if (_AccountManager.IsAdmin(context.User))  //å¦‚æœæ˜¯è¶…ç®¡
                 coll = coll.Where(c => c.OrgId == null);
             else
             {
                 var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
-                if (!merchantId.HasValue) return BadRequest("Î´ÖªµÄÉÌ»§Id");
-                if (context.User.OrgId is null) //ÈôÃ»ÓĞÖ¸¶¨»ú¹¹
+                if (!merchantId.HasValue) return BadRequest("æœªçŸ¥çš„å•†æˆ·Id");
+                if (context.User.OrgId is null) //å¦‚æœæ²¡æœ‰æŒ‡å®šæœºæ„
                 {
                     coll = coll.Where(c => c.OrgId == merchantId);
                 }
@@ -48,7 +50,7 @@ namespace PowerLmsWebApi.Controllers
                 }
             }
 
-            // Ê¹ÓÃEfHelper.GenerateWhereAnd½øĞĞÍ¨ÓÃ²éÑ¯Ìõ¼ş´¦Àí
+            // ä½¿ç”¨EfHelper.GenerateWhereAndå¤„ç†é€šç”¨æŸ¥è¯¢æ¡ä»¶åˆ†æ
             coll = EfHelper.GenerateWhereAnd(coll, conditional);
 
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
@@ -57,14 +59,14 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// ĞŞ¸ÄÊı¾İ×ÖµäÄ¿Â¼¡£
+        /// ä¿®æ”¹æ•°æ®å­—å…¸ç›®å½•ã€‚
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
-        /// <response code="200">Î´·¢ÉúÏµÍ³¼¶´íÎó¡£µ«¿ÉÄÜ³öÏÖÓ¦ÓÃ´íÎó£¬¾ßÌå²Î¼û HasError ºÍ ErrorCode ¡£</response>  
-        /// <response code="400">Ö¸¶¨ÊµÌåµÄId²»´æÔÚ¡£Í¨³£ÕâÊÇBug.ÔÚ¼«¶ËÇé¿öÏÂ¿ÉÄÜÊÇ²¢·¢ÎÊÌâ¡£</response>  
-        /// <response code="401">ÎŞĞ§ÁîÅÆ¡£</response>  
-        /// <response code="403">È¨ÏŞ²»×ã¡£</response>  
+        /// <response code="200">æœªå‘ç”Ÿç³»ç»Ÿçº§é”™è¯¯ã€‚ä½†å¯èƒ½å‡ºç°åº”ç”¨é”™è¯¯ï¼Œå…·ä½“å‚è§ HasError å’Œ ErrorCode ã€‚</response>  
+        /// <response code="400">æŒ‡å®šå®ä½“çš„Idä¸å­˜åœ¨ã€‚é€šå¸¸è¿™æ˜¯Bug.åœ¨æç«¯æƒ…å†µä¸‹æ˜¯å¹¶å‘é—®é¢˜ã€‚</response>  
+        /// <response code="401">æ— æ•ˆä»¤ç‰Œã€‚</response>  
+        /// <response code="403">æƒé™ä¸è¶³ã€‚</response>  
         [HttpPut]
         public ActionResult<ModifyDataDicCatalogReturnDto> ModifyDataDicCatalog(ModifyDataDicCatalogParamsDto model)
         {
@@ -81,14 +83,14 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// É¾³ıÒ»¸öÊı¾İ×ÖµäÄ¿Â¼£¬²¢É¾³ıÆäÄÚÈİ¡£
+        /// åˆ é™¤ä¸€ä¸ªæ•°æ®å­—å…¸ç›®å½•ï¼Œå¹¶åˆ é™¤å…¶æ•°æ®ã€‚
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
-        /// <response code="200">Î´·¢ÉúÏµÍ³¼¶´íÎó¡£µ«¿ÉÄÜ³öÏÖÓ¦ÓÃ´íÎó£¬¾ßÌå²Î¼û HasError ºÍ ErrorCode ¡£</response>  
-        /// <response code="400">Ö¸¶¨ÊµÌåµÄId²»´æÔÚ¡£Í¨³£ÕâÊÇBug.ÔÚ¼«¶ËÇé¿öÏÂ¿ÉÄÜÊÇ²¢·¢ÎÊÌâ¡£</response>  
-        /// <response code="401">ÎŞĞ§ÁîÅÆ¡£</response>  
-        /// <response code="403">È¨ÏŞ²»×ã¡£</response>  
+        /// <response code="200">æœªå‘ç”Ÿç³»ç»Ÿçº§é”™è¯¯ã€‚ä½†å¯èƒ½å‡ºç°åº”ç”¨é”™è¯¯ï¼Œå…·ä½“å‚è§ HasError å’Œ ErrorCode ã€‚</response>  
+        /// <response code="400">æŒ‡å®šå®ä½“çš„Idä¸å­˜åœ¨ã€‚é€šå¸¸è¿™æ˜¯Bug.åœ¨æç«¯æƒ…å†µä¸‹æ˜¯å¹¶å‘é—®é¢˜ã€‚</response>  
+        /// <response code="401">æ— æ•ˆä»¤ç‰Œã€‚</response>  
+        /// <response code="403">æƒé™ä¸è¶³ã€‚</response>  
         [HttpDelete]
         public ActionResult<RemoveDataDicCatalogReturnDto> RemoveDataDicCatalog(RemoveDataDicCatalogParamsDto model)
         {
@@ -104,18 +106,18 @@ namespace PowerLmsWebApi.Controllers
             return result;
         }
 
-        #endregion ×ÖµäÄ¿Â¼
+        #endregion å­—å…¸ç›®å½•
 
-        #region ÆäËû×ÖµäÏà¹Ø²Ù×÷
+        #region æ•°æ®å­—å…¸å¯¼å…¥å¯¼å‡º
 
         /// <summary>
-        /// ¸´ÖÆ¼òµ¥Êı¾İ×Öµä¡£
+        /// å¤åˆ¶ç®€å•æ•°æ®å­—å…¸ã€‚
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
-        /// <response code="200">Î´·¢ÉúÏµÍ³¼¶´íÎó¡£µ«¿ÉÄÜ³öÏÖÓ¦ÓÃ´íÎó£¬¾ßÌå²Î¼û HasError ºÍ ErrorCode ¡£</response>  
-        /// <response code="401">ÎŞĞ§ÁîÅÆ¡£</response> 
-        /// <response code="403">È¨ÏŞ²»×ã¡£</response>  
+        /// <response code="200">æœªå‘ç”Ÿç³»ç»Ÿçº§é”™è¯¯ã€‚ä½†å¯èƒ½å‡ºç°åº”ç”¨é”™è¯¯ï¼Œå…·ä½“å‚è§ HasError å’Œ ErrorCode ã€‚</response>  
+        /// <response code="401">æ— æ•ˆä»¤ç‰Œã€‚</response> 
+        /// <response code="403">æƒé™ä¸è¶³ã€‚</response>  
         [HttpPost]
         public ActionResult<CopySimpleDataDicReturnDto> CopySimpleDataDic(CopySimpleDataDicParamsDto model)
         {
@@ -126,22 +128,22 @@ namespace PowerLmsWebApi.Controllers
             var result = new CopySimpleDataDicReturnDto();
             //var merch = _DbContext.Merchants.Find(model.SrcOrgId);
             //if (merch == null) return NotFound();
-            #region ¸´ÖÆ¼òµ¥×Öµä
-            var baseCatalogs = _DbContext.DD_DataDicCatalogs.Where(c => c.OrgId == model.SrcOrgId).AsNoTracking();  //»ù±¾×ÖµäÄ¿Â¼¼¯ºÏ
+            #region å¤åˆ¶ç®€å•å­—å…¸
+            var baseCatalogs = _DbContext.DD_DataDicCatalogs.Where(c => c.OrgId == model.SrcOrgId).AsNoTracking();  //åŸºç¡€å­—å…¸ç›®å½•é›†åˆ
             foreach (var catalog in baseCatalogs)
             {
                 if (model.CatalogCodes.Contains(catalog.Code))
                     _DataManager.CopyTo(catalog, model.DestOrgId);
             }
             //_DataManager.CopyAllSpecialDataDicBase(model.Id);
-            #endregion ¸´ÖÆ¼òµ¥×Öµä
+            #endregion å¤åˆ¶ç®€å•å­—å…¸
 
             _DbContext.SaveChanges();
             return result;
         }
 
         /// <summary>
-        /// »ñÈ¡ÏµÍ³×ÊÔ´ÁĞ±í¡£
+        /// è·å–ç³»ç»Ÿèµ„æºåˆ—è¡¨
         /// </summary>
         /// <returns></returns>
         [HttpGet]
@@ -153,15 +155,15 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// Í¨ÓÃµÄµ¼ÈëÊı¾İ×Öµä¡£Ïàµ±ÓÚÇåÀí±íºóÔÙµ¼Èë¡£
+        /// é€šç”¨çš„å¯¼å…¥æ•°æ®å­—å…¸ã€‚ç­‰åŒäºæ‰¹é‡å¯¼å…¥ã€‚
         /// </summary>
         /// <param name="formFile"></param>
         /// <param name="token"></param>
-        /// <param name="rId">´Ó×ÊÔ´ÁĞ±íÖĞ»ñÈ¡£¬Ö¸¶¨×ÊÔ´µÄId¡£Èç:6AE3BBB3-BAC9-4509-BF82-C8578830CD24 ±íÊ¾ ¶àÓïÑÔ×ÊÔ´±í¡£IdÊÇ²»»á±ä»¯µÄ¡£</param>
+        /// <param name="rId">ç³»ç»Ÿèµ„æºåˆ—è¡¨ä¸­è·å–çš„æŒ‡å®šèµ„æºçš„Idã€‚ä¾‹å¦‚:6AE3BBB3-BAC9-4509-BF82-C8578830CD24 ã€‚ç³»ç»Ÿèµ„æºçš„Idæ˜¯ä¸ä¼šå˜åŒ–çš„ã€‚</param>
         /// <returns></returns>
-        /// <response code="200">Î´·¢ÉúÏµÍ³¼¶´íÎó¡£µ«¿ÉÄÜ³öÏÖÓ¦ÓÃ´íÎó£¬¾ßÌå²Î¼û HasError ºÍ ErrorCode ¡£</response>  
-        /// <response code="401">ÎŞĞ§ÁîÅÆ¡£</response>  
-        /// <response code="403">È¨ÏŞ²»×ã¡£</response>  
+        /// <response code="200">æœªå‘ç”Ÿç³»ç»Ÿçº§é”™è¯¯ã€‚ä½†å¯èƒ½å‡ºç°åº”ç”¨é”™è¯¯ï¼Œå…·ä½“å‚è§ HasError å’Œ ErrorCode ã€‚</response>  
+        /// <response code="401">æ— æ•ˆä»¤ç‰Œã€‚</response>  
+        /// <response code="403">æƒé™ä¸è¶³ã€‚</response>  
         [HttpPost]
         public ActionResult<ImportDataDicReturnDto> ImportDataDic(IFormFile formFile, Guid token, Guid rId)
         {
@@ -170,7 +172,7 @@ namespace PowerLmsWebApi.Controllers
             if (!_AuthorizationManager.Demand(out err, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ImportDataDicReturnDto();
             var srTask = _DbContext.DD_SystemResources.FindAsync(rId).AsTask();
-            var workbook = _NpoiManager.GetWorkbookFromStream(formFile.OpenReadStream());
+            var workbook = WorkbookFactory.Create(formFile.OpenReadStream()); // ğŸš€ ç›´æ¥ä½¿ç”¨WorkbookFactory.Create
             var sheet = workbook.GetSheetAt(0);
             var sr = srTask.Result;
             switch (sr.Name)
@@ -178,7 +180,10 @@ namespace PowerLmsWebApi.Controllers
                 case nameof(_DbContext.Multilinguals):
                     {
                         _DbContext.TruncateTable(nameof(_DbContext.Multilinguals));
-                        _NpoiManager.WriteToDb(sheet, _DbContext, _DbContext.Multilinguals);
+                        // ğŸš€ ä½¿ç”¨ DataSeedHelper æ›¿ä»£ NpoiManager.WriteToDbï¼Œæ€§èƒ½æ›´å¥½
+                        var count = DataSeedHelper.BulkInsertFromExcelWithStringList<Multilingual>(
+                            sheet, _DbContext, ignoreExisting: false, _Logger, "å¯¼å…¥å¤šè¯­è¨€æ•°æ®");
+                        _Logger?.LogInformation("æˆåŠŸå¯¼å…¥å¤šè¯­è¨€æ•°æ®ï¼š{count}æ¡è®°å½•", count);
                         _DbContext.SaveChanges();
                     }
                     break;
@@ -190,13 +195,13 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// Í¨ÓÃ»ñÈ¡Êı¾İ×Öµä±í¹¦ÄÜ¡£
+        /// é€šç”¨è·å–æ•°æ®å­—å…¸åŠŸèƒ½ã€‚
         /// </summary>
         /// <param name="token"></param>
         /// <param name="rId"></param>
         /// <returns></returns>
-        /// <response code="200">Î´·¢ÉúÏµÍ³¼¶´íÎó¡£µ«¿ÉÄÜ³öÏÖÓ¦ÓÃ´íÎó£¬¾ßÌå²Î¼û HasError ºÍ ErrorCode ¡£</response>  
-        /// <response code="401">ÎŞĞ§ÁîÅÆ¡£</response>  
+        /// <response code="200">æœªå‘ç”Ÿç³»ç»Ÿçº§é”™è¯¯ã€‚ä½†å¯èƒ½å‡ºç°åº”ç”¨é”™è¯¯ï¼Œå…·ä½“å‚è§ HasError å’Œ ErrorCode ã€‚</response>  
+        /// <response code="401">æ— æ•ˆä»¤ç‰Œã€‚</response>  
         [HttpGet]
         public ActionResult ExportDataDic(Guid token, Guid rId)
         {
@@ -204,13 +209,13 @@ namespace PowerLmsWebApi.Controllers
             var srTask = _DbContext.DD_SystemResources.FindAsync(rId).AsTask();
             var sr = srTask.Result;
             using var workbook = new HSSFWorkbook();
-            var sheet = workbook.CreateSheet("Sheet0");//´´½¨Ò»¸öÃû³ÆÎªSheet0µÄ±í  
+            var sheet = workbook.CreateSheet("Sheet0");//åˆ›å»ºä¸€ä¸ªåç§°ä¸ºSheet0çš„è¡¨  
             var fileName = $"{sr.Name}.xls";
             switch (sr.Name)
             {
                 case nameof(_DbContext.Multilinguals):
                     {
-                        _NpoiManager.WriteToExcel(_DbContext.Multilinguals.AsNoTracking(), typeof(Multilingual).GetProperties().Select(c => c.Name).ToArray(), sheet);
+                        NpoiUnit.WriteToExcel(_DbContext.Multilinguals.AsNoTracking(), typeof(Multilingual).GetProperties().Select(c => c.Name).ToArray(), sheet);
                     }
                     break;
                 default:
@@ -221,19 +226,19 @@ namespace PowerLmsWebApi.Controllers
             workbook.Close();
             stream.Seek(0, SeekOrigin.Begin);
             return File(stream, "application/octet-stream", fileName);
-            //var path = Path.Combine(AppContext.BaseDirectory, "ÏµÍ³×ÊÔ´", "ÏµÍ³×ÊÔ´.xlsx");
+            //var path = Path.Combine(AppContext.BaseDirectory, "ç³»ç»Ÿèµ„æº", "ç³»ç»Ÿèµ„æº.xlsx");
             //stream = new FileStream(path, FileMode.Open);
             //return new PhysicalFileResult(path, "application/octet-stream") { FileDownloadName = Path.GetFileName(path) };
         }
 
         /// <summary>
-        /// µ¼³öÄ£°å¡£
+        /// å¯¼å‡ºæ¨¡æ¿ã€‚
         /// </summary>
         /// <param name="token"></param>
         /// <param name="rId"></param>
         /// <returns></returns>
-        /// <response code="200">Î´·¢ÉúÏµÍ³¼¶´íÎó¡£µ«¿ÉÄÜ³öÏÖÓ¦ÓÃ´íÎó£¬¾ßÌå²Î¼û HasError ºÍ ErrorCode ¡£</response>  
-        /// <response code="401">ÎŞĞ§ÁîÅÆ¡£</response>  
+        /// <response code="200">æœªå‘ç”Ÿç³»ç»Ÿçº§é”™è¯¯ã€‚ä½†å¯èƒ½å‡ºç°åº”ç”¨é”™è¯¯ï¼Œå…·ä½“å‚è§ HasError å’Œ ErrorCode ã€‚</response>  
+        /// <response code="401">æ— æ•ˆä»¤ç‰Œã€‚</response>  
         [HttpGet]
         public ActionResult ExportDataDicTemplate(Guid token, Guid rId)
         {
@@ -241,13 +246,13 @@ namespace PowerLmsWebApi.Controllers
             var srTask = _DbContext.DD_SystemResources.FindAsync(rId).AsTask();
             var sr = srTask.Result;
             using var workbook = new HSSFWorkbook();
-            var sheet = workbook.CreateSheet("Sheet0");//´´½¨Ò»¸öÃû³ÆÎªSheet0µÄ±í  
+            var sheet = workbook.CreateSheet("Sheet0");//åˆ›å»ºä¸€ä¸ªåç§°ä¸ºSheet0çš„è¡¨  
             var fileName = $"{sr.Name}.xls";
             switch (sr.Name)
             {
                 case nameof(_DbContext.Multilinguals):
                     {
-                        _NpoiManager.WriteToExcel(_DbContext.Multilinguals.Take(0), typeof(Multilingual).GetProperties().Select(c => c.Name).ToArray(), sheet);
+                        NpoiUnit.WriteToExcel(_DbContext.Multilinguals.Take(0), typeof(Multilingual).GetProperties().Select(c => c.Name).ToArray(), sheet);
                     }
                     break;
                 default:
@@ -260,19 +265,19 @@ namespace PowerLmsWebApi.Controllers
             return File(stream, "application/octet-stream", fileName);
         }
 
-        #endregion ÆäËû×ÖµäÏà¹Ø²Ù×÷
+        #endregion æ•°æ®å­—å…¸å¯¼å…¥å¯¼å‡º
 
-        #region ¼òµ¥×ÖµäµÄCRUD
+        #region ç®€å•å­—å…¸CRUD
 
         /// <summary>
-        /// »ñÈ¡Ö¸¶¨Àà±ğÊı¾İ×ÖµäµÄÈ«²¿ÄÚÈİ¡£
+        /// è·å–æŒ‡å®šç±»åˆ«çš„ç®€å•å­—å…¸å…¨éƒ¨æ•°æ®ã€‚
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">Ö§³ÖÍ¨ÓÃ²éÑ¯Ìõ¼ş¡£ </param>
+        /// <param name="conditional">æ”¯æŒé€šç”¨æŸ¥è¯¢æ¡ä»¶ã€‚ </param>
         /// <returns></returns>
-        /// <response code="200">Î´·¢ÉúÏµÍ³¼¶´íÎó¡£µ«¿ÉÄÜ³öÏÖÓ¦ÓÃ´íÎó£¬¾ßÌå²Î¼û HasError ºÍ ErrorCode ¡£</response>  
-        /// <response code="400">Ö¸¶¨Àà±ğIdÎŞĞ§¡£</response>  
-        /// <response code="401">ÎŞĞ§ÁîÅÆ¡£</response>  
+        /// <response code="200">æœªå‘ç”Ÿç³»ç»Ÿçº§é”™è¯¯ã€‚ä½†å¯èƒ½å‡ºç°åº”ç”¨é”™è¯¯ï¼Œå…·ä½“å‚è§ HasError å’Œ ErrorCode ã€‚</response>  
+        /// <response code="400">æŒ‡å®šçš„ç±»Idæ— æ•ˆã€‚</response>  
+        /// <response code="401">æ— æ•ˆä»¤ç‰Œã€‚</response>  
         [HttpGet]
         public ActionResult<GetAllDataDicReturnDto> GetAllDataDic([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
@@ -282,7 +287,7 @@ namespace PowerLmsWebApi.Controllers
             var dbSet = _DbContext.DD_SimpleDataDics;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
 
-            // Ê¹ÓÃEfHelper.GenerateWhereAnd½øĞĞÍ¨ÓÃ²éÑ¯Ìõ¼ş´¦Àí
+            // ä½¿ç”¨EfHelper.GenerateWhereAndå¤„ç†é€šç”¨æŸ¥è¯¢æ¡ä»¶åˆ†æ
             coll = EfHelper.GenerateWhereAnd(coll, conditional);
 
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
@@ -291,15 +296,15 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// ÓÃÊı¾İ×ÖµäÄ¿Â¼Âë»ñÈ¡ËùÓĞ×ÖµäÏî¡£³¬¹ÜÃ»ÓĞ¾ßÌåÉÌ»§ÎŞ·¨Ê¹ÓÃ£¬½öÕë¶ÔÓĞ¾ßÌåÉÌ»§¹éÊôµÄÓÃ»§²Å¿ÉÊ¹ÓÃ¡£
-        /// ½öÕë¶Ô¼òµ¥×Öµä¡£
+        /// æŒ‰æ•°æ®å­—å…¸ç›®å½•è·å–ç®€å•å­—å…¸â€”â€”å¦‚æœæ²¡æœ‰æœºæ„ç”¨æˆ·æ— æ³•ä½¿ç”¨ï¼Œå¦‚æœæœ‰æœºæ„ç”¨æˆ·ä»ç„¶å¯ä½¿ç”¨ã€‚
+        /// è¿”å›ç®€çº¦å­—å…¸ã€‚
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
-        /// <response code="200">Î´·¢ÉúÏµÍ³¼¶´íÎó¡£µ«¿ÉÄÜ³öÏÖÓ¦ÓÃ´íÎó£¬¾ßÌå²Î¼û HasError ºÍ ErrorCode ¡£</response>  
-        /// <response code="400">Î´ÖªµÄÉÌ»§Id¡£</response>  
-        /// <response code="401">ÎŞĞ§ÁîÅÆ¡£</response>  
-        /// <response code="404">ÕÒ²»µ½Ö¸¶¨Ä¿Â¼CodeµÄ×Öµä¡£</response>  
+        /// <response code="200">æœªå‘ç”Ÿç³»ç»Ÿçº§é”™è¯¯ã€‚ä½†å¯èƒ½å‡ºç°åº”ç”¨é”™è¯¯ï¼Œå…·ä½“å‚è§ HasError å’Œ ErrorCode ã€‚</response>  
+        /// <response code="400">æœªçŸ¥çš„å•†æˆ·Idã€‚</response>  
+        /// <response code="401">æ— æ•ˆä»¤ç‰Œã€‚</response>  
+        /// <response code="404">æ‰¾ä¸åˆ°æŒ‡å®šç›®å½•Codeçš„å­—å…¸ã€‚</response>  
         [HttpGet]
         public ActionResult<GetDataDicByCatalogCodeReturnDto> GetDataDicByCatalogCode([FromQuery] GetDataDicByCatalogCodeParamsDto model)
         {
@@ -307,13 +312,13 @@ namespace PowerLmsWebApi.Controllers
             var result = new GetDataDicByCatalogCodeReturnDto();
             var dbSet = _DbContext.DD_DataDicCatalogs;
             var coll = dbSet.AsNoTracking();
-            if (_AccountManager.IsAdmin(context.User))  //ÈôÊÇ³¬¹Ü
+            if (_AccountManager.IsAdmin(context.User))  //å¦‚æœæ˜¯è¶…ç®¡
                 coll = coll.Where(c => c.OrgId == null);
             else
             {
                 var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
-                if (!merchantId.HasValue) return BadRequest("Î´ÖªµÄÉÌ»§Id");
-                if (context.User.OrgId is null) //ÈôÃ»ÓĞÖ¸¶¨»ú¹¹
+                if (!merchantId.HasValue) return BadRequest("æœªçŸ¥çš„å•†æˆ·Id");
+                if (context.User.OrgId is null) //å¦‚æœæ²¡æœ‰æŒ‡å®šæœºæ„
                 {
                     coll = coll.Where(c => c.OrgId == merchantId);
                 }
@@ -326,7 +331,7 @@ namespace PowerLmsWebApi.Controllers
             var catalog = coll.FirstOrDefault(c => c.Code == model.SimpleDicCatalogCode);
             if (catalog is null)
             {
-                return NotFound("ÕÒ²»µ½Ö¸¶¨Ä¿Â¼CodeµÄ×Öµä¡£");
+                return NotFound("æ‰¾ä¸åˆ°æŒ‡å®šç›®å½•Codeçš„å­—å…¸ã€‚");
             }
             var dataDics = _DbContext.DD_SimpleDataDics.Where(c => c.DataDicId == catalog.Id).AsNoTracking();
             result.Result.AddRange(dataDics);
@@ -335,39 +340,39 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// Ôö¼ÓÒ»¸öÊı¾İ×Öµä(Ä¿Â¼)¡£ÎŞÂÛCopyToChildrenµÄÖµ£¬¶ÔÓÚ³¬¹Ü¶¼»áÔö¼ÓÒ»¸öÈ«¾Ö×ÖµäÄ¿Â¼(OrgIdÎª¿Õ)£¬¶ÔÓÚÉÌ¹Ü¶¼»áÔö¼ÓÒ»¸öÉÌ»§¼¶×ÖµäÄ¿Â¼(OrgIdÎªÉÌ»§Id)¡£
-        /// Ö»ÓĞµ±¹´Ñ¡ÁË¸´ÖÆÑ¡Ïî(CopyToChildren=true)Ê±£¬²Å»á½«×ÖµäÄ¿Â¼¸´ÖÆµ½¹«Ë¾ĞÍ»ú¹¹¡£³¬¹Ü»á¸´ÖÆµ½ËùÓĞ¹«Ë¾ĞÍ»ú¹¹£¬ÉÌ¹Ü»á¸´ÖÆµ½ÆäÉÌ»§ÏÂËùÓĞ¹«Ë¾ĞÍ»ú¹¹¡£
-        /// ¿¼ÂÇµ½»ú¹¹ÊÇÊ÷×´½á¹¹£¬»á×ñÑ­»ú¹¹µÄ²ã¼¶¹ØÏµ½øĞĞ¸´ÖÆ¡£
+        /// å¢åŠ ä¸€ä¸ªæ•°æ®å­—å…¸(ç›®å½•)ï¼Œè‹¥æœ‰CopyToChildrenå€¼ï¼Œå¯ä»¥åœ¨åˆ›å»ºå®Œåå¢åŠ ä¸€ä¸ªå…¨å±€å­—å…¸ç›®å½•(OrgIdä¸ºç©º)ï¼Œå•†ç®¡åˆ›å»ºä¸€ä¸ªå•†æˆ·çº§å­—å…¸ç›®å½•(OrgIdä¸ºå•†æˆ·Id)ã€‚
+        /// åªæœ‰å½“å‹¾é€‰äº†å¤åˆ¶é€‰é¡¹(CopyToChildren=true)æ—¶ï¼Œæ‰ä¼šå°†å­—å…¸ç›®å½•å¤åˆ¶åˆ°å…¬å¸å®¢æˆ·ä¸‹ï¼Œè¶…ç®¡å¯å¤åˆ¶åˆ°æ‰€æœ‰å…¬å¸å®¢æˆ·ï¼Œå•†ç®¡å¯å¤åˆ¶åˆ°å•†æˆ·ä¸‹çš„æ‰€æœ‰å…¬å¸å®¢æˆ·ï¼Œã€‚
+        /// å› ä¸ºçš„æœºæ„æ˜¯æ ‘çŠ¶ç»“æ„ï¼Œå¯ä»¥å¾ªç¯å¤šå±‚çš„å±‚çº§å…³ç³»ï¼Œå…·æœ‰å¤æ‚ã€‚
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
-        /// <response code="200">Î´·¢ÉúÏµÍ³¼¶´íÎó¡£µ«¿ÉÄÜ³öÏÖÓ¦ÓÃ´íÎó£¬¾ßÌå²Î¼û HasError ºÍ ErrorCode ¡£</response>  
-        /// <response code="302">ĞèÒª¹ÜÀíÔ±È¨ÏŞ¡£</response>  
-        /// <response code="400">Î´ÖªµÄÉÌ»§Id¡£</response>  
-        /// <response code="401">ÎŞĞ§ÁîÅÆ¡£</response>  
+        /// <response code="200">æœªå‘ç”Ÿç³»ç»Ÿçº§é”™è¯¯ã€‚ä½†å¯èƒ½å‡ºç°åº”ç”¨é”™è¯¯ï¼Œå…·ä½“å‚è§ HasError å’Œ ErrorCode ã€‚</response>  
+        /// <response code="302">éœ€è¦ç®¡ç†å‘˜æƒé™ã€‚</response>  
+        /// <response code="400">æœªçŸ¥çš„å•†æˆ·Idã€‚</response>  
+        /// <response code="401">æ— æ•ˆä»¤ç‰Œã€‚</response>  
         [HttpPost]
         public ActionResult<AddDataDicCatalogReturnDto> AddDataDicCatalog(AddDataDicCatalogParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
 
-            if (!context.User.IsSuperAdmin) //Èô·Ç³¬¹Ü
+            if (!context.User.IsSuperAdmin) //ä¸æ˜¯è¶…ç®¡
             {
                 string err;
                 if (!_AuthorizationManager.Demand(out err, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-                if (!context.User.IsAdmin()) return StatusCode((int)HttpStatusCode.Forbidden, "ĞèÒª¹ÜÀíÔ±È¨ÏŞ¡£");
+                if (!context.User.IsAdmin()) return StatusCode((int)HttpStatusCode.Forbidden, "éœ€è¦ç®¡ç†å‘˜æƒé™ã€‚");
             }
 
-            // ¸ù¾İÓÃ»§ÀàĞÍÉèÖÃÕıÈ·µÄOrgId
+            // æ ¹æ®ç”¨æˆ·èº«ä»½ç¡®å®šæ­£ç¡®çš„OrgId
             Guid? targetOrgId = null;
             if (context.User.IsSuperAdmin)
             {
-                targetOrgId = null; // ³¬¹ÜÊ¹ÓÃÈ«¾ÖÄ¿Â¼
+                targetOrgId = null; // è¶…ç®¡ä½¿ç”¨å…¨å±€ç›®å½•
             }
             else if (context.User.IsMerchantAdmin)
             {
                 var merchId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
                 if (!merchId.HasValue)
-                    return BadRequest("ÎŞ·¨»ñÈ¡ÉÌ»§ID");
+                    return BadRequest("æ— æ³•è·å–å•†æˆ·ID");
                 targetOrgId = merchId;
             }
             else if (context.User.OrgId.HasValue)
@@ -375,28 +380,28 @@ namespace PowerLmsWebApi.Controllers
                 targetOrgId = context.User.OrgId;
             }
 
-            // ¼ì²éÍ¬Ò»»ú¹¹ÏÂÊÇ·ñÒÑ´æÔÚÏàÍ¬CodeµÄÄ¿Â¼
+            // æ£€æŸ¥åŒä¸€æœºæ„æ˜¯å¦å·²å­˜åœ¨ç›¸åŒCodeçš„ç›®å½•
             if (_DbContext.DD_DataDicCatalogs.Any(c => c.OrgId == targetOrgId && c.Code == model.Item.Code))
-                return BadRequest($"ÒÑ´æÔÚÏàÍ¬CodeµÄÄ¿Â¼: {model.Item.Code}");
+                return BadRequest($"å·²å­˜åœ¨ç›¸åŒCodeçš„ç›®å½•: {model.Item.Code}");
 
-            // ´´½¨Ö÷×ÖµäÄ¿Â¼²¢Ê¹ÓÃAutoMapper¸´ÖÆÊôĞÔ
+            // åˆ›å»ºæ•°æ®å­—å…¸ç›®å½•ï¼Œä½¿ç”¨AutoMapperè¿›è¡Œæ˜ å°„
             var mainCatalog = _Mapper.Map<DataDicCatalog>(model.Item);
             mainCatalog.OrgId = targetOrgId;
             mainCatalog.GenerateNewId();
 
             _DbContext.DD_DataDicCatalogs.Add(mainCatalog);
 
-            // Ö»ÓĞ¹´Ñ¡ÁË¸´ÖÆÑ¡ÏîÊ±²Å¸´ÖÆµ½¹«Ë¾ĞÍ»ú¹¹
+            // åªæœ‰å‹¾é€‰äº†å¤åˆ¶é€‰é¡¹æ—¶æ‰å¤åˆ¶åˆ°å…¬å¸å®¢æˆ·
             if (model.CopyToChildren)
             {
                 try
                 {
-                    // »ñÈ¡Ä¿±ê»ú¹¹¼¯ºÏ - Ê¹ÓÃ ToList() È·±£²éÑ¯Ö´ĞĞ
+                    // è·å–ç›®æ ‡æœºæ„é›†åˆ - ä½¿ç”¨ ToList() ç¡®ä¿æŸ¥è¯¢æ‰§è¡Œ
                     var targetOrgs = new List<PlOrganization>();
 
                     if (context.User.IsSuperAdmin)
                     {
-                        // ³¬¹Ü£º»ñÈ¡ËùÓĞ¹«Ë¾ĞÍ»ú¹¹
+                        // è¶…ç®¡ï¼šè·å–æ‰€æœ‰å…¬å¸å®¢æˆ·
                         targetOrgs = _DbContext.PlOrganizations
                             .Where(o => o.Otc == 2)
                             .AsNoTracking()
@@ -404,9 +409,9 @@ namespace PowerLmsWebApi.Controllers
                     }
                     else if (context.User.IsMerchantAdmin && targetOrgId.HasValue)
                     {
-                        // ÉÌ¹Ü£º»ñÈ¡ËùÊôÉÌ»§ÏÂËùÓĞ¹«Ë¾ĞÍ»ú¹¹
+                        // å•†ç®¡ï¼šè·å–è¯¥å•†æˆ·ä¸‹çš„æ‰€æœ‰å…¬å¸å®¢æˆ·
                         var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
-                        if (!merchantId.HasValue) return BadRequest("ÎŞ·¨»ñÈ¡ÉÌ»§ID");
+                        if (!merchantId.HasValue) return BadRequest("æ— æ³•è·å–å•†æˆ·ID");
 
                         var dictOrgs = _OrgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs;
                         var allowOrgObjs = dictOrgs.Values.ToArray();
@@ -418,7 +423,7 @@ namespace PowerLmsWebApi.Controllers
                         }
                     }
 
-                    // »ñÈ¡ÒÑ´æÔÚÏàÍ¬CodeµÄÄ¿Â¼µÄ»ú¹¹Id
+                    // è·å–å·²å­˜åœ¨ç›¸åŒCodeçš„ç›®å½•çš„æœºæ„Id
                     var existingCatalogOrgIds = _DbContext.DD_DataDicCatalogs
                         .Where(c => c.Code == model.Item.Code)
                         .AsNoTracking()
@@ -427,14 +432,14 @@ namespace PowerLmsWebApi.Controllers
 
                     var existingIdSet = new HashSet<Guid?>(existingCatalogOrgIds);
 
-                    // ´¦ÀíÃ¿¸öÄ¿±ê»ú¹¹
+                    // éå†æ¯ä¸ªç›®æ ‡æœºæ„
                     foreach (var org in targetOrgs)
                     {
-                        // Ìø¹ıÒÑ´æÔÚÏàÍ¬CodeµÄ»ú¹¹
+                        // è·³è¿‡å·²å­˜åœ¨ç›¸åŒCodeçš„æœºæ„
                         if (existingIdSet.Contains(org.Id))
                             continue;
 
-                        // ´´½¨ĞÂÄ¿Â¼ - Ö»Ê¹ÓÃDataDicCatalogÊµ¼ÊÓµÓĞµÄÊôĞÔ
+                        // åˆ›å»ºæ–°ç›®å½• - åªä½¿ç”¨DataDicCatalogå®ä½“æ‹¥æœ‰çš„å±æ€§
                         var newCatalog = new DataDicCatalog
                         {
                             Code = mainCatalog.Code,
@@ -448,16 +453,16 @@ namespace PowerLmsWebApi.Controllers
                 }
                 catch (Exception ex)
                 {
-                    // ²¶»ñ²¢¼ÇÂ¼Òì³££¬µ«ÈÔÈ»±£´æÖ÷Ä¿Â¼
+                    // è®°å½•é”™è¯¯å¹¶è®°å½•å¼‚å¸¸ï¼Œä½†ä»åˆ›å»ºä¸»ç›®å½•
                     var log = new OwSystemLog
                     {
-                        ExtraString = $"¸´ÖÆ×ÖµäÄ¿Â¼µ½×Ó»ú¹¹Ê±³ö´í: {ex.Message}",
+                        ExtraString = $"åˆ›å»ºå­—å…¸ç›®å½•å¤åˆ¶æœºæ„æ—¶å‡ºé”™: {ex.Message}",
                         ActionId = "DataDic.AddDataDicCatalog.CopyToChildren",
                         WorldDateTime = DateTime.Now,
                         OrgId = context.User.OrgId,
                     };
 
-                    // Èç¹ûĞèÒª´æ´¢ÍêÕûµÄ¶ÑÕ»¸ú×Ù£¬¿ÉÒÔÊ¹ÓÃJsonObjectStringÊôĞÔ
+                    // å¦‚æœéœ€è¦å­˜å‚¨é”™è¯¯çš„å †æ ˆè·Ÿè¸ªï¼Œå¯ä»¥ä½¿ç”¨JsonObjectStringå­—æ®µ
                     if (!string.IsNullOrEmpty(ex.StackTrace))
                     {
                         log.JsonObjectString = ex.StackTrace;
@@ -472,14 +477,14 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// ¸øÖ¸¶¨¼òµ¥Êı¾İ×ÖµäÔö¼ÓÒ»Ïî¡£
+        /// åœ¨æŒ‡å®šçš„æ•°æ®å­—å…¸é‡Œå¢åŠ ä¸€é¡¹
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
-        /// <response code="200">Î´·¢ÉúÏµÍ³¼¶´íÎó¡£µ«¿ÉÄÜ³öÏÖÓ¦ÓÃ´íÎó£¬¾ßÌå²Î¼û HasError ºÍ ErrorCode ¡£</response>  
-        /// <response code="400">ÔÚÍ¬Ò»Àà±ğÍ¬Ò»×éÖ¯»ú¹¹ÏÂÖ¸¶¨ÁËÖØ¸´µÄCode¡£</response>  
-        /// <response code="401">ÎŞĞ§ÁîÅÆ¡£</response>  
-        /// <response code="403">È¨ÏŞ²»×ã¡£</response>  
+        /// <response code="200">æœªå‘ç”Ÿç³»ç»Ÿçº§é”™è¯¯ã€‚ä½†å¯èƒ½å‡ºç°åº”ç”¨é”™è¯¯ï¼Œå…·ä½“å‚è§ HasError å’Œ ErrorCode ã€‚</response>  
+        /// <response code="400">åœ¨åŒä¸€ç±»ï¼ŒåŒä¸€æœºæ„ä¸‹ï¼ŒæŒ‡å®šäº†é‡å¤çš„Codeã€‚</response>  
+        /// <response code="401">æ— æ•ˆä»¤ç‰Œã€‚</response>  
+        /// <response code="403">æƒé™ä¸è¶³ã€‚</response>  
         [HttpPost]
         public ActionResult<AddSimpleDataDicReturnDto> AddSimpleDataDic(AddSimpleDataDicParamsDto model)
         {
@@ -487,18 +492,18 @@ namespace PowerLmsWebApi.Controllers
             string err;
             if (!_AuthorizationManager.Demand(out err, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new AddSimpleDataDicReturnDto();
-            if (_DbContext.DD_SimpleDataDics.Any(c => c.DataDicId == model.Item.DataDicId && c.Code == model.Item.Code))   //ÈôÖØ¸´
-                return BadRequest("IdÖØ¸´");
+            if (_DbContext.DD_SimpleDataDics.Any(c => c.DataDicId == model.Item.DataDicId && c.Code == model.Item.Code))   //å¦‚æœé‡å¤
+                return BadRequest("Idé‡å¤");
             if (model.Item.DataDicId is null)
-                return BadRequest($"{nameof(model.Item.DataDicId)} ²»ÄÜÎª¿Õ¡£");
+                return BadRequest($"{nameof(model.Item.DataDicId)} ä¸èƒ½ä¸ºç©ºã€‚");
             model.Item.GenerateNewId();
             var id = model.Item.Id;
             _DbContext.DD_SimpleDataDics.Add(model.Item);
-            if (model.CopyToChildren)    //ÈôĞèÒªÏòÏÂ´«²¥
+            if (model.CopyToChildren)    //å¦‚æœéœ€è¦æ‰¹é‡åˆ›å»º
             {
-                if (_DbContext.DD_DataDicCatalogs.FirstOrDefault(c => c.Id == model.Item.DataDicId) is DataDicCatalog catalog)  //ÈôÓĞ×Öµä
+                if (_DbContext.DD_DataDicCatalogs.FirstOrDefault(c => c.Id == model.Item.DataDicId) is DataDicCatalog catalog)  //æ‰¾åˆ°å­—å…¸
                 {
-                    var allCatalog = _DbContext.DD_DataDicCatalogs.Where(c => c.Code == catalog.Code && c.Id != model.Item.DataDicId);  //ÅÅ³ı×ÔÉíºóµÄ×Öµä
+                    var allCatalog = _DbContext.DD_DataDicCatalogs.Where(c => c.Code == catalog.Code && c.Id != model.Item.DataDicId);  //æ’é™¤ä¸»é”®çš„å­—å…¸
                     foreach (var item in allCatalog)
                     {
                         var sdd = (SimpleDataDic)model.Item.Clone();
@@ -513,14 +518,14 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// ĞŞ¸Ä¼òµ¥×ÖµäµÄÏî¡£
+        /// ä¿®æ”¹ç®€å•å­—å…¸é¡¹
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
-        /// <response code="200">Î´·¢ÉúÏµÍ³¼¶´íÎó¡£µ«¿ÉÄÜ³öÏÖÓ¦ÓÃ´íÎó£¬¾ßÌå²Î¼û HasError ºÍ ErrorCode ¡£</response>  
-        /// <response code="400">Ö¸¶¨ÊµÌåµÄId²»´æÔÚ¡£Í¨³£ÕâÊÇBug.ÔÚ¼«¶ËÇé¿öÏÂ¿ÉÄÜÊÇ²¢·¢ÎÊÌâ¡£</response>  
-        /// <response code="401">ÎŞĞ§ÁîÅÆ¡£</response>  
-        /// <response code="403">È¨ÏŞ²»×ã¡£</response>  
+        /// <response code="200">æœªå‘ç”Ÿç³»ç»Ÿçº§é”™è¯¯ã€‚ä½†å¯èƒ½å‡ºç°åº”ç”¨é”™è¯¯ï¼Œå…·ä½“å‚è§ HasError å’Œ ErrorCode ã€‚</response>  
+        /// <response code="400">æŒ‡å®šå®ä½“çš„Idä¸å­˜åœ¨ã€‚é€šå¸¸è¿™æ˜¯Bug.åœ¨æç«¯æƒ…å†µä¸‹æ˜¯å¹¶å‘é—®é¢˜ã€‚</response>  
+        /// <response code="401">æ— æ•ˆä»¤ç‰Œã€‚</response>  
+        /// <response code="403">æƒé™ä¸è¶³ã€‚</response>  
         [HttpPut]
         public ActionResult<ModifySimpleDataDicReturnDto> ModifySimpleDataDic(ModifySimpleDataDicParamsDto model)
         {
@@ -544,14 +549,14 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// É¾³ı¼òµ¥Êı¾İ×ÖµäÖĞµÄÒ»Ïî¡£
+        /// åˆ é™¤ç®€å•æ•°æ®å­—å…¸ä¸­çš„ä¸€é¡¹
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
-        /// <response code="200">Î´·¢ÉúÏµÍ³¼¶´íÎó¡£µ«¿ÉÄÜ³öÏÖÓ¦ÓÃ´íÎó£¬¾ßÌå²Î¼û HasError ºÍ ErrorCode ¡£</response>  
-        /// <response code="400">Ö¸¶¨ÊµÌåµÄId²»´æÔÚ¡£Í¨³£ÕâÊÇBug.ÔÚ¼«¶ËÇé¿öÏÂ¿ÉÄÜÊÇ²¢·¢ÎÊÌâ¡£</response>  
-        /// <response code="401">ÎŞĞ§ÁîÅÆ¡£</response>  
-        /// <response code="403">È¨ÏŞ²»×ã¡£</response>  
+        /// <response code="200">æœªå‘ç”Ÿç³»ç»Ÿçº§é”™è¯¯ã€‚ä½†å¯èƒ½å‡ºç°åº”ç”¨é”™è¯¯ï¼Œå…·ä½“å‚è§ HasError å’Œ ErrorCode ã€‚</response>  
+        /// <response code="400">æŒ‡å®šå®ä½“çš„Idä¸å­˜åœ¨ã€‚é€šå¸¸è¿™æ˜¯Bug.åœ¨æç«¯æƒ…å†µä¸‹å¯èƒ½æ˜¯å¹¶å‘é—®é¢˜ã€‚</response>  
+        /// <response code="401">æ— æ•ˆä»¤ç‰Œã€‚</response>  
+        /// <response code="403">æƒé™ä¸è¶³ã€‚</response>  
         [HttpDelete]
         public ActionResult<RemoveSimpleDataDicReturnDto> RemoveSimpleDataDic(RemoveSimpleDataDicParamsDto model)
         {
@@ -569,14 +574,14 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// »Ö¸´Ö¸¶¨µÄ¼òµ¥Êı¾İ×Öµä¡£
+        /// æ¢å¤æŒ‡å®šçš„ç®€å•æ•°æ®å­—å…¸ã€‚
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
-        /// <response code="200">Î´·¢ÉúÏµÍ³¼¶´íÎó¡£µ«¿ÉÄÜ³öÏÖÓ¦ÓÃ´íÎó£¬¾ßÌå²Î¼û HasError ºÍ ErrorCode ¡£</response>  
-        /// <response code="400">Ö¸¶¨ÊµÌåµÄId²»´æÔÚ¡£Í¨³£ÕâÊÇBug.ÔÚ¼«¶ËÇé¿öÏÂ¿ÉÄÜÊÇ²¢·¢ÎÊÌâ¡£</response>  
-        /// <response code="401">ÎŞĞ§ÁîÅÆ¡£</response>  
-        /// <response code="403">È¨ÏŞ²»×ã¡£</response>  
+        /// <response code="200">æœªå‘ç”Ÿç³»ç»Ÿçº§é”™è¯¯ã€‚ä½†å¯èƒ½å‡ºç°åº”ç”¨é”™è¯¯ï¼Œå…·ä½“å‚è§ HasError å’Œ ErrorCode ã€‚</response>  
+        /// <response code="400">æŒ‡å®šå®ä½“çš„Idä¸å­˜åœ¨ã€‚é€šå¸¸è¿™æ˜¯Bug.åœ¨æç«¯æƒ…å†µä¸‹å¯èƒ½æ˜¯å¹¶å‘é—®é¢˜ã€‚</response>  
+        /// <response code="401">æ— æ•ˆä»¤ç‰Œã€‚</response>  
+        /// <response code="403">æƒé™ä¸è¶³ã€‚</response>  
         [HttpPost]
         public ActionResult<RestoreSimpleDataDicReturnDto> RestoreSimpleDataDic(RestoreSimpleDataDicParamsDto model)
         {
@@ -594,9 +599,9 @@ namespace PowerLmsWebApi.Controllers
             return result;
         }
 
-        #endregion ¼òµ¥×ÖµäµÄCRUD
+        #endregion ç®€å•å­—å…¸CRUD
 
 
-        #endregion Êı¾İ×ÖµäÏà¹Ø
+        #endregion æ•°æ®å­—å…¸ç®¡ç†
     }
 }

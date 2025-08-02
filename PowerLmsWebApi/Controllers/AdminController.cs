@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using NPOI.HSSF.UserModel;
 using NuGet.Common;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
@@ -13,7 +12,6 @@ using OW.Data;
 using NuGet.Packaging;
 using NuGet.Protocol;
 using AutoMapper;
-using NPOI.SS.Formula.Functions;
 using System.Text;
 using Microsoft.Extensions.ObjectPool;
 using System.Text.RegularExpressions;
@@ -30,10 +28,9 @@ namespace PowerLmsWebApi.Controllers
     public partial class AdminController : PlControllerBase
     {
         /// <summary>
-        /// 
+        /// AdminController 构造函数
         /// </summary>
         /// <param name="context"></param>
-        /// <param name="npoiManager"></param>
         /// <param name="accountManager"></param>
         /// <param name="scope"></param>
         /// <param name="entityManager"></param>
@@ -42,12 +39,11 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="dataManager"></param>
         /// <param name="authorizationManager"></param>
         /// <param name="logger"></param>
-        public AdminController(PowerLmsUserDbContext context, NpoiManager npoiManager, AccountManager accountManager, IServiceProvider scope, EntityManager entityManager,
+        public AdminController(PowerLmsUserDbContext context, AccountManager accountManager, IServiceProvider scope, EntityManager entityManager,
             IMapper mapper, OrgManager<PowerLmsUserDbContext> orgManager, DataDicManager dataManager, AuthorizationManager authorizationManager,
             ILogger<AdminController> logger)
         {
             _DbContext = context;
-            _NpoiManager = npoiManager;
             _AccountManager = accountManager;
             _ServiceProvider = scope;
             _EntityManager = entityManager;
@@ -59,7 +55,6 @@ namespace PowerLmsWebApi.Controllers
         }
 
         readonly PowerLmsUserDbContext _DbContext;
-        private readonly NpoiManager _NpoiManager;
         readonly AccountManager _AccountManager;
         readonly IServiceProvider _ServiceProvider;
         readonly EntityManager _EntityManager;
