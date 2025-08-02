@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -8,29 +8,29 @@ using System.Runtime.CompilerServices;
 namespace System.Collections.Generic
 {
     /// <summary>
-    /// Ò»¸öÀàËÆ List&lt;T&gt; µÄ·ºĞÍ¼¯ºÏÀà£¬ÆäÄÚ²¿´æ´¢Êı×éÍ¨¹ı ArrayPool&lt;T&gt;.Shared ½øĞĞ³Ø»¯·ÖÅäÓë»ØÊÕ£¬
-    /// ÒÔ¼õÉÙÆµ·±·ÖÅä´óÊı×é´øÀ´µÄ GC Ñ¹Á¦ºÍÄÚ´æËéÆ¬£¬ÊÊÓÃÓÚ¸ßĞÔÄÜ³¡¾°ÏÂ´óÁ¿ÁÙÊ±Êı¾İµÄÊÕ¼¯Óë´¦Àí¡£
+    /// ä¸€ä¸ªç±»ä¼¼ List&lt;T&gt; çš„æ³›å‹é›†åˆç±»ï¼Œå…¶å†…éƒ¨å­˜å‚¨æ•°ç»„é€šè¿‡ ArrayPool&lt;T&gt;.Shared è¿›è¡Œæ± åŒ–åˆ†é…ä¸å›æ”¶ï¼Œ
+    /// ä»¥å‡å°‘é¢‘ç¹åˆ†é…å¤§æ•°ç»„å¸¦æ¥çš„ GC å‹åŠ›å’Œå†…å­˜ç¢ç‰‡ï¼Œé€‚ç”¨äºé«˜æ€§èƒ½åœºæ™¯ä¸‹å¤§é‡ä¸´æ—¶æ•°æ®çš„æ”¶é›†ä¸å¤„ç†ã€‚
     /// </summary>
     /// <remarks>
-    /// ×¢Òâ£º´ËÀàÉè¼ÆÓÃÓÚ¶ÌÉúÃüÖÜÆÚ³¡¾°£¬²»ÊÊºÏ³¤ÆÚ³ÖÓĞ¡£Ê¹ÓÃÍê±Ïºó±ØĞëµ÷ÓÃ Dispose ·½·¨¹é»¹×ÊÔ´¡£
-    /// µäĞÍÓÃ·¨ÊÇÔÚ using Óï¾äÖĞÊ¹ÓÃ´ËÀàµÄÊµÀı¡£
+    /// æ³¨æ„ï¼šæ­¤ç±»è®¾è®¡ç”¨äºçŸ­ç”Ÿå‘½å‘¨æœŸåœºæ™¯ï¼Œä¸é€‚åˆé•¿æœŸæŒæœ‰ã€‚ä½¿ç”¨å®Œæ¯•åå¿…é¡»è°ƒç”¨ Dispose æ–¹æ³•å½’è¿˜èµ„æºã€‚
+    /// å…¸å‹ç”¨æ³•æ˜¯åœ¨ using è¯­å¥ä¸­ä½¿ç”¨æ­¤ç±»çš„å®ä¾‹ã€‚
     /// </remarks>
-    /// <typeparam name="T">¼¯ºÏÖĞÔªËØµÄÀàĞÍ</typeparam>
-    public sealed class PooledList<T> : PooledListBase<T>
+    /// <typeparam name="T">é›†åˆä¸­å…ƒç´ çš„ç±»å‹</typeparam>
+    public sealed class PooledList<T> : PooledListBase<T>, IDisposable
     {
-        private const int DefaultCapacity = 8; // Ä¬ÈÏµÄ³õÊ¼ÈİÁ¿
+        private const int DefaultCapacity = 8; // é»˜è®¤çš„åˆå§‹å®¹é‡
 
-        #region ¹¹Ôìº¯Êı
-        /// <summary>³õÊ¼»¯ PooledList&lt;T&gt; ÀàµÄĞÂÊµÀı£¬¾ßÓĞÖ¸¶¨µÄ³õÊ¼ÈİÁ¿¡£</summary>
-        /// <param name="capacity">³õÊ¼ÈİÁ¿£¬Ä¬ÈÏÎª 8</param>
-        /// <exception cref="ArgumentOutOfRangeException">capacity Ğ¡ÓÚ 0</exception>
+        #region æ„é€ å‡½æ•°
+        /// <summary>åˆå§‹åŒ– PooledList&lt;T&gt; ç±»çš„æ–°å®ä¾‹ï¼Œå…·æœ‰æŒ‡å®šçš„åˆå§‹å®¹é‡ã€‚</summary>
+        /// <param name="capacity">åˆå§‹å®¹é‡ï¼Œé»˜è®¤ä¸º 8</param>
+        /// <exception cref="ArgumentOutOfRangeException">capacity å°äº 0</exception>
         public PooledList(int capacity = DefaultCapacity) : base(Math.Max(capacity, DefaultCapacity))
         {
         }
 
-        /// <summary>³õÊ¼»¯ PooledList&lt;T&gt; ÀàµÄĞÂÊµÀı£¬¸ÃÊµÀı°üº¬´ÓÖ¸¶¨¼¯ºÏ¸´ÖÆµÄÔªËØ</summary>
-        /// <param name="collection">Ò»¸ö¼¯ºÏ£¬ÆäÔªËØ±»¸´ÖÆµ½ĞÂÁĞ±íÖĞ</param>
-        /// <exception cref="ArgumentNullException">collection Îª null</exception>
+        /// <summary>åˆå§‹åŒ– PooledList&lt;T&gt; ç±»çš„æ–°å®ä¾‹ï¼Œè¯¥å®ä¾‹åŒ…å«ä»æŒ‡å®šé›†åˆå¤åˆ¶çš„å…ƒç´ </summary>
+        /// <param name="collection">ä¸€ä¸ªé›†åˆï¼Œå…¶å…ƒç´ è¢«å¤åˆ¶åˆ°æ–°åˆ—è¡¨ä¸­</param>
+        /// <exception cref="ArgumentNullException">collection ä¸º null</exception>
         public PooledList(IEnumerable<T> collection) : base(collection is ICollection<T> c ? c.Count : DefaultCapacity)
         {
             if (collection == null) throw new ArgumentNullException(nameof(collection));
@@ -38,23 +38,23 @@ namespace System.Collections.Generic
         }
         #endregion
 
-        #region ÔöÇ¿µÄList<T>¼æÈİ·½·¨
-        /// <summary>ËÑË÷ÓëÖ¸¶¨Î½´ÊÆ¥ÅäµÄÔªËØ£¬²¢·µ»ØÕû¸ö PooledList&lt;T&gt; ÖĞµÚÒ»¸öÆ¥ÅäÔªËØµÄ´ÓÁã¿ªÊ¼µÄË÷Òı</summary>
-        /// <param name="match">¶¨ÒåÒªËÑË÷µÄÔªËØµÄÌõ¼şµÄÎ½´Ê</param>
-        /// <returns>Èç¹ûÕÒµ½µÚÒ»¸öÓëÖ¸¶¨Î½´ÊÆ¥ÅäµÄÔªËØ£¬ÔòÎª¸ÃÔªËØµÄ´ÓÁã¿ªÊ¼µÄË÷Òı£¬·ñÔòÎª -1</returns>
-        /// <exception cref="ArgumentNullException">match Îª null</exception>
+        #region å¢å¼ºçš„List<T>å…¼å®¹æ–¹æ³•
+        /// <summary>æœç´¢ä¸æŒ‡å®šè°“è¯åŒ¹é…çš„å…ƒç´ ï¼Œå¹¶è¿”å›æ•´ä¸ª PooledList&lt;T&gt; ä¸­ç¬¬ä¸€ä¸ªåŒ¹é…å…ƒç´ çš„ä»é›¶å¼€å§‹çš„ç´¢å¼•</summary>
+        /// <param name="match">å®šä¹‰è¦æœç´¢çš„å…ƒç´ çš„æ¡ä»¶çš„è°“è¯</param>
+        /// <returns>å¦‚æœæ‰¾åˆ°ç¬¬ä¸€ä¸ªä¸æŒ‡å®šè°“è¯åŒ¹é…çš„å…ƒç´ ï¼Œåˆ™ä¸ºè¯¥å…ƒç´ çš„ä»é›¶å¼€å§‹çš„ç´¢å¼•ï¼Œå¦åˆ™ä¸º -1</returns>
+        /// <exception cref="ArgumentNullException">match ä¸º null</exception>
         public int FindIndex(Predicate<T> match)
         {
             if (match == null) throw new ArgumentNullException(nameof(match));
             return FindIndex(0, Count, match);
         }
 
-        /// <summary>´ÓÖ¸¶¨µÄË÷Òı¿ªÊ¼ËÑË÷ÓëÖ¸¶¨Î½´ÊÆ¥ÅäµÄÔªËØ£¬²¢·µ»ØÕû¸ö PooledList&lt;T&gt; ÖĞµÚÒ»¸öÆ¥ÅäÔªËØµÄ´ÓÁã¿ªÊ¼µÄË÷Òı</summary>
-        /// <param name="startIndex">´ÓÁã¿ªÊ¼µÄËÑË÷ÆğÊ¼Ë÷Òı</param>
-        /// <param name="match">¶¨ÒåÒªËÑË÷µÄÔªËØµÄÌõ¼şµÄÎ½´Ê</param>
-        /// <returns>Èç¹ûÕÒµ½µÚÒ»¸öÓëÖ¸¶¨Î½´ÊÆ¥ÅäµÄÔªËØ£¬ÔòÎª¸ÃÔªËØµÄ´ÓÁã¿ªÊ¼µÄË÷Òı£¬·ñÔòÎª -1</returns>
-        /// <exception cref="ArgumentNullException">match Îª null</exception>
-        /// <exception cref="ArgumentOutOfRangeException">startIndex ³¬³ö·¶Î§</exception>
+        /// <summary>ä»æŒ‡å®šçš„ç´¢å¼•å¼€å§‹æœç´¢ä¸æŒ‡å®šè°“è¯åŒ¹é…çš„å…ƒç´ ï¼Œå¹¶è¿”å›æ•´ä¸ª PooledList&lt;T&gt; ä¸­ç¬¬ä¸€ä¸ªåŒ¹é…å…ƒç´ çš„ä»é›¶å¼€å§‹çš„ç´¢å¼•</summary>
+        /// <param name="startIndex">ä»é›¶å¼€å§‹çš„æœç´¢èµ·å§‹ç´¢å¼•</param>
+        /// <param name="match">å®šä¹‰è¦æœç´¢çš„å…ƒç´ çš„æ¡ä»¶çš„è°“è¯</param>
+        /// <returns>å¦‚æœæ‰¾åˆ°ç¬¬ä¸€ä¸ªä¸æŒ‡å®šè°“è¯åŒ¹é…çš„å…ƒç´ ï¼Œåˆ™ä¸ºè¯¥å…ƒç´ çš„ä»é›¶å¼€å§‹çš„ç´¢å¼•ï¼Œå¦åˆ™ä¸º -1</returns>
+        /// <exception cref="ArgumentNullException">match ä¸º null</exception>
+        /// <exception cref="ArgumentOutOfRangeException">startIndex è¶…å‡ºèŒƒå›´</exception>
         public int FindIndex(int startIndex, Predicate<T> match)
         {
             if (match == null) throw new ArgumentNullException(nameof(match));
@@ -62,13 +62,13 @@ namespace System.Collections.Generic
             return FindIndex(startIndex, Count - startIndex, match);
         }
 
-        /// <summary>´ÓÖ¸¶¨µÄË÷Òı¿ªÊ¼ËÑË÷Ö¸¶¨ÊıÁ¿µÄÔªËØÖĞÓëÖ¸¶¨Î½´ÊÆ¥ÅäµÄÔªËØ£¬²¢·µ»ØÕû¸ö PooledList&lt;T&gt; ÖĞµÚÒ»¸öÆ¥ÅäÔªËØµÄ´ÓÁã¿ªÊ¼µÄË÷Òı</summary>
-        /// <param name="startIndex">´ÓÁã¿ªÊ¼µÄËÑË÷ÆğÊ¼Ë÷Òı</param>
-        /// <param name="count">ÒªËÑË÷µÄ²¿·ÖÖĞµÄÔªËØÊı</param>
-        /// <param name="match">¶¨ÒåÒªËÑË÷µÄÔªËØµÄÌõ¼şµÄÎ½´Ê</param>
-        /// <returns>Èç¹ûÕÒµ½µÚÒ»¸öÓëÖ¸¶¨Î½´ÊÆ¥ÅäµÄÔªËØ£¬ÔòÎª¸ÃÔªËØµÄ´ÓÁã¿ªÊ¼µÄË÷Òı£¬·ñÔòÎª -1</returns>
-        /// <exception cref="ArgumentNullException">match Îª null</exception>
-        /// <exception cref="ArgumentOutOfRangeException">startIndex »ò count ³¬³ö·¶Î§</exception>
+        /// <summary>ä»æŒ‡å®šçš„ç´¢å¼•å¼€å§‹æœç´¢æŒ‡å®šæ•°é‡çš„å…ƒç´ ä¸­ä¸æŒ‡å®šè°“è¯åŒ¹é…çš„å…ƒç´ ï¼Œå¹¶è¿”å›æ•´ä¸ª PooledList&lt;T&gt; ä¸­ç¬¬ä¸€ä¸ªåŒ¹é…å…ƒç´ çš„ä»é›¶å¼€å§‹çš„ç´¢å¼•</summary>
+        /// <param name="startIndex">ä»é›¶å¼€å§‹çš„æœç´¢èµ·å§‹ç´¢å¼•</param>
+        /// <param name="count">è¦æœç´¢çš„éƒ¨åˆ†ä¸­çš„å…ƒç´ æ•°</param>
+        /// <param name="match">å®šä¹‰è¦æœç´¢çš„å…ƒç´ çš„æ¡ä»¶çš„è°“è¯</param>
+        /// <returns>å¦‚æœæ‰¾åˆ°ç¬¬ä¸€ä¸ªä¸æŒ‡å®šè°“è¯åŒ¹é…çš„å…ƒç´ ï¼Œåˆ™ä¸ºè¯¥å…ƒç´ çš„ä»é›¶å¼€å§‹çš„ç´¢å¼•ï¼Œå¦åˆ™ä¸º -1</returns>
+        /// <exception cref="ArgumentNullException">match ä¸º null</exception>
+        /// <exception cref="ArgumentOutOfRangeException">startIndex æˆ– count è¶…å‡ºèŒƒå›´</exception>
         public int FindIndex(int startIndex, int count, Predicate<T> match)
         {
             if (match == null) throw new ArgumentNullException(nameof(match));
@@ -83,10 +83,10 @@ namespace System.Collections.Generic
             return -1;
         }
 
-        /// <summary>ËÑË÷ÓëÖ¸¶¨Î½´Ê¶¨ÒåµÄÌõ¼şÏàÆ¥ÅäµÄÔªËØ£¬²¢·µ»Ø PooledList&lt;T&gt; ÖĞµÄµÚÒ»¸öÆ¥ÅäÔªËØ</summary>
-        /// <param name="match">¶¨ÒåÒªËÑË÷µÄÔªËØµÄÌõ¼şµÄÎ½´Ê</param>
-        /// <returns>Èç¹ûÕÒµ½ÓëÖ¸¶¨Î½´Ê¶¨ÒåµÄÌõ¼şÏàÆ¥ÅäµÄµÚÒ»¸öÔªËØ£¬ÔòÎª¸ÃÔªËØ£»·ñÔòÎªÀàĞÍ T µÄÄ¬ÈÏÖµ</returns>
-        /// <exception cref="ArgumentNullException">match Îª null</exception>
+        /// <summary>æœç´¢ä¸æŒ‡å®šè°“è¯å®šä¹‰çš„æ¡ä»¶ç›¸åŒ¹é…çš„å…ƒç´ ï¼Œå¹¶è¿”å› PooledList&lt;T&gt; ä¸­çš„ç¬¬ä¸€ä¸ªåŒ¹é…å…ƒç´ </summary>
+        /// <param name="match">å®šä¹‰è¦æœç´¢çš„å…ƒç´ çš„æ¡ä»¶çš„è°“è¯</param>
+        /// <returns>å¦‚æœæ‰¾åˆ°ä¸æŒ‡å®šè°“è¯å®šä¹‰çš„æ¡ä»¶ç›¸åŒ¹é…çš„ç¬¬ä¸€ä¸ªå…ƒç´ ï¼Œåˆ™ä¸ºè¯¥å…ƒç´ ï¼›å¦åˆ™ä¸ºç±»å‹ T çš„é»˜è®¤å€¼</returns>
+        /// <exception cref="ArgumentNullException">match ä¸º null</exception>
         public T Find(Predicate<T> match)
         {
             if (match == null) throw new ArgumentNullException(nameof(match));
@@ -97,10 +97,10 @@ namespace System.Collections.Generic
             return default;
         }
 
-        /// <summary>¼ìË÷ÓëÖ¸¶¨Î½´Ê¶¨ÒåµÄÌõ¼şÏàÆ¥ÅäµÄËùÓĞÔªËØ</summary>
-        /// <param name="match">¶¨ÒåÒªËÑË÷µÄÔªËØµÄÌõ¼şµÄÎ½´Ê</param>
-        /// <returns>Èç¹ûÕÒµ½ÓëÖ¸¶¨Î½´Ê¶¨ÒåµÄÌõ¼şÏàÆ¥ÅäµÄÔªËØ£¬ÔòÎªÕâĞ©ÔªËØ×é³ÉµÄ PooledList&lt;T&gt;£»·ñÔòÎª¿ÕµÄ PooledList&lt;T&gt;</returns>
-        /// <exception cref="ArgumentNullException">match Îª null</exception>
+        /// <summary>æ£€ç´¢ä¸æŒ‡å®šè°“è¯å®šä¹‰çš„æ¡ä»¶ç›¸åŒ¹é…çš„æ‰€æœ‰å…ƒç´ </summary>
+        /// <param name="match">å®šä¹‰è¦æœç´¢çš„å…ƒç´ çš„æ¡ä»¶çš„è°“è¯</param>
+        /// <returns>å¦‚æœæ‰¾åˆ°ä¸æŒ‡å®šè°“è¯å®šä¹‰çš„æ¡ä»¶ç›¸åŒ¹é…çš„å…ƒç´ ï¼Œåˆ™ä¸ºè¿™äº›å…ƒç´ ç»„æˆçš„ PooledList&lt;T&gt;ï¼›å¦åˆ™ä¸ºç©ºçš„ PooledList&lt;T&gt;</returns>
+        /// <exception cref="ArgumentNullException">match ä¸º null</exception>
         public PooledList<T> FindAll(Predicate<T> match)
         {
             if (match == null) throw new ArgumentNullException(nameof(match));
@@ -112,22 +112,22 @@ namespace System.Collections.Generic
             return list;
         }
 
-        /// <summary>ËÑË÷ÓëÖ¸¶¨Î½´ÊÆ¥ÅäµÄÔªËØ£¬²¢·µ»ØÕû¸ö PooledList&lt;T&gt; ÖĞ×îºóÒ»¸öÆ¥ÅäÔªËØµÄ´ÓÁã¿ªÊ¼µÄË÷Òı</summary>
-        /// <param name="match">¶¨ÒåÒªËÑË÷µÄÔªËØµÄÌõ¼şµÄÎ½´Ê</param>
-        /// <returns>Èç¹ûÕÒµ½×îºóÒ»¸öÓëÖ¸¶¨Î½´ÊÆ¥ÅäµÄÔªËØ£¬ÔòÎª¸ÃÔªËØµÄ´ÓÁã¿ªÊ¼µÄË÷Òı£¬·ñÔòÎª -1</returns>
-        /// <exception cref="ArgumentNullException">match Îª null</exception>
+        /// <summary>æœç´¢ä¸æŒ‡å®šè°“è¯åŒ¹é…çš„å…ƒç´ ï¼Œå¹¶è¿”å›æ•´ä¸ª PooledList&lt;T&gt; ä¸­æœ€åä¸€ä¸ªåŒ¹é…å…ƒç´ çš„ä»é›¶å¼€å§‹çš„ç´¢å¼•</summary>
+        /// <param name="match">å®šä¹‰è¦æœç´¢çš„å…ƒç´ çš„æ¡ä»¶çš„è°“è¯</param>
+        /// <returns>å¦‚æœæ‰¾åˆ°æœ€åä¸€ä¸ªä¸æŒ‡å®šè°“è¯åŒ¹é…çš„å…ƒç´ ï¼Œåˆ™ä¸ºè¯¥å…ƒç´ çš„ä»é›¶å¼€å§‹çš„ç´¢å¼•ï¼Œå¦åˆ™ä¸º -1</returns>
+        /// <exception cref="ArgumentNullException">match ä¸º null</exception>
         public int FindLastIndex(Predicate<T> match)
         {
             if (match == null) throw new ArgumentNullException(nameof(match));
             return FindLastIndex(Count - 1, Count, match);
         }
 
-        /// <summary>´ÓÖ¸¶¨µÄË÷Òı¿ªÊ¼ÏòÇ°ËÑË÷ÓëÖ¸¶¨Î½´ÊÆ¥ÅäµÄÔªËØ£¬²¢·µ»ØÕû¸ö PooledList&lt;T&gt; ÖĞ×îºóÒ»¸öÆ¥ÅäÔªËØµÄ´ÓÁã¿ªÊ¼µÄË÷Òı</summary>
-        /// <param name="startIndex">´ÓÁã¿ªÊ¼µÄÏòºóËÑË÷µÄÆğÊ¼Ë÷Òı</param>
-        /// <param name="match">¶¨ÒåÒªËÑË÷µÄÔªËØµÄÌõ¼şµÄÎ½´Ê</param>
-        /// <returns>Èç¹ûÕÒµ½×îºóÒ»¸öÓëÖ¸¶¨Î½´ÊÆ¥ÅäµÄÔªËØ£¬ÔòÎª¸ÃÔªËØµÄ´ÓÁã¿ªÊ¼µÄË÷Òı£¬·ñÔòÎª -1</returns>
-        /// <exception cref="ArgumentNullException">match Îª null</exception>
-        /// <exception cref="ArgumentOutOfRangeException">startIndex ³¬³ö·¶Î§</exception>
+        /// <summary>ä»æŒ‡å®šçš„ç´¢å¼•å¼€å§‹å‘å‰æœç´¢ä¸æŒ‡å®šè°“è¯åŒ¹é…çš„å…ƒç´ ï¼Œå¹¶è¿”å›æ•´ä¸ª PooledList&lt;T&gt; ä¸­æœ€åä¸€ä¸ªåŒ¹é…å…ƒç´ çš„ä»é›¶å¼€å§‹çš„ç´¢å¼•</summary>
+        /// <param name="startIndex">ä»é›¶å¼€å§‹çš„å‘åæœç´¢çš„èµ·å§‹ç´¢å¼•</param>
+        /// <param name="match">å®šä¹‰è¦æœç´¢çš„å…ƒç´ çš„æ¡ä»¶çš„è°“è¯</param>
+        /// <returns>å¦‚æœæ‰¾åˆ°æœ€åä¸€ä¸ªä¸æŒ‡å®šè°“è¯åŒ¹é…çš„å…ƒç´ ï¼Œåˆ™ä¸ºè¯¥å…ƒç´ çš„ä»é›¶å¼€å§‹çš„ç´¢å¼•ï¼Œå¦åˆ™ä¸º -1</returns>
+        /// <exception cref="ArgumentNullException">match ä¸º null</exception>
+        /// <exception cref="ArgumentOutOfRangeException">startIndex è¶…å‡ºèŒƒå›´</exception>
         public int FindLastIndex(int startIndex, Predicate<T> match)
         {
             if (match == null) throw new ArgumentNullException(nameof(match));
@@ -136,13 +136,13 @@ namespace System.Collections.Generic
             return FindLastIndex(startIndex, startIndex + 1, match);
         }
 
-        /// <summary>´ÓÖ¸¶¨Ë÷Òı¿ªÊ¼ÏòºóËÑË÷Ö¸¶¨ÊıÁ¿µÄÔªËØÖĞÓëÖ¸¶¨Î½´ÊÆ¥ÅäµÄÔªËØ£¬²¢·µ»ØÕû¸ö PooledList&lt;T&gt; ÖĞ×îºóÒ»¸öÆ¥ÅäÔªËØµÄ´ÓÁã¿ªÊ¼µÄË÷Òı</summary>
-        /// <param name="startIndex">´ÓÁã¿ªÊ¼µÄÏòºóËÑË÷µÄÆğÊ¼Ë÷Òı</param>
-        /// <param name="count">ÒªËÑË÷µÄ²¿·ÖÖĞµÄÔªËØÊı</param>
-        /// <param name="match">¶¨ÒåÒªËÑË÷µÄÔªËØµÄÌõ¼şµÄÎ½´Ê</param>
-        /// <returns>Èç¹ûÕÒµ½×îºóÒ»¸öÓëÖ¸¶¨Î½´ÊÆ¥ÅäµÄÔªËØ£¬ÔòÎª¸ÃÔªËØµÄ´ÓÁã¿ªÊ¼µÄË÷Òı£¬·ñÔòÎª -1</returns>
-        /// <exception cref="ArgumentNullException">match Îª null</exception>
-        /// <exception cref="ArgumentOutOfRangeException">startIndex »ò count ³¬³ö·¶Î§</exception>
+        /// <summary>ä»æŒ‡å®šç´¢å¼•å¼€å§‹å‘åæœç´¢æŒ‡å®šæ•°é‡çš„å…ƒç´ ä¸­ä¸æŒ‡å®šè°“è¯åŒ¹é…çš„å…ƒç´ ï¼Œå¹¶è¿”å›æ•´ä¸ª PooledList&lt;T&gt; ä¸­æœ€åä¸€ä¸ªåŒ¹é…å…ƒç´ çš„ä»é›¶å¼€å§‹çš„ç´¢å¼•</summary>
+        /// <param name="startIndex">ä»é›¶å¼€å§‹çš„å‘åæœç´¢çš„èµ·å§‹ç´¢å¼•</param>
+        /// <param name="count">è¦æœç´¢çš„éƒ¨åˆ†ä¸­çš„å…ƒç´ æ•°</param>
+        /// <param name="match">å®šä¹‰è¦æœç´¢çš„å…ƒç´ çš„æ¡ä»¶çš„è°“è¯</param>
+        /// <returns>å¦‚æœæ‰¾åˆ°æœ€åä¸€ä¸ªä¸æŒ‡å®šè°“è¯åŒ¹é…çš„å…ƒç´ ï¼Œåˆ™ä¸ºè¯¥å…ƒç´ çš„ä»é›¶å¼€å§‹çš„ç´¢å¼•ï¼Œå¦åˆ™ä¸º -1</returns>
+        /// <exception cref="ArgumentNullException">match ä¸º null</exception>
+        /// <exception cref="ArgumentOutOfRangeException">startIndex æˆ– count è¶…å‡ºèŒƒå›´</exception>
         public int FindLastIndex(int startIndex, int count, Predicate<T> match)
         {
             if (match == null) throw new ArgumentNullException(nameof(match));
@@ -162,24 +162,24 @@ namespace System.Collections.Generic
             return -1;
         }
 
-        /// <summary>ËÑË÷ÓëÖ¸¶¨Î½´Ê¶¨ÒåµÄÌõ¼şÏàÆ¥ÅäµÄÔªËØ£¬²¢·µ»Ø PooledList&lt;T&gt; ÖĞµÄ×îºóÒ»¸öÆ¥ÅäÔªËØ</summary>
-        /// <param name="match">¶¨ÒåÒªËÑË÷µÄÔªËØµÄÌõ¼şµÄÎ½´Ê</param>
-        /// <returns>Èç¹ûÕÒµ½ÓëÖ¸¶¨Î½´Ê¶¨ÒåµÄÌõ¼şÏàÆ¥ÅäµÄ×îºóÒ»¸öÔªËØ£¬ÔòÎª¸ÃÔªËØ£»·ñÔòÎªÀàĞÍ T µÄÄ¬ÈÏÖµ</returns>
-        /// <exception cref="ArgumentNullException">match Îª null</exception>
+        /// <summary>æœç´¢ä¸æŒ‡å®šè°“è¯å®šä¹‰çš„æ¡ä»¶ç›¸åŒ¹é…çš„å…ƒç´ ï¼Œå¹¶è¿”å› PooledList&lt;T&gt; ä¸­çš„æœ€åä¸€ä¸ªåŒ¹é…å…ƒç´ </summary>
+        /// <param name="match">å®šä¹‰è¦æœç´¢çš„å…ƒç´ çš„æ¡ä»¶çš„è°“è¯</param>
+        /// <returns>å¦‚æœæ‰¾åˆ°ä¸æŒ‡å®šè°“è¯å®šä¹‰çš„æ¡ä»¶ç›¸åŒ¹é…çš„æœ€åä¸€ä¸ªå…ƒç´ ï¼Œåˆ™ä¸ºè¯¥å…ƒç´ ï¼›å¦åˆ™ä¸ºç±»å‹ T çš„é»˜è®¤å€¼</returns>
+        /// <exception cref="ArgumentNullException">match ä¸º null</exception>
         public T FindLast(Predicate<T> match)
         {
             if (match == null) throw new ArgumentNullException(nameof(match));
             for (int i = Count - 1; i >= 0; i--)
             {
-                if (match(this[i])) return this[i];new List<int>();
+                if (match(this[i])) return this[i];
             }
             return default;
         }
 
-        /// <summary>È·¶¨ PooledList&lt;T&gt; ÖĞµÄÃ¿¸öÔªËØÊÇ·ñÓëÖ¸¶¨Î½´Ê¶¨ÒåµÄÌõ¼şÆ¥Åä</summary>
-        /// <param name="match">¶¨ÒåÒªËÑË÷µÄÔªËØµÄÌõ¼şµÄÎ½´Ê</param>
-        /// <returns>Èç¹û PooledList&lt;T&gt; ÖĞµÄÃ¿¸öÔªËØ¶¼ÓëÖ¸¶¨Î½´Ê¶¨ÒåµÄÌõ¼şÆ¥Åä£¬ÔòÎª true£»·ñÔòÎª false</returns>
-        /// <exception cref="ArgumentNullException">match Îª null</exception>
+        /// <summary>ç¡®å®š PooledList&lt;T&gt; ä¸­çš„æ¯ä¸ªå…ƒç´ æ˜¯å¦ä¸æŒ‡å®šè°“è¯å®šä¹‰çš„æ¡ä»¶åŒ¹é…</summary>
+        /// <param name="match">å®šä¹‰è¦æœç´¢çš„å…ƒç´ çš„æ¡ä»¶çš„è°“è¯</param>
+        /// <returns>å¦‚æœ PooledList&lt;T&gt; ä¸­çš„æ¯ä¸ªå…ƒç´ éƒ½ä¸æŒ‡å®šè°“è¯å®šä¹‰çš„æ¡ä»¶åŒ¹é…ï¼Œåˆ™ä¸º trueï¼›å¦åˆ™ä¸º false</returns>
+        /// <exception cref="ArgumentNullException">match ä¸º null</exception>
         public bool TrueForAll(Predicate<T> match)
         {
             if (match == null) throw new ArgumentNullException(nameof(match));
@@ -190,32 +190,32 @@ namespace System.Collections.Generic
             return true;
         }
 
-        /// <summary>¶Ô PooledList&lt;T&gt; ÖĞµÄÃ¿¸öÔªËØÖ´ĞĞÖ¸¶¨²Ù×÷</summary>
-        /// <param name="action">Òª¶Ô PooledList&lt;T&gt; µÄÃ¿¸öÔªËØÖ´ĞĞµÄÎ¯ÍĞ</param>
-        /// <exception cref="ArgumentNullException">action Îª null</exception>
+        /// <summary>å¯¹ PooledList&lt;T&gt; ä¸­çš„æ¯ä¸ªå…ƒç´ æ‰§è¡ŒæŒ‡å®šæ“ä½œ</summary>
+        /// <param name="action">è¦å¯¹ PooledList&lt;T&gt; çš„æ¯ä¸ªå…ƒç´ æ‰§è¡Œçš„å§”æ‰˜</param>
+        /// <exception cref="ArgumentNullException">action ä¸º null</exception>
         public void ForEach(Action<T> action)
         {
             if (action == null) throw new ArgumentNullException(nameof(action));
             for (int i = 0; i < Count; i++) action(this[i]);
         }
 
-        /// <summary>´ÓÖ¸¶¨Ë÷Òı¿ªÊ¼£¬ÔÚ PooledList&lt;T&gt; ÖĞËÑË÷¶ÔÏó£¬²¢·µ»ØµÚÒ»¸öÆ¥ÅäÏîµÄ´ÓÁã¿ªÊ¼µÄË÷Òı</summary>
-        /// <param name="item">ÒªÔÚ PooledList&lt;T&gt; ÖĞ¶¨Î»µÄ¶ÔÏó£¬¶ÔÓÚÒıÓÃÀàĞÍ£¬¸ÃÖµ¿ÉÒÔÎª null</param>
-        /// <param name="index">´ÓÁã¿ªÊ¼µÄËÑË÷ÆğÊ¼Ë÷Òı</param>
-        /// <returns>´Ó index ¿ªÊ¼£¬Èç¹ûÔÚ PooledList&lt;T&gt; ÖĞÕÒµ½ item£¬ÔòÎª¸ÃÏîµÄµÚÒ»¸öÆ¥ÅäÏîµÄ´ÓÁã¿ªÊ¼µÄË÷Òı£»·ñÔòÎª -1</returns>
-        /// <exception cref="ArgumentOutOfRangeException">index ³¬³ö·¶Î§</exception>
+        /// <summary>ä»æŒ‡å®šç´¢å¼•å¼€å§‹ï¼Œåœ¨ PooledList&lt;T&gt; ä¸­æœç´¢å¯¹è±¡ï¼Œå¹¶è¿”å›ç¬¬ä¸€ä¸ªåŒ¹é…é¡¹çš„ä»é›¶å¼€å§‹çš„ç´¢å¼•</summary>
+        /// <param name="item">è¦åœ¨ PooledList&lt;T&gt; ä¸­å®šä½çš„å¯¹è±¡ï¼Œå¯¹äºå¼•ç”¨ç±»å‹ï¼Œè¯¥å€¼å¯ä»¥ä¸º null</param>
+        /// <param name="index">ä»é›¶å¼€å§‹çš„æœç´¢èµ·å§‹ç´¢å¼•</param>
+        /// <returns>ä» index å¼€å§‹ï¼Œå¦‚æœåœ¨ PooledList&lt;T&gt; ä¸­æ‰¾åˆ° itemï¼Œåˆ™ä¸ºè¯¥é¡¹çš„ç¬¬ä¸€ä¸ªåŒ¹é…é¡¹çš„ä»é›¶å¼€å§‹çš„ç´¢å¼•ï¼›å¦åˆ™ä¸º -1</returns>
+        /// <exception cref="ArgumentOutOfRangeException">index è¶…å‡ºèŒƒå›´</exception>
         public int IndexOf(T item, int index)
         {
             if (index < 0 || index > Count) throw new ArgumentOutOfRangeException(nameof(index));
             return Array.IndexOf(Buffer, item, index, Count - index);
         }
 
-        /// <summary>ÔÚ PooledList&lt;T&gt; ÄÚ£¬´ÓÖ¸¶¨µÄË÷Òı¿ªÊ¼²¢°üº¬Ö¸¶¨¼ÆÊıµÄÔªËØ£¬ËÑË÷¶ÔÏó£¬²¢·µ»ØµÚÒ»¸öÆ¥ÅäÏîµÄ´ÓÁã¿ªÊ¼µÄË÷Òı</summary>
-        /// <param name="item">ÒªÔÚ PooledList&lt;T&gt; ÖĞ¶¨Î»µÄ¶ÔÏó£¬¶ÔÓÚÒıÓÃÀàĞÍ£¬¸ÃÖµ¿ÉÒÔÎª null</param>
-        /// <param name="index">´ÓÁã¿ªÊ¼µÄËÑË÷ÆğÊ¼Ë÷Òı</param>
-        /// <param name="count">ÒªËÑË÷µÄÇøÓòÖĞµÄÔªËØÊı</param>
-        /// <returns>´Ó index ¿ªÊ¼£¬ÔÚ count ¸öÔªËØ·¶Î§ÄÚ£¬Èç¹ûÔÚ PooledList&lt;T&gt; ÖĞÕÒµ½ item£¬ÔòÎª¸ÃÏîµÄµÚÒ»¸öÆ¥ÅäÏîµÄ´ÓÁã¿ªÊ¼µÄË÷Òı£»·ñÔòÎª -1</returns>
-        /// <exception cref="ArgumentOutOfRangeException">index »ò count ³¬³ö·¶Î§</exception>
+        /// <summary>åœ¨ PooledList&lt;T&gt; å†…ï¼Œä»æŒ‡å®šçš„ç´¢å¼•å¼€å§‹å¹¶åŒ…å«æŒ‡å®šè®¡æ•°çš„å…ƒç´ ï¼Œæœç´¢å¯¹è±¡ï¼Œå¹¶è¿”å›ç¬¬ä¸€ä¸ªåŒ¹é…é¡¹çš„ä»é›¶å¼€å§‹çš„ç´¢å¼•</summary>
+        /// <param name="item">è¦åœ¨ PooledList&lt;T&gt; ä¸­å®šä½çš„å¯¹è±¡ï¼Œå¯¹äºå¼•ç”¨ç±»å‹ï¼Œè¯¥å€¼å¯ä»¥ä¸º null</param>
+        /// <param name="index">ä»é›¶å¼€å§‹çš„æœç´¢èµ·å§‹ç´¢å¼•</param>
+        /// <param name="count">è¦æœç´¢çš„åŒºåŸŸä¸­çš„å…ƒç´ æ•°</param>
+        /// <returns>ä» index å¼€å§‹ï¼Œåœ¨ count ä¸ªå…ƒç´ èŒƒå›´å†…ï¼Œå¦‚æœåœ¨ PooledList&lt;T&gt; ä¸­æ‰¾åˆ° itemï¼Œåˆ™ä¸ºè¯¥é¡¹çš„ç¬¬ä¸€ä¸ªåŒ¹é…é¡¹çš„ä»é›¶å¼€å§‹çš„ç´¢å¼•ï¼›å¦åˆ™ä¸º -1</returns>
+        /// <exception cref="ArgumentOutOfRangeException">index æˆ– count è¶…å‡ºèŒƒå›´</exception>
         public int IndexOf(T item, int index, int count)
         {
             if (index < 0 || index > Count) throw new ArgumentOutOfRangeException(nameof(index));
@@ -223,16 +223,16 @@ namespace System.Collections.Generic
             return Array.IndexOf(Buffer, item, index, count);
         }
 
-        /// <summary>´Ó PooledList&lt;T&gt; ÖĞÒÆ³ıÓëÖ¸¶¨Î½´Ê¶¨ÒåµÄÌõ¼şÏàÆ¥ÅäµÄËùÓĞÔªËØ</summary>
-        /// <param name="match">¶¨ÒåÒªÒÆ³ıµÄÔªËØµÄÌõ¼şµÄÎ½´Ê</param>
-        /// <returns>´Ó PooledList&lt;T&gt; ÖĞÒÆ³ıµÄÔªËØÊıÄ¿</returns>
-        /// <exception cref="ArgumentNullException">match Îª null</exception>
+        /// <summary>ä» PooledList&lt;T&gt; ä¸­ç§»é™¤ä¸æŒ‡å®šè°“è¯å®šä¹‰çš„æ¡ä»¶ç›¸åŒ¹é…çš„æ‰€æœ‰å…ƒç´ </summary>
+        /// <param name="match">å®šä¹‰è¦ç§»é™¤çš„å…ƒç´ çš„æ¡ä»¶çš„è°“è¯</param>
+        /// <returns>ä» PooledList&lt;T&gt; ä¸­ç§»é™¤çš„å…ƒç´ æ•°ç›®</returns>
+        /// <exception cref="ArgumentNullException">match ä¸º null</exception>
         public int RemoveAll(Predicate<T> match)
         {
             if (match == null) throw new ArgumentNullException(nameof(match));
 
             int freeIndex = 0;
-            // ÕÒµ½µÚÒ»¸öÒªÉ¾³ıµÄÔªËØ
+            // æ‰¾åˆ°ç¬¬ä¸€ä¸ªè¦åˆ é™¤çš„å…ƒç´ 
             while (freeIndex < Count && !match(this[freeIndex])) freeIndex++;
             if (freeIndex >= Count) return 0;
 
@@ -244,32 +244,32 @@ namespace System.Collections.Generic
             }
 
             int removed = Count - freeIndex;
-            // ÒÆ³ıÔªËØ
+            // ç§»é™¤å…ƒç´ 
             for (int i = 0; i < removed; i++)
                 RemoveAt(Count - 1);
 
             return removed;
         }
 
-        /// <summary>´Ó PooledList&lt;T&gt; ÖĞÒÆ³ıÖ¸¶¨·¶Î§µÄÔªËØ</summary>
-        /// <param name="index">ÒªÒÆ³ıµÄµÚÒ»¸öÔªËØµÄ´ÓÁã¿ªÊ¼µÄË÷Òı</param>
-        /// <param name="count">ÒªÒÆ³ıµÄÔªËØÊı</param>
-        /// <exception cref="ArgumentOutOfRangeException">index »ò count ³¬³ö·¶Î§</exception>
+        /// <summary>ä» PooledList&lt;T&gt; ä¸­ç§»é™¤æŒ‡å®šèŒƒå›´çš„å…ƒç´ </summary>
+        /// <param name="index">è¦ç§»é™¤çš„ç¬¬ä¸€ä¸ªå…ƒç´ çš„ä»é›¶å¼€å§‹çš„ç´¢å¼•</param>
+        /// <param name="count">è¦ç§»é™¤çš„å…ƒç´ æ•°</param>
+        /// <exception cref="ArgumentOutOfRangeException">index æˆ– count è¶…å‡ºèŒƒå›´</exception>
         public void RemoveRange(int index, int count)
         {
             if (index < 0 || index > Count) throw new ArgumentOutOfRangeException(nameof(index));
             if (count < 0 || index + count > Count) throw new ArgumentOutOfRangeException(nameof(count));
 
-            // ´Ó×îºóÍùÇ°É¾³ı£¬ÕâÑù²»ĞèÒªÒÆ¶¯ÔªËØ
+            // ä»æœ€åå¾€å‰åˆ é™¤ï¼Œè¿™æ ·ä¸éœ€è¦ç§»åŠ¨å…ƒç´ 
             for (int i = index + count - 1; i >= index; i--)
                 RemoveAt(i);
         }
 
-        /// <summary>ÔÚÖ¸¶¨µÄË÷Òı´¦½«¼¯ºÏµÄÔªËØ²åÈë PooledList&lt;T&gt;</summary>
-        /// <param name="index">Ó¦ÔÚ´Ë´¦²åÈëĞÂÔªËØµÄ´ÓÁã¿ªÊ¼µÄË÷Òı</param>
-        /// <param name="collection">Òª²åÈëµÄ¼¯ºÏ£¬¼¯ºÏ±¾Éí²»ÄÜÎª null£¬µ«Ëü¿ÉÒÔ°üº¬Îª null µÄÔªËØ</param>
-        /// <exception cref="ArgumentNullException">collection Îª null</exception>
-        /// <exception cref="ArgumentOutOfRangeException">index Ğ¡ÓÚ 0 »ò´óÓÚ Count</exception>
+        /// <summary>åœ¨æŒ‡å®šçš„ç´¢å¼•å¤„å°†é›†åˆçš„å…ƒç´ æ’å…¥ PooledList&lt;T&gt;</summary>
+        /// <param name="index">åº”åœ¨æ­¤å¤„æ’å…¥æ–°å…ƒç´ çš„ä»é›¶å¼€å§‹çš„ç´¢å¼•</param>
+        /// <param name="collection">è¦æ’å…¥çš„é›†åˆï¼Œé›†åˆæœ¬èº«ä¸èƒ½ä¸º nullï¼Œä½†å®ƒå¯ä»¥åŒ…å«ä¸º null çš„å…ƒç´ </param>
+        /// <exception cref="ArgumentNullException">collection ä¸º null</exception>
+        /// <exception cref="ArgumentOutOfRangeException">index å°äº 0 æˆ–å¤§äº Count</exception>
         public void InsertRange(int index, IEnumerable<T> collection)
         {
             if (collection == null) throw new ArgumentNullException(nameof(collection));
@@ -279,14 +279,14 @@ namespace System.Collections.Generic
                 Insert(index++, item);
         }
 
-        /// <summary>½«Ö¸¶¨ÊıÁ¿µÄÔªËØ´ÓÔ´Êı×é¸´ÖÆµ½ PooledList&lt;T&gt;</summary>
-        /// <param name="source">Òª´ÓÖĞ¸´ÖÆÔªËØµÄÔ´Êı×é</param>
-        /// <param name="sourceIndex">Ô´Êı×éÖĞ¿ªÊ¼¸´ÖÆµÄË÷Òı</param>
-        /// <param name="destinationIndex">PooledList&lt;T&gt; ÖĞ¿ªÊ¼Õ³ÌùµÄË÷Òı</param>
-        /// <param name="count">Òª¸´ÖÆµÄÔªËØÊı</param>
-        /// <exception cref="ArgumentNullException">source Îª null</exception>
-        /// <exception cref="ArgumentOutOfRangeException">sourceIndex¡¢destinationIndex »ò count ³¬³ö·¶Î§</exception>
-        /// <exception cref="ArgumentException">Ô´Êı×éÖĞÃ»ÓĞ×ã¹»µÄÔªËØ¿É¸´ÖÆ</exception>
+        /// <summary>å°†æŒ‡å®šæ•°é‡çš„å…ƒç´ ä»æºæ•°ç»„å¤åˆ¶åˆ° PooledList&lt;T&gt;</summary>
+        /// <param name="source">è¦ä»ä¸­å¤åˆ¶å…ƒç´ çš„æºæ•°ç»„</param>
+        /// <param name="sourceIndex">æºæ•°ç»„ä¸­å¼€å§‹å¤åˆ¶çš„ç´¢å¼•</param>
+        /// <param name="destinationIndex">PooledList&lt;T&gt; ä¸­å¼€å§‹ç²˜è´´çš„ç´¢å¼•</param>
+        /// <param name="count">è¦å¤åˆ¶çš„å…ƒç´ æ•°</param>
+        /// <exception cref="ArgumentNullException">source ä¸º null</exception>
+        /// <exception cref="ArgumentOutOfRangeException">sourceIndexã€destinationIndex æˆ– count è¶…å‡ºèŒƒå›´</exception>
+        /// <exception cref="ArgumentException">æºæ•°ç»„ä¸­æ²¡æœ‰è¶³å¤Ÿçš„å…ƒç´ å¯å¤åˆ¶</exception>
         public void CopyFrom(T[] source, int sourceIndex, int destinationIndex, int count)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));

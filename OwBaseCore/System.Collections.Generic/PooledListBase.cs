@@ -58,6 +58,9 @@ namespace System.Collections.Generic
         public PooledListBase(IEnumerable<T> collection)
         {
             ArgumentNullException.ThrowIfNull(collection);
+            // 先初始化缓冲区，然后添加元素
+            _Buffer = ArrayPool<T>.Shared.Rent(DefaultCapacity);
+            _Count = 0;
             AddRange(collection);
         }
 
