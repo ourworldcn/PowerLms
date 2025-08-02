@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
@@ -14,19 +14,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="6.0.35">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Proxies" Version="6.0.36" />
+    <!-- Web API 项目必需的包 -->
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="6.0.18" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
+    <!-- 恢复延迟加载代理包：Program.cs 中 UseLazyLoadingProxies() 需要此包 -->
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Bak\OwBaseCore\OwBaseCore.csproj" />
-    <ProjectReference Include="..\..\Bak\OwDbBase\OwDbBase.csproj" />
-    <ProjectReference Include="..\PowerLmsData\PowerLmsData.csproj" />
+    <!-- 只保留对业务逻辑层的直接依赖 -->
     <ProjectReference Include="..\PowerLmsServer\PowerLmsServer.csproj" />
   </ItemGroup>
 

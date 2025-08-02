@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.StaticFiles;
+ï»¿using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Options;
@@ -21,7 +21,7 @@ internal class Program
 {
     static void Main(string[] args)
     {
-        const int timeout = 60; // ÉèÖÃ³¬Ê±Ê±¼äÎª60Ãë
+        const int timeout = 60; // è®¾ç½®è¶…æ—¶æ—¶é—´ä¸º60ç§’
         var now = DateTime.Now;
         WebApplicationBuilder builder = ConfigService(args);
         var app = builder.Build();
@@ -31,29 +31,29 @@ internal class Program
         var config = app.Configuration;
 
         var logger = app.Services.GetRequiredService<ILogger<Program>>();
-        #region ×Ô¶¯Ç¨ÒÆÊı¾İ¿âËùÓĞ¹ÒÆğµÄÇ¨ÒÆ
+        #region è‡ªåŠ¨è¿ç§»æ•°æ®åº“æ‰€æœ‰æŒ‚èµ·çš„è¿ç§»
         try
         {
             var dbContextFactory = app.Services.GetRequiredService<IDbContextFactory<PowerLmsUserDbContext>>();
             using var dbContext = dbContextFactory.CreateDbContext();
-            while (!dbContext.Database.CanConnect()) // È·±£Êı¾İ¿âÁ¬½ÓÕı³£
+            while (!dbContext.Database.CanConnect()) // ç¡®ä¿æ•°æ®åº“è¿æ¥æ­£å¸¸
             {
-                //Èô³¬Ê±ÈÔÈ»ÎŞ·¨Á¬½Ó£¬ÔòÅ×³öÒì³£
+                //è‹¥è¶…æ—¶ä»ç„¶æ— æ³•è¿æ¥ï¼Œåˆ™æŠ›å‡ºå¼‚å¸¸
                 if (DateTime.Now - now > TimeSpan.FromSeconds(timeout))
                 {
-                    throw new Exception($"Æô¶¯Ê±µÈ´ı{timeout}ÃëÈÔÎŞ·¨Á¬½Óµ½Êı¾İ¿â£¬Çë¼ì²éÊı¾İ¿âÁ¬½ÓÅäÖÃ»ò»úÆ÷ĞÔÄÜ¡£");
+                    throw new Exception($"å¯åŠ¨æ—¶ç­‰å¾…{timeout}ç§’ä»æ— æ³•è¿æ¥åˆ°æ•°æ®åº“ï¼Œè¯·æ£€æŸ¥æ•°æ®åº“è¿æ¥é…ç½®æˆ–æœºå™¨æ€§èƒ½ã€‚");
                 }
-                logger.LogError("Æô¶¯Ê±Êı¾İ¿âÁ¬½ÓÊ§°Ü£¬ÕıÔÚ³¢ÊÔÖØĞÂÁ¬½Ó...");
+                logger.LogError("å¯åŠ¨æ—¶æ•°æ®åº“è¿æ¥å¤±è´¥ï¼Œæ­£åœ¨å°è¯•é‡æ–°è¿æ¥...");
                 Thread.Sleep(500);
             }
-            dbContext.Database.Migrate(); //×Ô¶¯Ç¨ÒÆÊı¾İ¿âËùÓĞ¹ÒÆğµÄÇ¨ÒÆ
+            dbContext.Database.Migrate(); //è‡ªåŠ¨è¿ç§»æ•°æ®åº“æ‰€æœ‰æŒ‚èµ·çš„è¿ç§»
         }
         catch (Exception ex)
         {
-            logger.LogError("Êı¾İ¿âÇ¨ÒÆÊ§°Ü: {Message}", ex.Message);
-            throw; // ÖØĞÂÅ×³öÒì³£ÒÔ±ãµ÷ÊÔ
+            logger.LogError("æ•°æ®åº“è¿ç§»å¤±è´¥: {Message}", ex.Message);
+            throw; // é‡æ–°æŠ›å‡ºå¼‚å¸¸ä»¥ä¾¿è°ƒè¯•
         }
-        #endregion ×Ô¶¯Ç¨ÒÆÊı¾İ¿âËùÓĞ¹ÒÆğµÄÇ¨ÒÆ
+        #endregion è‡ªåŠ¨è¿ç§»æ•°æ®åº“æ‰€æœ‰æŒ‚èµ·çš„è¿ç§»
 
         //app.UseRouting();
         //app.UseEndpoints(endpoints =>
@@ -65,21 +65,21 @@ internal class Program
         //if (app.Environment.IsDevelopment())
         {
             app.UseSwagger();
-            //ÆôÓÃÖĞ¼ä¼ş·şÎñÉú³ÉSwaggerUI£¬Ö¸¶¨Swagger JSONÖÕ½áµã
+            //å¯ç”¨ä¸­é—´ä»¶æœåŠ¡ç”ŸæˆSwaggerUIï¼ŒæŒ‡å®šSwagger JSONç»ˆç»“ç‚¹
             app.UseSwaggerUI(c =>
             {
                 //c.SwaggerEndpoint("/swagger/v2/swagger.json", env.EnvironmentName + $" V2");
                 c.SwaggerEndpoint("/swagger/v1/swagger.json", $"{env.EnvironmentName} V1");
-                c.RoutePrefix = string.Empty;//ÉèÖÃ¸ù½Úµã·ÃÎÊ
+                c.RoutePrefix = string.Empty;//è®¾ç½®æ ¹èŠ‚ç‚¹è®¿é—®
             });
         }
 
-        #region ¾²Ì¬×ÊÔ´·ÃÎÊ
+        #region é™æ€èµ„æºè®¿é—®
         app.UseStaticFiles();
         //var basePath = AppContext.BaseDirectory;
         //var path = Path.Combine(basePath, "Files/");
         //Directory.CreateDirectory(path);
-        //// Ìí¼ÓMIMEÖ§³Ö
+        //// æ·»åŠ MIMEæ”¯æŒ
         //var provider = new FileExtensionContentTypeProvider(new Dictionary<string, string>
         //{
         //    { ".xlsx","application/octet-stream"}
@@ -91,9 +91,9 @@ internal class Program
         //    RequestPath = path,
         //});
 
-        #endregion ¾²Ì¬×ÊÔ´·ÃÎÊ
+        #endregion é™æ€èµ„æºè®¿é—®
 
-        // Ìí¼Ó¿çÓòÉèÖÃ
+        // æ·»åŠ è·¨åŸŸè®¾ç½®
         app.UseCors("AnyOrigin");
 
         app.UseAuthorization();
@@ -109,7 +109,7 @@ internal class Program
         var services = builder.Services;
         services.AddMemoryCache();
 
-        //ÆôÓÃ¿çÓò
+        //å¯ç”¨è·¨åŸŸ
         services.AddCors(cors =>
         {
             cors.AddPolicy("AnyOrigin", o => o.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
@@ -122,38 +122,38 @@ internal class Program
             options.EnableForHttps = true;
         });
         //JsonSerializerSettings settings = new JsonSerializerSettings() { DateFormatString=""};
-        services.AddHttpContextAccessor(); // Ìí¼Ó IHttpContextAccessor ·şÎñ
+        services.AddHttpContextAccessor(); // æ·»åŠ  IHttpContextAccessor æœåŠ¡
         services.AddControllers().AddJsonOptions(opt =>
         {
             opt.JsonSerializerOptions.Converters.Add(new CustomsJsonConverter());
         });
 
-        #region ÅäÖÃSwagger
+        #region é…ç½®Swagger
         // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
         builder.Services.AddEndpointsApiExplorer();
 
-        //×¢²áSwaggerÉú³ÉÆ÷£¬¶¨ÒåÒ»¸ö Swagger ÎÄµµ
+        //æ³¨å†ŒSwaggerç”Ÿæˆå™¨ï¼Œå®šä¹‰ä¸€ä¸ª Swagger æ–‡æ¡£
         builder.Services.AddSwaggerGen(c =>
         {
             c.SwaggerDoc("v1", new OpenApiInfo
             {
                 Version = "v1",
                 Title = $"PowerLms",
-                Description = "½Ó¿ÚÎÄµµv2.0.0",
+                Description = "æ¥å£æ–‡æ¡£v2.0.0",
                 Contact = new OpenApiContact() { }
             });
-            // Îª Swagger ÉèÖÃxmlÎÄµµ×¢ÊÍÂ·¾¶
+            // ä¸º Swagger è®¾ç½®xmlæ–‡æ¡£æ³¨é‡Šè·¯å¾„
             var fileNames = Directory.GetFiles(AppContext.BaseDirectory, "*ApiDoc.xml");
-            foreach (var item in fileNames) //¼ÓÈë¶à¸öxmlÃèÊöÎÄ¼ş
+            foreach (var item in fileNames) //åŠ å…¥å¤šä¸ªxmlæè¿°æ–‡ä»¶
             {
                 var xmlPath = Path.Combine(AppContext.BaseDirectory, item);
                 c.IncludeXmlComments(xmlPath, true);
             }
             c.OrderActionsBy(c => c.RelativePath);
         });
-        #endregion ÅäÖÃSwagger
+        #endregion é…ç½®Swagger
 
-        #region ÅäÖÃÊı¾İ¿â
+        #region é…ç½®æ•°æ®åº“
         var userDbConnectionString = builder.Configuration.GetConnectionString("UserDbConnection").Replace("{Env}", builder.Environment.EnvironmentName);
         //services.AddDbContext<PowerLmsUserDbContext>(options => options.UseLazyLoadingProxies().UseSqlServer(userDbConnectionString).EnableSensitiveDataLogging());
         services.AddDbContextFactory<PowerLmsUserDbContext>(options =>
@@ -162,39 +162,39 @@ internal class Program
         });
         services.AddOwBatchDbWriter<PowerLmsUserDbContext>();
 
-        #endregion ÅäÖÃÊı¾İ¿â
+        #endregion é…ç½®æ•°æ®åº“
 
-        // Ìí¼Ó×éÖ¯¹ÜÀí·şÎñ£¨Ìæ´ú OrganizationManager ºÍ MerchantManager£©
+        // æ·»åŠ ç»„ç»‡ç®¡ç†æœåŠ¡ï¼ˆæ›¿ä»£ OrganizationManager å’Œ MerchantManagerï¼‰
         services.AddOrgManager<PowerLmsUserDbContext>();
 
-        services.AddSqlDependencyManager(); //Ìí¼ÓSqlDependencyManager·şÎñ
+        services.AddSqlDependencyManager(); //æ·»åŠ SqlDependencyManageræœåŠ¡
         if (TimeSpan.TryParse(builder.Configuration.GetSection("WorldClockOffset").Value, out var offerset))
-            OwHelper.Offset = offerset;  //ÅäÖÃÓÎÏ·ÊÀ½çµÄÊ±¼ä¡£
+            OwHelper.Offset = offerset;  //é…ç½®æ¸¸æˆä¸–ç•Œçš„æ—¶é—´ã€‚
 
-        #region ÅäÖÃÓ¦ÓÃµÄÒ»°ã·şÎñ
+        #region é…ç½®åº”ç”¨çš„ä¸€èˆ¬æœåŠ¡
         services.AddHostedService<InitializerService>();
-        services.AddOwTaskService<PowerLmsUserDbContext>(); //Ìí¼Ó³¤Ê±¼äÔËĞĞÈÎÎñ·şÎñ
-        #endregion ÅäÖÃÓ¦ÓÃµÄÒ»°ã·şÎñ
+        services.AddOwTaskService<PowerLmsUserDbContext>(); //æ·»åŠ é•¿æ—¶é—´è¿è¡Œä»»åŠ¡æœåŠ¡
+        #endregion é…ç½®åº”ç”¨çš„ä¸€èˆ¬æœåŠ¡
 
-        #region ÅäÖÃÎÄ¼ş·şÎñ
-        // ÅäÖÃ OwFileServiceOptions
+        #region é…ç½®æ–‡ä»¶æœåŠ¡
+        // é…ç½® OwFileServiceOptions
         services.Configure<OwFileServiceOptions>(builder.Configuration.GetSection(OwFileServiceOptions.SectionName));
-        // Ìí¼ÓÎÄ¼ş·şÎñ
+        // æ·»åŠ æ–‡ä»¶æœåŠ¡
         services.AddOwFileService<PowerLmsUserDbContext>();
-        #endregion ÅäÖÃÎÄ¼ş·şÎñ
+        #endregion é…ç½®æ–‡ä»¶æœåŠ¡
 
-        #region ÅäÖÃ AutoMapper
+        #region é…ç½® AutoMapper
 
-        var assemblies = new Assembly[] { typeof(PowerLmsUserDbContext).Assembly, typeof(Account).Assembly, typeof(SystemResourceManager).Assembly };   //±ÜÃâÓĞÉĞÎ´¼ÓÔØµÄÇé¿ö
+        var assemblies = new Assembly[] { typeof(PowerLmsUserDbContext).Assembly, typeof(Account).Assembly, typeof(SystemResourceManager).Assembly };   //é¿å…æœ‰å°šæœªåŠ è½½çš„æƒ…å†µ
         HashSet<Assembly> hsAssm = new HashSet<Assembly>(AppDomain.CurrentDomain.GetAssemblies());
         assemblies.ForEach(c => hsAssm.Add(c));
         services.AutoRegister(hsAssm);
 
         services.AddAutoMapper(hsAssm);
-        #endregion ÅäÖÃ AutoMapper
+        #endregion é…ç½® AutoMapper
 
-        services.AddManualInvoicingManager(); //Ìí¼ÓÊÖ¹¤¿ªÆ±¹ÜÀí·şÎñ
-        services.AddNuoNuoManager(); //Ìí¼ÓÅµÅµ¿ªÆ±¹ÜÀí·şÎñ
+        services.AddManualInvoicingManager(); //æ·»åŠ æ‰‹å·¥å¼€ç¥¨ç®¡ç†æœåŠ¡
+        services.AddNuoNuoManager(); //æ·»åŠ è¯ºè¯ºå¼€ç¥¨ç®¡ç†æœåŠ¡
         return builder;
     }
 }

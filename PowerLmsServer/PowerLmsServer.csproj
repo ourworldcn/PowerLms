@@ -10,14 +10,16 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.1" />
+    <PackageReference Include="AutoMapper" Version="13.0.1" />
+    <PackageReference Include="EFCore.BulkExtensions.SqlServer" Version="6.8.1" />
     <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.1.1" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Proxies" Version="6.0.36" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="6.0.1" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Bak\OwBaseCore\OwBaseCore.csproj" />
-    <ProjectReference Include="..\..\Bak\OwDbBase\OwDbBase.csproj" />
+    <!-- 最佳实践：遵循分层架构，业务层只依赖数据层 -->
+    <!-- OwDbBase 的功能通过 PowerLmsData 传递获得 -->
     <ProjectReference Include="..\PowerLmsData\PowerLmsData.csproj" />
   </ItemGroup>
 
