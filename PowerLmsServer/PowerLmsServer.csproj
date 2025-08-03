@@ -35,6 +35,9 @@
     <None Update="SystemResources\InitData\预初始化数据.xlsx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="数据库初始化数据\预初始化数据.xlsx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

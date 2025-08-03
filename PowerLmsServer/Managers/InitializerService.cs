@@ -1,24 +1,25 @@
 ﻿/*
  * PowerLms - 货运物流业务管理系统
- * 系统初始化服务 - 数据库和种子数据初始化管理
+ * 系统初始化服务 - 负责数据库初始化和种子数据管理
  * 
  * 功能说明：
- * - 基于JSON流的高性能Excel数据初始化
- * - 权限表和系统资源的种子数据管理
- * - 超级管理员账户自动创建
- * - 数据关系完整性验证和清理
- * - 支持增量插入模式，避免数据重复
+ * - 数据库连接验证和自动迁移（智能检测SQL Server状态）
+ * - 系统种子数据的批量导入（基于Excel文件的高性能处理）
+ * - 超级管理员账户创建和管理
+ * - 无效关联关系数据清理和维护
+ * - 基础配置数据初始化
  * 
  * 技术特点：
- * - 复用OwDataUnit + OwNpoiUnit基础设施组件
- * - JSON流处理降低内存分配和GC压力
- * - PooledList内存优化，提升大数据集处理性能
- * - 统一错误处理和详细日志记录
- * - 支持多租户数据隔离和权限验证
+ * - 高性能JSON流处理Excel数据，使用OwDataUnit + OwNpoiUnit基础设施
+ * - 智能数据库连接检查（支持数据库不存在的情况，连接master数据库验证）
+ * - 完整的错误处理和结构化日志记录
+ * - 复用基础设施组件，避免重复开发
+ * - 内存优化的批量数据操作，降低GC压力
+ * - 统一使用范围服务中的DbContext，避免工厂模式反复创建
  * 
  * 作者：PowerLms开发团队
  * 创建时间：2024年
- * 最后修改：2024年12月 - JSON流架构重构，简化代码结构
+ * 最后修改：2024年12月 - 修正DbContext生命周期管理，统一使用范围服务
  */
 
 using Microsoft.EntityFrameworkCore;
@@ -32,6 +33,8 @@ using OW;
 using OW.Data;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
+using System.Collections;
+using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
@@ -40,466 +43,479 @@ namespace PowerLmsServer.Managers
 {
     /// <summary>
     /// 系统初始化服务 - 负责数据库初始化和种子数据管理
+    /// 作为BackgroundService在应用启动时自动执行，确保系统各项基础设施就绪
     /// </summary>
     public partial class InitializerService : BackgroundService
     {
-        #region 字段和构造函数
+        #region 常量和字段
 
-        /// <summary>超级管理员登录名</summary>
+        /// <summary>超级管理员登录名 - 使用GUID格式确保全局唯一性</summary>
         private const string SuperAdminLoginName = "868d61ae-3a86-42a8-8a8c-1ed6cfa90817";
-        
+
+        /// <summary>数据库连接超时时间（秒） - 等待SQL Server就绪的最大时间</summary>
+        private const int DatabaseConnectionTimeout = 60;
+
         private readonly ILogger<InitializerService> _logger;
         private readonly IServiceScopeFactory _serviceScopeFactory;
-        private readonly IServiceProvider _serviceProvider;
+
+        #endregion
+
+        #region 构造函数
 
         /// <summary>
-        /// 构造函数
+        /// 初始化系统初始化服务
         /// </summary>
-        /// <param name="logger">日志服务</param>
-        /// <param name="serviceScopeFactory">服务范围工厂</param>
-        /// <param name="serviceProvider">服务提供者</param>
-        public InitializerService(ILogger<InitializerService> logger, IServiceScopeFactory serviceScopeFactory, IServiceProvider serviceProvider)
+        /// <param name="logger">日志服务，用于记录初始化过程的详细信息</param>
+        /// <param name="serviceScopeFactory">服务范围工厂，用于创建作用域内的服务实例</param>
+        public InitializerService(ILogger<InitializerService> logger, IServiceScopeFactory serviceScopeFactory)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _serviceScopeFactory = serviceScopeFactory ?? throw new ArgumentNullException(nameof(serviceScopeFactory));
-            _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         }
 
         #endregion
 
-        #region 主要初始化流程
+        #region BackgroundService实现
 
         /// <summary>
-        /// 执行系统初始化任务
+        /// 执行系统初始化任务的主入口点
+        /// 该方法在应用启动时由BackgroundService框架自动调用
         /// </summary>
-        /// <param name="stoppingToken">取消令牌</param>
-        /// <returns>异步任务</returns>
+        /// <param name="stoppingToken">取消令牌，用于优雅停止服务</param>
+        /// <returns>表示异步操作的任务</returns>
+        /// <remarks>
+        /// 初始化流程按照以下顺序执行：
+        /// 1. 确保数据库连接就绪并执行迁移
+        /// 2. 创建或更新超级管理员账户
+        /// 3. 初始化系统种子数据（Excel文件导入）
+        /// 4. 初始化基础配置数据（科目配置、发票通道等）
+        /// 5. 清理无效的关联关系数据
+        /// 所有步骤都有详细的日志记录和异常处理
+        /// 所有方法共享同一个范围服务中的DbContext实例
+        /// </remarks>
         protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
             var task = Task.Run(() =>
             {
                 using var scope = _serviceScopeFactory.CreateScope();
                 var services = scope.ServiceProvider;
-                InitializeDatabase(services); // 初始化数据库结构
-                InitializeSeedData(services); // 初始化种子数据
-                CreateSuperAdministrator(services); // 创建超级管理员
-                CleanupInvalidRelationships(services); // 清理无效关系数据
-                RunDiagnosticTests(services); // 运行诊断测试
+                try
+                {
+                    _logger.LogInformation("开始PowerLms系统初始化流程");
+
+                    // 第一步：确保数据库连接就绪并执行迁移
+                    EnsureDatabaseReady(services);
+
+                    // 第二步：创建超级管理员账户（确保系统有可管理账户）
+                    CreateSuperAdministrator(services);
+
+                    // 第三步：初始化系统种子数据（Excel文件中的基础数据）
+                    InitializeSeedData(services);
+
+                    // 第四步：初始化基础配置数据（科目配置、发票通道等）
+                    InitDb(services);
+
+                    // 第五步：清理无效的关联关系数据（数据完整性维护）
+                    CleanupInvalidRelationships(services);
+
+                    _logger.LogInformation("PowerLms系统初始化完成，服务已上线");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogCritical(ex, "系统初始化失败，服务无法正常启动");
+                    throw;
+                }
             }, CancellationToken.None);
-            _logger.LogInformation("PowerLms系统初始化完成，服务已上线");
             return task;
-        }
-
-        /// <summary>
-        /// 初始化数据库结构
-        /// </summary>
-        /// <param name="services">服务提供者</param>
-        private void InitializeDatabase(IServiceProvider services)
-        {
-            _logger.LogInformation("开始初始化数据库结构");
-            // 这里可以添加数据库结构验证和基础表创建逻辑
-            _logger.LogInformation("数据库结构初始化完成");
-        }
-
-        /// <summary>
-        /// 初始化种子数据 - 基于Excel文件的统一数据处理
-        /// </summary>
-        /// <param name="services">服务提供者</param>
-        private void InitializeSeedData(IServiceProvider services)
-        {
-            try
-            {
-                var dbContext = services.GetRequiredService<PowerLmsUserDbContext>();
-                _logger.LogInformation("开始初始化系统种子数据");
-                dbContext.TruncateTable("PlPermissions"); // 权限表特殊处理：清空重建确保数据完整性
-                var success = ProcessExcelSeedData(dbContext);
-                if (success)
-                {
-                    _logger.LogInformation("系统种子数据初始化成功");
-                }
-                else
-                {
-                    _logger.LogWarning("系统种子数据初始化部分失败或跳过");
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "系统种子数据初始化过程中发生错误");
-            }
-        }
-
-        /// <summary>
-        /// 处理Excel种子数据文件
-        /// </summary>
-        /// <param name="dbContext">数据库上下文</param>
-        /// <returns>是否成功处理</returns>
-        private bool ProcessExcelSeedData(PowerLmsUserDbContext dbContext)
-        {
-            try
-            {
-                var excelFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "系统资源", "预初始化数据.xlsx");
-                if (!File.Exists(excelFilePath))
-                {
-                    _logger.LogWarning("Excel种子数据文件不存在: {FilePath}", excelFilePath);
-                    return false;
-                }
-                using var fileStream = new FileStream(excelFilePath, FileMode.Open, FileAccess.Read);
-                using var workbook = new XSSFWorkbook(fileStream);
-                ProcessWorkbookViaJsonStream(workbook, dbContext);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "处理Excel种子数据时发生错误");
-                return false;
-            }
         }
 
         #endregion
 
-        #region JSON流数据处理
+        #region 数据库连接和迁移
 
         /// <summary>
-        /// 通过JSON流处理Excel工作簿数据 - 高性能版本
+        /// 确保数据库连接就绪并执行迁移
+        /// 该方法首先检查SQL Server的连通性，然后执行Entity Framework的数据库迁移
         /// </summary>
-        /// <param name="workbook">Excel工作簿</param>
-        /// <param name="dbContext">数据库上下文</param>
+        /// <param name="services">服务提供者，用于获取数据库上下文</param>
         /// <remarks>
-        /// 优化处理流程：
-        /// 1. Excel工作表转换为JSON流
-        /// 2. JSON反序列化为实体集合
-        /// 3. 调用基础库批量插入数据库
-        /// 4. 复用内存流降低GC压力
+        /// 连接检查策略：
+        /// 1. 直接从数据库上下文获取连接字符串（无需配置文件）
+        /// 2. 先连接到master数据库验证SQL Server是否可用（避免目标数据库不存在导致的连接失败）
+        /// 3. 使用重试机制，最大等待60秒
+        /// 4. 连接成功后使用Entity Framework执行数据库迁移
+        /// 5. 迁移过程包括创建数据库（如果不存在）和应用所有挂起的迁移
         /// </remarks>
-        private void ProcessWorkbookViaJsonStream(IWorkbook workbook, PowerLmsUserDbContext dbContext)
+        private void EnsureDatabaseReady(IServiceProvider services)
         {
-            var dbType = typeof(PowerLmsUserDbContext);
-            int processedSheets = 0;
-            int totalInserted = 0;
-            _logger.LogInformation("开始处理Excel工作簿，共{totalSheets}个工作表", workbook.NumberOfSheets);
-            using var processedResults = new PooledList<string>(workbook.NumberOfSheets);
-            using var errorMessages = new PooledList<string>(workbook.NumberOfSheets);
-            using var reusableJsonStream = new MemoryStream(1024 * 1024); // 预分配1MB复用流
-            for (int i = 0; i < workbook.NumberOfSheets; i++)
-            {
-                var sheet = workbook.GetSheetAt(i);
-                var sheetName = sheet.SheetName;
-                try
-                {
-                    var dbSetProperty = dbType.GetProperty(sheetName);
-                    if (!IsValidDbSetProperty(dbSetProperty, dbContext))
-                    {
-                        var warningMsg = $"跳过工作表：{sheetName}，未找到对应的DbSet";
-                        errorMessages.Add(warningMsg);
-                        _logger.LogWarning(warningMsg);
-                        continue;
-                    }
-                    var entityType = dbSetProperty.PropertyType.GetGenericArguments()[0];
-                    var insertedCount = ProcessSheetToDatabase(sheet, dbContext, entityType, reusableJsonStream);
-                    totalInserted += insertedCount;
-                    processedSheets++;
-                    processedResults.Add($"{sheetName}({insertedCount}条记录)");
-                    _logger.LogInformation("成功处理工作表：{sheetName}，插入记录：{insertedCount}", sheetName, insertedCount);
-                }
-                catch (Exception ex)
-                {
-                    var errorMsg = $"处理工作表失败：{sheetName} - {ex.Message}";
-                    errorMessages.Add(errorMsg);
-                    _logger.LogError(ex, "处理工作表失败：{sheetName}", sheetName);
-                }
-            }
-            SaveChangesAndLogResults(dbContext, processedSheets, totalInserted, workbook.NumberOfSheets, processedResults, errorMessages);
-        }
+            _logger.LogInformation("开始检查数据库连接和执行迁移");
+            var startTime = DateTime.Now;
 
-        /// <summary>
-        /// 处理单个工作表到数据库 - JSON流转换方式
-        /// </summary>
-        /// <param name="sheet">Excel工作表</param>
-        /// <param name="dbContext">数据库上下文</param>
-        /// <param name="entityType">实体类型</param>
-        /// <param name="reusableStream">可复用内存流</param>
-        /// <returns>插入的记录数</returns>
-        private int ProcessSheetToDatabase(ISheet sheet, DbContext dbContext, Type entityType, MemoryStream reusableStream)
-        {
-            reusableStream.SetLength(0); // 清空流但保持容量
-            reusableStream.Position = 0;
-            OwNpoiUnit.WriteJsonToStream(sheet, 0, reusableStream); // 步骤1：Excel转JSON流
-            if (reusableStream.Length == 0) return 0;
-            reusableStream.Position = 0;
-            var jsonBytes = reusableStream.ToArray();
-            var jsonString = Encoding.UTF8.GetString(jsonBytes);
-            if (string.IsNullOrWhiteSpace(jsonString) || jsonString == "[]") return 0;
-            var collectionType = typeof(IEnumerable<>).MakeGenericType(entityType);
-            var entities = JsonSerializer.Deserialize(jsonString, collectionType) as System.Collections.IEnumerable; // 步骤2：JSON反序列化
-            if (entities == null) return 0;
-            return OwDataUnit.BulkInsert(entities, dbContext, entityType, ignoreExisting: true); // 步骤3：批量插入数据库
-        }
-
-        /// <summary>
-        /// 验证DbSet属性是否有效
-        /// </summary>
-        /// <param name="property">属性信息</param>
-        /// <param name="dbContext">数据库上下文</param>
-        /// <returns>是否有效</returns>
-        private static bool IsValidDbSetProperty(System.Reflection.PropertyInfo property, DbContext dbContext)
-        {
-            return property?.PropertyType?.IsGenericType == true &&
-                   property.PropertyType.GetGenericTypeDefinition() == typeof(DbSet<>) &&
-                   property.GetValue(dbContext) != null;
-        }
-
-        /// <summary>
-        /// 保存更改并记录处理结果
-        /// </summary>
-        /// <param name="dbContext">数据库上下文</param>
-        /// <param name="processedSheets">处理的工作表数量</param>
-        /// <param name="totalInserted">插入的总记录数</param>
-        /// <param name="totalSheets">总工作表数量</param>
-        /// <param name="processedResults">处理结果列表</param>
-        /// <param name="errorMessages">错误消息列表</param>
-        private void SaveChangesAndLogResults(DbContext dbContext, int processedSheets, int totalInserted, int totalSheets,
-            PooledList<string> processedResults, PooledList<string> errorMessages)
-        {
             try
             {
-                var affectedRows = dbContext.SaveChanges();
-                _logger.LogInformation("数据初始化完成：处理{processedSheets}/{totalSheets}个工作表，插入{totalInserted}条记录，影响{affectedRows}行数据",
-                    processedSheets, totalSheets, totalInserted, affectedRows);
-                if (_logger.IsEnabled(LogLevel.Debug) && processedResults.Count > 0)
+                // 直接从服务容器获取数据库上下文（让DI容器管理生命周期）
+                var dbContext = services.GetRequiredService<PowerLmsUserDbContext>();
+
+                // 从数据库上下文获取连接字符串
+                var connectionString = dbContext.Database.GetConnectionString();
+                if (string.IsNullOrEmpty(connectionString))
                 {
-                    _logger.LogDebug("处理详情：{details}", string.Join(", ", processedResults));
+                    throw new InvalidOperationException("无法从数据库上下文获取连接字符串");
                 }
-                if (errorMessages.Count > 0)
+
+                _logger.LogInformation("从数据库上下文获取连接字符串成功");
+
+                // 使用ConnectionStringBuilder修改连接字符串，连接到master数据库验证服务器状态
+                var builder = new SqlConnectionStringBuilder(connectionString);
+                var targetDatabase = builder.InitialCatalog; // 保存目标数据库名
+                builder.InitialCatalog = "master"; // 连接master数据库避免目标数据库不存在的问题
+                builder.ConnectTimeout = 5; // 设置较短的连接超时避免长时间阻塞
+
+                _logger.LogInformation("等待SQL Server连接就绪，目标数据库：{TargetDatabase}", targetDatabase);
+
+                // 重试连接直到SQL Server可用
+                while (true)
                 {
-                    _logger.LogWarning("处理过程中遇到{errorCount}个问题", errorMessages.Count);
-                    foreach (var error in errorMessages)
+                    try
                     {
-                        _logger.LogWarning("问题详情：{error}", error);
+                        using var connection = new SqlConnection(builder.ConnectionString);
+                        connection.Open();
+                        connection.Close();
+                        _logger.LogInformation("SQL Server连接验证成功，开始执行数据库迁移到：{TargetDatabase}", targetDatabase);
+                        break; // 连接成功，跳出重试循环
+                    }
+                    catch (Exception ex)
+                    {
+                        if (DateTime.Now - startTime > TimeSpan.FromSeconds(DatabaseConnectionTimeout))
+                        {
+                            throw new TimeoutException($"启动时等待{DatabaseConnectionTimeout}秒仍无法连接到SQL Server，请检查数据库连接配置或机器性能。目标数据库：{targetDatabase}");
+                        }
+                        _logger.LogWarning("SQL Server连接失败，1秒后重试: {Message}", ex.Message);
+                        Thread.Sleep(1000); // 每秒重试一次，避免过于频繁的重试
                     }
                 }
+
+                // SQL Server可连接后，执行数据库迁移（这会自动创建数据库如果不存在）
+                _logger.LogInformation("开始执行Entity Framework数据库迁移到：{TargetDatabase}", targetDatabase);
+                dbContext.Database.Migrate(); // 应用所有挂起的迁移，包括创建数据库
+                _logger.LogInformation("数据库迁移执行完成，数据库结构已是最新版本：{TargetDatabase}", targetDatabase);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "保存数据库更改时发生错误");
+                _logger.LogError(ex, "数据库连接或迁移失败，系统无法正常启动");
                 throw;
             }
         }
 
         #endregion
 
-        #region 管理员和数据清理
+        #region 种子数据初始化
 
         /// <summary>
-        /// 创建超级管理员账户
+        /// 初始化系统种子数据
+        /// 该方法处理Excel种子数据文件，批量导入系统基础数据
+        /// </summary>
+        /// <param name="services">服务提供者，用于获取数据库上下文</param>
+        /// <remarks>
+        /// 种子数据处理流程：
+        /// 1. 清空权限表以确保权限数据的完整性（PlPermissions表特殊处理）
+        /// 2. 读取系统资源目录下的Excel文件（系统资源\预初始化数据.xlsx中已存在的表）
+        /// 3. 使用高性能JSON流处理Excel数据
+        /// 4. 批量插入数据库，忽略已存在的数据避免重复
+        /// 所有处理过程都有详细的日志记录和异常处理
+        /// </remarks>
+        private void InitializeSeedData(IServiceProvider services)
+        {
+            try
+            {
+                // 直接使用范围服务中的数据库上下文，由DI容器管理生命周期
+                var dbContext = services.GetRequiredService<PowerLmsUserDbContext>();
+                
+                _logger.LogInformation("开始初始化系统种子数据");
+
+                // 权限表特殊处理：清空重建确保数据完整性
+                dbContext.TruncateTable("PlPermissions");
+                _logger.LogInformation("已清空权限表，准备重新导入权限数据");
+                // 读取系统资源目录，处理所有Excel种子数据文件
+                var seedDataDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "数据库初始化数据");
+                if (!Directory.Exists(seedDataDirectory))
+                {
+                    _logger.LogWarning("系统资源目录不存在：{Directory}，跳过种子数据初始化", seedDataDirectory);
+                    return;
+                }
+
+                var excelFiles = Directory.GetFiles(seedDataDirectory, "*.xlsx", SearchOption.TopDirectoryOnly);
+
+                using var jsonStream = new MemoryStream(1024 * 1024);   // 使用JSON流方式处理Excel数据，性能优异且内存占用低，且应在多个工作表中使用
+
+                _logger.LogInformation("发现{fileCount}个Excel种子数据文件，开始逐个处理", excelFiles.Length);
+                foreach (var excelFilePath in excelFiles)
+                {
+                    try
+                    {
+                        _logger.LogInformation("开始处理Excel种子数据文件: {FilePath}", excelFilePath);
+                        using var fileStream = new FileStream(excelFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                        using var workbook = new XSSFWorkbook(fileStream);
+
+                        var dbType = typeof(PowerLmsUserDbContext);
+                        int processedSheets = 0;
+                        int totalInserted = 0;
+
+                        _logger.LogInformation("Excel文件包含{totalSheets}个工作表，开始逐个处理", workbook.NumberOfSheets);
+
+                        // 遍历所有工作表，每个工作表对应一个数据库实体
+                        for (int i = 0; i < workbook.NumberOfSheets; i++)
+                        {
+                            var sheet = workbook.GetSheetAt(i);
+                            var sheetName = sheet.SheetName;
+
+                            try
+                            {
+                                // 根据工作表名查找对应的DbSet属性
+                                var dbSetProperty = dbType.GetProperty(sheetName);
+                                if (dbSetProperty?.PropertyType?.IsGenericType != true ||
+                                    dbSetProperty.PropertyType.GetGenericTypeDefinition() != typeof(DbSet<>) ||
+                                    dbSetProperty.GetValue(dbContext) == null)
+                                {
+                                    _logger.LogWarning("跳过工作表：{sheetName}，未找到对应的DbSet或DbSet无效", sheetName);
+                                    continue;
+                                }
+
+                                // 获取实体类型并处理数据
+                                var entityType = dbSetProperty.PropertyType.GetGenericArguments()[0];
+                                jsonStream.SetLength(0); // 清空JSON流以准备写入新数据
+                                OwNpoiUnit.WriteJsonToStream(sheet, 0, jsonStream);
+
+                                if (jsonStream.Length == 0)
+                                {
+                                    _logger.LogInformation("工作表{sheetName}无数据，跳过处理", sheetName);
+                                    continue;
+                                }
+
+                                // JSON反序列化为实体集合
+                                jsonStream.Position = 0;
+
+                                var collectionType = typeof(IEnumerable<>).MakeGenericType(entityType);
+                                var entities = JsonSerializer.Deserialize(jsonStream, collectionType) as IEnumerable;   // 为性能考虑，直接从流中反序列化
+
+                                if (entities == null)
+                                {
+                                    _logger.LogWarning("工作表{sheetName}数据反序列化失败，跳过处理", sheetName);
+                                    continue;
+                                }
+
+                                // 批量插入数据库，忽略已存在的数据
+                                var insertedCount = OwDataUnit.BulkInsert(entities, dbContext, entityType, ignoreExisting: true);
+                                totalInserted += insertedCount;
+                                processedSheets++;
+
+                                _logger.LogInformation("成功处理工作表：{sheetName}，插入{insertedCount}条记录", sheetName, insertedCount);
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogError(ex, "处理工作表{sheetName}时发生错误，继续处理其他工作表", sheetName);
+                                // 不抛出异常，继续处理其他工作表
+                            }
+                        }
+
+                        // 保存所有更改并记录结果
+                        var affectedRows = dbContext.SaveChanges();
+                        _logger.LogInformation("Excel种子数据处理完成：文件{FilePath}，成功处理{processedSheets}/{totalSheets}个工作表，插入{totalInserted}条记录，数据库影响{affectedRows}行",
+                            excelFilePath, processedSheets, workbook.NumberOfSheets, totalInserted, affectedRows);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "处理Excel种子数据文件{FilePath}时发生严重错误", excelFilePath);
+                        throw;
+                    }
+                }
+
+                _logger.LogInformation("所有Excel种子数据文件处理完成");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "系统种子数据初始化过程中发生错误");
+                throw; // 种子数据初始化失败应该阻止系统启动
+            }
+        }
+
+        #endregion
+
+        #region 数据库基础配置初始化
+
+        /// <summary>
+        /// 初始化数据库基础配置数据
         /// </summary>
         /// <param name="services">服务提供者</param>
-        private void CreateSuperAdministrator(IServiceProvider services)
+        /// <remarks>
+        /// 重构说明：
+        /// - 所有基础配置数据（TaxInvoiceChannels、SubjectConfigurations等）已迁移到Excel种子数据文件
+        /// - Excel文件路径：系统资源\预初始化数据.xlsx
+        /// - 对应工作表：TaxInvoiceChannels、SubjectConfigurations、PlPermissions等
+        /// - 系统启动时会自动从Excel文件导入这些数据，无需硬编码初始化
+        /// - 此方法保留用于将来可能需要的特殊初始化逻辑（如动态生成的配置）
+        /// </remarks>
+        private void InitDb(IServiceProvider services)
         {
+            // 直接使用范围服务中的数据库上下文，由DI容器管理生命周期
             var dbContext = services.GetRequiredService<PowerLmsUserDbContext>();
-            var admin = dbContext.Accounts.FirstOrDefault(c => c.LoginName == SuperAdminLoginName);
-            if (admin == null)
+
+            _logger.LogInformation("基础配置数据已通过Excel种子数据文件管理，无需硬编码初始化");
+            _logger.LogInformation("如需修改基础配置数据，请编辑：系统资源\\预初始化数据.xlsx");
+
+            // 检查关键配置表是否已有数据（作为验证）
+            var hasTaxChannels = dbContext.TaxInvoiceChannels.Any();
+            var hasSubjectConfigs = dbContext.SubjectConfigurations.Any();
+            var hasPermissions = dbContext.PlPermissions.Any();
+
+            if (hasTaxChannels && hasSubjectConfigs && hasPermissions)
             {
-                admin = new Account
-                {
-                    LoginName = SuperAdminLoginName,
-                    CurrentLanguageTag = "zh-CN",
-                    LastModifyDateTimeUtc = OwHelper.WorldNow,
-                    State = 4,
-                };
-                dbContext.Accounts.Add(admin);
-                _logger.LogInformation("创建超级管理员账户");
+                _logger.LogInformation("验证成功：基础配置数据已正确从Excel种子数据导入");
             }
             else
             {
-                admin.State = 4;
-                _logger.LogInformation("更新超级管理员账户状态");
+                _logger.LogWarning("基础配置数据可能未完整导入，请检查Excel种子数据文件：" +
+                    "TaxInvoiceChannels={HasTaxChannels}, SubjectConfigurations={HasSubjectConfigs}, PlPermissions={HasPermissions}",
+                    hasTaxChannels, hasSubjectConfigs, hasPermissions);
             }
-            admin.SetPwd("1D381427-86BB-4D88-8CB0-5D92F8E1BADF");
-            dbContext.SaveChanges();
+
+            // 此处可以添加将来需要的动态初始化逻辑
+            // 例如：基于运行时环境的特殊配置、依赖外部服务的动态数据等
+            // 注意：常规的基础数据应该继续通过Excel文件管理，而不是在此处硬编码
+        }
+
+        #endregion
+
+        #region 系统管理
+
+        /// <summary>
+        /// 创建或更新超级管理员账户
+        /// 确保系统始终有一个可用的超级管理员账户用于系统管理
+        /// </summary>
+        /// <param name="services">服务提供者，用于获取数据库上下文</param>
+        /// <remarks>
+        /// 超级管理员账户说明：
+        /// 1. 登录名使用固定的GUID，确保全局唯一性
+        /// 2. 如果账户不存在则创建新账户，如果存在则更新状态
+        /// 3. 默认语言设置为中文（zh-CN）
+        /// 4. 账户状态设置为4（激活状态）
+        /// 5. 密码使用固定的GUID进行加密存储
+        /// </remarks>
+        private void CreateSuperAdministrator(IServiceProvider services)
+        {
+            // 直接使用范围服务中的数据库上下文，由DI容器管理生命周期
+            var dbContext = services.GetRequiredService<PowerLmsUserDbContext>();
+
+            try
+            {
+                var admin = dbContext.Accounts.FirstOrDefault(c => c.LoginName == SuperAdminLoginName);
+
+                if (admin == null)
+                {
+                    // 创建新的超级管理员账户
+                    admin = new Account
+                    {
+                        LoginName = SuperAdminLoginName,
+                        CurrentLanguageTag = "zh-CN", // 默认中文环境
+                        LastModifyDateTimeUtc = OwHelper.WorldNow,
+                        State = 4, // 激活状态
+                    };
+                    dbContext.Accounts.Add(admin);
+                    _logger.LogInformation("创建新的超级管理员账户，登录名：{LoginName}", SuperAdminLoginName);
+                }
+                else
+                {
+                    // 更新现有账户状态
+                    admin.State = 4;
+                    admin.LastModifyDateTimeUtc = OwHelper.WorldNow;
+                    _logger.LogInformation("更新现有超级管理员账户状态，确保账户处于激活状态");
+                }
+
+                // 设置密码（使用固定GUID进行加密）
+                admin.SetPwd("1D381427-86BB-4D88-8CB0-5D92F8E1BADF");
+
+                dbContext.SaveChanges();
+                _logger.LogInformation("超级管理员账户配置完成");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "创建或更新超级管理员账户时发生错误");
+                throw;
+            }
         }
 
         /// <summary>
-        /// 清理无效的关联关系数据
+        /// 清理数据库中的无效关联关系数据
+        /// 定期维护数据完整性，删除因为主表记录删除而变成孤儿的关联关系记录
         /// </summary>
-        /// <param name="services">服务提供者</param>
+        /// <param name="services">服务提供者，用于获取数据库上下文</param>
+        /// <remarks>
+        /// 清理的关联关系包括：
+        /// 1. 用户-角色关系（PlAccountRoles）：清理引用不存在用户或角色的记录
+        /// 2. 角色-权限关系（PlRolePermissions）：清理引用不存在角色或权限的记录
+        /// 3. 用户-机构关系（AccountPlOrganizations）：清理引用不存在用户或机构的记录
+        /// 清理过程使用事务确保数据一致性，并记录详细的操作日志
+        /// </remarks>
         private void CleanupInvalidRelationships(IServiceProvider services)
         {
+            // 直接使用范围服务中的数据库上下文，由DI容器管理生命周期
             var dbContext = services.GetRequiredService<PowerLmsUserDbContext>();
             var stopwatch = Stopwatch.StartNew();
-            _logger.LogInformation("开始清理无效的关联关系数据");
+
+            _logger.LogInformation("开始清理数据库中的无效关联关系数据");
+
             try
             {
-                using var invalidUserRoleIds = new PooledList<Guid>(1000);
-                using var invalidRolePermissionIds = new PooledList<Guid>(1000);
-                using var invalidUserOrgIds = new PooledList<Guid>(1000);
-                CollectInvalidUserRoles(dbContext, invalidUserRoleIds); // 收集无效用户-角色关系
-                CollectInvalidRolePermissions(dbContext, invalidRolePermissionIds); // 收集无效角色-权限关系
-                CollectInvalidUserOrganizations(dbContext, invalidUserOrgIds); // 收集无效用户-机构关系
-                var totalRemoved = RemoveInvalidRelationships(dbContext, invalidUserRoleIds, invalidRolePermissionIds, invalidUserOrgIds);
+                var totalRemoved = 0;
+
+                // 清理无效的用户-角色关系（用户或角色不存在的关联记录）
+                var invalidUserRoles = dbContext.PlAccountRoles
+                    .Where(ur => !dbContext.Accounts.Any(u => u.Id == ur.UserId) ||
+                                 !dbContext.PlRoles.Any(r => r.Id == ur.RoleId))
+                    .ToList();
+                if (invalidUserRoles.Count > 0)
+                {
+                    dbContext.PlAccountRoles.RemoveRange(invalidUserRoles);
+                    totalRemoved += invalidUserRoles.Count;
+                    _logger.LogInformation("清理无效用户-角色关系：{count}条记录", invalidUserRoles.Count);
+                }
+
+                // 清理无效的角色-权限关系（角色或权限不存在的关联记录）
+                var invalidRolePermissions = dbContext.PlRolePermissions
+                    .Where(rp => !dbContext.PlRoles.Any(r => r.Id == rp.RoleId) ||
+                                 !dbContext.PlPermissions.Any(p => p.Name == rp.PermissionId))
+                    .ToList();
+                if (invalidRolePermissions.Count > 0)
+                {
+                    dbContext.PlRolePermissions.RemoveRange(invalidRolePermissions);
+                    totalRemoved += invalidRolePermissions.Count;
+                    _logger.LogInformation("清理无效角色-权限关系：{count}条记录", invalidRolePermissions.Count);
+                }
+
+                // 清理无效的用户-机构关系（用户或机构不存在的关联记录）
+                var invalidUserOrgs = dbContext.AccountPlOrganizations
+                    .Where(uo => !dbContext.Accounts.Any(u => u.Id == uo.UserId) ||
+                                (!dbContext.PlOrganizations.Any(o => o.Id == uo.OrgId) &&
+                                 !dbContext.Merchants.Any(c => c.Id == uo.OrgId)))
+                    .ToList();
+                if (invalidUserOrgs.Count > 0)
+                {
+                    dbContext.AccountPlOrganizations.RemoveRange(invalidUserOrgs);
+                    totalRemoved += invalidUserOrgs.Count;
+                    _logger.LogInformation("清理无效用户-机构关系：{count}条记录", invalidUserOrgs.Count);
+                }
+
+                // 提交所有更改并记录结果
                 var actualRemoved = dbContext.SaveChanges();
                 stopwatch.Stop();
-                _logger.LogInformation("关系清理完成：删除{total}条无效数据，实际影响{actual}行，耗时{elapsed}ms",
+
+                _logger.LogInformation("无效关系数据清理完成：计划删除{totalRemoved}条记录，实际影响数据库{actualRemoved}行，总耗时{elapsed}毫秒",
                     totalRemoved, actualRemoved, stopwatch.ElapsedMilliseconds);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "清理无效关联关系时发生错误");
-            }
-        }
-
-        /// <summary>
-        /// 运行诊断测试
-        /// </summary>
-        /// <param name="services">服务提供者</param>
-        [Conditional("DEBUG")]
-        private void RunDiagnosticTests(IServiceProvider services)
-        {
-            _logger.LogDebug("运行系统诊断测试");
-            // 这里可以添加各种系统诊断逻辑
-        }
-
-        #endregion
-
-        #region 私有辅助方法
-
-        /// <summary>
-        /// 收集无效的用户-角色关系
-        /// </summary>
-        /// <param name="dbContext">数据库上下文</param>
-        /// <param name="invalidIds">无效ID集合</param>
-        private static void CollectInvalidUserRoles(PowerLmsUserDbContext dbContext, PooledList<Guid> invalidIds)
-        {
-            var userRoleQuery = dbContext.PlAccountRoles
-                .Where(ur => !dbContext.Accounts.Any(u => u.Id == ur.UserId) ||
-                             !dbContext.PlRoles.Any(r => r.Id == ur.RoleId))
-                .Select(ur => ur.UserId);
-            foreach (var id in userRoleQuery)
-            {
-                invalidIds.Add(id);
-            }
-        }
-
-        /// <summary>
-        /// 收集无效的角色-权限关系
-        /// </summary>
-        /// <param name="dbContext">数据库上下文</param>
-        /// <param name="invalidIds">无效ID集合</param>
-        private static void CollectInvalidRolePermissions(PowerLmsUserDbContext dbContext, PooledList<Guid> invalidIds)
-        {
-            var rolePermissionQuery = dbContext.PlRolePermissions
-                .Where(rp => !dbContext.PlRoles.Any(r => r.Id == rp.RoleId) ||
-                             !dbContext.PlPermissions.Any(p => p.Name == rp.PermissionId))
-                .Select(rp => rp.RoleId);
-            foreach (var id in rolePermissionQuery)
-            {
-                invalidIds.Add(id);
-            }
-        }
-
-        /// <summary>
-        /// 收集无效的用户-机构关系
-        /// </summary>
-        /// <param name="dbContext">数据库上下文</param>
-        /// <param name="invalidIds">无效ID集合</param>
-        private static void CollectInvalidUserOrganizations(PowerLmsUserDbContext dbContext, PooledList<Guid> invalidIds)
-        {
-            var userOrgQuery = dbContext.AccountPlOrganizations
-                .Where(uo => !dbContext.Accounts.Any(u => u.Id == uo.UserId) ||
-                            (!dbContext.PlOrganizations.Any(o => o.Id == uo.OrgId) && !dbContext.Merchants.Any(c => c.Id == uo.OrgId)))
-                .Select(uo => uo.UserId);
-            foreach (var id in userOrgQuery)
-            {
-                invalidIds.Add(id);
-            }
-        }
-
-        /// <summary>
-        /// 移除无效的关联关系
-        /// </summary>
-        /// <param name="dbContext">数据库上下文</param>
-        /// <param name="invalidUserRoleIds">无效用户-角色ID</param>
-        /// <param name="invalidRolePermissionIds">无效角色-权限ID</param>
-        /// <param name="invalidUserOrgIds">无效用户-机构ID</param>
-        /// <returns>移除的记录总数</returns>
-        private static int RemoveInvalidRelationships(PowerLmsUserDbContext dbContext,
-            PooledList<Guid> invalidUserRoleIds, PooledList<Guid> invalidRolePermissionIds, PooledList<Guid> invalidUserOrgIds)
-        {
-            int totalRemoved = 0;
-            if (invalidUserRoleIds.Count > 0)
-            {
-                var toRemove = dbContext.PlAccountRoles.Where(ur => invalidUserRoleIds.Contains(ur.UserId)).ToList();
-                dbContext.PlAccountRoles.RemoveRange(toRemove);
-                totalRemoved += toRemove.Count;
-            }
-            if (invalidRolePermissionIds.Count > 0)
-            {
-                var toRemove = dbContext.PlRolePermissions.Where(rp => invalidRolePermissionIds.Contains(rp.RoleId)).ToList();
-                dbContext.PlRolePermissions.RemoveRange(toRemove);
-                totalRemoved += toRemove.Count;
-            }
-            if (invalidUserOrgIds.Count > 0)
-            {
-                var toRemove = dbContext.AccountPlOrganizations.Where(uo => invalidUserOrgIds.Contains(uo.UserId)).ToList();
-                dbContext.AccountPlOrganizations.RemoveRange(toRemove);
-                totalRemoved += toRemove.Count;
-            }
-            return totalRemoved;
-        }
-
-        #endregion
-
-        #region 公共工具方法
-
-        /// <summary>
-        /// 通用JSON流处理工具 - 处理Excel工作表到数据库
-        /// </summary>
-        /// <param name="sheet">Excel工作表</param>
-        /// <param name="dbContext">数据库上下文</param>
-        /// <param name="entityType">实体类型</param>
-        /// <param name="reusableStream">可复用内存流（可选）</param>
-        /// <param name="ignoreExisting">是否忽略已存在数据</param>
-        /// <returns>插入的记录数</returns>
-        /// <exception cref="InvalidOperationException">处理失败时抛出</exception>
-        /// <remarks>
-        /// 高性能JSON流处理：
-        /// 1. Excel工作表转JSON流（复用<paramref name="OwNpoiUnit.WriteJsonToStream"/>）
-        /// 2. JSON反序列化为实体集合
-        /// 3. 批量数据库插入（复用<paramref name="OwDataUnit.BulkInsert"/>）
-        /// 4. 支持流复用降低GC压力
-        /// </remarks>
-        public static int ProcessExcelToDatabase(ISheet sheet, DbContext dbContext, Type entityType,
-            MemoryStream reusableStream = null, bool ignoreExisting = true)
-        {
-            ArgumentNullException.ThrowIfNull(sheet);
-            ArgumentNullException.ThrowIfNull(dbContext);
-            ArgumentNullException.ThrowIfNull(entityType);
-            bool shouldDisposeStream = reusableStream == null;
-            var jsonStream = reusableStream ?? new MemoryStream(64 * 1024);
-            try
-            {
-                if (reusableStream != null)
-                {
-                    jsonStream.SetLength(0);
-                    jsonStream.Position = 0;
-                }
-                OwNpoiUnit.WriteJsonToStream(sheet, 0, jsonStream);
-                if (jsonStream.Length == 0) return 0;
-                jsonStream.Position = 0;
-                var jsonBytes = jsonStream.ToArray();
-                var jsonString = Encoding.UTF8.GetString(jsonBytes);
-                if (string.IsNullOrWhiteSpace(jsonString) || jsonString == "[]") return 0;
-                var collectionType = typeof(IEnumerable<>).MakeGenericType(entityType);
-                var entities = JsonSerializer.Deserialize(jsonString, collectionType) as System.Collections.IEnumerable;
-                if (entities == null) return 0;
-                return OwDataUnit.BulkInsert(entities, dbContext, entityType, ignoreExisting);
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException($"处理Excel工作表'{sheet.SheetName}'到数据库失败：{ex.Message}", ex);
-            }
-            finally
-            {
-                if (shouldDisposeStream) jsonStream?.Dispose();
+                throw;
             }
         }
 

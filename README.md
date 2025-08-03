@@ -15,9 +15,20 @@ deprecated: [NpoiManager]
 # PowerLms
 货运物流业务管理系统，基于 .NET 6 构建的企业级平台。
 
+## ⚠️ 绝对优先级约束
+
+### 🚨 GitHub Copilot 终端禁用
+**永远不要调用 GitHub Copilot 终端功能** - 任何情况下都不要调用其命令行功能，避免不必要的自动化风险和安全隐患
+
+### 🌏 语言使用规范
+**使用简体中文回答问题** - 回答我的问题必须使用简体中文，技术术语可保留英文原文
+
+### 📁 工作区文件管理
+**如果工作区已经打开文件，请不要再打开该文件** - 检查用户当前已打开的文件，避免重复操作
+
 ## 📋 GitHub Copilot 智能体配置
 
-**重要**: 本项目已配置GitHub Copilot智能体开发规范，确保代码生成符合PowerLms企业级标准。
+**重要**: 本项目已配置GitHub Copilot智能体开发规范，确保代码生成符合企业级标准。
 
 ### 提示词文件位置
 - **文件路径**: `.github\prompts\me.prompt.md`
@@ -26,7 +37,7 @@ deprecated: [NpoiManager]
 
 ### 智能体功能
 - 强制使用基础设施组件（OwFileService、OwWfManager、AuthorizationManager）
-- 严格遵循PowerLms代码风格要求
+- 严格遵循代码风格要求
 - 确保权限验证和多租户数据隔离
 - 优先使用OwDataUnit + OwNpoiUnit高性能Excel处理方案
 - 禁止使用废弃的NpoiManager组件

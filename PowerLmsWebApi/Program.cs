@@ -1,4 +1,25 @@
-﻿using Microsoft.AspNetCore.StaticFiles;
+﻿/*
+ * PowerLms - 货运物流业务管理系统
+ * Web API 应用程序入口 - 负责服务配置和中间件管道
+ * 
+ * 功能说明：
+ * - 服务容器配置和依赖注入设置
+ * - 中间件管道配置和请求处理流程
+ * - Swagger API文档配置
+ * - 跨域策略和静态文件服务配置
+ * 
+ * 技术特点：
+ * - 职责分离，仅负责应用程序配置
+ * - 数据库初始化委托给InitializerService
+ * - 统一的异常处理和日志配置
+ * - 企业级中间件配置模式
+ * 
+ * 作者：PowerLms开发团队
+ * 创建时间：2024年
+ * 最后修改：2024年12月 - 重构数据库操作职责分离
+ */
+
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Options;
@@ -21,181 +42,194 @@ internal class Program
 {
     static void Main(string[] args)
     {
-        const int timeout = 60; // 设置超时时间为60秒
-        var now = DateTime.Now;
         WebApplicationBuilder builder = ConfigService(args);
         var app = builder.Build();
-
-        IWebHostEnvironment env = app.Environment;
-
-        var config = app.Configuration;
-
-        var logger = app.Services.GetRequiredService<ILogger<Program>>();
-        #region 自动迁移数据库所有挂起的迁移
-        try
-        {
-            var dbContextFactory = app.Services.GetRequiredService<IDbContextFactory<PowerLmsUserDbContext>>();
-            using var dbContext = dbContextFactory.CreateDbContext();
-            while (!dbContext.Database.CanConnect()) // 确保数据库连接正常
-            {
-                //若超时仍然无法连接，则抛出异常
-                if (DateTime.Now - now > TimeSpan.FromSeconds(timeout))
-                {
-                    throw new Exception($"启动时等待{timeout}秒仍无法连接到数据库，请检查数据库连接配置或机器性能。");
-                }
-                logger.LogError("启动时数据库连接失败，正在尝试重新连接...");
-                Thread.Sleep(500);
-            }
-            dbContext.Database.Migrate(); //自动迁移数据库所有挂起的迁移
-        }
-        catch (Exception ex)
-        {
-            logger.LogError("数据库迁移失败: {Message}", ex.Message);
-            throw; // 重新抛出异常以便调试
-        }
-        #endregion 自动迁移数据库所有挂起的迁移
-
-        //app.UseRouting();
-        //app.UseEndpoints(endpoints =>
-        //{
-        //    endpoints.MapControllers();
-        //});
-        // Configure the HTTP request pipeline.
-        app.UseResponseCompression();
-        //if (app.Environment.IsDevelopment())
-        {
-            app.UseSwagger();
-            //启用中间件服务生成SwaggerUI，指定Swagger JSON终结点
-            app.UseSwaggerUI(c =>
-            {
-                //c.SwaggerEndpoint("/swagger/v2/swagger.json", env.EnvironmentName + $" V2");
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", $"{env.EnvironmentName} V1");
-                c.RoutePrefix = string.Empty;//设置根节点访问
-            });
-        }
-
-        #region 静态资源访问
-        app.UseStaticFiles();
-        //var basePath = AppContext.BaseDirectory;
-        //var path = Path.Combine(basePath, "Files/");
-        //Directory.CreateDirectory(path);
-        //// 添加MIME支持
-        //var provider = new FileExtensionContentTypeProvider(new Dictionary<string, string>
-        //{
-        //    { ".xlsx","application/octet-stream"}
-        //});
-        //app.UseStaticFiles(new StaticFileOptions
-        //{
-        //    FileProvider = new PhysicalFileProvider(path),
-        //    ContentTypeProvider = provider,
-        //    RequestPath = path,
-        //});
-
-        #endregion 静态资源访问
-
-        // 添加跨域设置
-        app.UseCors("AnyOrigin");
-
-        app.UseAuthorization();
-        app.MapControllers();
-        app.UseDeveloperExceptionPage();
-        app.UseMiddleware<PlExceptionMiddleware>();
+        ConfigureMiddleware(app);
         app.Run();
     }
 
+    /// <summary>
+    /// 配置服务容器
+    /// </summary>
+    /// <param name="args">命令行参数</param>
+    /// <returns>Web应用程序构建器</returns>
     private static WebApplicationBuilder ConfigService(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
         var services = builder.Services;
+        
+        // 添加基础服务
         services.AddMemoryCache();
-
-        //启用跨域
+        services.AddHttpContextAccessor();
+        
+        // 配置跨域
         services.AddCors(cors =>
         {
             cors.AddPolicy("AnyOrigin", o => o.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
         });
 
-
-        // Add services to the container.
+        // 配置响应压缩
         services.AddResponseCompression(options =>
         {
             options.EnableForHttps = true;
         });
-        //JsonSerializerSettings settings = new JsonSerializerSettings() { DateFormatString=""};
-        services.AddHttpContextAccessor(); // 添加 IHttpContextAccessor 服务
+
+        // 配置控制器和JSON序列化
         services.AddControllers().AddJsonOptions(opt =>
         {
             opt.JsonSerializerOptions.Converters.Add(new CustomsJsonConverter());
         });
 
-        #region 配置Swagger
-        // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-        builder.Services.AddEndpointsApiExplorer();
+        // 配置Swagger
+        ConfigureSwagger(services);
 
-        //注册Swagger生成器，定义一个 Swagger 文档
-        builder.Services.AddSwaggerGen(c =>
+        // 配置数据库
+        ConfigureDatabase(services, builder.Configuration, builder.Environment);
+
+        // 配置组织管理服务
+        services.AddOrgManager<PowerLmsUserDbContext>();
+
+        // 配置SQL依赖管理
+        services.AddSqlDependencyManager();
+
+        // 配置世界时钟偏移
+        if (TimeSpan.TryParse(builder.Configuration.GetSection("WorldClockOffset").Value, out var offset))
+            OwHelper.Offset = offset;
+
+        // 配置应用服务
+        ConfigureApplicationServices(services);
+
+        // 配置文件服务
+        ConfigureFileServices(services, builder.Configuration);
+
+        // 配置AutoMapper
+        ConfigureAutoMapper(services);
+
+        // 配置发票管理服务
+        services.AddManualInvoicingManager();
+        services.AddNuoNuoManager();
+
+        return builder;
+    }
+
+    /// <summary>
+    /// 配置Swagger文档服务
+    /// </summary>
+    /// <param name="services">服务集合</param>
+    private static void ConfigureSwagger(IServiceCollection services)
+    {
+        services.AddEndpointsApiExplorer();
+        services.AddSwaggerGen(c =>
         {
             c.SwaggerDoc("v1", new OpenApiInfo
             {
                 Version = "v1",
-                Title = $"PowerLms",
+                Title = "PowerLms",
                 Description = "接口文档v2.0.0",
                 Contact = new OpenApiContact() { }
             });
+            
             // 为 Swagger 设置xml文档注释路径
             var fileNames = Directory.GetFiles(AppContext.BaseDirectory, "*ApiDoc.xml");
-            foreach (var item in fileNames) //加入多个xml描述文件
+            foreach (var item in fileNames)
             {
                 var xmlPath = Path.Combine(AppContext.BaseDirectory, item);
                 c.IncludeXmlComments(xmlPath, true);
             }
             c.OrderActionsBy(c => c.RelativePath);
         });
-        #endregion 配置Swagger
+    }
 
-        #region 配置数据库
-        var userDbConnectionString = builder.Configuration.GetConnectionString("UserDbConnection").Replace("{Env}", builder.Environment.EnvironmentName);
-        //services.AddDbContext<PowerLmsUserDbContext>(options => options.UseLazyLoadingProxies().UseSqlServer(userDbConnectionString).EnableSensitiveDataLogging());
-        services.AddDbContextFactory<PowerLmsUserDbContext>(options =>
+    /// <summary>
+    /// 配置数据库服务
+    /// </summary>
+    /// <param name="services">服务集合</param>
+    /// <param name="configuration">配置</param>
+    /// <param name="environment">环境</param>
+    private static void ConfigureDatabase(IServiceCollection services, IConfiguration configuration, IWebHostEnvironment environment)
+    {
+        var userDbConnectionString = configuration.GetConnectionString("UserDbConnection").Replace("{Env}", environment.EnvironmentName);
+        services.AddDbContextFactory<PowerLmsUserDbContext>(options =>  // 使用工厂模式配置DbContext,首推直接使用范围服务容器直接获取数据库上下文，或用工厂模式获取
         {
             options.UseLazyLoadingProxies().UseSqlServer(userDbConnectionString).EnableSensitiveDataLogging();
         });
         services.AddOwBatchDbWriter<PowerLmsUserDbContext>();
+    }
 
-        #endregion 配置数据库
+    /// <summary>
+    /// 配置应用程序服务
+    /// </summary>
+    /// <param name="services">服务集合</param>
+    private static void ConfigureApplicationServices(IServiceCollection services)
+    {
+        services.AddHostedService<InitializerService>(); // 系统初始化服务（包含数据库迁移）
+        services.AddOwTaskService<PowerLmsUserDbContext>(); // 长时间运行任务服务
+    }
 
-        // 添加组织管理服务（替代 OrganizationManager 和 MerchantManager）
-        services.AddOrgManager<PowerLmsUserDbContext>();
-
-        services.AddSqlDependencyManager(); //添加SqlDependencyManager服务
-        if (TimeSpan.TryParse(builder.Configuration.GetSection("WorldClockOffset").Value, out var offerset))
-            OwHelper.Offset = offerset;  //配置游戏世界的时间。
-
-        #region 配置应用的一般服务
-        services.AddHostedService<InitializerService>();
-        services.AddOwTaskService<PowerLmsUserDbContext>(); //添加长时间运行任务服务
-        #endregion 配置应用的一般服务
-
-        #region 配置文件服务
-        // 配置 OwFileServiceOptions
-        services.Configure<OwFileServiceOptions>(builder.Configuration.GetSection(OwFileServiceOptions.SectionName));
-        // 添加文件服务
+    /// <summary>
+    /// 配置文件服务
+    /// </summary>
+    /// <param name="services">服务集合</param>
+    /// <param name="configuration">配置</param>
+    private static void ConfigureFileServices(IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<OwFileServiceOptions>(configuration.GetSection(OwFileServiceOptions.SectionName));
         services.AddOwFileService<PowerLmsUserDbContext>();
-        #endregion 配置文件服务
+    }
 
-        #region 配置 AutoMapper
-
-        var assemblies = new Assembly[] { typeof(PowerLmsUserDbContext).Assembly, typeof(Account).Assembly, typeof(SystemResourceManager).Assembly };   //避免有尚未加载的情况
+    /// <summary>
+    /// 配置AutoMapper
+    /// </summary>
+    /// <param name="services">服务集合</param>
+    private static void ConfigureAutoMapper(IServiceCollection services)
+    {
+        var assemblies = new Assembly[] { 
+            typeof(PowerLmsUserDbContext).Assembly, 
+            typeof(Account).Assembly, 
+            typeof(SystemResourceManager).Assembly 
+        };
         HashSet<Assembly> hsAssm = new HashSet<Assembly>(AppDomain.CurrentDomain.GetAssemblies());
         assemblies.ForEach(c => hsAssm.Add(c));
         services.AutoRegister(hsAssm);
-
         services.AddAutoMapper(hsAssm);
-        #endregion 配置 AutoMapper
+    }
 
-        services.AddManualInvoicingManager(); //添加手工开票管理服务
-        services.AddNuoNuoManager(); //添加诺诺开票管理服务
-        return builder;
+    /// <summary>
+    /// 配置中间件管道
+    /// </summary>
+    /// <param name="app">Web应用程序</param>
+    private static void ConfigureMiddleware(WebApplication app)
+    {
+        IWebHostEnvironment env = app.Environment;
+
+        // 配置响应压缩
+        app.UseResponseCompression();
+
+        // 配置Swagger文档
+        app.UseSwagger();
+        app.UseSwaggerUI(c =>
+        {
+            c.SwaggerEndpoint("/swagger/v1/swagger.json", $"{env.EnvironmentName} V1");
+            c.RoutePrefix = string.Empty; // 设置根节点访问
+        });
+
+        // 配置静态文件服务
+        app.UseStaticFiles();
+
+        // 配置跨域
+        app.UseCors("AnyOrigin");
+
+        // 配置授权
+        app.UseAuthorization();
+
+        // 配置控制器路由
+        app.MapControllers();
+
+        // 配置开发异常页面
+        app.UseDeveloperExceptionPage();
+
+        // 配置自定义异常处理中间件
+        app.UseMiddleware<PlExceptionMiddleware>();
     }
 }
 
