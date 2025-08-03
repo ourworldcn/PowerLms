@@ -1,7 +1,30 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿/*
+ * PowerLms - 货运物流业务管理系统
+ * 管理员控制器 - 数据字典管理部分
+ * 
+ * 功能说明：
+ * - 数据字典目录管理（增删改查、复制到下级机构）
+ * - 系统资源管理和元数据获取
+ * - 数据字典导入导出（基于OwDataUnit + OwNpoiUnit高性能处理）
+ * - 简单字典项的CRUD操作
+ * - 支持多租户数据隔离和权限控制
+ * 
+ * 技术特点：
+ * - 基于角色的权限验证
+ * - 多租户OrgId数据隔离
+ * - 高性能Excel数据处理
+ * - 完整的错误处理和日志记录
+ * - 支持复杂的机构层级复制逻辑
+ * 
+ * 作者：PowerLms开发团队
+ * 创建时间：2024年
+ * 最后修改：2024年 - Excel处理架构重构，使用OwDataUnit替代旧架构
+ */
+
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NPOI.HSSF.UserModel;
-using NPOI; // 添加NPOI引用以使用NpoiUnit.WriteToExcel
+using NPOI; // 添加NPOI引用以使用OwNpoiUnit.WriteToExcel
 using NPOI.SS.UserModel; // 添加WorkbookFactory引用
 using PowerLms.Data;
 using PowerLmsServer.Managers;
@@ -172,7 +195,7 @@ namespace PowerLmsWebApi.Controllers
             if (!_AuthorizationManager.Demand(out err, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ImportDataDicReturnDto();
             var srTask = _DbContext.DD_SystemResources.FindAsync(rId).AsTask();
-            var workbook = WorkbookFactory.Create(formFile.OpenReadStream()); // 🚀 直接使用WorkbookFactory.Create
+            var workbook = WorkbookFactory.Create(formFile.OpenReadStream()); // 直接使用WorkbookFactory.Create
             var sheet = workbook.GetSheetAt(0);
             var sr = srTask.Result;
             switch (sr.Name)
@@ -180,9 +203,9 @@ namespace PowerLmsWebApi.Controllers
                 case nameof(_DbContext.Multilinguals):
                     {
                         _DbContext.TruncateTable(nameof(_DbContext.Multilinguals));
-                        // 🚀 使用 DataSeedHelper 替代 NpoiManager.WriteToDb，性能更好
-                        var count = DataSeedHelper.BulkInsertFromExcelWithStringList<Multilingual>(
-                            sheet, _DbContext, ignoreExisting: false, _Logger, "导入多语言数据");
+                        // 使用 OwDataUnit 替代 NpoiManager.WriteToDb，性能更好
+                        var count = OwDataUnit.BulkInsert<Multilingual>(
+                            sheet, _DbContext, ignoreExisting: true);
                         _Logger?.LogInformation("成功导入多语言数据：{count}条记录", count);
                         _DbContext.SaveChanges();
                     }
@@ -215,7 +238,7 @@ namespace PowerLmsWebApi.Controllers
             {
                 case nameof(_DbContext.Multilinguals):
                     {
-                        NpoiUnit.WriteToExcel(_DbContext.Multilinguals.AsNoTracking(), typeof(Multilingual).GetProperties().Select(c => c.Name).ToArray(), sheet);
+                        OwNpoiUnit.WriteToExcel(_DbContext.Multilinguals.AsNoTracking(), typeof(Multilingual).GetProperties().Select(c => c.Name).ToArray(), sheet);
                     }
                     break;
                 default:
@@ -252,7 +275,7 @@ namespace PowerLmsWebApi.Controllers
             {
                 case nameof(_DbContext.Multilinguals):
                     {
-                        NpoiUnit.WriteToExcel(_DbContext.Multilinguals.Take(0), typeof(Multilingual).GetProperties().Select(c => c.Name).ToArray(), sheet);
+                        OwNpoiUnit.WriteToExcel(_DbContext.Multilinguals.Take(0), typeof(Multilingual).GetProperties().Select(c => c.Name).ToArray(), sheet);
                     }
                     break;
                 default:

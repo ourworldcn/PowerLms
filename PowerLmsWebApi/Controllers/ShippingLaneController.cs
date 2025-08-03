@@ -1,10 +1,32 @@
-﻿using AutoMapper;
+﻿/*
+ * PowerLms - 货运物流业务管理系统
+ * 航线管理控制器
+ * 
+ * 功能说明：
+ * - 航线方案的增删改查管理
+ * - 航线数据的高性能批量导入
+ * - 基于Excel的航线数据处理
+ * - 支持多租户数据隔离和权限控制
+ * 
+ * 技术特点：
+ * - 使用OwDataUnit + OwNpoiUnit高性能Excel处理
+ * - PooledList优化内存使用
+ * - 完整的数据验证和错误处理
+ * - 支持复杂的航线属性映射
+ * - 批量插入优化，自动处理重复数据
+ * 
+ * 作者：PowerLms开发团队
+ * 创建时间：2024年
+ * 最后修改：2024年 - Excel处理架构重构
+ */
+
+using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
-using NPOI; // 引入NpoiUnit.GetStringList
+using NPOI; // 引入OwNpoiUnit.GetStringList
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
@@ -124,7 +146,7 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// 导入航线数据 - 使用DataSeedHelper高性能批量插入优化版本
+        /// 导入航线数据 - 使用OwDataUnit高性能批量插入优化版本
         /// </summary>
         [HttpPost]
         public ActionResult<ImportShippingLaneReturnDto> ImportShippingLane(IFormFile file, Guid token)
@@ -136,12 +158,10 @@ namespace PowerLmsWebApi.Controllers
 
             try
             {
-                // 🚀 使用NpoiUnit.GetStringList替代NpoiManager
-                using var workbook = new XSSFWorkbook(file.OpenReadStream());
+                using var workbook = new XSSFWorkbook(file.OpenReadStream()); // 直接创建工作簿
                 var sheet = workbook.GetSheetAt(0);
                 
-                // 使用GetStringList获取所有数据，跳过前2行
-                using var allRows = NpoiUnit.GetStringList(sheet, out var columnHeaders);
+                using var allRows = OwNpoiUnit.GetStringList(sheet, out var columnHeaders); // 使用OwNpoiUnit获取数据
                 
                 if (columnHeaders.Count == 0)
                 {
@@ -153,8 +173,7 @@ namespace PowerLmsWebApi.Controllers
                     return BadRequest("Excel文件格式错误：没有有效的数据行");
                 }
 
-                // 创建列名到属性的映射 - 基于ShippingLaneEto的JsonPropertyName
-                var propertyMappings = CreateShippingLanePropertyMappings();
+                var propertyMappings = CreateShippingLanePropertyMappings(); // 创建属性映射
                 var columnMappings = CreateColumnMappings(columnHeaders, propertyMappings);
 
                 if (columnMappings.Count == 0)
@@ -162,11 +181,9 @@ namespace PowerLmsWebApi.Controllers
                     return BadRequest("Excel文件格式错误：未找到匹配的列标题");
                 }
 
-                // 使用PooledList存储转换后的实体
-                using var shippingLanes = new PooledList<ShippingLane>(allRows.Count - 2);
+                using var shippingLanes = new PooledList<ShippingLane>(allRows.Count - 2); // 使用PooledList优化内存
                 
-                // 跳过前2行，从第3行开始处理数据（索引从0开始，所以是从索引2开始）
-                for (int rowIndex = 2; rowIndex < allRows.Count; rowIndex++)
+                for (int rowIndex = 2; rowIndex < allRows.Count; rowIndex++) // 跳过前2行标题
                 {
                     using var currentRow = allRows[rowIndex];
                     
@@ -180,18 +197,16 @@ namespace PowerLmsWebApi.Controllers
                     }
                     catch (Exception ex)
                     {
-                        // 记录具体行的错误，但继续处理其他行
                         var logger = _ServiceProvider.GetService<ILogger<ShippingLaneController>>();
-                        logger?.LogWarning("处理第{RowNumber}行数据时发生错误: {Error}", rowIndex + 1, ex.Message);
+                        logger?.LogWarning("处理第{RowNumber}行数据时发生错误: {Error}", rowIndex + 1, ex.Message); // 行尾注释，记录错误但继续处理
                     }
                 }
 
                 if (shippingLanes.Count > 0)
                 {
-                    // 🚀 使用DataSeedHelper进行高性能批量插入，替代传统的AddRange+SaveChanges
                     var logger = _ServiceProvider.GetService<ILogger<ShippingLaneController>>();
-                    var insertedCount = DataSeedHelper.TryBulkInsertOptimized(
-                        _DbContext, shippingLanes, false, logger, "航线数据导入");
+                    var insertedCount = OwDataUnit.BulkInsert(
+                        shippingLanes, _DbContext, ignoreExisting: true);
                     
                     if (insertedCount > 0)
                     {
