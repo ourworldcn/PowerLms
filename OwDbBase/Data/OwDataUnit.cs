@@ -59,8 +59,18 @@ namespace OW.Data
             if (dbContext == null) throw new ArgumentNullException(nameof(dbContext));
             var entityList = entities.ToList();
             if (entityList.Count == 0) return 0;
-            var bulkConfig = CreateBulkConfig(ignoreExisting, typeof(TEntity));
-            dbContext.BulkInsertOrUpdate(entityList, bulkConfig);
+            if (ignoreExisting)
+            {
+                dbContext.BulkInsert(entities, new BulkConfig
+                {
+                    SqlBulkCopyOptions = Microsoft.Data.SqlClient.SqlBulkCopyOptions.KeepIdentity | Microsoft.Data.SqlClient.SqlBulkCopyOptions.TableLock,
+                });
+            }
+            else
+            {
+                var bulkConfig = CreateBulkConfig(ignoreExisting, typeof(TEntity));
+                dbContext.BulkInsertOrUpdate(entityList, bulkConfig);
+            }
             return entityList.Count;
         }
 
@@ -144,7 +154,7 @@ namespace OW.Data
                 BulkCopyTimeout = 300,
                 SetOutputIdentity = false,
                 PreserveInsertOrder = false,
-                UseTempDB = true
+                UseTempDB = false,  //不要用临时表，避免还要显示开事务
             };
             if (ignoreExisting) // 忽略重复数据：排除所有字段更新，实现按主键跳过重复记录
             {
