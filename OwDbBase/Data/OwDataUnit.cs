@@ -17,13 +17,16 @@
  * 
  * 作者：PowerLms开发团队
  * 创建时间：2024年
- * 最后修改：2024年12月 - 按提示词规范重整，移除回退逻辑
+ * 最后修改：2024年12月 - 按提示词规范重整，移除回退逻辑，修复实体属性映射问题
  */
 
 using Microsoft.EntityFrameworkCore;
 using EFCore.BulkExtensions;
 using NPOI.SS.UserModel;
 using NPOI;
+using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
+using System.Reflection;
 
 namespace OW.Data
 {
@@ -59,18 +62,8 @@ namespace OW.Data
             if (dbContext == null) throw new ArgumentNullException(nameof(dbContext));
             var entityList = entities.ToList();
             if (entityList.Count == 0) return 0;
-            if (ignoreExisting)
-            {
-                dbContext.BulkInsert(entities, new BulkConfig
-                {
-                    SqlBulkCopyOptions = Microsoft.Data.SqlClient.SqlBulkCopyOptions.KeepIdentity | Microsoft.Data.SqlClient.SqlBulkCopyOptions.TableLock,
-                });
-            }
-            else
-            {
-                var bulkConfig = CreateBulkConfig(ignoreExisting, typeof(TEntity));
-                dbContext.BulkInsertOrUpdate(entityList, bulkConfig);
-            }
+            var bulkConfig = CreateBulkConfig(ignoreExisting, typeof(TEntity), dbContext);
+            dbContext.BulkInsertOrUpdate(entityList, bulkConfig);
             return entityList.Count;
         }
 
@@ -145,8 +138,9 @@ namespace OW.Data
         /// </summary>
         /// <param name="ignoreExisting">是否忽略重复数据</param>
         /// <param name="entityType">实体类型</param>
+        /// <param name="dbContext">数据库上下文，用于获取实体映射元数据</param>
         /// <returns>配置对象</returns>
-        private static BulkConfig CreateBulkConfig(bool ignoreExisting, Type entityType)
+        private static BulkConfig CreateBulkConfig(bool ignoreExisting, Type entityType, DbContext dbContext)
         {
             var config = new BulkConfig
             {
@@ -158,12 +152,28 @@ namespace OW.Data
             };
             if (ignoreExisting) // 忽略重复数据：排除所有字段更新，实现按主键跳过重复记录
             {
-                config.PropertiesToExcludeOnUpdate = entityType.GetProperties()
-                    .Where(p => p.CanWrite)
-                    .Select(p => p.Name)
-                    .ToList();
+                // 使用EF Core元数据获取实际映射到数据库的属性名，比反射特性检查更准确
+                config.PropertiesToExcludeOnUpdate = GetDatabaseMappedPropertiesFromMetadata(entityType, dbContext);
             }
             return config;
+        }
+
+        /// <summary>
+        /// 从EF Core元数据获取实际映射到数据库的属性名列表
+        /// </summary>
+        /// <param name="entityType">实体类型</param>
+        /// <param name="dbContext">数据库上下文</param>
+        /// <returns>映射到数据库的属性名列表</returns>
+        private static List<string> GetDatabaseMappedPropertiesFromMetadata(Type entityType, DbContext dbContext)
+        {
+            var entityTypeMetadata = dbContext.Model.FindEntityType(entityType);
+            if (entityTypeMetadata == null)
+                throw new InvalidOperationException($"找不到实体类型 {entityType.Name} 的EF Core元数据，请确保该实体已配置在DbContext中");
+            // 获取所有映射到数据库的属性，EF Core会自动排除[NotMapped]和其他非映射属性
+            return entityTypeMetadata.GetProperties()
+                .Where(p => !p.IsShadowProperty())  // 排除影子属性
+                .Select(p => p.Name)
+                .ToList();
         }
 
         /// <summary>
@@ -172,18 +182,18 @@ namespace OW.Data
         /// <param name="forSheet">是否为Excel工作表版本</param>
         /// <returns>方法信息</returns>
         /// <exception cref="InvalidOperationException">未找到匹配方法时抛出</exception>
-        private static System.Reflection.MethodInfo GetGenericBulkInsertMethod(bool forSheet)
+        private static MethodInfo GetGenericBulkInsertMethod(bool forSheet)
         {
             var methods = typeof(OwDataUnit).GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
             System.Reflection.MethodInfo targetMethod = forSheet
-                ? methods.FirstOrDefault(m => 
+                ? methods.FirstOrDefault(m =>
                     m.Name == nameof(BulkInsert) &&
                     m.IsGenericMethodDefinition &&
                     m.GetParameters().Length == 3 &&
                     m.GetParameters()[0].ParameterType == typeof(ISheet) &&
                     m.GetParameters()[1].ParameterType == typeof(DbContext) &&
                     m.GetParameters()[2].ParameterType == typeof(bool))
-                : methods.FirstOrDefault(m => 
+                : methods.FirstOrDefault(m =>
                     m.Name == nameof(BulkInsert) &&
                     m.IsGenericMethodDefinition &&
                     m.GetParameters().Length == 3 &&

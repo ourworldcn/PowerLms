@@ -348,12 +348,20 @@ namespace NPOI
                         }
                         else
                         {
-                            writer.WriteNumberValue(cell.NumericCellValue);
+                            writer.WriteStringValue(cell.ToString());
                         }
                         break;
                     case CellType.Boolean:
                         writer.WritePropertyName(propertyName);
                         writer.WriteBooleanValue(cell.BooleanCellValue);
+                        break;
+                    case CellType.Formula:
+                        stringValue = cell.ToString();
+                        if (!string.IsNullOrWhiteSpace(stringValue)) // 只有非空字符串才写入
+                        {
+                            writer.WritePropertyName(propertyName);
+                            writer.WriteStringValue(stringValue);
+                        }
                         break;
                     case CellType.Blank:
                         return; // 空白单元格不写入JSON属性
@@ -361,7 +369,7 @@ namespace NPOI
                         throw new InvalidOperationException($"遇到错误单元格：工作表'{sheet.SheetName}'第{rowIndex + 1}行第{colIndex + 1}列，错误代码：{cell.ErrorCellValue}"); // 错误单元格抛出异常
                     case CellType.Unknown:
                         throw new InvalidOperationException($"遇到未知类型单元格：工作表'{sheet.SheetName}'第{rowIndex + 1}行第{colIndex + 1}列，可能文件已损坏"); // 未知类型抛出异常
-                    default: 
+                    default:
                         throw new InvalidOperationException($"遇到不支持的单元格类型：工作表'{sheet.SheetName}'第{rowIndex + 1}行第{colIndex + 1}列，类型：{cellType}"); // 其他未处理类型抛出异常
                 }
             }
@@ -394,7 +402,7 @@ namespace NPOI
             return cell?.CellType switch
             {
                 CellType.String => string.IsNullOrWhiteSpace(cell.StringCellValue) ? null : cell.StringCellValue,
-                CellType.Numeric => DateUtil.IsCellDateFormatted(cell) 
+                CellType.Numeric => DateUtil.IsCellDateFormatted(cell)
                     ? cell.DateCellValue.ToString("yyyy-MM-ddTHH:mm:ss.fffK") // 使用可排序的ISO 8601格式
                     : cell.NumericCellValue.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 CellType.Boolean => cell.BooleanCellValue.ToString(),
@@ -420,7 +428,7 @@ namespace NPOI
                 return cell.CachedFormulaResultType switch
                 {
                     CellType.String => string.IsNullOrWhiteSpace(cell.StringCellValue) ? null : cell.StringCellValue,
-                    CellType.Numeric => DateUtil.IsCellDateFormatted(cell) 
+                    CellType.Numeric => DateUtil.IsCellDateFormatted(cell)
                         ? cell.DateCellValue.ToString("yyyy-MM-ddTHH:mm:ss.fffK") // 使用可排序格式
                         : cell.NumericCellValue.ToString(System.Globalization.CultureInfo.InvariantCulture),
                     CellType.Boolean => cell.BooleanCellValue.ToString(),
