@@ -374,5 +374,158 @@ namespace PowerLmsWebApi.Controllers
         }
 
         #endregion
+
+        /// <summary>
+        /// 获取当前用户相关的OA费用申请单和审批流状态。
+        /// 跑完标准审批流程后可审核。
+        /// </summary>
+        /// <param name="model">分页和排序参数</param>
+        /// <param name="conditional">查询的条件。支持三种格式的条件：
+        /// 1. 无前缀的条件：直接作为申请单(OaExpenseRequisition)的筛选条件
+        /// 2. "OwWf.字段名" 格式的条件：用于筛选关联的工作流(OwWf)对象
+        /// 所有键不区分大小写。其中，OwWf.State会特殊处理，与OwWfManager.GetWfNodeItemByOpertorId方法的state参数映射关系：
+        /// 0(流转中)→3, 1(成功完成)→4, 2(已被终止)→8
+        /// 通用条件写法:所有条件都是字符串，对区间的写法是用逗号分隔（字符串类型暂时不支持区间且都是模糊查询）如"2024-1-1,2024-1-2"。
+        /// 对强制取null的约束，则写"null"。</param>
+        /// <returns>包含申请单和对应工作流信息的结果集</returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        public ActionResult<GetAllOaExpenseRequisitionWithWfReturnDto> GetAllOaExpenseRequisitionWithWf([FromQuery] GetAllOaExpenseRequisitionWithWfParamsDto model,
+            [FromQuery][ModelBinder(typeof(DotKeyDictionaryModelBinder))] Dictionary<string, string> conditional = null)
+        {
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
+                return Unauthorized();
+
+            var result = new GetAllOaExpenseRequisitionWithWfReturnDto();
+
+            try
+            {
+                // 从条件中分离出不同前缀的条件
+                Dictionary<string, string> wfConditions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                Dictionary<string, string> reqConditions = conditional != null
+                    ? new Dictionary<string, string>(conditional, StringComparer.OrdinalIgnoreCase)
+                    : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                byte wfState = 15; // 默认值，意味着获取指定操作人相关的所有工作流节点项
+
+                if (reqConditions.Count > 0)
+                {
+                    List<string> keysToRemove = new List<string>();
+
+                    foreach (var pair in reqConditions)
+                    {
+                        // 处理工作流条件
+                        if (pair.Key.StartsWith("OwWf.", StringComparison.OrdinalIgnoreCase))
+                        {
+                            string wfFieldName = pair.Key.Substring(5); // 去掉"OwWf."前缀
+
+                            // 处理 State 的特殊情况
+                            if (string.Equals(wfFieldName, "State", StringComparison.OrdinalIgnoreCase))
+                            {
+                                if (byte.TryParse(pair.Value, out var state))
+                                {
+                                    switch (state)
+                                    {
+                                        case 0: // 流转中 - 等价于旧的"3"（1|2）
+                                            wfState = 3; // 使用OwWfManager中的值3：流转中的节点项
+                                            break;
+                                        case 1: // 成功完成 - 等价于旧的"4"
+                                            wfState = 4; // 使用OwWfManager中的值4：成功结束的流程
+                                            break;
+                                        case 2: // 已被终止 - 等价于旧的"8"
+                                            wfState = 8; // 使用OwWfManager中的值8：已失败结束的流程
+                                            break;
+                                        default:
+                                            wfState = 15; // 使用默认值15：不限定状态
+                                            break;
+                                    }
+                                }
+                            }
+                            else // 其他工作流条件
+                            {
+                                wfConditions[wfFieldName] = pair.Value;
+                            }
+                            keysToRemove.Add(pair.Key);
+                        }
+                    }
+
+                    // 从原始条件中移除特殊前缀的条件
+                    foreach (var key in keysToRemove)
+                    {
+                        reqConditions.Remove(key);
+                    }
+                }
+
+                // 查询关联的工作流
+                var docIdsQuery = _WfManager.GetWfNodeItemByOpertorId(context.User.Id, wfState)
+                    .Select(c => c.Parent.Parent);
+
+                // 如果有其他工作流条件，先应用它们
+                if (wfConditions.Count > 0)
+                {
+                    _Logger.LogDebug("应用工作流过滤条件: {conditions}",
+                        string.Join(", ", wfConditions.Select(kv => $"{kv.Key}={kv.Value}")));
+
+                    // 应用工作流筛选条件
+                    docIdsQuery = EfHelper.GenerateWhereAnd(docIdsQuery, wfConditions);
+                }
+
+                // 获取符合条件的文档ID
+                var docIds = docIdsQuery.Select(wf => wf.DocId.Value).Distinct();
+
+                // 构建申请单查询
+                var dbSet = _DbContext.OaExpenseRequisitions.Where(r => docIds.Contains(r.Id));
+
+                // 🔥 修复Bug：工作流查询已经包含权限控制，只需保留组织隔离
+                // 移除 (r.ApplicantId == context.User.Id || r.CreateBy == context.User.Id) 条件
+                // 这样审批人就能看到分配给自己审批的申请单了
+                if (!context.User.IsSuperAdmin)
+                {
+                    dbSet = dbSet.Where(r => r.OrgId == context.User.OrgId);
+                }
+
+                // 应用申请单条件
+                if (reqConditions.Count > 0)
+                {
+                    dbSet = EfHelper.GenerateWhereAnd(dbSet, reqConditions);
+                }
+
+                // 应用分页和排序
+                var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
+                var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
+
+                // 获取结果ID集合
+                var resultIds = prb.Result.Select(c => c.Id).ToList();
+
+                // 只查询结果相关的工作流
+                var wfsArray = _DbContext.OwWfs
+                    .Where(c => resultIds.Contains(c.DocId.Value))
+                    .ToArray();
+
+                // 组装结果
+                foreach (var requisition in prb.Result)
+                {
+                    var wf = wfsArray.FirstOrDefault(d => d.DocId == requisition.Id);
+                    result.Result.Add(new GetAllOaExpenseRequisitionWithWfItemDto()
+                    {
+                        Requisition = requisition,
+                        Wf = _Mapper.Map<OwWfDto>(wf),
+                    });
+                }
+
+                result.Total = prb.Total;
+            }
+            catch (Exception ex)
+            {
+                _Logger.LogError(ex, "获取OA费用申请单审批流程列表时发生错误");
+                result.HasError = true;
+                result.ErrorCode = 500;
+                result.DebugMessage = $"获取OA费用申请单审批流程列表时发生错误: {ex.Message}";
+            }
+
+            return result;
+        }
+
+
     }
 }
