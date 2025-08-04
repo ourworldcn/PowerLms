@@ -64,7 +64,6 @@ namespace PowerLms.Data
         /// </summary>
         [Comment("会计科目编码")]
         [MaxLength(32), Unicode(false)]
-        [Required(AllowEmptyStrings = false)]
         public string SubjectNumber { get; set; }
 
         /// <summary>
@@ -72,7 +71,6 @@ namespace PowerLms.Data
         /// </summary>
         [Comment("显示名称。")]
         [MaxLength(128)]
-        [Required(AllowEmptyStrings = false)]
         public string DisplayName { get; set; }
 
         /// <summary>
@@ -80,7 +78,7 @@ namespace PowerLms.Data
         /// 常用值：转（转账凭证）、收（收款凭证）、付（付款凭证）、记（记账凭证）
         /// </summary>
         [Comment("凭证类别字")]
-        [MaxLength(10)]
+        [MaxLength(8)]
         public string VoucherGroup { get; set; }
 
         /// <summary>
@@ -88,7 +86,7 @@ namespace PowerLms.Data
         /// 常用值：客户、供应商、部门、员工、项目、地区等
         /// </summary>
         [Comment("核算类别")]
-        [MaxLength(50)]
+        [MaxLength(8)]
         public string AccountingCategory { get; set; }
 
         /// <summary>

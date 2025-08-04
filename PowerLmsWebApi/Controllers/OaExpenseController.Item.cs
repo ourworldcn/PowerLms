@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+ï»¿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using OW.Data;
@@ -13,23 +13,23 @@ using System.Linq;
 namespace PowerLmsWebApi.Controllers
 {
     /// <summary>
-    /// OA·ÑÓÃÉêÇëµ¥¿ØÖÆÆ÷ - Ã÷Ï¸Ïî²Ù×÷²¿·Ö¡£
+    /// OAè´¹ç”¨ç”³è¯·å•æ§åˆ¶å™¨ - æ˜ç»†é¡¹æ“ä½œéƒ¨åˆ†ã€‚
     /// </summary>
     public partial class OaExpenseController
     {
-        #region OA·ÑÓÃÉêÇëµ¥Ã÷Ï¸²Ù×÷
+        #region OAè´¹ç”¨ç”³è¯·å•æ˜ç»†æ“ä½œ
 
         /// <summary>
-        /// »ñÈ¡ËùÓĞOA·ÑÓÃÉêÇëµ¥Ã÷Ï¸¡£
+        /// è·å–æ‰€æœ‰OAè´¹ç”¨ç”³è¯·å•æ˜ç»†ã€‚
         /// </summary>
-        /// <param name="model">·ÖÒ³ºÍ²éÑ¯²ÎÊı</param>
-        /// <param name="conditional">²éÑ¯µÄÌõ¼ş¡£ÊµÌåÊôĞÔÃû²»Çø·Ö´óĞ¡Ğ´¡£
-        /// Í¨ÓÃÌõ¼şĞ´·¨:ËùÓĞÌõ¼ş¶¼ÊÇ×Ö·û´®£¬¶ÔÇø¼äµÄĞ´·¨ÊÇÓÃ¶ººÅ·Ö¸ô£¨×Ö·û´®ÀàĞÍÔİÊ±²»Ö§³ÖÇø¼äÇÒ¶¼ÊÇÄ£ºı²éÑ¯£©Èç"2024-1-1,2024-1-2"¡£
-        /// ¶ÔÇ¿ÖÆÈ¡nullµÄÔ¼Êø£¬ÔòĞ´"null"¡£</param>
-        /// <returns>OA·ÑÓÃÉêÇëµ¥Ã÷Ï¸ÁĞ±í</returns>
-        /// <response code="200">Î´·¢ÉúÏµÍ³¼¶´íÎó¡£µ«¿ÉÄÜ³öÏÖÓ¦ÓÃ´íÎó£¬¾ßÌå²Î¼û HasError ºÍ ErrorCode¡£</response>
-        /// <response code="401">ÎŞĞ§ÁîÅÆ¡£</response>
-        /// <response code="403">È¨ÏŞ²»×ã¡£</response>
+        /// <param name="model">åˆ†é¡µå’ŒæŸ¥è¯¢å‚æ•°</param>
+        /// <param name="conditional">æŸ¥è¯¢çš„æ¡ä»¶ã€‚å®ä½“å±æ€§åä¸åŒºåˆ†å¤§å°å†™ã€‚
+        /// é€šç”¨æ¡ä»¶å†™æ³•:æ‰€æœ‰æ¡ä»¶éƒ½æ˜¯å­—ç¬¦ä¸²ï¼Œå¯¹åŒºé—´çš„å†™æ³•æ˜¯ç”¨é€—å·åˆ†éš”ï¼ˆå­—ç¬¦ä¸²ç±»å‹æš‚æ—¶ä¸æ”¯æŒåŒºé—´ä¸”éƒ½æ˜¯æ¨¡ç³ŠæŸ¥è¯¢ï¼‰å¦‚"2024-1-1,2024-1-2"ã€‚
+        /// å¯¹å¼ºåˆ¶å–nullçš„çº¦æŸï¼Œåˆ™å†™"null"ã€‚</param>
+        /// <returns>OAè´¹ç”¨ç”³è¯·å•æ˜ç»†åˆ—è¡¨</returns>
+        /// <response code="200">æœªå‘ç”Ÿç³»ç»Ÿçº§é”™è¯¯ã€‚ä½†å¯èƒ½å‡ºç°åº”ç”¨é”™è¯¯ï¼Œå…·ä½“å‚è§ HasError å’Œ ErrorCodeã€‚</response>
+        /// <response code="401">æ— æ•ˆä»¤ç‰Œã€‚</response>
+        /// <response code="403">æƒé™ä¸è¶³ã€‚</response>
         [HttpGet]
         public ActionResult<GetAllOaExpenseRequisitionItemReturnDto> GetAllOaExpenseRequisitionItem([FromQuery] PagingParamsDtoBase model,
             [FromQuery][ModelBinder(typeof(DotKeyDictionaryModelBinder))] Dictionary<string, string> conditional = null)
@@ -43,53 +43,52 @@ namespace PowerLmsWebApi.Controllers
             {
                 var dbSet = _DbContext.OaExpenseRequisitionItems;
 
-                // È·±£Ìõ¼ş×Öµä²»Çø·Ö´óĞ¡Ğ´
+                // ç¡®ä¿æ¡ä»¶å­—å…¸ä¸åŒºåˆ†å¤§å°å†™
                 var normalizedConditional = conditional != null ?
                     new Dictionary<string, string>(conditional, StringComparer.OrdinalIgnoreCase) :
                     null;
 
-                // Ó¦ÓÃÍ¨ÓÃÌõ¼ş²éÑ¯
+                // åº”ç”¨é€šç”¨æ¡ä»¶æŸ¥è¯¢
                 var coll = EfHelper.GenerateWhereAnd(dbSet, normalizedConditional);
 
-                // È¨ÏŞ¹ıÂË£ºÖ»ÏÔÊ¾ÓÃ»§ÓĞÈ¨ÏŞ²é¿´µÄÉêÇëµ¥µÄÃ÷Ï¸
+                // æƒé™è¿‡æ»¤ï¼šåªæ˜¾ç¤ºç”¨æˆ·æœ‰æƒé™æŸ¥çœ‹çš„ç”³è¯·å•çš„æ˜ç»†ï¼ˆåºŸå¼ƒApplicantIdï¼Œç»Ÿä¸€ä½¿ç”¨CreateByï¼‰
                 if (!context.User.IsSuperAdmin)
                 {
                     var accessibleRequisitionIds = _DbContext.OaExpenseRequisitions
-                        .Where(r => r.OrgId == context.User.OrgId &&
-                                   (r.ApplicantId == context.User.Id || r.CreateBy == context.User.Id))
+                        .Where(r => r.OrgId == context.User.OrgId && r.CreateBy == context.User.Id)
                         .Select(r => r.Id)
                         .ToList();
 
                     coll = coll.Where(i => i.ParentId != null && accessibleRequisitionIds.Contains(i.ParentId.Value));
                 }
 
-                // ÅÅĞò
+                // æ’åº
                 coll = coll.OrderBy(model.OrderFieldName, model.IsDesc);
 
-                // Ê¹ÓÃEntityManager½øĞĞ·ÖÒ³
+                // ä½¿ç”¨EntityManagerè¿›è¡Œåˆ†é¡µ
                 var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
                 result.Total = prb.Total;
                 result.Result.AddRange(prb.Result);
             }
             catch (Exception ex)
             {
-                _Logger.LogError(ex, "»ñÈ¡OA·ÑÓÃÉêÇëµ¥Ã÷Ï¸ÁĞ±íÊ±·¢Éú´íÎó");
+                _Logger.LogError(ex, "è·å–OAè´¹ç”¨ç”³è¯·å•æ˜ç»†åˆ—è¡¨æ—¶å‘ç”Ÿé”™è¯¯");
                 result.HasError = true;
                 result.ErrorCode = 500;
-                result.DebugMessage = $"»ñÈ¡OA·ÑÓÃÉêÇëµ¥Ã÷Ï¸ÁĞ±íÊ±·¢Éú´íÎó: {ex.Message}";
+                result.DebugMessage = $"è·å–OAè´¹ç”¨ç”³è¯·å•æ˜ç»†åˆ—è¡¨æ—¶å‘ç”Ÿé”™è¯¯: {ex.Message}";
             }
 
             return result;
         }
 
         /// <summary>
-        /// ´´½¨ĞÂµÄOA·ÑÓÃÉêÇëµ¥Ã÷Ï¸¡£
+        /// åˆ›å»ºæ–°çš„OAè´¹ç”¨ç”³è¯·å•æ˜ç»†ã€‚
         /// </summary>
-        /// <param name="model">Ã÷Ï¸ĞÅÏ¢</param>
-        /// <returns>´´½¨½á¹û</returns>
-        /// <response code="200">Î´·¢ÉúÏµÍ³¼¶´íÎó¡£µ«¿ÉÄÜ³öÏÖÓ¦ÓÃ´íÎó£¬¾ßÌå²Î¼û HasError ºÍ ErrorCode¡£</response>
-        /// <response code="401">ÎŞĞ§ÁîÅÆ¡£</response>
-        /// <response code="403">È¨ÏŞ²»×ã¡£</response>
+        /// <param name="model">æ˜ç»†ä¿¡æ¯</param>
+        /// <returns>åˆ›å»ºç»“æœ</returns>
+        /// <response code="200">æœªå‘ç”Ÿç³»ç»Ÿçº§é”™è¯¯ã€‚ä½†å¯èƒ½å‡ºç°åº”ç”¨é”™è¯¯ï¼Œå…·ä½“å‚è§ HasError å’Œ ErrorCodeã€‚</response>
+        /// <response code="401">æ— æ•ˆä»¤ç‰Œã€‚</response>
+        /// <response code="403">æƒé™ä¸è¶³ã€‚</response>
         [HttpPost]
         public ActionResult<AddOaExpenseRequisitionItemReturnDto> AddOaExpenseRequisitionItem(AddOaExpenseRequisitionItemParamsDto model)
         {
@@ -100,38 +99,36 @@ namespace PowerLmsWebApi.Controllers
 
             try
             {
-                // ¼ì²éÉêÇëµ¥ÊÇ·ñ´æÔÚºÍÈ¨ÏŞ
-                var requisition = _DbContext.OaExpenseRequisitions.Find(model.Item.ParentId); // ¸üĞÂÎªÊ¹ÓÃ Item ÊôĞÔ
+                // æ£€æŸ¥ç”³è¯·å•æ˜¯å¦å­˜åœ¨å’Œæƒé™
+                var requisition = _DbContext.OaExpenseRequisitions.Find(model.Item.ParentId);
                 if (requisition == null)
                 {
                     result.HasError = true;
                     result.ErrorCode = 404;
-                    result.DebugMessage = "Ö¸¶¨µÄOA·ÑÓÃÉêÇëµ¥²»´æÔÚ";
+                    result.DebugMessage = "æŒ‡å®šçš„OAè´¹ç”¨ç”³è¯·å•ä¸å­˜åœ¨";
                     return result;
                 }
 
-                // ¼ì²éÉêÇëµ¥×´Ì¬
-                if (!requisition.CanEdit(_DbContext))
+                // æ£€æŸ¥ç”³è¯·å•çŠ¶æ€ï¼šç»“ç®—åä¸èƒ½ä¿®æ”¹æ˜ç»†é¡¹
+                if (!requisition.CanEditItems(_DbContext))
                 {
                     result.HasError = true;
                     result.ErrorCode = 403;
-                    result.DebugMessage = "ÉêÇëµ¥µ±Ç°×´Ì¬²»ÔÊĞíÌí¼ÓÃ÷Ï¸";
+                    result.DebugMessage = "ç”³è¯·å•å½“å‰çŠ¶æ€ä¸å…è®¸æ·»åŠ æ˜ç»†";
                     return result;
                 }
 
-                // ¼ì²éÓÃ»§È¨ÏŞ - ¸üĞÂÎª¿É¿ÕÀàĞÍ´¦Àí
-                if ((requisition.ApplicantId.HasValue && requisition.ApplicantId.Value != context.User.Id) &&
-                    (requisition.CreateBy.HasValue && requisition.CreateBy.Value != context.User.Id) &&
-                    !context.User.IsSuperAdmin)
+                // æ£€æŸ¥ç”¨æˆ·æƒé™ï¼šåªèƒ½ä¸ºè‡ªå·±åˆ›å»º/ç™»è®°çš„ç”³è¯·å•æ·»åŠ æ˜ç»†ï¼ˆåºŸå¼ƒApplicantIdï¼Œç»Ÿä¸€ä½¿ç”¨CreateByï¼‰
+                if (requisition.CreateBy.HasValue && requisition.CreateBy.Value != context.User.Id && !context.User.IsSuperAdmin)
                 {
                     result.HasError = true;
                     result.ErrorCode = 403;
-                    result.DebugMessage = "È¨ÏŞ²»×ã£¬ÎŞ·¨Îª´ËÉêÇëµ¥Ìí¼ÓÃ÷Ï¸";
+                    result.DebugMessage = "æƒé™ä¸è¶³ï¼Œæ— æ³•ä¸ºæ­¤ç”³è¯·å•æ·»åŠ æ˜ç»†";
                     return result;
                 }
 
-                var entity = model.Item; // ¸üĞÂÎªÊ¹ÓÃ Item ÊôĞÔ
-                entity.GenerateNewId(); // Ç¿ÖÆÉú³ÉId
+                var entity = model.Item;
+                entity.GenerateNewId();
 
                 _DbContext.OaExpenseRequisitionItems.Add(entity);
                 _DbContext.SaveChanges();
@@ -140,23 +137,23 @@ namespace PowerLmsWebApi.Controllers
             }
             catch (Exception ex)
             {
-                _Logger.LogError(ex, "´´½¨OA·ÑÓÃÉêÇëµ¥Ã÷Ï¸Ê±·¢Éú´íÎó");
+                _Logger.LogError(ex, "åˆ›å»ºOAè´¹ç”¨ç”³è¯·å•æ˜ç»†æ—¶å‘ç”Ÿé”™è¯¯");
                 result.HasError = true;
                 result.ErrorCode = 500;
-                result.DebugMessage = $"´´½¨OA·ÑÓÃÉêÇëµ¥Ã÷Ï¸Ê±·¢Éú´íÎó: {ex.Message}";
+                result.DebugMessage = $"åˆ›å»ºOAè´¹ç”¨ç”³è¯·å•æ˜ç»†æ—¶å‘ç”Ÿé”™è¯¯: {ex.Message}";
             }
 
             return result;
         }
 
         /// <summary>
-        /// ĞŞ¸ÄOA·ÑÓÃÉêÇëµ¥Ã÷Ï¸ĞÅÏ¢¡£
+        /// ä¿®æ”¹OAè´¹ç”¨ç”³è¯·å•æ˜ç»†ä¿¡æ¯ã€‚
         /// </summary>
-        /// <param name="model">Ã÷Ï¸ĞÅÏ¢</param>
-        /// <returns>ĞŞ¸Ä½á¹û</returns>
-        /// <response code="200">Î´·¢ÉúÏµÍ³¼¶´íÎó¡£µ«¿ÉÄÜ³öÏÖÓ¦ÓÃ´íÎó£¬¾ßÌå²Î¼û HasError ºÍ ErrorCode¡£</response>
-        /// <response code="401">ÎŞĞ§ÁîÅÆ¡£</response>
-        /// <response code="404">Ö¸¶¨IdµÄÃ÷Ï¸²»´æÔÚ¡£</response>
+        /// <param name="model">æ˜ç»†ä¿¡æ¯</param>
+        /// <returns>ä¿®æ”¹ç»“æœ</returns>
+        /// <response code="200">æœªå‘ç”Ÿç³»ç»Ÿçº§é”™è¯¯ã€‚ä½†å¯èƒ½å‡ºç°åº”ç”¨é”™è¯¯ï¼Œå…·ä½“å‚è§ HasError å’Œ ErrorCodeã€‚</response>
+        /// <response code="401">æ— æ•ˆä»¤ç‰Œã€‚</response>
+        /// <response code="404">æŒ‡å®šIdçš„æ˜ç»†ä¸å­˜åœ¨ã€‚</response>
         [HttpPut]
         public ActionResult<ModifyOaExpenseRequisitionItemReturnDto> ModifyOaExpenseRequisitionItem(ModifyOaExpenseRequisitionItemParamsDto model)
         {
@@ -167,7 +164,7 @@ namespace PowerLmsWebApi.Controllers
 
             try
             {
-                // ¼ì²éËùÓĞÃ÷Ï¸ÏîÊÇ·ñ´æÔÚºÍÈ¨ÏŞ
+                // æ£€æŸ¥æ‰€æœ‰æ˜ç»†é¡¹æ˜¯å¦å­˜åœ¨å’Œæƒé™
                 foreach (var item in model.Items)
                 {
                     var existing = _DbContext.OaExpenseRequisitionItems.Find(item.Id);
@@ -175,38 +172,36 @@ namespace PowerLmsWebApi.Controllers
                     {
                         result.HasError = true;
                         result.ErrorCode = 404;
-                        result.DebugMessage = $"Ö¸¶¨µÄOA·ÑÓÃÉêÇëµ¥Ã÷Ï¸ {item.Id} ²»´æÔÚ";
+                        result.DebugMessage = $"æŒ‡å®šçš„OAè´¹ç”¨ç”³è¯·å•æ˜ç»† {item.Id} ä¸å­˜åœ¨";
                         return result;
                     }
 
-                    // ¼ì²éÉêÇëµ¥×´Ì¬ºÍÈ¨ÏŞ
+                    // æ£€æŸ¥ç”³è¯·å•çŠ¶æ€å’Œæƒé™
                     var requisition = _DbContext.OaExpenseRequisitions.Find(existing.ParentId);
-                    if (requisition == null || !requisition.CanEdit(_DbContext))
+                    if (requisition == null || !requisition.CanEditItems(_DbContext))
                     {
                         result.HasError = true;
                         result.ErrorCode = 403;
-                        result.DebugMessage = "ÉêÇëµ¥µ±Ç°×´Ì¬²»ÔÊĞíĞŞ¸ÄÃ÷Ï¸";
+                        result.DebugMessage = "ç”³è¯·å•å½“å‰çŠ¶æ€ä¸å…è®¸ä¿®æ”¹æ˜ç»†";
                         return result;
                     }
 
-                    // ¼ì²éÓÃ»§È¨ÏŞ - ¸üĞÂÎª¿É¿ÕÀàĞÍ´¦Àí
-                    if ((requisition.ApplicantId.HasValue && requisition.ApplicantId.Value != context.User.Id) &&
-                        (requisition.CreateBy.HasValue && requisition.CreateBy.Value != context.User.Id) &&
-                        !context.User.IsSuperAdmin)
+                    // æ£€æŸ¥ç”¨æˆ·æƒé™ï¼šåªèƒ½ä¿®æ”¹è‡ªå·±åˆ›å»º/ç™»è®°ç”³è¯·å•çš„æ˜ç»†ï¼ˆåºŸå¼ƒApplicantIdï¼Œç»Ÿä¸€ä½¿ç”¨CreateByï¼‰
+                    if (requisition.CreateBy.HasValue && requisition.CreateBy.Value != context.User.Id && !context.User.IsSuperAdmin)
                     {
                         result.HasError = true;
                         result.ErrorCode = 403;
-                        result.DebugMessage = "È¨ÏŞ²»×ã£¬ÎŞ·¨ĞŞ¸Ä´ËÃ÷Ï¸";
+                        result.DebugMessage = "æƒé™ä¸è¶³ï¼Œæ— æ³•ä¿®æ”¹æ­¤æ˜ç»†";
                         return result;
                     }
                 }
 
-                // Ê¹ÓÃEntityManager½øĞĞÅúÁ¿ĞŞ¸Ä
+                // ä½¿ç”¨EntityManagerè¿›è¡Œæ‰¹é‡ä¿®æ”¹
                 if (!_EntityManager.Modify(model.Items))
                 {
                     result.HasError = true;
                     result.ErrorCode = 404;
-                    result.DebugMessage = "ĞŞ¸ÄÊ§°Ü£¬Çë¼ì²éÊı¾İ";
+                    result.DebugMessage = "ä¿®æ”¹å¤±è´¥ï¼Œè¯·æ£€æŸ¥æ•°æ®";
                     return result;
                 }
 
@@ -214,23 +209,23 @@ namespace PowerLmsWebApi.Controllers
             }
             catch (Exception ex)
             {
-                _Logger.LogError(ex, "ĞŞ¸ÄOA·ÑÓÃÉêÇëµ¥Ã÷Ï¸Ê±·¢Éú´íÎó");
+                _Logger.LogError(ex, "ä¿®æ”¹OAè´¹ç”¨ç”³è¯·å•æ˜ç»†æ—¶å‘ç”Ÿé”™è¯¯");
                 result.HasError = true;
                 result.ErrorCode = 500;
-                result.DebugMessage = $"ĞŞ¸ÄOA·ÑÓÃÉêÇëµ¥Ã÷Ï¸Ê±·¢Éú´íÎó: {ex.Message}";
+                result.DebugMessage = $"ä¿®æ”¹OAè´¹ç”¨ç”³è¯·å•æ˜ç»†æ—¶å‘ç”Ÿé”™è¯¯: {ex.Message}";
             }
 
             return result;
         }
 
         /// <summary>
-        /// É¾³ıOA·ÑÓÃÉêÇëµ¥Ã÷Ï¸¡£
+        /// åˆ é™¤OAè´¹ç”¨ç”³è¯·å•æ˜ç»†ã€‚
         /// </summary>
-        /// <param name="model">É¾³ı²ÎÊı</param>
-        /// <returns>É¾³ı½á¹û</returns>
-        /// <response code="200">Î´·¢ÉúÏµÍ³¼¶´íÎó¡£ÈçÓĞÓ¦ÓÃ´íÎó£¬¾ßÌå²Î¼û HasError ºÍ ErrorCode¡£</response>
-        /// <response code="401">ÎŞĞ§ÁîÅÆ¡£</response>
-        /// <response code="404">Ö¸¶¨IdµÄÃ÷Ï¸²»´æÔÚ¡£</response>
+        /// <param name="model">åˆ é™¤å‚æ•°</param>
+        /// <returns>åˆ é™¤ç»“æœ</returns>
+        /// <response code="200">æœªå‘ç”Ÿç³»ç»Ÿçº§é”™è¯¯ã€‚å¦‚æœ‰åº”ç”¨é”™è¯¯ï¼Œå…·ä½“å‚è§ HasError å’Œ ErrorCodeã€‚</response>
+        /// <response code="401">æ— æ•ˆä»¤ç‰Œã€‚</response>
+        /// <response code="404">æŒ‡å®šIdçš„æ˜ç»†ä¸å­˜åœ¨ã€‚</response>
         [HttpDelete]
         public ActionResult<RemoveOaExpenseRequisitionItemReturnDto> RemoveOaExpenseRequisitionItem(RemoveOaExpenseRequisitionItemParamsDto model)
         {
@@ -245,24 +240,22 @@ namespace PowerLmsWebApi.Controllers
 
                 foreach (var entity in entities)
                 {
-                    // ¼ì²éÉêÇëµ¥×´Ì¬ºÍÈ¨ÏŞ
+                    // æ£€æŸ¥ç”³è¯·å•çŠ¶æ€å’Œæƒé™
                     var requisition = _DbContext.OaExpenseRequisitions.Find(entity.ParentId);
-                    if (requisition == null || !requisition.CanEdit(_DbContext))
+                    if (requisition == null || !requisition.CanEditItems(_DbContext))
                     {
                         result.HasError = true;
                         result.ErrorCode = 403;
-                        result.DebugMessage = "ÉêÇëµ¥µ±Ç°×´Ì¬²»ÔÊĞíÉ¾³ıÃ÷Ï¸";
+                        result.DebugMessage = "ç”³è¯·å•å½“å‰çŠ¶æ€ä¸å…è®¸åˆ é™¤æ˜ç»†";
                         return result;
                     }
 
-                    // ¼ì²éÓÃ»§È¨ÏŞ - ¸üĞÂÎª¿É¿ÕÀàĞÍ´¦Àí
-                    if ((requisition.ApplicantId.HasValue && requisition.ApplicantId.Value != context.User.Id) &&
-                        (requisition.CreateBy.HasValue && requisition.CreateBy.Value != context.User.Id) &&
-                        !context.User.IsSuperAdmin)
+                    // æ£€æŸ¥ç”¨æˆ·æƒé™ï¼šåªèƒ½åˆ é™¤è‡ªå·±åˆ›å»º/ç™»è®°ç”³è¯·å•çš„æ˜ç»†ï¼ˆåºŸå¼ƒApplicantIdï¼Œç»Ÿä¸€ä½¿ç”¨CreateByï¼‰
+                    if (requisition.CreateBy.HasValue && requisition.CreateBy.Value != context.User.Id && !context.User.IsSuperAdmin)
                     {
                         result.HasError = true;
                         result.ErrorCode = 403;
-                        result.DebugMessage = "È¨ÏŞ²»×ã£¬ÎŞ·¨É¾³ı´ËÃ÷Ï¸";
+                        result.DebugMessage = "æƒé™ä¸è¶³ï¼Œæ— æ³•åˆ é™¤æ­¤æ˜ç»†";
                         return result;
                     }
 
@@ -273,10 +266,10 @@ namespace PowerLmsWebApi.Controllers
             }
             catch (Exception ex)
             {
-                _Logger.LogError(ex, "É¾³ıOA·ÑÓÃÉêÇëµ¥Ã÷Ï¸Ê±·¢Éú´íÎó");
+                _Logger.LogError(ex, "åˆ é™¤OAè´¹ç”¨ç”³è¯·å•æ˜ç»†æ—¶å‘ç”Ÿé”™è¯¯");
                 result.HasError = true;
                 result.ErrorCode = 500;
-                result.DebugMessage = $"É¾³ıOA·ÑÓÃÉêÇëµ¥Ã÷Ï¸Ê±·¢Éú´íÎó: {ex.Message}";
+                result.DebugMessage = $"åˆ é™¤OAè´¹ç”¨ç”³è¯·å•æ˜ç»†æ—¶å‘ç”Ÿé”™è¯¯: {ex.Message}";
             }
 
             return result;
@@ -284,142 +277,27 @@ namespace PowerLmsWebApi.Controllers
 
         #endregion
 
-        #region Æ¾Ö¤ºÅÉú³É¹¦ÄÜ
+        #region ç§æœ‰è¾…åŠ©æ–¹æ³•
 
         /// <summary>
-        /// Éú³ÉÆ¾Ö¤ºÅ¡£
-        /// ¸ù¾İ½áËãÊ±¼äºÍ½áËãÕËºÅÉú³É·ûºÏ²ÆÎñÒªÇóµÄÆ¾Ö¤ºÅ¡£
+        /// è·å–æŒ‡å®šæœŸé—´å’Œå‡­è¯å­—çš„æœ€å¤§åºå·ã€‚
         /// </summary>
-        /// <param name="model">Æ¾Ö¤ºÅÉú³É²ÎÊı</param>
-        /// <returns>Éú³ÉµÄÆ¾Ö¤ºÅĞÅÏ¢</returns>
-        /// <response code="200">Î´·¢ÉúÏµÍ³¼¶´íÎó¡£µ«¿ÉÄÜ³öÏÖÓ¦ÓÃ´íÎó£¬¾ßÌå²Î¼û HasError ºÍ ErrorCode¡£</response>
-        /// <response code="201">Éú³É³É¹¦µ«´æÔÚÖØºÅ¾¯¸æ¡£</response>
-        /// <response code="401">ÎŞĞ§ÁîÅÆ¡£</response>
-        /// <response code="403">È¨ÏŞ²»×ã¡£</response>
-        /// <response code="404">Ö¸¶¨µÄÉêÇëµ¥»ò½áËãÕËºÅ²»´æÔÚ¡£</response>
-        [HttpPost]
-        public ActionResult<GenerateVoucherNumberReturnDto> GenerateVoucherNumber(GenerateVoucherNumberParamsDto model)
-        {
-            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
-                return Unauthorized();
-
-            var result = new GenerateVoucherNumberReturnDto();
-
-            try
-            {
-                // ¼ì²éÉêÇëµ¥ÊÇ·ñ´æÔÚ
-                var requisition = _DbContext.OaExpenseRequisitions.Find(model.RequisitionId);
-                if (requisition == null)
-                {
-                    result.HasError = true;
-                    result.ErrorCode = 404;
-                    result.DebugMessage = "Ö¸¶¨µÄOA·ÑÓÃÉêÇëµ¥²»´æÔÚ";
-                    return result;
-                }
-
-                // ¼ì²éÉêÇëµ¥ÊÇ·ñÒÑÉóºË
-                if (!requisition.IsAudited())
-                {
-                    result.HasError = true;
-                    result.ErrorCode = 400;
-                    result.DebugMessage = "ÉêÇëµ¥±ØĞëÏÈÉóºËÍ¨¹ı²ÅÄÜÉú³ÉÆ¾Ö¤ºÅ";
-                    return result;
-                }
-
-                // ¼ì²éÈ¨ÏŞ£º²ÆÎñÈËÔ±»ò³¬¹Ü
-                if (!context.User.IsSuperAdmin && requisition.OrgId != context.User.OrgId)
-                {
-                    result.HasError = true;
-                    result.ErrorCode = 403;
-                    result.DebugMessage = "È¨ÏŞ²»×ã£¬ÎŞ·¨Îª´ËÉêÇëµ¥Éú³ÉÆ¾Ö¤ºÅ";
-                    return result;
-                }
-
-                // ¼ì²é½áËãÕËºÅÊÇ·ñ´æÔÚ
-                var settlementAccount = _DbContext.BankInfos.Find(model.SettlementAccountId);
-                if (settlementAccount == null)
-                {
-                    result.HasError = true;
-                    result.ErrorCode = 404;
-                    result.DebugMessage = "Ö¸¶¨µÄ½áËãÕËºÅ²»´æÔÚ";
-                    return result;
-                }
-
-                // ¼ì²éÆ¾Ö¤×ÖÊÇ·ñÅäÖÃ
-                if (string.IsNullOrEmpty(settlementAccount.VoucherCharacter))
-                {
-                    result.HasError = true;
-                    result.ErrorCode = 400;
-                    result.DebugMessage = "½áËãÕËºÅÎ´ÅäÖÃÆ¾Ö¤×Ö£¬ÎŞ·¨Éú³ÉÆ¾Ö¤ºÅ";
-                    return result;
-                }
-
-                // Éú³ÉÆ¾Ö¤ºÅ
-                var period = model.SettlementDateTime.Month;
-                var voucherCharacter = settlementAccount.VoucherCharacter;
-
-                // »ñÈ¡µ±ÔÂ¸ÃÆ¾Ö¤×ÖµÄ×î´óĞòºÅ
-                var currentMaxSequence = GetMaxVoucherSequence(period, voucherCharacter, model.SettlementDateTime.Year);
-                var nextSequence = currentMaxSequence + 1;
-
-                // Éú³ÉÆ¾Ö¤ºÅ£º¸ñÊ½Îª"ÆÚ¼ä-Æ¾Ö¤×Ö-ĞòºÅ"
-                var voucherNumber = $"{period}-{voucherCharacter}-{nextSequence}";
-
-                // ¼ì²éÊÇ·ñ´æÔÚÖØºÅ
-                var duplicateExists = CheckVoucherNumberDuplicate(voucherNumber, model.SettlementDateTime.Year);
-
-                result.VoucherNumber = voucherNumber;
-                result.VoucherCharacter = voucherCharacter;
-                result.Period = period;
-                result.SequenceNumber = nextSequence;
-                result.HasDuplicateWarning = duplicateExists;
-
-                if (duplicateExists)
-                {
-                    result.DuplicateWarningMessage = $"Æ¾Ö¤ºÅ {voucherNumber} ÒÑ´æÔÚ£¬ÇëºË²éÊÇ·ñÖØ¸´";
-                    _Logger.LogWarning("Éú³ÉµÄÆ¾Ö¤ºÅ´æÔÚÖØ¸´: {VoucherNumber}", voucherNumber);
-                    
-                    // ·µ»Ø201×´Ì¬Âë±íÊ¾³É¹¦µ«ÓĞ¾¯¸æ
-                    return StatusCode(201, result);
-                }
-
-                _Logger.LogInformation("³É¹¦Éú³ÉÆ¾Ö¤ºÅ: {VoucherNumber}£¬ÉêÇëµ¥: {RequisitionId}", 
-                    voucherNumber, model.RequisitionId);
-            }
-            catch (Exception ex)
-            {
-                _Logger.LogError(ex, "Éú³ÉÆ¾Ö¤ºÅÊ±·¢Éú´íÎó");
-                result.HasError = true;
-                result.ErrorCode = 500;
-                result.DebugMessage = $"Éú³ÉÆ¾Ö¤ºÅÊ±·¢Éú´íÎó: {ex.Message}";
-            }
-
-            return result;
-        }
-
-        #endregion
-
-        #region Ë½ÓĞ¸¨Öú·½·¨
-
-        /// <summary>
-        /// »ñÈ¡Ö¸¶¨ÆÚ¼äºÍÆ¾Ö¤×ÖµÄ×î´óĞòºÅ¡£
-        /// </summary>
-        /// <param name="period">ÆÚ¼ä£¨ÔÂ·İ£©</param>
-        /// <param name="voucherCharacter">Æ¾Ö¤×Ö</param>
-        /// <param name="year">Äê·İ</param>
-        /// <returns>×î´óĞòºÅ</returns>
+        /// <param name="period">æœŸé—´ï¼ˆæœˆä»½ï¼‰</param>
+        /// <param name="voucherCharacter">å‡­è¯å­—</param>
+        /// <param name="year">å¹´ä»½</param>
+        /// <returns>æœ€å¤§åºå·</returns>
         private int GetMaxVoucherSequence(int period, string voucherCharacter, int year)
         {
             try
             {
-                // ²éÑ¯µ±ÔÂËùÓĞÊ¹ÓÃ¸ÃÆ¾Ö¤×ÖµÄÃ÷Ï¸¼ÇÂ¼
+                // æŸ¥è¯¢å½“æœˆæ‰€æœ‰ä½¿ç”¨è¯¥å‡­è¯å­—çš„æ˜ç»†è®°å½•
                 var voucherPattern = $"{period}-{voucherCharacter}-";
                 
                 var maxSequence = _DbContext.OaExpenseRequisitionItems
                     .Where(item => item.VoucherNumber != null && 
                                    item.VoucherNumber.StartsWith(voucherPattern) &&
                                    item.SettlementDateTime.Year == year)
-                    .AsEnumerable() // ÇĞ»»µ½¿Í»§¶ËÆÀ¹ÀÒÔÖ§³Ö¸´ÔÓµÄ×Ö·û´®²Ù×÷
+                    .AsEnumerable() // åˆ‡æ¢åˆ°å®¢æˆ·ç«¯è¯„ä¼°ä»¥æ”¯æŒå¤æ‚çš„å­—ç¬¦ä¸²æ“ä½œ
                     .Select(item => ExtractSequenceFromVoucherNumber(item.VoucherNumber, voucherPattern))
                     .Where(seq => seq.HasValue)
                     .DefaultIfEmpty(0)
@@ -429,17 +307,17 @@ namespace PowerLmsWebApi.Controllers
             }
             catch (Exception ex)
             {
-                _Logger.LogError(ex, "»ñÈ¡×î´óÆ¾Ö¤ĞòºÅÊ±·¢Éú´íÎó");
-                return 0; // ³ö´íÊ±·µ»Ø0£¬´Ó1¿ªÊ¼
+                _Logger.LogError(ex, "è·å–æœ€å¤§å‡­è¯åºå·æ—¶å‘ç”Ÿé”™è¯¯");
+                return 0; // å‡ºé”™æ—¶è¿”å›0ï¼Œä»1å¼€å§‹
             }
         }
 
         /// <summary>
-        /// ´ÓÆ¾Ö¤ºÅÖĞÌáÈ¡ĞòºÅ¡£
+        /// ä»å‡­è¯å·ä¸­æå–åºå·ã€‚
         /// </summary>
-        /// <param name="voucherNumber">Æ¾Ö¤ºÅ</param>
-        /// <param name="pattern">Ä£Ê½Ç°×º</param>
-        /// <returns>ĞòºÅ</returns>
+        /// <param name="voucherNumber">å‡­è¯å·</param>
+        /// <param name="pattern">æ¨¡å¼å‰ç¼€</param>
+        /// <returns>åºå·</returns>
         private int? ExtractSequenceFromVoucherNumber(string voucherNumber, string pattern)
         {
             if (string.IsNullOrEmpty(voucherNumber) || !voucherNumber.StartsWith(pattern))
@@ -450,11 +328,11 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// ¼ì²éÆ¾Ö¤ºÅÊÇ·ñ´æÔÚÖØ¸´¡£
+        /// æ£€æŸ¥å‡­è¯å·æ˜¯å¦å­˜åœ¨é‡å¤ã€‚
         /// </summary>
-        /// <param name="voucherNumber">Æ¾Ö¤ºÅ</param>
-        /// <param name="year">Äê·İ</param>
-        /// <returns>ÊÇ·ñ´æÔÚÖØ¸´</returns>
+        /// <param name="voucherNumber">å‡­è¯å·</param>
+        /// <param name="year">å¹´ä»½</param>
+        /// <returns>æ˜¯å¦å­˜åœ¨é‡å¤</returns>
         private bool CheckVoucherNumberDuplicate(string voucherNumber, int year)
         {
             try
@@ -465,8 +343,8 @@ namespace PowerLmsWebApi.Controllers
             }
             catch (Exception ex)
             {
-                _Logger.LogError(ex, "¼ì²éÆ¾Ö¤ºÅÖØ¸´Ê±·¢Éú´íÎó");
-                return false; // ³ö´íÊ±·µ»Øfalse£¬±ÜÃâ×èÈûÁ÷³Ì
+                _Logger.LogError(ex, "æ£€æŸ¥å‡­è¯å·é‡å¤æ—¶å‘ç”Ÿé”™è¯¯");
+                return false; // å‡ºé”™æ—¶è¿”å›falseï¼Œé¿å…é˜»å¡æµç¨‹
             }
         }
 

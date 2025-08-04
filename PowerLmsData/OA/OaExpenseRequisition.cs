@@ -1,4 +1,24 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿/*
+ * 数据访问层
+ * OA费用申请单模块 - 数据实体和业务扩展方法
+ * 
+ * 功能说明：
+ * - OA日常费用申请单数据模型定义
+ * - 申请单明细项数据模型定义
+ * - 结算与确认流程状态管理
+ * - 编辑权限控制扩展方法
+ * 
+ * 技术特点：
+ * - 基于Entity Framework Core的数据建模
+ * - 多租户数据隔离支持
+ * - 二进制位状态枚举设计
+ * - 状态驱动的编辑权限控制
+ * 
+ * 作者：PowerLms团队
+ * 创建时间：2024
+ * 最后修改：2025-01-27 - 新增结算确认流程状态管理和编辑权限控制
+ */
+using Microsoft.EntityFrameworkCore;
 using OW.Data;
 using System;
 using System.ComponentModel.DataAnnotations;
@@ -24,6 +44,42 @@ namespace PowerLms.Data.OA
     }
 
     /// <summary>
+    /// OA费用申请单状态枚举。采用二进制位值设计，支持位运算操作。
+    /// </summary>
+    public enum OaExpenseStatus : byte
+    {
+        /// <summary>
+        /// 草稿状态，可完全编辑
+        /// </summary>
+        Draft = 0,
+        
+        /// <summary>
+        /// 审批中，不能修改金额汇率等主要字段
+        /// </summary>
+        InApproval = 1,
+        
+        /// <summary>
+        /// 审批完成，待结算
+        /// </summary>
+        ApprovedPendingSettlement = 2,
+        
+        /// <summary>
+        /// 已结算，待确认。明细项不可修改
+        /// </summary>
+        SettledPendingConfirm = 4,
+        
+        /// <summary>
+        /// 已确认，可导入财务。总单和明细完全锁定
+        /// </summary>
+        ConfirmedReadyForExport = 8,
+        
+        /// <summary>
+        /// 已导入财务，完全锁定
+        /// </summary>
+        ExportedToFinance = 16
+    }
+
+    /// <summary>
     /// OA日常费用申请单主表。
     /// 用于处理日常费用（报销、借款）申请，独立于主营业务的费用申请。
     /// </summary>
@@ -39,6 +95,7 @@ namespace PowerLms.Data.OA
             CreateDateTime = OwHelper.WorldNow;
             CurrencyCode = "CNY";
             ExchangeRate = 1.0000m;
+            Status = OaExpenseStatus.Draft; // 默认为草稿状态
         }
 
         /// <summary>
@@ -49,8 +106,10 @@ namespace PowerLms.Data.OA
 
         /// <summary>
         /// 申请人Id（员工账号Id）。
+        /// 已废弃：请使用 CreateBy 字段记录创建人/登记人/申请人信息。
         /// </summary>
-        [Comment("申请人Id（员工账号Id）")]
+        [Comment("申请人Id（员工账号Id）。已废弃字段，请使用CreateBy")]
+        [Obsolete("已废弃原申请人字段，后续不再使用。费用申请单的逻辑调整为：创建人、登记人、申请人三者都使用CreateBy字段记录。")]
         public Guid? ApplicantId { get; set; }
 
         /// <summary>
@@ -141,6 +200,74 @@ namespace PowerLms.Data.OA
         public decimal Amount { get; set; }
 
         /// <summary>
+        /// 申请单状态。采用二进制位值，支持位运算操作。
+        /// </summary>
+        [Comment("申请单状态，采用二进制位值")]
+        public OaExpenseStatus Status { get; set; } = OaExpenseStatus.Draft;
+
+        #region 结算相关字段（第一步：出纳操作）
+        
+        /// <summary>
+        /// 结算操作人Id。执行结算操作的出纳人员Id。
+        /// </summary>
+        [Comment("结算操作人Id，执行结算操作的出纳人员Id")]
+        public Guid? SettlementOperatorId { get; set; }
+        
+        /// <summary>
+        /// 结算时间。出纳执行结算操作的时间。
+        /// </summary>
+        [Comment("结算时间，出纳执行结算操作的时间")]
+        [Precision(3)]
+        public DateTime? SettlementDateTime { get; set; }
+        
+        /// <summary>
+        /// 结算方式。现金/银行转账等结算方式说明。
+        /// </summary>
+        [Comment("结算方式，现金或银行转账等结算方式说明")]
+        [MaxLength(50)]
+        public string SettlementMethod { get; set; }
+        
+        /// <summary>
+        /// 结算备注。结算相关的备注说明。
+        /// </summary>
+        [Comment("结算备注，结算相关的备注说明")]
+        [MaxLength(500)]
+        public string SettlementRemark { get; set; }
+
+        #endregion
+
+        #region 确认相关字段（第二步：会计操作）
+        
+        /// <summary>
+        /// 确认操作人Id。执行确认操作的会计人员Id。
+        /// </summary>
+        [Comment("确认操作人Id，执行确认操作的会计人员Id")]
+        public Guid? ConfirmOperatorId { get; set; }
+        
+        /// <summary>
+        /// 确认时间。会计执行确认操作的时间。
+        /// </summary>
+        [Comment("确认时间，会计执行确认操作的时间")]
+        [Precision(3)]
+        public DateTime? ConfirmDateTime { get; set; }
+        
+        /// <summary>
+        /// 银行流水号。用于确认的银行流水号。
+        /// </summary>
+        [Comment("银行流水号，用于确认的银行流水号")]
+        [MaxLength(100)]
+        public string BankFlowNumber { get; set; }
+        
+        /// <summary>
+        /// 确认备注。确认相关的备注说明。
+        /// </summary>
+        [Comment("确认备注，确认相关的备注说明")]
+        [MaxLength(500)]
+        public string ConfirmRemark { get; set; }
+
+        #endregion
+
+        /// <summary>
         /// 审核时间。为空表示未审核。一般通过后台填写审核时间。数据库迁移后不可修改。
         /// </summary>
         [Comment("审核时间。为空表示未审核。一般通过后台填写审核时间")]
@@ -156,9 +283,12 @@ namespace PowerLms.Data.OA
         #region ICreatorInfo
 
         /// <summary>
-        /// 创建者Id（即登记人Id）。申请人申请时，记录人=申请人（申请人）；登记人不选择为申请人，申请时登记人选择申请人，登记人为申请人。
+        /// 创建者Id。统一记录创建人、登记人、申请人信息。
+        /// 创建人：记录谁发起了申请单。
+        /// 登记人：实际登记费用的人。
+        /// 申请人：保留为业务上的申请主体，如有特殊场景区分。
         /// </summary>
-        [Comment("创建者Id（即登记人Id）")]
+        [Comment("创建者Id。统一记录创建人、登记人、申请人信息")]
         public Guid? CreateBy { get; set; }
 
         /// <summary>
@@ -287,21 +417,27 @@ namespace PowerLms.Data.OA
 
         /// <summary>
         /// 获取申请人信息。
+        /// 注意：ApplicantId字段已废弃，此方法保留仅为向后兼容。
+        /// 推荐使用 GetRegistrar() 方法获取创建人/登记人/申请人信息。
         /// </summary>
         /// <param name="requisition">申请单</param>
         /// <param name="context">数据库上下文</param>
         /// <returns>申请人账号对象</returns>
+        [Obsolete("ApplicantId字段已废弃，请使用CreateBy统一记录创建人/登记人/申请人信息，推荐使用GetRegistrar()方法")]
         public static Account GetApplicant(this OaExpenseRequisition requisition, DbContext context)
         {
             return requisition.ApplicantId.HasValue ? context.Set<Account>().Find(requisition.ApplicantId.Value) : null;
         }
 
         /// <summary>
-        /// 获取登记人信息。CreateBy就是登记人Id。
+        /// 获取创建人/登记人/申请人信息。CreateBy统一记录这些角色信息。
+        /// 创建人：记录谁发起了申请单。
+        /// 登记人：实际登记费用的人。  
+        /// 申请人：保留为业务上的申请主体，如有特殊场景区分。
         /// </summary>
         /// <param name="requisition">申请单</param>
         /// <param name="context">数据库上下文</param>
-        /// <returns>登记人账号对象</returns>
+        /// <returns>创建人账号对象</returns>
         public static Account GetRegistrar(this OaExpenseRequisition requisition, DbContext context)
         {
             return requisition.CreateBy.HasValue ? context.Set<Account>().Find(requisition.CreateBy.Value) : null;
@@ -319,18 +455,81 @@ namespace PowerLms.Data.OA
         }
 
         /// <summary>
-        /// 判断申请单是否可以编辑。已审核的申请单不可编辑。
+        /// 获取结算操作人信息。
+        /// </summary>
+        /// <param name="requisition">申请单</param>
+        /// <param name="context">数据库上下文</param>
+        /// <returns>结算操作人账号对象</returns>
+        public static Account GetSettlementOperator(this OaExpenseRequisition requisition, DbContext context)
+        {
+            return requisition.SettlementOperatorId.HasValue ? context.Set<Account>().Find(requisition.SettlementOperatorId.Value) : null;
+        }
+
+        /// <summary>
+        /// 获取确认操作人信息。
+        /// </summary>
+        /// <param name="requisition">申请单</param>
+        /// <param name="context">数据库上下文</param>
+        /// <returns>确认操作人账号对象</returns>
+        public static Account GetConfirmOperator(this OaExpenseRequisition requisition, DbContext context)
+        {
+            return requisition.ConfirmOperatorId.HasValue ? context.Set<Account>().Find(requisition.ConfirmOperatorId.Value) : null;
+        }
+
+        #region 编辑权限控制扩展方法
+
+        /// <summary>
+        /// 判断申请单是否可以编辑。基于状态的全面编辑权限控制。
+        /// 只有草稿状态可以完全编辑。
         /// </summary>
         /// <param name="requisition">申请单</param>
         /// <param name="context">数据库上下文（可选）</param>
         /// <returns>可以编辑返回true，否则返回false</returns>
         public static bool CanEdit(this OaExpenseRequisition requisition, DbContext context = null)
         {
-            return !requisition.AuditDateTime.HasValue; // 未审核的可以编辑
+            return requisition.Status == OaExpenseStatus.Draft; // 只有草稿状态可以完全编辑
         }
 
         /// <summary>
-        /// 判断申请单是否已审核。
+        /// 判断申请单主要字段（金额、汇率、币种）是否可以编辑。
+        /// 进入审批工作流后不能修改总单上的金额与汇率。
+        /// </summary>
+        /// <param name="requisition">申请单</param>
+        /// <param name="context">数据库上下文（可选）</param>
+        /// <returns>可以编辑主要字段返回true，否则返回false</returns>
+        public static bool CanEditMainFields(this OaExpenseRequisition requisition, DbContext context = null)
+        {
+            return requisition.Status == OaExpenseStatus.Draft; // 进入审批后不能修改金额汇率等主要字段
+        }
+
+        /// <summary>
+        /// 判断申请单明细是否可以编辑。
+        /// 结算后不能修改明细项。
+        /// </summary>
+        /// <param name="requisition">申请单</param>
+        /// <param name="context">数据库上下文（可选）</param>
+        /// <returns>可以编辑明细返回true，否则返回false</returns>
+        public static bool CanEditItems(this OaExpenseRequisition requisition, DbContext context = null)
+        {
+            return requisition.Status < OaExpenseStatus.SettledPendingConfirm; // 结算后不能修改明细项
+        }
+
+        /// <summary>
+        /// 判断申请单是否完全不可编辑。
+        /// 确认后总单和明细都不能修改。
+        /// </summary>
+        /// <param name="requisition">申请单</param>
+        /// <param name="context">数据库上下文（可选）</param>
+        /// <returns>完全锁定返回true，否则返回false</returns>
+        public static bool IsCompletelyLocked(this OaExpenseRequisition requisition, DbContext context = null)
+        {
+            return requisition.Status >= OaExpenseStatus.ConfirmedReadyForExport; // 确认后完全不可编辑
+        }
+
+        #endregion
+
+        /// <summary>
+        /// 判断申请单是否已审核。兼容原有逻辑。
         /// </summary>
         /// <param name="requisition">申请单</param>
         /// <returns>已审核返回true，否则返回false</returns>
@@ -340,14 +539,23 @@ namespace PowerLms.Data.OA
         }
 
         /// <summary>
-        /// 获取申请单的审批状态。
+        /// 获取申请单的审批状态。基于新状态枚举的状态显示。
         /// </summary>
         /// <param name="requisition">申请单</param>
         /// <param name="context">数据库上下文</param>
         /// <returns>审批状态描述</returns>
         public static string GetApprovalStatus(this OaExpenseRequisition requisition, DbContext context = null)
         {
-            return requisition.AuditDateTime.HasValue ? "已审核" : "草稿";
+            return requisition.Status switch
+            {
+                OaExpenseStatus.Draft => "草稿",
+                OaExpenseStatus.InApproval => "审批中",
+                OaExpenseStatus.ApprovedPendingSettlement => "待结算",
+                OaExpenseStatus.SettledPendingConfirm => "待确认",
+                OaExpenseStatus.ConfirmedReadyForExport => "可导入财务",
+                OaExpenseStatus.ExportedToFinance => "已导入财务",
+                _ => "未知状态"
+            };
         }
 
         /// <summary>
@@ -436,6 +644,40 @@ namespace PowerLms.Data.OA
         public static SimpleDataDic GetFinanceDepartment(this OaExpenseRequisitionItem item, DbContext context)
         {
             return item.DepartmentId.HasValue ? context.Set<SimpleDataDic>().Find(item.DepartmentId.Value) : null;
+        }
+    }
+
+    /// <summary>
+    /// OA费用申请单状态流转控制静态类。
+    /// </summary>
+    public static class OaExpenseStatusTransition
+    {
+        /// <summary>
+        /// 判断申请单是否可以执行结算操作。
+        /// </summary>
+        /// <param name="requisition">申请单实体</param>
+        /// <returns>可以结算返回true，否则返回false</returns>
+        public static bool CanSettle(this OaExpenseRequisition requisition)
+        {
+            // 1. 状态必须是 ApprovedPendingSettlement
+            // 2. 工作流完成状态检查由控制器层负责
+            // 3. 权限检查由控制器层负责
+            return requisition.Status == OaExpenseStatus.ApprovedPendingSettlement;
+        }
+        
+        /// <summary>
+        /// 判断申请单是否可以执行确认操作。
+        /// </summary>
+        /// <param name="requisition">申请单实体</param>
+        /// <param name="currentUserId">当前用户Id</param>
+        /// <returns>可以确认返回true，否则返回false</returns>
+        public static bool CanConfirm(this OaExpenseRequisition requisition, Guid currentUserId)
+        {
+            // 1. 状态必须是 SettledPendingConfirm
+            // 2. 确认人不能是结算人（职责分离）
+            // 3. 权限检查由控制器层负责
+            return requisition.Status == OaExpenseStatus.SettledPendingConfirm 
+                && currentUserId != requisition.SettlementOperatorId;
         }
     }
 }

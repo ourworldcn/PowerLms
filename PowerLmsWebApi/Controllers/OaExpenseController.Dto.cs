@@ -84,7 +84,9 @@ namespace PowerLmsWebApi.Controllers
 
     /// <summary>
     /// 审核OA费用申请单功能的参数封装类。
+    /// 已废弃：请使用新的结算和确认流程。
     /// </summary>
+    [Obsolete("已废弃原有审核接口，请使用SettleOaExpenseRequisitionParamsDto和ConfirmOaExpenseRequisitionParamsDto实现两步式处理")]
     public class AuditOaExpenseRequisitionParamsDto : TokenDtoBase
     {
         /// <summary>
@@ -101,9 +103,96 @@ namespace PowerLmsWebApi.Controllers
 
     /// <summary>
     /// 审核OA费用申请单功能的返回值封装类。
+    /// 已废弃：请使用新的结算和确认流程。
     /// </summary>
+    [Obsolete("已废弃原有审核接口，请使用SettleOaExpenseRequisitionReturnDto和ConfirmOaExpenseRequisitionReturnDto")]
     public class AuditOaExpenseRequisitionReturnDto : ReturnDtoBase
     {
+    }
+
+    #endregion
+
+    #region 新增结算确认相关DTO
+
+    /// <summary>
+    /// 结算操作参数DTO。
+    /// </summary>
+    public class SettleOaExpenseRequisitionParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 申请单ID。
+        /// </summary>
+        [Required]
+        public Guid RequisitionId { get; set; }
+
+        /// <summary>
+        /// 结算方式。现金/银行转账等结算方式说明。
+        /// </summary>
+        [Required]
+        [MaxLength(50)]
+        public string SettlementMethod { get; set; }
+
+        /// <summary>
+        /// 结算备注。结算相关的备注说明。
+        /// </summary>
+        [MaxLength(500)]
+        public string SettlementRemark { get; set; }
+    }
+
+    /// <summary>
+    /// 结算操作返回值DTO。
+    /// </summary>
+    public class SettleOaExpenseRequisitionReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 结算完成时间。
+        /// </summary>
+        public DateTime SettlementDateTime { get; set; }
+
+        /// <summary>
+        /// 更新后的申请单状态。
+        /// </summary>
+        public OaExpenseStatus NewStatus { get; set; }
+    }
+
+    /// <summary>
+    /// 确认操作参数DTO。
+    /// </summary>
+    public class ConfirmOaExpenseRequisitionParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 申请单ID。
+        /// </summary>
+        [Required]
+        public Guid RequisitionId { get; set; }
+
+        /// <summary>
+        /// 银行流水号。用于确认的银行流水号。
+        /// </summary>
+        [MaxLength(100)]
+        public string BankFlowNumber { get; set; }
+
+        /// <summary>
+        /// 确认备注。确认相关的备注说明。
+        /// </summary>
+        [MaxLength(500)]
+        public string ConfirmRemark { get; set; }
+    }
+
+    /// <summary>
+    /// 确认操作返回值DTO。
+    /// </summary>
+    public class ConfirmOaExpenseRequisitionReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 确认完成时间。
+        /// </summary>
+        public DateTime ConfirmDateTime { get; set; }
+
+        /// <summary>
+        /// 更新后的申请单状态。
+        /// </summary>
+        public OaExpenseStatus NewStatus { get; set; }
     }
 
     #endregion
@@ -251,22 +340,16 @@ namespace PowerLmsWebApi.Controllers
     public class GenerateVoucherNumberParamsDto : TokenDtoBase
     {
         /// <summary>
-        /// 申请单ID。
-        /// </summary>
-        [Required]
-        public Guid RequisitionId { get; set; }
-
-        /// <summary>
-        /// 结算账号ID。
+        /// 结算账号ID。用于获取凭证字。
         /// </summary>
         [Required]
         public Guid SettlementAccountId { get; set; }
 
         /// <summary>
-        /// 结算时间。
+        /// 账期时间。用于确定凭证号的期间（月份）。
         /// </summary>
         [Required]
-        public DateTime SettlementDateTime { get; set; }
+        public DateTime AccountingPeriod { get; set; }
     }
 
     /// <summary>

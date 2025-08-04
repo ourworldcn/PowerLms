@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PowerLmsServer.EfData;
 
@@ -11,9 +12,10 @@ using PowerLmsServer.EfData;
 namespace PowerLmsData.Migrations
 {
     [DbContext(typeof(PowerLmsUserDbContext))]
-    partial class PowerLmsUserDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250804002419_25080401")]
+    partial class _25080401
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1579,46 +1581,6 @@ namespace PowerLmsData.Migrations
                     b.ToTable("OaExpenseRequisitionItems");
 
                     b.HasComment("OA费用申请单明细表");
-                });
-
-            modelBuilder.Entity("PowerLms.Data.OA.VoucherSequence", b =>
-                {
-                    b.Property<Guid>("OrgId")
-                        .HasColumnType("uniqueidentifier")
-                        .HasComment("组织机构ID，多租户隔离");
-
-                    b.Property<int>("Month")
-                        .HasColumnType("int")
-                        .HasComment("月份");
-
-                    b.Property<string>("VoucherCharacter")
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)")
-                        .HasComment("凭证字，直接存储避免关联银行信息");
-
-                    b.Property<DateTime>("CreateDateTime")
-                        .HasColumnType("datetime2")
-                        .HasComment("创建时间");
-
-                    b.Property<DateTime>("LastUpdateDateTime")
-                        .HasColumnType("datetime2")
-                        .HasComment("最后更新时间");
-
-                    b.Property<int>("MaxSequence")
-                        .HasColumnType("int")
-                        .HasComment("当前最大序号");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("rowversion")
-                        .HasComment("行版本，用于乐观锁控制");
-
-                    b.HasKey("OrgId", "Month", "VoucherCharacter");
-
-                    b.ToTable("VoucherSequences");
-
-                    b.HasComment("凭证序号管理表");
                 });
 
             modelBuilder.Entity("PowerLms.Data.OrgTaxChannelAccount", b =>

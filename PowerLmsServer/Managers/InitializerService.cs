@@ -38,6 +38,7 @@ using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace PowerLmsServer.Managers
 {
@@ -292,11 +293,11 @@ namespace PowerLmsServer.Managers
                                     continue;
                                 }
 
-                                // JSON反序列化为实体集合
+                                // JSON反序列化为实体集合，使用企业级配置处理Excel数据类型转换
                                 jsonStream.Position = 0;
-
+                                var jsonOptions = CreateExcelDataJsonOptions();
                                 var collectionType = typeof(IEnumerable<>).MakeGenericType(entityType);
-                                var entities = JsonSerializer.Deserialize(jsonStream, collectionType) as IEnumerable;   // 为性能考虑，直接从流中反序列化
+                                var entities = JsonSerializer.Deserialize(jsonStream, collectionType, jsonOptions) as IEnumerable;
 
                                 if (entities == null)
                                 {
@@ -517,6 +518,30 @@ namespace PowerLmsServer.Managers
                 _logger.LogError(ex, "清理无效关联关系时发生错误");
                 throw;
             }
+        }
+
+        #endregion
+
+        #region Excel数据类型转换支持
+
+        /// <summary>
+        /// 创建专用于Excel数据反序列化的JSON配置选项
+        /// 使用.NET 6内置功能处理Excel中数字类型与实体字符串属性的类型转换问题
+        /// </summary>
+        /// <returns>JSON序列化选项</returns>
+        private static JsonSerializerOptions CreateExcelDataJsonOptions()
+        {
+            return new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                ReadCommentHandling = JsonCommentHandling.Skip,
+                AllowTrailingCommas = true,
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
+                // 核心配置：允许从字符串读取数字，处理Excel数据类型混合的问题
+                NumberHandling = JsonNumberHandling.AllowReadingFromString,
+                // 编码器配置：处理中文字符等特殊字符
+                Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+            };
         }
 
         #endregion

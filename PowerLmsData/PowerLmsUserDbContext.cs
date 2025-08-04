@@ -88,6 +88,15 @@ namespace PowerLmsServer.EfData
             modelBuilder.Entity<RolePermission>().HasKey(nameof(RolePermission.RoleId), nameof(RolePermission.PermissionId));
             #endregion 权限相关
 
+            #region OA系统相关
+            // 配置凭证序号管理表的联合主键，这个就等于为 OrgId增加了索引
+            modelBuilder.Entity<VoucherSequence>().HasKey(
+                nameof(VoucherSequence.OrgId),
+                nameof(VoucherSequence.Month), 
+                nameof(VoucherSequence.VoucherCharacter));
+            
+            #endregion OA系统相关
+
             base.OnModelCreating(modelBuilder);
 
             #region 应用日志相关
@@ -540,6 +549,11 @@ namespace PowerLmsServer.EfData
         /// OA费用申请单明细表。
         /// </summary>
         public DbSet<OaExpenseRequisitionItem> OaExpenseRequisitionItems { get; set; }
+
+        /// <summary>
+        /// 凭证序号管理表。
+        /// </summary>
+        public DbSet<VoucherSequence> VoucherSequences { get; set; }
 
         #endregion
 

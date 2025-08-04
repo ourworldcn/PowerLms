@@ -27,6 +27,7 @@ namespace PowerLmsWebApi.Controllers
         private readonly EntityManager _EntityManager;
         private readonly OwWfManager _WfManager;
         private readonly IMapper _Mapper;
+        private readonly AuthorizationManager _AuthorizationManager;
 
         /// <summary>
         /// 构造函数。
@@ -37,7 +38,8 @@ namespace PowerLmsWebApi.Controllers
             ILogger<OaExpenseController> logger,
             EntityManager entityManager,
             OwWfManager wfManager,
-            IMapper mapper)
+            IMapper mapper,
+            AuthorizationManager authorizationManager)
         {
             _DbContext = dbContext;
             _ServiceProvider = serviceProvider;
@@ -46,6 +48,7 @@ namespace PowerLmsWebApi.Controllers
             _EntityManager = entityManager;
             _WfManager = wfManager;
             _Mapper = mapper;
+            _AuthorizationManager = authorizationManager;
         }
 
         #region OA费用申请单主表操作
@@ -77,8 +80,8 @@ namespace PowerLmsWebApi.Controllers
                 // 非超管用户权限过滤
                 if (!context.User.IsSuperAdmin)
                 {
-                    // 非超管只能看自己申请的或自己登记的
-                    dbSet = dbSet.Where(r => r.ApplicantId == context.User.Id || r.CreateBy == context.User.Id);
+                    // 只能看自己创建/登记的申请单（CreateBy记录创建人/登记人/申请人）
+                    dbSet = dbSet.Where(r => r.CreateBy == context.User.Id);
                 }
 
                 // 确保条件字典不区分大小写
@@ -138,18 +141,11 @@ namespace PowerLmsWebApi.Controllers
                 entity.CreateBy = context.User.Id; // CreateBy就是登记人
                 entity.CreateDateTime = OwHelper.WorldNow;
 
-                // 处理申请模式：代人登记
-                if (model.IsRegisterForOthers)
-                {
-                    // 代为登记模式：登记人为当前用户（CreateBy），申请人由用户选择
-                    // 申请人Id应由前端传入
-                }
-                else
-                {
-                    // 自己申请模式：申请人和登记人都是当前用户
-                    entity.ApplicantId = context.User.Id;
-                }
-
+                // 注意：ApplicantId字段已废弃，统一使用CreateBy记录创建人/登记人/申请人
+                // 处理申请模式：当前所有人员角色都通过CreateBy记录
+                // 无论是代人登记还是自己申请，CreateBy都记录当前登录用户
+                // 不再使用ApplicantId字段
+                
                 // 初始化审核字段
                 entity.AuditDateTime = null;
                 entity.AuditOperatorId = null;
@@ -205,14 +201,21 @@ namespace PowerLmsWebApi.Controllers
                     {
                         result.HasError = true;
                         result.ErrorCode = 403;
-                        result.DebugMessage = "申请单已审核，无法修改";
+                        result.DebugMessage = GetEditRestrictionMessage(existing.Status);
                         return result;
                     }
 
-                    // 检查用户权限：只能修改自己申请的申请单或自己登记的申请单
-                    if ((existing.ApplicantId.HasValue && existing.ApplicantId.Value != context.User.Id) && 
-                        (existing.CreateBy.HasValue && existing.CreateBy.Value != context.User.Id) && 
-                        !context.User.IsSuperAdmin)
+                    // 新增：检查主要字段编辑权限
+                    if (ItemContainsMainFieldChanges(item, existing) && !existing.CanEditMainFields(_DbContext))
+                    {
+                        result.HasError = true;
+                        result.ErrorCode = 403;
+                        result.DebugMessage = "申请单已进入审批流程，不能修改金额、汇率和币种字段";
+                        return result;
+                    }
+
+                    // 检查用户权限：只能修改自己创建/登记的申请单（废弃ApplicantId，统一使用CreateBy）
+                    if (existing.CreateBy.HasValue && existing.CreateBy.Value != context.User.Id && !context.User.IsSuperAdmin)
                     {
                         result.HasError = true;
                         result.ErrorCode = 403;
@@ -230,18 +233,51 @@ namespace PowerLmsWebApi.Controllers
                     return result;
                 }
 
-                // 确保核心字段不被修改
+                // 确保核心字段不被修改，增加状态驱动的字段保护
                 foreach (var item in model.Items)
                 {
                     var entry = _DbContext.Entry(item);
+                    var existing = entry.Entity as OaExpenseRequisition;
+                    
+                    // 原有的保护字段
                     entry.Property(e => e.OrgId).IsModified = false; // 机构Id创建时确定，不可修改
                     entry.Property(e => e.CreateBy).IsModified = false;
                     entry.Property(e => e.CreateDateTime).IsModified = false;
                     entry.Property(e => e.AuditDateTime).IsModified = false;
                     entry.Property(e => e.AuditOperatorId).IsModified = false;
-                }
 
-                _DbContext.SaveChanges();
+                    // 新增：状态驱动的字段保护
+                    if (!existing.CanEditMainFields())
+                    {
+                        entry.Property(e => e.Amount).IsModified = false;        // 保护金额
+                        entry.Property(e => e.ExchangeRate).IsModified = false; // 保护汇率
+                        entry.Property(e => e.CurrencyCode).IsModified = false; // 保护币种
+                    }
+
+                    if (existing.IsCompletelyLocked())
+                    {
+                        // 确认后所有业务字段都不可修改，只允许系统字段更新
+                        var allowedProperties = new[] { 
+                            nameof(OaExpenseRequisition.Status),
+                            nameof(OaExpenseRequisition.SettlementOperatorId),
+                            nameof(OaExpenseRequisition.SettlementDateTime),
+                            nameof(OaExpenseRequisition.SettlementMethod),
+                            nameof(OaExpenseRequisition.SettlementRemark),
+                            nameof(OaExpenseRequisition.ConfirmOperatorId),
+                            nameof(OaExpenseRequisition.ConfirmDateTime),
+                            nameof(OaExpenseRequisition.BankFlowNumber),
+                            nameof(OaExpenseRequisition.ConfirmRemark)
+                        };
+                        
+                        foreach (var property in entry.Properties)
+                        {
+                            if (!allowedProperties.Contains(property.Metadata.Name))
+                            {
+                                property.IsModified = false;
+                            }
+                        }
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -285,10 +321,8 @@ namespace PowerLmsWebApi.Controllers
                         return result;
                     }
 
-                    // 检查用户权限
-                    if ((entity.ApplicantId.HasValue && entity.ApplicantId.Value != context.User.Id) && 
-                        (entity.CreateBy.HasValue && entity.CreateBy.Value != context.User.Id) && 
-                        !context.User.IsSuperAdmin)
+                    // 检查用户权限：只能删除自己创建/登记的申请单（废弃ApplicantId，统一使用CreateBy）
+                    if (entity.CreateBy.HasValue && entity.CreateBy.Value != context.User.Id && !context.User.IsSuperAdmin)
                     {
                         result.HasError = true;
                         result.ErrorCode = 403;
@@ -319,6 +353,7 @@ namespace PowerLmsWebApi.Controllers
 
         /// <summary>
         /// 审核或取消审核OA费用申请单。
+        /// 已废弃：请使用新的结算和确认流程
         /// </summary>
         /// <param name="model">审核参数</param>
         /// <returns>审核结果</returns>
@@ -326,6 +361,7 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="401">无效令牌。</response>
         /// <response code="403">权限不足。</response>
         /// <response code="404">指定Id的申请单不存在。</response>
+        [Obsolete("已废弃原有审核接口，请使用SettleOaExpenseRequisition和ConfirmOaExpenseRequisition实现两步式处理")]
         [HttpPost]
         public ActionResult<AuditOaExpenseRequisitionReturnDto> AuditOaExpenseRequisition(AuditOaExpenseRequisitionParamsDto model)
         {
@@ -409,156 +445,86 @@ namespace PowerLmsWebApi.Controllers
             return result;
         }
 
-        /// <summary>
-        /// 获取当前用户相关的OA费用申请单和审批流状态。
-        /// 跑完标准审批流程后可审核。
-        /// </summary>
-        /// <param name="model">分页和排序参数</param>
-        /// <param name="conditional">查询的条件。支持三种格式的条件：
-        /// 1. 无前缀的条件：直接作为申请单(OaExpenseRequisition)的筛选条件
-        /// 2. "OwWf.字段名" 格式的条件：用于筛选关联的工作流(OwWf)对象
-        /// 所有键不区分大小写。其中，OwWf.State会特殊处理，与OwWfManager.GetWfNodeItemByOpertorId方法的state参数映射关系：
-        /// 0(流转中)→3, 1(成功完成)→4, 2(已被终止)→8
-        /// 通用条件写法:所有条件都是字符串，对区间的写法是用逗号分隔（字符串类型暂时不支持区间且都是模糊查询）如"2024-1-1,2024-1-2"。
-        /// 对强制取null的约束，则写"null"。</param>
-        /// <returns>包含申请单和对应工作流信息的结果集</returns>
-        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
-        /// <response code="401">无效令牌。</response>  
-        [HttpGet]
-        public ActionResult<GetAllOaExpenseRequisitionWithWfReturnDto> GetAllOaExpenseRequisitionWithWf([FromQuery] GetAllOaExpenseRequisitionWithWfParamsDto model,
-            [FromQuery][ModelBinder(typeof(DotKeyDictionaryModelBinder))] Dictionary<string, string> conditional = null)
-        {
-            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) 
-                return Unauthorized();
-            
-            var result = new GetAllOaExpenseRequisitionWithWfReturnDto();
+        #region 私有辅助方法
 
+        /// <summary>
+        /// 检查工作流是否已完成。优先使用OwWfManager，数据库查询作为兜底方案。
+        /// </summary>
+        /// <param name="requisitionId">申请单Id</param>
+        /// <returns>工作流已完成返回true，否则返回false</returns>
+        private bool IsWorkflowCompleted(Guid requisitionId)
+        {
             try
             {
-                // 从条件中分离出不同前缀的条件
-                Dictionary<string, string> wfConditions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                Dictionary<string, string> reqConditions = conditional != null
-                    ? new Dictionary<string, string>(conditional, StringComparer.OrdinalIgnoreCase)
-                    : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                byte wfState = 15; // 默认值，意味着获取指定操作人相关的所有工作流节点项
+                // 第一优先级：使用OwWfManager检查工作流状态
+                var wfItems = _WfManager.GetWfNodeItemByOpertorId(Guid.Empty, 4); // 4=成功完成的流程
+                var completedWf = wfItems.FirstOrDefault(item => 
+                    item.Parent.Parent.DocId == requisitionId);
 
-                if (reqConditions.Count > 0)
+                if (completedWf != null)
                 {
-                    List<string> keysToRemove = new List<string>();
-
-                    foreach (var pair in reqConditions)
-                    {
-                        // 处理工作流条件
-                        if (pair.Key.StartsWith("OwWf.", StringComparison.OrdinalIgnoreCase))
-                        {
-                            string wfFieldName = pair.Key.Substring(5); // 去掉"OwWf."前缀
-
-                            // 处理 State 的特殊情况
-                            if (string.Equals(wfFieldName, "State", StringComparison.OrdinalIgnoreCase))
-                            {
-                                if (byte.TryParse(pair.Value, out var state))
-                                {
-                                    switch (state)
-                                    {
-                                        case 0: // 流转中 - 等价于旧的"3"（1|2）
-                                            wfState = 3; // 使用OwWfManager中的值3：流转中的节点项
-                                            break;
-                                        case 1: // 成功完成 - 等价于旧的"4"
-                                            wfState = 4; // 使用OwWfManager中的值4：成功结束的流程
-                                            break;
-                                        case 2: // 已被终止 - 等价于旧的"8"
-                                            wfState = 8; // 使用OwWfManager中的值8：已失败结束的流程
-                                            break;
-                                        default:
-                                            wfState = 15; // 使用默认值15：不限定状态
-                                            break;
-                                    }
-                                }
-                            }
-                            else // 其他工作流条件
-                            {
-                                wfConditions[wfFieldName] = pair.Value;
-                            }
-                            keysToRemove.Add(pair.Key);
-                        }
-                    }
-
-                    // 从原始条件中移除特殊前缀的条件
-                    foreach (var key in keysToRemove)
-                    {
-                        reqConditions.Remove(key);
-                    }
+                    return true; // OwWfManager确认工作流已完成
                 }
 
-                // 查询关联的工作流
-                var docIdsQuery = _WfManager.GetWfNodeItemByOpertorId(context.User.Id, wfState)
-                    .Select(c => c.Parent.Parent);
+                // 第二优先级：直接查询数据库（兜底方案）
+                var workflow = _DbContext.OwWfs
+                    .Where(w => w.DocId == requisitionId)
+                    .FirstOrDefault();
 
-                // 如果有其他工作流条件，先应用它们
-                if (wfConditions.Count > 0)
-                {
-                    _Logger.LogDebug("应用工作流过滤条件: {conditions}",
-                        string.Join(", ", wfConditions.Select(kv => $"{kv.Key}={kv.Value}")));
-
-                    // 应用工作流筛选条件
-                    docIdsQuery = EfHelper.GenerateWhereAnd(docIdsQuery, wfConditions);
-                }
-
-                // 获取符合条件的文档ID
-                var docIds = docIdsQuery.Select(wf => wf.DocId.Value).Distinct();
-
-                // 构建申请单查询
-                var dbSet = _DbContext.OaExpenseRequisitions.Where(r => docIds.Contains(r.Id));
-
-                // 🔥 修复Bug：工作流查询已经包含权限控制，只需保留组织隔离
-                // 移除 (r.ApplicantId == context.User.Id || r.CreateBy == context.User.Id) 条件
-                // 这样审批人就能看到分配给自己审批的申请单了
-                if (!context.User.IsSuperAdmin)
-                {
-                    dbSet = dbSet.Where(r => r.OrgId == context.User.OrgId);
-                }
-
-                // 应用申请单条件
-                if (reqConditions.Count > 0)
-                {
-                    dbSet = EfHelper.GenerateWhereAnd(dbSet, reqConditions);
-                }
-
-                // 应用分页和排序
-                var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-                var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
-
-                // 获取结果ID集合
-                var resultIds = prb.Result.Select(c => c.Id).ToList();
-
-                // 只查询结果相关的工作流
-                var wfsArray = _DbContext.OwWfs
-                    .Where(c => resultIds.Contains(c.DocId.Value))
-                    .ToArray();
-
-                // 组装结果
-                foreach (var requisition in prb.Result)
-                {
-                    var wf = wfsArray.FirstOrDefault(d => d.DocId == requisition.Id);
-                    result.Result.Add(new GetAllOaExpenseRequisitionWithWfItemDto()
-                    {
-                        Requisition = requisition,
-                        Wf = _Mapper.Map<OwWfDto>(wf),
-                    });
-                }
-
-                result.Total = prb.Total;
+                return workflow?.State == 4; // 检查工作流是否成功完成
             }
             catch (Exception ex)
             {
-                _Logger.LogError(ex, "获取OA费用申请单审批流程列表时发生错误");
-                result.HasError = true;
-                result.ErrorCode = 500;
-                result.DebugMessage = $"获取OA费用申请单审批流程列表时发生错误: {ex.Message}";
-            }
+                _Logger.LogWarning(ex, "检查工作流状态时发生错误，申请单ID: {RequisitionId}，使用数据库查询作为兜底", requisitionId);
 
-            return result;
+                // 异常情况下使用数据库查询
+                try
+                {
+                    var workflow = _DbContext.OwWfs
+                        .Where(w => w.DocId == requisitionId)
+                        .FirstOrDefault();
+                    return workflow?.State == 4;
+                }
+                catch (Exception dbEx)
+                {
+                    _Logger.LogError(dbEx, "数据库查询工作流状态也失败，申请单ID: {RequisitionId}", requisitionId);
+                    return false; // 无法确定状态时保守返回false
+                }
+            }
         }
+
+        /// <summary>
+        /// 获取编辑限制的友好提示消息。
+        /// </summary>
+        /// <param name="status">申请单状态</param>
+        /// <returns>状态对应的限制消息</returns>
+        private static string GetEditRestrictionMessage(OaExpenseStatus status)
+        {
+            return status switch
+            {
+                OaExpenseStatus.InApproval => "申请单正在审批中，不能修改",
+                OaExpenseStatus.ApprovedPendingSettlement => "申请单已审批完成，不能修改",
+                OaExpenseStatus.SettledPendingConfirm => "申请单已结算，不能修改",
+                OaExpenseStatus.ConfirmedReadyForExport => "申请单已确认，不能修改",
+                OaExpenseStatus.ExportedToFinance => "申请单已导入财务，不能修改",
+                _ => "申请单状态不允许修改"
+            };
+        }
+
+        /// <summary>
+        /// 检查修改是否包含主要字段变更。
+        /// </summary>
+        /// <param name="newItem">新的申请单数据</param>
+        /// <param name="existing">现有申请单数据</param>
+        /// <returns>包含主要字段变更返回true，否则返回false</returns>
+        private static bool ItemContainsMainFieldChanges(OaExpenseRequisition newItem, OaExpenseRequisition existing)
+        {
+            return newItem.Amount != existing.Amount ||
+                   newItem.ExchangeRate != existing.ExchangeRate ||
+                   newItem.CurrencyCode != existing.CurrencyCode;
+        }
+
+        #endregion
 
         #endregion
     }
