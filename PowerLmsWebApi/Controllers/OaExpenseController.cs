@@ -196,21 +196,13 @@ namespace PowerLmsWebApi.Controllers
                         return result;
                     }
 
-                    // 检查权限和状态
+                    // 🔧 修正：OA日常费用申请单主单锁定规则
+                    // 一旦不是草稿状态，整个主单都不能修改
                     if (!existing.CanEdit(_DbContext))
                     {
                         result.HasError = true;
                         result.ErrorCode = 403;
                         result.DebugMessage = GetEditRestrictionMessage(existing.Status);
-                        return result;
-                    }
-
-                    // 新增：检查主要字段编辑权限
-                    if (ItemContainsMainFieldChanges(item, existing) && !existing.CanEditMainFields(_DbContext))
-                    {
-                        result.HasError = true;
-                        result.ErrorCode = 403;
-                        result.DebugMessage = "申请单已进入审批流程，不能修改金额、汇率和币种字段";
                         return result;
                     }
 
@@ -233,27 +225,20 @@ namespace PowerLmsWebApi.Controllers
                     return result;
                 }
 
-                // 确保核心字段不被修改，增加状态驱动的字段保护
+                // 确保核心字段不被修改
                 foreach (var item in model.Items)
                 {
                     var entry = _DbContext.Entry(item);
-                    var existing = entry.Entity as OaExpenseRequisition;
                     
-                    // 原有的保护字段
+                    // 始终保护的系统字段
                     entry.Property(e => e.OrgId).IsModified = false; // 机构Id创建时确定，不可修改
                     entry.Property(e => e.CreateBy).IsModified = false;
                     entry.Property(e => e.CreateDateTime).IsModified = false;
                     entry.Property(e => e.AuditDateTime).IsModified = false;
                     entry.Property(e => e.AuditOperatorId).IsModified = false;
 
-                    // 新增：状态驱动的字段保护
-                    if (!existing.CanEditMainFields())
-                    {
-                        entry.Property(e => e.Amount).IsModified = false;        // 保护金额
-                        entry.Property(e => e.ExchangeRate).IsModified = false; // 保护汇率
-                        entry.Property(e => e.CurrencyCode).IsModified = false; // 保护币种
-                    }
-
+                    // 状态驱动的字段保护：确认后只允许系统字段更新
+                    var existing = entry.Entity as OaExpenseRequisition;
                     if (existing.IsCompletelyLocked())
                     {
                         // 确认后所有业务字段都不可修改，只允许系统字段更新
@@ -278,13 +263,19 @@ namespace PowerLmsWebApi.Controllers
                         }
                     }
                 }
+
+                // 保存更改到数据库
+                _DbContext.SaveChanges();
+
+                _Logger.LogInformation("成功修改OA日常费用申请单主单，用户: {UserId}, 申请单数量: {Count}", 
+                    context.User.Id, model.Items.Count());
             }
             catch (Exception ex)
             {
-                _Logger.LogError(ex, "修改OA费用申请单时发生错误");
+                _Logger.LogError(ex, "修改OA日常费用申请单时发生错误");
                 result.HasError = true;
                 result.ErrorCode = 500;
-                result.DebugMessage = $"修改OA费用申请单时发生错误: {ex.Message}";
+                result.DebugMessage = $"修改OA日常费用申请单时发生错误: {ex.Message}";
             }
 
             return result;

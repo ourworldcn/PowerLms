@@ -413,6 +413,11 @@ namespace PowerLmsServer.EfData
         public DbSet<SubjectConfiguration> SubjectConfigurations { get; set; }
 
         /// <summary>
+        /// 实际收付记录表
+        /// </summary>
+        public DbSet<ActualFinancialTransaction> ActualFinancialTransactions { get; set; }
+
+        /// <summary>
         /// 业务费用收付款申请单.
         /// </summary>
         public DbSet<DocFeeRequisition> DocFeeRequisitions { get; set; }

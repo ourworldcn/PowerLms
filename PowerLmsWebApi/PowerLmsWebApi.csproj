@@ -46,8 +46,4 @@
     <Folder Include="Files\" />
   </ItemGroup>
 
-  <ItemGroup>
-    <None Include="..\.github\prompts\me.prompt.md" Link="me.prompt.md" />
-  </ItemGroup>
-
 </Project>
