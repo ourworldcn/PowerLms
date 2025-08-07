@@ -1,4 +1,85 @@
-﻿using System;
+﻿/*
+ * 项目：OwBaseCore基础设施组件
+ * 模块：System.Collections.Generic - 池化列表
+ * 文件说明：
+ * - 功能1：提供基于ArrayPool<T>的高性能池化列表实现
+ * - 功能2：减少频繁分配大数组带来的GC压力和内存碎片
+ * - 功能3：与List<T>保持API兼容，便于迁移和替换
+ * 
+ * PooledList<T> 设计与实现说明：
+ * 
+ * 1. 设计目标：
+ * - 实现一个类似List<T>的泛型集合类PooledList<T>，其内部存储数组全部通过ArrayPool<T>.Shared进行池化分配与回收
+ * - 减少频繁分配大数组带来的GC压力和内存碎片，适用于高性能场景下大量临时数据的收集与处理
+ * - 应用场景主要针对短生命周期的临时数据集合，避免对长期存在的对象使用该类
+ * 
+ * 2. 主要功能需求：
+ * - 通用泛型集合：支持Add、Insert、Remove、Clear、索引器、Count、Capacity等常用操作
+ * - 自动扩容与裁剪：数据超出当前容量时自动扩容，不再使用时可主动裁剪
+ * - 池化内存管理：所有内部数组通过ArrayPool<T>.Shared.Rent/Return管理
+ * - Dispose支持：实现IDisposable，归还内部数组资源
+ * - 数据安全：归还前清理未用槽位，防止数据泄漏
+ * - 接口兼容：尽量与List<T> API保持一致，公有成员要一致，方便迁移和替换
+ * - 支持枚举：实现IEnumerable<T>，支持foreach
+ * - 基类：从Collection<T>派生
+ * 
+ * 3. 设计要点与实现细节：
+ * 
+ * 3.1 字段与基本结构：
+ * - _items：当前池租用的存储数组
+ * - _count：当前元素数量
+ * - _disposed：防止重复释放
+ * - 默认最小容量设为8或由用户指定
+ * 
+ * 3.2 构造与初始化：
+ * - 支持默认与自定义初始容量
+ * - 初始化时通过ArrayPool<T>.Shared.Rent(capacity)获取数组
+ * 
+ * 3.3 添加/插入/扩容：
+ * - 添加元素时，如果容量不足，自动扩容（翻倍增长策略）
+ * - 扩容时，租用新数组，将原有数据拷贝到新数组，归还旧数组
+ * 
+ * 3.4 删除/裁剪/归还：
+ * - 支持Remove、RemoveAt、Clear等操作
+ * - Clear/Dispose/TrimExcess时将不用的数组归还池
+ * - 归还前，将未用元素设为default(T)，防止数据泄漏
+ * 
+ * 3.5 Dispose模式：
+ * - 实现IDisposable，Dispose时归还数组并置空引用，防止再次访问
+ * 
+ * 3.6 枚举器：
+ * - 实现IEnumerable<T>以支持foreach
+ * 
+ * 4. 典型用法：
+ * using var list = new PooledList<byte>(1024);
+ * for (int i = 0; i < 10000; i++) list.Add((byte)i);
+ * DoSomething(list);
+ * // 退出using块或调用Dispose后，底层数组自动归还池
+ * 
+ * 5. 注意事项与局限：
+ * - 归还数组后不得再访问
+ * - 与List<T>不同，Dispose后实例不可再用
+ * - 不可跨线程访问（如需线程安全请自行加锁）
+ * - 适用于短生命周期、大批量数据的场景，不建议长期持有
+ * 
+ * 6. 性能优势：
+ * - 减少GC压力：通过ArrayPool复用数组，减少垃圾回收频率
+ * - 避免内存碎片：池化管理避免频繁的大对象堆分配
+ * - 提高缓存效率：复用的数组可能仍在CPU缓存中
+ * - 降低分配延迟：避免大数组分配时的延迟
+ * 
+ * 技术要点：
+ * - 基于.NET ArrayPool<T>的池化内存管理
+ * - 实现完整的List<T>兼容API，包括查找、排序、移除等高级功能
+ * - 支持谓词操作，如FindIndex、FindAll、RemoveAll等
+ * - 内存安全处理，防止数据泄漏和重复释放
+ * 
+ * 作者：zc
+ * 创建：2024年
+ * 修改：2025-01-27 整合PooledList{T}设计需求文档
+ */
+
+using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -10,25 +91,78 @@ namespace System.Collections.Generic
     /// <summary>
     /// 一个类似 List&lt;T&gt; 的泛型集合类，其内部存储数组通过 ArrayPool&lt;T&gt;.Shared 进行池化分配与回收，
     /// 以减少频繁分配大数组带来的 GC 压力和内存碎片，适用于高性能场景下大量临时数据的收集与处理。
+    /// 
+    /// 设计特点：
+    /// - 池化内存管理：所有内部数组通过ArrayPool<T>.Shared管理，自动租用和归还
+    /// - API兼容性：与List<T>保持高度兼容，支持所有常用操作和高级功能
+    /// - 自动扩容：容量不足时自动扩容，采用翻倍增长策略优化性能
+    /// - 内存安全：归还前自动清理未用槽位，防止敏感数据泄漏
+    /// - 资源管理：实现IDisposable模式，确保资源及时释放
+    /// 
+    /// 性能优势：
+    /// - 减少GC压力：复用ArrayPool中的数组，降低垃圾回收频率
+    /// - 避免LOH分配：大数组复用避免进入大对象堆，减少内存碎片
+    /// - 提高缓存命中：复用的数组可能仍在CPU缓存中，提高访问效率
+    /// - 降低分配延迟：避免大数组分配时的性能开销
+    /// 
+    /// 使用场景：
+    /// - 高频临时数据收集：如日志处理、数据转换、批量计算等
+    /// - 大量数据的临时存储：如文件读取、网络数据接收等
+    /// - 性能敏感的算法：需要频繁创建和销毁列表的算法
+    /// - 内存受限环境：需要减少内存分配和GC压力的场景
+    /// 
+    /// 限制和注意事项：
+    /// - 短生命周期设计：不适合长期持有，使用完毕必须Dispose
+    /// - 非线程安全：需要外部同步机制保证线程安全
+    /// - 一次性使用：Dispose后不能再次使用，与普通List<T>不同
+    /// - 容量管理：建议根据预期大小设置合适的初始容量
     /// </summary>
     /// <remarks>
     /// 注意：此类设计用于短生命周期场景，不适合长期持有。使用完毕后必须调用 Dispose 方法归还资源。
     /// 典型用法是在 using 语句中使用此类的实例。
+    /// 
+    /// 最佳实践：
+    /// - 使用using语句确保及时释放：using var list = new PooledList&lt;T&gt;();
+    /// - 设置合适的初始容量以减少扩容次数
+    /// - 避免在长生命周期对象中保持引用
+    /// - 在高并发场景下注意线程安全
     /// </remarks>
     /// <typeparam name="T">集合中元素的类型</typeparam>
     public sealed class PooledList<T> : PooledListBase<T>, IDisposable
     {
-        private const int DefaultCapacity = 8; // 默认的初始容量
+        /// <summary>
+        /// 默认的初始容量
+        /// 
+        /// 容量选择说明：
+        /// - 设为8是基于List<T>的默认容量设计
+        /// - 平衡内存使用和扩容频率
+        /// - 适合大多数临时数据收集场景
+        /// </summary>
+        private const int DefaultCapacity = 8;
 
         #region 构造函数
-        /// <summary>初始化 PooledList&lt;T&gt; 类的新实例，具有指定的初始容量。</summary>
+        /// <summary>
+        /// 初始化 PooledList&lt;T&gt; 类的新实例，具有指定的初始容量。
+        /// 
+        /// 构造函数说明：
+        /// - 自动通过ArrayPool<T>.Shared.Rent获取指定容量的数组
+        /// - 最小容量保证为DefaultCapacity，避免频繁扩容
+        /// - 适合已知大概数据量的场景，可显著提高性能
+        /// </summary>
         /// <param name="capacity">初始容量，默认为 8</param>
         /// <exception cref="ArgumentOutOfRangeException">capacity 小于 0</exception>
         public PooledList(int capacity = DefaultCapacity) : base(Math.Max(capacity, DefaultCapacity))
         {
         }
 
-        /// <summary>初始化 PooledList&lt;T&gt; 类的新实例，该实例包含从指定集合复制的元素</summary>
+        /// <summary>
+        /// 初始化 PooledList&lt;T&gt; 类的新实例，该实例包含从指定集合复制的元素
+        /// 
+        /// 集合复制说明：
+        /// - 如果源集合实现ICollection<T>，使用其Count作为初始容量
+        /// - 否则使用默认容量，并在AddRange过程中根据需要扩容
+        /// - 适合从现有集合创建池化副本的场景
+        /// </summary>
         /// <param name="collection">一个集合，其元素被复制到新列表中</param>
         /// <exception cref="ArgumentNullException">collection 为 null</exception>
         public PooledList(IEnumerable<T> collection) : base(collection is ICollection<T> c ? c.Count : DefaultCapacity)
@@ -39,7 +173,14 @@ namespace System.Collections.Generic
         #endregion
 
         #region 增强的List<T>兼容方法
-        /// <summary>搜索与指定谓词匹配的元素，并返回整个 PooledList&lt;T&gt; 中第一个匹配元素的从零开始的索引</summary>
+        /// <summary>
+        /// 搜索与指定谓词匹配的元素，并返回整个 PooledList&lt;T&gt; 中第一个匹配元素的从零开始的索引
+        /// 
+        /// 查找功能说明：
+        /// - 提供基于谓词的灵活查找机制
+        /// - 支持复杂的查找条件，不仅限于相等比较
+        /// - 性能优化：从头开始线性搜索，适合小到中等规模数据
+        /// </summary>
         /// <param name="match">定义要搜索的元素的条件的谓词</param>
         /// <returns>如果找到第一个与指定谓词匹配的元素，则为该元素的从零开始的索引，否则为 -1</returns>
         /// <exception cref="ArgumentNullException">match 为 null</exception>
@@ -97,7 +238,14 @@ namespace System.Collections.Generic
             return default;
         }
 
-        /// <summary>检索与指定谓词定义的条件相匹配的所有元素</summary>
+        /// <summary>
+        /// 检索与指定谓词定义的条件相匹配的所有元素
+        /// 
+        /// 批量查找说明：
+        /// - 返回新的PooledList<T>实例，调用者负责释放
+        /// - 如果没有匹配元素，返回空的PooledList<T>
+        /// - 适合需要对匹配元素进行进一步处理的场景
+        /// </summary>
         /// <param name="match">定义要搜索的元素的条件的谓词</param>
         /// <returns>如果找到与指定谓词定义的条件相匹配的元素，则为这些元素组成的 PooledList&lt;T&gt;；否则为空的 PooledList&lt;T&gt;</returns>
         /// <exception cref="ArgumentNullException">match 为 null</exception>
@@ -223,7 +371,14 @@ namespace System.Collections.Generic
             return Array.IndexOf(Buffer, item, index, count);
         }
 
-        /// <summary>从 PooledList&lt;T&gt; 中移除与指定谓词定义的条件相匹配的所有元素</summary>
+        /// <summary>
+        /// 从 PooledList&lt;T&gt; 中移除与指定谓词定义的条件相匹配的所有元素
+        /// 
+        /// 批量移除说明：
+        /// - 使用高效的就地算法，避免多次数组拷贝
+        /// - 保持剩余元素的相对顺序不变
+        /// - 返回实际移除的元素数量
+        /// </summary>
         /// <param name="match">定义要移除的元素的条件的谓词</param>
         /// <returns>从 PooledList&lt;T&gt; 中移除的元素数目</returns>
         /// <exception cref="ArgumentNullException">match 为 null</exception>
