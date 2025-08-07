@@ -12,7 +12,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 
-namespace PowerLmsWebApi.Controllers
+namespace PowerLmsWebApi.Controllers.OA
 {
     /// <summary>
     /// OA费用申请单控制器。

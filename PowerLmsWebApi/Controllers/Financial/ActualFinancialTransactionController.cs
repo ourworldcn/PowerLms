@@ -23,7 +23,7 @@ using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
 using System.Net;
 
-namespace PowerLmsWebApi.Controllers
+namespace PowerLmsWebApi.Controllers.Financial
 {
     /// <summary>
     /// 实际收付记录控制器。

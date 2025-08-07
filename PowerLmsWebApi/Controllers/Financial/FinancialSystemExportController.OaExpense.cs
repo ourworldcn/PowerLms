@@ -18,17 +18,18 @@
 
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using PowerLms.Data.OA;
-using PowerLms.Data.Finance;
 using PowerLms.Data;
+using PowerLms.Data.Finance;
+using PowerLms.Data.OA;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
 using System.Text.Json;
 using OW.Data;
 using DotNetDBF;
+using SysIO = System.IO;
 
-namespace PowerLmsWebApi.Controllers
+namespace PowerLmsWebApi.Controllers.Financial
 {
     /// <summary>
     /// 财务系统导出控制器 - OA日常费用申请单导出模块
@@ -352,9 +353,9 @@ namespace PowerLmsWebApi.Controllers
                 bool fileExists = false;
                 try
                 {
-                    if (System.IO.File.Exists(fileInfoRecord.FilePath))
+                    if (SysIO.File.Exists(fileInfoRecord.FilePath))
                     {
-                        actualFileSize = new FileInfo(fileInfoRecord.FilePath).Length;
+                        actualFileSize = new SysIO.FileInfo(fileInfoRecord.FilePath).Length;
                         fileExists = true;
                     }
                 }

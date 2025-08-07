@@ -31,7 +31,7 @@ using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
 using System.Net;
 
-namespace PowerLmsWebApi.Controllers
+namespace PowerLmsWebApi.Controllers.System
 {
     /// <summary>
     /// 管理员功能控制器——数据字典部分

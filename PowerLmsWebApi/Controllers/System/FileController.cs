@@ -28,13 +28,13 @@ using PowerLmsWebApi.Dto;
 using SixLabors.ImageSharp.Metadata;
 using System.ComponentModel.DataAnnotations;
 using System.Drawing.Imaging;
-using System.IO;
 using System.Net;
 using System.Net.Mime;
 using System.Text;
 using System.Text.Unicode;
+using SysIO = System.IO;
 
-namespace PowerLmsWebApi.Controllers
+namespace PowerLmsWebApi.Controllers.System
 {
     /// <summary>
     /// 文件相关操作的控制器。
@@ -117,7 +117,7 @@ namespace PowerLmsWebApi.Controllers
             var info = _DbContext.PlFileInfos.Find(fileId);
             if (info == null) return NotFound();
             var path = Path.Combine(AppContext.BaseDirectory, "Files", info.FilePath);
-            if (!System.IO.File.Exists(path)) return NotFound();
+            if (!SysIO.File.Exists(path)) return NotFound();
             var stream = new FileStream(path, FileMode.Open);
             return File(stream, "application/octet-stream", info.FileName);
         }

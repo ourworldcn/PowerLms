@@ -6,10 +6,12 @@ using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
 using System.Text.Json;
+using System.Runtime.ExceptionServices;
 using OW.Data;
 using DotNetDBF;
+using SysIO = System.IO;
 
-namespace PowerLmsWebApi.Controllers
+namespace PowerLmsWebApi.Controllers.Financial
 {
     /// <summary>
     /// 财务系统接口导出功能控制器。
@@ -41,13 +43,13 @@ namespace PowerLmsWebApi.Controllers
             _OrgManager = orgManager;
         }
 
-        private readonly AccountManager _AccountManager;
-        private readonly IServiceProvider _ServiceProvider; // 保留，用于当前请求作用域的服务解析
-        private readonly IServiceScopeFactory _ServiceScopeFactory; // 用于后台任务的独立作用域创建
-        private readonly PowerLmsUserDbContext _DbContext;
-        private readonly ILogger<FinancialSystemExportController> _Logger;
-        private readonly OwFileService<PowerLmsUserDbContext> _FileService;
-        private readonly OrgManager<PowerLmsUserDbContext> _OrgManager;
+        readonly AccountManager _AccountManager;
+        readonly IServiceProvider _ServiceProvider; // 保留，用于当前请求作用域的服务解析
+        readonly IServiceScopeFactory _ServiceScopeFactory; // 用于后台任务的独立作用域创建
+        readonly PowerLmsUserDbContext _DbContext;
+        readonly ILogger<FinancialSystemExportController> _Logger;
+        readonly OwFileService<PowerLmsUserDbContext> _FileService;
+        readonly OrgManager<PowerLmsUserDbContext> _OrgManager;
 
         #region HTTP接口
 
@@ -265,13 +267,13 @@ namespace PowerLmsWebApi.Controllers
                     if (fileSize == 0)
                         throw new InvalidOperationException($"DBF文件生成失败，文件为空");
                     memoryStream.Position = 0; // 重置流位置以便读取
-                    
+
                     // 构建最终的显示名称和备注
-                    var finalDisplayName = !string.IsNullOrWhiteSpace(displayName) ? 
+                    var finalDisplayName = !string.IsNullOrWhiteSpace(displayName) ?
                         displayName : $"发票导出-{DateTime.Now:yyyy年MM月dd日}";
-                    var finalRemark = !string.IsNullOrWhiteSpace(remark) ? 
+                    var finalRemark = !string.IsNullOrWhiteSpace(remark) ?
                         remark : $"发票DBF导出文件，共{invoices.Count}张发票，{kingdeeVouchers.Count}条会计分录，导出时间：{exportDateTime:yyyy-MM-dd HH:mm:ss}";
-                    
+
                     fileInfoRecord = fileService.CreateFile(
                         fileStream: memoryStream,
                         fileName: fileName,
@@ -295,9 +297,9 @@ namespace PowerLmsWebApi.Controllers
                 bool fileExists = false;
                 try
                 {
-                    if (System.IO.File.Exists(fileInfoRecord.FilePath))
+                    if (SysIO.File.Exists(fileInfoRecord.FilePath))
                     {
-                        actualFileSize = new FileInfo(fileInfoRecord.FilePath).Length;
+                        actualFileSize = new SysIO.FileInfo(fileInfoRecord.FilePath).Length;
                         fileExists = true;
                     }
                 }
@@ -326,7 +328,7 @@ namespace PowerLmsWebApi.Controllers
                     throw new InvalidOperationException(contextualError, ex); // 对于已知的业务异常，添加上下文信息但保留原始异常
                 else
                 {
-                    System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex).Throw(); // 对于其他异常，直接重新抛出以保留完整的堆栈信息
+                    ExceptionDispatchInfo.Capture(ex).Throw(); // 使用全局using解决命名空间冲突
                     throw; // 这行永远不会执行，但编译器需要
                 }
             }
@@ -411,13 +413,13 @@ namespace PowerLmsWebApi.Controllers
                     {
                         var requisition = dbContext.DocFeeRequisitions
                             .FirstOrDefault(r => r.Id == invoice.DocFeeRequisitionId.Value);
-                            
+
                         if (requisition?.BalanceId.HasValue == true)
                         {
                             // 根据申请单的结算单位ID查询客户资料的财务编码
                             var customer = dbContext.PlCustomers
                                 .FirstOrDefault(c => c.Id == requisition.BalanceId.Value);
-                                
+
                             if (customer != null)
                             {
                                 customerFinancialCode = customer.TacCountNo ?? "";
@@ -425,7 +427,7 @@ namespace PowerLmsWebApi.Controllers
                             }
                         }
                     }
-                    
+
                     // 获取开票项目第一个GoodsName作为摘要
                     var firstItem = items.FirstOrDefault();
                     if (firstItem != null)
@@ -658,7 +660,7 @@ namespace PowerLmsWebApi.Controllers
                 {
                     return invoicesQuery.Where(i => false);
                 }
-                
+
                 var companyOrgIds = orgManager.GetOrgIdsByCompanyId(companyId.Value).ToList();
                 allowedOrgIds = new HashSet<Guid?>(companyOrgIds.Cast<Guid?>());
                 allowedOrgIds.Add(merchantId.Value); // 添加商户ID本身
@@ -700,7 +702,7 @@ namespace PowerLmsWebApi.Controllers
             {
                 "PBI_ACC_RECEIVABLE",   // 应收账款
                 "PBI_SALES_REVENUE",    // 主营业务收入
-                "PBI_TAX_PAYABLE",      // 应交税金
+                "PBI_TAX_PAYABLE"      // 应交税金
             };
 
             var existingCodes = _DbContext.SubjectConfigurations
@@ -769,7 +771,7 @@ namespace PowerLmsWebApi.Controllers
                 {
                     return invoicesQuery.Where(i => false);
                 }
-                
+
                 var userOrgIds = _OrgManager.GetOrgIdsByCompanyId(companyId.Value)
                     .Select(id => (Guid?)id).ToHashSet();
                 userOrgIds.Add(merchantId.Value);

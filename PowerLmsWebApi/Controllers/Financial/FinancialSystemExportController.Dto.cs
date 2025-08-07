@@ -1,6 +1,6 @@
 ﻿using PowerLmsWebApi.Dto;
 
-namespace PowerLmsWebApi.Controllers
+namespace PowerLmsWebApi.Controllers.Financial
 {
     #region DTO定义
 

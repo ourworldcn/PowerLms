@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+ï»¿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PowerLms.Data;
 using PowerLms.Data.Finance;
@@ -8,34 +8,33 @@ using PowerLmsWebApi.Dto;
 using System.Text.Json;
 using OW.Data;
 using DotNetDBF;
+using SysIO = System.IO;
 
-namespace PowerLmsWebApi.Controllers
+namespace PowerLmsWebApi.Controllers.Financial
 {
     /// <summary>
-    /// ²ÆÎñÏµÍ³µ¼³ö¹¦ÄÜ¿ØÖÆÆ÷ - APAB(¼ÆÌáAÕËÓ¦¸¶±¾Î»±Ò¹ÒÕË)Ä£¿é¡£
-    /// ÊµÏÖAPAB(¼ÆÌáAÕËÓ¦¸¶±¾Î»±Ò¹ÒÕË)¹ı³ÌµÄµ¼³ö¹¦ÄÜ¡£
-    /// ¸ù¾İ·ÑÓÃÊı¾İ°´½áËãµ¥Î»¡¢¹úÄÚÍâ¡¢´úµæÊôĞÔ·Ö×éÍ³¼Æ£¬Éú³É½ğµûÆ¾Ö¤ÎÄ¼ş¡£
+    /// è´¢åŠ¡ç³»ç»Ÿå¯¼å‡ºæ§åˆ¶å™¨ - ARAB(è®¡æAè´¦åº”æ”¶)éƒ¨åˆ†
     /// </summary>
     public partial class FinancialSystemExportController
     {
-        #region HTTP½Ó¿Ú - APAB(¼ÆÌáAÕËÓ¦¸¶±¾Î»±Ò¹ÒÕË)
+        #region HTTPæ¥å£ - ARAB(è®¡æAè´¦åº”æ”¶)
 
         /// <summary>
-        /// µ¼³öAÕËÓ¦¸¶±¾Î»±Ò¹ÒÕË(APAB)Êı¾İÎª½ğµûDBF¸ñÊ½ÎÄ¼ş¡£
+        /// è®¡æAè´¦åº”æ”¶æŠµä½å¸æ±‡å·®(ARAB)å¯¼å‡ºä¸ºé‡‘è¶DBFæ ¼å¼æ–‡ä»¶ã€‚
         /// </summary>
         [HttpPost]
-        public ActionResult<ExportApabToDbfReturnDto> ExportApabToDbf(ExportApabToDbfParamsDto model)
+        public ActionResult<ExportArabToDbfReturnDto> ExportArabToDbf(ExportArabToDbfParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
                 return Unauthorized();
 
-            var result = new ExportApabToDbfReturnDto();
+            var result = new ExportArabToDbfReturnDto();
             try
             {
-                // ´ÓExportConditionsÖĞ½âÎöÌõ¼ş
+                // ä»ExportConditionsä¸­è§£ææ¡ä»¶
                 var conditions = model.ExportConditions ?? new Dictionary<string, string>();
                 
-                // ÉèÖÃÄ¬ÈÏÈÕÆÚ·¶Î§
+                // è®¾ç½®é»˜è®¤æ—¥æœŸèŒƒå›´
                 var startDate = conditions.TryGetValue("StartDate", out var startDateStr) && DateTime.TryParse(startDateStr, out var parsedStartDate) 
                     ? parsedStartDate : new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
                 var endDate = conditions.TryGetValue("EndDate", out var endDateStr) && DateTime.TryParse(endDateStr, out var parsedEndDate) 
@@ -43,22 +42,25 @@ namespace PowerLmsWebApi.Controllers
                 var accountingDate = conditions.TryGetValue("AccountingDate", out var accountingDateStr) && DateTime.TryParse(accountingDateStr, out var parsedAccountingDate) 
                     ? parsedAccountingDate : DateTime.Now.Date;
 
-                // Ô¤¼ì²é·ÑÓÃÊı¾İ
-                var feesQuery = _DbContext.DocFees
-                    .Where(f => f.IO == false && // Ö»Í³¼ÆÖ§³ö
-                               f.CreateDateTime >= startDate && 
-                               f.CreateDateTime <= endDate);
+                // é¢„æ£€æŸ¥æ•°æ®æ•°é‡ - ä¿®å¤ï¼šä½¿ç”¨å·¥ä½œå·çš„è´¢åŠ¡æ—¥æœŸå’ŒçŠ¶æ€è¿‡æ»¤
+                var feesQuery = from fee in _DbContext.DocFees
+                               join job in _DbContext.PlJobs on fee.JobId equals job.Id
+                               where fee.IO == true && // åªç»Ÿè®¡æ”¶å…¥
+                                     job.AccountDate >= startDate && 
+                                     job.AccountDate <= endDate &&
+                                     job.JobState == 16 // å·¥ä½œå·å·²å…³é—­çŠ¶æ€
+                               select fee;
 
                 var feeCount = feesQuery.Count();
                 if (feeCount == 0)
                 {
                     result.HasError = true;
                     result.ErrorCode = 404;
-                    result.DebugMessage = "Ã»ÓĞÕÒµ½·ûºÏÌõ¼şµÄ·ÑÓÃÊı¾İ£¬Çëµ÷Õû²éÑ¯Ìõ¼ş";
+                    result.DebugMessage = "æ²¡æœ‰æ‰¾åˆ°ç¬¦åˆæ¡ä»¶çš„è´¹ç”¨æ•°æ®ï¼Œè¯·æ£€æŸ¥æŸ¥è¯¢æ¡ä»¶";
                     return result;
                 }
 
-                // ´´½¨ÈÎÎñ
+                // åˆ›å»ºä»»åŠ¡
                 var taskService = _ServiceProvider.GetRequiredService<OwTaskService<PowerLmsUserDbContext>>();
                 var taskParameters = new Dictionary<string, string>
                 {
@@ -73,13 +75,13 @@ namespace PowerLmsWebApi.Controllers
                 };
 
                 var taskId = taskService.CreateTask(typeof(FinancialSystemExportController),
-                    nameof(ProcessApabDbfExportTask),
+                    nameof(ProcessArabDbfExportTask),
                     taskParameters,
                     context.User.Id,
                     context.User.OrgId);
 
                 result.TaskId = taskId;
-                result.Message = "APABµ¼³öÈÎÎñÒÑ´´½¨";
+                result.Message = "ARABå¯¼å‡ºä»»åŠ¡å·²åˆ›å»º";
                 result.ExpectedFeeCount = feeCount;
             }
             catch (Exception ex)
@@ -93,90 +95,90 @@ namespace PowerLmsWebApi.Controllers
 
         #endregion
 
-        #region ¾²Ì¬ÈÎÎñ´¦Àí·½·¨ - APAB
+        #region é™æ€ä»»åŠ¡å¤„ç†æ–¹æ³• - ARAB
 
         /// <summary>
-        /// APAB·Ö×éÊı¾İÏî
+        /// ARABåˆ†ç»„æ•°æ®é¡¹
         /// </summary>
-        public class ApabGroupDataItem
+        public class ArabGroupDataItem
         {
             /// <summary>
-            /// ½áËãµ¥Î»ID
+            /// ç»“ç®—å•ä½ID
             /// </summary>
             public Guid? BalanceId { get; set; }
             
             /// <summary>
-            /// ¹©Ó¦ÉÌÃû³Æ
+            /// å®¢æˆ·åç§°
             /// </summary>
-            public string SupplierName { get; set; }
+            public string CustomerName { get; set; }
             
             /// <summary>
-            /// ¹©Ó¦ÉÌ¼ò³Æ
+            /// å®¢æˆ·ç®€ç§°
             /// </summary>
-            public string SupplierShortName { get; set; }
+            public string CustomerShortName { get; set; }
             
             /// <summary>
-            /// ¹©Ó¦ÉÌ²ÆÎñ±àÂë
+            /// å®¢æˆ·è´¢åŠ¡ç¼–ç 
             /// </summary>
-            public string SupplierFinanceCode { get; set; }
+            public string CustomerFinanceCode { get; set; }
             
             /// <summary>
-            /// ÊÇ·ñ¹úÄÚ¹©Ó¦ÉÌ
+            /// æ˜¯å¦å›½å†…å®¢æˆ·
             /// </summary>
             public bool IsDomestic { get; set; }
             
             /// <summary>
-            /// ÊÇ·ñ´úµæ·ÑÓÃ
+            /// æ˜¯å¦ä»£å«è´¹ç”¨
             /// </summary>
             public bool IsAdvance { get; set; }
             
             /// <summary>
-            /// ×Ü½ğ¶î£¨±¾Î»±Ò£©
+            /// æ€»é‡‘é¢ï¼ˆæœ¬ä½å¸ï¼‰
             /// </summary>
             public decimal TotalAmount { get; set; }
         }
 
         /// <summary>
-        /// ´¦ÀíAPAB DBFµ¼³öÈÎÎñ
+        /// å¤„ç†ARAB DBFå¯¼å‡ºä»»åŠ¡
         /// </summary>
-        public static object ProcessApabDbfExportTask(Guid taskId, Dictionary<string, string> parameters, IServiceProvider serviceProvider)
+        public static object ProcessArabDbfExportTask(Guid taskId, Dictionary<string, string> parameters, IServiceProvider serviceProvider)
         {
-            string currentStep = "²ÎÊıÑéÖ¤";
+            string currentStep = "å‚æ•°éªŒè¯";
             try
             {
                 if (serviceProvider == null)
-                    throw new ArgumentNullException(nameof(serviceProvider), "·şÎñÌá¹©Õß²»ÄÜÎª¿Õ");
+                    throw new ArgumentNullException(nameof(serviceProvider), "æœåŠ¡æä¾›è€…ä¸èƒ½ä¸ºç©º");
                 if (parameters == null)
-                    throw new ArgumentNullException(nameof(parameters), "ÈÎÎñ²ÎÊı²»ÄÜÎª¿Õ");
+                    throw new ArgumentNullException(nameof(parameters), "ä»»åŠ¡å‚æ•°ä¸èƒ½ä¸ºç©º");
 
-                currentStep = "½âÎö·şÎñÒÀÀµ";
+                currentStep = "åˆå§‹åŒ–æœåŠ¡";
                 var dbContextFactory = serviceProvider.GetService<IDbContextFactory<PowerLmsUserDbContext>>() ??
-                    throw new InvalidOperationException("ÎŞ·¨»ñÈ¡Êı¾İ¿âÉÏÏÂÎÄ¹¤³§");
+                    throw new InvalidOperationException("æ— æ³•è·å–æ•°æ®åº“ä¸Šä¸‹æ–‡å·¥å‚");
                 var fileService = serviceProvider.GetService<OwFileService<PowerLmsUserDbContext>>() ??
-                    throw new InvalidOperationException("ÎŞ·¨»ñÈ¡ÎÄ¼ş·şÎñ");
+                    throw new InvalidOperationException("æ— æ³•è·å–æ–‡ä»¶æœåŠ¡");
 
-                currentStep = "½âÎöÈÎÎñ²ÎÊı";
+                currentStep = "è§£æä»»åŠ¡å‚æ•°";
                 if (!parameters.TryGetValue("StartDate", out var startDateStr) || !DateTime.TryParse(startDateStr, out var startDate))
-                    throw new InvalidOperationException("È±ÉÙ»òÎŞĞ§µÄ¿ªÊ¼ÈÕÆÚ²ÎÊı");
+                    throw new InvalidOperationException("ç¼ºå°‘æˆ–æ— æ•ˆçš„å¼€å§‹æ—¥æœŸå‚æ•°");
                 if (!parameters.TryGetValue("EndDate", out var endDateStr) || !DateTime.TryParse(endDateStr, out var endDate))
-                    throw new InvalidOperationException("È±ÉÙ»òÎŞĞ§µÄ½áÊøÈÕÆÚ²ÎÊı");
+                    throw new InvalidOperationException("ç¼ºå°‘æˆ–æ— æ•ˆçš„ç»“æŸæ—¥æœŸå‚æ•°");
                 if (!parameters.TryGetValue("AccountingDate", out var accountingDateStr) || !DateTime.TryParse(accountingDateStr, out var accountingDate))
-                    throw new InvalidOperationException("È±ÉÙ»òÎŞĞ§µÄ¼ÇÕËÈÕÆÚ²ÎÊı");
+                    throw new InvalidOperationException("ç¼ºå°‘æˆ–æ— æ•ˆçš„è®°è´¦æ—¥æœŸå‚æ•°");
                 if (!parameters.TryGetValue("UserId", out var userIdStr) || !Guid.TryParse(userIdStr, out var userId))
-                    throw new InvalidOperationException("È±ÉÙ»òÎŞĞ§µÄÓÃ»§ID²ÎÊı");
+                    throw new InvalidOperationException("ç¼ºå°‘æˆ–æ— æ•ˆçš„ç”¨æˆ·IDå‚æ•°");
 
                 Guid? orgId = null;
                 if (parameters.TryGetValue("OrgId", out var orgIdStr) && !string.IsNullOrEmpty(orgIdStr))
                 {
                     if (!Guid.TryParse(orgIdStr, out var parsedOrgId))
-                        throw new InvalidOperationException($"ÎŞĞ§µÄ×éÖ¯ID¸ñÊ½: {orgIdStr}");
+                        throw new InvalidOperationException($"æ— æ•ˆçš„ç»„ç»‡IDæ ¼å¼: {orgIdStr}");
                     orgId = parsedOrgId;
                 }
 
                 var displayName = parameters.GetValueOrDefault("DisplayName", "");
                 var remark = parameters.GetValueOrDefault("Remark", "");
 
-                // ½âÎöµ¼³öÌõ¼ş
+                // è§£æå¯¼å‡ºæ¡ä»¶
                 var exportConditionsJson = parameters.GetValueOrDefault("ExportConditions", "{}");
                 Dictionary<string, string> conditions = null;
                 if (!string.IsNullOrEmpty(exportConditionsJson))
@@ -187,73 +189,77 @@ namespace PowerLmsWebApi.Controllers
                     }
                     catch (JsonException ex)
                     {
-                        throw new InvalidOperationException($"µ¼³öÌõ¼şJSON¸ñÊ½´íÎó: {ex.Message}");
+                        throw new InvalidOperationException($"å¯¼å‡ºæ¡ä»¶JSONæ ¼å¼é”™è¯¯: {ex.Message}");
                     }
                 }
                 conditions ??= new Dictionary<string, string>();
 
-                currentStep = "´´½¨Êı¾İ¿âÉÏÏÂÎÄ";
+                currentStep = "åˆ›å»ºæ•°æ®åº“ä¸Šä¸‹æ–‡";
                 using var dbContext = dbContextFactory.CreateDbContext();
 
-                currentStep = "¼ÓÔØ¿ÆÄ¿ÅäÖÃ";
-                var subjectConfigs = LoadApabSubjectConfigurations(dbContext, orgId);
+                currentStep = "åŠ è½½ç§‘ç›®é…ç½®";
+                var subjectConfigs = LoadArabSubjectConfigurations(dbContext, orgId);
                 if (!subjectConfigs.Any())
-                    throw new InvalidOperationException($"APAB¿ÆÄ¿ÅäÖÃÎ´ÕÒµ½£¬ÎŞ·¨Éú³ÉÆ¾Ö¤¡£×éÖ¯ID: {orgId}");
+                    throw new InvalidOperationException($"ARABç§‘ç›®é…ç½®æœªæ‰¾åˆ°ï¼Œæ— æ³•ç”Ÿæˆå‡­è¯ï¼Œç»„ç»‡ID: {orgId}");
 
-                currentStep = "²éÑ¯·ÑÓÃÊı¾İ";
-                var feesQuery = dbContext.DocFees
-                    .Where(f => f.IO == false && // Ö»Í³¼ÆÖ§³ö
-                               f.CreateDateTime >= startDate && 
-                               f.CreateDateTime <= endDate);
+                currentStep = "æŸ¥è¯¢è´¹ç”¨æ•°æ®";
+                // ä¿®å¤ï¼šä½¿ç”¨å·¥ä½œå·çš„è´¢åŠ¡æ—¥æœŸå’ŒçŠ¶æ€è¿‡æ»¤
+                var feesQuery = from fee in dbContext.DocFees
+                               join job in dbContext.PlJobs on fee.JobId equals job.Id
+                               where fee.IO == true && // åªç»Ÿè®¡æ”¶å…¥
+                                     job.AccountDate >= startDate && 
+                                     job.AccountDate <= endDate &&
+                                     job.JobState == 16 // å·¥ä½œå·å·²å…³é—­çŠ¶æ€
+                               select fee;
 
-                // Ó¦ÓÃ¶îÍâµÄ²éÑ¯Ìõ¼ş
+                // åº”ç”¨é¢å¤–çš„æŸ¥è¯¢æ¡ä»¶
                 if (conditions != null && conditions.Any())
                 {
                     feesQuery = EfHelper.GenerateWhereAnd(feesQuery, conditions);
                 }
 
-                // Ó¦ÓÃ×éÖ¯È¨ÏŞ¹ıÂË
+                // åº”ç”¨ç»„ç»‡æƒé™è¿‡æ»¤
                 var taskUser = dbContext.Accounts?.FirstOrDefault(a => a.Id == userId);
                 if (taskUser != null)
                 {
                     feesQuery = ApplyOrganizationFilterForFeesStatic(feesQuery, taskUser, dbContext, serviceProvider);
                 }
 
-                currentStep = "°´ÒµÎñ¹æÔò·Ö×éÍ³¼Æ";
-                // APABÒµÎñÂß¼­£ºIO=Ö§³ö£¬sum(Amount*ExchangeRate) as Totalamount£¬°´ ·ÑÓÃ.½áËãµ¥Î»¡¢½áËãµ¥Î».¹ú±ğ¡¢·ÑÓÃÖÖÀà.´úµæ ·Ö×é
-                var apabGroupData = (from fee in feesQuery
-                                   join supplier in dbContext.PlCustomers on fee.BalanceId equals supplier.Id into supplierGroup
-                                   from supp in supplierGroup.DefaultIfEmpty()
+                currentStep = "ä¸šåŠ¡æ•°æ®èšåˆç»Ÿè®¡";
+                // ARABä¸šåŠ¡é€»è¾‘ï¼šIO=æ”¶å…¥ï¼Œsum(Amount*ExchangeRate) as Totalamountï¼ŒæŒ‰ è´¹ç”¨.ç»“ç®—å•ä½ã€ç»“ç®—å•ä½.å›½åˆ«ã€è´¹ç”¨ç§ç±».ä»£å« åˆ†ç»„
+                var arabGroupData = (from fee in feesQuery
+                                   join customer in dbContext.PlCustomers on fee.BalanceId equals customer.Id into customerGroup
+                                   from cust in customerGroup.DefaultIfEmpty()
                                    join feeType in dbContext.DD_SimpleDataDics on fee.FeeTypeId equals feeType.Id into feeTypeGroup
                                    from feeTypeDict in feeTypeGroup.DefaultIfEmpty()
-                                   group new { fee, supp, feeTypeDict } by new
+                                   group new { fee, cust, feeTypeDict } by new
                                    {
                                        BalanceId = fee.BalanceId,
-                                       SupplierName = supp != null ? supp.Name_DisplayName : "Î´Öª¹©Ó¦ÉÌ",
-                                       SupplierShortName = supp != null ? supp.Name_ShortName : "",
-                                       SupplierFinanceCode = supp != null ? supp.TacCountNo : "",
-                                       IsDomestic = supp != null ? (supp.IsDomestic ?? true) : true,
-                                       IsAdvance = feeTypeDict != null && feeTypeDict.Remark != null && feeTypeDict.Remark.Contains("´úµæ")
+                                       CustomerName = cust != null ? cust.Name_DisplayName : "æœªçŸ¥å®¢æˆ·",
+                                       CustomerShortName = cust != null ? cust.Name_ShortName : "",
+                                       CustomerFinanceCode = cust != null ? cust.TacCountNo : "",
+                                       IsDomestic = cust != null ? (cust.IsDomestic ?? true) : true,
+                                       IsAdvance = feeTypeDict != null && feeTypeDict.Remark != null && feeTypeDict.Remark.Contains("ä»£å«")
                                    } into g
-                                   select new ApabGroupDataItem
+                                   select new ArabGroupDataItem
                                    {
                                        BalanceId = g.Key.BalanceId,
-                                       SupplierName = g.Key.SupplierName,
-                                       SupplierShortName = g.Key.SupplierShortName,
-                                       SupplierFinanceCode = g.Key.SupplierFinanceCode,
+                                       CustomerName = g.Key.CustomerName,
+                                       CustomerShortName = g.Key.CustomerShortName,
+                                       CustomerFinanceCode = g.Key.CustomerFinanceCode,
                                        IsDomestic = g.Key.IsDomestic,
                                        IsAdvance = g.Key.IsAdvance,
                                        TotalAmount = g.Sum(x => x.fee.Amount * x.fee.ExchangeRate)
                                    }).ToList();
 
-                if (!apabGroupData.Any())
-                    throw new InvalidOperationException("Ã»ÓĞÕÒµ½·ûºÏÌõ¼şµÄ·ÑÓÃÊı¾İ");
+                if (!arabGroupData.Any())
+                    throw new InvalidOperationException("æ²¡æœ‰æ‰¾åˆ°ç¬¦åˆæ¡ä»¶çš„è´¹ç”¨æ•°æ®");
 
-                currentStep = "Éú³É½ğµûÆ¾Ö¤Êı¾İ";
-                var kingdeeVouchers = GenerateApabKingdeeVouchers(apabGroupData, accountingDate, subjectConfigs);
+                currentStep = "ç”Ÿæˆé‡‘è¶å‡­è¯æ•°æ®";
+                var kingdeeVouchers = GenerateArabKingdeeVouchers(arabGroupData, accountingDate, subjectConfigs);
 
-                currentStep = "Éú³ÉDBFÎÄ¼ş";
-                var fileName = $"APAB_Export_{DateTime.Now:yyyyMMdd_HHmmss}.dbf";
+                currentStep = "ç”ŸæˆDBFæ–‡ä»¶";
+                var fileName = $"ARAB_Export_{DateTime.Now:yyyyMMdd_HHmmss}.dbf";
                 var kingdeeFieldMappings = new Dictionary<string, string>
                 {
                     {"FDATE", "FDATE"}, {"FTRANSDATE", "FTRANSDATE"}, {"FPERIOD", "FPERIOD"}, {"FGROUP", "FGROUP"}, {"FNUM", "FNUM"},
@@ -270,7 +276,7 @@ namespace PowerLmsWebApi.Controllers
                     {"FDEBIT", NativeDbType.Numeric}, {"FCREDIT", NativeDbType.Numeric}, {"FPREPARE", NativeDbType.Char}, {"FMODULE", NativeDbType.Char}, {"FDELETED", NativeDbType.Logical}
                 };
 
-                currentStep = "´´½¨ÎÄ¼ş¼ÇÂ¼";
+                currentStep = "ä¿å­˜æ–‡ä»¶è®°å½•";
                 PlFileInfo fileInfoRecord;
                 long fileSize;
                 var memoryStream = new MemoryStream(1024 * 1024 * 1024);
@@ -279,13 +285,13 @@ namespace PowerLmsWebApi.Controllers
                     DotNetDbfUtil.WriteToStream(kingdeeVouchers, memoryStream, kingdeeFieldMappings, customFieldTypes);
                     fileSize = memoryStream.Length;
                     if (fileSize == 0)
-                        throw new InvalidOperationException("DBFÎÄ¼şÉú³ÉÊ§°Ü£¬ÎÄ¼şÎª¿Õ");
+                        throw new InvalidOperationException("DBFæ–‡ä»¶ç”Ÿæˆå¤±è´¥ï¼Œæ–‡ä»¶ä¸ºç©º");
                     memoryStream.Position = 0;
                     
                     var finalDisplayName = !string.IsNullOrWhiteSpace(displayName) ? 
-                        displayName : $"APAB¼ÆÌáµ¼³ö-{DateTime.Now:yyyyÄêMMÔÂddÈÕ}";
+                        displayName : $"ARABè´¢åŠ¡å¯¼å‡º-{DateTime.Now:yyyyå¹´MMæœˆddæ—¥}";
                     var finalRemark = !string.IsNullOrWhiteSpace(remark) ? 
-                        remark : $"APAB¼ÆÌáDBFµ¼³öÎÄ¼ş£¬¹²{apabGroupData.Count}¸ö¹©Ó¦ÉÌ·Ö×é£¬{kingdeeVouchers.Count}Ìõ»á¼Æ·ÖÂ¼£¬µ¼³öÊ±¼ä£º{DateTime.Now:yyyy-MM-dd HH:mm:ss}";
+                        remark : $"ARABè®¡æDBFå¯¼å‡ºæ–‡ä»¶ï¼ŒåŒ…å«{arabGroupData.Count}ä¸ªå®¢æˆ·åˆ†ç»„ï¼Œ{kingdeeVouchers.Count}æ¡åˆ†å½•è®°å½•ï¼Œç”Ÿæˆæ—¶é—´ï¼š{DateTime.Now:yyyy-MM-dd HH:mm:ss}";
                     
                     fileInfoRecord = fileService.CreateFile(
                         fileStream: memoryStream,
@@ -304,28 +310,28 @@ namespace PowerLmsWebApi.Controllers
                 }
                 
                 if (fileInfoRecord == null)
-                    throw new InvalidOperationException("fileService.CreateFile ·µ»Ø null");
+                    throw new InvalidOperationException("fileService.CreateFile è¿”å› null");
 
-                currentStep = "ÑéÖ¤×îÖÕÎÄ¼ş²¢·µ»Ø½á¹û";
+                currentStep = "éªŒè¯è¾“å‡ºæ–‡ä»¶å¹¶è¿”å›ç»“æœ";
                 long actualFileSize = 0;
                 bool fileExists = false;
                 try
                 {
-                    if (System.IO.File.Exists(fileInfoRecord.FilePath))
+                    if (SysIO.File.Exists(fileInfoRecord.FilePath))
                     {
-                        actualFileSize = new FileInfo(fileInfoRecord.FilePath).Length;
+                        actualFileSize = new SysIO.FileInfo(fileInfoRecord.FilePath).Length;
                         fileExists = true;
                     }
                 }
-                catch { }
+                catch { } // å¿½ç•¥éªŒè¯æ—¶çš„å¼‚å¸¸ï¼Œä¸å½±å“ä¸»è¦åŠŸèƒ½
 
                 return new
                 {
                     FileId = fileInfoRecord.Id,
                     FileName = fileName,
-                    FeeGroupCount = apabGroupData.Count,
+                    FeeGroupCount = arabGroupData.Count,
                     VoucherCount = kingdeeVouchers.Count,
-                    TotalAmount = apabGroupData.Sum(g => g.TotalAmount),
+                    TotalAmount = arabGroupData.Sum(g => g.TotalAmount),
                     FilePath = fileInfoRecord.FilePath,
                     ExportDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
                     FileSize = actualFileSize,
@@ -335,28 +341,28 @@ namespace PowerLmsWebApi.Controllers
             }
             catch (Exception ex)
             {
-                var contextualError = $"APAB DBFµ¼³öÈÎÎñÊ§°Ü£¬µ±Ç°²½Öè: {currentStep}, ÈÎÎñID: {taskId}";
+                var contextualError = $"ARAB DBFå¯¼å‡ºä»»åŠ¡å¤±è´¥ï¼Œå½“å‰æ­¥éª¤: {currentStep}, ä»»åŠ¡ID: {taskId}";
                 if (parameters != null)
-                    contextualError += $"\nÈÎÎñ²ÎÊı: {string.Join(", ", parameters.Select(kv => $"{kv.Key}={kv.Value}"))}";
+                    contextualError += $"\nä»»åŠ¡å‚æ•°: {string.Join(", ", parameters.Select(kv => $"{kv.Key}={kv.Value}"))}";
 
                 throw new InvalidOperationException(contextualError, ex);
             }
         }
 
         /// <summary>
-        /// ¼ÓÔØAPAB¿ÆÄ¿ÅäÖÃ£¨¾²Ì¬°æ±¾£©
+        /// åŠ è½½ARABç§‘ç›®é…ç½®ï¼ˆé™æ€ç‰ˆæœ¬ï¼‰
         /// </summary>
-        private static Dictionary<string, SubjectConfiguration> LoadApabSubjectConfigurations(PowerLmsUserDbContext dbContext, Guid? orgId)
+        private static Dictionary<string, SubjectConfiguration> LoadArabSubjectConfigurations(PowerLmsUserDbContext dbContext, Guid? orgId)
         {
             var requiredCodes = new List<string>
             {
-                "APAB_TOTAL",      // ¼ÆÌá×ÜÓ¦¸¶
-                "APAB_IN_SUP",     // ¼ÆÌáÓ¦¸¶¹úÄÚ-¹©Ó¦ÉÌ
-                "APAB_IN_TAR",     // ¼ÆÌáÓ¦¸¶¹úÄÚ-¹ØË°
-                "APAB_OUT_SUP",    // ¼ÆÌáÓ¦¸¶¹úÍâ-¹©Ó¦ÉÌ
-                "APAB_OUT_TAR",    // ¼ÆÌáÓ¦¸¶¹úÍâ-¹ØË°
-                "GEN_PREPARER",    // ÖÆµ¥ÈË
-                "GEN_VOUCHER_GROUP" // Æ¾Ö¤Àà±ğ×Ö
+                "ARAB_TOTAL",      // è®¡ææ€»åº”æ”¶
+                "ARAB_IN_CUS",     // è®¡æåº”æ”¶å›½å†…-å®¢æˆ·
+                "ARAB_IN_TAR",     // è®¡æåº”æ”¶å›½å†…-å…³ç¨
+                "ARAB_OUT_CUS",    // è®¡æåº”æ”¶å›½å¤–-å®¢æˆ·
+                "ARAB_OUT_TAR",    // è®¡æåº”æ”¶å›½å¤–-å…³ç¨
+                "GEN_PREPARER",    // åˆ¶å•äºº
+                "GEN_VOUCHER_GROUP" // å‡­è¯ç±»åˆ«å­—
             };
 
             var configs = dbContext.SubjectConfigurations
@@ -367,58 +373,58 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// Éú³ÉAPAB½ğµûÆ¾Ö¤Êı¾İ
+        /// ç”ŸæˆARABé‡‘è¶å‡­è¯æ•°æ®
         /// </summary>
-        private static List<KingdeeVoucher> GenerateApabKingdeeVouchers(
-            List<ApabGroupDataItem> apabGroupData,
+        private static List<KingdeeVoucher> GenerateArabKingdeeVouchers(
+            List<ArabGroupDataItem> arabGroupData,
             DateTime accountingDate,
             Dictionary<string, SubjectConfiguration> subjectConfigs)
         {
             var vouchers = new List<KingdeeVoucher>();
             var voucherNumber = 1;
             
-            // »ñÈ¡Í¨ÓÃÅäÖÃ
+            // è·å–é€šç”¨é…ç½®
             var preparerName = subjectConfigs.ContainsKey("GEN_PREPARER") ?
-                (subjectConfigs["GEN_PREPARER"]?.Preparer ?? "ÏµÍ³µ¼³ö") : "ÏµÍ³µ¼³ö";
+                (subjectConfigs["GEN_PREPARER"]?.Preparer ?? "ç³»ç»Ÿå¯¼å‡º") : "ç³»ç»Ÿå¯¼å‡º";
             var voucherGroup = subjectConfigs.ContainsKey("GEN_VOUCHER_GROUP") ?
-                (subjectConfigs["GEN_VOUCHER_GROUP"]?.VoucherGroup ?? "×ª") : "×ª";
+                (subjectConfigs["GEN_VOUCHER_GROUP"]?.VoucherGroup ?? "è½¬") : "è½¬";
 
-            // ¼ÆËã×Ü½ğ¶î
-            var totalAmount = apabGroupData.Sum(g => g.TotalAmount);
+            // è®¡ç®—æ€»é‡‘é¢
+            var totalAmount = arabGroupData.Sum(g => g.TotalAmount);
 
             int entryId = 0;
 
-            // Éú³ÉÃ÷Ï¸·ÖÂ¼£¨½è·½£©
-            foreach (var group in apabGroupData)
+            // ç”Ÿæˆæ˜ç»†åˆ†å½•ï¼ˆå€Ÿæ–¹ï¼‰
+            foreach (var group in arabGroupData)
             {
                 string subjectCode;
                 string description;
                 
-                // ¸ù¾İ¹úÄÚÍâºÍ´úµæÊôĞÔÈ·¶¨¿ÆÄ¿
+                // æ ¹æ®å›½å†…å¤–å’Œä»£å«å±æ€§ç¡®å®šç§‘ç›®
                 if (group.IsDomestic)
                 {
                     if (group.IsAdvance)
                     {
-                        subjectCode = "APAB_IN_TAR";
-                        description = $"¼ÆÌáÓ¦¸¶¹úÄÚ-¹ØË°-{group.SupplierName} {group.TotalAmount:F2}Ôª";
+                        subjectCode = "ARAB_IN_TAR";
+                        description = $"è®¡æåº”æ”¶å›½å†…-å…³ç¨-{group.CustomerName} {group.TotalAmount:F2}å…ƒ";
                     }
                     else
                     {
-                        subjectCode = "APAB_IN_SUP";
-                        description = $"¼ÆÌáÓ¦¸¶¹úÄÚ-¹©Ó¦ÉÌ-{group.SupplierName} {group.TotalAmount:F2}Ôª";
+                        subjectCode = "ARAB_IN_CUS";
+                        description = $"è®¡æåº”æ”¶å›½å†…-å®¢æˆ·-{group.CustomerName} {group.TotalAmount:F2}å…ƒ";
                     }
                 }
                 else
                 {
                     if (group.IsAdvance)
                     {
-                        subjectCode = "APAB_OUT_TAR";
-                        description = $"¼ÆÌáÓ¦¸¶¹úÍâ-¹ØË°-{group.SupplierName} {group.TotalAmount:F2}Ôª";
+                        subjectCode = "ARAB_OUT_TAR";
+                        description = $"è®¡æåº”æ”¶å›½å¤–-å…³ç¨-{group.CustomerName} {group.TotalAmount:F2}å…ƒ";
                     }
                     else
                     {
-                        subjectCode = "APAB_OUT_SUP";
-                        description = $"¼ÆÌáÓ¦¸¶¹úÍâ-¹©Ó¦ÉÌ-{group.SupplierName} {group.TotalAmount:F2}Ôª";
+                        subjectCode = "ARAB_OUT_CUS";
+                        description = $"è®¡æåº”æ”¶å›½å¤–-å®¢æˆ·-{group.CustomerName} {group.TotalAmount:F2}å…ƒ";
                     }
                 }
 
@@ -435,13 +441,13 @@ namespace PowerLmsWebApi.Controllers
                         FENTRYID = entryId++,
                         FEXP = description,
                         FACCTID = config.SubjectNumber,
-                        FCLSNAME1 = config.AccountingCategory ?? "¹©Ó¦ÉÌ",
-                        FOBJID1 = group.SupplierShortName ?? group.SupplierFinanceCode ?? "SUPPLIER",
-                        FOBJNAME1 = group.SupplierName,
-                        FTRANSID = group.SupplierFinanceCode ?? "",
+                        FCLSNAME1 = config.AccountingCategory ?? "å®¢æˆ·",
+                        FOBJID1 = group.CustomerShortName ?? group.CustomerFinanceCode ?? "CUSTOMER",
+                        FOBJNAME1 = group.CustomerName,
+                        FTRANSID = group.CustomerFinanceCode ?? "",
                         FCYID = "RMB",
                         FEXCHRATE = 1.0000000m,
-                        FDC = 0, // ½è·½
+                        FDC = 0, // å€Ÿæ–¹
                         FFCYAMT = group.TotalAmount,
                         FDEBIT = group.TotalAmount,
                         FCREDIT = 0,
@@ -452,8 +458,8 @@ namespace PowerLmsWebApi.Controllers
                 }
             }
 
-            // Éú³É×Ü¿ÆÄ¿·ÖÂ¼£¨´û·½£©
-            if (subjectConfigs.TryGetValue("APAB_TOTAL", out var totalConfig) && totalConfig != null)
+            // ç”Ÿæˆæ€»ç§‘ç›®åˆ†å½•ï¼ˆè´·æ–¹ï¼‰
+            if (subjectConfigs.TryGetValue("ARAB_TOTAL", out var totalConfig) && totalConfig != null)
             {
                 vouchers.Add(new KingdeeVoucher
                 {
@@ -464,11 +470,11 @@ namespace PowerLmsWebApi.Controllers
                     FGROUP = voucherGroup,
                     FNUM = voucherNumber,
                     FENTRYID = entryId,
-                    FEXP = $"¼ÆÌá{accountingDate:yyyyÄêMMÔÂ}×ÜÓ¦¸¶ {totalAmount:F2}Ôª",
+                    FEXP = $"è®¡æ{accountingDate:yyyyå¹´MMæœˆ}æ€»åº”æ”¶ {totalAmount:F2}å…ƒ",
                     FACCTID = totalConfig.SubjectNumber,
                     FCYID = "RMB",
                     FEXCHRATE = 1.0000000m,
-                    FDC = 1, // ´û·½
+                    FDC = 1, // è´·æ–¹
                     FFCYAMT = totalAmount,
                     FDEBIT = 0,
                     FCREDIT = totalAmount,
@@ -479,6 +485,65 @@ namespace PowerLmsWebApi.Controllers
             }
 
             return vouchers;
+        }
+
+        /// <summary>
+        /// é’ˆå¯¹è´¹ç”¨æ•°æ®çš„ç»„ç»‡æƒé™è¿‡æ»¤æ–¹æ³•ï¼ˆé™æ€ç‰ˆæœ¬ï¼‰
+        /// </summary>
+        private static IQueryable<DocFee> ApplyOrganizationFilterForFeesStatic(IQueryable<DocFee> feesQuery, Account user,
+            PowerLmsUserDbContext dbContext, IServiceProvider serviceProvider)
+        {
+            if (user == null)
+            {
+                return feesQuery.Where(f => false);
+            }
+
+            if (user.IsSuperAdmin)
+            {
+                return feesQuery;
+            }
+
+            var orgManager = serviceProvider.GetRequiredService<OrgManager<PowerLmsUserDbContext>>();
+
+            // è·å–ç”¨æˆ·æ‰€å±å•†æˆ·ID
+            var merchantId = orgManager.GetMerchantIdByUserId(user.Id);
+            if (!merchantId.HasValue)
+            {
+                return feesQuery.Where(f => false);
+            }
+
+            HashSet<Guid?> allowedOrgIds;
+
+            if (user.IsMerchantAdmin)
+            {
+                // å•†æˆ·ç®¡ç†å‘˜å¯ä»¥è®¿é—®æ•´ä¸ªå•†æˆ·ä¸‹çš„æ‰€æœ‰ç»„ç»‡æœºæ„
+                var allOrgIds = orgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs.Keys.ToList();
+                allowedOrgIds = new HashSet<Guid?>(allOrgIds.Cast<Guid?>());
+                allowedOrgIds.Add(merchantId.Value); // æ·»åŠ å•†æˆ·IDæœ¬èº«
+            }
+            else
+            {
+                // æ™®é€šç”¨æˆ·åªèƒ½è®¿é—®å…¶å½“å‰ç™»å½•çš„å…¬å¸åŠä¸‹å±æœºæ„
+                var companyId = user.OrgId.HasValue ? orgManager.GetCompanyIdByOrgId(user.OrgId.Value) : null;
+                if (!companyId.HasValue)
+                {
+                    return feesQuery.Where(f => false);
+                }
+                
+                var companyOrgIds = orgManager.GetOrgIdsByCompanyId(companyId.Value).ToList();
+                allowedOrgIds = new HashSet<Guid?>(companyOrgIds.Cast<Guid?>());
+                allowedOrgIds.Add(merchantId.Value); // æ·»åŠ å•†æˆ·IDæœ¬èº«
+            }
+
+            // é€šè¿‡å…³è”çš„ä¸šåŠ¡è¿‡æ»¤è´¹ç”¨
+            var filteredQuery = from fee in feesQuery
+                               join job in dbContext.PlJobs
+                                   on fee.JobId equals job.Id into jobGroup
+                               from plJob in jobGroup.DefaultIfEmpty()
+                               where allowedOrgIds.Contains(plJob.OrgId)
+                               select fee;
+
+            return filteredQuery.Distinct();
         }
 
         #endregion

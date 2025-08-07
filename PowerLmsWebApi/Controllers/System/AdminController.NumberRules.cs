@@ -6,8 +6,11 @@ using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
 using System.Net;
 
-namespace PowerLmsWebApi.Controllers
+namespace PowerLmsWebApi.Controllers.System
 {
+    /// <summary>
+    /// 管理员控制器 - 编号规则管理部分
+    /// </summary>
     public partial class AdminController
     {
         #region 业务编码规则相关

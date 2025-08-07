@@ -4,8 +4,9 @@ using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
+using SysIO = System.IO;
 
-namespace PowerLmsWebApi.Controllers
+namespace PowerLmsWebApi.Controllers.System
 {
     /// <summary>
     /// 验证码相关功能的控制器。
@@ -54,7 +55,7 @@ namespace PowerLmsWebApi.Controllers
             };
             _UserDbContext.CaptchaInfos.Add(captchaInfo);
             _UserDbContext.SaveChanges();
-            var stream = System.IO.File.OpenRead(fullPath);
+            var stream = SysIO.File.OpenRead(fullPath);
             return File(stream, "application/jpeg", Path.GetFileName(fullPath));
         }
 

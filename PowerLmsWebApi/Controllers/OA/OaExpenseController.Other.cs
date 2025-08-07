@@ -12,7 +12,7 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 
-namespace PowerLmsWebApi.Controllers
+namespace PowerLmsWebApi.Controllers.OA
 {
     /// <summary>
     /// OA费用申请单控制器 - 其他操作部分。

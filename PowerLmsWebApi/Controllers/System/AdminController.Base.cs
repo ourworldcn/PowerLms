@@ -22,8 +22,11 @@ using PowerLmsServer;
 using Microsoft.EntityFrameworkCore.Internal;
 using System.ComponentModel;
 
-namespace PowerLmsWebApi.Controllers
+namespace PowerLmsWebApi.Controllers.System
 {
+    /// <summary>
+    /// 管理员控制器 - 基础数据管理部分
+    /// </summary>
     public partial class AdminController : PlControllerBase
     {
         #region 国家相关

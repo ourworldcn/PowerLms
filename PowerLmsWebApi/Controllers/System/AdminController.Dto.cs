@@ -2,8 +2,11 @@
 using PowerLms.Data;
 using PowerLmsWebApi.Dto;
 
-namespace PowerLmsWebApi.Controllers
+namespace PowerLmsWebApi.Controllers.System
 {
+    /// <summary>
+    /// 管理员控制器 - DTO定义
+    /// </summary>
     #region 其它编码规则
 
     /// <summary>
