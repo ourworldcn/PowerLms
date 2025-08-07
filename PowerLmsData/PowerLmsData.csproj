@@ -36,6 +36,7 @@
 
   <ItemGroup>
     <Folder Include="Migrations\" />
+    <Folder Include="数据库迁移脚本\" />
   </ItemGroup>
 
   <ItemGroup>

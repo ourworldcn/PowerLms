@@ -1,4 +1,21 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿/*
+ * 项目：PowerLms货运物流业务管理系统
+ * 模块：财务管理 - 主营业务结算单
+ * 文件说明：
+ * - 功能1：PlInvoices结算单实体定义，支持复杂的财务结算业务
+ * - 功能2：PlInvoicesItem结算单明细实体，支持多明细项核销
+ * - 功能3：PlInvoicesExtensions扩展方法，提供丰富的业务计算功能
+ * 技术要点：
+ * - 基于EntityFramework Core的企业级数据建模
+ * - 支持多币种计算和汇率处理，精度控制：金额2位小数，汇率4位小数
+ * - 2025年1月扩展：新增16个字段支持主营业务结算单功能改造
+ * - 保持向后兼容：新增字段均为可空类型，避免影响现有数据
+ * 作者：zc
+ * 创建：2024年
+ * 修改：2025-01-27 基于会议纪要需求，扩展16个新字段支持深度改造
+ */
+
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,6 +34,8 @@ namespace PowerLms.Data
 {
     /// <summary>
     /// 结算单。
+    /// 主营业务结算单实体，支持海运、空运、陆运等全流程财务结算业务。
+    /// 2025年1月功能改造：新增16个字段，支持更复杂的财务计算和多币种处理。
     /// </summary>
     public class PlInvoices : GuidKeyObjectBase, ICreatorInfo
     {
@@ -25,8 +44,11 @@ namespace PowerLms.Data
         /// </summary>
         public PlInvoices()
         {
-
+            // 设置新增字段的默认值
+            IsExportToFinancialSoftware = true; // 默认允许导出到财务软件
         }
+
+        #region 原有字段 - 经过长期验证的核心字段
 
         /// <summary>
         /// 收付凭证号
@@ -131,6 +153,143 @@ namespace PowerLms.Data
         [Comment("确认人Id。")]
         public Guid? ConfirmId { get; set; }
 
+        /// <summary>
+        /// 收付，false支出，true收入。自动计算强制改变，0算支出。。
+        /// </summary>
+        [Comment("收付，false支出，true收入。")]
+        public bool IO { get; set; }
+
+        #endregion
+
+        #region 新增字段 - 主营业务结算单功能改造 (2025年1月)
+
+        /// <summary>
+        /// 财务支付确认。
+        /// 用于财务对账需要，标识该笔收付款是否已经在财务系统中确认。
+        /// </summary>
+        [Comment("财务支付确认，对账需要")]
+        public bool? FinancialPaymentConfirmed { get; set; }
+
+        /// <summary>
+        /// 财务凭证号。
+        /// 支付账号关联的凭证字自动生成，用于与外部财务系统（如金蝶）的凭证对应。
+        /// </summary>
+        [MaxLength(64)]
+        [Comment("财务凭证号，支付账号关联的凭证字自动生成")]
+        public string FinancialVoucherNumber { get; set; }
+
+        /// <summary>
+        /// 支付方法。
+        /// 简单字典ApplyType，如：银行转账、现金支付、支票等。
+        /// </summary>
+        [MaxLength(64)]
+        [Comment("支付方法，简单字典ApplyType")]
+        public string PaymentMethod { get; set; }
+
+        /// <summary>
+        /// 财务信息。
+        /// 存储与财务相关的补充信息，如特殊说明、审批意见等。
+        /// </summary>
+        [Comment("财务信息，string类型")]
+        public string FinancialInformation { get; set; }
+
+        /// <summary>
+        /// 收/付汇率（主汇率）。
+        /// 4位小数精度，收付金额对应的汇率，用于本位币金额计算。
+        /// </summary>
+        [Precision(18, 4)]
+        [Comment("收/付汇率（主汇率），4位小数，收付金额对应的汇率")]
+        public decimal? PaymentExchangeRate { get; set; }
+
+        /// <summary>
+        /// 收/付款合计本位币金额。
+        /// 2位小数精度，计算公式：收付金额 × 收付汇率。
+        /// </summary>
+        [Precision(18, 2)]
+        [Comment("收/付款合计本位币金额，2位小数，收付金额*收付汇率")]
+        public decimal? PaymentTotalBaseCurrencyAmount { get; set; }
+
+        /// <summary>
+        /// 手续费金额。
+        /// 2位小数精度，计算公式：收付金额 - 实收金额。
+        /// </summary>
+        [Precision(18, 2)]
+        [Comment("手续费金额，2位小数，收付金额-实收金额")]
+        public decimal? ServiceFeeAmount { get; set; }
+
+        /// <summary>
+        /// 手续费本位币金额。
+        /// 2位小数精度，计算公式：手续费（主币种） × 收付汇率。
+        /// </summary>
+        [Precision(18, 2)]
+        [Comment("手续费本位币金额，2位小数，手续费（主币种）*收付汇率")]
+        public decimal? ServiceFeeBaseCurrencyAmount { get; set; }
+
+        /// <summary>
+        /// 实收金额。
+        /// 2位小数精度，实际收到的金额，可能与收付金额不同（扣除手续费后）。
+        /// </summary>
+        [Precision(18, 2)]
+        [Comment("实收金额，2位小数")]
+        public decimal? ActualReceivedAmount { get; set; }
+
+        /// <summary>
+        /// 实收金额本位币金额。
+        /// 2位小数精度，计算公式：实收金额（主币种） × 收付汇率。
+        /// </summary>
+        [Precision(18, 2)]
+        [Comment("实收金额本位币金额，2位小数，实收金额（主币种）*收付汇率")]
+        public decimal? ActualReceivedBaseCurrencyAmount { get; set; }
+
+        /// <summary>
+        /// 预收/付金额金额。
+        /// 2位小数精度，计算公式：收付金额 - 核销金额（主币种）。
+        /// </summary>
+        [Precision(18, 2)]
+        [Comment("预收/付金额金额，2位小数，收付金额-核销金额（主币种）")]
+        public decimal? AdvancePaymentAmount { get; set; }
+
+        /// <summary>
+        /// 预收/付金额本位币金额。
+        /// 2位小数精度，计算公式：预收金额（主币种） × 收付汇率。
+        /// </summary>
+        [Precision(18, 2)]
+        [Comment("预收/付金额本位币金额，2位小数，预收金额（主币种）*收付汇率")]
+        public decimal? AdvancePaymentBaseCurrencyAmount { get; set; }
+
+        /// <summary>
+        /// 回款单位。
+        /// 选择客户资料中的结算单位，可能与原结算单位不同。
+        /// </summary>
+        [Comment("回款单位，选择客户资料中的结算单位")]
+        public Guid? RefundUnitId { get; set; }
+
+        /// <summary>
+        /// 是否导出到财务软件。
+        /// true允许导出，false禁止导出，默认true。
+        /// 这是一个控制开关（允许/禁止导出），而不是状态记录（已导出/未导出）。
+        /// </summary>
+        [Comment("是否导出到财务软件，true允许导出，默认true")]
+        public bool IsExportToFinancialSoftware { get; set; } = true;
+
+        /// <summary>
+        /// 预收/付冲应收金额。
+        /// 2位小数精度，用于处理预收预付款项的冲抵计算。
+        /// </summary>
+        [Precision(18, 2)]
+        [Comment("预收/付冲应收金额，2位小数")]
+        public decimal? AdvanceOffsetReceivableAmount { get; set; }
+
+        /// <summary>
+        /// 预收/付款金额。
+        /// 2位小数精度，从以前的预收中获取，用于预收预付的历史追溯。
+        /// </summary>
+        [Precision(18, 2)]
+        [Comment("预收/付款金额，2位小数，从以前的预收中获取")]
+        public decimal? AdvancePaymentFromPreviousAmount { get; set; }
+
+        #endregion
+
         #region ICreatorInfo
 
         /// <summary>
@@ -144,14 +303,8 @@ namespace PowerLms.Data
         /// </summary>
         [Comment("创建的时间。")]
         public DateTime CreateDateTime { get; set; }
+
         #endregion ICreatorInfo
-
-        /// <summary>
-        /// 收付，false支出，true收入。自动计算强制改变，0算支出。。
-        /// </summary>
-        [Comment("收付，false支出，true收入。")]
-        public bool IO { get; set; }
-
     }
 
     /// <summary>
