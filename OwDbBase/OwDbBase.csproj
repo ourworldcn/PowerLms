@@ -16,7 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Bak\OwBaseCore\OwBaseCore.csproj" />
+    <ProjectReference Include="..\OwBaseCore\OwBaseCore.csproj" />
   </ItemGroup>
 
 </Project>
