@@ -27,11 +27,11 @@ namespace PowerLmsWebApi.Controllers
             _AuthorizationManager = authorizationManager;
         }
 
-        IServiceProvider _ServiceProvider;
-        AccountManager _AccountManager;
-        PowerLmsUserDbContext _DbContext;
-        JobManager _JobNumber;
-        AuthorizationManager _AuthorizationManager;
+        readonly IServiceProvider _ServiceProvider;
+        readonly AccountManager _AccountManager;
+        readonly PowerLmsUserDbContext _DbContext;
+        readonly JobManager _JobNumber;
+        readonly AuthorizationManager _AuthorizationManager;
 
         /// <summary>
         /// 用指定的编码规则生成一个新的编码。
@@ -47,13 +47,12 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             if (_DbContext.DD_JobNumberRules.Find(model.RuleId) is not JobNumberRule jnr) return BadRequest($"指定的规则不存在，Id={model.RuleId}");
-            string err;
             if (jnr.BusinessTypeId == ProjectContent.AeId)    //若是空运出口业务
             {
-                if (!_AuthorizationManager.Demand(out err, "D0.1.1.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!_AuthorizationManager.Demand(out string err, "D0.1.1.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             }
             else if (jnr.BusinessTypeId == ProjectContent.AiId)    //若是空运进口业务
-                if (!_AuthorizationManager.Demand(out err, "D1.1.1.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!_AuthorizationManager.Demand(out string err, "D1.1.1.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
 
             var result = new GeneratedJobNumberReturnDto();
             using var dw = DisposeHelper.Create((key, timeout) => SingletonLocker.TryEnter(key, timeout), key => SingletonLocker.Exit(key), model.RuleId.ToString(), TimeSpan.FromSeconds(2)); //锁定该规则

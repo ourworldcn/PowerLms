@@ -19,6 +19,19 @@ namespace PowerLmsServer.Managers
         #region 构造函数
 
         /// <summary>
+        /// 静态构造函数。验证当前平台是否支持System.Drawing.Common库。
+        /// </summary>
+        /// <exception cref="PlatformNotSupportedException"></exception>
+        static CaptchaManager()
+        {
+            // 验证当前平台是否支持System.Drawing.Common库
+            if (!OperatingSystem.IsWindows() && !OperatingSystem.IsMacOS() && !OperatingSystem.IsLinux())
+            {
+                throw new PlatformNotSupportedException("CaptchaManager requires System.Drawing.Common which is not supported on this platform.");
+            }
+        }
+
+        /// <summary>
         /// 构造函数。初始化验证码管理器实例。
         /// </summary>
         public CaptchaManager()
@@ -146,5 +159,5 @@ namespace PowerLmsServer.Managers
 
         #endregion 私有方法
     }
-}
 #pragma warning restore CA1416 // 验证平台兼容性
+}

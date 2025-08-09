@@ -11,7 +11,7 @@ namespace PowerLmsServer.Managers
     [OwAutoInjection(ServiceLifetime.Scoped)]
     public class BusinessLogicManager
     {
-        private readonly IServiceProvider _ServiceProvider;
+        readonly IServiceProvider _ServiceProvider;
         private OrgManager<PowerLmsUserDbContext> _OrgManager => _ServiceProvider.GetRequiredService<OrgManager<PowerLmsUserDbContext>>();
         // 使用后期初始化避免重复解析
         private DbContext _DbContext;
@@ -87,8 +87,7 @@ namespace PowerLmsServer.Managers
         /// <returns>本币码</returns>
         private string GetOrganizationBaseCurrencyCode(Guid organizationId)
         {
-            var organization = DbContext.Set<PlOrganization>().Find(organizationId);
-            if (organization == null)
+            if (DbContext.Set<PlOrganization>().Find(organizationId) is not PlOrganization organization)
                 throw new InvalidOperationException($"未找到 Id 为 {organizationId} 的组织机构。");
             return GetCurrencyCode(organization.Id);
         }
@@ -110,8 +109,7 @@ namespace PowerLmsServer.Managers
         /// <returns>本币码</returns>
         private string GetJobBaseCurrencyCode(Guid jobId)
         {
-            var job = DbContext.Set<PlJob>().Find(jobId);
-            if (job == null) throw new InvalidOperationException($"未找到 Id 为 {jobId} 的工作。");
+            if (DbContext.Set<PlJob>().Find(jobId) is not PlJob job) throw new InvalidOperationException($"未找到 Id 为 {jobId} 的工作。");
             return GetCurrencyCode(job.OrgId.Value);
         }
 
@@ -120,8 +118,7 @@ namespace PowerLmsServer.Managers
         /// <returns>本币码</returns>
         private string GetFeeBaseCurrencyCode(Guid feeId)
         {
-            var fee = DbContext.Set<DocFee>().Find(feeId);
-            if (fee == null) throw new InvalidOperationException($"未找到 Id 为 {feeId} 的费用。");
+            if (DbContext.Set<DocFee>().Find(feeId) is not DocFee fee) throw new InvalidOperationException($"未找到 Id 为 {feeId} 的费用。");
             return GetJobBaseCurrencyCode(fee.JobId.Value);
         }
 
@@ -130,10 +127,8 @@ namespace PowerLmsServer.Managers
         /// <returns>本币码</returns>
         private string GetBillBaseCurrencyCode(Guid billId)
         {
-            var bill = DbContext.Set<DocBill>().Find(billId);
-            if (bill == null) throw new InvalidOperationException($"未找到 Id 为 {billId} 的账单。");
-            var fee = DbContext.Set<DocFee>().FirstOrDefaultWithLocal(f => f.BillId == bill.Id);
-            if (fee == null) throw new InvalidOperationException($"未找到与账单 Id 为 {bill.Id} 关联的费用。");
+            if (DbContext.Set<DocBill>().Find(billId) is not DocBill bill) throw new InvalidOperationException($"未找到 Id 为 {billId} 的账单。");
+            if (DbContext.Set<DocFee>().FirstOrDefaultWithLocal(f => f.BillId == bill.Id) is not DocFee fee) throw new InvalidOperationException($"未找到与账单 Id 为 {bill.Id} 关联的费用。");
             return GetJobBaseCurrencyCode(fee.JobId.Value);
         }
 
@@ -290,8 +285,7 @@ namespace PowerLmsServer.Managers
         public bool CanDeleteJob(Guid jobId, PowerLmsUserDbContext dbContext = null)
         {
             dbContext ??= (PowerLmsUserDbContext)DbContext;
-            var job = dbContext.PlJobs.Find(jobId);
-            if (job == null)
+            if (dbContext.PlJobs.Find(jobId) is not PlJob job)
             {
                 OwHelper.SetLastErrorAndMessage(404, $"未找到Id为{jobId}的工作号");
                 return false;
@@ -358,16 +352,14 @@ namespace PowerLmsServer.Managers
         /// <returns>变更结果,包含最新状态;失败返回null。</returns>
         public (byte JobState, byte OperateState)? ChangeJobAndDocState(Guid jobId, int? jobState, byte? operateState, Guid userId)
         {
-            var job = DbContext.Set<PlJob>().Find(jobId);
-            if (job is null)
+            if (DbContext.Set<PlJob>().Find(jobId) is not PlJob job)
             {
                 OwHelper.SetLastErrorAndMessage(404, $"找不到指定的业务对象，Id={jobId}");
                 return null;
             }
             byte oldJobState = job.JobState;
             var now = OwHelper.WorldNow;
-            string error;
-            var plBusinessDoc = FindAndChangeBusinessDoc(jobId, job, operateState, jobState, out error);
+            var plBusinessDoc = FindAndChangeBusinessDoc(jobId, job, operateState, jobState, out string error);
             if (plBusinessDoc == null)
             {
                 OwHelper.SetLastErrorAndMessage(400, error);
@@ -381,7 +373,7 @@ namespace PowerLmsServer.Managers
                     var transition = (job.JobState, jobState.Value);
                     switch (transition)
                     {
-                        case (4, 8): // 从“操作完成”到“已审核”
+                        case (4, 8): // 从"操作完成"到"已审核"
                             if (!AuthorizationManager.Demand(out error, "F.2.8"))
                             {
                                 OwHelper.SetLastErrorAndMessage(403, error);
@@ -396,7 +388,7 @@ namespace PowerLmsServer.Managers
                             }
                             SqlAppLogger.LogGeneralInfo($"审核工作号:{job.JobNo}, 状态从{oldJobState}变更为{jobState.Value}, 审核费用数量:{auditFees.Count}");
                             break;
-                        case (8, 4): // 从“已审核”回到“操作完成”
+                        case (8, 4): // 从"已审核"回到"操作完成"
                             if (!AuthorizationManager.Demand(out error, "F.2.8"))
                             {
                                 OwHelper.SetLastErrorAndMessage(403, error);
@@ -411,7 +403,7 @@ namespace PowerLmsServer.Managers
                             }
                             SqlAppLogger.LogGeneralInfo($"取消审核工作号:{job.JobNo}, 状态从{oldJobState}变更为{jobState.Value}, 取消审核费用数量:{unauditFees.Count}");
                             break;
-                        case (8, 16): // 从“已审核”到“已关闭”
+                        case (8, 16): // 从"已审核"到"已关闭"
                             if (!AuthorizationManager.Demand(out error, "F.2.9"))
                             {
                                 OwHelper.SetLastErrorAndMessage(403, error);
@@ -420,7 +412,7 @@ namespace PowerLmsServer.Managers
                             job.CloseDate = now;
                             SqlAppLogger.LogGeneralInfo($"关闭工作号:{job.JobNo}, 状态从{oldJobState}变更为{jobState.Value}");
                             break;
-                        case (16, 8): // 从“已关闭”回到“已审核”
+                        case (16, 8): // 从"已关闭"回到"已审核"
                             if (!AuthorizationManager.Demand(out error, "F.2.9"))
                             {
                                 OwHelper.SetLastErrorAndMessage(403, error);

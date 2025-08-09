@@ -54,6 +54,12 @@ namespace PowerLmsServer.Managers
         private readonly ConcurrentDictionary<string, Dictionary<string, SubjectConfiguration>> _configCache;
         private readonly ConcurrentDictionary<Guid, HashSet<Guid>> _orgPermissionCache;
 
+        /// <summary>
+        /// 初始化财务系统导出管理器的新实例
+        /// </summary>
+        /// <param name="dbContextFactory">数据库上下文工厂</param>
+        /// <param name="logger">日志记录器</param>
+        /// <param name="serviceProvider">服务提供者</param>
         public FinancialSystemExportManager(
             IDbContextFactory<PowerLmsUserDbContext> dbContextFactory,
             ILogger<FinancialSystemExportManager> logger,
@@ -155,10 +161,8 @@ namespace PowerLmsServer.Managers
             Dictionary<string, string> fieldMappings, 
             Dictionary<string, NativeDbType> fieldTypes) where T : class
         {
-            if (fieldMappings == null)
-                throw new ArgumentNullException(nameof(fieldMappings), "字段映射不能为空，应由调用方提供具体的字段映射定义");
-            if (fieldTypes == null)
-                throw new ArgumentNullException(nameof(fieldTypes), "字段类型不能为空，应由调用方提供具体的字段类型定义");
+            ArgumentNullException.ThrowIfNull(fieldMappings, "字段映射不能为空，应由调用方提供具体的字段映射定义");
+            ArgumentNullException.ThrowIfNull(fieldTypes, "字段类型不能为空，应由调用方提供具体的字段类型定义");
 
             var memoryStream = new MemoryStream();
             try
@@ -280,7 +284,7 @@ namespace PowerLmsServer.Managers
         /// <returns>权限验证结果</returns>
         public bool ValidateExportPermission(Account user, string exportType)
         {
-            if (user == null) return false;
+            if (user is null) return false;
             if (user.IsSuperAdmin) return true;
 
             // 基础权限检查，具体的权限节点由调用方确定
@@ -307,7 +311,7 @@ namespace PowerLmsServer.Managers
         /// <returns>过滤后的查询</returns>
         public IQueryable<T> ApplyOrganizationFilter<T>(IQueryable<T> query, Account user) where T : class, ISpecificOrg
         {
-            if (user == null) return query.Where(_ => false);
+            if (user is null) return query.Where(_ => false);
             if (user.IsSuperAdmin) return query;
 
             var orgManager = _serviceProvider.GetRequiredService<OrgManager<PowerLmsUserDbContext>>();

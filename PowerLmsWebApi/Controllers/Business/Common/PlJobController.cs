@@ -43,7 +43,7 @@ namespace PowerLmsWebApi.Controllers
         readonly EntityManager _EntityManager;
         readonly DataDicManager _DataManager;
         readonly ILogger<PlJobController> _Logger;
-        JobManager _JobManager;
+        readonly JobManager _JobManager;
         readonly AuthorizationManager _AuthorizationManager;
         private readonly OwSqlAppLogger _SqlAppLogger;
         readonly BusinessLogicManager _BusinessLogic;
@@ -73,11 +73,11 @@ namespace PowerLmsWebApi.Controllers
                 #region 业务表单关联过滤
                 if (conditional != null)
                 {
-                    // 空运出口单条件过滤 - 使用不区分大小写的比较
+                    // 空运出口单条件过滤 - 使用范围运算符简化
                     var eaDocConditions = conditional
                         .Where(c => c.Key.StartsWith("PlEaDoc.", StringComparison.OrdinalIgnoreCase))
                         .ToDictionary(
-                            c => c.Key.Substring(c.Key.IndexOf('.') + 1),
+                            c => c.Key[(c.Key.IndexOf('.') + 1)..],
                             c => c.Value,
                             StringComparer.OrdinalIgnoreCase);
 
@@ -89,11 +89,11 @@ namespace PowerLmsWebApi.Controllers
                         coll = coll.Where(job => eaDocJobIds.Contains(job.Id));
                     }
 
-                    // 空运进口单条件过滤 - 使用不区分大小写的比较
+                    // 空运进口单条件过滤 - 使用范围运算符简化
                     var iaDocConditions = conditional
                         .Where(c => c.Key.StartsWith("PlIaDoc.", StringComparison.OrdinalIgnoreCase))
                         .ToDictionary(
-                            c => c.Key.Substring(c.Key.IndexOf('.') + 1),
+                            c => c.Key[(c.Key.IndexOf('.') + 1)..],
                             c => c.Value,
                             StringComparer.OrdinalIgnoreCase);
 
@@ -105,11 +105,11 @@ namespace PowerLmsWebApi.Controllers
                         coll = coll.Where(job => iaDocJobIds.Contains(job.Id));
                     }
 
-                    // 海运出口单条件过滤 - 使用不区分大小写的比较
+                    // 海运出口单条件过滤 - 使用范围运算符简化
                     var esDocConditions = conditional
                         .Where(c => c.Key.StartsWith("PlEsDoc.", StringComparison.OrdinalIgnoreCase))
                         .ToDictionary(
-                            c => c.Key.Substring(c.Key.IndexOf('.') + 1),
+                            c => c.Key[(c.Key.IndexOf('.') + 1)..],
                             c => c.Value,
                             StringComparer.OrdinalIgnoreCase);
 
@@ -121,12 +121,12 @@ namespace PowerLmsWebApi.Controllers
                         coll = coll.Where(job => esDocJobIds.Contains(job.Id));
                     }
 
-                    // 海运进口单条件过滤 - 使用不区分大小写的比较
+                    // 海运进口单条件过滤 - 使用范围运算符简化
                     // 修复: 使用正确的类型名称 "PlIsDoc" 而不是 "PlIaDoc"
                     var isDocConditions = conditional
                         .Where(c => c.Key.StartsWith("PlIsDoc.", StringComparison.OrdinalIgnoreCase))
                         .ToDictionary(
-                            c => c.Key.Substring(c.Key.IndexOf('.') + 1),
+                            c => c.Key[(c.Key.IndexOf('.') + 1)..],
                             c => c.Value,
                             StringComparer.OrdinalIgnoreCase);
 
@@ -691,7 +691,7 @@ namespace PowerLmsWebApi.Controllers
                     .Where(c => c.Key.StartsWith($"{ignFeeName}.", StringComparison.OrdinalIgnoreCase) ||
                                 c.Key.StartsWith("docFee.", StringComparison.OrdinalIgnoreCase))
                     .ToDictionary(
-                        c => c.Key.Substring(c.Key.IndexOf('.') + 1),
+                        c => c.Key[(c.Key.IndexOf('.') + 1)..],
                         c => c.Value,
                         StringComparer.OrdinalIgnoreCase);
 

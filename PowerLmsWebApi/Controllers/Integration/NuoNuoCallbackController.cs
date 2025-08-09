@@ -71,7 +71,7 @@ namespace PowerLmsWebApi.Controllers
                     return BadRequest(new { status = "9999", message = "缺少操作类型参数" });
                 }
 
-                _logger.LogInformation($"处理诺诺发票回调, 操作类型: {operater}");
+                _logger.LogInformation("处理诺诺发票回调, 操作类型: {Operater}", operater);
 
                 // 根据操作类型处理不同的回调
                 switch (operater)
@@ -123,7 +123,7 @@ namespace PowerLmsWebApi.Controllers
                     return BadRequest(new { status = "9999", message = "缺少必要参数" });
                 }
 
-                _logger.LogInformation($"处理开票结果回调, 订单号: {orderno}");
+                _logger.LogInformation("处理开票结果回调, 订单号: {OrderNo}", orderno);
 
                 // 解析JSON内容
                 var invoiceData = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(content);
@@ -146,7 +146,7 @@ namespace PowerLmsWebApi.Controllers
 
                 if (invoiceInfo == null)
                 {
-                    _logger.LogWarning($"未找到匹配的发票记录, 发票流水号: {fpqqlsh.GetString()}");
+                    _logger.LogWarning("未找到匹配的发票记录, 发票流水号: {InvoiceSerialNum}", fpqqlsh.GetString());
                     // 记录回调数据但返回成功，避免诺诺系统重复回调
                     _dbContext.OwSystemLogs.Add(new OwSystemLog
                     {
@@ -169,7 +169,7 @@ namespace PowerLmsWebApi.Controllers
                 // 更新发票信息
                 UpdateInvoiceInfo(invoiceInfo, invoiceData, status, content);
                 _dbContext.SaveChanges();
-                _logger.LogInformation($"成功更新发票信息, 发票ID: {invoiceInfo.Id}");
+                _logger.LogInformation("成功更新发票信息, 发票ID: {InvoiceId}", invoiceInfo.Id);
 
                 // 记录回调日志
                 _dbContext.OwSystemLogs.Add(new OwSystemLog
@@ -202,7 +202,7 @@ namespace PowerLmsWebApi.Controllers
         {
             try
             {
-                _logger.LogInformation($"开始更新发票信息, 发票ID: {invoiceInfo.Id}, 状态: {status}");
+                _logger.LogInformation("开始更新发票信息, 发票ID: {InvoiceId}, 状态: {Status}", invoiceInfo.Id, status);
 
                 // 根据状态更新发票
                 if (status == null || status == "1") // 开票完成
@@ -229,7 +229,7 @@ namespace PowerLmsWebApi.Controllers
                     if (invoiceData.TryGetValue("c_fpdm", out var fpdm) && fpdm.ValueKind != JsonValueKind.Undefined)
                     {
                         string fpdmValue = fpdm.GetString();
-                        _logger.LogInformation($"发票ID: {invoiceInfo.Id} 收到发票代码: {fpdmValue}");
+                        _logger.LogInformation("发票ID: {InvoiceId} 收到发票代码: {InvoiceCode}", invoiceInfo.Id, fpdmValue);
                         // 发票代码将存储在SellerInvoiceData的完整回调数据中
                     }
 
@@ -252,29 +252,31 @@ namespace PowerLmsWebApi.Controllers
                             if (long.TryParse(dateString, out long timestamp))
                             {
                                 invoiceInfo.InvoiceDate = DateTimeOffset.FromUnixTimeMilliseconds(timestamp).DateTime;
-                                _logger.LogInformation($"发票ID: {invoiceInfo.Id} 成功解析开票日期时间戳: {dateString} -> {invoiceInfo.InvoiceDate:yyyy-MM-dd HH:mm:ss}");
+                                _logger.LogInformation("发票ID: {InvoiceId} 成功解析开票日期时间戳: {DateString} -> {InvoiceDate}", 
+                                    invoiceInfo.Id, dateString, invoiceInfo.InvoiceDate.Value.ToString("yyyy-MM-dd HH:mm:ss"));
                             }
                             // 如果不是时间戳，尝试直接解析日期字符串
                             else if (DateTime.TryParse(dateString, out DateTime invoiceDate))
                             {
                                 invoiceInfo.InvoiceDate = invoiceDate;
-                                _logger.LogInformation($"发票ID: {invoiceInfo.Id} 成功解析开票日期字符串: {dateString} -> {invoiceInfo.InvoiceDate:yyyy-MM-dd HH:mm:ss}");
+                                _logger.LogInformation("发票ID: {InvoiceId} 成功解析开票日期字符串: {DateString} -> {InvoiceDate}", 
+                                    invoiceInfo.Id, dateString, invoiceInfo.InvoiceDate.Value.ToString("yyyy-MM-dd HH:mm:ss"));
                             }
                             else
                             {
-                                _logger.LogWarning($"发票ID: {invoiceInfo.Id} 无法解析开票日期: {dateString}，使用当前时间");
+                                _logger.LogWarning("发票ID: {InvoiceId} 无法解析开票日期: {DateString}，使用当前时间", invoiceInfo.Id, dateString);
                                 invoiceInfo.InvoiceDate = DateTime.Now;
                             }
                         }
                         else
                         {
-                            _logger.LogWarning($"发票ID: {invoiceInfo.Id} 开票日期字段为空，使用当前时间");
+                            _logger.LogWarning("发票ID: {InvoiceId} 开票日期字段为空，使用当前时间", invoiceInfo.Id);
                             invoiceInfo.InvoiceDate = DateTime.Now;
                         }
                     }
                     else
                     {
-                        _logger.LogWarning($"发票ID: {invoiceInfo.Id} 未找到开票日期字段 c_kprq，使用当前时间");
+                        _logger.LogWarning("发票ID: {InvoiceId} 未找到开票日期字段 c_kprq，使用当前时间", invoiceInfo.Id);
                         invoiceInfo.InvoiceDate = DateTime.Now;
                     }
 
@@ -332,14 +334,14 @@ namespace PowerLmsWebApi.Controllers
                     if (invoiceData.TryGetValue("c_jym", out var jym) && jym.ValueKind != JsonValueKind.Undefined)
                     {
                         string jymValue = jym.GetString();
-                        _logger.LogInformation($"发票ID: {invoiceInfo.Id} 收到校验码: {jymValue}");
+                        _logger.LogInformation("发票ID: {InvoiceId} 收到校验码: {VerificationCode}", invoiceInfo.Id, jymValue);
                     }
 
                     // 记录数电票号码信息到日志中
                     if (invoiceData.TryGetValue("c_ddh", out var ddh) && ddh.ValueKind != JsonValueKind.Undefined)
                     {
                         string ddhValue = ddh.GetString();
-                        _logger.LogInformation($"发票ID: {invoiceInfo.Id} 收到数电票号码: {ddhValue}");
+                        _logger.LogInformation("发票ID: {InvoiceId} 收到数电票号码: {DigitalInvoiceNumber}", invoiceInfo.Id, ddhValue);
                     }
 
                     // 更新PDF下载地址
@@ -354,7 +356,8 @@ namespace PowerLmsWebApi.Controllers
                     // 设置返回发票时间
                     invoiceInfo.ReturnInvoiceTime = DateTime.Now;
 
-                    _logger.LogInformation($"发票开具成功，已更新发票信息，发票ID: {invoiceInfo.Id}, 发票号: {invoiceInfo.InvoiceNumber}");
+                    _logger.LogInformation("发票开具成功，已更新发票信息，发票ID: {InvoiceId}, 发票号: {InvoiceNumber}", 
+                        invoiceInfo.Id, invoiceInfo.InvoiceNumber);
                 }
                 else if (status == "2") // 开票失败
                 {
@@ -377,7 +380,8 @@ namespace PowerLmsWebApi.Controllers
                     invoiceInfo.FailReason = errorMessage; // 明确记录失败原因
                     invoiceInfo.ReturnInvoiceTime = DateTime.Now;
 
-                    _logger.LogWarning($"发票开具失败，已重置状态，发票ID: {invoiceInfo.Id}, 失败原因: {errorMessage}");
+                    _logger.LogWarning("发票开具失败，已重置状态，发票ID: {InvoiceId}, 失败原因: {ErrorMessage}", 
+                        invoiceInfo.Id, errorMessage);
 
                     // 如果有原审核人ID，向审核人发送消息通知
                     if (auditorId.HasValue)
@@ -403,16 +407,16 @@ namespace PowerLmsWebApi.Controllers
                                 true                    // 是系统消息
                             );
 
-                            _logger.LogInformation($"已向原审核人 {auditorId.Value} 发送开票失败通知，发票已重置为待审核状态");
+                            _logger.LogInformation("已向原审核人 {AuditorId} 发送开票失败通知，发票已重置为待审核状态", auditorId.Value);
                         }
                         catch (Exception ex)
                         {
-                            _logger.LogError(ex, $"向原审核人 {auditorId.Value} 发送开票失败通知时出错");
+                            _logger.LogError(ex, "向原审核人 {AuditorId} 发送开票失败通知时出错", auditorId.Value);
                         }
                     }
                     else
                     {
-                        _logger.LogWarning($"发票 {invoiceInfo.Id} 开票失败，但未找到原审核人ID，无法发送通知");
+                        _logger.LogWarning("发票 {InvoiceId} 开票失败，但未找到原审核人ID，无法发送通知", invoiceInfo.Id);
                     }
                 }
                 else if (status == "3") // 开票成功签章失败
@@ -433,7 +437,8 @@ namespace PowerLmsWebApi.Controllers
                     invoiceInfo.FailReason = errorMessage; // 明确记录失败原因
                     invoiceInfo.ReturnInvoiceTime = DateTime.Now;
 
-                    _logger.LogWarning($"发票签章失败，已更新状态，发票ID: {invoiceInfo.Id}, 失败原因: {errorMessage}");
+                    _logger.LogWarning("发票签章失败，已更新状态，发票ID: {InvoiceId}, 失败原因: {ErrorMessage}", 
+                        invoiceInfo.Id, errorMessage);
 
                     // 如果有审核人ID，向审核人发送消息通知
                     if (invoiceInfo.AuditorId.HasValue)
@@ -460,11 +465,11 @@ namespace PowerLmsWebApi.Controllers
                                 true                        // 是系统消息
                             );
 
-                            _logger.LogInformation($"已向审核人 {invoiceInfo.AuditorId.Value} 发送签章失败通知");
+                            _logger.LogInformation("已向审核人 {AuditorId} 发送签章失败通知", invoiceInfo.AuditorId.Value);
                         }
                         catch (Exception ex)
                         {
-                            _logger.LogError(ex, $"向审核人 {invoiceInfo.AuditorId.Value} 发送签章失败通知时出错");
+                            _logger.LogError(ex, "向审核人 {AuditorId} 发送签章失败通知时出错", invoiceInfo.AuditorId.Value);
                         }
                     }
                 }
@@ -479,18 +484,20 @@ namespace PowerLmsWebApi.Controllers
                         {
                             requisition.TaxInvoiceId = invoiceInfo.Id;  // 更新申请单关联的发票ID
                             requisition.InvoiceNumber = invoiceInfo.InvoiceNumber;  // 回写发票号到申请单
-                            _logger?.LogInformation($"已更新费用申请单与发票的关联，申请单ID: {requisition.Id}, 发票ID: {invoiceInfo.Id}, 发票号: {invoiceInfo.InvoiceNumber}");
+                            _logger?.LogInformation("已更新费用申请单与发票的关联，申请单ID: {RequisitionId}, 发票ID: {InvoiceId}, 发票号: {InvoiceNumber}", 
+                                requisition.Id, invoiceInfo.Id, invoiceInfo.InvoiceNumber);
                         }
                     }
                     catch (Exception ex)
                     {
-                        _logger?.LogError(ex, $"更新费用申请单与发票关联时出错，申请单ID: {invoiceInfo.DocFeeRequisitionId}, 发票ID: {invoiceInfo.Id}");
+                        _logger?.LogError(ex, "更新费用申请单与发票关联时出错，申请单ID: {RequisitionId}, 发票ID: {InvoiceId}", 
+                            invoiceInfo.DocFeeRequisitionId, invoiceInfo.Id);
                     }
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"更新发票信息时发生异常, 发票ID: {invoiceInfo.Id}");
+                _logger.LogError(ex, "更新发票信息时发生异常, 发票ID: {InvoiceId}", invoiceInfo.Id);
                 // 即使发生异常，也保存基本信息
                 invoiceInfo.ReturnInvoiceTime = DateTime.Now;
                 invoiceInfo.SellerInvoiceData = rawContent;
@@ -516,7 +523,7 @@ namespace PowerLmsWebApi.Controllers
                     return BadRequest(new { status = "9999", message = "缺少必要参数" });
                 }
 
-                _logger.LogInformation($"处理发票作废回调, 发票流水号: {fpqqlsh}");
+                _logger.LogInformation("处理发票作废回调, 发票流水号: {InvoiceSerialNum}", fpqqlsh);
 
                 // 解析JSON内容
                 var invalidData = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(content);
@@ -542,7 +549,7 @@ namespace PowerLmsWebApi.Controllers
                             invoiceInfo.State = 4; // 设置为已作废状态
                             invoiceInfo.SellerInvoiceData = content; // 存储作废信息
                             _dbContext.SaveChanges();
-                            _logger.LogInformation($"发票作废成功, 发票ID: {invoiceInfo.Id}");
+                            _logger.LogInformation("发票作废成功, 发票ID: {InvoiceId}", invoiceInfo.Id);
                         }
                         else if (status == "2") // 作废失败
                         {
@@ -550,13 +557,13 @@ namespace PowerLmsWebApi.Controllers
                             if (invalidData.TryGetValue("invalidErrorMessage", out var errorMsg) &&
                                 errorMsg.ValueKind != JsonValueKind.Undefined)
                             {
-                                _logger.LogWarning($"发票作废失败: {errorMsg.GetString()}, 发票ID: {invoiceInfo.Id}");
+                                _logger.LogWarning("发票作废失败: {ErrorMessage}, 发票ID: {InvoiceId}", errorMsg.GetString(), invoiceInfo.Id);
                                 invoiceInfo.SellerInvoiceData = $"{{\"invalidErrorMessage\": \"{errorMsg.GetString()}\"}}";
                                 _dbContext.SaveChanges();
                             }
                             else
                             {
-                                _logger.LogWarning($"发票作废失败: 未知原因, 发票ID: {invoiceInfo.Id}");
+                                _logger.LogWarning("发票作废失败: 未知原因, 发票ID: {InvoiceId}", invoiceInfo.Id);
                                 invoiceInfo.SellerInvoiceData = "{\"invalidErrorMessage\": \"作废失败: 未知原因\"}";
                                 _dbContext.SaveChanges();
                             }
@@ -604,7 +611,7 @@ namespace PowerLmsWebApi.Controllers
                     return BadRequest(new { status = "9999", message = "缺少必要参数" });
                 }
 
-                _logger.LogInformation($"处理开票申请结果回调, 订单号: {orderno}, 成功: {isSuccess}");
+                _logger.LogInformation("处理开票申请结果回调, 订单号: {OrderNo}, 成功: {IsSuccess}", orderno, isSuccess);
 
                 // 记录回调日志
                 _dbContext.OwSystemLogs.Add(new OwSystemLog
@@ -650,7 +657,7 @@ namespace PowerLmsWebApi.Controllers
                     return BadRequest(new { status = "9999", message = "缺少必要参数" });
                 }
 
-                _logger.LogInformation($"处理红字信息表申请结果回调, 申请单号: {billNo}");
+                _logger.LogInformation("处理红字信息表申请结果回调, 申请单号: {BillNo}", billNo);
 
                 // 记录回调日志
                 _dbContext.OwSystemLogs.Add(new OwSystemLog
@@ -690,7 +697,7 @@ namespace PowerLmsWebApi.Controllers
                     return BadRequest(new { status = "9999", message = "缺少必要参数" });
                 }
 
-                _logger.LogInformation($"处理红字确认单申请结果回调, 申请单ID: {billId}");
+                _logger.LogInformation("处理红字确认单申请结果回调, 申请单ID: {BillId}", billId);
 
                 // 记录回调日志
                 _dbContext.OwSystemLogs.Add(new OwSystemLog

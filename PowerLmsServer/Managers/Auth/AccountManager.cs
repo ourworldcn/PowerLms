@@ -41,7 +41,7 @@ namespace PowerLmsServer.Managers
         readonly IMapper _Mapper;
         readonly IMemoryCache _MemoryCache;
         readonly IDbContextFactory<PowerLmsUserDbContext> _DbContextFactory;
-        IHostApplicationLifetime _ApplicationLifetime;
+        readonly IHostApplicationLifetime _ApplicationLifetime;
 
         /// <summary>
         /// 将令牌转换为用户Key的字典的缓存项的key。
@@ -51,7 +51,7 @@ namespace PowerLmsServer.Managers
         /// <summary>
         /// TaskDispatcher 实例。延迟初始化。
         /// </summary>
-        private TaskDispatcher TaskDispatcher;
+        private readonly TaskDispatcher TaskDispatcher;
 
         /// <summary>
         /// 令牌到缓存键的映射字典。
@@ -519,7 +519,6 @@ namespace PowerLmsServer.Managers
                 OwHelper.SetLastErrorAndMessage(404, "未找到指定的账号。");
                 return false;
             }
-
 
             // 使用TaskDispatcher排队保存任务
             return TaskDispatcher.Enqueue(

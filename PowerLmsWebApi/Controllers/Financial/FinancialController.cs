@@ -37,15 +37,15 @@ namespace PowerLmsWebApi.Controllers
             _SqlAppLogger = sqlAppLogger;
         }
 
-        private AccountManager _AccountManager;
-        private IServiceProvider _ServiceProvider;
-        private EntityManager _EntityManager;
-        private PowerLmsUserDbContext _DbContext;
+        readonly AccountManager _AccountManager;
+        readonly IServiceProvider _ServiceProvider;
+        readonly EntityManager _EntityManager;
+        readonly PowerLmsUserDbContext _DbContext;
         readonly ILogger<FinancialController> _Logger;
         readonly IMapper _Mapper;
         readonly OwWfManager _WfManager;
         readonly AuthorizationManager _AuthorizationManager;
-        OwSqlAppLogger _SqlAppLogger;
+        readonly OwSqlAppLogger _SqlAppLogger;
 
         #region 结算单
 
@@ -78,14 +78,14 @@ namespace PowerLmsWebApi.Controllers
                 var reqConditions = conditional
                     .Where(pair => pair.Key.StartsWith(docFeeRequisitionPrefix, StringComparison.OrdinalIgnoreCase))
                     .ToDictionary(
-                        pair => pair.Key.Substring(docFeeRequisitionPrefix.Length), // 去掉前缀
+                        pair => pair.Key[docFeeRequisitionPrefix.Length..], // 使用范围运算符去掉前缀
                         pair => pair.Value,
                         StringComparer.OrdinalIgnoreCase
                     );
 
                 // 收集所有不包含点号的条件
                 var invoiceConditions = conditional
-                    .Where(pair => !pair.Key.Contains("."))
+                    .Where(pair => !pair.Key.Contains('.'))
                     .ToDictionary(
                         pair => pair.Key,
                         pair => pair.Value,
@@ -153,8 +153,7 @@ namespace PowerLmsWebApi.Controllers
             try
             {
                 // 验证权限
-                string err;
-                if (!_AuthorizationManager.Demand(out err, "F.3.1"))
+                if (!_AuthorizationManager.Demand(out string err, "F.3.1"))
                     return StatusCode((int)HttpStatusCode.Forbidden, err);
 
                 // 验证输入参数
@@ -214,8 +213,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<ModifyPlInvoicesReturnDto> ModifyPlInvoices(ModifyPlInvoicesParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "F.3.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out string err, "F.3.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ModifyPlInvoicesReturnDto();
             if (!_EntityManager.Modify(new[] { model.PlInvoices })) return NotFound();
             //忽略不可更改字段
@@ -238,12 +236,9 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemovePlInvoicesReturnDto();
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "F.3.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out string err, "F.3.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var id = model.Id;
-            var dbSet = _DbContext.PlInvoicess;
-            var item = dbSet.Find(id);
-            if (item is null) return BadRequest();
+            if (_DbContext.PlInvoicess.Find(id) is not PlInvoices item) return BadRequest();
             var children = _DbContext.PlInvoicesItems.Where(c => c.ParentId == item.Id).ToArray();
             _EntityManager.Remove(item);
             if (children.Length > 0) _DbContext.RemoveRange(children);
@@ -273,8 +268,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ConfirmPlInvoicesReturnDto();
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "F.3.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out string err, "F.3.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var coll = _DbContext.PlInvoicess.Where(c => model.Ids.Contains(c.Id)).ToArray();
             if (coll.Length != model.Ids.Count) return BadRequest("至少有一个id不存在对应的结算单");
 
@@ -415,11 +409,10 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
             {
-                _Logger.LogWarning("无效的令牌{token}", model.Token);
+                _Logger.LogWarning("无效的令牌: {token}", model.Token);
                 return Unauthorized();
             }
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "F.3.1") && !_AuthorizationManager.Demand(out err, "F.3.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out string err, "F.3.1") && !_AuthorizationManager.Demand(out err, "F.3.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new AddPlInvoicesItemReturnDto();
             var entity = model.PlInvoicesItem;
             entity.GenerateNewId();
@@ -445,8 +438,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyPlInvoicesItemReturnDto();
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "F.3.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out string err, "F.3.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             if (!_EntityManager.Modify(new[] { model.PlInvoicesItem })) return NotFound();
             //忽略不可更改字段
             var entity = _DbContext.Entry(model.PlInvoicesItem);
@@ -467,13 +459,10 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<RemovePlInvoicesItemReturnDto> RemovePlInvoicesItem(RemovePlInvoicesItemParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "F.3.2") && !_AuthorizationManager.Demand(out err, "F.3.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out string err, "F.3.2") && !_AuthorizationManager.Demand(out err, "F.3.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new RemovePlInvoicesItemReturnDto();
             var id = model.Id;
-            var dbSet = _DbContext.PlInvoicesItems;
-            var item = dbSet.Find(id);
-            if (item is null) return BadRequest();
+            if (_DbContext.PlInvoicesItems.Find(id) is not PlInvoicesItem item) return BadRequest();
             _EntityManager.Remove(item);
             _DbContext.SaveChanges();
             return result;
@@ -493,8 +482,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new SetPlInvoicesItemReturnDto();
-            var fr = _DbContext.DocFeeRequisitions.Find(model.FrId);
-            if (fr is null) return NotFound();
+            if (_DbContext.DocFeeRequisitions.Find(model.FrId) is not DocFeeRequisition fr) return NotFound();
             var aryIds = model.Items.Select(c => c.Id).ToArray();   //指定的Id
             var existsIds = _DbContext.PlInvoicesItems.Where(c => c.ParentId == fr.Id).Select(c => c.Id).ToArray();    //已经存在的Id
             //更改
@@ -562,28 +550,27 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
             {
-                _Logger.LogWarning("无效的令牌{token}", model.Token);
+                _Logger.LogWarning("无效的令牌: {token}", model.Token);
                 return Unauthorized();
             }
 
             #region 权限判定
-            string err;
             var docFeeTT = model.DocFeeTemplate;
             if (docFeeTT.JobTypeId == ProjectContent.AeId)    //若是空运出口业务
             {
-                if (!_AuthorizationManager.Demand(out err, "D20.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!_AuthorizationManager.Demand(out string err, "D20.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             }
             else if (docFeeTT.JobTypeId == ProjectContent.AiId)    //若是空运进口业务
             {
-                if (!_AuthorizationManager.Demand(out err, "D20.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!_AuthorizationManager.Demand(out string err, "D20.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             }
             else if (docFeeTT.JobTypeId == ProjectContent.SeId)    //若是海运出口业务
             {
-                if (!_AuthorizationManager.Demand(out err, "D20.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!_AuthorizationManager.Demand(out string err, "D20.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             }
             else if (docFeeTT.JobTypeId == ProjectContent.SiId)    //若是海运进口业务
             {
-                if (!_AuthorizationManager.Demand(out err, "D20.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!_AuthorizationManager.Demand(out string err, "D20.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             }
             #endregion 权限判定
 
@@ -615,23 +602,22 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyDocFeeTemplateReturnDto();
             #region 权限判定
-            string err;
             var docFeeTT = model.DocFeeTemplate;
             if (docFeeTT.JobTypeId == ProjectContent.AeId)    //若是空运出口业务
             {
-                if (!_AuthorizationManager.Demand(out err, "D20.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!_AuthorizationManager.Demand(out string err, "D20.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             }
             else if (docFeeTT.JobTypeId == ProjectContent.AiId)    //若是空运进口业务
             {
-                if (!_AuthorizationManager.Demand(out err, "D20.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!_AuthorizationManager.Demand(out string err, "D20.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             }
             else if (docFeeTT.JobTypeId == ProjectContent.SeId)    //若是海运出口业务
             {
-                if (!_AuthorizationManager.Demand(out err, "D20.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!_AuthorizationManager.Demand(out string err, "D20.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             }
             else if (docFeeTT.JobTypeId == ProjectContent.SiId)    //若是海运进口业务
             {
-                if (!_AuthorizationManager.Demand(out err, "D20.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!_AuthorizationManager.Demand(out string err, "D20.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             }
             #endregion 权限判定
             if (!_EntityManager.Modify(new[] { model.DocFeeTemplate })) return NotFound();
@@ -656,26 +642,24 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveDocFeeTemplateReturnDto();
             var id = model.Id;
-            var dbSet = _DbContext.DocFeeTemplates;
-            if (dbSet.Find(id) is not DocFeeTemplate item) return BadRequest();
+            if (_DbContext.DocFeeTemplates.Find(id) is not DocFeeTemplate item) return BadRequest();
             #region 权限判定
-            string err;
             var docFeeTT = item;
             if (docFeeTT.JobTypeId == ProjectContent.AeId)    //若是空运出口业务
             {
-                if (!_AuthorizationManager.Demand(out err, "D20.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!_AuthorizationManager.Demand(out string err, "D20.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             }
             else if (docFeeTT.JobTypeId == ProjectContent.AiId)    //若是空运进口业务
             {
-                if (!_AuthorizationManager.Demand(out err, "D20.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!_AuthorizationManager.Demand(out string err, "D20.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             }
             else if (docFeeTT.JobTypeId == ProjectContent.SeId)    //若是海运出口业务
             {
-                if (!_AuthorizationManager.Demand(out err, "D20.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!_AuthorizationManager.Demand(out string err, "D20.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             }
             else if (docFeeTT.JobTypeId == ProjectContent.SiId)    //若是海运进口业务
             {
-                if (!_AuthorizationManager.Demand(out err, "D20.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!_AuthorizationManager.Demand(out string err, "D20.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             }
             #endregion 权限判定
             var children = _DbContext.DocFeeTemplateItems.Where(c => c.ParentId == item.Id).ToArray();
@@ -735,7 +719,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
             {
-                _Logger.LogWarning("无效的令牌{token}", model.Token);
+                _Logger.LogWarning("无效的令牌: {token}", model.Token);
                 return Unauthorized();
             }
             var result = new AddDocFeeTemplateItemReturnDto();
@@ -743,26 +727,24 @@ namespace PowerLmsWebApi.Controllers
 
             var id = model.DocFeeTemplateItem.ParentId;
             if (id is null) return BadRequest();
-            var dbSet = _DbContext.DocFeeTemplates;
-            if (dbSet.Find(id.Value) is not DocFeeTemplate item) return BadRequest();
+            if (_DbContext.DocFeeTemplates.Find(id.Value) is not DocFeeTemplate item) return BadRequest();
             #region 权限判定
-            string err;
             var docFeeTT = item;
             if (docFeeTT.JobTypeId == ProjectContent.AeId)    //若是空运出口业务
             {
-                if (!_AuthorizationManager.Demand(out err, "D20.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!_AuthorizationManager.Demand(out string err, "D20.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             }
             else if (docFeeTT.JobTypeId == ProjectContent.AiId)    //若是空运进口业务
             {
-                if (!_AuthorizationManager.Demand(out err, "D20.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!_AuthorizationManager.Demand(out string err, "D20.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             }
             else if (docFeeTT.JobTypeId == ProjectContent.SeId)    //若是海运出口业务
             {
-                if (!_AuthorizationManager.Demand(out err, "D20.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!_AuthorizationManager.Demand(out string err, "D20.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             }
             else if (docFeeTT.JobTypeId == ProjectContent.SiId)    //若是海运进口业务
             {
-                if (!_AuthorizationManager.Demand(out err, "D20.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!_AuthorizationManager.Demand(out string err, "D20.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             }
             #endregion 权限判定
 
@@ -791,26 +773,24 @@ namespace PowerLmsWebApi.Controllers
             var result = new ModifyDocFeeTemplateItemReturnDto();
             var id = model.DocFeeTemplateItem.ParentId;
             if (id is null) return BadRequest();
-            var dbSet = _DbContext.DocFeeTemplates;
-            if (dbSet.Find(id.Value) is not DocFeeTemplate item) return BadRequest();
+            if (_DbContext.DocFeeTemplates.Find(id.Value) is not DocFeeTemplate item) return BadRequest();
             #region 权限判定
-            string err;
             var docFeeTT = item;
             if (docFeeTT.JobTypeId == ProjectContent.AeId)    //若是空运出口业务
             {
-                if (!_AuthorizationManager.Demand(out err, "D20.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!_AuthorizationManager.Demand(out string err, "D20.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             }
             else if (docFeeTT.JobTypeId == ProjectContent.AiId)    //若是空运进口业务
             {
-                if (!_AuthorizationManager.Demand(out err, "D20.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!_AuthorizationManager.Demand(out string err, "D20.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             }
             else if (docFeeTT.JobTypeId == ProjectContent.SeId)    //若是海运出口业务
             {
-                if (!_AuthorizationManager.Demand(out err, "D20.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!_AuthorizationManager.Demand(out string err, "D20.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             }
             else if (docFeeTT.JobTypeId == ProjectContent.SiId)    //若是海运进口业务
             {
-                if (!_AuthorizationManager.Demand(out err, "D20.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!_AuthorizationManager.Demand(out string err, "D20.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             }
             #endregion 权限判定
 
@@ -836,32 +816,29 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveDocFeeTemplateItemReturnDto();
             var id = model.Id;
-            var dbSet = _DbContext.DocFeeTemplateItems;
-            var item = dbSet.Find(id);
-            if (item is null) return BadRequest();
+            if (_DbContext.DocFeeTemplateItems.Find(id) is not DocFeeTemplateItem item) return BadRequest();
 
             var idTT = item.ParentId;
             if (idTT is null) return BadRequest();
 
             if (_DbContext.DocFeeTemplates.Find(idTT.Value) is not DocFeeTemplate tt) return BadRequest();
             #region 权限判定
-            string err;
             var docFeeTT = tt;
             if (docFeeTT.JobTypeId == ProjectContent.AeId)    //若是空运出口业务
             {
-                if (!_AuthorizationManager.Demand(out err, "D20.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!_AuthorizationManager.Demand(out string err, "D20.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             }
             else if (docFeeTT.JobTypeId == ProjectContent.AiId)    //若是空运进口业务
             {
-                if (!_AuthorizationManager.Demand(out err, "D20.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!_AuthorizationManager.Demand(out string err, "D20.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             }
             else if (docFeeTT.JobTypeId == ProjectContent.SeId)    //若是海运出口业务
             {
-                if (!_AuthorizationManager.Demand(out err, "D20.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!_AuthorizationManager.Demand(out string err, "D20.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             }
             else if (docFeeTT.JobTypeId == ProjectContent.SiId)    //若是海运进口业务
             {
-                if (!_AuthorizationManager.Demand(out err, "D20.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!_AuthorizationManager.Demand(out string err, "D20.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             }
             #endregion 权限判定
 
@@ -885,29 +862,27 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new SetDocFeeTemplateItemReturnDto();
-            var fr = _DbContext.DocFeeRequisitions.Find(model.FrId);
-            if (fr is null) return NotFound();
+            if (_DbContext.DocFeeRequisitions.Find(model.FrId) is not DocFeeRequisition fr) return NotFound();
 
             var idTT = model.FrId;
             if (_DbContext.DocFeeTemplates.Find(idTT) is not DocFeeTemplate tt) return BadRequest();
             #region 权限判定
-            string err;
             var docFeeTT = tt;
             if (docFeeTT.JobTypeId == ProjectContent.AeId)    //若是空运出口业务
             {
-                if (!_AuthorizationManager.Demand(out err, "D20.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!_AuthorizationManager.Demand(out string err, "D20.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             }
             else if (docFeeTT.JobTypeId == ProjectContent.AiId)    //若是空运进口业务
             {
-                if (!_AuthorizationManager.Demand(out err, "D20.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!_AuthorizationManager.Demand(out string err, "D20.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             }
             else if (docFeeTT.JobTypeId == ProjectContent.SeId)    //若是海运出口业务
             {
-                if (!_AuthorizationManager.Demand(out err, "D20.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!_AuthorizationManager.Demand(out string err, "D20.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             }
             else if (docFeeTT.JobTypeId == ProjectContent.SiId)    //若是海运进口业务
             {
-                if (!_AuthorizationManager.Demand(out err, "D20.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!_AuthorizationManager.Demand(out string err, "D20.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             }
             #endregion 权限判定
             var aryIds = model.Items.Select(c => c.Id).ToArray();   //指定的Id

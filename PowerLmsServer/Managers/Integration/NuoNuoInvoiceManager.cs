@@ -46,11 +46,11 @@ namespace PowerLmsServer.Managers
         /// </summary>
         private const string InvoiceUrl = "https://sdk.nuonuo.com/open/v1/services";
 
-        private readonly HttpClient _httpClient;
-        private readonly ILogger<NuoNuoManager> _logger;
-        IMapper _mapper;
-        IMemoryCache _cache;
-        IDbContextFactory<PowerLmsUserDbContext> _dbContextFactory;
+        readonly HttpClient _httpClient;
+        readonly ILogger<NuoNuoManager> _logger;
+        readonly IMapper _mapper;
+        readonly IMemoryCache _cache;
+        readonly IDbContextFactory<PowerLmsUserDbContext> _dbContextFactory;
         PowerLmsUserDbContext DbContext => _DbContext ??= _dbContextFactory.CreateDbContext();
         PowerLmsUserDbContext _DbContext;
 
@@ -85,9 +85,8 @@ namespace PowerLmsServer.Managers
                 var invoiceInfo = DbContext.TaxInvoiceInfos.Find(taxInvoiceInfoId); // 查询发票信息
                 if (invoiceInfo == null) // 发票信息不存在
                 {
-                    string errorMessage = $"未找到ID为 {taxInvoiceInfoId} 的发票信息";
-                    _logger?.LogError(errorMessage);
-                    OwHelper.SetLastErrorAndMessage((int)HttpStatusCode.NotFound, errorMessage);
+                    _logger?.LogError("未找到ID为 {TaxInvoiceInfoId} 的发票信息", taxInvoiceInfoId);
+                    OwHelper.SetLastErrorAndMessage((int)HttpStatusCode.NotFound, $"未找到ID为 {taxInvoiceInfoId} 的发票信息");
                     return null;
                 }
                 return invoiceInfo; // 返回发票信息
@@ -137,17 +136,17 @@ namespace PowerLmsServer.Managers
                     goto ErrorHandler;
                 }
 
-                _logger?.LogInformation("成功获取发票ID {TaxInvoiceInfoId} 对应的渠道账号配置", invoiceInfo.Id); // 使用结构化日志记录
+                _logger?.LogInformation("成功获取发票ID {TaxInvoiceInfoId} 对应的渠道账号配置", invoiceInfo.Id);
                 return channelAccount; // 返回成功结果
 
             ErrorHandler: // 统一错误处理标签
-                _logger?.LogError(errorMessage); // 记录错误日志
+                _logger?.LogError(errorMessage);
                 OwHelper.SetLastErrorAndMessage(errorCode, errorMessage);
                 return null;
             }
             catch (Exception ex) // 异常处理
             {
-                _logger?.LogError(ex, "获取发票ID {TaxInvoiceInfoId} 对应的渠道账号配置时发生错误", invoiceInfo.Id); // 使用结构化日志记录
+                _logger?.LogError(ex, "获取发票ID {TaxInvoiceInfoId} 对应的渠道账号配置时发生错误", invoiceInfo.Id);
                 OwHelper.SetLastErrorAndMessage((int)HttpStatusCode.InternalServerError, $"获取发票ID {invoiceInfo.Id} 对应的渠道账号配置时发生错误: {ex.Message}");
                 return null;
             }
@@ -456,12 +455,12 @@ namespace PowerLmsServer.Managers
 
                 DbContext.SaveChanges();
 
-                _logger?.LogInformation($"已回填并保存发票基本信息，发票ID: {taxInvoiceInfoId}, 含税总金额: {totalTaxInclusiveAmount}");
+                _logger?.LogInformation("已回填并保存发票基本信息，发票ID: {TaxInvoiceInfoId}, 含税总金额: {TotalTaxInclusiveAmount}", taxInvoiceInfoId, totalTaxInclusiveAmount);
 
                 // 检查是否使用沙箱模式
                 if (useSandbox)
                 {
-                    _logger?.LogInformation($"使用沙箱环境开具发票，发票ID: {taxInvoiceInfoId}");
+                    _logger?.LogInformation("使用沙箱环境开具发票，发票ID: {TaxInvoiceInfoId}", taxInvoiceInfoId);
 
                     // 调用沙箱测试方法
                     var sandboxResult = TestIssueInvoiceInSandbox(nnChannelAccount.AppKey, nnChannelAccount.AppSecret, invoiceInfo.CallbackUrl);
@@ -469,7 +468,7 @@ namespace PowerLmsServer.Managers
                     // 如果沙箱测试成功，更新发票信息
                     if (sandboxResult.Success)
                     {
-                        _logger?.LogInformation($"沙箱环境开票成功，发票ID: {taxInvoiceInfoId}，流水号: {sandboxResult.InvoiceSerialNum}");
+                        _logger?.LogInformation("沙箱环境开票成功，发票ID: {TaxInvoiceInfoId}，流水号: {InvoiceSerialNum}", taxInvoiceInfoId, sandboxResult.InvoiceSerialNum);
 
                         // 更新发票状态和流水号
                         if (!string.IsNullOrEmpty(sandboxResult.InvoiceSerialNum))
@@ -480,12 +479,12 @@ namespace PowerLmsServer.Managers
                             invoiceInfo.SellerInvoiceData = $"{{\"sandboxTest\": {useSandbox.ToString().ToLower()}, \"invoiceSerialNum\": \"{sandboxResult.InvoiceSerialNum}\"}}";
                             DbContext.SaveChanges();
 
-                            _logger?.LogInformation($"已更新沙箱开票结果信息，发票ID: {taxInvoiceInfoId}");
+                            _logger?.LogInformation("已更新沙箱开票结果信息，发票ID: {TaxInvoiceInfoId}", taxInvoiceInfoId);
                         }
                     }
                     else
                     {
-                        _logger?.LogWarning($"沙箱环境开票失败，发票ID: {taxInvoiceInfoId}，错误: {sandboxResult.ErrorMessage}");
+                        _logger?.LogWarning("沙箱环境开票失败，发票ID: {TaxInvoiceInfoId}，错误: {ErrorMessage}", taxInvoiceInfoId, sandboxResult.ErrorMessage);
                     }
 
                     return sandboxResult;
@@ -507,11 +506,11 @@ namespace PowerLmsServer.Managers
                 // 检查回调地址
                 if (string.IsNullOrEmpty(invoiceInfo.CallbackUrl))
                 {
-                    _logger?.LogWarning($"发票ID {taxInvoiceInfoId} 未设置回调地址，将无法接收开票结果通知");
+                    _logger?.LogWarning("发票ID {TaxInvoiceInfoId} 未设置回调地址，将无法接收开票结果通知", taxInvoiceInfoId);
                 }
                 else
                 {
-                    _logger?.LogInformation($"发票ID {taxInvoiceInfoId} 设置了回调地址: {invoiceInfo.CallbackUrl}");
+                    _logger?.LogInformation("发票ID {TaxInvoiceInfoId} 设置了回调地址: {CallbackUrl}", taxInvoiceInfoId, invoiceInfo.CallbackUrl);
                 }
 
                 // 准备数据
@@ -551,7 +550,7 @@ namespace PowerLmsServer.Managers
                 if (!response.IsSuccessStatusCode)
                 {
                     // 记录失败原因
-                    _logger?.LogError($"开票失败，发票ID: {taxInvoiceInfoId}, 错误码: {response.StatusCode}");
+                    _logger?.LogError("开票失败，发票ID: {TaxInvoiceInfoId}, 错误码: {StatusCode}", taxInvoiceInfoId, response.StatusCode);
 
                     DbContext.SaveChanges();
 
@@ -588,7 +587,7 @@ namespace PowerLmsServer.Managers
 
                     DbContext.SaveChanges();
 
-                    _logger?.LogInformation($"开票成功并更新了发票状态和信息，发票ID: {taxInvoiceInfoId}, 流水号: {result.Result?.InvoiceSerialNum}");
+                    _logger?.LogInformation("开票成功并更新了发票状态和信息，发票ID: {TaxInvoiceInfoId}, 流水号: {InvoiceSerialNum}", taxInvoiceInfoId, result.Result?.InvoiceSerialNum);
 
                     return new NuoNuoInvoiceResult
                     {
@@ -599,7 +598,7 @@ namespace PowerLmsServer.Managers
                 else
                 {
                     // 记录失败原因
-                    _logger?.LogError($"开票失败，发票ID: {taxInvoiceInfoId}, 错误码: {result?.Code}, 描述: {result?.Describe}");
+                    _logger?.LogError("开票失败，发票ID: {TaxInvoiceInfoId}, 错误码: {ErrorCode}, 描述: {ErrorMessage}", taxInvoiceInfoId, result?.Code, result?.Describe);
 
                     return new NuoNuoInvoiceResult
                     {
@@ -703,7 +702,7 @@ namespace PowerLmsServer.Managers
             if (!string.IsNullOrEmpty(invoiceInfo.CallbackUrl))
             {
                 order.CallBackUrl = invoiceInfo.CallbackUrl;
-                _logger?.LogDebug($"设置回调URL: {order.CallBackUrl}");
+                _logger?.LogDebug("设置回调URL: {CallbackUrl}", order.CallBackUrl);
             }
 
             return new NuoNuoRequest
@@ -869,7 +868,7 @@ namespace PowerLmsServer.Managers
                 if (!string.IsNullOrEmpty(callbackUrl))
                 {
                     order.CallBackUrl = callbackUrl;
-                    _logger?.LogInformation($"设置沙箱测试回调URL: {callbackUrl}");
+                    _logger?.LogInformation("设置沙箱测试回调URL: {CallbackUrl}", callbackUrl);
                 }
 
                 // 构建明细项

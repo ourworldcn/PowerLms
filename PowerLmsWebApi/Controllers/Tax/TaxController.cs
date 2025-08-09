@@ -323,7 +323,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
             {
-                _Logger.LogWarning("无效的令牌{token}", model.Token);
+                _Logger.LogWarning("无效的令牌{Token}", model.Token);
                 return Unauthorized();
             }
 
@@ -503,7 +503,7 @@ namespace PowerLmsWebApi.Controllers
                     {
                         var request = httpContextAccessor.HttpContext.Request;
                         baseUrl = $"{request.Scheme}://{request.Host}";
-                        _Logger.LogInformation($"从当前HTTP上下文获取基础URL：{baseUrl}");
+                        _Logger.LogInformation("从当前HTTP上下文获取基础URL：{BaseUrl}", baseUrl);
                     }
                     else
                     {
@@ -514,17 +514,17 @@ namespace PowerLmsWebApi.Controllers
                         if (string.IsNullOrEmpty(baseUrl))
                         {
                             baseUrl = "https://api.example.com"; // 默认值
-                            _Logger.LogWarning($"无法获取HTTP上下文，且未配置CallbackBaseUrl，使用默认值：{baseUrl}");
+                            _Logger.LogWarning("无法获取HTTP上下文，且未配置CallbackBaseUrl，使用默认值：{BaseUrl}", baseUrl);
                         }
                         else
                         {
-                            _Logger.LogInformation($"使用配置的CallbackBaseUrl：{baseUrl}");
+                            _Logger.LogInformation("使用配置的CallbackBaseUrl：{BaseUrl}", baseUrl);
                         }
                     }
 
                     // 设置回调地址
                     taxInvoiceInfo.CallbackUrl = $"{baseUrl.TrimEnd('/')}/api/NuoNuoCallback/HandleCallback";
-                    _Logger.LogInformation($"设置发票回调地址：{taxInvoiceInfo.CallbackUrl}");
+                    _Logger.LogInformation("设置发票回调地址：{CallbackUrl}", taxInvoiceInfo.CallbackUrl);
                 }
                 catch (Exception ex)
                 {
@@ -546,7 +546,7 @@ namespace PowerLmsWebApi.Controllers
                     _DbContext.TaxInvoiceChannels.Find(tica.ParentlId) is not TaxInvoiceChannel tic ||
                     tic.Id != typeof(NuoNuoManager).GUID)
                 {
-                    _Logger.LogInformation($"发票信息 {taxInvoiceInfo.Id} 没有指定诺诺渠道账号，无法调用开票接口");
+                    _Logger.LogInformation("发票信息 {InvoiceId} 没有指定诺诺渠道账号，无法调用开票接口", taxInvoiceInfo.Id);
                     return result;
                 }
                 // 在状态成功变更为审核通过(1)后，调用诺诺开票接口
@@ -559,24 +559,26 @@ namespace PowerLmsWebApi.Controllers
                         // 记录是否使用沙箱模式
                         if (model.UseSandbox)
                         {
-                            _Logger.LogInformation($"将使用沙箱模式开具发票，发票ID: {taxInvoiceInfo.Id}");
+                            _Logger.LogInformation("将使用沙箱模式开具发票，发票ID: {InvoiceId}", taxInvoiceInfo.Id);
                         }
 
                         // 处理开票请求
                         try
                         {
-                            _Logger.LogInformation($"开始调用诺诺开票接口，发票ID: {taxInvoiceInfo.Id}, 沙箱模式: {model.UseSandbox}, 回调地址: {taxInvoiceInfo.CallbackUrl}");
+                            _Logger.LogInformation("开始调用诺诺开票接口，发票ID: {InvoiceId}, 沙箱模式: {UseSandbox}, 回调地址: {CallbackUrl}", 
+                                taxInvoiceInfo.Id, model.UseSandbox, taxInvoiceInfo.CallbackUrl);
 
                             // 调用开票接口，传入沙箱模式参数
                             var issueResult = nuoNuoManager.IssueInvoice(taxInvoiceInfo.Id, model.UseSandbox);
 
                             if (issueResult.Success)
                             {
-                                _Logger.LogInformation($"调用诺诺开票接口成功，发票ID: {taxInvoiceInfo.Id}");
+                                _Logger.LogInformation("调用诺诺开票接口成功，发票ID: {InvoiceId}", taxInvoiceInfo.Id);
                             }
                             else
                             {
-                                _Logger.LogWarning($"调用诺诺开票接口失败，发票ID: {taxInvoiceInfo.Id}, 错误: {issueResult.ErrorMessage}, 错误代码: {issueResult.ErrorCode}");
+                                _Logger.LogWarning("调用诺诺开票接口失败，发票ID: {InvoiceId}, 错误: {ErrorMessage}, 错误代码: {ErrorCode}", 
+                                    taxInvoiceInfo.Id, issueResult.ErrorMessage, issueResult.ErrorCode);
 
                                 // 如果开票失败，直接在当前上下文中更新错误信息
                                 // 重新获取最新的发票信息
@@ -591,7 +593,7 @@ namespace PowerLmsWebApi.Controllers
                         }
                         catch (Exception ex)
                         {
-                            _Logger.LogError(ex, $"调用诺诺开票接口时发生异常，发票ID: {taxInvoiceInfo.Id}");
+                            _Logger.LogError(ex, "调用诺诺开票接口时发生异常，发票ID: {InvoiceId}", taxInvoiceInfo.Id);
 
                             // 记录异常信息，直接在当前上下文中更新
                             // 重新获取最新的发票信息
@@ -605,12 +607,12 @@ namespace PowerLmsWebApi.Controllers
                     }
                     else
                     {
-                        _Logger.LogWarning($"未能找到NuoNuoManager服务，无法调用开票接口，发票ID: {taxInvoiceInfo.Id}");
+                        _Logger.LogWarning("未能找到NuoNuoManager服务，无法调用开票接口，发票ID: {InvoiceId}", taxInvoiceInfo.Id);
                     }
                 }
                 catch (Exception ex)
                 {
-                    _Logger.LogError(ex, $"尝试调用诺诺开票接口时发生异常，发票ID: {taxInvoiceInfo.Id}");
+                    _Logger.LogError(ex, "尝试调用诺诺开票接口时发生异常，发票ID: {InvoiceId}", taxInvoiceInfo.Id);
                 }
             }
             else if (model.NewState == 2 && oldState == 1) // 从开票中状态变更为已开票状态
@@ -679,7 +681,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
             {
-                _Logger.LogWarning("无效的令牌{token}", model.Token);
+                _Logger.LogWarning("无效的令牌{Token}", model.Token);
                 return Unauthorized();
             }
 

@@ -25,7 +25,7 @@ namespace PowerLms.Data
         /// 源币种。废弃，请使用SCurrency属性。
         /// </summary>
         [Comment("源币种.废弃，请使用SCurrency属性。")]
-        [Obsolete]
+        [Obsolete("源币种.废弃，请使用SCurrency属性。")]
         public Guid SCurrencyId { get; set; }
 
         /// <summary>
@@ -39,7 +39,7 @@ namespace PowerLms.Data
         /// 宿币种。废弃，请使用 DCurrency 属性。
         /// </summary>
         [Comment("宿币种。废弃，请使用 DCurrency 属性。")]
-        [Obsolete]
+        [Obsolete("宿币种。废弃，请使用 DCurrency 属性。")]
         public Guid DCurrencyId { get; set; }
 
         /// <summary>

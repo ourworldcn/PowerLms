@@ -269,7 +269,7 @@ Carrie	承运人	船公司或航空公司或	二字码
         /// </summary>
         [Comment("承运人，船公司或航空公司或，二字码。已废弃，使用Guid关联客户表。")]
         [MaxLength(4), Unicode(false)]
-        [Obsolete]
+        [Obsolete("已废弃，使用Guid关联客户表。")]
         public string CarrieCode { get; set; }
 
         /// <summary>

@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+ï»¿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
@@ -12,12 +12,12 @@ using PowerLmsServer;
 namespace PowerLmsWebApi.Controllers
 {
     /// <summary>
-    /// ÈÕ³£·ÑÓÃÖÖÀà×Öµä¿ØÖÆÆ÷¡£
+    /// æ—¥å¸¸è´¹ç”¨ç§ç±»å­—å…¸æ§åˆ¶å™¨ã€‚
     /// </summary>
     public partial class DataDicController : PlControllerBase
     {
         /// <summary>
-        /// ¹¹Ôìº¯Êı¡£
+        /// æ„é€ å‡½æ•°ã€‚
         /// </summary>
         public DataDicController(PowerLmsUserDbContext context, AccountManager accountManager, 
             IServiceProvider serviceProvider, EntityManager entityManager, IMapper mapper, 
@@ -43,17 +43,17 @@ namespace PowerLmsWebApi.Controllers
         readonly AuthorizationManager _AuthorizationManager;
         readonly ILogger<DataDicController> _Logger;
 
-        #region ÈÕ³£·ÑÓÃÖÖÀàÏà¹Ø
+        #region æ—¥å¸¸è´¹ç”¨ç§ç±»ç›¸å…³
 
         /// <summary>
-        /// »ñÈ¡ÈÕ³£·ÑÓÃÀàĞÍ¡£³¬¹Ü¿ÉÒÔ²é¿´ÏµÍ³¼¶£¬ÆäËûÓÃ»§Ö»ÄÜ¿´µ½¹«Ë¾/×éÖ¯ÏÂµÄÊµÌå¡£
+        /// è·å–æ—¥å¸¸è´¹ç”¨ç±»å‹ã€‚è¶…ç®¡å¯ä»¥æŸ¥çœ‹ç³»ç»Ÿçº§ï¼Œå…¶ä»–ç”¨æˆ·åªèƒ½çœ‹åˆ°å…¬å¸/ç»„ç»‡ä¸‹çš„å®ä½“ã€‚
         /// </summary>
-        /// <param name="model">·ÖÒ³²ÎÊı</param>
-        /// <param name="conditional">Ö§³ÖÍ¨ÓÃ²éÑ¯Ìõ¼ş</param>
-        /// <returns>ÈÕ³£·ÑÓÃÀàĞÍÁĞ±í</returns>
-        /// <response code="200">Î´·¢ÉúÏµÍ³¼¶´íÎó¡£µ«¿ÉÄÜ³öÏÖÓ¦ÓÃ´íÎó£¬¾ßÌå²Î¼û HasError ºÍ ErrorCode ¡£</response>  
-        /// <response code="400">Ö¸¶¨Àà±ğIdÎŞĞ§¡£</response>  
-        /// <response code="401">ÎŞĞ§ÁîÅÆ¡£</response>  
+        /// <param name="model">åˆ†é¡µå‚æ•°</param>
+        /// <param name="conditional">æ”¯æŒé€šç”¨æŸ¥è¯¢æ¡ä»¶</param>
+        /// <returns>æ—¥å¸¸è´¹ç”¨ç±»å‹åˆ—è¡¨</returns>
+        /// <response code="200">æœªå‘ç”Ÿç³»ç»Ÿçº§é”™è¯¯ã€‚ä½†å¯èƒ½å‡ºç°åº”ç”¨é”™è¯¯ï¼Œå…·ä½“å‚è§ HasError å’Œ ErrorCode ã€‚</response>  
+        /// <response code="400">æŒ‡å®šç±»åˆ«Idæ— æ•ˆã€‚</response>  
+        /// <response code="401">æ— æ•ˆä»¤ç‰Œã€‚</response>  
         [HttpGet]
         public ActionResult<GetAllDailyFeesTypeReturnDto> GetAllDailyFeesType([FromQuery] PagingParamsDtoBase model, [FromQuery] Dictionary<string, string> conditional = null)
         {
@@ -62,7 +62,7 @@ namespace PowerLmsWebApi.Controllers
             var dbSet = _DbContext.DD_DailyFeesTypes;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             
-            // Ê¹ÓÃÍ³Ò»µÄ×éÖ¯È¨ÏŞ¿ØÖÆ·½·¨
+            // ä½¿ç”¨ç»Ÿä¸€çš„ç»„ç»‡æƒé™æ§åˆ¶æ–¹æ³•
             var allowedOrgIds = GetOrgIds(context.User, _OrgManager);
             coll = coll.Where(c => allowedOrgIds.Contains(c.OrgId));
             
@@ -73,14 +73,14 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// Ôö¼ÓÈÕ³£·ÑÓÃÖÖÀà¼ÇÂ¼¡£
+        /// å¢åŠ æ—¥å¸¸è´¹ç”¨ç§ç±»è®°å½•ã€‚
         /// </summary>
-        /// <param name="model">Ôö¼Ó²ÎÊı</param>
-        /// <returns>²Ù×÷½á¹û</returns>
-        /// <response code="200">Î´·¢ÉúÏµÍ³¼¶´íÎó¡£µ«¿ÉÄÜ³öÏÖÓ¦ÓÃ´íÎó£¬¾ßÌå²Î¼û HasError ºÍ ErrorCode ¡£</response>  
-        /// <response code="400">²ÎÊı´íÎó¡£</response>  
-        /// <response code="401">ÎŞĞ§ÁîÅÆ¡£</response>  
-        /// <response code="403">È¨ÏŞ²»×ã¡£</response>  
+        /// <param name="model">å¢åŠ å‚æ•°</param>
+        /// <returns>æ“ä½œç»“æœ</returns>
+        /// <response code="200">æœªå‘ç”Ÿç³»ç»Ÿçº§é”™è¯¯ã€‚ä½†å¯èƒ½å‡ºç°åº”ç”¨é”™è¯¯ï¼Œå…·ä½“å‚è§ HasError å’Œ ErrorCode ã€‚</response>  
+        /// <response code="400">å‚æ•°é”™è¯¯ã€‚</response>  
+        /// <response code="401">æ— æ•ˆä»¤ç‰Œã€‚</response>  
+        /// <response code="403">æƒé™ä¸è¶³ã€‚</response>  
         [HttpPost]
         public ActionResult<AddDailyFeesTypeReturnDto> AddDailyFeesType(AddDailyFeesTypeParamsDto model)
         {
@@ -90,20 +90,20 @@ namespace PowerLmsWebApi.Controllers
 
             var result = new AddDailyFeesTypeReturnDto();
 
-            // È·±£Ê¹ÓÃµ±Ç°ÓÃ»§µÄ×éÖ¯»ú¹¹ID
+            // ç¡®ä¿ä½¿ç”¨å½“å‰ç”¨æˆ·çš„ç»„ç»‡æœºæ„ID
             model.Item.OrgId = context.User.OrgId;
 
-            // Éú³ÉÖ÷¼ÇÂ¼ID
+            // ç”Ÿæˆä¸»è®°å½•ID
             model.Item.GenerateNewId();
             var id = model.Item.Id;
 
-            // Ìí¼ÓÖ÷¼ÇÂ¼
+            // æ·»åŠ ä¸»è®°å½•
             _DbContext.DD_DailyFeesTypes.Add(model.Item);
 
-            // Èç¹ûĞèÒªÍ¬²½µ½×Ó»ú¹¹
+            // å¦‚æœéœ€è¦åŒæ­¥åˆ°å­æœºæ„
             if (model.CopyToChildren)
             {
-                // »ñÈ¡ÓÃ»§¹ÜÏ½·¶Î§ÄÚµÄ¹«Ë¾ĞÍ×éÖ¯»ú¹¹ID
+                // è·å–ç”¨æˆ·ç®¡è¾–èŒƒå›´å†…çš„å…¬å¸å‹ç»„ç»‡æœºæ„ID
                 var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
                 if (merchantId.HasValue)
                 {
@@ -112,14 +112,14 @@ namespace PowerLmsWebApi.Controllers
 
                     foreach (var orgId in companyIds)
                     {
-                        // ¼ì²éÊÇ·ñÒÑ´æÔÚÏàÍ¬CodeµÄ¼ÇÂ¼
+                        // æ£€æŸ¥æ˜¯å¦å·²å­˜åœ¨ç›¸åŒCodeçš„è®°å½•
                         if (_DbContext.DD_DailyFeesTypes.Any(f => f.OrgId == orgId && f.Code == model.Item.Code))
                             continue;
 
-                        // Ê¹ÓÃClone·½·¨´´½¨Éî±í¸±±¾
+                        // ä½¿ç”¨Cloneæ–¹æ³•åˆ›å»ºæ·±è¡¨å‰¯æœ¬
                         var newItem = (DailyFeesType)model.Item.Clone();
                         newItem.OrgId = orgId;
-                        newItem.GenerateNewId(); // È·±£ĞÂ¼ÇÂ¼ÓĞÎ¨Ò»ID
+                        newItem.GenerateNewId(); // ç¡®ä¿æ–°è®°å½•æœ‰å”¯ä¸€ID
 
                         _DbContext.DD_DailyFeesTypes.Add(newItem);
                     }
@@ -132,14 +132,14 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// ĞŞ¸ÄÈÕ³£·ÑÓÃÖÖÀà¼ÇÂ¼¡£
+        /// ä¿®æ”¹æ—¥å¸¸è´¹ç”¨ç§ç±»è®°å½•ã€‚
         /// </summary>
-        /// <param name="model">ĞŞ¸Ä²ÎÊı</param>
-        /// <returns>²Ù×÷½á¹û</returns>
-        /// <response code="200">Î´·¢ÉúÏµÍ³¼¶´íÎó¡£µ«¿ÉÄÜ³öÏÖÓ¦ÓÃ´íÎó£¬¾ßÌå²Î¼û HasError ºÍ ErrorCode ¡£</response>  
-        /// <response code="400">Ö¸¶¨ÊµÌåµÄId²»´æÔÚ¡£Í¨³£ÕâÊÇBug.ÔÚ¼«¶ËÇé¿öÏÂ¿ÉÄÜÊÇ²¢·¢ÎÊÌâ¡£</response>  
-        /// <response code="401">ÎŞĞ§ÁîÅÆ¡£</response>  
-        /// <response code="403">È¨ÏŞ²»×ã¡£</response>  
+        /// <param name="model">ä¿®æ”¹å‚æ•°</param>
+        /// <returns>æ“ä½œç»“æœ</returns>
+        /// <response code="200">æœªå‘ç”Ÿç³»ç»Ÿçº§é”™è¯¯ã€‚ä½†å¯èƒ½å‡ºç°åº”ç”¨é”™è¯¯ï¼Œå…·ä½“å‚è§ HasError å’Œ ErrorCode ã€‚</response>  
+        /// <response code="400">æŒ‡å®šå®ä½“çš„Idä¸å­˜åœ¨ã€‚é€šå¸¸è¿™æ˜¯Bug.åœ¨æç«¯æƒ…å†µä¸‹å¯èƒ½æ˜¯å¹¶å‘é—®é¢˜ã€‚</response>  
+        /// <response code="401">æ— æ•ˆä»¤ç‰Œã€‚</response>  
+        /// <response code="403">æƒé™ä¸è¶³ã€‚</response>  
         [HttpPut]
         public ActionResult<ModifyDailyFeesTypeReturnDto> ModifyDailyFeesType(ModifyDailyFeesTypeParamsDto model)
         {
@@ -161,14 +161,14 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// É¾³ıÈÕ³£·ÑÓÃÖÖÀàµÄ¼ÇÂ¼¡£
+        /// åˆ é™¤æ—¥å¸¸è´¹ç”¨ç§ç±»çš„è®°å½•ã€‚
         /// </summary>
-        /// <param name="model">É¾³ı²ÎÊı</param>
-        /// <returns>²Ù×÷½á¹û</returns>
-        /// <response code="200">Î´·¢ÉúÏµÍ³¼¶´íÎó¡£µ«¿ÉÄÜ³öÏÖÓ¦ÓÃ´íÎó£¬¾ßÌå²Î¼û HasError ºÍ ErrorCode ¡£</response>  
-        /// <response code="400">Ö¸¶¨ÊµÌåµÄId²»´æÔÚ¡£Í¨³£ÕâÊÇBug.ÔÚ¼«¶ËÇé¿öÏÂ¿ÉÄÜÊÇ²¢·¢ÎÊÌâ¡£</response>  
-        /// <response code="401">ÎŞĞ§ÁîÅÆ¡£</response>  
-        /// <response code="403">È¨ÏŞ²»×ã¡£</response>  
+        /// <param name="model">åˆ é™¤å‚æ•°</param>
+        /// <returns>æ“ä½œç»“æœ</returns>
+        /// <response code="200">æœªå‘ç”Ÿç³»ç»Ÿçº§é”™è¯¯ã€‚ä½†å¯èƒ½å‡ºç°åº”ç”¨é”™è¯¯ï¼Œå…·ä½“å‚è§ HasError å’Œ ErrorCode ã€‚</response>  
+        /// <response code="400">æŒ‡å®šå®ä½“çš„Idä¸å­˜åœ¨ã€‚é€šå¸¸è¿™æ˜¯Bug.åœ¨æç«¯æƒ…å†µä¸‹å¯èƒ½æ˜¯å¹¶å‘é—®é¢˜ã€‚</response>  
+        /// <response code="401">æ— æ•ˆä»¤ç‰Œã€‚</response>  
+        /// <response code="403">æƒé™ä¸è¶³ã€‚</response>  
         [HttpDelete]
         public ActionResult<RemoveDailyFeesTypeReturnDto> RemoveDailyFeesType(RemoveDailyFeesTypeParamsDto model)
         {
@@ -186,14 +186,14 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// »Ö¸´Ö¸¶¨µÄ±»É¾³ıÈÕ³£·ÑÓÃÖÖÀà¼ÇÂ¼¡£
+        /// æ¢å¤æŒ‡å®šçš„è¢«åˆ é™¤æ—¥å¸¸è´¹ç”¨ç§ç±»è®°å½•ã€‚
         /// </summary>
-        /// <param name="model">»Ö¸´²ÎÊı</param>
-        /// <returns>²Ù×÷½á¹û</returns>
-        /// <response code="200">Î´·¢ÉúÏµÍ³¼¶´íÎó¡£µ«¿ÉÄÜ³öÏÖÓ¦ÓÃ´íÎó£¬¾ßÌå²Î¼û HasError ºÍ ErrorCode ¡£</response>  
-        /// <response code="400">Ö¸¶¨ÊµÌåµÄId²»´æÔÚ¡£Í¨³£ÕâÊÇBug.ÔÚ¼«¶ËÇé¿öÏÂ¿ÉÄÜÊÇ²¢·¢ÎÊÌâ¡£</response>  
-        /// <response code="401">ÎŞĞ§ÁîÅÆ¡£</response>  
-        /// <response code="403">È¨ÏŞ²»×ã¡£</response>  
+        /// <param name="model">æ¢å¤å‚æ•°</param>
+        /// <returns>æ“ä½œç»“æœ</returns>
+        /// <response code="200">æœªå‘ç”Ÿç³»ç»Ÿçº§é”™è¯¯ã€‚ä½†å¯èƒ½å‡ºç°åº”ç”¨é”™è¯¯ï¼Œå…·ä½“å‚è§ HasError å’Œ ErrorCode ã€‚</response>  
+        /// <response code="400">æŒ‡å®šå®ä½“çš„Idä¸å­˜åœ¨ã€‚é€šå¸¸è¿™æ˜¯Bug.åœ¨æç«¯æƒ…å†µä¸‹å¯èƒ½æ˜¯å¹¶å‘é—®é¢˜ã€‚</response>  
+        /// <response code="401">æ— æ•ˆä»¤ç‰Œã€‚</response>  
+        /// <response code="403">æƒé™ä¸è¶³ã€‚</response>  
         [HttpPost]
         public ActionResult<RestoreDailyFeesTypeReturnDto> RestoreDailyFeesType(RestoreDailyFeesTypeParamsDto model)
         {
@@ -210,6 +210,6 @@ namespace PowerLmsWebApi.Controllers
             return result;
         }
 
-        #endregion ÈÕ³£·ÑÓÃÖÖÀàÏà¹Ø
+        #endregion æ—¥å¸¸è´¹ç”¨ç§ç±»ç›¸å…³
     }
 }
