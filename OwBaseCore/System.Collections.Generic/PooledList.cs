@@ -93,8 +93,8 @@ namespace System.Collections.Generic
     /// 以减少频繁分配大数组带来的 GC 压力和内存碎片，适用于高性能场景下大量临时数据的收集与处理。
     /// 
     /// 设计特点：
-    /// - 池化内存管理：所有内部数组通过ArrayPool<T>.Shared管理，自动租用和归还
-    /// - API兼容性：与List<T>保持高度兼容，支持所有常用操作和高级功能
+    /// - 池化内存管理：所有内部数组通过ArrayPool&lt;T&gt;管理，自动租用和归还
+    /// - API兼容性：与List&lt;T&gt;保持高度兼容，支持所有常用操作和高级功能
     /// - 自动扩容：容量不足时自动扩容，采用翻倍增长策略优化性能
     /// - 内存安全：归还前自动清理未用槽位，防止敏感数据泄漏
     /// - 资源管理：实现IDisposable模式，确保资源及时释放
@@ -114,7 +114,7 @@ namespace System.Collections.Generic
     /// 限制和注意事项：
     /// - 短生命周期设计：不适合长期持有，使用完毕必须Dispose
     /// - 非线程安全：需要外部同步机制保证线程安全
-    /// - 一次性使用：Dispose后不能再次使用，与普通List<T>不同
+    /// - 一次性使用：Dispose后不能再次使用，与普通List&lt;T&gt;不同
     /// - 容量管理：建议根据预期大小设置合适的初始容量
     /// </summary>
     /// <remarks>
@@ -134,7 +134,7 @@ namespace System.Collections.Generic
         /// 默认的初始容量
         /// 
         /// 容量选择说明：
-        /// - 设为8是基于List<T>的默认容量设计
+        /// - 设为8是基于List&lt;T&gt;的默认容量设计
         /// - 平衡内存使用和扩容频率
         /// - 适合大多数临时数据收集场景
         /// </summary>
@@ -142,12 +142,7 @@ namespace System.Collections.Generic
 
         #region 构造函数
         /// <summary>
-        /// 初始化 PooledList&lt;T&gt; 类的新实例，具有指定的初始容量。
-        /// 
-        /// 构造函数说明：
-        /// - 自动通过ArrayPool<T>.Shared.Rent获取指定容量的数组
-        /// - 最小容量保证为DefaultCapacity，避免频繁扩容
-        /// - 适合已知大概数据量的场景，可显著提高性能
+        /// 初始化 PooledList 类的新实例，具有指定的初始容量
         /// </summary>
         /// <param name="capacity">初始容量，默认为 8</param>
         /// <exception cref="ArgumentOutOfRangeException">capacity 小于 0</exception>
@@ -156,12 +151,7 @@ namespace System.Collections.Generic
         }
 
         /// <summary>
-        /// 初始化 PooledList&lt;T&gt; 类的新实例，该实例包含从指定集合复制的元素
-        /// 
-        /// 集合复制说明：
-        /// - 如果源集合实现ICollection<T>，使用其Count作为初始容量
-        /// - 否则使用默认容量，并在AddRange过程中根据需要扩容
-        /// - 适合从现有集合创建池化副本的场景
+        /// 初始化 PooledList 类的新实例，包含从指定集合复制的元素
         /// </summary>
         /// <param name="collection">一个集合，其元素被复制到新列表中</param>
         /// <exception cref="ArgumentNullException">collection 为 null</exception>
@@ -174,8 +164,7 @@ namespace System.Collections.Generic
 
         #region 增强的List<T>兼容方法
         /// <summary>
-        /// 搜索与指定谓词匹配的元素，并返回整个 PooledList&lt;T&gt; 中第一个匹配元素的从零开始的索引
-        /// 
+        /// 搜索与指定谓词匹配的元素，并返回整个 PooledList&lt;T&gt; 中第一个匹配元素的从零开始的索引。
         /// 查找功能说明：
         /// - 提供基于谓词的灵活查找机制
         /// - 支持复杂的查找条件，不仅限于相等比较
@@ -203,7 +192,9 @@ namespace System.Collections.Generic
             return FindIndex(startIndex, Count - startIndex, match);
         }
 
-        /// <summary>从指定的索引开始搜索指定数量的元素中与指定谓词匹配的元素，并返回整个 PooledList&lt;T&gt; 中第一个匹配元素的从零开始的索引</summary>
+        /// <summary>
+        /// 从指定的索引开始搜索指定数量的元素中与指定谓词匹配的元素，并返回整个 PooledList&lt;T&gt; 中第一个匹配元素的从零开始的索引
+        /// </summary>
         /// <param name="startIndex">从零开始的搜索起始索引</param>
         /// <param name="count">要搜索的部分中的元素数</param>
         /// <param name="match">定义要搜索的元素的条件的谓词</param>
@@ -242,8 +233,8 @@ namespace System.Collections.Generic
         /// 检索与指定谓词定义的条件相匹配的所有元素
         /// 
         /// 批量查找说明：
-        /// - 返回新的PooledList<T>实例，调用者负责释放
-        /// - 如果没有匹配元素，返回空的PooledList<T>
+        /// - 返回新的PooledList&lt;T&gt;实例，调用者负责释放
+        /// - 如果没有匹配元素，返回空的PooledList&lt;T&gt;
         /// - 适合需要对匹配元素进行进一步处理的场景
         /// </summary>
         /// <param name="match">定义要搜索的元素的条件的谓词</param>

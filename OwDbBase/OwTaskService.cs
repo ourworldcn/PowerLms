@@ -423,10 +423,7 @@ namespace OW.Data
 
                 currentStep = "查找服务类型";
                 // 改进的类型查找机制
-                var serviceType = FindTypeByName(taskEntity.ServiceTypeName);
-                if (serviceType == null)
-                    throw new InvalidOperationException($"无法找到类型: {taskEntity.ServiceTypeName}");
-
+                var serviceType = FindTypeByName(taskEntity.ServiceTypeName) ?? throw new InvalidOperationException($"无法找到类型: {taskEntity.ServiceTypeName}");
                 _logger.LogDebug("任务 {TaskId} 找到服务类型: {ServiceType}", taskId, serviceType.FullName);
 
                 currentStep = "查找方法";

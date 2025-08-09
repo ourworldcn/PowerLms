@@ -9,7 +9,7 @@
  * 核心功能需求：
  * - 队列结构：维护一个队列存放待执行任务，忽略任务优先级问题
  * - 相同类型任务合并：如果队列中已存在相同typeId的任务，则只保留最新任务的执行逻辑，合并处理
- * - 执行函数：签名为Func<object, bool>，返回true表示执行成功，false或抛出异常均视为失败
+ * - 执行函数：签名为Func&lt;object, bool&gt;，返回true表示执行成功，false或抛出异常均视为失败
  * - 执行顺序：不需严格FIFO，但尽量保持先提交先执行
  * - 低优先级线程：使用一个低优先级线程顺序执行队列中的任务（可根据需求配置）
  * 
@@ -32,7 +32,7 @@
  * - 提交任务：Enqueue方法提交任务时指定typeId、执行逻辑及是否需要锁定
  * - 相同任务合并：若已存在同typeId的任务，则合并为一个，仅保留最新执行逻辑
  * - 从队列移除：当开始尝试执行任务时，立刻将其从队列中取出
- * - ProcessAll方法：依次执行队列中的任务，若需锁定则尝试SingletonLocker，锁定失败的任务将被放回队列，不阻塞其它任务
+ * - ProcessAll方法：依次执行队列中的任务，若需锁定則尝试SingletonLocker，锁定失败的任务将被放回队列，不阻塞其它任务
  * - 异常处理：任务执行失败后仅记录日志，并将其彻底移除或根据需求进行自定义处理
  * 
  * 结果处理：
@@ -145,7 +145,7 @@ namespace System.Threading
     /// 设计目标：
     /// - 任务存储与合并：维护一个队列存放待执行任务，忽略任务优先级问题
     /// - 相同类型任务合并：如果队列中已存在相同typeId的任务，则只保留最新任务的执行逻辑，合并处理
-    /// - 任务定义与执行：执行函数签名为Func<object, bool>，返回true表示执行成功，false或抛出异常均视为失败
+    /// - 任务定义与执行：执行函数签名为Func&lt;object, bool&gt;，返回true表示执行成功，false或抛出异常均视为失败
     /// - 执行顺序：不需严格FIFO，但尽量保持先提交先执行
     /// - 低优先级线程：使用一个低优先级线程顺序执行队列中的任务（可根据需求配置）
     /// 
@@ -179,7 +179,7 @@ namespace System.Threading
         /// - 支持依赖注入的配置选项
         /// - 自动启动执行线程
         /// </summary>
-        /// <param name="options">配置选项，为空则使用默认配置。</param>
+        /// <param name="options">配置选项，为空则使用默认配置</param>
         public TaskDispatcher(TaskDispatcherOptions options)
         {
             _options = options ?? new TaskDispatcherOptions();
@@ -215,8 +215,8 @@ namespace System.Threading
         /// <returns>是否成功添加到队列</returns>
         public bool Enqueue(object typeId, Func<object, bool> executeFunc, object parameter = null, bool needLock = true)
         {
-            if (typeId == null) throw new ArgumentNullException(nameof(typeId));
-            if (executeFunc == null) throw new ArgumentNullException(nameof(executeFunc));
+            ArgumentNullException.ThrowIfNull(typeId);
+            ArgumentNullException.ThrowIfNull(executeFunc);
             if (_disposed) return false;
 
             // 检查队列容量限制
@@ -246,7 +246,7 @@ namespace System.Threading
         /// 手动处理队列中的所有任务，会在9秒内不断重试直到字典为空
         /// 
         /// ProcessAll方法说明：
-        /// - 依次执行队列中的任务，若需锁定则尝试SingletonLocker
+        /// - 依次执行队列中的任务，若需锁定則尝试SingletonLocker
         /// - 锁定失败的任务将被放回队列，不阻塞其它任务
         /// - 设置超时机制，避免无限循环
         /// - 在服务停止时调用，确保剩余任务得到处理
@@ -436,7 +436,7 @@ namespace System.Threading
         /// <returns>如果任务完成或不存在返回true，超时返回false</returns>
         public bool EnsureCompleteIdempotent(object typeId, TimeSpan timeout)
         {
-            if (typeId == null) throw new ArgumentNullException(nameof(typeId));
+            ArgumentNullException.ThrowIfNull(typeId);
 
             if (!Contains(typeId))
                 return true;
@@ -501,7 +501,7 @@ namespace System.Threading
         /// 
         /// 任务项说明：
         /// - TypeId：任务类型标识，用于任务合并和锁定
-        /// - ExecuteFunc：执行函数，签名为Func<object, bool>
+        /// - ExecuteFunc：执行函数，签名为Func&lt;object, bool&gt;
         /// - Parameter：任务参数，在执行时传递给执行函数
         /// - NeedLock：是否需要锁定，控制是否使用SingletonLocker
         /// - EnqueueTime：入队时间，用于监控和调试

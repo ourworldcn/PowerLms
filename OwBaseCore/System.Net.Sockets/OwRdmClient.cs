@@ -954,8 +954,7 @@ namespace System.Net.Sockets
                     break;
                 }
             }
-            if (result is null)  //若没有找到——须加入头部
-                result = AddFirst((item, key));
+            result ??= AddFirst((item, key));
             return result;
         }
 

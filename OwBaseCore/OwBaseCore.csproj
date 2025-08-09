@@ -9,10 +9,10 @@
     <DocumentationFile>OwBaseCoreApiDoc.xml</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <NoWarn>1701;1702;CS1591</NoWarn>
+    <NoWarn>1701;1702;CS1591;IDE0130</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <NoWarn>1701;1702;CS1591</NoWarn>
+    <NoWarn>1701;1702;CS1591;IDE0130</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="Microsoft.Extensions\**" />
