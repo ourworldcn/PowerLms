@@ -164,6 +164,44 @@ namespace PowerLmsWebApi.Controllers
         /// </summary>
         public Guid Result { get; set; }
     }
+
+    /// <summary>
+    /// 验证工作号唯一性功能的参数封装类。
+    /// </summary>
+    public class ValidateJobNoParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 要验证的工作号。
+        /// </summary>
+        [Required]
+        public string JobNo { get; set; }
+
+        /// <summary>
+        /// 要排除的工作号ID（用于编辑场景，避免与自身冲突）。
+        /// </summary>
+        public Guid? ExcludeJobId { get; set; }
+    }
+
+    /// <summary>
+    /// 验证工作号唯一性功能的返回值封装类。
+    /// </summary>
+    public class ValidateJobNoReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 工作号是否在当前机构内唯一。
+        /// </summary>
+        public bool IsUnique { get; set; }
+
+        /// <summary>
+        /// 验证结果说明信息。
+        /// </summary>
+        public string Message { get; set; }
+
+        /// <summary>
+        /// 如果工作号重复，这里返回冲突的工作号ID。
+        /// </summary>
+        public Guid? ConflictJobId { get; set; }
+    }
     #endregion 业务总表
 
     /// <summary>

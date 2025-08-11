@@ -109,7 +109,7 @@ namespace PowerLmsWebApi.Controllers.OA
 
         /// <summary>
         /// 执行OA费用申请单结算操作。
-        /// 出纳权限：OA.1.2.1，工作流完成后将状态从"待结算"更新为"待确认"。
+        /// 出纳权限：OA.1.1，工作流完成后将状态从"待结算"更新为"待确认"。
         /// </summary>
         /// <param name="model">结算参数</param>
         /// <returns>结算结果</returns>
@@ -127,10 +127,16 @@ namespace PowerLmsWebApi.Controllers.OA
 
             try
             {
-                // 权限验证 - 需要OA.1.2.1权限
-                string err;
-                if (!_AuthorizationManager.Demand(out err, "OA.1.2.1"))
-                    return StatusCode(403, err);
+                // 🔧 修复权限验证 - 使用正确的权限代码 OA.1.1
+                if (!_AuthorizationManager.Demand(out var err, "OA.1.1"))
+                {
+                    _Logger.LogWarning("权限检查失败 - 用户: {UserId}, 权限: OA.1.1, 错误信息: {Error}", 
+                        context.User.Id, err);
+                    result.HasError = true;
+                    result.ErrorCode = 403;
+                    result.DebugMessage = $"权限不足: {err}";
+                    return result;
+                }
 
                 var requisition = _DbContext.OaExpenseRequisitions.Find(model.RequisitionId);
                 if (requisition == null)
@@ -196,7 +202,7 @@ namespace PowerLmsWebApi.Controllers.OA
 
         /// <summary>
         /// 执行OA费用申请单确认操作。
-        /// 会计权限：OA.1.2.2，结算完成后将状态从"待确认"更新为"可导入财务"。
+        /// 会计权限：OA.1.1，结算完成后将状态从"待确认"更新为"可导入财务"。
         /// </summary>
         /// <param name="model">确认参数</param>
         /// <returns>确认结果</returns>
@@ -214,10 +220,16 @@ namespace PowerLmsWebApi.Controllers.OA
 
             try
             {
-                // 权限验证 - 需要OA.1.2.2权限
-                string err;
-                if (!_AuthorizationManager.Demand(out err, "OA.1.2.2"))
-                    return StatusCode((int)HttpStatusCode.Forbidden, err);
+                // 🔧 修复权限验证 - 使用正确的权限代码 OA.1.1
+                if (!_AuthorizationManager.Demand(out var err, "OA.1.1"))
+                {
+                    _Logger.LogWarning("权限检查失败 - 用户: {UserId}, 权限: OA.1.1, 错误信息: {Error}", 
+                        context.User.Id, err);
+                    result.HasError = true;
+                    result.ErrorCode = 403;
+                    result.DebugMessage = $"权限不足: {err}";
+                    return result;
+                }
 
                 var requisition = _DbContext.OaExpenseRequisitions.Find(model.RequisitionId);
                 if (requisition == null)
@@ -228,7 +240,7 @@ namespace PowerLmsWebApi.Controllers.OA
                     return result;
                 }
 
-                // 多租Tenant数据隔离检查
+                // 多租户数据隔离检查
                 if (!context.User.IsSuperAdmin && requisition.OrgId != context.User.OrgId)
                 {
                     result.HasError = true;

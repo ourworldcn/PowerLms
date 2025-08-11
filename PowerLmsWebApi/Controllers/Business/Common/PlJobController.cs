@@ -213,6 +213,7 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         /// <response code="403">权限不足。</response>  
+        /// <response code="409">工作号重复。当手动指定工作号时，如果该工作号在同一机构内已存在。</response>  
         [HttpPost]
         public ActionResult<AddPlJobReturnDto> AddPlJob(AddPlJobParamsDto model)
         {
@@ -238,18 +239,110 @@ namespace PowerLmsWebApi.Controllers
             {
                 if (!_AuthorizationManager.Demand(out err, "D3.1.1.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             }
+
             var result = new AddPlJobReturnDto();
             var entity = model.PlJob;
             entity.GenerateNewId();
-            _DbContext.PlJobs.Add(model.PlJob);
             entity.CreateBy = context.User.Id;
             entity.CreateDateTime = OwHelper.WorldNow;
             entity.JobState = 2;
             entity.OperatingDateTime = OwHelper.WorldNow;
             entity.OperatorId = context.User.Id;
-            _DbContext.SaveChanges();
-            result.Id = model.PlJob.Id;
-            return result;
+            entity.OrgId = context.User.OrgId; // 确保设置机构ID
+
+            // 🆕 工作号处理逻辑：支持手动录入 + 唯一性校验
+            if (!string.IsNullOrWhiteSpace(entity.JobNo))
+            {
+                // 手动指定了工作号，需要验证唯一性
+                var existingJob = _DbContext.PlJobs
+                    .Where(j => j.OrgId == context.User.OrgId && j.JobNo == entity.JobNo)
+                    .FirstOrDefault();
+
+                if (existingJob != null)
+                {
+                    _Logger.LogWarning("工作号重复，机构ID: {OrgId}, 工作号: {JobNo}, 用户: {UserId}", 
+                        context.User.OrgId, entity.JobNo, context.User.Id);
+                    
+                    result.HasError = true;
+                    result.ErrorCode = 1001;
+                    result.DebugMessage = $"工作号 '{entity.JobNo}' 在当前机构内已存在，请使用其他工作号";
+                    
+                    return Conflict(result);
+                }
+
+                _Logger.LogInformation("使用手动指定的工作号：{JobNo}，机构ID：{OrgId}，用户：{UserId}", 
+                    entity.JobNo, context.User.OrgId, context.User.Id);
+            }
+            else
+            {
+                // 未指定工作号，使用自动生成（保持原有逻辑）
+                try
+                {
+                    // 根据业务类型获取对应的工作号规则并生成工作号
+                    var rules = _DbContext.DD_JobNumberRules
+                        .Where(r => r.OrgId == context.User.OrgId && r.BusinessTypeId == entity.JobTypeId)
+                        .ToList();
+
+                    if (rules.Any())
+                    {
+                        var rule = rules.First(); // 取第一个匹配的规则
+                        using var dw = DisposeHelper.Create(
+                            (key, timeout) => SingletonLocker.TryEnter(key, timeout), 
+                            key => SingletonLocker.Exit(key), 
+                            rule.Id.ToString(), 
+                            TimeSpan.FromSeconds(2)
+                        );
+                        
+                        entity.JobNo = _JobManager.Generated(rule, context.User, OwHelper.WorldNow);
+                        _Logger.LogInformation("自动生成工作号：{JobNo}，规则ID：{RuleId}，用户：{UserId}", 
+                            entity.JobNo, rule.Id, context.User.Id);
+                    }
+                    else
+                    {
+                        // 如果没有找到规则，生成一个简单的工作号
+                        entity.JobNo = $"JOB{DateTime.Now:yyyyMMddHHmmss}{new Random().Next(100, 999)}";
+                        _Logger.LogWarning("未找到工作号生成规则，使用默认格式：{JobNo}，机构ID：{OrgId}", 
+                            entity.JobNo, context.User.OrgId);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _Logger.LogError(ex, "自动生成工作号时发生错误，机构ID: {OrgId}", context.User.OrgId);
+                    result.HasError = true;
+                    result.ErrorCode = 500;
+                    result.DebugMessage = $"生成工作号时发生错误: {ex.Message}";
+                    return StatusCode(StatusCodes.Status500InternalServerError, result);
+                }
+            }
+
+            try
+            {
+                _DbContext.PlJobs.Add(entity);
+                _DbContext.SaveChanges();
+                result.Id = entity.Id;
+                
+                _Logger.LogInformation("工作号创建成功：ID={JobId}, 工作号={JobNo}, 用户={UserId}", 
+                    entity.Id, entity.JobNo, context.User.Id);
+                
+                return result;
+            }
+            catch (DbUpdateException ex) when (ex.InnerException?.Message?.Contains("IX_PlJobs_OrgId_JobNo") == true)
+            {
+                // 捕获数据库唯一性约束冲突（双重保险）
+                _Logger.LogError(ex, "数据库唯一性约束冲突，工作号: {JobNo}", entity.JobNo);
+                result.HasError = true;
+                result.ErrorCode = 1001;
+                result.DebugMessage = $"工作号 '{entity.JobNo}' 重复，请使用其他工作号";
+                return Conflict(result);
+            }
+            catch (Exception ex)
+            {
+                _Logger.LogError(ex, "保存工作号时发生错误，工作号: {JobNo}", entity.JobNo);
+                result.HasError = true;
+                result.ErrorCode = 500;
+                result.DebugMessage = $"保存工作号时发生错误: {ex.Message}";
+                return StatusCode(StatusCodes.Status500InternalServerError, result);
+            }
         }
 
         /// <summary>
@@ -261,12 +354,14 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">指定Id的业务总表不存在。</response>  
         /// <response code="403">权限不足。</response>  
+        /// <response code="409">工作号重复。当修改工作号时，如果该工作号在同一机构内已被其他工作号使用。</response>  
         [HttpPut]
         public ActionResult<ModifyPlJobReturnDto> ModifyPlJob(ModifyPlJobParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyPlJobReturnDto();
             if (_DbContext.PlJobs.Find(model.PlJob.Id) is not PlJob ov) return NotFound();
+            
             string err; //权限报错字符串
             if (model.PlJob.JobTypeId == ProjectContent.AeId)    //若是空运出口业务
             {
@@ -290,21 +385,72 @@ namespace PowerLmsWebApi.Controllers
             {
                 if (!_AuthorizationManager.Demand(out err, "D3.1.1.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             }
+
+            // 🆕 工作号唯一性校验（仅当工作号发生变更时）
+            if (!string.IsNullOrWhiteSpace(model.PlJob.JobNo) && model.PlJob.JobNo != ov.JobNo)
+            {
+                var existingJob = _DbContext.PlJobs
+                    .Where(j => j.OrgId == context.User.OrgId && 
+                               j.JobNo == model.PlJob.JobNo && 
+                               j.Id != model.PlJob.Id) // 排除当前工作号自身
+                    .FirstOrDefault();
+
+                if (existingJob != null)
+                {
+                    _Logger.LogWarning("尝试修改为重复的工作号，机构ID: {OrgId}, 工作号: {JobNo}, 当前工作ID: {JobId}, 冲突工作ID: {ConflictJobId}", 
+                        context.User.OrgId, model.PlJob.JobNo, model.PlJob.Id, existingJob.Id);
+                    
+                    result.HasError = true;
+                    result.ErrorCode = 1001;
+                    result.DebugMessage = $"工作号 '{model.PlJob.JobNo}' 在当前机构内已存在，请使用其他工作号";
+                    
+                    return Conflict(result);
+                }
+
+                _Logger.LogInformation("工作号变更：从 '{OldJobNo}' 修改为 '{NewJobNo}'，工作ID：{JobId}", 
+                    ov.JobNo, model.PlJob.JobNo, model.PlJob.Id);
+            }
+
             if (ov.SalesId != model.PlJob.SalesId)
             {
 
             }
-            if (!_EntityManager.Modify(new[] { model.PlJob })) return NotFound();
-            //忽略不可更改字段
-            var entity = _DbContext.Entry(model.PlJob);
-            entity.Property(c => c.JobState).IsModified = false;
-            entity.Property(c => c.AuditOperatorId).IsModified = false;
-            entity.Property(c => c.AuditDateTime).IsModified = false;
-            //model.PlJob.OperatingDateTime = OwHelper.WorldNow;
-            //model.PlJob.OperatorId = context.User.Id;
-            _DbContext.SaveChanges();
+            try
+            {
+                if (!_EntityManager.Modify(new[] { model.PlJob })) return NotFound();
+                
+                //忽略不可更改字段
+                var entity = _DbContext.Entry(model.PlJob);
+                entity.Property(c => c.JobState).IsModified = false;
+                entity.Property(c => c.AuditOperatorId).IsModified = false;
+                entity.Property(c => c.AuditDateTime).IsModified = false;
+                
+                _DbContext.SaveChanges();
 
-            return result;
+                _Logger.LogInformation("工作号修改成功：ID={JobId}, 工作号={JobNo}, 用户={UserId}", 
+                    model.PlJob.Id, model.PlJob.JobNo, context.User.Id);
+
+                return result;
+            }
+            catch (DbUpdateException ex) when (ex.InnerException?.Message?.Contains("IX_PlJobs_OrgId_JobNo") == true)
+            {
+                // 捕获数据库唯一性约束冲突（双重保险）
+                _Logger.LogError(ex, "数据库唯一性约束冲突，工作号: {JobNo}, 工作ID: {JobId}", 
+                    model.PlJob.JobNo, model.PlJob.Id);
+                result.HasError = true;
+                result.ErrorCode = 1001;
+                result.DebugMessage = $"工作号 '{model.PlJob.JobNo}' 重复，请使用其他工作号";
+                return Conflict(result);
+            }
+            catch (Exception ex)
+            {
+                _Logger.LogError(ex, "修改工作号时发生错误，工作号: {JobNo}, 工作ID: {JobId}", 
+                    model.PlJob.JobNo, model.PlJob.Id);
+                result.HasError = true;
+                result.ErrorCode = 500;
+                result.DebugMessage = $"修改工作号时发生错误: {ex.Message}";
+                return StatusCode(StatusCodes.Status500InternalServerError, result);
+            }
         }
 
         /// <summary>
@@ -423,7 +569,7 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         /// <response code="400">任务状态非法。要审核任务的 JobStata 必须是4时才能调用，成功后 JobStata 自动切换为8。
-        /// 要取消审核任务的 JobStata 必须是8才能调用，成功后 JobStata 自动切换为4,此时会取消下属费用的已审核状态。</response>  
+        /// 要取消审核任务的 JobStata 必须是8才能调用，成功后 JobStata 自动切换为4, 此时会取消下属费用的已审核状态。</response>  
         /// <response code="403">权限不足。</response>  
         /// <response code="404">未找到指定的业务对象(Job) -或- 没有找到对应的业务单据。</response>  
         [HttpPost]
@@ -727,305 +873,76 @@ namespace PowerLmsWebApi.Controllers
             return result;
         }
 
+        /// <summary>
+        /// 验证工作号是否在当前机构内唯一。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <response code="200">验证完成。通过Result属性查看是否唯一。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        public ActionResult<ValidateJobNoReturnDto> ValidateJobNo([FromQuery] ValidateJobNoParamsDto model)
+        {
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
+            {
+                _Logger.LogWarning("工作号验证：无效的令牌{token}", model.Token);
+                return Unauthorized();
+            }
+
+            var result = new ValidateJobNoReturnDto();
+
+            // 检查参数有效性
+            if (string.IsNullOrWhiteSpace(model.JobNo))
+            {
+                result.IsUnique = true; // 空工作号视为有效（将使用自动生成）
+                result.Message = "工作号为空，将使用自动生成";
+                return result;
+            }
+
+            try
+            {
+                // 查询是否存在重复的工作号
+                var query = _DbContext.PlJobs
+                    .Where(j => j.OrgId == context.User.OrgId && j.JobNo == model.JobNo);
+
+                // 如果是编辑现有工作号，排除自身
+                if (model.ExcludeJobId.HasValue)
+                {
+                    query = query.Where(j => j.Id != model.ExcludeJobId.Value);
+                }
+
+                var existingJob = query.FirstOrDefault();
+
+                if (existingJob != null)
+                {
+                    result.IsUnique = false;
+                    result.Message = $"工作号 '{model.JobNo}' 已存在";
+                    result.ConflictJobId = existingJob.Id;
+                    
+                    _Logger.LogDebug("工作号重复检测：'{JobNo}' 已被工作ID {ConflictJobId} 使用", 
+                        model.JobNo, existingJob.Id);
+                }
+                else
+                {
+                    result.IsUnique = true;
+                    result.Message = $"工作号 '{model.JobNo}' 可以使用";
+                    
+                    _Logger.LogDebug("工作号唯一性验证通过：'{JobNo}'", model.JobNo);
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _Logger.LogError(ex, "验证工作号唯一性时发生错误，工作号: {JobNo}", model.JobNo);
+                result.HasError = true;
+                result.ErrorCode = 500;
+                result.DebugMessage = $"验证工作号时发生错误: {ex.Message}";
+                return StatusCode(StatusCodes.Status500InternalServerError, result);
+            }
+        }
+
         #endregion 业务总表
-
-        #region 空运出口单
-
-        /// <summary>
-        /// 获取全部空运出口单。
-        /// </summary>
-        /// <param name="model"></param>
-        /// <param name="conditional">已支持通用查询——除个别涉及敏感信息字段外，所有实体字段都可作为条件。</param>
-        /// <returns></returns>
-        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
-        /// <response code="401">无效令牌。</response>  
-        [HttpGet]
-        public ActionResult<GetAllPlEaDocReturnDto> GetAllPlEaDoc([FromQuery] PagingParamsDtoBase model,
-            [FromQuery] Dictionary<string, string> conditional = null)
-        {
-            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            var result = new GetAllPlEaDocReturnDto();
-
-            var dbSet = _DbContext.PlEaDocs;
-            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-            coll = EfHelper.GenerateWhereAnd(coll, conditional);
-            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
-            _Mapper.Map(prb, result);
-            return result;
-        }
-
-        /// <summary>
-        /// 增加新空运出口单。
-        /// </summary>
-        /// <param name="model"></param>
-        /// <returns></returns>
-        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
-        /// <response code="401">无效令牌。</response>  
-        /// <response code="403">权限不足。</response>  
-        [HttpPost]
-        public ActionResult<AddPlEaDocReturnDto> AddPlEaDoc(AddPlEaDocParamsDto model)
-        {
-            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "D0.1.1.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-            var result = new AddPlEaDocReturnDto();
-            var entity = model.PlEaDoc;
-            entity.GenerateNewId();
-            _DbContext.PlEaDocs.Add(model.PlEaDoc);
-            entity.CreateBy = context.User.Id;
-            entity.CreateDateTime = OwHelper.WorldNow;
-            _DbContext.SaveChanges();
-            result.Id = model.PlEaDoc.Id;
-            return result;
-        }
-
-        /// <summary>
-        /// 修改空运出口单信息。
-        /// </summary>
-        /// <param name="model"></param>
-        /// <returns></returns>
-        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
-        /// <response code="401">无效令牌。</response>  
-        /// <response code="404">指定Id的空运出口单不存在。</response>  
-        /// <response code="403">权限不足。</response>  
-        [HttpPut]
-        public ActionResult<ModifyPlEaDocReturnDto> ModifyPlEaDoc(ModifyPlEaDocParamsDto model)
-        {
-            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            var result = new ModifyPlEaDocReturnDto();
-            var doc = _DbContext.PlEaDocs.Find(model.PlEaDoc.Id);
-            if (doc == null) return NotFound("指定Id的空运出口单不存在");
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "D0.1.1.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-
-            if (!_EntityManager.Modify(new[] { model.PlEaDoc })) return NotFound();
-            _DbContext.SaveChanges();
-            return result;
-        }
-
-        /// <summary>
-        /// 删除指定Id的空运出口单。慎用！
-        /// </summary>
-        /// <param name="model"></param>
-        /// <returns></returns>
-        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
-        /// <response code="400">未找到指定的业务，或该业务不在初始创建状态——无法删除。</response>  
-        /// <response code="401">无效令牌。</response>  
-        /// <response code="404">指定Id的空运出口单不存在。</response>  
-        [HttpDelete]
-        public ActionResult<RemovePlEaDocReturnDto> RemovePlEaDoc(RemovePlEaDocParamsDto model)
-        {
-            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            var result = new RemovePlEaDocReturnDto();
-            var id = model.Id;
-            var dbSet = _DbContext.PlEaDocs;
-            var item = dbSet.Find(id);
-            //if (item.JobState > 0) return BadRequest("业务已经开始，无法删除。");
-            if (item is null) return BadRequest();
-            _EntityManager.Remove(item);
-            _DbContext.SaveChanges();
-            return result;
-        }
-
-        #endregion 空运出口单
-
-        #region 货场出重单
-
-        /// <summary>
-        /// 获取全部货场出重单。
-        /// </summary>
-        /// <param name="model"></param>
-        /// <param name="conditional">查询的条件。支持 Id，EaDocId(EA单Id)。不区分大小写。</param>
-        /// <returns></returns>
-        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
-        /// <response code="401">无效令牌。</response>  
-        [HttpGet]
-        public ActionResult<GetAllHuochangChuchongReturnDto> GetAllHuochangChuchong([FromQuery] PagingParamsDtoBase model,
-            [FromQuery] Dictionary<string, string> conditional = null)
-        {
-            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            var result = new GetAllHuochangChuchongReturnDto();
-
-            var dbSet = _DbContext.HuochangChuchongs;
-            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-            foreach (var item in conditional)
-                if (string.Equals(item.Key, "Id", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (Guid.TryParse(item.Value, out var id))
-                        coll = coll.Where(c => c.Id == id);
-                }
-                else if (string.Equals(item.Key, "EaDocId", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (Guid.TryParse(item.Value, out var id))
-                        coll = coll.Where(c => c.EaDocId == id);
-                }
-            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
-            _Mapper.Map(prb, result);
-            return result;
-        }
-
-        /// <summary>
-        /// 增加新货场出重单。
-        /// </summary>
-        /// <param name="model"></param>
-        /// <returns></returns>
-        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
-        /// <response code="401">无效令牌。</response>  
-        [HttpPost]
-        public ActionResult<AddHuochangChuchongReturnDto> AddHuochangChuchong(AddHuochangChuchongParamsDto model)
-        {
-            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            var result = new AddHuochangChuchongReturnDto();
-            var entity = model.HuochangChuchong;
-            entity.GenerateNewId();
-            _DbContext.HuochangChuchongs.Add(model.HuochangChuchong);
-            _DbContext.SaveChanges();
-            result.Id = model.HuochangChuchong.Id;
-            return result;
-        }
-
-        /// <summary>
-        /// 修改货场出重单信息。
-        /// </summary>
-        /// <param name="model"></param>
-        /// <returns></returns>
-        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
-        /// <response code="401">无效令牌。</response>  
-        /// <response code="404">指定Id的货场出重单不存在。</response>  
-        [HttpPut]
-        public ActionResult<ModifyHuochangChuchongReturnDto> ModifyHuochangChuchong(ModifyHuochangChuchongParamsDto model)
-        {
-            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            var result = new ModifyHuochangChuchongReturnDto();
-            if (!_EntityManager.Modify(new[] { model.HuochangChuchong })) return NotFound();
-            _DbContext.SaveChanges();
-            return result;
-        }
-
-        /// <summary>
-        /// 删除指定Id的货场出重单。慎用！
-        /// </summary>
-        /// <param name="model"></param>
-        /// <returns></returns>
-        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
-        /// <response code="400">未找到指定的业务，或该业务不在初始创建状态——无法删除。</response>  
-        /// <response code="401">无效令牌。</response>  
-        /// <response code="404">指定Id的货场出重单不存在。</response>  
-        [HttpDelete]
-        public ActionResult<RemoveHuochangChuchongReturnDto> RemoveHuochangChuchong(RemoveHuochangChuchongParamsDto model)
-        {
-            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            var result = new RemoveHuochangChuchongReturnDto();
-            var id = model.Id;
-            var dbSet = _DbContext.HuochangChuchongs;
-            var item = dbSet.Find(id);
-            //if (item.JobState > 0) return BadRequest("业务已经开始，无法删除。");
-            if (item is null) return BadRequest();
-            _EntityManager.Remove(item);
-            _DbContext.SaveChanges();
-            return result;
-        }
-
-        #endregion 货场出重单
-
-        #region 空运进口单相关
-
-        /// <summary>
-        /// 获取全部空运进口单。
-        /// </summary>
-        /// <param name="model"></param>
-        /// <param name="conditional">已支持通用查询——除个别涉及敏感信息字段外，所有实体字段都可作为条件。</param>
-        /// <returns></returns>
-        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
-        /// <response code="401">无效令牌。</response>  
-        [HttpGet]
-        public ActionResult<GetAllPlIaDocReturnDto> GetAllPlIaDoc([FromQuery] PagingParamsDtoBase model,
-            [FromQuery] Dictionary<string, string> conditional = null)
-        {
-            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            var result = new GetAllPlIaDocReturnDto();
-
-            var dbSet = _DbContext.PlIaDocs;
-            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-            coll = EfHelper.GenerateWhereAnd(coll, conditional);
-            var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
-            _Mapper.Map(prb, result);
-            return result;
-        }
-
-        /// <summary>
-        /// 增加新空运进口单。
-        /// </summary>
-        /// <param name="model"></param>
-        /// <returns></returns>
-        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
-        /// <response code="401">无效令牌。</response>  
-        /// <response code="403">权限不足。</response>  
-        [HttpPost]
-        public ActionResult<AddPlIaDocReturnDto> AddPlIaDoc(AddPlIaDocParamsDto model)
-        {
-            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "D1.1.1.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-            var result = new AddPlIaDocReturnDto();
-            var entity = model.PlIaDoc;
-            entity.GenerateNewId();
-            _DbContext.PlIaDocs.Add(model.PlIaDoc);
-            entity.CreateBy = context.User.Id;
-            entity.CreateDateTime = OwHelper.WorldNow;
-            _DbContext.SaveChanges();
-            result.Id = model.PlIaDoc.Id;
-            return result;
-        }
-
-        /// <summary>
-        /// 修改空运进口单信息。
-        /// </summary>
-        /// <param name="model"></param>
-        /// <returns></returns>
-        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
-        /// <response code="401">无效令牌。</response>  
-        /// <response code="404">指定Id的空运进口单不存在。</response>  
-        /// <response code="403">权限不足。</response>  
-        [HttpPut]
-        public ActionResult<ModifyPlIaDocReturnDto> ModifyPlIaDoc(ModifyPlIaDocParamsDto model)
-        {
-            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            var result = new ModifyPlIaDocReturnDto();
-            var doc = _DbContext.PlIaDocs.Find(model.PlIaDoc.Id);
-            if (doc == null) return NotFound("指定Id的空运进口单不存在");
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "D1.1.1.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-            if (!_EntityManager.Modify(new[] { model.PlIaDoc })) return NotFound();
-            _DbContext.SaveChanges();
-            return result;
-        }
-
-        /// <summary>
-        /// 删除指定Id的空运进口单。慎用！
-        /// </summary>
-        /// <param name="model"></param>
-        /// <returns></returns>
-        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
-        /// <response code="400">未找到指定的业务，或该业务不在初始创建状态——无法删除。</response>  
-        /// <response code="401">无效令牌。</response>  
-        /// <response code="404">指定Id的空运进口单不存在。</response>  
-        [HttpDelete]
-        public ActionResult<RemovePlIaDocReturnDto> RemovePlIaDoc(RemovePlIaDocParamsDto model)
-        {
-            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            var result = new RemovePlIaDocReturnDto();
-            var id = model.Id;
-            var dbSet = _DbContext.PlIaDocs;
-            var item = dbSet.Find(id);
-            if (item.Status > 0) return BadRequest("业务已经开始，无法删除。");
-            if (item is null) return BadRequest();
-            _EntityManager.Remove(item);
-            _DbContext.SaveChanges();
-            return result;
-        }
-
-        #endregion  空运进口单相关
 
     }
 

@@ -83,6 +83,7 @@ namespace PowerLmsWebApi.Controllers.OA
 
         /// <summary>
         /// 创建新的OA费用申请单明细。
+        /// 权限要求：OA.1.2 - 日常费用拆分结算
         /// </summary>
         /// <param name="model">明细信息</param>
         /// <returns>创建结果</returns>
@@ -99,6 +100,17 @@ namespace PowerLmsWebApi.Controllers.OA
 
             try
             {
+                // 🔧 权限验证 - 使用 OA.1.2 权限：日常费用拆分结算（子表增删改权限）
+                if (!_AuthorizationManager.Demand(out var err, "OA.1.2"))
+                {
+                    _Logger.LogWarning("权限检查失败 - 用户: {UserId}, 权限: OA.1.2, 错误信息: {Error}", 
+                        context.User.Id, err);
+                    result.HasError = true;
+                    result.ErrorCode = 403;
+                    result.DebugMessage = $"权限不足: {err}";
+                    return result;
+                }
+
                 // 检查申请单是否存在和权限
                 var requisition = _DbContext.OaExpenseRequisitions.Find(model.Item.ParentId);
                 if (requisition == null)
@@ -106,6 +118,15 @@ namespace PowerLmsWebApi.Controllers.OA
                     result.HasError = true;
                     result.ErrorCode = 404;
                     result.DebugMessage = "指定的OA费用申请单不存在";
+                    return result;
+                }
+
+                // 多租户数据隔离检查
+                if (!context.User.IsSuperAdmin && requisition.OrgId != context.User.OrgId)
+                {
+                    result.HasError = true;
+                    result.ErrorCode = 403;
+                    result.DebugMessage = "权限不足，无法操作此申请单";
                     return result;
                 }
 
@@ -118,15 +139,6 @@ namespace PowerLmsWebApi.Controllers.OA
                     return result;
                 }
 
-                // 检查用户权限：只能为自己创建/登记的申请单添加明细（废弃ApplicantId，统一使用CreateBy）
-                if (requisition.CreateBy.HasValue && requisition.CreateBy.Value != context.User.Id && !context.User.IsSuperAdmin)
-                {
-                    result.HasError = true;
-                    result.ErrorCode = 403;
-                    result.DebugMessage = "权限不足，无法为此申请单添加明细";
-                    return result;
-                }
-
                 var entity = model.Item;
                 entity.GenerateNewId();
 
@@ -134,6 +146,9 @@ namespace PowerLmsWebApi.Controllers.OA
                 _DbContext.SaveChanges();
 
                 result.Id = entity.Id;
+
+                _Logger.LogInformation("成功添加OA费用申请单明细 - 申请单ID: {RequisitionId}, 明细ID: {ItemId}, 操作人: {UserId}",
+                    model.Item.ParentId, entity.Id, context.User.Id);
             }
             catch (Exception ex)
             {
@@ -148,6 +163,7 @@ namespace PowerLmsWebApi.Controllers.OA
 
         /// <summary>
         /// 修改OA费用申请单明细信息。
+        /// 权限要求：OA.1.2 - 日常费用拆分结算
         /// </summary>
         /// <param name="model">明细信息</param>
         /// <returns>修改结果</returns>
@@ -164,6 +180,17 @@ namespace PowerLmsWebApi.Controllers.OA
 
             try
             {
+                // 🔧 权限验证 - 使用 OA.1.2 权限：日常费用拆分结算（子表增删改权限）
+                if (!_AuthorizationManager.Demand(out var err, "OA.1.2"))
+                {
+                    _Logger.LogWarning("权限检查失败 - 用户: {UserId}, 权限: OA.1.2, 错误信息: {Error}", 
+                        context.User.Id, err);
+                    result.HasError = true;
+                    result.ErrorCode = 403;
+                    result.DebugMessage = $"权限不足: {err}";
+                    return result;
+                }
+
                 // 检查所有明细项是否存在和权限
                 foreach (var item in model.Items)
                 {
@@ -178,20 +205,28 @@ namespace PowerLmsWebApi.Controllers.OA
 
                     // 检查申请单状态和权限
                     var requisition = _DbContext.OaExpenseRequisitions.Find(existing.ParentId);
-                    if (requisition == null || !requisition.CanEditItems(_DbContext))
+                    if (requisition == null)
+                    {
+                        result.HasError = true;
+                        result.ErrorCode = 404;
+                        result.DebugMessage = "关联的申请单不存在";
+                        return result;
+                    }
+
+                    // 多租户数据隔离检查
+                    if (!context.User.IsSuperAdmin && requisition.OrgId != context.User.OrgId)
+                    {
+                        result.HasError = true;
+                        result.ErrorCode = 403;
+                        result.DebugMessage = "权限不足，无法操作此申请单";
+                        return result;
+                    }
+
+                    if (!requisition.CanEditItems(_DbContext))
                     {
                         result.HasError = true;
                         result.ErrorCode = 403;
                         result.DebugMessage = "申请单当前状态不允许修改明细";
-                        return result;
-                    }
-
-                    // 检查用户权限：只能修改自己创建/登记申请单的明细（废弃ApplicantId，统一使用CreateBy）
-                    if (requisition.CreateBy.HasValue && requisition.CreateBy.Value != context.User.Id && !context.User.IsSuperAdmin)
-                    {
-                        result.HasError = true;
-                        result.ErrorCode = 403;
-                        result.DebugMessage = "权限不足，无法修改此明细";
                         return result;
                     }
                 }
@@ -206,6 +241,9 @@ namespace PowerLmsWebApi.Controllers.OA
                 }
 
                 _DbContext.SaveChanges();
+
+                _Logger.LogInformation("成功修改OA费用申请单明细 - 明细数量: {Count}, 操作人: {UserId}",
+                    model.Items.Count(), context.User.Id);
             }
             catch (Exception ex)
             {
@@ -220,6 +258,7 @@ namespace PowerLmsWebApi.Controllers.OA
 
         /// <summary>
         /// 删除OA费用申请单明细。
+        /// 权限要求：OA.1.2 - 日常费用拆分结算
         /// </summary>
         /// <param name="model">删除参数</param>
         /// <returns>删除结果</returns>
@@ -236,13 +275,41 @@ namespace PowerLmsWebApi.Controllers.OA
 
             try
             {
+                // 🔧 权限验证 - 使用 OA.1.2 权限：日常费用拆分结算（子表增删改权限）
+                if (!_AuthorizationManager.Demand(out var err, "OA.1.2"))
+                {
+                    _Logger.LogWarning("权限检查失败 - 用户: {UserId}, 权限: OA.1.2, 错误信息: {Error}", 
+                        context.User.Id, err);
+                    result.HasError = true;
+                    result.ErrorCode = 403;
+                    result.DebugMessage = $"权限不足: {err}";
+                    return result;
+                }
+
                 var entities = _DbContext.OaExpenseRequisitionItems.Where(e => model.Ids.Contains(e.Id)).ToList();
 
                 foreach (var entity in entities)
                 {
                     // 检查申请单状态和权限
                     var requisition = _DbContext.OaExpenseRequisitions.Find(entity.ParentId);
-                    if (requisition == null || !requisition.CanEditItems(_DbContext))
+                    if (requisition == null)
+                    {
+                        result.HasError = true;
+                        result.ErrorCode = 404;
+                        result.DebugMessage = "关联的申请单不存在";
+                        return result;
+                    }
+
+                    // 多租户数据隔离检查
+                    if (!context.User.IsSuperAdmin && requisition.OrgId != context.User.OrgId)
+                    {
+                        result.HasError = true;
+                        result.ErrorCode = 403;
+                        result.DebugMessage = "权限不足，无法操作此申请单";
+                        return result;
+                    }
+
+                    if (!requisition.CanEditItems(_DbContext))
                     {
                         result.HasError = true;
                         result.ErrorCode = 403;
@@ -250,19 +317,13 @@ namespace PowerLmsWebApi.Controllers.OA
                         return result;
                     }
 
-                    // 检查用户权限：只能删除自己创建/登记申请单的明细（废弃ApplicantId，统一使用CreateBy）
-                    if (requisition.CreateBy.HasValue && requisition.CreateBy.Value != context.User.Id && !context.User.IsSuperAdmin)
-                    {
-                        result.HasError = true;
-                        result.ErrorCode = 403;
-                        result.DebugMessage = "权限不足，无法删除此明细";
-                        return result;
-                    }
-
                     _EntityManager.Remove(entity);
                 }
 
                 _DbContext.SaveChanges();
+
+                _Logger.LogInformation("成功删除OA费用申请单明细 - 明细数量: {Count}, 操作人: {UserId}",
+                    entities.Count, context.User.Id);
             }
             catch (Exception ex)
             {

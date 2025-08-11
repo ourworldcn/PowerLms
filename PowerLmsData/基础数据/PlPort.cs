@@ -11,6 +11,25 @@ using System.Threading.Tasks;
 namespace PowerLms.Data
 {
     /// <summary>
+    /// 港口类型枚举。
+    /// 用于区分空运港口（IATA三字码）和海运港口（船公司四/五位码）。
+    /// </summary>
+    public enum PortType : byte
+    {
+        /// <summary>
+        /// 空运港口，使用IATA三字码（如LAX）。
+        /// </summary>
+        [Display(Name = "空运")]
+        Air = 1,
+
+        /// <summary>
+        /// 海运港口，使用船公司四/五位码（如USLAX）。
+        /// </summary>
+        [Display(Name = "海运")]
+        Sea = 2
+    }
+
+    /// <summary>
     /// 港口类。CustomId 对应原系统三字码（海关码）。DisplayName 对应原有 中英文名称（看看就好）。Code 复制自原有三字码。Id 取代原有 ZDBH。
     /// </summary>
     [Comment("港口")]
@@ -63,6 +82,14 @@ namespace PowerLms.Data
         [MaxLength(32)]
         [Unicode(false)] // 使用ASCII编码存储
         public string CargoRouteCode { get; set; }
+
+        /// <summary>
+        /// 港口类型。用于区分空运港口（IATA三字码）和海运港口（船公司四/五位码）。
+        /// 空运港口使用三字码（如LAX），海运港口使用四/五位码（如USLAX）。
+        /// 同一地点的空港和海港需要分别建立两条记录。
+        /// </summary>
+        [Comment("港口类型。1=空运，2=海运")]
+        public PortType? PortType { get; set; }
     }
 
     /// <summary>

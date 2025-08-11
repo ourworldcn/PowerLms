@@ -109,57 +109,42 @@ namespace PowerLmsWebApi.Controllers.System
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">没有找到指定文件。</response>  
+        /// <response code="410">接口已废弃，请使用新的通用接口。</response>
         [HttpGet]
-        [Obsolete("未来将删除此接口，请使用 GetFile 替代。")]
+        [Obsolete("已废弃接口，请使用 GetFile 替代。该接口将在未来版本中移除。")]
         public ActionResult DownloadCustomerFile(Guid token, Guid fileId)
         {
-            if (_AccountManager.GetOrLoadContextByToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            var info = _DbContext.PlFileInfos.Find(fileId);
-            if (info == null) return NotFound();
-            var path = Path.Combine(AppContext.BaseDirectory, "Files", info.FilePath);
-            if (!SysIO.File.Exists(path)) return NotFound();
-            var stream = new FileStream(path, FileMode.Open);
-            return File(stream, "application/octet-stream", info.FileName);
+            _Logger.LogWarning("尝试使用已废弃的客户文件下载接口，令牌: {Token}, 文件ID: {FileId}", 
+                token, fileId);
+            
+            return StatusCode(StatusCodes.Status410Gone, 
+                "此接口已废弃，请使用新的通用文件下载接口 GetFile。新接口提供更好的安全性和权限控制。");
         }
 
         /// <summary>
         /// 上传客户资料的特定接口。
+        /// 已废弃：强烈建议使用 AddFile 接口替代，该接口将在未来版本中移除。
         /// </summary>
         /// <param name="file"></param>
         /// <param name="model"></param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
+        /// <response code="410">接口已废弃，请使用新的通用接口。</response>
         [HttpPost]
-        [Obsolete("未来将删除此接口，请使用 AddFile替代。")]
+        [Obsolete("已废弃接口，请使用 AddFile 替代。该接口将在未来版本中移除。")]
         public ActionResult<UploadCustomerFileReturnDto> UploadCustomerFile(IFormFile file, [FromForm] UploadCustomerFileParamsDto model)
         {
-            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            // 🔧 紧急修复：禁用旧版接口，强制使用新版通用接口
+            _Logger.LogWarning("尝试使用已废弃的客户文件上传接口，用户: {UserId}, 文件: {FileName}", 
+                model.Token, file?.FileName);
+            
             var result = new UploadCustomerFileReturnDto();
-            if (file is null)
-            {
-                throw new ArgumentNullException(nameof(file));
-            }
-            var info = new PlFileInfo
-            {
-                DisplayName = model.DisplayName,
-                FileTypeId = model.FileTypeId,
-                ParentId = model.ParentId,
-                FileName = file.FileName,   //从 Content-Disposition 标头获取文件名。
-            };
-
-            info.FilePath = $"Customer\\{info.Id}.bin";
-            _DbContext.Add(info);
-
-            var stream = file.OpenReadStream();
-            var path = Path.Combine(_FileService.GetDirectory(), info.FilePath);
-            var dir = Path.GetDirectoryName(path);
-            Directory.CreateDirectory(dir);
-            using var destStream = new FileStream(path, FileMode.Create);
-            stream.CopyTo(destStream);
-            _DbContext.SaveChanges();
-            result.Result = info.Id;
-            return result;
+            result.HasError = true;
+            result.ErrorCode = 410; // Gone
+            result.DebugMessage = "此接口已废弃，请使用新的通用文件上传接口 AddFile。新接口提供更好的安全性和文件类型验证。";
+            
+            return StatusCode(StatusCodes.Status410Gone, result);
         }
 
         #region 通用文件管理接口

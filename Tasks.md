@@ -1,323 +1,261 @@
-﻿# ZC@WorkGroup 任务执行计划
+﻿# ZC@WorkGroup 行动项计划 - 基于2025-08-09会议纪要
 
-## 任务概览
-根据会议纪要中的工作安排，作为后端开发负责以下核心任务：
+## 会议核心决议总结
 
-### 紧急Bug修复
-1. **OA备用申请单编辑保存失败** ✅ **已完成**
-2. **工作流Send方法审批意见丢失问题**（已在临时输出.md中确认修复）
-
-### 主营业务结算单功能改造
-1. **实体与数据库变更**
-2. **通用实际收付记录表**
-3. **计算工具接口开发**
-
-### 财务导出接口
-1. **财务单据导出接口开发**
+### 三大主题
+1. **主营业务结算单前端界面开发进度审查与UI细节调整**
+2. **客户测试反馈问题的集中梳理、原因定位与任务分配**  
+3. **新功能需求：为所有基础资料（字典）提供通用的导入导出功能**
 
 ---
 
-## 详细执行计划
+## 🔥 高优先级任务 [立即执行]
 
-### 任务一：Bug修复 [高优先级] ✅ **已完成**
+### 任务一：客户测试反馈问题修复
 
-#### 1.1 OA备用申请单编辑保存失败 ✅ **已完成**
-**问题描述：** 前端发送正确数据，但后端未能成功写入数据库
+#### 1.1 OA日常费用权限问题修复 ✅ **已完成**
+**问题：** 调用"日常费用结算"接口时后端报权限错误  
+**修复：** 修改为正确的权限代码，结算、确认和明细操作权限验证已修复  
+**涉及接口：** `SettleOaExpenseRequisition`、`ConfirmOaExpenseRequisition`、`AddOaExpenseRequisitionItem`、`ModifyOaExpenseRequisitionItem`、`RemoveOaExpenseRequisitionItem`
 
-**问题根因：** `OaExpenseController.ModifyOaExpenseRequisition`方法缺少`_DbContext.SaveChanges()`调用
+**✅ 权限设计实现（已完成）：**
+- `OA.1.1 - 日常费用结算确认`：**既是结算也是确认的权限**
+  - 适用于主表结算和确认操作：`SettleOaExpenseRequisition`、`ConfirmOaExpenseRequisition`
+  - 控制对申请单整体的结算确认流程权限
+- `OA.1.2 - 日常费用拆分结算`：**OA日常费用申请表子表的增删改权限**  
+  - 适用于申请单明细项的增加、删除、修改操作：`AddOaExpenseRequisitionItem`、`ModifyOaExpenseRequisitionItem`、`RemoveOaExpenseRequisitionItem`
+  - 控制对申请单明细（子表）的编辑权限
 
-**修复内容：**
-```csharp
-// 在字段保护逻辑之后添加：
-_DbContext.SaveChanges();
-_Logger.LogInformation("成功修改OA费用申请单，用户: {UserId}, 申请单数量: {Count}", 
-    context.User.Id, model.Items.Count());
-```
+**权限使用场景：**
+- **结算操作**：使用`OA.1.1`权限，对申请单进行结算处理
+- **确认操作**：使用`OA.1.1`权限，对已结算申请单进行确认
+- **明细编辑**：使用`OA.1.2`权限，对申请单的明细项进行增删改操作
+- **拆分结算**：使用`OA.1.2`权限，处理明细项的拆分和重新组织
 
-**验证结果：** ✅ 编译成功，Bug已修复
+**技术实现要点：**
+- 结算和确认接口统一使用`OA.1.1`权限验证
+- 明细项增删改接口统一使用`OA.1.2`权限验证
+- 保持多租户数据隔离和状态检查
+- 添加详细的权限检查日志记录
 
-#### 1.2 数据锁定功能实现 ✅ **已完成并修正**
-**需求：** 审批中的单据不允许修改主表单信息
+**状态：** ✅ **已完成**（权限逻辑、代码实现和业务需求均已完成）
 
-**实现范围：**
-1. **OA日常费用申请单**：主单+明细分别锁定
-2. **主营业务费用申请单**：基于工作流状态实现锁定
+#### 1.2 通用文件上传/下载功能统一 ✅ **已完成**
+**问题：** 新上传文件无法下载，使用了废弃的旧版接口  
+**修复：** 统一使用新版通用接口
+**前端影响：** 需替换所有文件上传下载调用，详见API文档
 
-**具体实现：**
-
-**OA日常费用申请单锁定逻辑：**
-```csharp
-// 主单锁定：只有草稿状态可以修改主单
-if (!existing.CanEdit(_DbContext))
-{
-    result.HasError = true;
-    result.ErrorCode = 403;
-    result.DebugMessage = GetEditRestrictionMessage(existing.Status);
-    return result;
-}
-
-// 明细锁定：结算后不能修改明细项
-if (!requisition.CanEditItems(_DbContext))
-{
-    result.HasError = true;
-    result.ErrorCode = 403;
-    result.DebugMessage = "申请单当前状态不允许修改明细";
-    return result;
-}
-```
-
-**主营业务费用申请单锁定逻辑：**
-```csharp
-// 检查申请单是否已进入审批流程
-if (IsInWorkflow(originalEntity.Id))
-{
-    result.HasError = true;
-    result.ErrorCode = 403;
-    result.DebugMessage = "申请单已进入审批流程，主表单信息不能修改";
-    return result;
-}
-
-private bool IsInWorkflow(Guid requisitionId)
-{
-    // 查询是否存在关联的工作流
-    var workflow = _DbContext.OwWfs
-        .Where(w => w.DocId == requisitionId && w.State != 8) // 排除失败结束的流程
-        .FirstOrDefault();
-    return workflow != null;
-}
-```
-
-**锁定规则总结：**
-- **OA日常费用申请单主单**：只有草稿状态可编辑
-- **OA日常费用申请单明细**：结算前可编辑，结算后锁定
-- **主营业务费用申请单**：进入审批流程后主单锁定
-- **确认后状态**：完全锁定（仅允许系统字段更新）
-
-**预估工期：** 0.5天 → **实际完成：** 0.5天
-
-### 任务二：主营业务结算单功能改造 [核心功能]
-
-#### 2.1 实体与数据库变更
-**需求：** 根据Excel文档新增约13个字段
-
-**执行步骤：**
-```
-1. 分析现有实体结构
-   - 查找MainBusinessSettlement相关实体
-   - 分析当前字段定义
-   
-2. 对比Excel文档需求
-   - 确认新增字段列表
-   - 定义字段类型和约束
-   
-3. 更新实体定义
-   - 添加新增字段属性
-   - 配置数据注解和约束
-   - 更新字段注释
-   
-4. 数据库迁移（手动规划）
-   - 编写ALTER TABLE语句
-   - 考虑数据兼容性
-   - 制定回滚方案
-```
-
-**字段设计要点：**
-- 金额字段：decimal(18,2) - 两位小数
-- 汇率字段：decimal(18,4) - 四位小数  
-- 新增字段包括："收付单号"、"财务凭证号"、"是否导出到财务软件"等
-
-**预估工期：** 1.5天
-
-#### 2.2 通用实际收付记录表设计
-**需求：** 处理一笔结算分多次收/付款场景
-
-**执行步骤：**
-```
-1. 设计表结构
-   CREATE TABLE ActualPaymentRecords (
-       Id uniqueidentifier PRIMARY KEY,
-       ParentId uniqueidentifier NOT NULL, -- 通用父单据ID
-       PaymentDate datetime2 NOT NULL,     -- 收付日期
-       Amount decimal(18,2) NOT NULL,      -- 金额
-       AmountInBaseCurrency decimal(18,2), -- 本位币金额
-       ExchangeRate decimal(18,4),         -- 汇率
-       CurrencyId uniqueidentifier,        -- 币种ID
-       PaymentMethod nvarchar(50),         -- 收付方式
-       Remark nvarchar(500),              -- 备注
-       CreateTime datetime2 DEFAULT GETDATE(),
-       CreatorId uniqueidentifier,
-       IsDelete bit DEFAULT 0
-   )
-   
-2. 创建对应实体类
-   - 定义ActualPaymentRecord实体
-   - 配置数据注解
-   - 设置导航属性
-   
-3. 实现CRUD接口
-   - AddActualPaymentRecord
-   - GetActualPaymentRecords  
-   - ModifyActualPaymentRecord
-   - RemoveActualPaymentRecord
-```
-
-**预估工期：** 1天
-
-#### 2.3 计算工具接口开发
-**需求：** 提供核销金额等复杂计算的统一接口
-
-**执行步骤：**
-```
-1. 设计计算接口
-   - 定义输入参数DTO
-   - 确定计算输出格式
-   
-2. 实现计算逻辑
-   public class SettlementCalculationService 
-   {
-       // 核销金额计算
-       public CalculationResultDto CalculateWriteOffAmount(...)
-       
-       // 汇率转换计算  
-       public decimal ConvertCurrency(...)
-       
-       // 金额汇总计算
-       public CalculationResultDto SumAmounts(...)
-   }
-   
-3. 创建Controller接口
-   [HttpPost]
-   public ActionResult<CalculationResultDto> Calculate(CalculationParamsDto model)
-```
-
-**计算规则：**
-- 确保浮点数精度一致性
-- 与金蝶导出算法保持一致
-- 支持多币种计算
-
-**预估工期：** 1天
-
-### 任务三：财务导出接口开发 [紧急需求]
-
-#### 3.1 财务单据导出接口
-**需求：** 完成两个财务单据导出接口（客户已催促）
-
-**执行步骤：**
-```
-1. 分析现有导出代码
-   - 查看FinancialSystemExportController
-   - 了解现有导出逻辑
-   
-2. 设计导出接口
-   - 主营业务结算单导出
-   - 费用申请单导出
-   
-3. 实现导出功能
-   - 数据查询和筛选
-   - 格式转换（Excel/DBF）
-   - 权限控制
-   - 异步任务处理
-   
-4. 测试和优化
-   - 大数据量测试
-   - 性能优化
-   - 错误处理
-```
-
-**技术要点：**
-- 使用现有的任务调度机制
-- 保持与发票导出一致的架构
-- 支持条件筛选和权限过滤
-
-**预估工期：** 2天
+#### 1.3 工作号手动录入唯一性校验 ✅ **已完成**
+**需求：** 支持手动录入工作号以便新旧系统数据比对  
+**实现：** 支持手动录入+自动生成，增加唯一性校验
+**新增接口：** 工作号唯一性验证接口，前端实时验证使用
 
 ---
 
-## 总体时间规划
+## 🎯 中优先级任务
 
-| 任务 | 优先级 | 预估工期 | 完成状态 |
-|------|--------|----------|----------|
-| OA申请单Bug修复 | 高 | 0.5天 | ✅ **已完成** |
-| 数据锁定功能 | 高 | 0.5天 | ✅ **已完成** |
-| 财务导出接口 | 高 | 2天 | 📋 计划中 |
-| 实际收付记录表 | 中 | 1天 | 📋 计划中 |
-| 结算单实体改造 | 中 | 1.5天 | 📋 计划中 |
-| 计算工具接口 | 中 | 1天 | 📋 计划中 |
+### 任务二：通用导入导出功能开发 📋 **计划中**
 
-**总计：6.5个工作日** | **已完成：1天** | **剩余：5.5天**
+#### 2.1 字典数据导入导出基础设施 🌟 核心功能
+**业务价值：** 支持9个分公司快速配置基础数据，大幅提升实施效率
+**预估工期：** 6天
+**新增接口：** Excel导入导出接口组，前端需添加导入/导出按钮
+
+**前端协作要点：**
+- 各基础资料列表页面增加"导入"和"导出"按钮
+- 导入导出功能使用统一的API接口
+- 具体接口规范详见API文档
+
+**预估工期：** 3天
+
+#### 2.2 技术评估报告（详细）
+
+**🔍 涉及实体清单及Code字段状态：**
+
+| 实体类名 | 数据库表名 | Code字段状态 | 优先级 | 备注 |
+|---------|------------|-------------|--------|------|
+| **PlCustomer** | PlCustomers | ✅ 有Code字段 | 🔥 最高 | **客户资料主表** |
+| **PlCustomerContact** | PlCustomerContacts | ❌ 无Code字段需求 | 🟡 中等 | 客户联系人（关联到客户） |
+| **PlBusinessHeader** | PlBusinessHeaders | ❌ 无Code字段需求 | 🟡 中等 | 业务负责人（关联到客户+用户+业务种类） |
+| **PlTidan** | PlTidans | ❌ 无Code字段需求 | 🟡 中等 | 客户提单内容（关联到客户） |
+| **CustomerBlacklist** | CustomerBlacklists | ❌ 无Code字段需求 | 🟡 中等 | 黑名单跟踪（关联到客户） |
+| **PlLoadingAddr** | PlLoadingAddrs | ❌ 无Code字段需求 | 🟡 中等 | 装货地址（关联到客户） |
+| **PlCurrency** | DD_PlCurrencys | ✅ 继承自NamedSpecialDataDicBase | 🔥 最高 | 客户拖欠限额币种关联 |
+| **PlCountry** | DD_PlCountrys | ✅ 继承自NamedSpecialDataDicBase | 🔥 最高 | 客户地址国家关联 |
+| **SimpleDataDic** | DD_SimpleDataDics | ✅ 继承自DataDicBase | 🔥 最高 | 多个简单字典关联 |
+| **PlPort** | DD_PlPorts | ✅ 继承自NamedSpecialDataDicBase | 🔥 最高 | |
+| **PlCargoRoute** | DD_PlCargoRoutes | ✅ 继承自NamedSpecialDataDicBase | 🔥 最高 | |
+| **FeesType** | DD_FeesTypes | ✅ 继承自NamedSpecialDataDicBase | 🔥 最高 | |
+| **PlExchangeRate** | DD_PlExchangeRates | ❌ 需要添加Code字段 | 🟡 中等 | |
+| **UnitConversion** | DD_UnitConversions | ❌ 需要添加Code字段 | 🟡 中等 | |
+| **JobNumberRule** | DD_JobNumberRules | ❓ 需实际验证 | 🟡 中等 | |
+| **OtherNumberRule** | DD_OtherNumberRules | ❓ 需实际验证 | 🟡 中等 | |
+| **ShippingContainersKind** | DD_ShippingContainersKinds | ❓ 需实际验证 | 🟡 中等 | |
+| **BusinessTypeDataDic** | DD_BusinessTypeDataDics | ❓ 需实际验证 | 🟡 中等 | |
+
+**🎯 客户资料关联分析：**
+
+**客户资料实体群：**
+- **PlCustomer**：主表，包含Code字段 ✅
+- **客户关联子表**：PlCustomerContact、PlBusinessHeader、PlTidan、CustomerBlacklist、PlLoadingAddr
+  - 这些子表通过CustomerId关联，无需独立的Code字段
+  - 导入导出时作为客户资料的一部分处理
+
+**客户资料的字典关联：**
+- **Address_CountryId** → PlCountry (✅ 有Code字段)
+- **BillingInfo_CurrtypeId** → PlCurrency (✅ 有Code字段)  
+- **ShipperPropertyId** → SimpleDataDic (✅ 有Code字段)
+- **CustomerLevelId** → SimpleDataDic (✅ 有Code字段)
+- **Airlines_PayModeId** → SimpleDataDic (✅ 有Code字段)
+- **Airlines_DocumentsPlaceId** → SimpleDataDic (✅ 有Code字段)
+- **OrderTypeId** → BusinessTypeDataDic (❓ 需验证Code字段)
+
+**🎯 核心发现：**
+- ✅ **好消息**：客户资料主表及主要关联字典已有Code字段，可直接支持导入导出
+- ✅ **关联完整**：客户资料的子表通过外键关联，可作为整体进行导入导出
+- ⚠️ **需验证**：BusinessTypeDataDic（业务种类）是客户业务负责人表的关键关联，需确认Code字段状态
+- ⚠️ **需补强**：PlExchangeRate、UnitConversion确认需要添加Code字段
+
+**📊 外键关联分析：**
+- **客户资料导入导出策略**：
+  - 主表PlCustomer：使用自身Code字段
+  - 国家关联：使用PlCountry.Code替代Address_CountryId
+  - 币种关联：使用PlCurrency.Code替代BillingInfo_CurrtypeId
+  - 简单字典关联：使用SimpleDataDic.Code替代各种xxxId
+  - 子表数据：可选择性导入导出，通过客户Code关联
+
+**⏱️ 修正后工期评估：**
+- **Phase 1**: 基础设施开发（2天）
+- **Phase 2**: 客户资料导入导出实现（1天）- 包含子表处理
+- **Phase 3**: Code字段补强（1天）- 确认需要为2个实体添加Code字段
+- **Phase 4**: 字典功能实现（1.5天）
+- **Phase 5**: 测试和优化（0.5天）
+- **总计**: 6天（已包含客户资料完整处理）
+
+**⚠️ 主要风险：**
+- **客户数据复杂度**：客户资料包含多个子表，需要设计合理的导入导出策略
+- **Code字段缺失**：已确认PlExchangeRate、UnitConversion需要补强
+- **数据完整性**：多租户数据隔离和权限控制
+- **性能优化**：大批量客户数据导入的内存和事务处理
+
+**🚀 实施策略：**
+1. **优先验证**：立即确认BusinessTypeDataDic等4个实体的Code字段状态
+2. **客户资料优先**：优先实现客户资料完整导入导出（包含子表）
+3. **分阶段实施**：先实现已有Code字段的实体，再处理需要补强的实体
+4. **关联处理**：设计统一的Code值关联策略，确保数据一致性
+
+### 任务三：业务功能增强 🔄 **部分完成**
+
+#### 3.1 港口类型区分功能 ✅ **已完成**
+**实现：** 在PlPort实体中添加PortType枚举字段（1=空运，2=海运）
+**新增接口能力：** 港口查询接口`AdminController.GetAllPlPort`支持PortType字段筛选
+**前端应用：** 可在港口选择界面增加类型筛选，详见API文档
+
+**数据库变更：**
+```sql
+ALTER TABLE DD_PlPorts ADD [PortType] tinyint NULL;
+-- 1=空运（Air），2=海运（Sea）
+```
+
+#### 3.2 单票审核列表字段补强 ✅ **已完成**（后端）
+**实现：** PlJob实体添加ClosedBy字段，区分审核人和关闭人
+**接口变更：** PlJob相关查询接口返回数据包含ClosedBy字段
+**前端协作：** 需在单票审核列表添加"关闭人"和"关闭日期"列显示
+
+**数据库变更：**
+```sql
+ALTER TABLE PlJobs ADD [ClosedBy] uniqueidentifier NULL;
+```
+
+#### 3.3 汇率获取业务种类确认 📋 **待验证**
+**需求：** 确认工作号录入费用时，汇率获取按业务种类区分的逻辑
+**前端验证：** 确认调用汇率接口时已传入业务种类参数
 
 ---
 
-## 已完成任务详细记录
+## 📊 时间规划与优先级
 
-### ✅ 任务1.1：OA申请单编辑保存失败修复
-**修复时间：** 2025-01-27  
-**问题定位：** `PowerLmsWebApi/Controllers/OaExpenseController.cs` 的 `ModifyOaExpenseRequisition` 方法  
-**根本原因：** 缺少 `_DbContext.SaveChanges()` 调用  
-**修复方案：** 在字段保护逻辑后添加SaveChanges调用和日志记录  
-**验证结果：** 编译成功，功能恢复正常  
+| 任务 | 优先级 | 预估工期 | 状态 | 前端影响 |
+|------|--------|----------|------|----------|
+| **已完成任务** ||||
+| OA日常费用权限修复 | 🔥紧急 | 0.5天 | ⚠️**待确认** | 无影响 |
+| 文件接口统一 | 🔥紧急 | 1天 | ✅**已完成** | 需更新调用 |
+| 工作号手动录入 | 🔥紧急 | 0.5天 | ✅**已完成** | 新增验证接口 |
+| 港口类型区分功能 | 🟡中等 | 0.5天 | ✅**已完成** | 新增筛选功能 |
+| 单票审核字段补强 | 🟡中等 | 0.5天 | ✅**已完成**（后端） | 新增列显示 |
+| **当前任务** ||||
+| 通用导入导出开发 | 🌟重要 | 6天 | 📋计划中 | 新增导入导出按钮 |
+| 汇率获取逻辑确认 | 🟡中等 | 0.2天 | 📋计划中 | 参数验证 |
 
-### ✅ 任务1.2：数据锁定功能实现（已修正）
-**实现时间：** 2025-01-27  
-**实现文件：** 
-- `PowerLmsWebApi/Controllers/OaExpenseController.cs` - OA费用申请单主单锁定
-- `PowerLmsWebApi/Controllers/OaExpenseController.Item.cs` - OA费用申请单明细锁定
-- `PowerLmsWebApi/Controllers/FinancialController.DocFeeRequisition.cs` - 主营业务费用申请单锁定
-
-**核心技术方案：**
-1. **状态驱动锁定**：基于申请单状态或工作流状态判断编辑权限
-2. **分层权限控制**：主单和明细分别控制编辑权限
-3. **字段级保护**：使用EF Core的`IsModified = false`保护特定字段
-4. **用户友好提示**：返回明确的错误信息说明限制原因
-
-**锁定规则详细说明：**
-- **OA日常费用申请单主单**：`CanEdit()` - 只有草稿状态可编辑
-- **OA日常费用申请单明细**：`CanEditItems()` - 结算前可编辑，结算后锁定
-- **主营业务费用申请单**：`IsInWorkflow()` - 进入审批流程后主单锁定
-
-**验证结果：** 编译成功，逻辑完整，错误处理完善
+**当前状态：**
+- **已完成：** 2.5天（文件接口 + 工作号录入 + 港口功能 + 单票审核后端）
+- **待确认：** 0.5天（OA权限问题的业务逻辑确认）
+- **剩余工期：** 6.2天（导入导出6天 + 汇率逻辑确认0.2天）
 
 ---
 
-## 技术风险与注意事项
-
-### 1. 数据库变更风险
-- **风险：** 生产环境数据结构变更可能影响现有功能
-- **应对：** 制定详细的迁移脚本和回滚方案
-
-### 2. 兼容性风险  
-- **风险：** 新增字段可能影响前端现有逻辑
-- **应对：** 确保新字段有合理默认值，保持向后兼容
-
-### 3. 性能风险
-- **风险：** 复杂计算和大数据量导出可能影响性能
-- **应对：** 使用异步处理，优化查询语句
-
-### 4. 业务逻辑风险
-- **风险：** 计算逻辑与前端不一致导致数据差异
-- **应对：** 提供统一的计算接口，确保前后端使用相同算法
-
----
-
-## 协作要求
+## 🤝 协作计划
 
 ### 与前端开发协作
-1. **字段变更通知：** 新增字段定义完成后及时通知前端
-2. **接口文档：** 提供详细的API文档和示例
-3. **联调测试：** 完成后端开发后安排联调测试
+1. **接口变更通知：** 新增字段和接口定义完成后及时通知
+2. **API文档同步：** 所有接口变更更新到API文档，前端参考Swagger文档
+3. **功能联调：** 完成后端开发后安排前后端联调测试
 
-### 与产品经理协作  
-1. **需求确认：** Excel文档中的字段定义需要最终确认
-2. **验收标准：** 明确功能验收的具体标准
-3. **优先级调整：** 如有紧急需求变更及时沟通
+**具体协作事项：**
+- 文件上传下载接口替换（已完成，需前端配合更新）
+- 港口类型筛选功能（新增接口能力，接口：`AdminController.GetAllPlPort`）
+- 单票审核列表字段显示（后端已就绪，需前端添加列显示）
+- 导入导出功能（计划中，需前端配合添加按钮和调用逻辑）
+
+### 与产品经理协作
+1. **权限设计澄清：** 确认OA.1.1和OA.1.2的具体使用场景
+2. **导入导出需求确认：** 确认具体字典表范围和功能要求
+3. **验收标准：** 明确各功能的验收标准
+
+### 数据库变更协作
+1. **PlPort表增强：** 添加PortType字段（已完成）
+2. **PlJob表增强：** 添加ClosedBy字段（已完成）
+3. **Code字段补强：** PlExchangeRate、UnitConversion等实体（计划中）
 
 ---
 
-## 备注说明
+## ⚠️ 风险控制
 
-1. **禁止自动创建数据迁移：** 所有数据库变更必须手动规划，不使用EF自动迁移
-2. **代码质量：** 保持与现有代码风格一致，添加充分的注释和错误处理
-3. **测试覆盖：** 重要功能需要编写单元测试，确保代码质量
-4. **文档更新：** 完成开发后更新相关技术文档
+### 技术风险评估
+- **Code字段缺失：** 已确认PlExchangeRate、UnitConversion需要补强
+- **性能风险：** 大批量数据导入需要分批处理和事务优化
+- **数据一致性：** 多租户数据隔离和权限控制
+- **接口兼容性：** 确保API变更不影响现有前端功能
 
-**执行状态：** 📋 任务1已完成，继续执行剩余任务
+### 应对策略
+- **分阶段交付：** 先实现已有Code字段的实体，再处理需要补强的实体
+- **专项测试：** 安排专门的测试时间确保质量
+- **API版本管理：** 新增接口保持向后兼容
+
+---
+
+## 📝 开发规范
+
+- **数据库变更：** 手动管理数据库迁移，禁用EF自动迁移
+- **代码质量：** 保持现有代码风格，添加充分注释和错误处理
+- **API文档：** 所有接口变更同步更新Swagger文档
+- **前端接口：** 新增接口提供完整的参数说明和返回值定义
+
+---
+
+## ✅ 已完成任务总结
+
+**高优先级客户反馈问题：** 2.5项完成，0.5项待确认
+- OA日常费用权限问题修复（技术完成，业务逻辑待确认）
+- 文件上传下载接口统一（前端需配合更新调用）
+- 工作号手动录入唯一性校验（新增验证接口）
+
+**业务功能增强：** 2项已完成（后端）
+- 港口类型区分功能（查询接口`AdminController.GetAllPlPort`新增筛选能力）
+- 单票审核字段补强（接口返回数据新增ClosedBy字段）
+
+**前端协作事项：** 
+- 已完成功能的前端适配（参见API文档）
+- 计划中功能的前端准备（导入导出按钮等）
+
+**执行状态：** 🚀 继续执行通用导入导出功能开发

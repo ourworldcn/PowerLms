@@ -227,6 +227,12 @@ namespace PowerLms.Data
         [Comment("关闭日期")]
         public DateTime? CloseDate { get; set; }
 
+        /// <summary>
+        /// 关闭人Id。
+        /// </summary>
+        [Comment("关闭人Id")]
+        public Guid? ClosedBy { get; set; }
+
         /*SpecialAgent	订舱代理	string100	选择客户资料是订舱代理的客户
 Opcompany	操作公司	string100	选择所有客户资料的客户
 */
