@@ -12,7 +12,7 @@ using PowerLmsServer;
 namespace PowerLmsWebApi.Controllers
 {
     /// <summary>
-    /// 日常费用种类字典控制器。
+    /// 数据字典控制器。
     /// </summary>
     public partial class DataDicController : PlControllerBase
     {
@@ -22,7 +22,7 @@ namespace PowerLmsWebApi.Controllers
         public DataDicController(PowerLmsUserDbContext context, AccountManager accountManager, 
             IServiceProvider serviceProvider, EntityManager entityManager, IMapper mapper, 
             OrgManager<PowerLmsUserDbContext> orgManager, AuthorizationManager authorizationManager,
-            ILogger<DataDicController> logger)
+            ILogger<DataDicController> logger, DataDicManager dataDicManager)
         {
             _DbContext = context;
             _AccountManager = accountManager;
@@ -32,6 +32,7 @@ namespace PowerLmsWebApi.Controllers
             _OrgManager = orgManager;
             _AuthorizationManager = authorizationManager;
             _Logger = logger;
+            _DataDicManager = dataDicManager;
         }
 
         readonly PowerLmsUserDbContext _DbContext;
@@ -42,6 +43,7 @@ namespace PowerLmsWebApi.Controllers
         readonly OrgManager<PowerLmsUserDbContext> _OrgManager;
         readonly AuthorizationManager _AuthorizationManager;
         readonly ILogger<DataDicController> _Logger;
+        readonly DataDicManager _DataDicManager;
 
         #region 日常费用种类相关
 

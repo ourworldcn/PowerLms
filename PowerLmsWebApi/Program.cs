@@ -16,7 +16,7 @@
  * 
  * 作者：PowerLms开发团队
  * 创建时间：2024年
- * 最后修改：2024年12月 - 重构数据库操作职责分离
+ * 最后修改：2024年12月 - 架构平台统一修复
  */
 
 using Microsoft.AspNetCore.StaticFiles;

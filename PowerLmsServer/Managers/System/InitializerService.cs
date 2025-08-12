@@ -19,7 +19,7 @@
  * 
  * 作者：PowerLms开发团队
  * 创建时间：2024年
- * 最后修改：2024年12月 - 修正DbContext生命周期管理，统一使用范围服务
+ * 最后修改：2024年12月
  */
 
 using Microsoft.EntityFrameworkCore;
@@ -35,7 +35,6 @@ using PowerLms.Data;
 using PowerLmsServer.EfData;
 using System.Collections;
 using System.Data.SqlClient;
-using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -94,40 +93,74 @@ namespace PowerLmsServer.Managers
         /// 所有步骤都有详细的日志记录和异常处理
         /// 所有方法共享同一个范围服务中的DbContext实例
         /// </remarks>
-        protected override Task ExecuteAsync(CancellationToken stoppingToken)
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            var task = Task.Run(() =>
+            try
             {
-                using var scope = _serviceScopeFactory.CreateScope();
-                var services = scope.ServiceProvider;
-                try
+                _logger.LogInformation("系统初始化服务启动");
+
+                if (stoppingToken.IsCancellationRequested)
                 {
-                    _logger.LogInformation("开始PowerLms系统初始化流程");
-
-                    // 第一步：确保数据库连接就绪并执行迁移
-                    EnsureDatabaseReady(services);
-
-                    // 第二步：创建超级管理员账户（确保系统有可管理账户）
-                    CreateSuperAdministrator(services);
-
-                    // 第三步：初始化系统种子数据（Excel文件中的基础数据）
-                    InitializeSeedData(services);
-
-                    // 第四步：初始化基础配置数据（科目配置、发票通道等）
-                    InitDb(services);
-
-                    // 第五步：清理无效的关联关系数据（数据完整性维护）
-                    CleanupInvalidRelationships(services);
-
-                    _logger.LogInformation("PowerLms系统初始化完成，服务已上线");
+                    _logger.LogInformation("系统初始化服务收到取消请求，停止初始化");
+                    return;
                 }
-                catch (Exception ex)
+
+                // 使用Task.Run避免阻塞主线程
+                await Task.Run(async () =>
                 {
-                    _logger.LogCritical(ex, "系统初始化失败，服务无法正常启动");
-                    throw;
-                }
-            }, CancellationToken.None);
-            return task;
+                    // 创建服务范围，确保所有操作在同一个作用域内
+                    using var scope = _serviceScopeFactory.CreateScope();
+                    var services = scope.ServiceProvider;
+                    
+                    try
+                    {
+                        _logger.LogInformation("开始PowerLms系统初始化流程");
+
+                        // 第一步：确保数据库连接就绪并执行迁移
+                        await EnsureDatabaseReadyAsync(services, stoppingToken);
+
+                        if (stoppingToken.IsCancellationRequested) return;
+
+                        // 第二步：创建超级管理员账户（确保系统有可管理账户）
+                        CreateSuperAdministrator(services);
+
+                        if (stoppingToken.IsCancellationRequested) return;
+
+                        // 第三步：初始化系统种子数据（Excel文件中的基础数据）
+                        InitializeSeedData(services);
+
+                        if (stoppingToken.IsCancellationRequested) return;
+
+                        // 第四步：初始化基础配置数据（科目配置、发票通道等）
+                        InitDb(services);
+
+                        if (stoppingToken.IsCancellationRequested) return;
+
+                        // 第五步：清理无效的关联关系数据（数据完整性维护）
+                        CleanupInvalidRelationships(services);
+
+                        _logger.LogInformation("PowerLms系统初始化完成，服务已上线");
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        _logger.LogInformation("系统初始化被取消");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogCritical(ex, "系统初始化失败，服务无法正常启动");
+                        throw;
+                    }
+                }, stoppingToken);
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogInformation("系统初始化服务被取消");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogCritical(ex, "系统初始化服务启动失败");
+                throw;
+            }
         }
 
         #endregion
@@ -135,19 +168,20 @@ namespace PowerLmsServer.Managers
         #region 数据库连接和迁移
 
         /// <summary>
-        /// 确保数据库连接就绪并执行迁移
+        /// 异步确保数据库连接就绪并执行迁移
         /// 该方法首先检查SQL Server的连通性，然后执行Entity Framework的数据库迁移
         /// </summary>
         /// <param name="services">服务提供者，用于获取数据库上下文</param>
+        /// <param name="cancellationToken">取消令牌</param>
         /// <remarks>
         /// 连接检查策略：
         /// 1. 直接从数据库上下文获取连接字符串（无需配置文件）
         /// 2. 先连接到master数据库验证SQL Server是否可用（避免目标数据库不存在导致的连接失败）
-        /// 3. 使用重试机制，最大等待60秒
+        /// 3. 使用异步重试机制，最大等待60秒
         /// 4. 连接成功后使用Entity Framework执行数据库迁移
         /// 5. 迁移过程包括创建数据库（如果不存在）和应用所有挂起的迁移
         /// </remarks>
-        private void EnsureDatabaseReady(IServiceProvider services)
+        private async Task EnsureDatabaseReadyAsync(IServiceProvider services, CancellationToken cancellationToken)
         {
             _logger.LogInformation("开始检查数据库连接和执行迁移");
             var startTime = DateTime.Now;
@@ -174,32 +208,46 @@ namespace PowerLmsServer.Managers
 
                 _logger.LogInformation("等待SQL Server连接就绪，目标数据库：{TargetDatabase}", targetDatabase);
 
-                // 重试连接直到SQL Server可用
-                while (true)
+                // 异步重试连接直到SQL Server可用
+                while (!cancellationToken.IsCancellationRequested)
                 {
                     try
                     {
                         using var connection = new SqlConnection(builder.ConnectionString);
-                        connection.Open();
+                        await connection.OpenAsync(cancellationToken);
                         connection.Close();
                         _logger.LogInformation("SQL Server连接验证成功，开始执行数据库迁移到：{TargetDatabase}", targetDatabase);
                         break; // 连接成功，跳出重试循环
                     }
-                    catch (Exception ex)
+                    catch (Exception ex) when (!(ex is OperationCanceledException))
                     {
                         if (DateTime.Now - startTime > TimeSpan.FromSeconds(DatabaseConnectionTimeout))
                         {
                             throw new TimeoutException($"启动时等待{DatabaseConnectionTimeout}秒仍无法连接到SQL Server，请检查数据库连接配置或机器性能。目标数据库：{targetDatabase}");
                         }
                         _logger.LogWarning("SQL Server连接失败，1秒后重试: {Message}", ex.Message);
-                        Thread.Sleep(1000); // 每秒重试一次，避免过于频繁的重试
+                        await Task.Delay(1000, cancellationToken); // 每秒重试一次，避免过于频繁的重试
                     }
+                }
+
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    _logger.LogInformation("数据库连接检查被取消");
+                    return;
                 }
 
                 // SQL Server可连接后，执行数据库迁移（这会自动创建数据库如果不存在）
                 _logger.LogInformation("开始执行Entity Framework数据库迁移到：{TargetDatabase}", targetDatabase);
-                dbContext.Database.Migrate(); // 应用所有挂起的迁移，包括创建数据库
+                
+                // 使用异步迁移方法
+                await dbContext.Database.MigrateAsync(cancellationToken);
+                
                 _logger.LogInformation("数据库迁移执行完成，数据库结构已是最新版本：{TargetDatabase}", targetDatabase);
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogInformation("数据库连接检查被取消");
+                throw;
             }
             catch (Exception ex)
             {
@@ -235,8 +283,16 @@ namespace PowerLmsServer.Managers
                 _logger.LogInformation("开始初始化系统种子数据");
 
                 // 权限表特殊处理：清空重建确保数据完整性
-                dbContext.TruncateTable("PlPermissions");
-                _logger.LogInformation("已清空权限表，准备重新导入权限数据");
+                try
+                {
+                    dbContext.TruncateTable("PlPermissions");
+                    _logger.LogInformation("已清空权限表，准备重新导入权限数据");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "清空权限表时发生错误，继续执行其他初始化");
+                }
+
                 // 读取系统资源目录，处理所有Excel种子数据文件
                 var seedDataDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "数据库初始化数据");
                 if (!Directory.Exists(seedDataDirectory))
@@ -358,31 +414,39 @@ namespace PowerLmsServer.Managers
         /// </remarks>
         private void InitDb(IServiceProvider services)
         {
-            // 直接使用范围服务中的数据库上下文，由DI容器管理生命周期
-            var dbContext = services.GetRequiredService<PowerLmsUserDbContext>();
-
-            _logger.LogInformation("基础配置数据已通过Excel种子数据文件管理，无需硬编码初始化");
-            _logger.LogInformation("如需修改基础配置数据，请编辑：系统资源\\预初始化数据.xlsx");
-
-            // 检查关键配置表是否已有数据（作为验证）
-            var hasTaxChannels = dbContext.TaxInvoiceChannels.Any();
-            var hasSubjectConfigs = dbContext.SubjectConfigurations.Any();
-            var hasPermissions = dbContext.PlPermissions.Any();
-
-            if (hasTaxChannels && hasSubjectConfigs && hasPermissions)
+            try
             {
-                _logger.LogInformation("验证成功：基础配置数据已正确从Excel种子数据导入");
-            }
-            else
-            {
-                _logger.LogWarning("基础配置数据可能未完整导入，请检查Excel种子数据文件：" +
-                    "TaxInvoiceChannels={HasTaxChannels}, SubjectConfigurations={HasSubjectConfigs}, PlPermissions={HasPermissions}",
-                    hasTaxChannels, hasSubjectConfigs, hasPermissions);
-            }
+                // 直接使用范围服务中的数据库上下文，由DI容器管理生命周期
+                var dbContext = services.GetRequiredService<PowerLmsUserDbContext>();
 
-            // 此处可以添加将来需要的动态初始化逻辑
-            // 例如：基于运行时环境的特殊配置、依赖外部服务的动态数据等
-            // 注意：常规的基础数据应该继续通过Excel文件管理，而不是在此处硬编码
+                _logger.LogInformation("基础配置数据已通过Excel种子数据文件管理，无需硬编码初始化");
+                _logger.LogInformation("如需修改基础配置数据，请编辑：系统资源\\预初始化数据.xlsx");
+
+                // 检查关键配置表是否已有数据（作为验证）
+                var hasTaxChannels = dbContext.TaxInvoiceChannels.Any();
+                var hasSubjectConfigs = dbContext.SubjectConfigurations.Any();
+                var hasPermissions = dbContext.PlPermissions.Any();
+
+                if (hasTaxChannels && hasSubjectConfigs && hasPermissions)
+                {
+                    _logger.LogInformation("验证成功：基础配置数据已正确从Excel种子数据导入");
+                }
+                else
+                {
+                    _logger.LogWarning("基础配置数据可能未完整导入，请检查Excel种子数据文件：" +
+                        "TaxInvoiceChannels={HasTaxChannels}, SubjectConfigurations={HasSubjectConfigs}, PlPermissions={HasPermissions}",
+                        hasTaxChannels, hasSubjectConfigs, hasPermissions);
+                }
+
+                // 此处可以添加将来需要的动态初始化逻辑
+                // 例如：基于运行时环境的特殊配置、依赖外部服务的动态数据等
+                // 注意：常规的基础数据应该继续通过Excel文件管理，而不是在此处硬编码
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "基础配置数据初始化时发生错误");
+                // 基础配置错误通常不应该阻止系统启动，仅记录警告
+            }
         }
 
         #endregion
@@ -404,11 +468,11 @@ namespace PowerLmsServer.Managers
         /// </remarks>
         private void CreateSuperAdministrator(IServiceProvider services)
         {
-            // 直接使用范围服务中的数据库上下文，由DI容器管理生命周期
-            var dbContext = services.GetRequiredService<PowerLmsUserDbContext>();
-
             try
             {
+                // 直接使用范围服务中的数据库上下文，由DI容器管理生命周期
+                var dbContext = services.GetRequiredService<PowerLmsUserDbContext>();
+
                 var admin = dbContext.Accounts.FirstOrDefault(c => c.LoginName == SuperAdminLoginName);
 
                 if (admin == null)
@@ -459,14 +523,14 @@ namespace PowerLmsServer.Managers
         /// </remarks>
         private void CleanupInvalidRelationships(IServiceProvider services)
         {
-            // 直接使用范围服务中的数据库上下文，由DI容器管理生命周期
-            var dbContext = services.GetRequiredService<PowerLmsUserDbContext>();
-            var stopwatch = Stopwatch.StartNew();
-
-            _logger.LogInformation("开始清理数据库中的无效关联关系数据");
-
             try
             {
+                // 直接使用范围服务中的数据库上下文，由DI容器管理生命周期
+                var dbContext = services.GetRequiredService<PowerLmsUserDbContext>();
+                var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+                _logger.LogInformation("开始清理数据库中的无效关联关系数据");
+
                 var totalRemoved = 0;
 
                 // 清理无效的用户-角色关系（用户或角色不存在的关联记录）
@@ -516,7 +580,7 @@ namespace PowerLmsServer.Managers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "清理无效关联关系时发生错误");
-                throw;
+                // 清理操作失败不应该阻止系统启动，仅记录错误
             }
         }
 

@@ -1,76 +1,96 @@
-using PowerLms.Data;
+ï»¿using PowerLms.Data;
 using PowerLmsWebApi.Dto;
 
 namespace PowerLmsWebApi.Controllers
 {
-    #region ÈÕ³£·ÑÓÃÖÖÀàÏà¹Ø
+    #region æ—¥å¸¸è´¹ç”¨ç§ç±»ç›¸å…³
 
     /// <summary>
-    /// »Ö¸´ÈÕ³£·ÑÓÃÖÖÀà¼ÇÂ¼µÄ¹¦ÄÜ²ÎÊı·â×°Àà¡£
+    /// æ¢å¤æ—¥å¸¸è´¹ç”¨ç§ç±»è®°å½•çš„åŠŸèƒ½å‚æ•°å°è£…ç±»ã€‚
     /// </summary>
     public class RestoreDailyFeesTypeParamsDto : RestoreParamsDtoBase
     {
     }
 
     /// <summary>
-    /// »Ö¸´ÈÕ³£·ÑÓÃÖÖÀà¼ÇÂ¼µÄ¹¦ÄÜ·µ»ØÖµ·â×°Àà¡£
+    /// æ¢å¤æ—¥å¸¸è´¹ç”¨ç§ç±»è®°å½•çš„åŠŸèƒ½è¿”å›å€¼å°è£…ç±»ã€‚
     /// </summary>
     public class RestoreDailyFeesTypeReturnDto : RestoreReturnDtoBase
     {
     }
 
     /// <summary>
-    /// É¾³ıÈÕ³£·ÑÓÃÖÖÀà¼ÇÂ¼µÄ¹¦ÄÜ²ÎÊı·â×°Àà¡£
+    /// åˆ é™¤æ—¥å¸¸è´¹ç”¨ç§ç±»è®°å½•çš„åŠŸèƒ½å‚æ•°å°è£…ç±»ã€‚
     /// </summary>
     public class RemoveDailyFeesTypeParamsDto : RemoveParamsDtoBase
     {
     }
 
     /// <summary>
-    /// É¾³ıÈÕ³£·ÑÓÃÖÖÀà¼ÇÂ¼µÄ¹¦ÄÜ·µ»ØÖµ·â×°Àà¡£
+    /// åˆ é™¤æ—¥å¸¸è´¹ç”¨ç§ç±»è®°å½•çš„åŠŸèƒ½è¿”å›å€¼å°è£…ç±»ã€‚
     /// </summary>
     public class RemoveDailyFeesTypeReturnDto : RemoveReturnDtoBase
     {
     }
 
     /// <summary>
-    /// ĞŞ¸ÄÈÕ³£·ÑÓÃÖÖÀà¼ÇÂ¼µÄ¹¦ÄÜ²ÎÊı·â×°Àà¡£
+    /// ä¿®æ”¹æ—¥å¸¸è´¹ç”¨ç§ç±»è®°å½•çš„åŠŸèƒ½å‚æ•°å°è£…ç±»ã€‚
     /// </summary>
     public class ModifyDailyFeesTypeParamsDto : ModifyParamsDtoBase<DailyFeesType>
     {
     }
 
     /// <summary>
-    /// ĞŞ¸ÄÈÕ³£·ÑÓÃÖÖÀà¼ÇÂ¼µÄ¹¦ÄÜ·µ»ØÖµ·â×°Àà¡£
+    /// ä¿®æ”¹æ—¥å¸¸è´¹ç”¨ç§ç±»è®°å½•çš„åŠŸèƒ½è¿”å›å€¼å°è£…ç±»ã€‚
     /// </summary>
     public class ModifyDailyFeesTypeReturnDto : ModifyReturnDtoBase
     {
     }
 
     /// <summary>
-    /// Ôö¼ÓÈÕ³£·ÑÓÃÖÖÀà¼ÇÂ¼µÄ¹¦ÄÜ²ÎÊı·â×°Àà¡£
+    /// å¢åŠ æ—¥å¸¸è´¹ç”¨ç§ç±»è®°å½•çš„åŠŸèƒ½å‚æ•°å°è£…ç±»ã€‚
     /// </summary>
     public class AddDailyFeesTypeParamsDto : AddParamsDtoBase<DailyFeesType>
     {
         /// <summary>
-        /// ÊÇ·ñÍ¬²½µ½×Ó¹«Ë¾/×éÖ¯»ú¹¹¡£¶ÔÓÚ³¬¹Ü¸´ÖÆµ½ËùÓĞ×ÖµäÖĞ£¬¶ÔÓÚÉÌ»§¹ÜÀíÔ±ÊÓÍ¬ÎªÆÕÍ¨ÓÃ»§¡£
+        /// æ˜¯å¦åŒæ­¥åˆ°å­å…¬å¸/ç»„ç»‡æœºæ„ã€‚é€‚ç”¨äºè¶…ç®¡å¤åˆ¶çš„æ•°æ®åˆ°å€¼ä¸­ï¼Œå•†ç®¡æˆ–å…¬å¸ç®¡ç†å‘˜åŒä¸ºæ™®é€šç”¨æˆ·ã€‚
         /// </summary>
         public bool CopyToChildren { get; set; }
     }
 
     /// <summary>
-    /// Ôö¼ÓÈÕ³£·ÑÓÃÖÖÀà¼ÇÂ¼µÄ¹¦ÄÜ·µ»ØÖµ·â×°Àà¡£
+    /// å¢åŠ æ—¥å¸¸è´¹ç”¨ç§ç±»è®°å½•çš„åŠŸèƒ½è¿”å›å€¼å°è£…ç±»ã€‚
     /// </summary>
     public class AddDailyFeesTypeReturnDto : AddReturnDtoBase
     {
     }
 
     /// <summary>
-    /// »ñÈ¡ÈÕ³£·ÑÓÃÖÖÀàµÄ¹¦ÄÜ·µ»ØÖµ·â×°Àà¡£
+    /// è·å–æ—¥å¸¸è´¹ç”¨ç§ç±»çš„åŠŸèƒ½è¿”å›å€¼å°è£…ç±»ã€‚
     /// </summary>
     public class GetAllDailyFeesTypeReturnDto : PagingReturnDtoBase<DailyFeesType>
     {
     }
 
-    #endregion ÈÕ³£·ÑÓÃÖÖÀàÏà¹Ø
+    #endregion æ—¥å¸¸è´¹ç”¨ç§ç±»ç›¸å…³
+
+    #region å­—å…¸å¯¼å…¥å¯¼å‡ºç›¸å…³
+
+    /// <summary>
+    /// å¯¼å…¥æ‰€æœ‰å­—å…¸åŠŸèƒ½çš„è¿”å›å€¼å°è£…ç±»ã€‚
+    /// </summary>
+    public class ImportAllDictionariesReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// å¯¼å…¥æˆåŠŸçš„è®°å½•æ€»æ•°ã€‚
+        /// </summary>
+        public int TotalImported { get; set; }
+
+        /// <summary>
+        /// å¤„ç†è¯¦æƒ…åˆ—è¡¨ã€‚
+        /// </summary>
+        public List<string> ProcessingDetails { get; set; } = new();
+    }
+
+    #endregion å­—å…¸å¯¼å…¥å¯¼å‡ºç›¸å…³
 }

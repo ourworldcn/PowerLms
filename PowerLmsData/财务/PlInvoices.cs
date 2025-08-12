@@ -76,9 +76,9 @@ namespace PowerLms.Data
         public string Currency { get; set; }
 
         /// <summary>
-        /// 金额。下属结算单明细的合计。
+        /// 金额。由前端直接填写，不再进行自动计算。
         /// </summary>
-        [Comment("金额。下属结算单明细的合计。")]
+        [Comment("金额。")]
         [Precision(18, 4)]
         public decimal Amount { get; set; }
 

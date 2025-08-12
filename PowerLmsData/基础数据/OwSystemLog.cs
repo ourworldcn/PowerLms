@@ -21,6 +21,7 @@ namespace PowerLms.Data
     {
         public OwSystemLog()
         {
+            // 确保主键字段有值 - 基类构造函数会处理 Id 的初始化
         }
 
         public OwSystemLog(Guid id) : base(id)
