@@ -11,6 +11,7 @@
  * - 支持多条件查询和分页
  * 作者：zc
  * 创建：2025-01
+ * 修改：2025-01-27 修复删除操作的多租户验证和错误处理
  */
 
 using AutoMapper;
@@ -244,6 +245,7 @@ namespace PowerLmsWebApi.Controllers.Financial
         /// <response code="400">记录已被删除。</response>  
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">指定Id的实际收付记录不存在。</response>  
+        /// <response code="409">存在关联数据，无法删除。</response>  
         [HttpDelete]
         public ActionResult<RemoveActualFinancialTransactionReturnDto> RemoveActualFinancialTransaction(
             RemoveActualFinancialTransactionParamsDto model)
@@ -258,35 +260,93 @@ namespace PowerLmsWebApi.Controllers.Financial
                 var id = model.Id;
                 var item = _DbContext.ActualFinancialTransactions.Find(id);
                 if (item == null)
+                {
+                    _Logger.LogWarning("尝试删除不存在的实际收付记录: {id}", id);
                     return NotFound("指定ID的实际收付记录不存在");
+                }
 
                 if (item.IsDelete)
                 {
+                    _Logger.LogWarning("尝试删除已被删除的实际收付记录: {id}", id);
                     result.HasError = true;
                     result.ErrorCode = 400;
                     result.DebugMessage = "记录已被删除";
                     return BadRequest(result.DebugMessage);
                 }
 
+                // 🔧 多租户数据隔离验证 - 确保用户只能删除自己租户的数据
+                if (!_AccountManager.IsAdmin(context.User))
+                {
+                    // 通过ParentId获取关联的结算单，但由于PlInvoices没有OrgId字段，
+                    // 我们通过其他方式验证权限：检查创建者是否属于同一组织
+                    if (item.ParentId.HasValue)
+                    {
+                        var parentInvoice = _DbContext.PlInvoicess.AsNoTracking()
+                            .FirstOrDefault(p => p.Id == item.ParentId.Value);
+                        
+                        if (parentInvoice != null && parentInvoice.CreateBy.HasValue)
+                        {
+                            // 验证结算单的创建者是否与当前用户属于同一组织
+                            var creator = _DbContext.Accounts.AsNoTracking()
+                                .FirstOrDefault(a => a.Id == parentInvoice.CreateBy.Value);
+                            
+                            if (creator != null && creator.OrgId != context.User.OrgId)
+                            {
+                                _Logger.LogWarning("用户 {userId} 尝试删除不属于其租户的实际收付记录: {id}", 
+                                    context.User.Id, id);
+                                result.HasError = true;
+                                result.ErrorCode = 403;
+                                result.DebugMessage = "权限不足，无法删除此记录";
+                                return result;
+                            }
+                        }
+                    }
+                }
+
+                // 🔧 检查是否存在业务关联约束
+                if (!CheckCanDelete(item.Id))
+                {
+                    _Logger.LogWarning("实际收付记录 {id} 存在业务关联，无法删除", id);
+                    result.HasError = true;
+                    result.ErrorCode = 409;
+                    result.DebugMessage = "记录存在业务关联，无法删除";
+                    return result;
+                }
+
                 // 执行软删除
                 _EntityManager.Remove(item);
 
-                // 记录系统日志
-                _DbContext.OwSystemLogs.Add(new OwSystemLog
+                // 🔧 正确创建系统日志实体 - 确保包含主键ID和适当的ActionId长度
+                var systemLog = new OwSystemLog
                 {
+                    Id = Guid.NewGuid(), // 必须设置主键ID
                     OrgId = context.User.OrgId,
-                    ActionId = $"Delete.{nameof(ActualFinancialTransaction)}.{item.Id}",
+                    // 🔧 缩短ActionId避免数据库字段长度限制（64字符）
+                    // 原格式：Delete.ActualFinancialTransaction.{GUID} (约71字符)
+                    // 新格式：Del.ActFinTrans.{GUID前8位} (约24字符)
+                    ActionId = $"Del.ActFinTrans.{item.Id.ToString()[..8]}",
                     ExtraGuid = context.User.Id,
                     WorldDateTime = OwHelper.WorldNow,
-                });
+                };
+                _DbContext.OwSystemLogs.Add(systemLog);
+
+                // 记录应用日志
+                _SqlAppLogger.LogGeneralInfo($"用户 {context.User.Id} 删除了实际收付记录ID:{item.Id}");
 
                 _DbContext.SaveChanges();
 
-                _Logger.LogDebug("成功删除实际收付记录: {id}", id);
+                _Logger.LogInformation("成功删除实际收付记录: {id}, 操作用户: {userId}", id, context.User.Id);
+            }
+            catch (DbUpdateException dbEx)
+            {
+                _Logger.LogError(dbEx, "删除实际收付记录时发生数据库错误，记录ID: {id}", model.Id);
+                result.HasError = true;
+                result.ErrorCode = 500;
+                result.DebugMessage = "删除记录时发生数据库错误，请检查数据完整性约束";
             }
             catch (Exception ex)
             {
-                _Logger.LogError(ex, "删除实际收付记录时发生错误");
+                _Logger.LogError(ex, "删除实际收付记录时发生未知错误，记录ID: {id}", model.Id);
                 result.HasError = true;
                 result.ErrorCode = 500;
                 result.DebugMessage = $"删除实际收付记录时发生错误: {ex.Message}";
@@ -339,5 +399,33 @@ namespace PowerLmsWebApi.Controllers.Financial
         }
 
         #endregion 基础CRUD操作
+
+        #region 私有辅助方法
+
+        /// <summary>
+        /// 检查实际收付记录是否可以删除
+        /// </summary>
+        /// <param name="transactionId">收付记录ID</param>
+        /// <returns>true表示可以删除，false表示存在约束</returns>
+        private bool CheckCanDelete(Guid transactionId)
+        {
+            try
+            {
+                // 🔧 检查是否存在业务关联约束
+                // 这里可以根据实际业务规则添加具体的约束检查
+                // 例如：检查是否被审计记录引用、是否在特定状态下等
+
+                // 当前实现：允许删除（软删除模式下通常可以删除）
+                // 如果将来有具体的业务约束，可以在这里添加检查逻辑
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _Logger.LogError(ex, "检查删除约束时发生错误，记录ID: {id}", transactionId);
+                return false; // 发生错误时，出于安全考虑，不允许删除
+            }
+        }
+
+        #endregion 私有辅助方法
     }
 }

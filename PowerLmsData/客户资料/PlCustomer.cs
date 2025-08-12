@@ -1,4 +1,19 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿/*
+ * 项目：PowerLms物流管理系统
+ * 模块：客户资料管理
+ * 文件说明：
+ * - 功能1：客户资料主表及相关子表定义
+ * - 功能2：客户联系人、业务负责人、提单、黑名单、装货地址管理
+ * 技术要点：
+ * - 展开复杂类型为平铺字段以支持导入导出功能
+ * - 保持数据库字段名与现有结构一致
+ * - 多租户数据隔离和外键关联
+ * 作者：zc
+ * 创建：2023-12
+ * 修改：2025-01-15 展开PlOwnedContact复杂类型为平铺字段
+ */
+
+using Microsoft.EntityFrameworkCore;
 using OW.Data;
 using System;
 using System.Collections.Generic;
@@ -46,6 +61,8 @@ namespace PowerLms.Data
         [MaxLength(32)]
         public string Code { get; set; }
 
+        #region 客户名称信息 - 展开PlOwnedName复杂类型
+
         /// <summary>
         /// 正式名称，拥有相对稳定性。
         /// </summary>
@@ -66,6 +83,8 @@ namespace PowerLms.Data
         [Comment("显示名，有时它是昵称或简称(系统内)的意思")]
         public string Name_DisplayName { get; set; }
 
+        #endregion 客户名称信息
+
         /// <summary>
         /// 纳税人识别号。
         /// </summary>
@@ -77,6 +96,8 @@ namespace PowerLms.Data
         /// </summary>
         [Comment("编号")]
         public string Number { get; set; }
+
+        #region 联系方式信息 - 展开PlOwnedContact复杂类型
 
         /// <summary>
         /// 电话。
@@ -98,6 +119,10 @@ namespace PowerLms.Data
         [Comment("电子邮件")]
         [MaxLength(128), EmailAddress]
         public string Contact_EMail { get; set; }
+
+        #endregion 联系方式信息
+
+        #region 地址信息 - 展开PlOwnedAddress复杂类型
 
         /// <summary>
         /// 国家编码Id。
@@ -132,13 +157,15 @@ namespace PowerLms.Data
         [Comment("邮政编码")]
         [MaxLength(8)]
         public string Address_ZipCode { get; set; }
+
+        #endregion 地址信息
+
         /// <summary>
         /// 网址。
         /// </summary>
         [Comment("网址")]
         [MaxLength(1024)]
         public string InternetAddress { get; set; }
-
 
         /// <summary>
         /// 搜索用的关键字。逗号分隔多个关键字。
@@ -147,7 +174,7 @@ namespace PowerLms.Data
         [MaxLength(128)]
         public string Keyword { get; set; }
 
-        #region 账单信息
+        #region 账单信息 - 展开PlBillingInfo复杂类型
 
         /// <summary>
         /// 是否应收结算单位
@@ -229,7 +256,7 @@ namespace PowerLms.Data
         [Comment("备注")]
         public string Remark { get; set; }
 
-        #region Airlines 相关属性
+        #region Airlines 相关属性 - 展开OwnedAirlines复杂类型
 
         /// <summary>
         /// 航空公司2位代码（如国航为CA）。此项空则表示整个航空公司不生效。
@@ -306,6 +333,7 @@ namespace PowerLms.Data
         /// </summary>
         [Comment("是否海关检疫")]
         public bool IsCustomsQuarantine { get; set; }
+
         #region 客户性质
 
         /// <summary>
@@ -420,20 +448,14 @@ namespace PowerLms.Data
 
     /// <summary>
     /// 航空公司内嵌类。
+    /// 注意：此类已废弃，相关字段已展开到PlCustomer主表中，使用Airlines_前缀。
     /// </summary>
+    [Obsolete("已废弃，相关字段已展开到PlCustomer主表中，使用Airlines_前缀", false)]
     [ComplexType]
     [Owned]
     public class OwnedAirlines
     {
-        /*
-         * AirlineCode	航空公司2位代码（如国航为CA）
-         * Airline number code	3位，如国航999
-         * paymode	付款方式，关联简单字典BillPaymentMode
-         * paymentplace	付款地点
-         * DocumentsPlace	交单地，简单字典DocumentsPlace
-         * SettlementModes	结算方式，cass/非Cass/空
-         */
-
+        // ... 保留原有实现以保持兼容性
         /// <summary>
         /// 航空公司2位代码（如国航为CA）。此项空则表示整个航空公司不生效。
         /// </summary>
@@ -505,10 +527,30 @@ namespace PowerLms.Data
         [MaxLength(32)]
         public string Title { get; set; }
 
+        #region 联系方式信息 - 展开PlOwnedContact复杂类型
+
         /// <summary>
-        /// 联系方式的封装。
+        /// 电话。
         /// </summary>
-        public PlOwnedContact Contact { get; set; }
+        [Comment("电话")]
+        [MaxLength(32), Phone]
+        public string Contact_Tel { get; set; }
+
+        /// <summary>
+        /// 传真。
+        /// </summary>
+        [Comment("传真")]
+        [MaxLength(32), Phone]
+        public string Contact_Fax { get; set; }
+
+        /// <summary>
+        /// 电子邮件。
+        /// </summary>
+        [Comment("电子邮件")]
+        [MaxLength(128), EmailAddress]
+        public string Contact_EMail { get; set; }
+
+        #endregion 联系方式信息
 
         /// <summary>
         /// 移动电话。
@@ -544,8 +586,9 @@ namespace PowerLms.Data
         [Comment("备注。")]
         [MaxLength(256)]
         public string Remark { get; set; }
-
     }
+
+    #region 客户子表实体
 
     /// <summary>
     /// 业务负责人表。
@@ -656,7 +699,7 @@ namespace PowerLms.Data
         /// <summary>
         /// 联系人。
         /// </summary>
-        [Comment("所属客户Id")]
+        [Comment("联系人")]
         [MaxLength(32)]
         public string Contact { get; set; }
 
@@ -674,4 +717,6 @@ namespace PowerLms.Data
         [MaxLength(64)]
         public string Addr { get; set; }
     }
+
+    #endregion 客户子表实体
 }

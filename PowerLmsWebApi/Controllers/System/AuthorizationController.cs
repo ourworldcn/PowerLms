@@ -53,18 +53,6 @@ namespace PowerLmsWebApi.Controllers
         #region 角色的CRUD
 
         /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="model"></param>
-        /// <param name="conditional"></param>
-        /// <returns></returns>
-        [HttpGet]
-        public ActionResult<bool> IsAuthorized1([FromQuery] PagingParamsBase model, [FromQuery] Dictionary<string, string> conditional = null)
-        {
-            return true;
-        }
-
-        /// <summary>
         /// 获取全部角色。通用查询。
         /// </summary>
         /// <param name="model"></param>
@@ -74,7 +62,7 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
         public ActionResult<GetAllPlRoleReturnDto> GetAllPlRole([FromQuery] PagingParamsDtoBase model,
-            [FromQuery] Dictionary<string, string> conditional = null)
+            [FromQuery][ModelBinder(typeof(DotKeyDictionaryModelBinder))] Dictionary<string, string> conditional = null)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlRoleReturnDto();
@@ -247,7 +235,7 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
         public ActionResult<GetAllPlPermissionReturnDto> GetAllPlPermission([FromQuery] PagingParamsDtoBase model,
-            [FromQuery] Dictionary<string, string> conditional = null)
+            [FromQuery][ModelBinder(typeof(DotKeyDictionaryModelBinder))] Dictionary<string, string> conditional = null)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlPermissionReturnDto();
@@ -372,7 +360,7 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
         public ActionResult<GetAllAccountRoleReturnDto> GetAllAccountRole([FromQuery] PagingParamsDtoBase model,
-            [FromQuery] Dictionary<string, string> conditional = null)
+            [FromQuery][ModelBinder(typeof(DotKeyDictionaryModelBinder))] Dictionary<string, string> conditional = null)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllAccountRoleReturnDto();
@@ -458,7 +446,7 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
         public ActionResult<GetAllRolePermissionReturnDto> GetAllRolePermission([FromQuery] PagingParamsDtoBase model,
-            [FromQuery] Dictionary<string, string> conditional = null)
+            [FromQuery][ModelBinder(typeof(DotKeyDictionaryModelBinder))] Dictionary<string, string> conditional = null)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllRolePermissionReturnDto();

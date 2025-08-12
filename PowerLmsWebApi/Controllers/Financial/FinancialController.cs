@@ -304,17 +304,34 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
         public ActionResult<GetPlInvoicesItemReturnDto> GetDocInvoicesItem([FromQuery] GetPlInvoicesItemParamsDto model,
-            [FromQuery] Dictionary<string, string> conditional = null)
+            [FromQuery][ModelBinder(typeof(DotKeyDictionaryModelBinder))] Dictionary<string, string> conditional = null)
         {
             //查询 需要返回 申请单 job 费用实体 申请明细的余额（未结算）
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetPlInvoicesItemReturnDto();
+            
+            // 确保conditional不为null
+            conditional = conditional ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            
             var dbSet = _DbContext.PlInvoicesItems;
 
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
 
-            var tmpColl = new Dictionary<string, string>(conditional.Where(c => c.Key.StartsWith(nameof(PlInvoicesItem), StringComparison.OrdinalIgnoreCase)),
-                StringComparer.OrdinalIgnoreCase);
+            // 处理PlInvoicesItem的条件（包括没有前缀的直接字段名条件）
+            var tmpColl = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            
+            // 添加带PlInvoicesItem前缀的条件
+            foreach (var item in conditional.Where(c => c.Key.StartsWith(nameof(PlInvoicesItem), StringComparison.OrdinalIgnoreCase)))
+            {
+                tmpColl[item.Key] = item.Value;
+            }
+            
+            // 添加没有前缀的条件（直接作为PlInvoicesItem的字段）
+            foreach (var item in conditional.Where(c => !c.Key.Contains('.')))
+            {
+                tmpColl[item.Key] = item.Value;
+            }
+            
             var collInvoicesItem = EfHelper.GenerateWhereAnd(coll, tmpColl);
 
             tmpColl = new Dictionary<string, string>(conditional.Where(c => c.Key.StartsWith(nameof(PlJob), StringComparison.OrdinalIgnoreCase)),
@@ -382,7 +399,7 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
         public ActionResult<GetAllPlInvoicesItemReturnDto> GetAllPlInvoicesItem([FromQuery] PagingParamsDtoBase model,
-            [FromQuery] Dictionary<string, string> conditional = null)
+            [FromQuery][ModelBinder(typeof(DotKeyDictionaryModelBinder))] Dictionary<string, string> conditional = null)
         {
 
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
@@ -523,7 +540,7 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
         public ActionResult<GetAllDocFeeTemplateReturnDto> GetAllDocFeeTemplate([FromQuery] PagingParamsDtoBase model,
-            [FromQuery] Dictionary<string, string> conditional = null)
+            [FromQuery][ModelBinder(typeof(DotKeyDictionaryModelBinder))] Dictionary<string, string> conditional = null)
         {
 
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
@@ -693,7 +710,7 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="404">指定Id的费用方案不存在。</response>  
         [HttpGet]
         public ActionResult<GetAllDocFeeTemplateItemReturnDto> GetAllDocFeeTemplateItem([FromQuery] PagingParamsDtoBase model,
-            [FromQuery] Dictionary<string, string> conditional = null)
+            [FromQuery][ModelBinder(typeof(DotKeyDictionaryModelBinder))] Dictionary<string, string> conditional = null)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllDocFeeTemplateItemReturnDto();
