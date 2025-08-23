@@ -51,9 +51,12 @@ namespace PowerLmsWebApi.Controllers
         #region 业务总表
         /// <summary>
         /// 获取全部业务总表。
+        /// 注意：财务日期(FinancialDate)是本地计算字段，不能作为查询条件使用。
+        /// 如需按财务日期查询，请使用 AccountDate、Etd（开航日期）或 ETA（到港日期）字段。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">已支持通用查询——除个别涉及敏感信息字段外，所有实体字段都可作为条件。</param>
+        /// <param name="conditional">已支持通用查询——除个别涉及敏感信息字段外，所有实体字段都可作为条件。
+        /// 注意：FinancialDate字段为本地计算字段，不支持作为查询条件。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
@@ -192,6 +195,13 @@ namespace PowerLmsWebApi.Controllers
 
                 // 从数据库中获取数据
                 var prb = _EntityManager.GetAll(r.AsQueryable(), model.StartIndex, model.Count);
+                
+                // 🆕 填充财务日期 - 批量处理避免N+1查询
+                if (prb.Result?.Any() == true)
+                {
+                    _JobManager.FillFinancialDates(prb.Result, _DbContext);
+                }
+                
                 _Mapper.Map(prb, result);
             }
             catch (Exception ex)

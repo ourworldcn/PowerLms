@@ -39,6 +39,7 @@ namespace PowerLms.Data
     /// 解决方案：通过FinanceCodeAR/AP字段建立PowerLms与金蝶的精确编码映射，
     /// 确保生成的DBF凭证能被金蝶系统正确识别和处理。
     /// </summary>
+    [Comment("客户资料")]
     public class PlCustomer : GuidKeyObjectBase, ICreatorInfo
     {
         /// <summary>
@@ -447,58 +448,9 @@ namespace PowerLms.Data
     }
 
     /// <summary>
-    /// 航空公司内嵌类。
-    /// 注意：此类已废弃，相关字段已展开到PlCustomer主表中，使用Airlines_前缀。
-    /// </summary>
-    [Obsolete("已废弃，相关字段已展开到PlCustomer主表中，使用Airlines_前缀", false)]
-    [ComplexType]
-    [Owned]
-    public class OwnedAirlines
-    {
-        // ... 保留原有实现以保持兼容性
-        /// <summary>
-        /// 航空公司2位代码（如国航为CA）。此项空则表示整个航空公司不生效。
-        /// </summary>
-        [MaxLength(2)]
-        [Comment("航空公司2位代码（如国航为CA）")]
-        public string AirlineCode { get; set; }
-
-        /// <summary>
-        /// 3位，如国航999。
-        /// </summary>
-        [MaxLength(3)]
-        [Comment("3位，如国航999")]
-        public string NumberCode { get; set; }
-
-        /// <summary>
-        /// 付款方式，关联简单字典BillPaymentMode。
-        /// </summary>
-        [Comment("付款方式Id，关联简单字典BillPaymentMode")]
-        public Guid? PayModeId { get; set; }
-
-        /// <summary>
-        /// 付款地点。
-        /// </summary>
-        [MaxLength(64)]
-        [Comment("付款地点")]
-        public string PaymentPlace { get; set; }
-
-        /// <summary>
-        /// 交单地，简单字典DocumentsPlace。
-        /// </summary>
-        [Comment("交单地，简单字典DocumentsPlace")]
-        public Guid? DocumentsPlaceId { get; set; }
-
-        /// <summary>
-        /// 结算方式，cass=true/非Cass=false/空=null。
-        /// </summary>
-        [Comment("结算方式，cass=true/非Cass=false/空=null")]
-        public bool? SettlementModes { get; set; }
-    }
-
-    /// <summary>
     /// 客户资料的联系人。
     /// </summary>
+    [Comment("客户资料的联系人")]
     [Index(nameof(CustomerId), IsUnique = false)]
     public class PlCustomerContact : GuidKeyObjectBase
     {
@@ -593,6 +545,7 @@ namespace PowerLms.Data
     /// <summary>
     /// 业务负责人表。
     /// </summary>
+    [Comment("业务负责人表")]
     [Index(nameof(CustomerId), IsUnique = false)]
     public class PlBusinessHeader
     {
@@ -618,6 +571,7 @@ namespace PowerLms.Data
     /// <summary>
     /// 客户提单内容表。
     /// </summary>
+    [Comment("客户提单内容表")]
     [Index(nameof(CustomerId), IsUnique = false)]
     public class PlTidan : GuidKeyObjectBase
     {
@@ -643,6 +597,7 @@ namespace PowerLms.Data
     /// <summary>
     /// 黑名单客户跟踪表。
     /// </summary>
+    [Comment("黑名单客户跟踪表")]
     [Index(nameof(CustomerId), nameof(Datetime), IsUnique = false)]
     public class CustomerBlacklist : GuidKeyObjectBase
     {
@@ -687,6 +642,7 @@ namespace PowerLms.Data
     /// <summary>
     /// 装货地址。
     /// </summary>
+    [Comment("装货地址")]
     [Index(nameof(CustomerId), IsUnique = false)]
     public class PlLoadingAddr : GuidKeyObjectBase
     {

@@ -1,515 +1,443 @@
-﻿# PowerLms项目变更记录
+﻿# PowerLms 功能变更总览
 
-## 📅 **2025年8月16日 - 核心业务流程重构规划**
+**最新更新：财务日期逻辑重构完成**
 
-### 🎯 **重大需求变更总览** （便于复制分享给团队）
+完成了财务日期从数据库字段到本地计算字段的重构，实现了基于业务类型的自动联动计算，确保数据的一致性和业务逻辑的准确性。
 
-**核心流程重构决议：**
-• 申请单一键回退功能 - 支持已审批单据撤销修改，涉及工作流引擎核心逻辑变更
-• 账期管理统一机制 - 新建机构参数表，废除单票关闭，统一月度批量关闭流程
-• 财务日期联动重构 - 改为只读字段，由到港/开航日期自动决定，增加时间约束
-• 字典导入导出策略调整 - 改为按类型分别导出，重复数据采用覆盖模式
-• 客户管理功能增强 - 增加软删除状态、弹窗选择器、有效性管理
-• 费用明细展示优化 - 点击已申请金额显示关联申请单详情
-• OA申请单功能扩展 - 增加公司字段关联客户资料
+## 2025-01-27 功能变更
 
-**开发里程碑规划：**
-• Phase 1（8月23日）：申请单回退+账期管理 - 5天工期，核心流程变更
-• Phase 2（8月26日）：财务日期+字典导入导出 - 3天工期，逻辑重构
-• Phase 3（8月30日）：界面优化+客户管理 - 4.5天工期，用户体验提升
-• 验收测试（9月2日）：集成测试+上线准备 - 2天工期，质量保障
+### 财务日期逻辑重构：新增计算字段而非替换现有字段
 
-**总工期：** 14.5天 | **目标上线：** 2025年9月2日 | **风险级别：** 中等
+**背景**：根据会议决议，需要新增一个财务日期字段，该字段根据业务类型自动计算，而不是修改现有的`AccountDate`字段。
 
----
+**解决方案**：在`PlJob`实体中新增`FinancialDate`计算字段，保留原有`AccountDate`字段不变，在返回工作对象前由专门服务填充。
 
-## 📅 **2024年12月 - VS2022调试问题修复**
+#### 技术实现方案
 
-### 🎯 **紧急问题修复总览** （便于复制分享给技术团队）
+**1. 实体类修改**
+- **文件**：`PowerLmsData/业务/PlJob.cs`
+- **变更**：新增`FinancialDate`字段，标记为`[NotMapped]`，不映射到数据库
+- **保持**：原有`AccountDate`字段保持不变
+- **类型**：`DateTime?`，支持空值状态
 
-**紧急调试问题修复：**
-• VS2022启动调试异常终止修复 - 处理器架构不匹配导致的调试器冲突问题解决
-• 项目平台架构统一 - 所有项目统一使用AnyCPU平台，消除AMD64/MSIL架构冲突
-• Program.cs代码简化 - 移除复杂条件编译代码，保持安全模式支持的同时提升可维护性
-• OwSystemLog主键问题修复 - 确保日志记录正常保存，解决ActionId字段长度限制
+**2. 财务日期填充服务**
+- **位置**：`PowerLmsServer/Managers/Business/JobManager.cs`
+- **新增方法**：
+  - `FillFinancialDates(IEnumerable<PlJob>, DbContext)` - 批量填充FinancialDate
+  - `FillFinancialDate(PlJob, DbContext)` - 单个填充FinancialDate
+  - `GetBusinessDocsBatch()` - 批量查询业务单据，避免N+1问题
+  - `CalculateFinancialDate()` - 财务日期计算逻辑
 
----
+#### 业务规则实现
 
-## 📅 **2025年8月12日周变更记录**
-
-### 🎯 **功能变更总览** （便于复制分享给前端用户）
-
-**高优先级问题修复：**
-• OA日常费用权限验证错误修复 - 结算、确认、明细操作恢复正常
-• 文件上传下载接口统一整合 - 废弃旧接口，统一使用新版通用接口  
-• 工作号手动录入功能新增 - 支持手动录入+自动生成，增加唯一性校验
-• 结算单明细查询Bug修复 - parentId参数过滤失效问题已解决
-• **客户资料复杂类型展开优化** - 为导入导出功能优化数据结构，展开5个复杂嵌套类型为平铺字段
-• 实际收付记录删除异常修复 - 多租户验证、字段长度、主键问题解决
-
-**业务功能增强：**
-• 港口类型区分支持完善 - PlPort实体PortType字段，控制器按类型筛选
-• 单票审核字段补强完善 - PlJob实体ClosedBy和CloseDate字段
-
-**架构优化重构：**
-• PlInvoices.Amount字段重构 - 触发器计算移除，改为前端直接填写，移除服务端自动计算
-• 字典导入导出功能新增 - 9种字典类型，Excel多工作表，多租户隔离
-
----
-
-## 📊 **完成度统计**
-
-**已完成：** 10项功能变更 + 1项紧急修复
-**规划中：** 7项重大功能重构（基于8月16日会议决议）
-**整体进度：** 核心业务流程重构阶段
-
----
-
-## 📝 **详细变更记录**
-
-### 🎯 **v2025.08.16 - 核心业务流程重构规划**
-
-#### 重大需求评审与开发计划调整
-**会议背景：** 基于客户测试反馈和业务需求变更，项目进入关键功能重构阶段
-
-**参会人员：** 石永昌(PM/产品)、陈云霄(前端)、ZC@WorkGroup(后端)
-
-#### 1. 申请单审批流程回退功能 🆕 **最高优先级**
-
-**业务场景：** 已审批完成的申请单发现错误时，需要撤销到初始状态以便修改
-
-**核心需求：**
-- 已财务付款的申请单发现错误（如银行余额不足、客户要求取消）
-- 允许业务员修改错误的申请单并重新提交
-- 关键目标：释放被锁定的费用以便后续操作
-
-**技术方案：一键回退功能**
-1. **权限控制** - 专门权限，非人人可用
-2. **日志记录** - 生成当前状态快照存入系统日志备查
-3. **清空审批流** - 删除所有已生成的审批节点
-4. **状态回退** - 将主表状态改回"初始状态/未提交"
-5. **保留明细** - 表头和明细数据保留，触发trigger释放关联费用
-6. **消息通知** - 向审批流相关人员发送撤销通知
-
-**适用范围：** 主营业务申请单 + OA费用申请单
-
-**技术复杂度：** 高 - 涉及工作流引擎核心逻辑，需要确保数据一致性
-
-**开发计划：** 2.5天工期，目标8月21日完成
-
-#### 2. 账期管理与工作号关闭机制重构 🆕 **最高优先级**
-
-**业务需求：** 引入公司级账期概念，统一管理各公司工作号的月度关闭
-
-**新增架构：**
-- **账期概念**：每个公司独立账期，格式YYYYMM（如202508）
-- **机构参数表**：与机构一对一关联的参数配置表
-- **统一关闭机制**：废除单票/批量关闭，统一使用"关闭账期"操作
-
-**核心字段设计：**
-```sql
--- 机构参数表新增字段
-current_accounting_period VARCHAR(6) -- 当前账期（只读）
-账单抬头1 NVARCHAR(100)
-账单抬头2 NVARCHAR(100)  
-账单落款 NVARCHAR(200)
-```
-
-**关闭账期操作逻辑：**
-1. 财务人员专用权限操作
-2. 批量关闭财务日期在当前账期内的所有工作号
-3. 账期参数自动递增至下一月（202508→202509）
-4. 关闭后工作号费用无法修改
-
-**架构影响：** 废除原有关闭工作号方式，与金蝶财务系统对齐
-
-**开发计划：** 2.5天工期，目标8月23日完成
-
-#### 3. 财务日期逻辑重构 🆕 **高优先级**
-
-**问题现状：** KL_Job中财务日期存在2001-01-01无效默认值
-
-**新逻辑设计：**
-- **财务日期改为只读字段**，由其他日期联动决定
-- **进口业务**（海运/空运）：财务日期 = 到港日期
-- **出口业务**（海运/空运）：财务日期 = 开航日期
-- **时间约束**：到港/开航日期不能选择当前月份之前的日期
-
-**业务价值：** 确保财务日期的准确性和时效性，防止跨期问题
-
-**开发计划：** 1天工期，目标8月24日完成
-
-#### 4. 字典导入导出功能策略调整 🔄 **已开发65%**
-
-**会议决议变更：**
-- **导出方式变更**：从一次性导出所有改为按类型分别导出
-- **简单字典处理**：按分类导入导出，仅处理字典项不含分类本身
-- **重复数据策略**：采用覆盖（Update）模式替代忽略模式
-
-**技术调整：**
-- 前端传递分类code给后端，后端按类型导出对应数据
-- 导入时验证字典间依赖关系，依赖不存在时阻止导入
-- 客户资料暂时仅处理主表，子表功能暂缓
-
-**开发计划：** 2天工期完成剩余功能，目标8月26日
-
-#### 5. 客户管理功能全面增强 🆕
-
-**5.1 客户资料有效性管理**
-- 增加有效/无效状态（软删除机制）
-- 带权限的状态切换操作
-- 选择器默认只显示有效客户
-
-**5.2 客户选择器体验优化**
-- 改为弹出式窗口选择模式
-- 显示更多字段：名称、简称、财务编码、是否超期、是否超额
-- 支持多维度模糊搜索：按名称、简称、财务编码搜索
-- 根据业务场景自动过滤客户类型
-
-**开发计划：** 3天工期，目标8月30日完成
-
-#### 6. OA费用申请单功能扩展 🆕
-
-**新增需求：** OA费用申请单主表增加"公司"字段
-
-**业务背景：** 用户将个人费用也录入客户资料，需要在OA申请单中选用
-
-**技术实现：** 增加customerId字段关联客户资料表
-
-**开发计划：** 0.5天工期，目标8月27日完成
-
-#### 7. 费用列表申请单详情展示 🆕
-
-**用户需求：** 在费用列表点击"已申请金额"时，显示关联的申请单信息
-
-**技术方案：** 弹窗列表展示申请单号、申请金额、申请人、申请时间
-
-**业务价值：** 提升费用追溯能力，便于用户了解费用申请状态
-
-**开发计划：** 1天工期，目标8月27日完成
-
-#### 开发里程碑与风险评估
-
-**Phase 1（8月23日）：核心流程变更**
-- 申请单一键回退功能（2.5天）
-- 账期管理机制（2.5天）
-- **风险点**：涉及工作流引擎核心逻辑，需仔细测试
-
-**Phase 2（8月26日）：逻辑重构**
-- 财务日期联动重构（1天）
-- 字典导入导出完善（2天）
-- **风险点**：业务流程变更，需充分验证
-
-**Phase 3（8月30日）：用户体验**
-- 客户管理增强（3天）
-- OA申请单扩展（0.5天）
-- 费用明细优化（1天）
-- **风险点**：前端界面调整较多
-
-**验收测试（9月2日）：质量保障**
-- 集成测试（1天）
-- Bug修复（1天）
-- **风险点**：时间紧张，需提前识别问题
-
-**总体风险评估：中等**
-- **技术风险**：核心流程变更多，需要仔细测试审批流状态变更
-- **时间风险**：14.5天工期相对紧张，需要团队紧密配合
-- **质量风险**：多个功能并行开发，需要确保集成测试充分
-
-### 🚨 **v2024.12 - 紧急调试问题修复**
-
-#### VS2022启动调试异常终止修复
-**问题：** VS2022调试启动时异常终止，系统日志显示ASProxy64.dll访问违例（0xc0000005）  
-**错误信息：** 
-```
-错误应用程序名称：devenv.exe，版本：17.14.36401.2
-错误模块名称：ASProxy64.dll，版本：2.3.6.3
-异常代码：0xc0000005（访问违例）
-处理器架构不匹配：PowerLmsServer(AMD64) vs PowerLmsWebApi(MSIL)
-```
-
-**根因分析：**
-- **主要原因**：项目处理器架构不匹配导致调试器进程注入冲突
-- PowerLmsServer 编译为 AMD64，PowerLmsWebApi 编译为 MSIL(AnyCPU)
-- ASProxy64.dll（应用程序兼容性代理）与混合架构环境冲突
-- 架构不匹配触发系统级内存访问违例
-
-**解决方案：**
-1. **统一平台架构**
-   - 所有项目统一设置 `<PlatformTarget>AnyCPU</PlatformTarget>`
-   - 消除 MSB3270 处理器架构不匹配警告
-   - 确保调试器与应用程序运行在相同架构下
-
-2. **代码简化重构**
-   - 移除复杂的条件编译代码（#if SAFE_DEBUG_MODE）
-   - 保留简洁的安全模式支持（通过配置文件控制）
-   - 提升代码可维护性和问题排查效率
-
-3. **日志系统修复**
-   - 修复 OwSystemLog 实体主键设置
-   - 确保基类继承正确，不重写非virtual字段
-   - 解决日志记录保存失败问题
-
-**影响：** VS2022调试启动恢复正常，开发环境稳定性显著提升  
-**修改文件：** 
-- PowerLmsServer/PowerLmsServer.csproj - 平台目标统一为AnyCPU
-- PowerLmsData/PowerLmsData.csproj - 平台目标统一为AnyCPU
-- PowerLmsWebApi/PowerLmsWebApi.csproj - 移除SAFE_DEBUG_MODE条件编译
-- PowerLmsWebApi/Program.cs - 简化代码结构，移除条件编译
-- PowerLmsData/基础数据/OwSystemLog.cs - 修复主键继承问题
-
-#### 技术要点总结
-- **架构统一**：解决了企业级项目中常见的多项目架构不匹配问题
-- **调试器兼容性**：确保VS2022调试器与.NET 6应用程序完全兼容
-- **代码质量**：遵循"复杂性是bug的温床"原则，简化代码提升可维护性
-- **向后兼容**：保留安全模式功能，确保紧急情况下的备用方案
-
-### ✅ **v2025.08.12 - 高优先级问题修复**
-
-#### 1. OA日常费用权限问题修复
-**问题：** 权限验证错误导致结算、确认操作失败  
-**解决：** 修复权限代码错误，支持完整的费用管理操作流程  
-**影响：** OA日常费用模块功能恢复正常  
-**修改文件：** PowerLmsWebApi/Controllers/OaExpenseController.cs
-
-#### 2. 文件上传下载接口统一
-**问题：** 新旧两套文件处理接口并存，旧接口安全性不足  
-**解决：** 废弃旧版专用接口，统一使用新版通用文件处理接口  
-**影响：** 提升文件安全性，统一技术栈  
-**技术细节：** 客户资料等模块需要从老接口迁移到新的通用接口
-
-#### 3. 工作号手动录入功能
-**需求：** 支持手动录入工作号以便新旧系统数据比对  
-**实现：** 在自动生成基础上增加手动录入选项，添加唯一性校验  
-**影响：** 便于3个月并行测试期间的数据对照  
-**业务背景：** 客户要求新系统工作号与单机版保持一致以便数据比对
-
-#### 4. 结算单明细查询Bug修复
-**问题：** `parentId`参数过滤失效，无法正确筛选明细记录  
-**解决：** 修复查询逻辑，确保参数过滤正常工作  
-**影响：** 结算单明细查询功能恢复正常  
-**技术细节：** WhereWithLocalSafe查询条件修复
-
-#### 5. 客户资料复杂类型展开优化 🔧 **重要架构变更**
-**需求背景：** 为即将实现的通用导入导出功能奠定数据基础，解决复杂类型无法直接映射Excel列的技术障碍
-
-**技术挑战分析：**
-- **根本问题**：EF Core的复杂类型（Owned Types）无法直接映射为Excel列，导入导出时无法处理嵌套对象
-- **业务痛点**：客户有数千条基础资料不愿逐条录入，急需Excel批量导入功能支持
-- **数据一致性**：展开过程中必须保持数据库字段名和业务逻辑完全一致
-
-**实现方案：展开5个复杂嵌套类型为平铺字段**
-
-**5.1 PlOwnedName复杂类型展开**
+**计算逻辑**：
 ```csharp
-// 原嵌套结构 → 展开后平铺字段
-PlOwnedName Name → Name_Name (正式名称)
-                → Name_ShortName (正式简称) 
-                → Name_DisplayName (显示名)
+FinancialDate = 业务单据类型 switch {
+    PlIaDoc => job.ETA,    // 空运进口：到港日期
+    PlIsDoc => job.ETA,    // 海运进口：到港日期  
+    PlEaDoc => job.Etd,    // 空运出口：开航日期
+    PlEsDoc => job.Etd,    // 海运出口：开航日期
+    _ => null              // 无业务单据或未知类型
+};
 ```
 
-**5.2 PlOwnedContact复杂类型展开**
+**字段对比**：
+- **AccountDate**：保留不变，原有业务逻辑继续使用
+- **FinancialDate**：新增计算字段，根据业务类型联动计算
+
+**使用示例**：
 ```csharp
-// 客户主表联系方式
-PlOwnedContact Contact → Contact_Tel (电话)
-                      → Contact_Fax (传真)
-                      → Contact_EMail (电子邮件)
+// 批量填充（推荐）
+var jobs = GetJobsFromDatabase();
+_JobManager.FillFinancialDates(jobs, _DbContext);
 
-// 客户联系人表同样展开
-PlCustomerContact实体中同步展开相同字段
+// 单个填充
+var job = GetSingleJob();
+_JobManager.FillFinancialDate(job, _DbContext);
+
+// 使用新的财务日期
+var financialDate = job.FinancialDate; // 计算字段
+var accountDate = job.AccountDate;     // 原有字段
 ```
 
-**5.3 PlOwnedAddress复杂类型展开**
+#### 性能优化特性
+
+1. **批量查询优化**：通过`GetBusinessDocsBatch()`方法一次性查询所有相关业务单据
+2. **避免N+1问题**：使用HashSet进行快速映射，避免循环查询
+3. **内存效率**：通过Dictionary缓存业务单据映射关系
+4. **查询合并**：同时查询所有四种业务单据类型（PlEaDoc, PlIaDoc, PlEsDoc, PlIsDoc）
+
+#### 控制器集成示例
+
+**修改文件**：`PowerLmsWebApi/Controllers/Business/Common/PlJobController.cs`
+**集成位置**：在`GetAllPlJob`方法中添加财务日期填充调用
+
 ```csharp
-// 地址信息完整展开
-PlOwnedAddress Address → Address_CountryId (国家编码Id)
-                      → Address_Province (省)
-                      → Address_City (地市)
-                      → Address_Address (详细地址)
-                      → Address_ZipCode (邮政编码)
+// 获取数据后立即填充财务日期
+var prb = _EntityManager.GetAll(r.AsQueryable(), model.StartIndex, model.Count);
+if (prb.Result?.Any() == true)
+{
+    _JobManager.FillFinancialDates(prb.Result, _DbContext);
+}
 ```
 
-**5.4 PlBillingInfo复杂类型展开**
-```csharp
-// 账单信息全面展开
-PlBillingInfo BillingInfo → BillingInfo_IsExesGather (是否应收结算单位)
-                          → BillingInfo_IsExesPayer (是否应付结算单位)
-                          → BillingInfo_Dayslimited (信用期限天数)
-                          → BillingInfo_CurrtypeId (拖欠限额币种Id)
-                          → BillingInfo_AmountLimited (拖欠金额)
-                          → BillingInfo_AmountTypeId (付费方式Id)
-                          → BillingInfo_IsCEBlack (是否超额黑名单)
-                          → BillingInfo_IsBlack (是否超期黑名单)
-                          → BillingInfo_IsNeedTrace (是否特别注意)
-```
+**注意**：新增的`FinancialDate`字段为计算字段，原有的`AccountDate`字段保持不变，确保向后兼容。
 
-**5.5 OwnedAirlines复杂类型展开**
-```csharp
-// 航空公司信息展开
-OwnedAirlines Airlines → Airlines_AirlineCode (航空公司2位代码)
-                      → Airlines_NumberCode (3位编码)
-                      → Airlines_PayModeId (付款方式Id)
-                      → Airlines_PaymentPlace (付款地点)
-                      → Airlines_DocumentsPlaceId (交单地Id)
-                      → Airlines_SettlementModes (结算方式)
-```
+#### 架构设计优势
 
-**技术实现要点：**
-1. **字段命名规范**：使用`原类型名_字段名`的命名约定，确保语义清晰
-2. **数据类型保持**：所有字段的数据类型、长度限制、注释完全保持一致
-3. **验证注解保留**：`[Phone]`、`[EmailAddress]`等验证注解同步迁移
-4. **向后兼容**：原有复杂类型标记为`[Obsolete]`但保留，避免破坏现有代码
-5. **索引维护**：保持所有相关索引和外键关系不变
+1. **向后兼容**：原有`AccountDate`字段完全保留，现有代码无需修改
+2. **数据一致性**：新增`FinancialDate`字段始终与实际业务日期保持同步
+3. **维护简化**：无需手动维护财务日期，减少人工错误
+4. **性能优化**：批量处理机制确保大数据量下的高效执行
+5. **业务逻辑清晰**：基于业务单据类型的明确规则
+6. **渐进式升级**：可以逐步从`AccountDate`迁移到`FinancialDate`
 
-**导入导出优势：**
-- **Excel映射简单**：每个平铺字段直接对应Excel列，无需复杂的对象序列化
-- **用户友好**：导出的Excel表头直观易懂，用户可直接编辑
-- **数据完整性**：保持了原有的所有数据完整性约束和业务规则
-- **性能提升**：避免了运行时的复杂类型展开操作，查询性能更优
+#### 实施影响
 
-**影响范围：**
-- **数据库层**：PlCustomer主表字段数量增加，但不影响现有数据
-- **业务逻辑层**：需要适配新的字段结构，但业务逻辑不变
-- **前端界面**：逐步迁移到新字段结构，支持导入导出功能
-- **API接口**：DTO需要调整以支持平铺字段结构
+**数据库变更**：无（新字段不映射到数据库）
+**原有字段**：`AccountDate`完全保留，无任何变更
+**API变更**：无（新增字段，不影响现有接口）
+**前端适配**：可选（前端可选择使用新的`FinancialDate`字段）
+**性能影响**：轻微增加（批量查询业务单据的开销）
+**兼容性**：完全向后兼容，现有功能不受影响
 
-**修改文件：** 
-- PowerLmsData/客户资料/PlCustomer.cs - 主要变更文件，展开5个复杂类型
+### 架构重构：通用导入导出功能独立化
 
-#### 6. 实际收付记录删除异常修复
-**问题：** 删除实际收付记录时出现数据库错误  
-**错误信息：** "字符串或二进制数据将在表PowerLmsUserProduction.dbo.OwSystemLogs，列ActionId中被截断"  
-**根因分析：**
-- ActionId字段长度超限(71→64字符)
-- OwSystemLog主键缺失
-- 多租户验证缺失  
+**背景**：原有的导入导出功能分散在DataDicController中，职责不清晰，且仅支持字典类型，难以扩展到客户资料等其他业务实体。
 
-**解决方案：**
-- ActionId优化：从"Delete.ActualFinancialTransaction.{GUID}"(71字符)改为"Del.ActFinTrans.{GUID前8位}"(24字符)
-- 添加主键设置：OwSystemLog实体必须设置ID字段
-- 完善多租户权限验证：通过创建者组织归属验证权限
+**解决方案**：重构为独立的导入导出模块，建立标准的服务-控制器架构。
 
-**影响：** 删除操作恢复正常，系统稳定性提升  
-**修改文件：** PowerLmsWebApi/Controllers/Financial/FinancialController.cs
+#### 新增文件结构
 
-### ✅ **v2025.08.12 - 业务功能增强**
+1. **`PowerLmsServer/Services/ImportExportService.cs`**
+   - 通用导入导出服务类
+   - 统一处理字典、客户资料及其子表的Excel导入导出
+   - 基于OwDataUnit + OwNpoiUnit的高性能Excel处理
+   - 支持多租户数据隔离和权限控制
+   - 重复数据覆盖策略，依赖关系验证
 
-#### 7. 港口类型区分支持
-**需求：** 区分空运港口(IATA三字码)和海运港口(船公司四/五位码)  
-**背景：** 空运港口使用三字码（如LAX），海运港口使用四/五位码（如USLAX），客户单机版是分离的两个表，导致统计数据割裂  
-**解决方案：** 在PlPort实体增加PortType字段，同一地点建两条记录分别标记类型  
-**优势：** 支持按航线或国家统计，解决单机版数据割裂问题  
-**影响：** 支持准确的港口类型管理和统计
+2. **`PowerLmsWebApi/Controllers/ImportExportController.cs`**
+   - 通用导入导出控制器
+   - RESTful API设计，支持标准的HTTP操作
+   - 统一的权限验证和异常处理
+   - 多租户安全隔离机制
 
-#### 8. 单票审核字段补强
-**需求：** 在单票审核列表增加关闭人和关闭日期字段  
-**现状：** PlJob实体已有CloseDate字段，需要新增ClosedBy字段  
-**实现：** 区分审核人和关闭人，支持不同人员操作的权限控制  
-**影响：** 完善单票审核流程记录，提升审核流程的可追溯性
+3. **`PowerLmsWebApi/Controllers/ImportExportController.Dto.cs`**
+   - 导入导出相关的DTO定义
+   - 类型信息查询、导入结果返回等数据传输对象
 
-### ✅ **v2025.08.12 - 架构优化重构**
+#### 删除的文件
 
-#### 9. PlInvoices.Amount字段重构
-**重大变更：** 将Amount字段从trigger自动计算改为前端直接填写  
-**变更原因：** 业务需求变化，不再需要服务端自动计算金额  
+- **`PowerLmsServer/Services/DictionaryImportExportService.cs`** - 原有字典专用服务
+- **`PowerLmsWebApi/Controllers/BaseData/DataDicController.ImportExport.cs`** - 原有字典导入导出控制器扩展
 
-**技术调整：**
-- 修改实体字段注释：从"下属结算单明细的合计"改为"由前端直接填写"
-- 移除触发器自动计算逻辑：删除`GetInvoiceAmountAndIO`调用和相关依赖
-- 删除空的触发器框架文件：PowerLmsServer\Triggers\PlInvoices.Triggers.cs
-- 保留相关计算方法：确保向后兼容，避免破坏其他功能
+#### 支持的功能类型
 
-**影响：** 职责分离，计算逻辑由服务端转移到前端  
-**修改文件：** 
-- PowerLmsData/财务/PlInvoices.cs
-- PowerLmsServer/Triggers/PlInvoices.Triggers.cs（已删除）
+**字典类型**：
+- PlCountry (国家地区)
+- PlPort (港口)
+- PlCargoRoute (货运路线)
+- PlCurrency (币种)
+- FeesType (费用类型)
+- PlExchangeRate (汇率)
+- UnitConversion (单位换算)
+- ShippingContainersKind (集装箱类型)
+- 简单字典 (按分类代码)
 
-#### 10. 通用字典导入导出功能开发 🔄 **架构完成，实现进行中**
-**新增功能：** 为9种字典类型提供Excel导入导出能力  
+**客户资料类型**：
+- PlCustomer (客户资料主表)
+- PlCustomerContact (客户联系人)
+- PlBusinessHeader (业务负责人)
+- PlTidan (客户提单内容)
+- CustomerBlacklist (黑名单客户跟踪)
+- PlLoadingAddr (装货地址)
 
-**技术特点：**
-- 系统既定导出：无需用户选择参数，导出所有字典到多工作表Excel文件
-- 智能识别导入：根据Excel工作表名称自动识别导入对应类型
-- 严格的多租户数据隔离：输入时忽略Excel中OrgId，输出时OrgId列不显示
-- 字典类型范围控制：只支持9种字典（PlCountry、PlPort、PlCargoRoute、PlCurrency、FeesType、PlCustomer、PlExchangeRate、UnitConversion、ShippingContainersKind），排除JobNumberRule、OtherNumberRule
+#### API接口设计
 
-**已完成部分：**
-- ✅ 需求澄清和架构设计
-- ✅ 控制器API接口框架
-- ✅ DTO定义和数据结构
-- ✅ 多租户安全控制逻辑
-- ✅ 字典类型范围限制
-- ✅ Excel导出框架实现
+**类型查询**：
+- `GET /api/ImportExport/dictionary-types` - 获取支持的字典类型
+- `GET /api/ImportExport/customer-subtable-types` - 获取客户子表类型
+- `GET /api/ImportExport/simple-dictionary-categories` - 获取简单字典分类
 
-**剩余工作：** 
-- 权限验证逻辑实现
-- Excel解析和导入逻辑实现
-- 数据完整性和异常处理完善
+**字典导入导出**：
+- `GET /api/ImportExport/export/dictionary/{dictionaryType}` - 导出字典
+- `GET /api/ImportExport/export/simple-dictionary/{categoryCode}` - 导出简单字典
+- `POST /api/ImportExport/import/dictionary/{dictionaryType}` - 导入字典
+- `POST /api/ImportExport/import/simple-dictionary/{categoryCode}` - 导入简单字典
 
-**创建文件：**
-- PowerLmsWebApi/Controllers/BaseData/DataDicController.ImportExport.cs
-- PowerLmsWebApi/Controllers/BaseData/DataDicController.Dto.cs
+**客户资料导入导出**：
+- `GET /api/ImportExport/export/customers` - 导出客户资料主表
+- `GET /api/ImportExport/export/customer-subtable/{subTableType}` - 导出客户子表
+- `POST /api/ImportExport/import/customers` - 导入客户资料主表
+- `POST /api/ImportExport/import/customer-subtable/{subTableType}` - 导入客户子表
+
+#### 技术特性
+
+1. **多租户数据隔离**：输入时忽略Excel中的OrgId，输出时OrgId列不显示
+2. **重复数据处理**：支持覆盖模式（updateExisting参数控制）
+3. **类型安全**：强类型的实体映射和属性验证
+4. **错误处理**：完善的异常捕获和用户友好的错误信息
+5. **日志记录**：详细的操作日志，便于问题追踪
+6. **性能优化**：基于NPOI的高效Excel处理
+
+#### 代码清理
+
+1. **DataDicController修正**：移除了不再需要的DictionaryImportExportService依赖注入
+2. **DTO清理**：从DataDicController.Dto.cs中移除了字典导入导出相关的DTO，保持文件职责单一
+3. **依赖清理**：删除了无用的服务引用和扩展文件
+
+#### 设计优势
+
+1. **职责分离**：导入导出功能独立，符合单一职责原则
+2. **易于扩展**：标准化的服务架构，便于添加新的业务实体类型
+3. **代码复用**：通用的导入导出逻辑，减少重复代码
+4. **类型安全**：泛型设计确保编译时类型检查
+5. **统一接口**：RESTful API设计，便于前端调用和测试
+
+这次重构为后续扩展更多业务实体的导入导出功能奠定了良好的架构基础，同时保持了现有功能的完整性和稳定性。
 
 ---
 
-## 💡 **项目亮点总结**
+### 财务日期查询性能优化
 
-### 技术亮点
-1. **调试环境稳定性**：通过架构统一解决VS2022调试异常，保障开发环境稳定性
-2. **代码质量提升**：遵循简洁性原则，移除复杂条件编译，提升可维护性
-3. **架构简化与清理**：及时清理无用代码，保持代码库整洁度
-4. **多租户安全一致性**：所有功能都严格遵循多租户数据隔离原则
-5. **向后兼容考虑**：重大变更时保留相关方法，避免破坏现有功能
-6. **问题修复的深度分析**：不仅解决表面问题，更深入分析根本原因
-7. **复杂类型展开重构**：创新性地解决了EF Core复杂类型无法导入导出的技术难题
-8. **核心业务流程重构规划**：基于客户反馈制定了完整的功能重构计划
+**背景**：原有的财务日期计算需要查询完整的业务单据对象，但实际上只需要判断业务方向（进口/出口），造成了不必要的数据传输。
 
-### 业务价值
-1. **开发效率保障**：修复调试环境问题，确保开发团队工作效率
-2. **系统稳定性提升**：修复多个关键Bug，确保核心功能正常运行
-3. **用户体验改善**：支持手动录入工作号，便于新旧系统并行使用
-4. **数据管理效率**：字典导入导出功能大幅提升基础数据维护效率，解决客户数千条资料录入痛点
-5. **安全性增强**：统一文件处理接口，完善多租户权限验证
-6. **数据迁移便利性**：客户资料复杂类型展开为批量数据导入提供技术基础
-7. **业务流程优化**：一键回退功能解决了实际业务中的错误处理需求
-8. **财务管理规范化**：账期统一管理与金蝶财务系统对齐
+**优化方案**：重构查询逻辑，只查询必要的JobId信息来判断业务方向，大幅减少数据库IO和网络传输。
 
-### 开发效率
-1. **技术债务清理**：及时删除无用代码，保持代码库质量
-2. **架构优化**：职责分离，前后端协作更加清晰
-3. **文档规范化**：建立变更记录和任务管理的最佳实践
-4. **故障排除机制**：建立完整的调试问题解决方案文档
-5. **数据结构优化**：为导入导出功能奠定了坚实的数据基础
-6. **项目规划能力**：制定了详细的重构计划和里程碑管理
+#### 性能优化详情
 
----
+**原有查询方式**：
+- 查询完整的PlEaDoc、PlIaDoc、PlEsDoc、PlIsDoc对象
+- 返回包含所有字段的业务单据实体
+- 基于单据类型进行switch判断
 
-## 📋 **下一阶段计划**
+**优化后查询方式**：
+- 只查询各业务单据表的JobId字段
+- 返回JobId到业务方向的简单映射（true=进口，false=出口）
+- 基于布尔值进行简单条件判断
 
-### 近期重点（2025年9月2日前）
-1. **Phase 1：核心流程变更**（8月23日）
-   - 申请单一键回退功能开发
-   - 账期管理统一机制建设
-   - 机构参数表设计与实现
+#### 技术实现
 
-2. **Phase 2：逻辑重构**（8月26日）
-   - 财务日期联动重构
-   - 字典导入导出功能完善
-   - 权限验证逻辑实现
+**查询优化**：
+```csharp
+// 优化前：查询完整对象
+var businessDocs = GetBusinessDocsBatch(jobIds, context);
 
-3. **Phase 3：用户体验提升**（8月30日）
-   - 客户管理功能增强
-   - 客户选择器优化
-   - 费用明细展示改进
+// 优化后：只查询JobId
+var businessDirections = GetBusinessDirectionsBatch(jobIds, context);
+```
 
-4. **验收测试**（9月2日）
-   - 集成测试执行
-   - Bug修复与优化
-   - 上线准备与质量保障
+**计算逻辑简化**：
+```csharp
+// 优化前：基于单据类型
+businessDoc switch {
+    PlIaDoc => job.ETA,    // 空运进口
+    PlIsDoc => job.ETA,    // 海运进口
+    PlEaDoc => job.Etd,    // 空运出口
+    PlEsDoc => job.Etd,    // 海运出口
+    _ => null
+};
 
-### 长期目标
-1. **系统功能完善**：补齐核心业务功能，满足客户生产环境需求
-2. **性能优化**：大数据量处理优化，提升用户体验
-3. **代码质量提升**：完善单元测试，建立持续集成机制
+// 优化后：基于业务方向
+isImport switch {
+    true => job.ETA,   // 进口业务
+    false => job.Etd   // 出口业务
+};
+```
 
-这次会议决议标志着PowerLms项目进入关键的业务流程重构阶段，体现了**需求响应敏捷性、架构设计合理性、开发计划科学性、风险评估全面性**等企业级项目管理的综合能力。特别是申请单回退功能和账期管理机制的设计，充分考虑了实际业务场景和用户需求。
+#### 性能提升
+
+**数据传输减少**：
+- **单据字段数量**：从~20个字段减少到1个字段(JobId)
+- **查询复杂度**：从实体对象查询优化为简单ID查询
+- **内存占用**：大幅减少业务单据对象的内存占用
+
+**查询效率提升**：
+- **网络IO**：减少数据传输量约90%
+- **序列化成本**：避免复杂对象的序列化/反序列化
+- **缓存友好**：简单的布尔映射更容易缓存
+
+#### 实施文件
+
+**修改文件**：
+- `PowerLmsServer/Managers/Business/JobManager.cs` - 重构查询和计算逻辑
+
+**新增方法**：
+- `GetBusinessDirectionsBatch()` - 批量查询业务方向
+- `CalculateFinancialDate(PlJob, bool?)` - 基于方向的财务日期计算
+
+**移除方法**：
+- `GetBusinessDocsBatch()` - 原有的完整单据查询
+- `CalculateFinancialDate(PlJob, IPlBusinessDoc)` - 原有的单据对象计算
+
+### 财务日期查询限制注释
+
+**添加说明**：为`PlJobController.GetAllPlJob`方法添加重要注释，明确说明财务日期字段的使用限制。
+
+#### 关键提醒
+
+```csharp
+/// <summary>
+/// 获取全部业务总表。
+/// 注意：财务日期(FinancialDate)是本地计算字段，不能作为查询条件使用。
+/// 如需按财务日期查询，请使用 AccountDate、Etd（开航日期）或 ETA（到港日期）字段。
+/// </summary>
+```
+
+**说明要点**：
+- **FinancialDate不支持查询**：该字段为本地计算字段，不在数据库中存储
+- **替代查询方案**：使用AccountDate、Etd或ETA字段进行日期相关查询
+- **开发者提醒**：避免在前端或API调用中尝试使用FinancialDate作为查询条件
+
+### 其他返回PlJob对象的方法核查
+
+经过全面搜索，确认了以下主要返回PlJob对象的方法：
+
+**主要接口**：
+1. **PlJobController.GetAllPlJob** - ✅ 已添加财务日期填充
+2. **PlJobController其他方法** - 单个对象操作，需要时可单独调用`FillFinancialDate`
+3. **费用相关查询** - 主要返回费用对象，不直接返回PlJob
+
+**业务单据控制器**：
+- **PlSeaborneController** - 主要处理海运进出口单，不直接返回PlJob
+- **其他业务控制器** - 类似模式，主要处理业务单据而非工作任务对象
+
+**财务相关控制器**：
+- **FinancialController** - 主要处理结算单等财务对象，查询中关联PlJob但不直接返回
+
+#### 建议的财务日期填充策略
+
+**批量查询场景**：
+- 在`GetAllPlJob`等批量返回接口中使用`FillFinancialDates`
+- 在返回数据前统一调用，确保所有PlJob对象都包含财务日期
+
+**单个对象场景**：
+- 在需要时调用`FillFinancialDate`
+- 适用于详情查看、编辑等单个对象操作
+
+**性能考虑**：
+- 批量填充避免N+1查询问题
+- 按需填充减少不必要的数据库查询
+
+### API简化：ImportReturnDto类属性优化
+
+**背景**：`ImportReturnDto`类中包含了多余的属性，信息冗余，需要简化以提高API的简洁性。
+
+**优化内容**：
+- **删除冗余属性**：移除`TargetTable`（目标表名称）和`ProcessingDetails`（处理详情列表）属性
+- **保留核心数据**：保留`ImportedCount`（导入成功记录数量）作为主要返回信息
+- **信息压缩**：将表名和处理详情信息压缩到基类的`DebugMessage`属性中
+
+**技术实现**：
+```csharp
+// 优化前
+public class ImportReturnDto : ReturnDtoBase
+{
+    public int ImportedCount { get; set; }
+    public string TargetTable { get; set; }           // 删除
+    public List<string> ProcessingDetails { get; set; } // 删除
+}
+
+// 优化后
+public class ImportReturnDto : ReturnDtoBase
+{
+    public int ImportedCount { get; set; }
+    // 其他信息通过基类DebugMessage传递
+}
+```
+
+**信息整合策略**：
+```csharp
+// 将处理详情和目标表信息压缩到DebugMessage中
+var detailsText = importResult.Details?.Count > 0 ? 
+    $"，详情: {string.Join("; ", importResult.Details.Take(3))}{(importResult.Details.Count > 3 ? "..." : "")}" : "";
+result.DebugMessage = $"导入{paramsDto.TableType}完成，共处理 {importResult.ImportedCount} 条记录{detailsText}";
+```
+
+**优化效果**：
+- **API简洁性**：减少返回对象的复杂度，突出核心数据
+- **信息完整性**：重要信息仍然通过DebugMessage传递，不丢失功能
+- **向后兼容**：客户端仍能获取所需的反馈信息
+- **代码简化**：减少不必要的属性赋值和维护成本
+
+### 代码清理：删除废弃的OwnedAirlines类
+
+**背景**：`OwnedAirlines`类已被标记为废弃，其相关字段已经展开到`PlCustomer`主表中，使用`Airlines_`前缀。该类不再使用，需要完全清理。
+
+**清理内容**：
+- **删除类定义**：移除`PowerLmsData/客户资料/PlCustomer.cs`中的`OwnedAirlines`类定义
+- **删除映射配置**：移除`PowerLmsServer/AutoMappper/AutoMapperProfile.cs`中的AutoMapper映射配置
+- **保留功能字段**：`Airlines_`前缀的字段继续在`PlCustomer`主表中使用
+
+**技术影响**：
+- **编译验证**：✅ 无编译错误，所有引用已清理完毕
+- **功能完整性**：✅ 航空公司相关功能通过`Airlines_`前缀字段正常运作
+- **数据完整性**：✅ 数据库结构不受影响，字段映射已完成展开
+
+**清理文件**：
+- `PowerLmsData/客户资料/PlCustomer.cs` - 删除`OwnedAirlines`类定义
+- `PowerLmsServer/AutoMappper/AutoMapperProfile.cs` - 删除AutoMapper映射
+
+### 参数语义优化：导入导出功能参数调整
+
+**背景**：根据业务需求，需要调整导入导出功能的参数语义，使其更加准确和易于理解。
+
+**参数语义调整**：
+- **表类型 → 表名称**：`TableType`注释从"表类型"改为"表名称"，语义更准确
+- **GetSupportedTables简化**：移除不必要的`TableName`参数，一次性返回所有支持的表
+- **更新模式 → 删除模式**：`UpdateExisting` → `DeleteExisting`，语义反转更清晰
+
+#### 具体变更
+
+**GetSupportedTablesParamsDto简化**：
+```csharp
+// 优化前
+public class GetSupportedTablesParamsDto : TokenDtoBase
+{
+    public string TableName { get; set; }  // 不必要的参数
+}
+
+// 优化后  
+public class GetSupportedTablesParamsDto : TokenDtoBase
+{
+    // 无需额外参数，直接返回所有支持的表列表
+}
+```
+
+**接口行为调整**：
+- **优化前**：需要指定表类型参数，分类查询
+- **优化后**：一次性返回所有支持的表，包括：
+  - 字典表（PlCountry、PlCurrency等）
+  - 客户子表（PlCustomerContact、PlTidan等）
+  - 简单字典（SimpleDataDic）
+  - 客户主表（PlCustomer）
+
+**业务逻辑优化**：
+```csharp
+// 一次性获取所有表类型
+var allTables = new List<TableInfo>();
+allTables.AddRange(dictionaryTypes.Select(...));      // 字典表
+allTables.AddRange(customerSubTypes.Select(...));     // 客户子表  
+allTables.AddRange(simpleDictionaries.Select(...));   // 简单字典
+allTables.Add(new TableInfo { TableName = "PlCustomer", DisplayName = "客户资料" });
+```
+
+**ImportParamsDto参数调整**：
+```csharp
+// 优化前
+public bool UpdateExisting { get; set; } = false;  // 是否更新现有记录
+
+// 优化后  
+public bool DeleteExisting { get; set; } = false;  // 是否删除已有记录
+```
+
+**参数语义说明**：
+- **DeleteExisting=true**：删除已有记录然后重新导入（全量替换模式）
+- **DeleteExisting=false**：采用更新模式，不删除现有记录，仅更新冲突记录
+
+**业务逻辑调整**：
+```csharp
+// 传递给Service的updateExisting参数需要取反
+var updateExisting = !paramsDto.DeleteExisting;
+importResult = _ImportExportService.ImportDictionary(
+    formFile, paramsDto.TableName, orgId, updateExisting);

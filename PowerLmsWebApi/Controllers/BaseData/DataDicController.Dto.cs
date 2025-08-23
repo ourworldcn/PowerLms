@@ -73,24 +73,4 @@ namespace PowerLmsWebApi.Controllers
     }
 
     #endregion 日常费用种类相关
-
-    #region 字典导入导出相关
-
-    /// <summary>
-    /// 导入所有字典功能的返回值封装类。
-    /// </summary>
-    public class ImportAllDictionariesReturnDto : ReturnDtoBase
-    {
-        /// <summary>
-        /// 导入成功的记录总数。
-        /// </summary>
-        public int TotalImported { get; set; }
-
-        /// <summary>
-        /// 处理详情列表。
-        /// </summary>
-        public List<string> ProcessingDetails { get; set; } = new();
-    }
-
-    #endregion 字典导入导出相关
 }

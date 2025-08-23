@@ -274,5 +274,120 @@ namespace PowerLmsServer.Managers
             return null;
         }
         #endregion 任务相关
+
+        #region 财务日期填充
+
+        /// <summary>
+        /// 为一组工作任务对象填充财务日期。
+        /// 批量处理，注重性能，避免N+1查询问题。
+        /// </summary>
+        /// <param name="jobs">工作任务对象集合</param>
+        /// <param name="context">数据库上下文</param>
+        public void FillFinancialDates(IEnumerable<PlJob> jobs, DbContext context)
+        {
+            if (jobs?.Any() != true) return;
+
+            var jobList = jobs.ToList();
+            var jobIds = jobList.Select(j => j.Id).ToHashSet();
+
+            // 批量查询所有相关的业务方向，避免N+1问题
+            var businessDirections = GetBusinessDirectionsBatch(jobIds, context);
+
+            // 为每个job填充财务日期
+            foreach (var job in jobList)
+            {
+                job.FinancialDate = CalculateFinancialDate(job, businessDirections.GetValueOrDefault(job.Id));
+            }
+        }
+
+        /// <summary>
+        /// 为单个工作任务对象填充财务日期
+        /// </summary>
+        /// <param name="job">工作任务对象</param>
+        /// <param name="context">数据库上下文</param>
+        public void FillFinancialDate(PlJob job, DbContext context)
+        {
+            if (job == null) return;
+
+            // 优化：只查询业务方向，不获取完整单据对象
+            var businessDirections = GetBusinessDirectionsBatch(new HashSet<Guid> { job.Id }, context);
+            job.FinancialDate = CalculateFinancialDate(job, businessDirections.GetValueOrDefault(job.Id));
+        }
+
+        /// <summary>
+        /// 批量获取业务单据类型，避免N+1查询
+        /// 优化：只查询业务方向判断所需的最小数据，不返回完整单据对象
+        /// </summary>
+        /// <param name="jobIds">工作任务ID集合</param>
+        /// <param name="context">数据库上下文</param>
+        /// <returns>JobId到业务方向的映射（true=进口，false=出口，null=无单据）</returns>
+        private Dictionary<Guid, bool?> GetBusinessDirectionsBatch(HashSet<Guid> jobIds, DbContext context)
+        {
+            var result = new Dictionary<Guid, bool?>();
+
+            // 批量查询各类业务单据的类型信息（只查询JobId，不查询完整对象）
+            // 空运出口单 - 出口方向
+            var eaDocJobIds = context.Set<PlEaDoc>()
+                .Where(d => d.JobId.HasValue && jobIds.Contains(d.JobId.Value))
+                .Select(d => d.JobId.Value)
+                .ToList();
+
+            // 空运进口单 - 进口方向
+            var iaDocJobIds = context.Set<PlIaDoc>()
+                .Where(d => d.JobId.HasValue && jobIds.Contains(d.JobId.Value))
+                .Select(d => d.JobId.Value)
+                .ToList();
+
+            // 海运出口单 - 出口方向
+            var esDocJobIds = context.Set<PlEsDoc>()
+                .Where(d => d.JobId.HasValue && jobIds.Contains(d.JobId.Value))
+                .Select(d => d.JobId.Value)
+                .ToList();
+
+            // 海运进口单 - 进口方向
+            var isDocJobIds = context.Set<PlIsDoc>()
+                .Where(d => d.JobId.HasValue && jobIds.Contains(d.JobId.Value))
+                .Select(d => d.JobId.Value)
+                .ToList();
+
+            // 填充结果：true=进口，false=出口
+            foreach (var jobId in eaDocJobIds)
+                result[jobId] = false; // 空运出口
+
+            foreach (var jobId in iaDocJobIds)
+                result[jobId] = true;  // 空运进口
+
+            foreach (var jobId in esDocJobIds)
+                result[jobId] = false; // 海运出口
+
+            foreach (var jobId in isDocJobIds)
+                result[jobId] = true;  // 海运进口
+
+            return result;
+        }
+
+        /// <summary>
+        /// 计算财务日期
+        /// 优化版本：基于业务方向而非完整业务单据对象
+        /// 业务规则：
+        /// - 进口业务：财务日期 = 到港日期(ETA)
+        /// - 出口业务：财务日期 = 开航日期(Etd)
+        /// - 当对应日期为空时，财务日期也为空
+        /// </summary>
+        /// <param name="job">工作任务对象</param>
+        /// <param name="isImport">业务方向：true=进口，false=出口，null=无业务单据</param>
+        /// <returns>计算出的财务日期</returns>
+        private DateTime? CalculateFinancialDate(PlJob job, bool? isImport)
+        {
+            if (!isImport.HasValue) return null;
+
+            return isImport.Value switch
+            {
+                true => job.ETA,   // 进口业务：使用到港日期
+                false => job.Etd   // 出口业务：使用开航日期
+            };
+        }
+
+        #endregion 财务日期填充
     }
 }

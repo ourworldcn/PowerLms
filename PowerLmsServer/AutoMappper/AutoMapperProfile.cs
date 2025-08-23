@@ -21,7 +21,6 @@ namespace PowerLmsServer.AutoMappper
             CreateMap<PlSimpleOwnedAddress, PlSimpleOwnedAddress>().IncludeAllDerived();
             CreateMap<PlOwnedName, PlOwnedName>().IncludeAllDerived();
 
-            CreateMap<OwnedAirlines, OwnedAirlines>().IncludeAllDerived();
             CreateMap<PlOwnedContact, PlOwnedContact>().IncludeAllDerived();
             CreateMap<PlBillingInfo, PlBillingInfo>().IncludeAllDerived();
 

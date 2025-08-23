@@ -2,51 +2,55 @@
 
 ## 🎯 **当前优先级任务 (目标：9月2日前完成)**
 
-### 🔄 **进行中任务**
+### ✅ **已完成任务**
 
-#### 1. 通用字典导入导出功能完善 （架构已完成，按类型分别导出）
+#### 1. 字典导入导出功能重构完成 ✅ **重大架构变更**
 
-**会议决议变更：**
-- ✅ 导出方式：改为按字典类型分别导出（非一次性导出所有）
-- ✅ 简单字典：按分类导入导出，仅处理字典项不含分类本身
-- ✅ 重复数据策略：采用覆盖（Update）模式，确保数据与导入文件一致
+**会议决议执行：**
+- ✅ **导出方式变更**：从一次性导出所有改为按类型分别导出
+- ✅ **简单字典处理**：按分类导入导出，仅处理字典项不含分类本身
+- ✅ **重复数据策略**：采用覆盖（Update）模式替代忽略模式
+- ✅ **动态表发现**：从DbContext自动获取实体类型，无需硬编码
 
-**已完成部分：**
-- ✅ 需求澄清和架构设计
-- ✅ 控制器API接口框架(`DataDicController.ImportExport.cs`)
-- ✅ DTO定义(`DataDicController.Dto.cs`)
-- ✅ 多租户安全控制逻辑
-- ✅ 字典类型范围限制（9种字典，排除JobNumberRule、OtherNumberRule）
-- ✅ Excel导出框架实现
+**技术实现完成：**
+- ✅ **统一导入导出服务**：`ImportExportService`，采用泛型和动态发现机制
+- ✅ **控制器接口优化**：3个核心接口，DTO参数封装，IFormFile独立处理
+- ✅ **简单字典整体处理**：作为单一表整体导入导出，不按分类拆分
+- ✅ **表注释验证**：仅支持有Comment注释的表，确保DisplayName可用
+- ✅ **自然路径设计**：所有接口使用控制器自然路径，无特殊路由
 
-**剩余核心工作：**
+**核心功能接口：**
+1. **GetSupportedTables** - 获取支持的表列表（字典/客户/简单字典）
+2. **Export** - 通用导出功能（参数DTO封装）
+3. **Import** - 通用导入功能（IFormFile + 参数DTO）
 
-##### 1.1 权限验证逻辑实现 🔄 **优先级：高**
-**当前状态：** 代码中有TODO注释，需要实现具体权限查找逻辑
-```csharp
-// 权限验证：搜索权限文件，如果有叶子权限符合要求就使用，如果没有就不进行权限验证
-// TODO: 实现具体权限查找逻辑
+**技术架构亮点：**
+- **动态发现机制**：从`_DbContext.Model.GetEntityTypes()`获取所有实体类型
+- **Comment注释驱动**：通过`entityType.GetComment()`获取中文显示名称
+- **智能过滤规则**：`IsDictionaryEntity()`和`IsCustomerSubTableEntity()`自动分类
+- **表名一致性**：确保Excel表名与数据库表名一一对应
+- **多租户安全**：严格的OrgId隔离，导入时忽略Excel中OrgId，导出时OrgId列不显示
+- **职责分离**：控制器只做校验和异常处理，业务逻辑在服务类
+- **依赖注入**：服务类使用`[OwAutoInjection(ServiceLifetime.Scoped)]`自动注入
+
+**API接口简化：**
+```
+GET /api/ImportExport/GetSupportedTables?token=xxx&category=dictionary     # 获取字典表列表
+GET /api/ImportExport/GetSupportedTables?token=xxx&category=customer       # 获取客户子表列表  
+GET /api/ImportExport/GetSupportedTables?token=xxx&category=simple         # 获取简单字典(返回SimpleDataDic)
+GET /api/ImportExport/Export?token=xxx&tableType=PlCountry                 # 导出国家字典
+GET /api/ImportExport/Export?token=xxx&tableType=SimpleDataDic             # 导出简单字典(整体)
+POST /api/ImportExport/Import + FormData                                   # 导入功能(文件+DTO参数)
 ```
 
-**预估工期：** 0.5天
+**创建文件：**
+- ✅ PowerLmsServer/Services/ImportExportService.cs - 统一导入导出服务
+- ✅ PowerLmsWebApi/Controllers/ImportExportController.cs - 简化的控制器
+- ✅ PowerLmsWebApi/Controllers/ImportExportController.Dto.cs - 统一DTO定义
 
-##### 1.2 按类型导出功能调整 🔄 **优先级：高**
-**技术要求：**
-- 调整导出接口，支持按传入的类型标识导出对应数据
-- 简单字典按分类code进行导入导出
-- 客户资料暂时仅处理主表
-
-**预估工期：** 0.5天
-
-##### 1.3 Excel解析和导入逻辑实现 🔄 **优先级：高**
-**技术要求：**
-- 重复数据采用覆盖（Update）策略
-- 验证字典间依赖关系，依赖不存在时阻止导入
-- 强制OrgId设置：完全忽略Excel中的OrgId值，使用当前用户OrgId
-
-**预估工期：** 1天
-
-**总剩余工期：** 2天
+**修改文件：**
+- ✅ PowerLmsData/基础数据/UnitConversion.cs - 添加Comment注释
+- ✅ PowerLmsData/客户资料/PlCustomer.cs - 完善所有子表Comment注释
 
 ---
 
@@ -147,13 +151,13 @@
 | 申请单一键回退功能 | 🔴 最高 | 新增 | 2.5天 | 8月21日 |
 | 账期管理机制 | 🔴 最高 | 新增 | 2.5天 | 8月23日 |
 | 财务日期逻辑重构 | 🔴 高 | 新增 | 1天 | 8月24日 |
-| 字典导入导出功能完善 | 🔴 高 | 进行中 | 2天 | 8月26日 |
+| 权限验证逻辑实现 | 🔴 高 | 进行中 | 0.5天 | 8月24日 |
 | 费用列表申请单详情 | 🟡 中 | 新增 | 1天 | 8月27日 |
 | OA申请单公司字段 | 🟡 中 | 新增 | 0.5天 | 8月27日 |
 | 客户资料有效性管理 | 🟡 中 | 新增 | 1天 | 8月28日 |
 | 客户选择器优化 | 🟡 中 | 新增 | 2天 | 8月30日 |
 
-**总计剩余工期：** 12.5个工作日  
+**总计剩余工期：** 11个工作日  
 **目标完成时间：** 2025年9月2日  
 **风险评估：** 中等 - 核心流程变更较多，需紧密配合
 
@@ -162,7 +166,7 @@
 ## 🔧 **技术债务和注意事项**
 
 ### 权限验证待完善
-- **位置**：`DataDicController.ImportExport.cs` 中的TODO注释
+- **位置**：所有导入导出接口中的TODO注释
 - **要求**：实现"搜索权限文件，如果有叶子权限符合要求就使用，如果没有就不进行权限验证"的逻辑
 - **影响**：影响导入导出功能的安全性
 
@@ -184,9 +188,10 @@
 **导出时：** 仅输出当前登录用户OrgId的数据，但**OrgId列不输出**  
 **导入时：** **忽略Excel表中的OrgId数据，只用当前登录用户的OrgId**
 
-### 字典类型范围限制
-**包含：** PlCountry、PlPort、PlCargoRoute、PlCurrency、FeesType、PlCustomer、PlExchangeRate、UnitConversion、ShippingContainersKind  
-**排除：** JobNumberRule、OtherNumberRule不导入/导出
+### 动态表发现要求
+**支持的表：** 从DbContext动态发现，通过Comment注释验证  
+**过滤规则：** 字典类型和客户子表类型通过命名规则自动识别  
+**DisplayName：** 必须有Comment注释，否则不支持导入导出
 
 ### 权限控制要求
 - **一键回退功能**：需要专门权限，并非人人可用
@@ -206,3 +211,4 @@
 3. **客户选择**：默认只显示"有效"客户
 4. **申请单回退**：适用于主营业务申请单和OA费用申请单
 5. **财务日期**：改为只读字段，由其他日期联动决定
+6. **接口设计**：所有控制器使用自然路径，无特殊路由配置

@@ -160,6 +160,16 @@ namespace PowerLms.Data
         public DateTime AccountDate { get; set; }
 
         /// <summary>
+        /// 财务日期（计算字段）。根据业务类型自动计算：
+        /// 进口业务（空运/海运）：财务日期 = 到港日期(ETA)
+        /// 出口业务（空运/海运）：财务日期 = 开航日期(Etd)
+        /// 当对应日期为空时，财务日期也为空
+        /// </summary>
+        [Comment("财务日期（计算字段），根据业务类型联动计算")]
+        [NotMapped]
+        public DateTime? FinancialDate { get; set; }
+
+        /// <summary>
         /// 开航日期。
         /// </summary>
         [Comment("开航日期。")]

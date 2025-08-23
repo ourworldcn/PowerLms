@@ -12,6 +12,7 @@ namespace PowerLms.Data
     /// <summary>
     /// 单位换算。
     /// </summary>
+    [Comment("单位换算")]
     public class UnitConversion : SpecialDataDicBase, IMarkDelete
     {
         /// <summary>
