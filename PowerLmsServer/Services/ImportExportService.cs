@@ -592,6 +592,7 @@ namespace PowerLmsServer.Services
         /// <summary>
         /// 导入实体数据
         /// 自动处理Id和OrgId字段：Id生成新GUID，OrgId使用当前用户的机构ID
+        /// 修复：使用安全的属性映射创建，避免重复键错误
         /// </summary>
         /// <typeparam name="T">实体类型</typeparam>
         /// <param name="sheet">Excel工作表</param>
@@ -605,13 +606,35 @@ namespace PowerLmsServer.Services
             var headerRow = sheet.GetRow(0);
             if (headerRow == null) return 0;
 
-            // 获取表头映射（排除Id、OrgId和复杂类型）
-            var properties = typeof(T).GetProperties()
+            // 获取可写入的属性（排除Id、OrgId和复杂类型），使用安全的字典创建方法
+            var propertyList = typeof(T).GetProperties()
                 .Where(p => p.CanWrite && 
                            !p.Name.Equals("Id", StringComparison.OrdinalIgnoreCase) &&
                            !p.Name.Equals("OrgId", StringComparison.OrdinalIgnoreCase) &&
                            !IsComplexType(p.PropertyType))
-                .ToDictionary(p => p.Name, p => p, StringComparer.OrdinalIgnoreCase);
+                .ToList();
+
+            // 安全创建属性字典，避免重复键错误
+            var properties = new Dictionary<string, PropertyInfo>(StringComparer.OrdinalIgnoreCase);
+            foreach (var property in propertyList)
+            {
+                try
+                {
+                    if (!properties.ContainsKey(property.Name))
+                    {
+                        properties.Add(property.Name, property);
+                    }
+                    else
+                    {
+                        _Logger.LogWarning("发现重复属性名称: {PropertyName} 在实体 {EntityType} 中，已跳过", property.Name, typeof(T).Name);
+                    }
+                }
+                catch (ArgumentException ex)
+                {
+                    _Logger.LogError(ex, "添加属性映射时发生错误: {PropertyName} 在实体 {EntityType} 中", property.Name, typeof(T).Name);
+                    throw new InvalidOperationException($"实体{typeof(T).Name}中存在重复的属性名称: {property.Name}", ex);
+                }
+            }
 
             var columnMappings = new Dictionary<int, PropertyInfo>();
             for (int i = 0; i <= headerRow.LastCellNum; i++)

@@ -155,10 +155,10 @@ namespace PowerLms.Data
 
         /// <summary>
         ///  财务日期。出口默认出港日期，进口默认出库日期。
-        /// 完全由前端计算和管理，后端不参与任何逻辑。
+        /// 前端根据业务类型自动计算并设置，后端接受前端计算的值。
+        /// 后端在关账/计提等功能中直接读取该字段，不参与计算逻辑。
         /// </summary>
-        [Comment("财务日期，由前端计算管理，后端不存储")]
-        [NotMapped]
+        [Comment("财务日期，前端自动计算设置，后端直接使用")]
         public DateTime? AccountDate { get; set; }
 
         /// <summary>

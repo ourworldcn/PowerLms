@@ -114,7 +114,7 @@ namespace PowerLmsWebApi.Controllers
         /// - 流式Excel生成减少内存占用
         /// </summary>
         /// <param name="paramsDto">参数封装对象，包含要导出的Catalog Code列表</param>
-        /// <returns>Excel文件</returns>
+        /// <returns>Excel文件二进制流，浏览器自动下载保存</returns>
         [HttpGet]
         public ActionResult ExportSimpleDictionary([FromQuery] ExportSimpleDictionaryParamsDto paramsDto)
         {
@@ -134,7 +134,9 @@ namespace PowerLmsWebApi.Controllers
                 
                 var fileName = $"SimpleDataDic_{string.Join("_", paramsDto.CatalogCodes.Take(3))}{(paramsDto.CatalogCodes.Count > 3 ? "_etc" : "")}_{DateTime.Now:yyyyMMdd_HHmmss}.xls";
 
-                return File(fileBytes, "application/vnd.ms-excel", fileName);
+                // 二进制模式下载，确保跨浏览器兼容性
+                Response.Headers.Add("Content-Disposition", $"attachment; filename=\"{fileName}\"");
+                return File(fileBytes, "application/octet-stream", fileName);
             }
             catch (ArgumentException ex)
             {

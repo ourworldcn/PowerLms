@@ -355,15 +355,40 @@ namespace PowerLmsServer.Services
         /// 获取简单字典属性映射信息，避免重复反射
         /// 性能优化：预先计算属性映射，避免每次导入时重复反射
         /// 排除字段：DataDicId（通过Sheet名称自动设置）、Id（自动生成）
+        /// 修复：使用 StringComparer.OrdinalIgnoreCase 避免重复键错误
         /// </summary>
         /// <returns>属性名称到PropertyInfo的映射字典</returns>
         private Dictionary<string, PropertyInfo> GetSimpleDataDicPropertyMappings()
         {
-            return typeof(SimpleDataDic).GetProperties()
+            var properties = typeof(SimpleDataDic).GetProperties()
                 .Where(p => p.CanWrite && 
                            !p.Name.Equals("DataDicId", StringComparison.OrdinalIgnoreCase) &&
-                           !p.Name.Equals("Id", StringComparison.OrdinalIgnoreCase))
-                .ToDictionary(p => p.Name, p => p, StringComparer.OrdinalIgnoreCase);
+                           !p.Name.Equals("Id", StringComparison.OrdinalIgnoreCase));
+
+            var result = new Dictionary<string, PropertyInfo>(StringComparer.OrdinalIgnoreCase);
+            
+            foreach (var property in properties)
+            {
+                try
+                {
+                    // 检查是否已存在同名属性（忽略大小写），避免重复键错误
+                    if (!result.ContainsKey(property.Name))
+                    {
+                        result.Add(property.Name, property);
+                    }
+                    else
+                    {
+                        _Logger.LogWarning("发现重复属性名称: {PropertyName}，已跳过", property.Name);
+                    }
+                }
+                catch (ArgumentException ex)
+                {
+                    _Logger.LogError(ex, "添加属性映射时发生错误: {PropertyName}", property.Name);
+                    throw new InvalidOperationException($"SimpleDataDic类中存在重复的属性名称: {property.Name}", ex);
+                }
+            }
+
+            return result;
         }
 
         /// <summary>

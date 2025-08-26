@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PowerLmsServer.EfData;
 
@@ -11,9 +12,10 @@ using PowerLmsServer.EfData;
 namespace PowerLmsData.Migrations
 {
     [DbContext(typeof(PowerLmsUserDbContext))]
-    partial class PowerLmsUserDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250826070517_25082602")]
+    partial class _25082602
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

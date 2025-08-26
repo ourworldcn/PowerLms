@@ -161,7 +161,7 @@ namespace PowerLmsWebApi.Controllers
         /// - 列标题为实体属性名称（排除Id、OrgId系统字段）
         /// </summary>
         /// <param name="paramsDto">参数封装对象，包含要导出的表名称列表</param>
-        /// <returns>Excel文件</returns>
+        /// <returns>Excel文件二进制流，浏览器自动下载保存</returns>
         [HttpGet]
         public ActionResult ExportMultipleTables([FromQuery] ExportMultipleTablesParamsDto paramsDto)
         {
@@ -212,7 +212,9 @@ namespace PowerLmsWebApi.Controllers
                 
                 var fileName = $"MultiTables_{string.Join("_", paramsDto.TableNames.Take(3))}{(paramsDto.TableNames.Count > 3 ? "_etc" : "")}_{DateTime.Now:yyyyMMdd_HHmmss}.xls";
 
-                return File(fileBytes, "application/vnd.ms-excel", fileName);
+                // 二进制模式下载，确保跨浏览器兼容性
+                Response.Headers.Add("Content-Disposition", $"attachment; filename=\"{fileName}\"");
+                return File(fileBytes, "application/octet-stream", fileName);
             }
             catch (ArgumentException ex)
             {
