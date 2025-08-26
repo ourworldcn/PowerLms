@@ -274,6 +274,11 @@ namespace PowerLmsServer.EfData
         /// 组织机构表。
         /// </summary>
         public DbSet<PlOrganization> PlOrganizations { get; set; }
+
+        /// <summary>
+        /// 机构参数表。
+        /// </summary>
+        public DbSet<PlOrganizationParameter> PlOrganizationParameters { get; set; }
         #endregion 组织机构相关
 
         #region 客户资料相关

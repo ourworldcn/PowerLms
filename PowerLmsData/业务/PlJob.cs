@@ -155,19 +155,11 @@ namespace PowerLms.Data
 
         /// <summary>
         ///  财务日期。出口默认出港日期，进口默认出库日期。
+        /// 完全由前端计算和管理，后端不参与任何逻辑。
         /// </summary>
-        [Comment("出口默认出港日期，进口默认出库日期。")]
-        public DateTime AccountDate { get; set; }
-
-        /// <summary>
-        /// 财务日期（计算字段）。根据业务类型自动计算：
-        /// 进口业务（空运/海运）：财务日期 = 到港日期(ETA)
-        /// 出口业务（空运/海运）：财务日期 = 开航日期(Etd)
-        /// 当对应日期为空时，财务日期也为空
-        /// </summary>
-        [Comment("财务日期（计算字段），根据业务类型联动计算")]
+        [Comment("财务日期，由前端计算管理，后端不存储")]
         [NotMapped]
-        public DateTime? FinancialDate { get; set; }
+        public DateTime? AccountDate { get; set; }
 
         /// <summary>
         /// 开航日期。

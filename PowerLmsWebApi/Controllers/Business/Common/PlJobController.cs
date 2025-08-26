@@ -435,6 +435,10 @@ namespace PowerLmsWebApi.Controllers
                 entity.Property(c => c.AuditOperatorId).IsModified = false;
                 entity.Property(c => c.AuditDateTime).IsModified = false;
                 
+                // 🔒 保护账期关闭相关字段，防止普通修改操作影响
+                entity.Property(c => c.CloseDate).IsModified = false;
+                entity.Property(c => c.ClosedBy).IsModified = false;
+                
                 _DbContext.SaveChanges();
 
                 _Logger.LogInformation("工作号修改成功：ID={JobId}, 工作号={JobNo}, 用户={UserId}", 
@@ -953,6 +957,269 @@ namespace PowerLmsWebApi.Controllers
         }
 
         #endregion 业务总表
+
+        #region 账期管理
+
+        /// <summary>
+        /// 预览账期关闭的影响范围。
+        /// </summary>
+        /// <param name="model">预览参数</param>
+        /// <returns>预览结果</returns>
+        /// <response code="200">预览成功，查看预览结果。</response>
+        /// <response code="401">无效令牌。</response>
+        /// <response code="404">机构参数未配置。</response>
+        [HttpGet]
+        [ApiExplorerSettings(IgnoreApi = true)]
+        public ActionResult<PreviewAccountingPeriodCloseReturnDto> PreviewAccountingPeriodClose(
+            [FromQuery] PreviewAccountingPeriodCloseParamsDto model)
+        {
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
+                return Unauthorized();
+
+            var result = new PreviewAccountingPeriodCloseReturnDto();
+            
+            // 使用当前用户的机构ID
+            var orgId = context.User.OrgId;
+            
+            // 获取机构参数
+            var parameter = _DbContext.PlOrganizationParameters.FirstOrDefault(p => p.OrgId == orgId);
+            if (parameter == null)
+            {
+                return NotFound($"当前机构未配置参数");
+            }
+
+            var targetPeriod = model.AccountingPeriod ?? parameter.CurrentAccountingPeriod;
+            if (string.IsNullOrEmpty(targetPeriod))
+            {
+                result.HasError = true;
+                result.ErrorCode = 400;
+                result.DebugMessage = "当前账期为空，请先配置机构参数";
+                return BadRequest(result);
+            }
+
+            result.CurrentPeriod = targetPeriod;
+            result.NextPeriod = CalculateNextPeriod(targetPeriod);
+
+            try
+            {
+                // 查找该账期内的所有工作号
+                // 注意：AccountDate现在是NotMapped字段，无法在数据库查询中使用
+                // 需要使用其他日期字段进行账期判断，如AuditDateTime（审核日期）
+                var jobsInPeriod = _DbContext.PlJobs
+                    .Where(j => j.OrgId == orgId && 
+                               j.AuditDateTime.HasValue &&
+                               j.AuditDateTime.Value.ToString("yyyyMM") == targetPeriod)
+                    .AsNoTracking()
+                    .ToList();
+
+                // 分类统计
+                var closableJobs = jobsInPeriod.Where(CanCloseJob).ToList();
+                var unClosableJobs = jobsInPeriod.Where(j => !CanCloseJob(j)).ToList();
+
+                result.ClosableJobCount = closableJobs.Count;
+                result.UnClosableJobCount = unClosableJobs.Count;
+
+                // 返回前20个示例
+                result.ClosableJobs = closableJobs.Take(20).ToList();
+                result.UnClosableJobs = unClosableJobs.Take(20).ToList();
+
+                // 判断是否可以关闭
+                if (unClosableJobs.Any())
+                {
+                    result.CanClose = false;
+                    result.ReasonCannotClose = $"存在 {unClosableJobs.Count} 个未审核的工作号，无法关闭账期";
+                }
+                else if (!closableJobs.Any())
+                {
+                    result.CanClose = false;
+                    result.ReasonCannotClose = "该账期内没有可关闭的工作号";
+                }
+                else
+                {
+                    result.CanClose = true;
+                }
+
+                _Logger.LogInformation("预览账期关闭：机构{OrgId}，账期{Period}，可关闭{ClosableCount}个，不可关闭{UnClosableCount}个",
+                    orgId, targetPeriod, result.ClosableJobCount, result.UnClosableJobCount);
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _Logger.LogError(ex, "预览账期关闭时发生错误：机构{OrgId}，账期{Period}", orgId, targetPeriod);
+                result.HasError = true;
+                result.ErrorCode = 500;
+                result.DebugMessage = $"预览账期关闭时发生错误: {ex.Message}";
+                return StatusCode(StatusCodes.Status500InternalServerError, result);
+            }
+        }
+
+        /// <summary>
+        /// 关闭账期。批量将指定账期内的已审核工作号状态设为"已关闭"，并自动递增账期。
+        /// </summary>
+        /// <param name="model">关闭参数</param>
+        /// <returns>关闭结果</returns>
+        /// <response code="200">关闭成功。</response>
+        /// <response code="400">关闭失败，可能存在未审核的工作号。</response>
+        /// <response code="401">无效令牌。</response>
+        /// <response code="403">权限不足。</response>
+        /// <response code="404">机构参数未配置。</response>
+        [HttpPost]
+        public ActionResult<CloseAccountingPeriodReturnDto> CloseAccountingPeriod(
+            CloseAccountingPeriodParamsDto model)
+        {
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
+                return Unauthorized();
+
+            // 权限验证 - 关闭账期需要特殊权限
+            string err;
+            if (!_AuthorizationManager.Demand(out err, "F.2.9"))
+                return StatusCode((int)HttpStatusCode.Forbidden, err);
+
+            var result = new CloseAccountingPeriodReturnDto();
+            
+            // 使用当前用户的机构ID
+            var orgId = context.User.OrgId;
+
+            try
+            {
+                // 获取机构参数
+                var parameter = _DbContext.PlOrganizationParameters.FirstOrDefault(p => p.OrgId == orgId);
+                if (parameter == null)
+                {
+                    return NotFound($"当前机构未配置参数");
+                }
+
+                var targetPeriod = model.AccountingPeriod ?? parameter.CurrentAccountingPeriod;
+                if (string.IsNullOrEmpty(targetPeriod))
+                {
+                    result.HasError = true;
+                    result.ErrorCode = 400;
+                    result.DebugMessage = "当前账期为空，请先配置机构参数";
+                    return BadRequest(result);
+                }
+
+                result.ClosedPeriod = targetPeriod;
+
+                // 使用事务确保数据一致性
+                using var transaction = _DbContext.Database.BeginTransaction();
+
+                // 查找该账期内的工作号
+                var jobsToProcess = _DbContext.PlJobs
+                    .Where(j => j.OrgId == orgId && 
+                               j.AuditDateTime.HasValue &&
+                               j.AuditDateTime.Value.ToString("yyyyMM") == targetPeriod)
+                    .ToList();
+
+                // 分类处理
+                var closableJobs = jobsToProcess.Where(CanCloseJob).ToList();
+                var unClosableJobs = jobsToProcess.Where(j => !CanCloseJob(j)).ToList();
+
+                // 验证是否可以关闭
+                if (unClosableJobs.Any() && !model.ForceClose)
+                {
+                    result.HasError = true;
+                    result.ErrorCode = 400;
+                    result.DebugMessage = $"存在 {unClosableJobs.Count} 个未审核的工作号，无法关闭账期。如需强制关闭，请设置 ForceClose = true";
+                    
+                    transaction.Rollback();
+                    return BadRequest(result);
+                }
+
+                if (!closableJobs.Any())
+                {
+                    result.HasError = true;
+                    result.ErrorCode = 400;
+                    result.DebugMessage = "该账期内没有可关闭的工作号";
+                    
+                    transaction.Rollback();
+                    return BadRequest(result);
+                }
+
+                // 批量关闭工作号
+                var closeTime = OwHelper.WorldNow;
+                var closedBy = context.User.Id;
+
+                foreach (var job in closableJobs)
+                {
+                    job.JobState = 16; // 已关闭
+                    job.CloseDate = closeTime;
+                    job.ClosedBy = closedBy;
+                }
+
+                result.AffectedJobCount = closableJobs.Count;
+
+                // 更新机构账期
+                var nextPeriod = CalculateNextPeriod(targetPeriod);
+                parameter.CurrentAccountingPeriod = nextPeriod;
+                result.NewAccountingPeriod = nextPeriod;
+
+                // 保存更改
+                _DbContext.SaveChanges();
+                transaction.Commit();
+
+                result.Message = $"成功关闭账期 {targetPeriod}，影响 {result.AffectedJobCount} 个工作号，新账期为 {nextPeriod}";
+
+                _Logger.LogInformation("账期关闭成功：机构{OrgId}，关闭账期{ClosedPeriod}，影响{AffectedCount}个工作号，新账期{NewPeriod}，操作人{UserId}",
+                    orgId, targetPeriod, result.AffectedJobCount, nextPeriod, context.User.Id);
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _Logger.LogError(ex, "关闭账期时发生错误：机构{OrgId}，账期{Period}", orgId, model.AccountingPeriod);
+                result.HasError = true;
+                result.ErrorCode = 500;
+                result.DebugMessage = $"关闭账期时发生错误: {ex.Message}";
+                return StatusCode(StatusCodes.Status500InternalServerError, result);
+            }
+        }
+
+        #endregion 账期管理
+
+        #region 账期管理辅助方法
+
+        /// <summary>
+        /// 判断工作号是否可以关闭。
+        /// </summary>
+        /// <param name="job">工作号对象</param>
+        /// <returns>是否可以关闭</returns>
+        private bool CanCloseJob(PlJob job)
+        {
+            // 业务规则验证：
+            // 1. 必须是已审核状态 (JobState = 8)
+            // 2. 不能已经关闭 (CloseDate 为空)
+            // 3. 审核日期不能为空（用于账期判断）
+            return job.JobState == 8 && 
+                   job.CloseDate == null && 
+                   job.AuditDateTime.HasValue;
+        }
+
+        /// <summary>
+        /// 计算下一个账期。
+        /// </summary>
+        /// <param name="currentPeriod">当前账期，格式YYYYMM</param>
+        /// <returns>下一个账期</returns>
+        private string CalculateNextPeriod(string currentPeriod)
+        {
+            if (string.IsNullOrEmpty(currentPeriod) || currentPeriod.Length != 6)
+            {
+                throw new ArgumentException("账期格式错误，应为YYYYMM格式", nameof(currentPeriod));
+            }
+
+            if (!int.TryParse(currentPeriod.Substring(0, 4), out var year) ||
+                !int.TryParse(currentPeriod.Substring(4, 2), out var month))
+            {
+                throw new ArgumentException("账期格式错误，应为YYYYMM格式", nameof(currentPeriod));
+            }
+
+            var date = new DateTime(year, month, 1);
+            var nextDate = date.AddMonths(1);
+            
+            return nextDate.ToString("yyyyMM");
+        }
+
+        #endregion 账期管理辅助方法
 
     }
 

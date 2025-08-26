@@ -78,7 +78,7 @@ namespace PowerLmsServer.Services
         /// 
         /// Excel文件结构：
         /// - 多Sheet：每个Catalog Code对应一个Sheet
-        /// - Sheet命名：Sheet名称 = DataDicCatalog.Code的具体值（如"COUNTRY"、"PORT"）
+        /// - Sheet命名：Sheet名称 = 传入的Catalog Code值（必须是DataDicCatalog.Code字段的有效值）
         /// - 列结构：SimpleDataDic的所有字段（排除DataDicId和Id）
         /// - 数据来源：通过DataDicId关联查询ow_SimpleDataDics表
         /// - 空数据支持：即使Catalog Code有效但无数据，也导出包含表头的Sheet
@@ -94,7 +94,14 @@ namespace PowerLmsServer.Services
         /// - 批量映射查询减少数据库往返次数
         /// - 预计算属性信息避免重复反射
         /// </summary>
-        /// <param name="catalogCodes">要导出的Catalog Code列表，对应ow_DataDicCatalogs表的Code字段值</param>
+        /// <param name="catalogCodes">
+        /// 简单字典分类代码列表，必须是数据库表DD_DataDicCatalogs.Code字段的有效值。
+        /// 这些是业务上的字典分类代码，比如：
+        /// - "CARGOTYPE"（货物类型）
+        /// - "PackType"（包装方式）  
+        /// - "AddedTaxType"（增值税类型）
+        /// 注意：不是实体名称，不是表名，也不是独立表字典（如PlCountry、PlPort、PlCurrency等）
+        /// </param>
         /// <param name="orgId">组织ID，用于多租户数据隔离</param>
         /// <returns>Excel文件字节数组，文件名格式：SimpleDataDic_[Code1]_[Code2]_[DateTime].xls</returns>
         public byte[] ExportSimpleDictionaries(List<string> catalogCodes, Guid? orgId)
@@ -102,23 +109,65 @@ namespace PowerLmsServer.Services
             if (catalogCodes == null || !catalogCodes.Any())
                 throw new ArgumentException("请至少指定一个Catalog Code");
 
+            // 验证Catalog Code的合法性 - Excel Sheet名称不能包含非法字符
+            var invalidChars = new char[] { '\\', '/', '?', '*', '[', ']', ':', '.' };
+            foreach (var catalogCode in catalogCodes)
+            {
+                if (string.IsNullOrWhiteSpace(catalogCode))
+                {
+                    throw new ArgumentException("Catalog Code不能为空或空白字符");
+                }
+
+                if (catalogCode.Length > 31)
+                {
+                    throw new ArgumentException($"Catalog Code '{catalogCode}' 长度超过31个字符，Excel Sheet名称不支持");
+                }
+
+                if (catalogCode.IndexOfAny(invalidChars) >= 0)
+                {
+                    throw new ArgumentException($"Catalog Code '{catalogCode}' 包含非法字符。Excel Sheet名称不能包含以下字符: \\ / ? * [ ] : .");
+                }
+
+                if (catalogCode.StartsWith("'") || catalogCode.EndsWith("'"))
+                {
+                    throw new ArgumentException($"Catalog Code '{catalogCode}' 不能以单引号开头或结尾");
+                }
+            }
+
             try
             {
                 // 性能优化：批量查询所有需要的DataDicCatalog，避免多次数据库查询
                 var catalogMapping = GetCatalogMappingBatch(catalogCodes, orgId);
                 
+                _Logger.LogInformation("开始导出，传入的CatalogCodes: {CatalogCodes}", string.Join(",", catalogCodes));
+                _Logger.LogInformation("数据库映射结果: {MappingCount} 个匹配项", catalogMapping.Count);
+                
                 using var workbook = new HSSFWorkbook();
                 int totalExported = 0;
+                int createdSheets = 0;
 
                 foreach (var catalogCode in catalogCodes)
                 {
+                    _Logger.LogInformation("处理CatalogCode: {CatalogCode}", catalogCode);
+                    
                     if (catalogMapping.TryGetValue(catalogCode, out var catalogId))
                     {
-                        var sheet = workbook.CreateSheet(catalogCode);
-                        var exportedCount = ExportSimpleDictionaryToSheet(sheet, catalogCode, catalogId, orgId);
-                        totalExported += exportedCount;
+                        _Logger.LogInformation("找到映射 {CatalogCode} -> {CatalogId}，创建Sheet", catalogCode, catalogId);
                         
-                        _Logger.LogInformation("导出简单字典 {CatalogCode} 到Sheet，共 {Count} 条记录", catalogCode, exportedCount);
+                        try
+                        {
+                            var sheet = workbook.CreateSheet(catalogCode);
+                            var exportedCount = ExportSimpleDictionaryToSheet(sheet, catalogCode, catalogId, orgId);
+                            totalExported += exportedCount;
+                            createdSheets++;
+                            
+                            _Logger.LogInformation("成功创建Sheet {CatalogCode}，导出 {Count} 条记录", catalogCode, exportedCount);
+                        }
+                        catch (Exception ex)
+                        {
+                            _Logger.LogError(ex, "创建Sheet {CatalogCode} 时发生错误", catalogCode);
+                            throw;
+                        }
                     }
                     else
                     {
@@ -126,12 +175,23 @@ namespace PowerLmsServer.Services
                     }
                 }
 
+                // 如果没有创建任何Sheet，创建一个默认的空Sheet以确保Excel文件格式正确
+                if (createdSheets == 0)
+                {
+                    _Logger.LogWarning("所有Catalog Code都无效，创建默认空Sheet");
+                    var defaultSheet = workbook.CreateSheet("NoData");
+                    var headerRow = defaultSheet.CreateRow(0);
+                    headerRow.CreateCell(0).SetCellValue("提示");
+                    var dataRow = defaultSheet.CreateRow(1);
+                    dataRow.CreateCell(0).SetCellValue("未找到匹配的字典分类");
+                }
+
                 // 性能优化：流式写入内存流
                 using var stream = new MemoryStream();
                 workbook.Write(stream, true);
                 workbook.Close();
 
-                _Logger.LogInformation("导出简单字典完成，共 {TotalCount} 条记录，{SheetCount} 个Sheet", totalExported, catalogCodes.Count);
+                _Logger.LogInformation("导出简单字典完成，共 {TotalCount} 条记录，{SheetCount} 个Sheet", totalExported, createdSheets);
                 return stream.ToArray();
             }
             catch (Exception ex)

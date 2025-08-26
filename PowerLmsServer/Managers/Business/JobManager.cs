@@ -280,9 +280,13 @@ namespace PowerLmsServer.Managers
         /// <summary>
         /// 为一组工作任务对象填充财务日期。
         /// 批量处理，注重性能，避免N+1查询问题。
+        /// 
+        /// 注意：根据会议纪要决议，财务日期计算完全交给前端负责。
+        /// 此方法保留供前端参考计算逻辑，后端不再主动调用。
         /// </summary>
         /// <param name="jobs">工作任务对象集合</param>
         /// <param name="context">数据库上下文</param>
+        [Obsolete("财务日期计算已交给前端处理，此方法仅供参考，后端不再调用")]
         public void FillFinancialDates(IEnumerable<PlJob> jobs, DbContext context)
         {
             if (jobs?.Any() != true) return;
@@ -293,25 +297,33 @@ namespace PowerLmsServer.Managers
             // 批量查询所有相关的业务方向，避免N+1问题
             var businessDirections = GetBusinessDirectionsBatch(jobIds, context);
 
-            // 为每个job填充财务日期
+            // 为每个job计算财务日期（供前端参考）
             foreach (var job in jobList)
             {
-                job.FinancialDate = CalculateFinancialDate(job, businessDirections.GetValueOrDefault(job.Id));
+                var calculatedDate = CalculateFinancialDate(job, businessDirections.GetValueOrDefault(job.Id));
+                // 注意：不再自动设置AccountDate，由前端负责
+                // job.AccountDate = calculatedDate;
             }
         }
 
         /// <summary>
         /// 为单个工作任务对象填充财务日期
+        /// 
+        /// 注意：根据会议纪要决议，财务日期计算完全交给前端负责。
+        /// 此方法保留供前端参考计算逻辑，后端不再主动调用。
         /// </summary>
         /// <param name="job">工作任务对象</param>
         /// <param name="context">数据库上下文</param>
+        [Obsolete("财务日期计算已交给前端处理，此方法仅供参考，后端不再调用")]
         public void FillFinancialDate(PlJob job, DbContext context)
         {
             if (job == null) return;
 
             // 优化：只查询业务方向，不获取完整单据对象
             var businessDirections = GetBusinessDirectionsBatch(new HashSet<Guid> { job.Id }, context);
-            job.FinancialDate = CalculateFinancialDate(job, businessDirections.GetValueOrDefault(job.Id));
+            var calculatedDate = CalculateFinancialDate(job, businessDirections.GetValueOrDefault(job.Id));
+            // 注意：不再自动设置AccountDate，由前端负责
+            // job.AccountDate = calculatedDate;
         }
 
         /// <summary>

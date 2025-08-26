@@ -266,6 +266,17 @@ namespace PowerLmsWebApi.Controllers
                 _DbContext.SaveChanges();
                 result.Id = id;
 
+                // 自动为新机构创建默认参数
+                var parameter = new PlOrganizationParameter
+                {
+                    OrgId = id,
+                    CurrentAccountingPeriod = DateTime.Now.ToString("yyyyMM"),
+                    BillHeader1 = model.Item.Name_Name ?? "",
+                    BillHeader2 = "",
+                    BillFooter = model.Item.Name_Name ?? ""
+                };
+                _DbContext.PlOrganizationParameters.Add(parameter);
+
                 // 使相关商户缓存失效
                 // 如果是顶层组织机构（ParentId为null），直接使用其MerchantId
                 if (model.Item.ParentId == null && model.Item.MerchantId.HasValue)
@@ -314,6 +325,10 @@ namespace PowerLmsWebApi.Controllers
                         _DbContext.SaveChanges(); // 保存财务科目设置
                     }
                 }
+
+                // 最终保存机构参数
+                _DbContext.SaveChanges();
+                _Logger.LogInformation("为新机构 {orgId} 自动创建了默认参数配置", id);
             }
             catch (Exception err)
             {
@@ -426,7 +441,7 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
-        /// <response code="404">找不到指定Id的对象 -或- 不是父对象的孩子 -或- 子对象还有孩子。</response> 
+        /// <response code="404">找不到指定Id的对象 -或- 不是父对象的孩子 -or- 子对象还有孩子。</response> 
         [HttpDelete]
         public ActionResult<RemoveOrgRelationReturnDto> RemoveOrgRelation([FromBody] RemoveOrgRelationParamsDto model)
         {
@@ -529,7 +544,15 @@ namespace PowerLmsWebApi.Controllers
                 _Logger.LogInformation("准备删除组织机构: ID={orgId}, 名称='{orgName}', 父ID={parentId}, 商户ID={merchantId}",
                     item.Id, item.Name_DisplayName, item.ParentId, merchantId);
 
-                // 1. 删除用户-机构关系
+                // 1. 删除机构参数
+                var parameter = _DbContext.PlOrganizationParameters.FirstOrDefault(p => p.OrgId == id);
+                if (parameter != null)
+                {
+                    _DbContext.PlOrganizationParameters.Remove(parameter);
+                    _Logger.LogInformation("删除组织机构 {orgId} 的参数配置", id);
+                }
+
+                // 2. 删除用户-机构关系
                 var userOrgRelations = _DbContext.AccountPlOrganizations
                     .Where(ao => ao.OrgId == id)
                     .ToList();
@@ -541,7 +564,7 @@ namespace PowerLmsWebApi.Controllers
                     _DbContext.SaveChanges();
                 }
 
-                // 2. 执行删除组织机构操作
+                // 3. 执行删除组织机构操作
                 _EntityManager.Remove(item);
                 _DbContext.SaveChanges();
 

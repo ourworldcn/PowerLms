@@ -632,4 +632,107 @@ namespace PowerLmsWebApi.Controllers
     }
     #endregion  空运进口单相关
 
+    #region 账期管理
+
+    /// <summary>
+    /// 关闭账期功能的参数封装类。
+    /// </summary>
+    public class CloseAccountingPeriodParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 要关闭的账期，格式YYYYMM。如果不指定，使用机构参数中的当前账期。
+        /// </summary>
+        public string AccountingPeriod { get; set; }
+
+        /// <summary>
+        /// 是否强制关闭，即使存在未审核的工作号也强制关闭。默认false。
+        /// </summary>
+        public bool ForceClose { get; set; } = false;
+    }
+
+    /// <summary>
+    /// 关闭账期功能的返回值封装类。
+    /// </summary>
+    public class CloseAccountingPeriodReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 本次关闭操作影响的工作号数量。
+        /// </summary>
+        public int AffectedJobCount { get; set; }
+
+        /// <summary>
+        /// 关闭后的新账期。
+        /// </summary>
+        public string NewAccountingPeriod { get; set; }
+
+        /// <summary>
+        /// 本次关闭的账期。
+        /// </summary>
+        public string ClosedPeriod { get; set; }
+
+        /// <summary>
+        /// 关闭操作的详细信息。
+        /// </summary>
+        public string Message { get; set; }
+    }
+
+    /// <summary>
+    /// 预览账期关闭影响范围功能的参数封装类。
+    /// </summary>
+    public class PreviewAccountingPeriodCloseParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 要预览的账期，格式YYYYMM。如果不指定，使用机构参数中的当前账期。
+        /// </summary>
+        public string AccountingPeriod { get; set; }
+    }
+
+    /// <summary>
+    /// 预览账期关闭影响范围功能的返回值封装类。
+    /// </summary>
+    public class PreviewAccountingPeriodCloseReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 当前账期。
+        /// </summary>
+        public string CurrentPeriod { get; set; }
+
+        /// <summary>
+        /// 可关闭的工作号数量。
+        /// </summary>
+        public int ClosableJobCount { get; set; }
+
+        /// <summary>
+        /// 不可关闭的工作号数量。
+        /// </summary>
+        public int UnClosableJobCount { get; set; }
+
+        /// <summary>
+        /// 可关闭的工作号列表（只返回前20个）。
+        /// </summary>
+        public List<PlJob> ClosableJobs { get; set; } = new List<PlJob>();
+
+        /// <summary>
+        /// 不可关闭的工作号列表（只返回前20个）。
+        /// </summary>
+        public List<PlJob> UnClosableJobs { get; set; } = new List<PlJob>();
+
+        /// <summary>
+        /// 关闭后的新账期。
+        /// </summary>
+        public string NextPeriod { get; set; }
+
+        /// <summary>
+        /// 是否可以执行关闭操作。
+        /// </summary>
+        public bool CanClose { get; set; }
+
+        /// <summary>
+        /// 不能关闭的原因。
+        /// </summary>
+        public string ReasonCannotClose { get; set; }
+    }
+
+    #endregion 账期管理
+
 }
