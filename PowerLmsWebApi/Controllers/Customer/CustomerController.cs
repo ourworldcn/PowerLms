@@ -149,6 +149,8 @@ namespace PowerLmsWebApi.Controllers
             foreach (var item in model.Items)
             {
                 _DbContext.Entry(item).Property(c => c.OrgId).IsModified = false;
+                // 禁止修改客户有效性字段，需要使用专门的接口
+                _DbContext.Entry(item).Property(c => c.IsValid).IsModified = false;
             }
             _DbContext.SaveChanges();
             return result;
@@ -749,6 +751,42 @@ namespace PowerLmsWebApi.Controllers
         }
         #endregion 客户上的装货地址操作
 
-    }
+        #region 客户有效性管理
 
+        /// <summary>
+        /// 设置客户有效性状态。专门用于启用或停用客户。
+        /// </summary>
+        /// <param name="model">客户有效性设置参数</param>
+        /// <returns>设置结果</returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
+        /// <response code="404">指定Id的客户不存在。</response>  
+        [HttpPost]
+        public ActionResult<SetCustomerValidityReturnDto> SetCustomerValidity(SetCustomerValidityParamsDto model)
+        {
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            string err;
+            if (!_AuthorizationManager.Demand(out err, "C.1.8")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            var result = new SetCustomerValidityReturnDto();
+            var customer = _DbContext.PlCustomers.Where(c => c.OrgId == context.User.OrgId && c.Id == model.CustomerId).FirstOrDefault();
+            if (customer == null) return NotFound($"未找到指定的客户，Id={model.CustomerId}");
+            customer.IsValid = model.IsValid;
+            _DbContext.SaveChanges();
+            var logEntry = new OwSystemLog
+            {
+                OrgId = context.User.OrgId,
+                ActionId = "Customer.SetValidity",
+                ExtraGuid = model.CustomerId,
+                ExtraString = $"{(model.IsValid ? "启用" : "停用")}客户",
+                ExtraDecimal = context.User.Id.GetHashCode()
+            };
+            _DbContext.OwSystemLogs.Add(logEntry);
+            _DbContext.SaveChanges();
+            return result;
+        }
+
+        #endregion 客户有效性管理
+
+    }
 }

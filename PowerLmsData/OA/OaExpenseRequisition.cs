@@ -132,6 +132,12 @@ namespace PowerLms.Data.OA
         public string RelatedCustomer { get; set; }
 
         /// <summary>
+        /// 客户Id。关联客户资料表，用于选择具体的客户/公司。
+        /// </summary>
+        [Comment("客户Id。关联客户资料表，用于选择具体的客户/公司")]
+        public Guid? CustomerId { get; set; }
+
+        /// <summary>
         /// 收款银行。
         /// </summary>
         [Comment("收款银行")]

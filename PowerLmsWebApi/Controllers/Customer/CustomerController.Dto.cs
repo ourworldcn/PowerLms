@@ -450,4 +450,33 @@ namespace PowerLmsWebApi.Controllers
     }
     #endregion 联系人
 
+    #region 客户有效性管理
+
+    /// <summary>
+    /// 设置客户有效性状态功能参数封装类。
+    /// </summary>
+    public class SetCustomerValidityParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 客户Id。
+        /// </summary>
+        [Required]
+        public Guid CustomerId { get; set; }
+
+        /// <summary>
+        /// 是否有效。true=启用，false=停用。
+        /// </summary>
+        [Required]
+        public bool IsValid { get; set; }
+    }
+
+    /// <summary>
+    /// 设置客户有效性状态功能返回值封装类。
+    /// </summary>
+    public class SetCustomerValidityReturnDto : ReturnDtoBase
+    {
+    }
+
+    #endregion 客户有效性管理
+
 }

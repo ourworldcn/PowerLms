@@ -1002,13 +1002,17 @@ namespace PowerLmsWebApi.Controllers
 
             try
             {
-                // 查找该账期内的所有工作号
-                // 注意：AccountDate现在是NotMapped字段，无法在数据库查询中使用
-                // 需要使用其他日期字段进行账期判断，如AuditDateTime（审核日期）
+                // 生成账期的日期范围
+                var (startDate, endDate) = GetPeriodDateRange(targetPeriod);
+                
+                // 使用日期范围查询，避免ToString()翻译问题
+                // startDate: 当月第一天 00:00:00
+                // endDate: 下月第一天 00:00:00，使用 < 比较，包含当月所有时间
                 var jobsInPeriod = _DbContext.PlJobs
                     .Where(j => j.OrgId == orgId && 
                                j.AuditDateTime.HasValue &&
-                               j.AuditDateTime.Value.ToString("yyyyMM") == targetPeriod)
+                               j.AuditDateTime.Value >= startDate &&
+                               j.AuditDateTime.Value < endDate)
                     .AsNoTracking()
                     .ToList();
 
@@ -1104,11 +1108,17 @@ namespace PowerLmsWebApi.Controllers
                 // 使用事务确保数据一致性
                 using var transaction = _DbContext.Database.BeginTransaction();
 
-                // 查找该账期内的工作号
+                // 生成账期的日期范围
+                var (startDate, endDate) = GetPeriodDateRange(targetPeriod);
+                
+                // 使用日期范围查询，避免ToString()翻译问题
+                // startDate: 当月第一天 00:00:00
+                // endDate: 下月第一天 00:00:00，使用 < 比较，包含当月所有时间
                 var jobsToProcess = _DbContext.PlJobs
                     .Where(j => j.OrgId == orgId && 
                                j.AuditDateTime.HasValue &&
-                               j.AuditDateTime.Value.ToString("yyyyMM") == targetPeriod)
+                               j.AuditDateTime.Value >= startDate &&
+                               j.AuditDateTime.Value < endDate)
                     .ToList();
 
                 // 分类处理
@@ -1180,6 +1190,24 @@ namespace PowerLmsWebApi.Controllers
         #region 账期管理辅助方法
 
         /// <summary>
+        /// 根据账期字符串生成起始和结束日期
+        /// </summary>
+        /// <param name="accountingPeriod">账期，格式YYYYMM，如"202507"</param>
+        /// <returns>该账期的起始日期和结束日期</returns>
+        private (DateTime StartDate, DateTime EndDate) GetPeriodDateRange(string accountingPeriod)
+        {
+            if (string.IsNullOrEmpty(accountingPeriod) || accountingPeriod.Length != 6)
+            {
+                throw new ArgumentException("账期格式错误，应为YYYYMM格式", nameof(accountingPeriod));
+            }
+            var year = int.Parse(accountingPeriod.Substring(0, 4));
+            var month = int.Parse(accountingPeriod.Substring(4, 2));
+            var startDate = new DateTime(year, month, 1); // 当月第一天 00:00:00
+            var endDate = startDate.AddMonths(1); // 下月第一天 00:00:00
+            return (startDate, endDate);
+        }
+
+        /// <summary>
         /// 判断工作号是否可以关闭。
         /// </summary>
         /// <param name="job">工作号对象</param>
@@ -1206,16 +1234,13 @@ namespace PowerLmsWebApi.Controllers
             {
                 throw new ArgumentException("账期格式错误，应为YYYYMM格式", nameof(currentPeriod));
             }
-
             if (!int.TryParse(currentPeriod.Substring(0, 4), out var year) ||
                 !int.TryParse(currentPeriod.Substring(4, 2), out var month))
             {
                 throw new ArgumentException("账期格式错误，应为YYYYMM格式", nameof(currentPeriod));
             }
-
             var date = new DateTime(year, month, 1);
             var nextDate = date.AddMonths(1);
-            
             return nextDate.ToString("yyyyMM");
         }
 

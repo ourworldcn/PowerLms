@@ -1,20 +1,25 @@
 ﻿/*
  * 项目：PowerLms | 模块：主营业务费用申请单管理
- * 功能：主营业务费用申请单的业务逻辑管理，包括回退、状态管理等功能
- * 技术要点：依赖注入、服务层业务逻辑、工作流管理
- * 作者：zc | 创建：2025-01 | 修改：2025-01-27 实现主营业务费用申请单回退功能
+ * 功能：主营业务费用申请单的业务逻辑管理，包括回退、状态管理、子表查询等功能
+ * 技术要点：依赖注入、服务层业务逻辑、工作流管理、单一实体查询
+ * 作者：zc | 创建：2025-01 | 修改：2025-01-27 实现子表专一化查询服务，集中复杂连接查询逻辑
  */
 
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using OW.Data;
 using PowerLms.Data;
+using PowerLmsServer;
 using PowerLmsServer.EfData;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace PowerLmsServer.Managers.Financial
 {
     /// <summary>
     /// 主营业务费用申请单管理器。
-    /// 负责主营业务费用申请单的业务逻辑处理，包括状态管理、回退等功能。
+    /// 负责主营业务费用申请单的业务逻辑处理，包括状态管理、回退、子表查询等功能。
     /// </summary>
     [OwAutoInjection(ServiceLifetime.Scoped)]
     public class DocFeeRequisitionManager
@@ -30,6 +35,100 @@ namespace PowerLmsServer.Managers.Financial
 
         private readonly PowerLmsUserDbContext _DbContext;
         private readonly OwSqlAppLogger _SqlAppLogger;
+
+        #region 子表查询服务
+
+        /// <summary>
+        /// 获取费用申请单明细（子表）的专一化查询。
+        /// 这是唯一的基准函数，集中所有复杂的过滤和联合查询逻辑。
+        /// 返回单一实体集合的查询接口。
+        /// </summary>
+        /// <param name="conditional">条件字典，支持多实体前缀格式：
+        /// - DocFeeRequisitionItem.字段名：子表本身的属性
+        /// - DocFeeRequisition.字段名：关联父表的属性
+        /// - PlJob.字段名：关联工作任务的属性
+        /// - DocFee.字段名：关联费用的属性
+        /// - DocBill.字段名：关联账单的属性
+        /// - 无前缀：默认作为DocFeeRequisitionItem的属性</param>
+        /// <param name="orgId">组织ID，用于数据隔离</param>
+        /// <returns>返回DocFeeRequisitionItem单一实体集合的查询接口</returns>
+        public IQueryable<DocFeeRequisitionItem> GetAllDocFeeRequisitionItemQuery(Dictionary<string, string> conditional = null, Guid? orgId = null)
+        {
+            conditional ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            
+            // 第一步：逐一生成条件字典
+            var itemConditions = conditional.Where(p => p.Key.StartsWith($"{nameof(DocFeeRequisitionItem)}.", StringComparison.OrdinalIgnoreCase) || !p.Key.Contains('.')).ToDictionary(p => p.Key.StartsWith($"{nameof(DocFeeRequisitionItem)}.", StringComparison.OrdinalIgnoreCase) ? p.Key.Substring(nameof(DocFeeRequisitionItem).Length + 1) : p.Key, p => p.Value, StringComparer.OrdinalIgnoreCase);
+            var jobConditions = conditional.Where(p => p.Key.StartsWith($"{nameof(PlJob)}.", StringComparison.OrdinalIgnoreCase)).ToDictionary(p => p.Key.Substring(nameof(PlJob).Length + 1), p => p.Value, StringComparer.OrdinalIgnoreCase);
+            var feeConditions = conditional.Where(p => p.Key.StartsWith($"{nameof(DocFee)}.", StringComparison.OrdinalIgnoreCase)).ToDictionary(p => p.Key.Substring(nameof(DocFee).Length + 1), p => p.Value, StringComparer.OrdinalIgnoreCase);
+            var requisitionConditions = conditional.Where(p => p.Key.StartsWith($"{nameof(DocFeeRequisition)}.", StringComparison.OrdinalIgnoreCase)).ToDictionary(p => p.Key.Substring(nameof(DocFeeRequisition).Length + 1), p => p.Value, StringComparer.OrdinalIgnoreCase);
+            var billConditions = conditional.Where(p => p.Key.StartsWith($"{nameof(DocBill)}.", StringComparison.OrdinalIgnoreCase)).ToDictionary(p => p.Key.Substring(nameof(DocBill).Length + 1), p => p.Value, StringComparer.OrdinalIgnoreCase);
+            
+            // 第二步：生成各个子查询的过滤
+            var itemsQuery = EfHelper.GenerateWhereAnd(_DbContext.DocFeeRequisitionItems.AsQueryable(), itemConditions) ?? _DbContext.DocFeeRequisitionItems.AsQueryable();
+            var jobsQuery = EfHelper.GenerateWhereAnd(_DbContext.PlJobs.AsQueryable(), jobConditions) ?? _DbContext.PlJobs.AsQueryable();
+            var feesQuery = EfHelper.GenerateWhereAnd(_DbContext.DocFees.AsQueryable(), feeConditions) ?? _DbContext.DocFees.AsQueryable();
+            
+            // 在申请单子查询中直接应用OrgId过滤
+            var requisitionsQuery = EfHelper.GenerateWhereAnd(_DbContext.DocFeeRequisitions.AsQueryable(), requisitionConditions) ?? _DbContext.DocFeeRequisitions.AsQueryable();
+            if (orgId.HasValue)
+            {
+                requisitionsQuery = requisitionsQuery.Where(req => req.OrgId == orgId.Value);
+            }
+            
+            var billsQuery = EfHelper.GenerateWhereAnd(_DbContext.DocBills.AsQueryable(), billConditions) ?? _DbContext.DocBills.AsQueryable();
+            
+            // 第三步：把子查询连接起来
+            var joinedQuery = from item in itemsQuery 
+                             join req in requisitionsQuery on item.ParentId equals req.Id 
+                             join fee in feesQuery on item.FeeId equals fee.Id 
+                             join job in jobsQuery on fee.JobId equals job.Id 
+                             join bill in billsQuery on fee.BillId equals bill.Id 
+                             select item;
+                             
+            return joinedQuery;
+        }
+
+        /// <summary>
+        /// 获取申请单明细的已结算金额字典。
+        /// </summary>
+        /// <param name="itemIds">申请单明细ID列表</param>
+        /// <returns>已结算金额字典，Key为明细ID，Value为已结算金额</returns>
+        public Dictionary<Guid, decimal> GetInvoicedAmounts(IEnumerable<Guid> itemIds)
+        {
+            if (itemIds == null || !itemIds.Any())
+                return new Dictionary<Guid, decimal>();
+
+            var itemIdList = itemIds.ToList();
+
+            return _DbContext.PlInvoicesItems
+                .Where(x => x.RequisitionItemId.HasValue && itemIdList.Contains(x.RequisitionItemId.Value))
+                .GroupBy(x => x.RequisitionItemId.Value)
+                .AsNoTracking()
+                .ToList()
+                .ToDictionary(g => g.Key, g => g.Sum(x => x.Amount));
+        }
+
+        /// <summary>
+        /// 获取费用申请单父表查询。
+        /// </summary>
+        /// <param name="orgId">组织ID</param>
+        /// <returns>申请单查询接口</returns>
+        public IQueryable<DocFeeRequisition> GetAllDocFeeRequisitionQuery(Guid? orgId = null)
+        {
+            var query = _DbContext.DocFeeRequisitions.AsQueryable();
+
+            // 添加组织ID限制
+            if (orgId.HasValue)
+            {
+                query = query.Where(r => r.OrgId == orgId.Value);
+            }
+
+            return query;
+        }
+
+        #endregion 子表查询服务
+
+        #region 回退功能
 
         /// <summary>
         /// 回退主营业务费用申请单到初始状态。
@@ -134,9 +233,9 @@ namespace PowerLmsServer.Managers.Financial
 
                 // 检查是否有关联的结算单
                 var hasSettlement = _DbContext.PlInvoicesItems
-                    .Join(_DbContext.DocFeeRequisitionItems, 
-                          ii => ii.RequisitionItemId, 
-                          ri => ri.Id, 
+                    .Join(_DbContext.DocFeeRequisitionItems,
+                          ii => ii.RequisitionItemId,
+                          ri => ri.Id,
                           (ii, ri) => ri.ParentId)
                     .Any(parentId => parentId == requisitionId);
 
@@ -157,6 +256,8 @@ namespace PowerLmsServer.Managers.Financial
                 return null;
             }
         }
+
+        #endregion 回退功能
     }
 
     /// <summary>
@@ -256,7 +357,6 @@ namespace PowerLmsServer.Managers.Financial
         /// 申请金额。
         /// </summary>
         public decimal Amount { get; set; }
-
         /// <summary>
         /// 币种。
         /// </summary>

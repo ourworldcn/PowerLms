@@ -271,6 +271,12 @@ namespace PowerLms.Data
         /// </summary>
         [Comment("合同号")]
         public string ContractNo { get; set; }
+
+        /// <summary>
+        /// 收支方向。false=支出（付款），true=收入（收款）。
+        /// </summary>
+        [Comment("收支方向。false=支出（付款），true=收入（收款）")]
+        public bool IO { get; set; }
     }
 
     public static class DocBillExtensions
