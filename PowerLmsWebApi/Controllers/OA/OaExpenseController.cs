@@ -5,12 +5,14 @@ using PowerLms.Data;
 using PowerLms.Data.OA;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
+using PowerLmsServer.Managers.OA;
 using PowerLmsWebApi.Dto;
 using AutoMapper;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
+using System.Net;
 
 namespace PowerLmsWebApi.Controllers.OA
 {
@@ -28,6 +30,7 @@ namespace PowerLmsWebApi.Controllers.OA
         private readonly OwWfManager _WfManager;
         private readonly IMapper _Mapper;
         private readonly AuthorizationManager _AuthorizationManager;
+        private readonly OaExpenseManager _OaExpenseManager;
 
         /// <summary>
         /// 构造函数。
@@ -39,7 +42,8 @@ namespace PowerLmsWebApi.Controllers.OA
             EntityManager entityManager,
             OwWfManager wfManager,
             IMapper mapper,
-            AuthorizationManager authorizationManager)
+            AuthorizationManager authorizationManager,
+            OaExpenseManager oaExpenseManager)
         {
             _DbContext = dbContext;
             _ServiceProvider = serviceProvider;
@@ -49,6 +53,7 @@ namespace PowerLmsWebApi.Controllers.OA
             _WfManager = wfManager;
             _Mapper = mapper;
             _AuthorizationManager = authorizationManager;
+            _OaExpenseManager = oaExpenseManager;
         }
 
         #region OA费用申请单主表操作
@@ -434,6 +439,110 @@ namespace PowerLmsWebApi.Controllers.OA
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// 回退OA费用申请单到初始状态。
+        /// 会清空相关工作流、重置申请单状态并释放被锁定的费用。
+        /// 根据会议纪要，业务在任何状态下都可能被清空工作流并回退到工作流的初始状态。
+        /// </summary>
+        /// <param name="model">回退参数</param>
+        /// <returns>回退操作结果</returns>
+        /// <response code="200">回退成功。</response>
+        /// <response code="400">回退失败，申请单不存在或其他业务错误。</response>
+        /// <response code="401">无效令牌。</response>
+        /// <response code="403">权限不足。优先使用现有权限OA.1.3（日常费用撤销），如无合适权限则在注释中说明未来增加权限控制。</response>
+        /// <response code="404">指定ID的申请单不存在。</response>
+        /// <response code="500">回退过程中发生系统错误。</response>
+        [HttpPost]
+        public ActionResult<RevertOaExpenseRequisitionReturnDto> RevertOaExpenseRequisition(RevertOaExpenseRequisitionParamsDto model)
+        {
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
+            {
+                _Logger.LogWarning("无效的令牌{token}", model.Token);
+                return Unauthorized();
+            }
+
+            var result = new RevertOaExpenseRequisitionReturnDto();
+
+            try
+            {
+                // 1. 权限验证（优先使用现有权限"OA.1.3"（日常费用撤销），如无合适权限则说明未来增加权限控制）
+                string err;
+                if (!_AuthorizationManager.Demand(out err, "OA.1.3"))  // 使用现有的日常费用撤销权限
+                {
+                    _Logger.LogWarning("权限不足，用户{UserId}尝试回退OA费用申请单{RequisitionId}", context.User.Id, model.RequisitionId);
+                    return StatusCode((int)HttpStatusCode.Forbidden, "权限不足：需要日常费用撤销权限（OA.1.3）");
+                }
+
+                // 2. 记录回退原因到审计日志
+                if (!string.IsNullOrWhiteSpace(model.Reason))
+                {
+                    _Logger.LogInformation("OA费用申请单回退原因：RequisitionId={RequisitionId}, 操作人={UserId}, 原因={Reason}", 
+                        model.RequisitionId, context.User.Id, model.Reason);
+                }
+
+                // 3. 调用OaExpenseManager的回退服务方法
+                var revertResult = _OaExpenseManager.RevertRequisition(
+                    model.RequisitionId, 
+                    context.User.Id, 
+                    _WfManager);
+
+                // 4. 根据服务返回结果构造API响应
+                if (revertResult.Success)
+                {
+                    result.RequisitionId = revertResult.RequisitionId;
+                    result.ClearedWorkflowCount = revertResult.ClearedWorkflowCount;
+                    result.Message = revertResult.Message;
+
+                    _Logger.LogInformation("OA费用申请单回退成功：RequisitionId={RequisitionId}, 操作人={UserId}, 清空工作流{WorkflowCount}个", 
+                        model.RequisitionId, context.User.Id, revertResult.ClearedWorkflowCount);
+
+                    return result;
+                }
+                else
+                {
+                    // 回退失败，根据错误信息确定HTTP状态码
+                    _Logger.LogWarning("OA费用申请单回退失败：RequisitionId={RequisitionId}, 操作人={UserId}, 错误={Error}", 
+                        model.RequisitionId, context.User.Id, revertResult.Message);
+
+                    if (revertResult.Message.Contains("未找到"))
+                    {
+                        return NotFound(revertResult.Message);
+                    }
+                    else
+                    {
+                        result.HasError = true;
+                        result.ErrorCode = 400;
+                        result.DebugMessage = revertResult.Message;
+                        return BadRequest(result);
+                    }
+                }
+            }
+            catch (ArgumentException ex)
+            {
+                _Logger.LogError(ex, "回退OA费用申请单参数错误：RequisitionId={RequisitionId}, 操作人={UserId}", model.RequisitionId, context.User.Id);
+                result.HasError = true;
+                result.ErrorCode = 400;
+                result.DebugMessage = $"参数错误：{ex.Message}";
+                return BadRequest(result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                _Logger.LogError(ex, "回退OA费用申请单操作错误：RequisitionId={RequisitionId}, 操作人={UserId}", model.RequisitionId, context.User.Id);
+                result.HasError = true;
+                result.ErrorCode = 400;
+                result.DebugMessage = $"操作错误：{ex.Message}";
+                return BadRequest(result);
+            }
+            catch (Exception ex)
+            {
+                _Logger.LogError(ex, "回退OA费用申请单时发生系统错误：RequisitionId={RequisitionId}, 操作人={UserId}", model.RequisitionId, context.User.Id);
+                result.HasError = true;
+                result.ErrorCode = 500;
+                result.DebugMessage = $"系统错误：{ex.Message}";
+                return StatusCode(StatusCodes.Status500InternalServerError, result);
+            }
         }
 
         #region 私有辅助方法

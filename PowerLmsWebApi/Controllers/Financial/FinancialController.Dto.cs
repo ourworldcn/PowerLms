@@ -413,7 +413,7 @@ namespace PowerLmsWebApi.Dto
     public class ModifyDocFeeRequisitionItemReturnDto : ReturnDtoBase
     {
     }
-    #endregion 业务费用申请单明细
+    #endregion 业务费用申请单
 
     #region 业务费用申请单
 
@@ -891,4 +891,46 @@ namespace PowerLmsWebApi.Dto
     }
     #endregion 费用方案
 
+    #region 主营业务费用申请单回退功能
+
+    /// <summary>
+    /// 回退主营业务费用申请单功能的参数封装类。
+    /// </summary>
+    public class RevertDocFeeRequisitionParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 要回退的主营业务费用申请单ID。
+        /// </summary>
+        [Required]
+        public Guid RequisitionId { get; set; }
+
+        /// <summary>
+        /// 回退原因，可选，用于审计记录。
+        /// </summary>
+        [MaxLength(500)]
+        public string Reason { get; set; }
+    }
+
+    /// <summary>
+    /// 回退主营业务费用申请单功能的返回值封装类。
+    /// </summary>
+    public class RevertDocFeeRequisitionReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 回退的主营业务费用申请单ID。
+        /// </summary>
+        public Guid RequisitionId { get; set; }
+
+        /// <summary>
+        /// 清空的工作流数量，用于审计统计。
+        /// </summary>
+        public int ClearedWorkflowCount { get; set; }
+
+        /// <summary>
+        /// 操作结果描述信息。
+        /// </summary>
+        public string Message { get; set; }
+    }
+
+    #endregion
 }

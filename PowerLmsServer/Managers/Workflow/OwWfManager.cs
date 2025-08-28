@@ -18,12 +18,94 @@ namespace PowerLmsServer.Managers
         /// <summary>
         /// 构造函数。
         /// </summary>
-        public OwWfManager(PowerLmsUserDbContext dbContext)
+        public OwWfManager(PowerLmsUserDbContext dbContext, OwSqlAppLogger sqlAppLogger)
         {
             _DbContext = dbContext;
+            _SqlAppLogger = sqlAppLogger;
         }
 
         private PowerLmsUserDbContext _DbContext;
+        private readonly OwSqlAppLogger _SqlAppLogger;
+
+        /// <summary>
+        /// 根据业务文档ID清空相关的所有工作流数据。
+        /// 此方法用于申请单回退功能，会记录审计快照并级联删除所有相关工作流数据。
+        /// </summary>
+        /// <param name="docId">业务文档GUID，对应申请单ID</param>
+        /// <returns>返回被清空的工作流实体列表，这些实体已在数据库上下文中标记为删除状态</returns>
+        /// <exception cref="ArgumentException">当docId为空时抛出</exception>
+        /// <exception cref="InvalidOperationException">当数据操作错误时抛出</exception>
+        public List<OwWf> ClearWorkflowByDocId(Guid docId)
+        {
+            // 1. 参数有效性验证
+            if (docId == Guid.Empty)
+                throw new ArgumentException("业务文档ID不能为空", nameof(docId));
+
+            try
+            {
+                // 2. 查询与文档ID关联的所有工作流实例
+                var workflows = _DbContext.OwWfs
+                    .Where(wf => wf.DocId == docId)
+                    .ToList();
+
+                if (!workflows.Any())
+                {
+                    _SqlAppLogger.LogGeneralInfo($"工作流清理：未找到文档ID为 {docId} 的工作流数据");
+                    return new List<OwWf>();
+                }
+
+                // 3. 记录审计快照（操作前状态保存）
+                foreach (var workflow in workflows)
+                {
+                    var snapshotInfo = new
+                    {
+                        WorkflowId = workflow.Id,
+                        DocId = workflow.DocId,
+                        State = workflow.State,
+                        NodeCount = _DbContext.OwWfNodes.Count(n => n.ParentId == workflow.Id),
+                        ItemCount = _DbContext.OwWfNodeItems.Count(i => i.Parent.ParentId == workflow.Id)
+                    };
+
+                    _SqlAppLogger.LogGeneralInfo($"工作流回退快照记录：{System.Text.Json.JsonSerializer.Serialize(snapshotInfo)}");
+                }
+
+                // 4. 级联标记删除（NodeItems → Nodes → Workflows）
+                var workflowIds = workflows.Select(w => w.Id).ToList();
+
+                // 删除工作流节点项
+                var nodeItems = _DbContext.OwWfNodeItems
+                    .Where(item => workflowIds.Contains(item.Parent.ParentId.Value))
+                    .ToList();
+                
+                if (nodeItems.Any())
+                {
+                    _DbContext.OwWfNodeItems.RemoveRange(nodeItems);
+                    _SqlAppLogger.LogGeneralInfo($"工作流清理：删除 {nodeItems.Count} 个工作流节点项");
+                }
+
+                // 删除工作流节点
+                var nodes = _DbContext.OwWfNodes
+                    .Where(node => workflowIds.Contains(node.ParentId.Value))
+                    .ToList();
+                
+                if (nodes.Any())
+                {
+                    _DbContext.OwWfNodes.RemoveRange(nodes);
+                    _SqlAppLogger.LogGeneralInfo($"工作流清理：删除 {nodes.Count} 个工作流节点");
+                }
+
+                // 删除工作流
+                _DbContext.OwWfs.RemoveRange(workflows);
+                _SqlAppLogger.LogGeneralInfo($"工作流清理：删除 {workflows.Count} 个工作流实例，文档ID：{docId}");
+
+                return workflows;
+            }
+            catch (Exception ex)
+            {
+                _SqlAppLogger.LogGeneralInfo($"工作流清理失败：文档ID {docId}，错误：{ex.Message}");
+                throw new InvalidOperationException($"清空工作流数据时发生错误：{ex.Message}", ex);
+            }
+        }
 
         /// <summary>
         /// 获取指定操作人相关的工作流节点项。

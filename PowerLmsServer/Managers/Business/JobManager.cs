@@ -7,6 +7,7 @@ using NPOI.SS.Formula.Functions;
 using Org.BouncyCastle.Asn1.IsisMtt.X509;
 using OW.Data;
 using PowerLms.Data;
+using PowerLms.Data.OA;
 using PowerLmsServer.EfData;
 using System;
 using System.Collections.Generic;
@@ -258,6 +259,30 @@ namespace PowerLmsServer.Managers
         }
 
         /// <summary>
+        /// 关闭任务的审核状态。
+        /// </summary>
+        /// <param name="job"></param>
+        /// <param name="db"></param>
+        /// <returns></returns>
+        public bool CloseJobAudit(PlJob job, PowerLmsUserDbContext db)
+        {
+            if (job.JobState != 3)
+            {
+                return false;
+            }
+            job.JobState = 4;
+            job.AuditDateTime = null;
+            job.AuditOperatorId = null;
+            var fees = db.DocFees.Where(c => c.JobId == job.Id).ToList();
+            fees.ForEach(c =>
+            {
+                c.AuditDateTime = null;
+                c.AuditOperatorId = null;
+            });
+            return true;
+        }
+
+        /// <summary>
         /// 用指定的任务Id获取其下属业务对象。
         /// </summary>
         /// <param name="jobId"></param>
@@ -269,8 +294,6 @@ namespace PowerLmsServer.Managers
             if (context.Set<PlIaDoc>().FirstOrDefault(c => c.JobId == jobId) is PlIaDoc ia) return ia;
             if (context.Set<PlEsDoc>().FirstOrDefault(c => c.JobId == jobId) is PlEsDoc es) return es;
             if (context.Set<PlIsDoc>().FirstOrDefault(c => c.JobId == jobId) is PlIsDoc isDoc) return isDoc;
-            //if (context.Set<PlIaDoc>().FirstOrDefault(c => c.JobId == jobId) is PlIaDoc ia) return ia;
-            //if (context.Set<PlIaDoc>().FirstOrDefault(c => c.JobId == jobId) is PlIaDoc ia) return ia;
             return null;
         }
         #endregion 任务相关
@@ -401,5 +424,71 @@ namespace PowerLmsServer.Managers
         }
 
         #endregion 财务日期填充
+
+        #region 支撑类型定义
+
+        /// <summary>
+        /// 申请单回退操作的结果类型。
+        /// 用于统一服务层方法的返回格式。
+        /// </summary>
+        public class RevertResult
+        {
+            /// <summary>
+            /// 操作是否成功的布尔值。
+            /// </summary>
+            public bool Success { get; set; }
+
+            /// <summary>
+            /// 业务单据ID，用于确认操作目标。
+            /// </summary>
+            public Guid JobId { get; set; }
+
+            /// <summary>
+            /// 清空的工作流数量，用于审计统计。
+            /// </summary>
+            public int ClearedWorkflowCount { get; set; }
+
+            /// <summary>
+            /// 操作结果描述信息。
+            /// </summary>
+            public string Message { get; set; }
+
+            /// <summary>
+            /// 创建成功的回退结果。
+            /// </summary>
+            /// <param name="jobId">业务单据ID</param>
+            /// <param name="clearedWorkflowCount">清空的工作流数量</param>
+            /// <param name="message">操作描述信息</param>
+            /// <returns>成功的回退结果</returns>
+            public static RevertResult CreateSuccess(Guid jobId, int clearedWorkflowCount, string message)
+            {
+                return new RevertResult
+                {
+                    Success = true,
+                    JobId = jobId,
+                    ClearedWorkflowCount = clearedWorkflowCount,
+                    Message = message
+                };
+            }
+
+            /// <summary>
+            /// 创建失败的回退结果。
+            /// </summary>
+            /// <param name="jobId">业务单据ID</param>
+            /// <param name="message">失败描述信息</param>
+            /// <returns>失败的回退结果</returns>
+            public static RevertResult CreateFailure(Guid jobId, string message)
+            {
+                return new RevertResult
+                {
+                    Success = false,
+                    JobId = jobId,
+                    ClearedWorkflowCount = 0,
+                    Message = message
+                };
+            }
+        }
+
+        #endregion 支撑类型定义
     }
 }
