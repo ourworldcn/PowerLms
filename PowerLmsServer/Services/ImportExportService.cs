@@ -60,7 +60,7 @@ namespace PowerLmsServer.Services
 
         /// <summary>
         /// 获取支持的独立表字典类型列表
-        /// 包含：pl_Countries、pl_Ports、pl_CargoRoutes、pl_Currencies、pl_FeesTypes、pl_ExchangeRates、pl_UnitConversions、pl_ShippingContainersKinds
+        /// 包含：PlCountry、PlPort、PlCargoRoute、PlCurrency、FeesType、PlExchangeRate、UnitConversion、ShippingContainersKind
         /// </summary>
         /// <returns>独立表字典类型名称和中文名称的元组集合</returns>
         public List<(string TypeName, string DisplayName)> GetSupportedDictionaryTypes()
@@ -96,7 +96,7 @@ namespace PowerLmsServer.Services
 
         /// <summary>
         /// 获取支持的客户资料子表类型列表
-        /// 包含：pl_CustomerContacts、pl_BusinessHeaders、pl_Tidans、pl_CustomerBlacklists、pl_LoadingAddrs
+        /// 包含：PlCustomerContact、PlBusinessHeader、PlTidan、CustomerBlacklist、PlLoadingAddr
         /// </summary>
         /// <returns>子表类型名称和中文名称的元组集合</returns>
         public List<(string TypeName, string DisplayName)> GetSupportedCustomerSubTableTypes()
@@ -211,11 +211,11 @@ namespace PowerLmsServer.Services
 
         /// <summary>
         /// 批量导出多个独立表字典类型到Excel（多Sheet结构）
-        /// 支持：pl_Countries、pl_Ports、pl_CargoRoutes、pl_Currencies、pl_FeesTypes、pl_ExchangeRates、pl_UnitConversions、pl_ShippingContainersKinds
+        /// 支持：PlCountry、PlPort、PlCargoRoute、PlCurrency、FeesType、PlExchangeRate、UnitConversion、ShippingContainersKind
         /// 每个表类型对应一个Sheet，Sheet名称为实体类型名称
         /// 即使表无数据也会导出表头，便于客户填写数据模板
         /// </summary>
-        /// <param name="dictionaryTypes">要导出的表类型列表</param>
+        /// <param name="dictionaryTypes">要导出的实体类型名称列表（如：PlCountry、PlPort等）</param>
         /// <param name="orgId">组织ID，用于多租户数据隔离</param>
         /// <returns>Excel文件字节数组</returns>
         public byte[] ExportDictionaries(List<string> dictionaryTypes, Guid? orgId)
@@ -273,8 +273,9 @@ namespace PowerLmsServer.Services
 
         /// <summary>
         /// 批量导入多个独立表字典类型（多Sheet结构）
-        /// 自动识别Excel中的所有Sheet，根据Sheet名称匹配表类型
-        /// 支持：pl_Countries、pl_Ports、pl_CargoRoutes、pl_Currencies、pl_FeesTypes、pl_ExchangeRates、pl_UnitConversions、pl_ShippingContainersKinds
+        /// 自动识别Excel中的所有Sheet，根据Sheet名称匹配实体类型
+        /// 支持：PlCountry、PlPort、PlCargoRoute、PlCurrency、FeesType、PlExchangeRate、UnitConversion、ShippingContainersKind
+        /// Excel中Sheet名称必须使用实体类型名称（如：PlCountry、PlPort等）
         /// </summary>
         /// <param name="file">Excel文件</param>
         /// <param name="orgId">组织ID，用于多租户数据隔离</param>
@@ -376,7 +377,7 @@ namespace PowerLmsServer.Services
         /// 每个表类型对应一个Sheet，Sheet名称为实体类型名称
         /// 即使表无数据也会导出表头，便于客户填写数据模板
         /// </summary>
-        /// <param name="tableTypes">要导出的表类型列表（可包含PlCustomer和所有客户子表）</param>
+        /// <param name="tableTypes">要导出的实体类型名称列表（如：PlCustomer、PlCustomerContact等）</param>
         /// <param name="orgId">组织ID，用于多租户数据隔离</param>
         /// <returns>Excel文件字节数组</returns>
         public byte[] ExportCustomerTables(List<string> tableTypes, Guid? orgId)
@@ -433,8 +434,9 @@ namespace PowerLmsServer.Services
 
         /// <summary>
         /// 批量导入客户资料表（多Sheet结构）
-        /// 自动识别Excel中的所有Sheet，根据Sheet名称匹配表类型
+        /// 自动识别Excel中的所有Sheet，根据Sheet名称匹配实体类型
         /// 支持客户主表和所有客户子表
+        /// Excel中Sheet名称必须使用实体类型名称（如：PlCustomer、PlCustomerContact等）
         /// </summary>
         /// <param name="file">Excel文件</param>
         /// <param name="orgId">组织ID，用于多租户数据隔离</param>
@@ -480,7 +482,7 @@ namespace PowerLmsServer.Services
                             
                             result.TotalImportedCount += importedCount;
                             result.ProcessedSheets++;
-                            
+         
                             _Logger.LogInformation("导入客户资料表Sheet {TableName} 成功，共 {Count} 条记录", sheetName, importedCount);
                         }
                         else
@@ -592,7 +594,7 @@ namespace PowerLmsServer.Services
         /// <summary>
         /// 导入实体数据
         /// 自动处理Id和OrgId字段：Id生成新GUID，OrgId使用当前用户的机构ID
-        /// 修复：使用安全的属性映射创建，避免重复键错误
+        /// 安全的属性映射创建，避免重复键错误，完整的错误处理机制
         /// </summary>
         /// <typeparam name="T">实体类型</typeparam>
         /// <param name="sheet">Excel工作表</param>
@@ -601,24 +603,32 @@ namespace PowerLmsServer.Services
         /// <returns>导入的记录数</returns>
         private int ImportEntityData<T>(ISheet sheet, Guid? orgId, bool updateExisting) where T : class, new()
         {
-            if (sheet.LastRowNum < 1) return 0; // 没有数据行
+            if (sheet.LastRowNum < 1)
+            {
+                _Logger.LogDebug("表 {EntityType} 的Sheet {SheetName} 没有数据行", typeof(T).Name, sheet.SheetName);
+                return 0; // 没有数据行
+            }
 
             var headerRow = sheet.GetRow(0);
-            if (headerRow == null) return 0;
-
-            // 获取可写入的属性（排除Id、OrgId和复杂类型），使用安全的字典创建方法
-            var propertyList = typeof(T).GetProperties()
-                .Where(p => p.CanWrite && 
-                           !p.Name.Equals("Id", StringComparison.OrdinalIgnoreCase) &&
-                           !p.Name.Equals("OrgId", StringComparison.OrdinalIgnoreCase) &&
-                           !IsComplexType(p.PropertyType))
-                .ToList();
-
-            // 安全创建属性字典，避免重复键错误
-            var properties = new Dictionary<string, PropertyInfo>(StringComparer.OrdinalIgnoreCase);
-            foreach (var property in propertyList)
+            if (headerRow == null)
             {
-                try
+                _Logger.LogWarning("表 {EntityType} 的Sheet {SheetName} 没有标题行", typeof(T).Name, sheet.SheetName);
+                return 0;
+            }
+
+            try
+            {
+                // 获取可写入的属性（排除Id、OrgId和复杂类型），使用安全的字典创建方法
+                var propertyList = typeof(T).GetProperties()
+                    .Where(p => p.CanWrite && 
+                               !p.Name.Equals("Id", StringComparison.OrdinalIgnoreCase) &&
+                               !p.Name.Equals("OrgId", StringComparison.OrdinalIgnoreCase) &&
+                               !IsComplexType(p.PropertyType))
+                    .ToList();
+
+                // 安全创建属性字典，避免重复键错误
+                var properties = new Dictionary<string, PropertyInfo>(StringComparer.OrdinalIgnoreCase);
+                foreach (var property in propertyList)
                 {
                     if (!properties.ContainsKey(property.Name))
                     {
@@ -629,103 +639,128 @@ namespace PowerLmsServer.Services
                         _Logger.LogWarning("发现重复属性名称: {PropertyName} 在实体 {EntityType} 中，已跳过", property.Name, typeof(T).Name);
                     }
                 }
-                catch (ArgumentException ex)
-                {
-                    _Logger.LogError(ex, "添加属性映射时发生错误: {PropertyName} 在实体 {EntityType} 中", property.Name, typeof(T).Name);
-                    throw new InvalidOperationException($"实体{typeof(T).Name}中存在重复的属性名称: {property.Name}", ex);
-                }
-            }
 
-            var columnMappings = new Dictionary<int, PropertyInfo>();
-            for (int i = 0; i <= headerRow.LastCellNum; i++)
-            {
-                var cell = headerRow.GetCell(i);
-                if (cell != null && !string.IsNullOrWhiteSpace(cell.StringCellValue))
+                var columnMappings = new Dictionary<int, PropertyInfo>();
+                for (int i = 0; i <= headerRow.LastCellNum; i++)
                 {
-                    var columnName = cell.StringCellValue.Trim();
-                    if (properties.ContainsKey(columnName))
+                    var cell = headerRow.GetCell(i);
+                    if (cell != null && !string.IsNullOrWhiteSpace(cell.StringCellValue))
                     {
-                        columnMappings[i] = properties[columnName];
-                    }
-                }
-            }
-
-            var importedCount = 0;
-            var dbSet = _DbContext.Set<T>();
-
-            for (int rowIndex = 1; rowIndex <= sheet.LastRowNum; rowIndex++)
-            {
-                var row = sheet.GetRow(rowIndex);
-                if (row == null) continue;
-
-                var entity = new T();
-                var hasData = false;
-
-                // 填充实体属性（排除Id和OrgId）
-                foreach (var mapping in columnMappings)
-                {
-                    var cell = row.GetCell(mapping.Key);
-                    if (cell != null)
-                    {
-                        var value = GetCellValue(cell, mapping.Value.PropertyType);
-                        if (value != null)
+                        var columnName = cell.StringCellValue.Trim();
+                        if (properties.ContainsKey(columnName))
                         {
-                            mapping.Value.SetValue(entity, value);
-                            hasData = true;
+                            columnMappings[i] = properties[columnName];
+                        }
+                        else
+                        {
+                            _Logger.LogDebug("列 {ColumnName} 在实体 {EntityType} 中未找到对应属性", columnName, typeof(T).Name);
                         }
                     }
                 }
 
-                if (!hasData) continue;
-
-                // 自动设置Id字段：生成新的GUID
-                var idProperty = typeof(T).GetProperty("Id");
-                if (idProperty != null && idProperty.PropertyType == typeof(Guid))
+                if (!columnMappings.Any())
                 {
-                    idProperty.SetValue(entity, Guid.NewGuid());
+                    _Logger.LogWarning("表 {EntityType} 的Sheet {SheetName} 没有有效的列映射", typeof(T).Name, sheet.SheetName);
+                    return 0;
                 }
 
-                // 自动设置OrgId字段：使用当前登录用户的机构ID
-                var orgIdProperty = typeof(T).GetProperty("OrgId");
-                if (orgIdProperty != null)
-                {
-                    orgIdProperty.SetValue(entity, orgId);
-                }
+                var importedCount = 0;
+                var updatedCount = 0;
+                var dbSet = _DbContext.Set<T>();
 
-                // 检查是否需要更新现有记录
-                if (updateExisting)
+                for (int rowIndex = 1; rowIndex <= sheet.LastRowNum; rowIndex++)
                 {
-                    var codeProperty = typeof(T).GetProperty("Code");
-                    if (codeProperty != null)
+                    var row = sheet.GetRow(rowIndex);
+                    if (row == null) continue;
+
+                    try
                     {
-                        var code = codeProperty.GetValue(entity)?.ToString();
-                        if (!string.IsNullOrEmpty(code))
+                        var entity = new T();
+                        var hasData = false;
+
+                        // 填充实体属性（排除Id和OrgId）
+                        foreach (var mapping in columnMappings)
                         {
-                            // 查找现有记录并更新
-                            var existing = FindExistingEntity<T>(code, orgId);
-                            if (existing != null)
+                            var cell = row.GetCell(mapping.Key);
+                            if (cell != null)
                             {
-                                // 更新现有记录的属性（排除Id和OrgId）
-                                foreach (var mapping in columnMappings)
+                                var value = GetCellValue(cell, mapping.Value.PropertyType);
+                                if (value != null)
                                 {
-                                    var value = mapping.Value.GetValue(entity);
-                                    mapping.Value.SetValue(existing, value);
+                                    mapping.Value.SetValue(entity, value);
+                                    hasData = true;
                                 }
-                                continue;
                             }
                         }
+
+                        if (!hasData) continue;
+
+                        // 自动设置Id字段：生成新的GUID
+                        var idProperty = typeof(T).GetProperty("Id");
+                        if (idProperty != null && idProperty.PropertyType == typeof(Guid))
+                        {
+                            idProperty.SetValue(entity, Guid.NewGuid());
+                        }
+
+                        // 自动设置OrgId字段：使用当前登录用户的机构ID
+                        var orgIdProperty = typeof(T).GetProperty("OrgId");
+                        if (orgIdProperty != null)
+                        {
+                            orgIdProperty.SetValue(entity, orgId);
+                        }
+
+                        // 检查是否需要更新现有记录
+                        if (updateExisting)
+                        {
+                            var codeProperty = typeof(T).GetProperty("Code");
+                            if (codeProperty != null)
+                            {
+                                var code = codeProperty.GetValue(entity)?.ToString();
+                                if (!string.IsNullOrEmpty(code))
+                                {
+                                    // 查找现有记录并更新
+                                    var existing = FindExistingEntity<T>(code, orgId);
+                                    if (existing != null)
+                                    {
+                                        // 更新现有记录的属性（排除Id和OrgId）
+                                        foreach (var mapping in columnMappings)
+                                        {
+                                            var value = mapping.Value.GetValue(entity);
+                                            mapping.Value.SetValue(existing, value);
+                                        }
+                                        updatedCount++;
+                                        continue;
+                                    }
+                                }
+                            }
+                        }
+
+                        dbSet.Add(entity);
+                        importedCount++;
+                    }
+                    catch (Exception ex)
+                    {
+                        _Logger.LogError(ex, "导入第 {RowIndex} 行数据时发生错误，表: {EntityType}, Sheet: {SheetName}", 
+                            rowIndex, typeof(T).Name, sheet.SheetName);
+                        // 继续处理其他行，不抛出异常
                     }
                 }
 
-                dbSet.Add(entity);
-                importedCount++;
-            }
+                _Logger.LogInformation("表 {EntityType} 导入完成，新增: {ImportedCount}, 更新: {UpdatedCount}", 
+                    typeof(T).Name, importedCount, updatedCount);
 
-            return importedCount;
+                return importedCount;
+            }
+            catch (Exception ex)
+            {
+                _Logger.LogError(ex, "导入实体 {EntityType} 时发生严重错误", typeof(T).Name);
+                throw new InvalidOperationException($"导入表 {typeof(T).Name} 失败: {ex.Message}", ex);
+            }
         }
 
         /// <summary>
         /// 根据Code查找现有实体
+        /// 用于实现基于业务代码的更新策略，支持多租户数据隔离
         /// </summary>
         /// <typeparam name="T">实体类型</typeparam>
         /// <param name="code">业务代码</param>
@@ -733,36 +768,54 @@ namespace PowerLmsServer.Services
         /// <returns>现有实体或null</returns>
         private T FindExistingEntity<T>(string code, Guid? orgId) where T : class
         {
-            var dbSet = _DbContext.Set<T>();
-            var entityType = typeof(T);
-
-            // 构建查询条件
-            var parameter = Expression.Parameter(entityType, "x");
-            
-            // Code条件
-            var codeProperty = Expression.Property(parameter, "Code");
-            var codeConstant = Expression.Constant(code);
-            var codeEquals = Expression.Equal(codeProperty, codeConstant);
-
-            Expression whereExpression = codeEquals;
-
-            // OrgId条件（如果实体有OrgId属性）
-            var orgIdProperty = entityType.GetProperty("OrgId");
-            if (orgIdProperty != null)
+            try
             {
-                var orgIdPropertyExpr = Expression.Property(parameter, "OrgId");
-                var orgIdConstant = Expression.Constant(orgId, typeof(Guid?));
-                var orgIdEquals = Expression.Equal(orgIdPropertyExpr, orgIdConstant);
-                
-                whereExpression = Expression.AndAlso(whereExpression, orgIdEquals);
-            }
+                var dbSet = _DbContext.Set<T>();
+                var entityType = typeof(T);
 
-            var lambda = Expression.Lambda<Func<T, bool>>(whereExpression, parameter);
-            return dbSet.FirstOrDefault(lambda);
+                // 构建查询条件
+                var parameter = Expression.Parameter(entityType, "x");
+                
+                // Code条件
+                var codeProperty = Expression.Property(parameter, "Code");
+                var codeConstant = Expression.Constant(code);
+                var codeEquals = Expression.Equal(codeProperty, codeConstant);
+
+                Expression whereExpression = codeEquals;
+
+                // OrgId条件（如果实体有OrgId属性）
+                var orgIdProperty = entityType.GetProperty("OrgId");
+                if (orgIdProperty != null)
+                {
+                    var orgIdPropertyExpr = Expression.Property(parameter, "OrgId");
+                    var orgIdConstant = Expression.Constant(orgId, typeof(Guid?));
+                    var orgIdEquals = Expression.Equal(orgIdPropertyExpr, orgIdConstant);
+                    
+                    whereExpression = Expression.AndAlso(whereExpression, orgIdEquals);
+                }
+
+                var lambda = Expression.Lambda<Func<T, bool>>(whereExpression, parameter);
+                var result = dbSet.FirstOrDefault(lambda);
+
+                if (result != null)
+                {
+                    _Logger.LogDebug("找到现有实体 {EntityType} with Code: {Code}, OrgId: {OrgId}", 
+                        typeof(T).Name, code, orgId);
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _Logger.LogError(ex, "查找现有实体 {EntityType} 时发生错误，Code: {Code}, OrgId: {OrgId}", 
+                    typeof(T).Name, code, orgId);
+                throw;
+            }
         }
 
         /// <summary>
         /// 获取指定类型的实体数据
+        /// 支持多租户数据隔离，使用AsNoTracking提升查询性能
         /// </summary>
         /// <typeparam name="T">实体类型</typeparam>
         /// <param name="orgId">组织ID</param>
@@ -786,12 +839,17 @@ namespace PowerLmsServer.Services
                     query = query.Where(lambda);
                 }
 
-                return query.ToList();
+                var result = query.ToList();
+                _Logger.LogDebug("获取实体数据 {EntityType}，OrgId: {OrgId}，记录数: {Count}", 
+                    typeof(T).Name, orgId, result.Count);
+
+                return result;
             }
             catch (Exception ex)
             {
-                _Logger.LogError(ex, "获取实体数据时发生错误，实体类型: {EntityType}", typeof(T).Name);
-                throw;
+                _Logger.LogError(ex, "获取实体数据时发生错误，实体类型: {EntityType}, OrgId: {OrgId}", 
+                    typeof(T).Name, orgId);
+                throw new InvalidOperationException($"查询实体 {typeof(T).Name} 数据失败: {ex.Message}", ex);
             }
         }
 

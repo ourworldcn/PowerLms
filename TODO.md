@@ -70,7 +70,45 @@ POST /api/ImportExport/Import + FormData                                   # 导
 
 ### 1.2 🔴 紧急待完成任务（会议决议）
 
-#### 1.2.1 费用反查申请单明细过滤失败 🆕 **优先级：最高**
+#### 1.2.1 导入导出控制器代码质量完善 ✅ **优先级：最高**
+
+**已完成技术改进：**
+- ✅ **日志记录完善**：所有方法增加详细的开始/结束/错误日志
+- ✅ **错误处理规范**：统一错误返回格式，用户友好的错误信息
+- ✅ **Token验证标准化**：修正为系统标准的Unauthorized()返回方式
+- ✅ **参数验证增强**：文件格式验证、参数非空验证、业务逻辑验证
+- ✅ **代码逻辑健壮性**：异常处理覆盖、资源释放、错误隔离
+- ✅ **性能优化**：AsNoTracking查询、批量操作、重复键检查优化
+
+**Token验证修正：**
+```csharp
+// 修正前（不符合系统标准）
+if (_AccountManager.GetOrLoadContextByToken(paramsDto.Token, _ServiceProvider) is not OwContext context)
+{
+    result.HasError = true;
+    result.ErrorCode = 401;
+    result.DebugMessage = "身份验证失败，请重新登录";
+    return Unauthorized(result);
+}
+
+// 修正后（符合系统标准）
+if (_AccountManager.GetOrLoadContextByToken(paramsDto.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+```
+
+**核心修正：**
+```
+ImportExportController.cs:
+- GetSupportedTables: Token验证、详细日志、标准错误返回
+- ExportMultipleTables: 文件大小日志、类型分析日志、混合导出限制  
+- ImportMultipleTables: 文件格式验证、逐步导入尝试、成功标志控制
+
+ImportExportService.cs:
+- ImportEntityData: 行级错误处理、更新/新增计数、属性映射优化
+- FindExistingEntity: 异常处理、查询日志、null安全检查
+- GetEntityDataByOrgId: 性能日志、异常封装、多租户查询优化
+```
+
+#### 1.2.2 费用反查申请单明细过滤失败 🆕 **优先级：最高**
 
 **问题描述：** 调用"获取费用申请单明细（fee-request-details）"时，按`fee_id`过滤未生效，返回所有明细
 
@@ -88,7 +126,7 @@ POST /api/ImportExport/Import + FormData                                   # 导
 
 **预估工期：** 0.5天
 
-#### 1.2.2 OA费用申请单增加公司字段 🆕 **优先级：最高**
+#### 1.2.3 OA费用申请单增加公司字段 🆕 **优先级：最高**
 
 **业务需求：** OA费用申请单主表需要增加一个"公司"字段，关联到客户资料表
 
@@ -102,7 +140,7 @@ POST /api/ImportExport/Import + FormData                                   # 导
 
 **预估工期：** 1天
 
-#### 1.2.3 空运接口架构重复问题修正 🆕 **优先级：高**
+#### 1.2.4 空运接口架构重复问题修正 🆕 **优先级：高**
 
 **发现问题：** 空运出口单接口在PlJobController.EaDoc.cs与PlAirborneController中重复实现
 
