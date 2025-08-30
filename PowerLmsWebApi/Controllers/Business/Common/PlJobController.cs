@@ -196,11 +196,8 @@ namespace PowerLmsWebApi.Controllers
                 // 从数据库中获取数据
                 var prb = _EntityManager.GetAll(r.AsQueryable(), model.StartIndex, model.Count);
                 
-                // 🆕 填充财务日期 - 批量处理避免N+1查询
-                if (prb.Result?.Any() == true)
-                {
-                    _JobManager.FillFinancialDates(prb.Result, _DbContext);
-                }
+                // 注释掉过时的财务日期填充，交给前端处理
+                // _JobManager.FillFinancialDates(prb.Result, _DbContext);
                 
                 _Mapper.Map(prb, result);
             }

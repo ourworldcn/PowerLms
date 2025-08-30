@@ -35,7 +35,7 @@ namespace PowerLmsServer.Services
         /// - 有组织ID：返回当前组织 + 全局数据 (OrgId == orgId || OrgId == null)
         /// - 无组织ID：仅返回全局数据 (OrgId == null)
         /// 
-        /// 返回格式：List<(Code, DisplayName)> 按Code排序
+        /// 返回格式：List{(Code, DisplayName)} 按Code排序
         /// </summary>
         /// <param name="orgId">组织ID，用于多租户数据隔离</param>
         /// <returns>可用的分类代码和显示名称，来源于ow_DataDicCatalogs表</returns>

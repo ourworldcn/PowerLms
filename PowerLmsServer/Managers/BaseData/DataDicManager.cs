@@ -259,7 +259,7 @@ namespace PowerLmsServer.Managers
         /// </summary>
         /// <typeparam name="T">实体类型</typeparam>
         /// <returns>对应的DbSet，如果未找到则返回null</returns>
-        private IQueryable<T>? GetDbSet<T>() where T : class
+        private IQueryable<T> GetDbSet<T>() where T : class
         {
             var entityType = typeof(T);
             
@@ -277,7 +277,7 @@ namespace PowerLmsServer.Managers
                 nameof(JobNumberRule) => _DbContext.DD_JobNumberRules.Cast<T>(),
                 nameof(OtherNumberRule) => _DbContext.DD_OtherNumberRules.Cast<T>(),
                 nameof(ShippingContainersKind) => _DbContext.DD_ShippingContainersKinds.Cast<T>(),
-                _ => null
+                _ => throw new NotSupportedException($"不支持的实体类型: {entityType.Name}")
             };
         }
 
