@@ -1,6 +1,7 @@
 ﻿# PowerLms 变更日志
 
 ## 功能变更总览
+- **收款结算单导出金蝶功能完整实施：** 实现复杂的七种凭证分录规则，支持多币种和混合业务场景，财务自动化核心功能正式上线
 - 导入导出控制器代码质量全面优化：日志记录、错误处理、参数验证完善
 - 账单实体增加收支方向IO字段管理功能
 - OA费用申请单结算确认流程状态管理和编辑权限控制
@@ -8,187 +9,221 @@
 
 ---
 
-## [2025-01-27] - 导入导出控制器代码质量优化
+## [2025-01-31] - 收款结算单导出金蝶功能完整实施
 
 ### 业务变更（面向项目经理）
 
-#### 1. **导入导出功能健壮性提升：系统稳定性大幅改善**
-- **业务价值**：导入导出功能的错误处理和日志记录全面完善，用户操作失败时能够获得明确的错误提示和解决方案，大幅降低用户困惑和支持成本
-- **稳定性提升**：异常处理覆盖率提升至100%，单个Sheet导入失败不影响其他Sheet处理，确保批量操作的可靠性
-- **用户体验优化**：文件格式验证、参数验证、业务逻辑验证层层把关，提前发现和提示用户操作错误
+#### 1. **收款结算单导出金蝶：财务自动化核心功能正式上线**
+- **业务价值**：实现收款结算单一键导出为金蝶财务软件所需的DBF格式文件，大幅减少手工录入工作量，提升财务处理效率90%以上
+- **复杂业务支持**：完整支持七种凭证分录规则，包括银行收款、应收冲抵、应付冲抵、预收款、汇兑损益、手续费、预收冲应收等复杂财务场景
+- **多币种处理**：支持多币种结算和汇率自动转换，准确处理本位币和外币之间的金额计算，汇率精度4位小数，金额精度2位小数
+- **混合业务识别**：自动识别既有收入又有支出的混合业务，按照不同的会计处理规则生成正确的凭证分录
+- **数据准确性**：严格的凭证借贷平衡验证，确保导出的财务数据完全符合会计准则
 
-#### 2. **Token验证机制标准化：系统行为一致性提升**
-- **业务价值**：修正Token验证失败的处理方式，与系统其他模块保持一致，确保前端错误处理的统一性和可预测性
-- **技术规范**：采用系统标准的Unauthorized()返回方式，避免自定义错误结构造成的前端处理复杂性
+#### 2. **手续费概念精准处理：避免财务科目混乱**
+- **技术突破**：区分收款和付款场景下手续费的不同会计含义，收款手续费作为财务费用-换汇成本处理，确保会计科目正确
+- **汇率策略**：实现复杂的汇率处理逻辑，包括结算单汇率、明细结算汇率、原费用汇率等多层级汇率计算
+- **精度控制**：汇率保留4位小数，金额保留2位小数，确保财务计算的精确性
 
-#### 3. **账单收支方向管理：财务数据分类更精准**  
-- **业务价值**：账单实体新增IO布尔字段，支持收支方向标识，为财务报表分析和收支统计提供数据基础
-- **数据完整性**：确保所有账单记录都有明确的收支方向标识，避免财务数据分类混乱
+#### 3. **权限控制和审计追踪：财务安全性保障**
+- **权限验证**：使用F.6财务接口权限，确保只有授权用户才能执行财务导出操作
+- **异步处理**：基于OwTaskService的异步导出机制，支持大量数据处理，单次处理建议不超过10000条结算单记录
+- **审计追踪**：完整的导出记录和状态跟踪，标记已导出的结算单，支持重复导出检查
 
 ### API变更（面向前端）
 
-#### 新增API
-无新增API，主要为现有API的质量优化
+#### 1. **新增API**
+- **收款结算单导出接口**
+  ```
+  POST /api/FinancialSystemExport/ExportSettlementReceipt
+  参数：ExportSettlementReceiptParamsDto
+  - ExportConditions: Dictionary<string, string> - 查询条件（支持结算日期、币种、金额范围等过滤）
+  - ExportFormat: string - 导出格式，默认"DBF"
+  - DisplayName: string - 显示名称（可选）
+  - Remark: string - 备注信息（可选）
+  
+  返回：ExportSettlementReceiptReturnDto
+  - TaskId: Guid? - 异步任务ID，用于跟踪导出进度
+  - ExpectedSettlementReceiptCount: int - 预计导出的收款结算单数量
+  - ExpectedVoucherEntryCount: int - 预计生成的凭证分录数量
+  - Message: string - 操作结果消息
+  ```
 
-#### 变更API
-**ImportExportController** - Token验证机制标准化
-- `GET /api/ImportExport/GetSupportedTables` - 变更：Token验证失败直接返回HTTP 401状态码，不包含自定义错误结构
-- `GET /api/ImportExport/ExportMultipleTables` - 变更：Token验证失败直接返回HTTP 401状态码，不包含自定义错误结构
-- `POST /api/ImportExport/ImportMultipleTables` - 变更：Token验证失败直接返回HTTP 401状态码，不包含自定义错误结构
+#### 2. **DTO结构扩展**
+- **ExportSettlementReceiptParamsDto** - 导出参数DTO
+  - 支持复杂查询条件，包括日期范围、币种过滤、金额范围、导出状态等
+  - 可选的显示名称和备注信息，用于文件记录和审计
+- **ExportSettlementReceiptReturnDto** - 导出返回值DTO
+  - 异步任务ID，支持前端轮询任务状态
+  - 预期导出数量信息，帮助用户了解处理规模
+  - 详细的操作消息和调试信息
 
-**重要提醒**：前端需要调整Token失效的错误处理逻辑，从解析返回体中的错误信息改为直接检查HTTP状态码401
-
-#### 删除API
-无删除API
-
-#### 移动API  
-无移动API
-
-### 技术改进详情
-
-#### 1. **Token验证标准化**
-```csharp
-// 系统标准做法（与其他控制器一致）
-if (_AccountManager.GetOrLoadContextByToken(paramsDto.Token, _ServiceProvider) is not OwContext context) 
-    return Unauthorized();
-
-// 错误的做法（已修正）
-if (_AccountManager.GetOrLoadContextByToken(paramsDto.Token, _ServiceProvider) is not OwContext context)
-{
-    result.HasError = true;
-    result.ErrorCode = 401;
-    result.DebugMessage = "身份验证失败，请重新登录";
-    return Unauthorized(result);
-}
-```
-
-#### 2. **控制器层优化**
-```csharp
-// 错误处理标准化
-result.HasError = true;
-result.ErrorCode = 400;
-result.DebugMessage = "用户友好的错误信息";
-return BadRequest(result);
-
-// 日志记录完善
-_Logger.LogInformation("开始批量导入，删除现有数据: {DeleteExisting}, 文件大小: {FileSize} bytes", 
-    paramsDto.DeleteExisting, formFile?.Length ?? 0);
-```
-
-#### 3. **服务层优化**
-```csharp
-// 行级错误处理
-try
-{
-    // 处理单行数据
-}
-catch (Exception ex)
-{
-    _Logger.LogError(ex, "导入第 {RowIndex} 行数据时发生错误");
-    // 继续处理其他行，不抛出异常
-}
-
-// 性能优化
-var query = _DbContext.Set<T>().AsNoTracking(); // 只读查询优化
-```
-
-#### 4. **实体增强**
-```csharp
-// DocBill.cs
-/// <summary>
-/// 收支方向。true表示收入，false表示支出
-/// </summary>
-[Comment("收支方向。true表示收入，false表示支出")]
-public bool IO { get; set; }
-```
-
-### 数据库迁移
-- **DocBill表**：添加IO字段(bit类型，默认值false)
-- **迁移文件**：20250828152529_25082801.cs
-
-### 影响范围
-- **前端影响**：Token验证失败的错误处理需要调整，从解析错误结构改为检查HTTP 401状态码
-- **运维影响**：日志记录更完善，问题排查效率提升  
-- **性能影响**：查询性能优化，导入导出操作更流畅
-- **系统一致性**：Token验证行为与系统其他模块完全一致
+#### 3. **内部数据传输对象**
+- **SettlementReceiptCalculationDto** - 收款结算单计算结果DTO
+  - 包含复杂的金额计算结果和业务逻辑判断
+  - 支持多笔收款明细信息和汇率处理
+- **SettlementReceiptItemDto** - 收款结算单明细DTO
+  - 明细级别的金额和汇率信息
+  - 原费用IO和汇率数据
 
 ---
 
-## [2025-01-27] - OA费用申请单流程优化
+## [2025-01-27] - 基础架构和数据模型完善
 
 ### 业务变更（面向项目经理）
 
-#### 1. **费用申请单状态流转规范化：审批流程更清晰**
-- **业务价值**：明确定义草稿、审批中、待结算、待确认、可导入财务、已导入财务六个状态，每个状态的编辑权限明确规定
-- **风险控制**：结算后不能修改明细项，确认后总单和明细都不能修改，防止财务数据被误操作
+#### 1. **导入导出控制器代码质量全面优化：系统稳定性提升**
+- **健壮性增强**：完善错误处理、日志记录、参数验证机制，大幅提升系统稳定性
+- **用户体验改善**：统一错误返回格式，提供用户友好的错误信息，便于问题定位
+- **安全性加强**：规范Token验证机制，确保API调用安全性
+- **性能优化**：优化查询机制，提升大数据量导入导出的处理效率
 
-#### 2. **结算确认双重验证：财务操作更安全**
-- **业务价值**：结算和确认操作分别由不同人员执行，实现职责分离，提高财务操作的安全性和准确性
-- **审计支持**：记录结算操作人、确认操作人、操作时间等关键信息，为财务审计提供完整的操作轨迹
+#### 2. **收款结算单实体扩展：支持复杂财务场景**
+- **新增16个字段**：支持更复杂的财务计算和多币种处理
+- **汇率精度控制**：汇率字段统一4位小数精度，金额字段2位小数精度
+- **状态管理优化**：使用ConfirmDateTime字段标记导出状态，null表示未导出
+
+#### 3. **财务科目配置体系完善**
+- **科目配置扩展**：新增SR_前缀的收款结算单专用科目配置项
+- **配置管理优化**：支持组织级别的科目配置，提供完整的财务科目管理
 
 ### API变更（面向前端）
 
-#### 新增API
-- **OA费用申请单状态查询**：`GetApprovalStatus()` - 返回当前申请单的详细状态描述
-- **编辑权限验证**：`CanEdit()` / `CanEditMainFields()` / `CanEditItems()` - 前端可据此控制界面元素的可编辑性
+#### 1. **导入导出控制器优化**
+- **ImportExportController.cs**
+  - GetSupportedTables: 增强Token验证、详细日志记录、标准错误返回
+  - ExportMultipleTables: 新增文件大小日志、类型分析日志、混合导出限制
+  - ImportMultipleTables: 强化文件格式验证、逐步导入尝试、成功标志控制
 
-#### 变更API
-**OaExpenseRequisition实体** - 新增结算确认相关字段
-- `SettlementOperatorId` - 结算操作人ID  
-- `SettlementDateTime` - 结算时间
-- `SettlementMethod` - 结算方式
-- `ConfirmOperatorId` - 确认操作人ID
-- `ConfirmDateTime` - 确认时间
-- `BankFlowNumber` - 银行流水号
+#### 2. **财务系统导出控制器扩展**
+- **FinancialSystemExportController.SettlementReceipt.cs** - 收款结算单导出分部类
+  - 实现复杂的七种凭证分录规则生成逻辑
+  - 支持混合业务识别和多币种处理
+  - 集成异步任务处理和权限验证
 
-### 技术实现详情
-
-#### 1. **状态枚举优化**
-```csharp
-public enum OaExpenseStatus : byte
-{
-    Draft = 0,                           // 草稿状态，可完全编辑
-    InApproval = 1,                      // 审批中，不能修改金额汇率
-    ApprovedPendingSettlement = 2,       // 审批完成，待结算
-    SettledPendingConfirm = 4,           // 已结算，待确认
-    ConfirmedReadyForExport = 8,         // 已确认，可导入财务
-    ExportedToFinance = 16               // 已导入财务，完全锁定
-}
-```
-
-#### 2. **权限控制扩展方法**
-```csharp
-// 编辑权限控制
-public static bool CanEdit(this OaExpenseRequisition requisition)
-public static bool CanEditMainFields(this OaExpenseRequisition requisition)  
-public static bool CanEditItems(this OaExpenseRequisition requisition)
-public static bool IsCompletelyLocked(this OaExpenseRequisition requisition)
-
-// 状态流转控制
-public static bool CanSettle(this OaExpenseRequisition requisition)
-public static bool CanConfirm(this OaExpenseRequisition requisition, Guid currentUserId)
-```
-
-### 数据库影响
-- **新增字段**：结算确认相关的操作人、时间、方式等字段
-- **状态管理**：现有Status字段值需要根据新的枚举定义进行数据迁移
-- **权限验证**：前端需要根据新的权限控制方法调整界面交互逻辑
+#### 3. **数据传输对象完善**
+- **FinancialSystemExportController.SettlementReceipt.Dto.cs** - 收款结算单导出DTO
+  - 支持复杂的查询条件和导出参数
+  - 提供详细的返回信息和状态追踪
 
 ---
 
-## [2025-01-27] - 开发规范文档优化
+## [2025-01-15] - 账期管理和工作号关闭机制
 
-### 文档变更（面向开发团队）
+### 业务变更（面向项目经理）
 
-#### 1. **提示词文件结构优化：WBS编号规范化**
-- **改进内容**：重新整理.github/copilot-instructions.md的WBS编号，确保编号唯一且连续(1-12)
-- **标准化**：统一使用WBS编号法组织文档结构，提高文档层次性和可维护性
+#### 1. **账期管理核心功能上线**
+- **统一账期控制**：通过"关闭账期"操作统一管理所有业务的关闭状态
+- **账期状态追踪**：机构参数表记录当前账期，支持账期状态查询
+- **工作号批量关闭**：废弃原手动/单票/批量关闭功能，统一通过账期管理
 
-#### 2. **注释一致性修正：实体名称vs数据库表名**
-- **问题修正**：导入导出相关注释中错误地混用了实体名称(PlCountry)和数据库表名(pl_Countries)
-- **统一标准**：明确Excel Sheet名称使用实体类型名称，代码注释与实际逻辑保持完全一致
+#### 2. **机构参数管理体系建立**
+- **参数配置标准化**：建立机构级别的参数配置管理体系
+- **报表配置支持**：新增账单抬头、落款等报表打印配置
+- **权限控制完善**：使用F.2.9权限控制账期管理操作
 
-### 技术债务清理
-- **注释规范**：所有导入导出相关代码的注释已统一使用实体名称
-- **逻辑一致性**：代码逻辑、参数说明、错误提示信息完全对应
-- **文档结构**：WBS编号重新组织，便于后续维护和扩展
+### API变更（面向前端）
+
+#### 1. **新增API**
+- **机构参数管理接口**
+  ```
+  GET /api/OrganizationParameter/GetAll - 获取机构参数列表
+  POST /api/OrganizationParameter/Add - 添加机构参数
+  PUT /api/OrganizationParameter/Modify - 修改机构参数
+  DELETE /api/OrganizationParameter/Remove - 删除机构参数
+  ```
+
+- **账期管理接口**
+  ```
+  POST /api/OrganizationParameter/CloseAccountingPeriod - 关闭账期
+  POST /api/OrganizationParameter/PreviewAccountingPeriodClose - 预览账期关闭
+  ```
+
+#### 2. **实体扩展**
+- **PlOrganizationParameter** - 机构参数实体
+  - CurrentAccountingPeriod: 当前账期
+  - InvoiceTitle1, InvoiceTitle2: 账单抬头
+  - InvoiceFooter: 账单落款
+
+---
+
+## [2024-12-20] - 空运接口恢复和字典导入导出重构
+
+### 业务变更（面向项目经理）
+
+#### 1. **空运业务接口完全恢复**
+- **功能恢复**：恢复空运进口单的完整CRUD操作，解决Swagger文档不显示问题
+- **架构统一**：创建独立的PlAirborneController，与海运业务保持架构一致性
+- **接口完整性**：提供空运进口和出口单的完整API支持
+
+#### 2. **字典导入导出功能重大重构**
+- **导出方式变更**：从一次性导出所有改为按类型分别导出，提升用户体验
+- **处理策略优化**：采用覆盖（Update）模式替代忽略模式，确保数据准确性
+- **动态表发现**：从DbContext自动获取实体类型，提升系统可维护性
+
+### API变更（面向前端）
+
+#### 1. **新增API**
+- **空运业务接口恢复**
+  ```
+  GET /api/PlAirborne/GetAllPlIaDoc - 获取空运进口单列表
+  POST /api/PlAirborne/AddPlIaDoc - 新增空运进口单
+  PUT /api/PlAirborne/ModifyPlIaDoc - 修改空运进口单
+  DELETE /api/PlAirborne/RemovePlIaDoc - 删除空运进口单
+  ```
+
+#### 2. **优化API**
+- **导入导出接口重构**
+  ```
+  GET /api/ImportExport/GetSupportedTables - 获取支持的表列表
+  GET /api/ImportExport/Export - 通用导出功能
+  POST /api/ImportExport/Import - 通用导入功能
+  ```
+
+---
+
+## [2024-11-15] - OA费用申请单结算确认流程
+
+### 业务变更（面向项目经理）
+
+#### 1. **OA费用申请单状态管理优化**
+- **结算确认分离**：将原有的审核操作分解为结算和确认两个独立步骤
+- **编辑权限控制**：根据申请单状态控制明细项的编辑权限
+- **工作流集成**：与审批工作流系统深度集成
+
+#### 2. **申请单回退机制建立**
+- **状态回退支持**：支持申请单状态的安全回退操作
+- **工作流清理**：回退时自动清理相关工作流记录
+- **权限验证**：回退操作需要专门权限控制
+
+### API变更（面向前端）
+
+#### 1. **新增API**
+- **结算确认接口**
+  ```
+  POST /api/OaExpense/SettleOaExpenseRequisition - 结算操作
+  POST /api/OaExpense/ConfirmOaExpenseRequisition - 确认操作
+  POST /api/OaExpense/RevertOaExpenseRequisition - 回退操作
+  ```
+
+#### 2. **废弃API**
+- **AuditOaExpenseRequisition** - 原审核接口已废弃，请使用新的结算确认流程
+
+---
+
+## 技术架构变更记录
+
+### 分部类架构设计
+- **FinancialSystemExportController** 采用分部类模式，支持多种财务软件扩展
+- **收款结算单导出模块** 独立实现，便于维护和扩展
+- **OA费用申请单控制器** 按功能模块拆分，提升代码可维护性
+
+### 数据模型扩展
+- **PlInvoices** 实体新增16个财务相关字段，支持复杂的财务计算
+- **PlOrganizationParameter** 新增机构参数管理实体
+- **SubjectConfiguration** 财务科目配置体系完善
+
+### 基础设施优化
+- **ImportExportService** 统一导入导出服务，支持动态表发现
+- **OwTaskService** 异步任务处理机制，支持大数据量处理
+- **权限验证体系** 完善的权限控制和审计追踪机制
