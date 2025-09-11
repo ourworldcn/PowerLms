@@ -66,8 +66,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<AddPlEaDocReturnDto> AddPlEaDoc(AddPlEaDocParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "D0.1.1.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out string err, "D0.1.1.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new AddPlEaDocReturnDto();
             var entity = model.PlEaDoc;
             entity.GenerateNewId();
@@ -95,8 +94,7 @@ namespace PowerLmsWebApi.Controllers
             var result = new ModifyPlEaDocReturnDto();
             var doc = _DbContext.PlEaDocs.Find(model.PlEaDoc.Id);
             if (doc == null) return NotFound("指定Id的空运出口单不存在");
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "D0.1.1.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out string err, "D0.1.1.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
 
             if (!_EntityManager.Modify(new[] { model.PlEaDoc })) return NotFound();
             _DbContext.SaveChanges();

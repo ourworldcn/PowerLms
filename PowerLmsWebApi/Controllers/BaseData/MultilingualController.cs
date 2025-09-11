@@ -22,7 +22,7 @@ namespace PowerLmsWebApi.Controllers
             _Db = db;
         }
 
-        PowerLmsUserDbContext _Db;
+        readonly PowerLmsUserDbContext _Db;
 
         /// <summary>
         /// 获取一组语言资源。

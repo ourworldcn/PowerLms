@@ -48,19 +48,19 @@ namespace PowerLmsWebApi.Controllers
             _PermissionManager = permissionManager;
         }
 
-        readonly IServiceProvider _ServiceProvider;
-        readonly PowerLmsUserDbContext _DbContext;
-        readonly AccountManager _AccountManager;
-        readonly AuthorizationManager _AuthorizationManager;
-        readonly IMapper _Mapper;
-        readonly EntityManager _EntityManager;
-        readonly OrgManager<PowerLmsUserDbContext> _OrgManager;
-        readonly CaptchaManager _CaptchaManager;
-        readonly RoleManager _RoleManager;
-        OwSqlAppLogger _AppLogger;
-        IMemoryCache _Cache;
-        ILogger<AccountController> _Logger;
-        PermissionManager _PermissionManager;
+        private readonly IServiceProvider _ServiceProvider;
+        private readonly PowerLmsUserDbContext _DbContext;
+        private readonly AccountManager _AccountManager;
+        private readonly AuthorizationManager _AuthorizationManager;
+        private readonly IMapper _Mapper;
+        private readonly EntityManager _EntityManager;
+        private readonly OrgManager<PowerLmsUserDbContext> _OrgManager;
+        private readonly CaptchaManager _CaptchaManager;
+        private readonly RoleManager _RoleManager;
+        private readonly OwSqlAppLogger _AppLogger;
+        private readonly IMemoryCache _Cache;
+        private readonly ILogger<AccountController> _Logger;
+        private readonly PermissionManager _PermissionManager;
 
         #region 用户相关
 

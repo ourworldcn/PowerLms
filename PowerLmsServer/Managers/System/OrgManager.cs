@@ -418,7 +418,7 @@ namespace PowerLmsServer.Managers
         {
             // 首先尝试作为商户ID查找，使用Set<T>()方法
             var merchant = dbContext.Set<PlMerchant>().Find(orgId);
-            if (merchant != null)
+            if (merchant is not null)
                 return merchant.Id;
 
             // 然后尝试作为组织机构ID查找，递归向上查找商户
@@ -452,7 +452,7 @@ namespace PowerLmsServer.Managers
             {
                 // 加载商户信息，使用Set<T>()方法
                 var merchant = dbContext.Set<PlMerchant>().FirstOrDefault(c => c.Id == merchantId);
-                if (merchant == null)
+                if (merchant is null)
                     throw new InvalidOperationException($"商户 {merchantId} 未找到");
 
                 // 加载该商户下的所有组织机构，使用Include预加载导航属性提高性能

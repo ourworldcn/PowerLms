@@ -69,7 +69,7 @@ namespace PowerLms.Data
         public DateTime CreateDateTime { get; set; } = OwHelper.WorldNow;
 
         #region 瞬时属性
-        ConcurrentDictionary<string, object> _RuntimeProperties = new ConcurrentDictionary<string, object>();
+        private readonly ConcurrentDictionary<string, object> _RuntimeProperties = new ConcurrentDictionary<string, object>();
 
         /// <summary>
         /// 记录瞬时属性的字典。

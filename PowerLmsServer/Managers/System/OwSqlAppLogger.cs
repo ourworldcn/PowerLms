@@ -89,7 +89,7 @@ namespace PowerLmsServer.Managers
         private readonly IServiceProvider _ServiceProvider;
         private readonly IMemoryCache _MemoryCache;
         private const string LoggerStoresCacheKey = "LoggerStoresCache";
-        IMapper _Mapper;
+        private readonly IMapper _Mapper;
         #endregion
 
         #region 公共属性

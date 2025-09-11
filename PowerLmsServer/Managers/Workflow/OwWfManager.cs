@@ -24,7 +24,7 @@ namespace PowerLmsServer.Managers
             _SqlAppLogger = sqlAppLogger;
         }
 
-        private PowerLmsUserDbContext _DbContext;
+        private readonly PowerLmsUserDbContext _DbContext;
         private readonly OwSqlAppLogger _SqlAppLogger;
 
         /// <summary>

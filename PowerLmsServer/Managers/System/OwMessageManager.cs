@@ -109,7 +109,7 @@ namespace PowerLmsServer.Managers
                     throw new ArgumentException("消息内容不能为空", nameof(content));
 
                 if (title.Length > 64)
-                    title = title.Substring(0, 64);
+                    title = title[..64];
 
                 var receiverList = receiverIds?.Distinct().ToList();
                 if (receiverList == null || receiverList.Count == 0)

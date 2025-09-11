@@ -273,6 +273,7 @@ namespace PowerLmsWebApi.Controllers
             if (coll.Length != model.Ids.Count) return BadRequest("至少有一个id不存在对应的结算单");
 
             var now = OwHelper.WorldNow;
+            // 确认结算单
             foreach (var invoice in coll)
             {
                 if (model.IsConfirm)

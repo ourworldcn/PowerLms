@@ -48,7 +48,7 @@ namespace PowerLmsWebApi.Controllers
         readonly OrgManager<PowerLmsUserDbContext> _OrgManager;
         readonly PermissionManager _PermissionManager;
         readonly RoleManager _RoleManager;
-        ILogger<AuthorizationController> _Logger;
+        readonly ILogger<AuthorizationController> _Logger;
 
         #region 角色的CRUD
 

@@ -94,7 +94,7 @@ namespace PowerLmsWebApi.Controllers.System
         public ActionResult<ModifyDataDicCatalogReturnDto> ModifyDataDicCatalog(ModifyDataDicCatalogParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.Demand(out var err, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out string err, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ModifyDataDicCatalogReturnDto();
             if (!_EntityManager.Modify(model.Items))
             {
@@ -364,7 +364,7 @@ namespace PowerLmsWebApi.Controllers.System
 
         /// <summary>
         /// 增加一个数据字典(目录)，若有CopyToChildren值，可以在创建完后增加一个全局字典目录(OrgId为空)，商管创建一个商户级字典目录(OrgId为商户Id)。
-        /// 只有当勾选了复制选项(CopyToChildren=true)时，才会将字典目录复制到公司客户下，超管可复制到所有公司客户，商管可复制到商户下的所有公司客户，。
+        /// 只有当勾选了复制选项(CopyToChildren=true)时，才会将字典目录复制到公司客户下，超管可复制到所有公司客户，商管可复制到商戶下的所有公司客户，。
         /// 因为的机构是树状结构，可以循环多层的层级关系，具有复杂。
         /// </summary>
         /// <param name="model"></param>
@@ -380,8 +380,7 @@ namespace PowerLmsWebApi.Controllers.System
 
             if (!context.User.IsSuperAdmin) //不是超管
             {
-                string err;
-                if (!_AuthorizationManager.Demand(out err, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!_AuthorizationManager.Demand(out string err, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
                 if (!context.User.IsAdmin()) return StatusCode((int)HttpStatusCode.Forbidden, "需要管理员权限。");
             }
 

@@ -88,8 +88,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<AddDailyFeesTypeReturnDto> AddDailyFeesType(AddDailyFeesTypeParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "B.8")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out string err, "B.8")) return StatusCode((int)HttpStatusCode.Forbidden, err);
 
             var result = new AddDailyFeesTypeReturnDto();
 
@@ -147,8 +146,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<ModifyDailyFeesTypeReturnDto> ModifyDailyFeesType(ModifyDailyFeesTypeParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "B.8")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out string err, "B.8")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ModifyDailyFeesTypeReturnDto();
             if (!_EntityManager.ModifyWithMarkDelete(model.Items))
             {
@@ -176,8 +174,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<RemoveDailyFeesTypeReturnDto> RemoveDailyFeesType(RemoveDailyFeesTypeParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "B.8")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out string err, "B.8")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new RemoveDailyFeesTypeReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.DD_DailyFeesTypes;
@@ -201,8 +198,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<RestoreDailyFeesTypeReturnDto> RestoreDailyFeesType(RestoreDailyFeesTypeParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "B.8")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out string err, "B.8")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new RestoreDailyFeesTypeReturnDto();
             if (!_EntityManager.Restore<DailyFeesType>(model.Id))
             {

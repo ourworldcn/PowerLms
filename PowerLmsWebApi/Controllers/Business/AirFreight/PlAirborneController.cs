@@ -101,8 +101,7 @@ namespace PowerLmsWebApi.Controllers
                 return Unauthorized();
             
             // 权限验证：空运进口业务新增权限
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "D1.1.1.2")) 
+            if (!_AuthorizationManager.Demand(out string err, "D1.1.1.2")) 
                 return StatusCode((int)HttpStatusCode.Forbidden, err);
 
             var result = new AddPlIaDocReturnDto();
@@ -151,8 +150,7 @@ namespace PowerLmsWebApi.Controllers
                 return Unauthorized();
             
             // 权限验证：空运进口业务修改权限
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "D1.1.1.3")) 
+            if (!_AuthorizationManager.Demand(out string err, "D1.1.1.3")) 
                 return StatusCode((int)HttpStatusCode.Forbidden, err);
 
             var result = new ModifyPlIaDocReturnDto();
@@ -196,8 +194,7 @@ namespace PowerLmsWebApi.Controllers
                 return Unauthorized();
             
             // 权限验证：空运进口业务删除权限
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "D1.1.1.4")) 
+            if (!_AuthorizationManager.Demand(out string err, "D1.1.1.4")) 
                 return StatusCode((int)HttpStatusCode.Forbidden, err);
 
             var result = new RemovePlIaDocReturnDto();
@@ -289,8 +286,7 @@ namespace PowerLmsWebApi.Controllers
                 return Unauthorized();
             
             // 权限验证：空运出口业务新增权限
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "D0.1.1.2")) 
+            if (!_AuthorizationManager.Demand(out string err, "D0.1.1.2")) 
                 return StatusCode((int)HttpStatusCode.Forbidden, err);
 
             var result = new AddPlEaDocReturnDto();
@@ -339,8 +335,7 @@ namespace PowerLmsWebApi.Controllers
                 return Unauthorized();
             
             // 权限验证：空运出口业务修改权限
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "D0.1.1.3")) 
+            if (!_AuthorizationManager.Demand(out string err, "D0.1.1.3")) 
                 return StatusCode((int)HttpStatusCode.Forbidden, err);
 
             var result = new ModifyPlEaDocReturnDto();
@@ -384,8 +379,7 @@ namespace PowerLmsWebApi.Controllers
                 return Unauthorized();
             
             // 权限验证：空运出口业务删除权限
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "D0.1.1.4")) 
+            if (!_AuthorizationManager.Demand(out string err, "D0.1.1.4")) 
                 return StatusCode((int)HttpStatusCode.Forbidden, err);
 
             var result = new RemovePlEaDocReturnDto();

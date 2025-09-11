@@ -351,8 +351,7 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
                 return Unauthorized(OwHelper.GetLastErrorMessage());
 
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "B.1"))
+            if (!_AuthorizationManager.Demand(out string err, "B.1"))
                 return StatusCode((int)HttpStatusCode.Forbidden, err);
 
             var result = new ModifyOrgReturnDto();
@@ -834,8 +833,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<ModifyBankInfoReturnDto> ModifyBankInfo(ModifyBankInfoParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "B.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out string err, "B.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ModifyBankInfoReturnDto();
             if (!_EntityManager.Modify(new[] { model.BankInfo })) return NotFound();
             _DbContext.SaveChanges();

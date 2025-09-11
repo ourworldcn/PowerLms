@@ -57,11 +57,11 @@ namespace PowerLmsServer.Managers.Financial
             conditional ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             
             // 第一步：逐一生成条件字典
-            var itemConditions = conditional.Where(p => p.Key.StartsWith($"{nameof(DocFeeRequisitionItem)}.", StringComparison.OrdinalIgnoreCase) || !p.Key.Contains('.')).ToDictionary(p => p.Key.StartsWith($"{nameof(DocFeeRequisitionItem)}.", StringComparison.OrdinalIgnoreCase) ? p.Key.Substring(nameof(DocFeeRequisitionItem).Length + 1) : p.Key, p => p.Value, StringComparer.OrdinalIgnoreCase);
-            var jobConditions = conditional.Where(p => p.Key.StartsWith($"{nameof(PlJob)}.", StringComparison.OrdinalIgnoreCase)).ToDictionary(p => p.Key.Substring(nameof(PlJob).Length + 1), p => p.Value, StringComparer.OrdinalIgnoreCase);
-            var feeConditions = conditional.Where(p => p.Key.StartsWith($"{nameof(DocFee)}.", StringComparison.OrdinalIgnoreCase)).ToDictionary(p => p.Key.Substring(nameof(DocFee).Length + 1), p => p.Value, StringComparer.OrdinalIgnoreCase);
-            var requisitionConditions = conditional.Where(p => p.Key.StartsWith($"{nameof(DocFeeRequisition)}.", StringComparison.OrdinalIgnoreCase)).ToDictionary(p => p.Key.Substring(nameof(DocFeeRequisition).Length + 1), p => p.Value, StringComparer.OrdinalIgnoreCase);
-            var billConditions = conditional.Where(p => p.Key.StartsWith($"{nameof(DocBill)}.", StringComparison.OrdinalIgnoreCase)).ToDictionary(p => p.Key.Substring(nameof(DocBill).Length + 1), p => p.Value, StringComparer.OrdinalIgnoreCase);
+            var itemConditions = conditional.Where(p => p.Key.StartsWith($"{nameof(DocFeeRequisitionItem)}.", StringComparison.OrdinalIgnoreCase) || !p.Key.Contains('.')).ToDictionary(p => p.Key.StartsWith($"{nameof(DocFeeRequisitionItem)}.", StringComparison.OrdinalIgnoreCase) ? p.Key[(nameof(DocFeeRequisitionItem).Length + 1)..] : p.Key, p => p.Value, StringComparer.OrdinalIgnoreCase);
+            var jobConditions = conditional.Where(p => p.Key.StartsWith($"{nameof(PlJob)}.", StringComparison.OrdinalIgnoreCase)).ToDictionary(p => p.Key[(nameof(PlJob).Length + 1)..], p => p.Value, StringComparer.OrdinalIgnoreCase);
+            var feeConditions = conditional.Where(p => p.Key.StartsWith($"{nameof(DocFee)}.", StringComparison.OrdinalIgnoreCase)).ToDictionary(p => p.Key[(nameof(DocFee).Length + 1)..], p => p.Value, StringComparer.OrdinalIgnoreCase);
+            var requisitionConditions = conditional.Where(p => p.Key.StartsWith($"{nameof(DocFeeRequisition)}.", StringComparison.OrdinalIgnoreCase)).ToDictionary(p => p.Key[(nameof(DocFeeRequisition).Length + 1)..], p => p.Value, StringComparer.OrdinalIgnoreCase);
+            var billConditions = conditional.Where(p => p.Key.StartsWith($"{nameof(DocBill)}.", StringComparison.OrdinalIgnoreCase)).ToDictionary(p => p.Key[(nameof(DocBill).Length + 1)..], p => p.Value, StringComparer.OrdinalIgnoreCase);
             
             // 第二步：生成各个子查询的过滤
             var itemsQuery = EfHelper.GenerateWhereAnd(_DbContext.DocFeeRequisitionItems.AsQueryable(), itemConditions) ?? _DbContext.DocFeeRequisitionItems.AsQueryable();

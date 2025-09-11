@@ -109,25 +109,24 @@ namespace PowerLmsWebApi.Controllers
                 entity.GenerateIdIfEmpty();
 
                 // 权限检查
-                string err;
                 var collPerm = GetJobsFromFeeIds(model.FeeIds);
                 if (collPerm.Any())
                 {
                     if (collPerm.Any(c => c.JobTypeId == ProjectContent.AeId))
                     {
-                        if (!_AuthorizationManager.Demand(out err, "D0.7.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                        if (!_AuthorizationManager.Demand(out string err, "D0.7.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
                     }
                     if (collPerm.Any(c => c.JobTypeId == ProjectContent.AiId))
                     {
-                        if (!_AuthorizationManager.Demand(out err, "D1.7.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                        if (!_AuthorizationManager.Demand(out string err, "D1.7.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
                     }
                     if (collPerm.Any(c => c.JobTypeId == ProjectContent.SeId))
                     {
-                        if (!_AuthorizationManager.Demand(out err, "D2.7.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                        if (!_AuthorizationManager.Demand(out string err, "D2.7.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
                     }
                     if (collPerm.Any(c => c.JobTypeId == ProjectContent.SiId))
                     {
-                        if (!_AuthorizationManager.Demand(out err, "D3.7.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                        if (!_AuthorizationManager.Demand(out string err, "D3.7.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
                     }
                 }
 
@@ -212,24 +211,23 @@ namespace PowerLmsWebApi.Controllers
             var jobs = GetJobsFromFeeIds(oldFee.Select(c => c.Id)); // 相关业务对象
 
             // 权限检查
-            string err;
             if (jobs.Any())
             {
                 if (jobs.Any(c => c.JobTypeId == ProjectContent.AeId))   //若有空运出口业务
                 {
-                    if (!_AuthorizationManager.Demand(out err, "D0.7.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                    if (!_AuthorizationManager.Demand(out string err, "D0.7.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
                 }
                 if (jobs.Any(c => c.JobTypeId == ProjectContent.AiId))   //若有空运进口业务
                 {
-                    if (!_AuthorizationManager.Demand(out err, "D1.7.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                    if (!_AuthorizationManager.Demand(out string err, "D1.7.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
                 }
                 if (jobs.Any(c => c.JobTypeId == ProjectContent.SeId))   //若有海运出口业务
                 {
-                    if (!_AuthorizationManager.Demand(out err, "D2.7.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                    if (!_AuthorizationManager.Demand(out string err, "D2.7.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
                 }
                 if (jobs.Any(c => c.JobTypeId == ProjectContent.SiId))   //若有海运进口业务
                 {
-                    if (!_AuthorizationManager.Demand(out err, "D3.7.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                    if (!_AuthorizationManager.Demand(out string err, "D3.7.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
                 }
             }
 
@@ -289,15 +287,14 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveDocBillReturnDto();
             var jobs = GetJobsFromBillIds(new Guid[] { model.Id });
-            string err;
             if (jobs.Any(c => c.JobTypeId == ProjectContent.AeId))   //若有空运出口业务
-                if (!_AuthorizationManager.Demand(out err, "D0.7.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!_AuthorizationManager.Demand(out string err, "D0.7.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             if (jobs.Any(c => c.JobTypeId == ProjectContent.AeId))   //若有空运进口业务
-                if (!_AuthorizationManager.Demand(out err, "D1.7.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!_AuthorizationManager.Demand(out string err, "D1.7.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             if (jobs.Any(c => c.JobTypeId == ProjectContent.SeId))   //若有海运出口业务
-                if (!_AuthorizationManager.Demand(out err, "D2.7.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!_AuthorizationManager.Demand(out string err, "D2.7.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             if (jobs.Any(c => c.JobTypeId == ProjectContent.SiId))   //若有海运进口业务
-                if (!_AuthorizationManager.Demand(out err, "D3.7.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!_AuthorizationManager.Demand(out string err, "D3.7.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
 
             var id = model.Id;
             var dbSet = _DbContext.DocBills;
@@ -331,9 +328,8 @@ namespace PowerLmsWebApi.Controllers
             var result = new GetDocBillsByJobIdReturnDto();
             var collJob = _DbContext.PlJobs.Where(c => model.Ids.Contains(c.Id));
             if (collJob.Count() != model.Ids.Count) return NotFound();
-            string err;
-            var allowAe = _AuthorizationManager.Demand(out err, "D0.7.2");
-            var allowAi = _AuthorizationManager.Demand(out err, "D1.7.2");
+            var allowAe = _AuthorizationManager.Demand(out string err, "D0.7.2");
+            var allowAi = _AuthorizationManager.Demand(out string err2, "D1.7.2");
 
             var coll = from job in _DbContext.PlJobs
                        where model.Ids.Contains(job.Id) && (allowAe || job.JobTypeId != ProjectContent.AeId) && (allowAi || job.JobTypeId != ProjectContent.AiId)

@@ -197,7 +197,14 @@ namespace PowerLmsWebApi.Controllers
                 if (unsupportedTables.Any())
                 {
                     _Logger.LogWarning("批量导出失败：包含不支持的表名称 {UnsupportedTables}", string.Join(", ", unsupportedTables));
-                    return BadRequest($"不支持的表名称: {string.Join(", ", unsupportedTables)}。SimpleDataDic（简单字典）请使用专门的简单字典导入导出API。");
+                    
+                    // 特别处理SimpleDataDic的错误信息
+                    if (unsupportedTables.Contains("SimpleDataDic", StringComparer.OrdinalIgnoreCase))
+                    {
+                        return BadRequest($"不支持的表名称: {string.Join(", ", unsupportedTables)}。简单字典(SimpleDataDic)请使用专门的简单字典导入导出API：/api/ImportExport/ExportSimpleDictionary");
+                    }
+                    
+                    return BadRequest($"不支持的表名称: {string.Join(", ", unsupportedTables)}。支持的独立字典表有：{string.Join(", ", dictionaryTypes)}。支持的客户资料表有：{string.Join(", ", customerSubTypes)}");
                 }
 
                 byte[] fileBytes;

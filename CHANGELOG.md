@@ -1,11 +1,150 @@
 ﻿# PowerLms 变更日志
 
 ## 功能变更总览
+- **新增通用数据查询接口**：支持多种实体类型的字段值查询，提供灵活的去重控制选项，未来将支持客户资料、工作号等更多实体
+- **BUG修复：字典导出"键重复"错误彻底解决**：修复币种等字典导出时的重复键异常，优化API选择错误提示
 - **收款结算单导出金蝶功能完整实施：** 实现复杂的七种凭证分录规则，支持多币种和混合业务场景，财务自动化核心功能正式上线
 - 导入导出控制器代码质量全面优化：日志记录、错误处理、参数验证完善
 - 账单实体增加收支方向IO字段管理功能
 - OA费用申请单结算确认流程状态管理和编辑权限控制
 - 提示词文件WBS编号重新整理，确保编号唯一且连续
+
+---
+
+## [2025-01-27] - 通用数据查询接口
+
+### 业务变更（面向项目经理）
+
+#### 1. **通用数据查询功能上线：多实体类型查询支持**
+- **业务价值**：提供统一的数据查询接口，支持多种实体类型的字段值查询，为前端选择器和联想功能提供数据支撑
+- **现支持实体**：OA费用申请单、业务费用申请单的收款人相关字段查询
+- **扩展性设计**：架构设计支持未来新增客户资料、工作号、费用信息等更多实体类型
+- **灵活去重控制**：用户可选择是否使用DISTINCT去重查询，满足不同业务场景需求
+
+#### 2. **架构清晰设计**
+- **明确switch case结构**：使用清晰的switch case模式处理不同实体类型
+- **辅助函数分离**：每种实体类型使用专门的查询辅助函数，便于维护和扩展
+- **安全机制完善**：表白名单、字段白名单、机构隔离、用户权限控制等多层安全保障
+
+### API变更（面向前端）
+
+#### 1. **新增API**
+- **通用数据查询接口**
+  ```
+  GET /api/CommonDataQuery/QueryData
+  参数：CommonDataQueryParamsDto
+  - Token: Guid - 用户访问令牌（必填）
+  - TableName: string - 表名（必填）
+  - FieldName: string - 字段名（必填）
+  - IsDistinct: bool - 是否去重查询，默认true（可选）
+  - MaxResults: int - 最大返回结果数量，默认50，最大200（可选）
+  
+  返回：CommonDataQueryReturnDto
+  - TableName: string - 查询的表名
+  - FieldName: string - 查询的字段名
+  - IsDistinct: bool - 是否使用了去重查询
+  - Values: List<string> - 字段值列表（按字母顺序排序）
+  ```
+
+#### 2. **支持的表和字段映射**
+- **OaExpenseRequisitions（OA费用申请单）**
+  - ReceivingBank：收款银行
+  - ReceivingAccountName：收款户名
+  - ReceivingAccountNumber：收款人账号
+- **DocFeeRequisitions（业务费用申请单）**
+  - BlanceAccountNo：结算单位账号
+  - Bank：结算单位开户行
+  - Contact：结算单位联系人
+
+#### 3. **未来扩展支持（架构已预留）**
+- **PlCustomers（客户资料）**：Name, ShortName, FinanceCode 等
+- **PlJobs（工作号）**：JobNo, MblNo, Vessel 等
+- **DocFees（费用信息）**：FeeTypeName, Currency 等
+
+#### 4. **灵活查询控制**
+- **去重可选**：IsDistinct参数控制是否使用DISTINCT查询
+- **结果限制**：MaxResults参数控制返回结果数量
+- **安全过滤**：自动过滤空值和空白字符串
+- **数据隔离**：强制按机构ID和用户权限过滤数据
+
+#### 5. **架构设计特点**
+- **明确的switch case**：根据表名清晰分发到对应的查询函数
+- **辅助函数模式**：每种实体类型使用专门的查询辅助函数
+- **扩展友好**：新增实体类型只需添加case分支和对应辅助函数
+- **错误处理完善**：详细的错误码和调试信息
+
+---
+
+## [2025-01-31] - 字典导出BUG修复
+
+### 业务变更（面向项目经理）
+
+#### 1. **字典导出"键重复"错误彻底解决**
+- **问题背景**：币种等非简单字典导出时报错"An item with the same key has already been added. Key: CARGOTYPE"
+- **根因分析**：数据库中同一Catalog Code存在多条记录（不同OrgId），直接调用ToDictionary导致重复键异常
+- **解决方案**：实现安全的字典构建机制，优先选择当前组织的记录，避免键重复错误
+- **用户体验提升**：提供更明确的API选择指导，区分独立字典表和简单字典的不同调用方式
+
+#### 2. **API选择错误提示优化**
+- **错误提示改进**：当用户错误调用API时，提供明确的正确API路径指导
+- **类型区分说明**：明确区分PlCurrency（独立字典表）和SimpleDataDic（简单字典）的不同使用场景
+- **支持列表展示**：错误信息中列出所有支持的表类型，帮助用户正确选择
+
+### API变更（面向前端）
+
+#### 1. **ImportExportService.SimpleDataDic.cs 关键修复**
+- **GetCatalogMappingBatch方法优化**
+  - 修复键重复错误：先获取结果列表，不直接调用ToDictionary
+  - 安全字典构建：检查重复键，优先选择当前组织的记录
+  - 详细日志记录：记录重复键处理过程和缺失的Catalog Codes
+  - 使用StringComparer.OrdinalIgnoreCase确保大小写不敏感匹配
+
+#### 2. **ImportExportController.cs 错误处理改进**
+- **ExportMultipleTables方法优化**
+  - 特别处理SimpleDataDic的错误信息，提供正确的API路径
+  - 详细列出支持的独立字典表和客户资料表类型
+  - 改进用户友好的错误提示信息
+
+#### 3. **修复技术细节**
+```csharp
+// 修复前（会抛出重复键异常）
+return query.ToDictionary(x => x.Code, x => x.Id);
+
+// 修复后（安全的字典构建）
+var result = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
+foreach (var catalog in catalogList)
+{
+    if (!result.ContainsKey(catalog.Code))
+    {
+        result.Add(catalog.Code, catalog.Id);
+    }
+    else
+    {
+        // 优先选择当前组织的记录
+        if (catalog.OrgId == orgId)
+        {
+            result[catalog.Code] = catalog.Id;
+        }
+    }
+}
+```
+
+### 用户操作指南
+
+#### 1. **正确的API调用方式**
+- **币种等独立字典表导出**：
+  ```
+  GET /api/ImportExport/ExportMultipleTables?tableNames=PlCurrency
+  ```
+- **简单字典导出**：
+  ```
+  GET /api/ImportExport/ExportSimpleDictionary?catalogCodes=CARGOTYPE,PACKTYPE
+  ```
+
+#### 2. **错误避免**
+- 不要在多表导出API中传入SimpleDataDic
+- 不要在简单字典API中传入PlCurrency等独立表名
+- 注意区分实体类型名称（PlCurrency）和分类代码（CARGOTYPE）
 
 ---
 
@@ -214,16 +353,20 @@
 ## 技术架构变更记录
 
 ### 分部类架构设计
+- **CommonDataQueryController** 通用数据查询控制器，支持多种实体类型的字段值查询，使用明确的switch case架构
 - **FinancialSystemExportController** 采用分部类模式，支持多种财务软件扩展
 - **收款结算单导出模块** 独立实现，便于维护和扩展
 - **OA费用申请单控制器** 按功能模块拆分，提升代码可维护性
 
 ### 数据模型扩展
+- **通用数据查询DTO** 新增CommonDataQueryParamsDto和CommonDataQueryReturnDto，支持灵活的去重控制
 - **PlInvoices** 实体新增16个财务相关字段，支持复杂的财务计算
 - **PlOrganizationParameter** 新增机构参数管理实体
 - **SubjectConfiguration** 财务科目配置体系完善
 
 ### 基础设施优化
+- **表白名单机制** 确保通用数据查询的安全性和可控性，支持未来扩展更多实体类型
+- **switch case架构** 使用明确的switch case模式和辅助函数，便于维护和扩展
 - **ImportExportService** 统一导入导出服务，支持动态表发现
 - **OwTaskService** 异步任务处理机制，支持大数据量处理
 - **权限验证体系** 完善的权限控制和审计追踪机制

@@ -30,12 +30,12 @@ namespace PowerLmsWebApi.Controllers
             _AuthorizationManager = authorizationManager;
         }
 
-        private AccountManager _AccountManager;
-        private IServiceProvider _ServiceProvider;
-        private PowerLmsUserDbContext _DbContext;
-        private EntityManager _EntityManager;
-        private IMapper _Mapper;
-        AuthorizationManager _AuthorizationManager;
+        private readonly AccountManager _AccountManager;
+        private readonly IServiceProvider _ServiceProvider;
+        private readonly PowerLmsUserDbContext _DbContext;
+        private readonly EntityManager _EntityManager;
+        private readonly IMapper _Mapper;
+        private readonly AuthorizationManager _AuthorizationManager;
 
         #region 模板表相关
 
@@ -52,8 +52,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             #region 权限判定
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "E.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out string err, "E.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             #endregion 权限判定
 
             var result = new AddWorkflowTemplateReturnDto();
@@ -119,8 +118,7 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyWorkflowTemplateReturnDto();
             #region 权限判定
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "E.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out string err, "E.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             #endregion 权限判定
             if (!_EntityManager.Modify(model.Items)) return NotFound();
             //foreach (var item in model.Items)
@@ -148,8 +146,7 @@ namespace PowerLmsWebApi.Controllers
             var result = new RemoveWorkflowTemplateReturnDto();
 
             #region 权限判定
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "E.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out string err, "E.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             #endregion 权限判定
 
             var dbSet = _DbContext.WfTemplates;
@@ -179,8 +176,7 @@ namespace PowerLmsWebApi.Controllers
             var result = new AddWfTemplateNodeReturnDto();
 
             #region 权限判定
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "E.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out string err, "E.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             #endregion 权限判定
             if (model.Item.NextId is not null)
             {
@@ -263,8 +259,7 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyWfTemplateNodeReturnDto();
             #region 权限判定
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "E.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out string err, "E.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             #endregion 权限判定
             var ids = model.Items.Where(c => c.NextId is not null).Select(c => c.NextId);
             var nextNodeCount = _DbContext.WfTemplateNodes.Count(c => ids.Contains(c.Id));
@@ -294,8 +289,7 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveWfTemplateNodeReturnDto();
             #region 权限判定
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "E.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out string err, "E.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             #endregion 权限判定
             var dbSet = _DbContext.WfTemplateNodes;
 
@@ -365,8 +359,7 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddWfTemplateNodeItemReturnDto();
             #region 权限判定
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "E.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out string err, "E.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             #endregion 权限判定
             model.Item.GenerateNewId();
 
@@ -426,8 +419,7 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyWfTemplateNodeItemReturnDto();
             #region 权限判定
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "E.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out string err, "E.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             #endregion 权限判定
             if (!_EntityManager.Modify(model.Items)) return NotFound();
             //foreach (var item in model.Items)
@@ -454,8 +446,7 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveWfTemplateNodeItemReturnDto();
             #region 权限判定
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "E.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out string err, "E.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             #endregion 权限判定
 
             var dbSet = _DbContext.WfTemplateNodeItems;
@@ -482,8 +473,7 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new SetWfTemplateNodeItemReturnDto();
             #region 权限判定
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "E.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out string err, "E.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             #endregion 权限判定
             var parent = _DbContext.WfTemplateNodes.FirstOrDefault(c => c.Id == model.ParentId);
             if (parent is null) return NotFound();

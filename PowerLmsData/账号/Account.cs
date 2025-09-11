@@ -136,7 +136,7 @@ namespace PowerLms.Data
         public string FinanceCode { get; set; }
 
         #region 瞬时属性
-        ConcurrentDictionary<string, object> _RuntimeProperties = new ConcurrentDictionary<string, object>();
+        private readonly ConcurrentDictionary<string, object> _RuntimeProperties = new ConcurrentDictionary<string, object>();
 
         /// <summary>
         /// 记录瞬时属性的字典。

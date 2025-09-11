@@ -144,9 +144,8 @@ namespace PowerLmsWebApi.Controllers
                 #endregion 业务表单关联过滤
 
                 #region 权限判定
-                string err;
                 var r = coll.AsEnumerable();    //设计备注：如果结果集小则没问题；如果结果集大虽然这导致巨大内存消耗，但在此问题规模下，用内存替换cpu消耗是合理的置换代价
-                if (!_AuthorizationManager.Demand(out err, "F.2"))  //若无通用查看权限
+                if (!_AuthorizationManager.Demand(out string err, "F.2"))  //若无通用查看权限
                 {
                     var currentCompany = _OrgManager.GetCurrentCompanyByUser(context.User);
                     if (currentCompany == null)
@@ -1073,8 +1072,7 @@ namespace PowerLmsWebApi.Controllers
                 return Unauthorized();
 
             // 权限验证 - 关闭账期需要特殊权限
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "F.2.9"))
+            if (!_AuthorizationManager.Demand(out string err, "F.2.9"))
                 return StatusCode((int)HttpStatusCode.Forbidden, err);
 
             var result = new CloseAccountingPeriodReturnDto();
@@ -1197,8 +1195,8 @@ namespace PowerLmsWebApi.Controllers
             {
                 throw new ArgumentException("账期格式错误，应为YYYYMM格式", nameof(accountingPeriod));
             }
-            var year = int.Parse(accountingPeriod.Substring(0, 4));
-            var month = int.Parse(accountingPeriod.Substring(4, 2));
+            var year = int.Parse(accountingPeriod[..4]);
+            var month = int.Parse(accountingPeriod[4..6]);
             var startDate = new DateTime(year, month, 1); // 当月第一天 00:00:00
             var endDate = startDate.AddMonths(1); // 下月第一天 00:00:00
             return (startDate, endDate);
@@ -1231,8 +1229,8 @@ namespace PowerLmsWebApi.Controllers
             {
                 throw new ArgumentException("账期格式错误，应为YYYYMM格式", nameof(currentPeriod));
             }
-            if (!int.TryParse(currentPeriod.Substring(0, 4), out var year) ||
-                !int.TryParse(currentPeriod.Substring(4, 2), out var month))
+            if (!int.TryParse(currentPeriod[..4], out var year) ||
+                !int.TryParse(currentPeriod[4..6], out var month))
             {
                 throw new ArgumentException("账期格式错误，应为YYYYMM格式", nameof(currentPeriod));
             }

@@ -22,8 +22,8 @@ namespace PowerLmsWebApi.Controllers.System
             _UserDbContext = userDbContext;
         }
 
-        CaptchaManager _CaptchaManager;
-        PowerLmsUserDbContext _UserDbContext;
+        readonly CaptchaManager _CaptchaManager;
+        readonly PowerLmsUserDbContext _UserDbContext;
 
         /// <summary>
         /// 获取一个新的验证码图片，下载的图片文件名（无扩展名）需要记住，在验证时，需要将答案和文件名一同上传。

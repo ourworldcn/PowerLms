@@ -17,12 +17,12 @@ namespace PowerLmsWebApi.Controllers
     /// </summary>
     public class PlSeaborneController : PlControllerBase
     {
-        private AccountManager _AccountManager;
-        private IServiceProvider _ServiceProvider;
-        private PowerLmsUserDbContext _DbContext;
-        private EntityManager _EntityManager;
-        private IMapper _Mapper;
-        readonly AuthorizationManager _AuthorizationManager;
+        private readonly AccountManager _AccountManager;
+        private readonly IServiceProvider _ServiceProvider;
+        private readonly PowerLmsUserDbContext _DbContext;
+        private readonly EntityManager _EntityManager;
+        private readonly IMapper _Mapper;
+        private readonly AuthorizationManager _AuthorizationManager;
         /// <summary>
         /// 狗构造函数。
         /// </summary>
@@ -79,8 +79,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<AddPlIsDocReturnDto> AddPlIsDoc(AddPlIsDocParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "D3.1.1.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out string err, "D3.1.1.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
 
             var result = new AddPlIsDocReturnDto();
             var entity = model.PlIsDoc;
@@ -105,8 +104,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<ModifyPlIsDocReturnDto> ModifyPlIsDoc(ModifyPlIsDocParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "D3.1.1.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out string err, "D3.1.1.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ModifyPlIsDocReturnDto();
             if (!_EntityManager.Modify(new[] { model.PlIsDoc })) return NotFound();
             _DbContext.SaveChanges();
@@ -126,8 +124,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<RemovePlIsDocReturnDto> RemovePlIsDoc(RemovePlIsDocParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "D3.1.1.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out string err, "D3.1.1.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new RemovePlIsDocReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.PlIsDocs;
@@ -178,8 +175,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<AddPlEsDocReturnDto> AddPlEsDoc(AddPlEsDocParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "D2.1.1.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out string err, "D2.1.1.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
 
             var result = new AddPlEsDocReturnDto();
             var entity = model.PlEsDoc;
@@ -205,8 +201,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<ModifyPlEsDocReturnDto> ModifyPlEsDoc(ModifyPlEsDocParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "D2.1.1.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out string err, "D2.1.1.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ModifyPlEsDocReturnDto();
             if (!_EntityManager.Modify(new[] { model.PlEsDoc })) return NotFound();
             _DbContext.SaveChanges();
@@ -227,8 +222,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<RemovePlEsDocReturnDto> RemovePlEsDoc(RemovePlEsDocParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "D2.1.1.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out string err, "D2.1.1.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new RemovePlEsDocReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.PlEsDocs;

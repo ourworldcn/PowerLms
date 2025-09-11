@@ -451,7 +451,7 @@ namespace PowerLmsWebApi.Controllers.OA
         /// <response code="200">回退成功。</response>
         /// <response code="400">回退失败，申请单不存在或其他业务错误。</response>
         /// <response code="401">无效令牌。</response>
-        /// <response code="403">权限不足。优先使用现有权限OA.1.3（日常费用撤销），如无合适权限则在注释中说明未来增加权限控制。</response>
+        /// <response code="403">权限不足。使用OA.1.3（日常费用撤销）权限，专门控制OA日常费用申请单的撤销。</response>
         /// <response code="404">指定ID的申请单不存在。</response>
         /// <response code="500">回退过程中发生系统错误。</response>
         [HttpPost]
@@ -467,9 +467,8 @@ namespace PowerLmsWebApi.Controllers.OA
 
             try
             {
-                // 1. 权限验证（优先使用现有权限"OA.1.3"（日常费用撤销），如无合适权限则说明未来增加权限控制）
-                string err;
-                if (!_AuthorizationManager.Demand(out err, "OA.1.3"))  // 使用现有的日常费用撤销权限
+                // 1. 权限验证（使用OA.1.3日常费用撤销权限，专门控制OA日常费用申请单的撤销）
+                if (!_AuthorizationManager.Demand(out string err, "OA.1.3"))  // 使用OA.1.3日常费用撤销权限
                 {
                     _Logger.LogWarning("权限不足，用户{UserId}尝试回退OA费用申请单{RequisitionId}", context.User.Id, model.RequisitionId);
                     return StatusCode((int)HttpStatusCode.Forbidden, "权限不足：需要日常费用撤销权限（OA.1.3）");

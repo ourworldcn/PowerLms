@@ -128,7 +128,7 @@ namespace PowerLmsWebApi.Controllers.OA
             try
             {
                 // 🔧 修复权限验证 - 使用正确的权限代码 OA.1.1
-                if (!_AuthorizationManager.Demand(out var err, "OA.1.1"))
+                if (!_AuthorizationManager.Demand(out string err, "OA.1.1"))
                 {
                     _Logger.LogWarning("权限检查失败 - 用户: {UserId}, 权限: OA.1.1, 错误信息: {Error}", 
                         context.User.Id, err);
@@ -221,7 +221,7 @@ namespace PowerLmsWebApi.Controllers.OA
             try
             {
                 // 🔧 修复权限验证 - 使用正确的权限代码 OA.1.1
-                if (!_AuthorizationManager.Demand(out var err, "OA.1.1"))
+                if (!_AuthorizationManager.Demand(out string err, "OA.1.1"))
                 {
                     _Logger.LogWarning("权限检查失败 - 用户: {UserId}, 权限: OA.1.1, 错误信息: {Error}", 
                         context.User.Id, err);

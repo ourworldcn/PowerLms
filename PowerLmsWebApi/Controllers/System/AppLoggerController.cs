@@ -24,10 +24,10 @@ namespace GY02.Controllers
         private readonly AccountManager _AccountManager;
         private readonly IServiceProvider _ServiceProvider;
         private readonly EntityManager _EntityManager;
-        OrgManager<PowerLmsUserDbContext> _OrgManager;
+        private readonly OrgManager<PowerLmsUserDbContext> _OrgManager;
         private readonly IMapper _Mapper;
-        OwSqlAppLogger _AppLogger;
-        PowerLmsUserDbContext _DbContext;
+        private readonly OwSqlAppLogger _AppLogger;
+        private readonly PowerLmsUserDbContext _DbContext;
 
         /// <summary>
         /// 构造函数。

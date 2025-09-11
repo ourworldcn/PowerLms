@@ -35,24 +35,23 @@ namespace PowerLmsWebApi.Controllers
             if (_DbContext.PlJobs.Find(fee.JobId) is not PlJob job) return NotFound();
 
             #region 验证权限
-            string err;
-            if (!(model.IsAudit && _AuthorizationManager.Demand(out err, "F.2.4.5") || !model.IsAudit && _AuthorizationManager.Demand(out err, "F.2.4.6")))
+            if (!(model.IsAudit && _AuthorizationManager.Demand(out string err, "F.2.4.5") || !model.IsAudit && _AuthorizationManager.Demand(out string err2, "F.2.4.6")))
             {
                 if (job.JobTypeId == ProjectContent.AeId)
                 {
-                    if (!_AuthorizationManager.Demand(out err, "D0.6.7")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                    if (!_AuthorizationManager.Demand(out string err3, "D0.6.7")) return StatusCode((int)HttpStatusCode.Forbidden, err3);
                 }
                 else if (job.JobTypeId == ProjectContent.AiId)
                 {
-                    if (!_AuthorizationManager.Demand(out err, "D1.6.7")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                    if (!_AuthorizationManager.Demand(out string err4, "D1.6.7")) return StatusCode((int)HttpStatusCode.Forbidden, err4);
                 }
                 else if (job.JobTypeId == ProjectContent.SeId)
                 {
-                    if (!_AuthorizationManager.Demand(out err, "D2.6.7")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                    if (!_AuthorizationManager.Demand(out string err5, "D2.6.7")) return StatusCode((int)HttpStatusCode.Forbidden, err5);
                 }
                 else if (job.JobTypeId == ProjectContent.SiId)
                 {
-                    if (!_AuthorizationManager.Demand(out err, "D3.6.7")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                    if (!_AuthorizationManager.Demand(out string err6, "D3.6.7")) return StatusCode((int)HttpStatusCode.Forbidden, err6);
                 }
             }
             #endregion 验证权限
@@ -101,9 +100,8 @@ namespace PowerLmsWebApi.Controllers
             coll = EfHelper.GenerateWhereAnd(coll, normalizedConditional);
 
             #region 验证权限
-            string err;
             var r = coll.AsEnumerable();
-            if (!_AuthorizationManager.Demand(out err, "F.2.4.2"))  //若无通用查看权限
+            if (!_AuthorizationManager.Demand(out string err, "F.2.4.2"))  //若无通用查看权限
             {
                 var currentCompany = _OrgManager.GetCurrentCompanyByUser(context.User);
                 if (currentCompany == null)
@@ -195,8 +193,8 @@ namespace PowerLmsWebApi.Controllers
                         if (dotIndex > 0)
                         {
                             // 有实体前缀的条件
-                            string entityName = key.Substring(0, dotIndex).ToLowerInvariant();
-                            string propertyName = key.Substring(dotIndex + 1);
+                            string entityName = key[..dotIndex].ToLowerInvariant();
+                            string propertyName = key[(dotIndex + 1)..];
 
                             switch (entityName)
                             {
@@ -278,8 +276,7 @@ namespace PowerLmsWebApi.Controllers
                 feeQuery = feeQuery.OrderBy(model.OrderFieldName, model.IsDesc);
 
                 // 权限检查
-                string err;
-                bool hasGeneralPermission = _AuthorizationManager.Demand(out err, "F.2.4.2");
+                bool hasGeneralPermission = _AuthorizationManager.Demand(out string err, "F.2.4.2");
 
                 if (!hasGeneralPermission)
                 {
@@ -370,7 +367,7 @@ namespace PowerLmsWebApi.Controllers
                     {
                         // 没有相关工作任务，返回空结果
                         feeQuery = feeQuery.Where(f => false);
-                    }
+                      }
                 }
 
                 // 获取总数（必须在应用分页前进行）
@@ -478,9 +475,8 @@ namespace PowerLmsWebApi.Controllers
             if (model.Count > -1)
                 collBase = collBase.Take(model.Count);
             #region 验证权限
-            string err;
             var r = collBase.AsEnumerable();
-            if (!_AuthorizationManager.Demand(out err, "F.2.4.2"))  //若无通用查看权限
+            if (!_AuthorizationManager.Demand(out string err, "F.2.4.2"))  //若无通用查看权限
             {
                 var currentCompany = _OrgManager.GetCurrentCompanyByUser(context.User);
                 if (currentCompany == null)
@@ -550,24 +546,23 @@ namespace PowerLmsWebApi.Controllers
             if (_DbContext.PlJobs.Find(model.DocFee.JobId) is not PlJob job) return NotFound($"没有找到业务Id={model.DocFee.JobId}");
 
             #region 验证权限
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "F.2.4.1"))
+            if (!_AuthorizationManager.Demand(out string err, "F.2.4.1"))
             {
                 if (job.JobTypeId == ProjectContent.AeId)
                 {
-                    if (!_AuthorizationManager.Demand(out err, "D0.6.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                    if (!_AuthorizationManager.Demand(out string err2, "D0.6.1")) return StatusCode((int)HttpStatusCode.Forbidden, err2);
                 }
                 else if (job.JobTypeId == ProjectContent.AiId)    //若是空运进口业务
                 {
-                    if (!_AuthorizationManager.Demand(out err, "D1.6.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                    if (!_AuthorizationManager.Demand(out string err3, "D1.6.1")) return StatusCode((int)HttpStatusCode.Forbidden, err3);
                 }
                 else if (job.JobTypeId == ProjectContent.SeId)    //若是海运出口业务
                 {
-                    if (!_AuthorizationManager.Demand(out err, "D2.6.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                    if (!_AuthorizationManager.Demand(out string err4, "D2.6.1")) return StatusCode((int)HttpStatusCode.Forbidden, err4);
                 }
                 else if (job.JobTypeId == ProjectContent.SiId)    //若是海运进口业务
                 {
-                    if (!_AuthorizationManager.Demand(out err, "D3.6.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                    if (!_AuthorizationManager.Demand(out string err5, "D3.6.1")) return StatusCode((int)HttpStatusCode.Forbidden, err5);
                 }
             }
             #endregion 验证权限
@@ -598,24 +593,23 @@ namespace PowerLmsWebApi.Controllers
             if (_DbContext.PlJobs.Find(model.DocFee.JobId) is not PlJob job) return NotFound($"没有找到业务Id={model.DocFee.JobId}");
 
             #region 权限验证
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "F.2.4.3"))
+            if (!_AuthorizationManager.Demand(out string err, "F.2.4.3"))
             {
                 if (job.JobTypeId == ProjectContent.AeId)
                 {
-                    if (!_AuthorizationManager.Demand(out err, "D0.6.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                    if (!_AuthorizationManager.Demand(out string err2, "D0.6.3")) return StatusCode((int)HttpStatusCode.Forbidden, err2);
                 }
                 else if (job.JobTypeId == ProjectContent.AiId)
                 {
-                    if (!_AuthorizationManager.Demand(out err, "D1.6.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                    if (!_AuthorizationManager.Demand(out string err3, "D1.6.3")) return StatusCode((int)HttpStatusCode.Forbidden, err3);
                 }
                 else if (job.JobTypeId == ProjectContent.SeId)
                 {
-                    if (!_AuthorizationManager.Demand(out err, "D2.6.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                    if (!_AuthorizationManager.Demand(out string err4, "D2.6.3")) return StatusCode((int)HttpStatusCode.Forbidden, err4);
                 }
                 else if (job.JobTypeId == ProjectContent.SiId)
                 {
-                    if (!_AuthorizationManager.Demand(out err, "D3.6.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                    if (!_AuthorizationManager.Demand(out string err5, "D3.6.3")) return StatusCode((int)HttpStatusCode.Forbidden, err5);
                 }
             }
             #endregion 权限验证
@@ -647,24 +641,23 @@ namespace PowerLmsWebApi.Controllers
             if (_DbContext.DocFees.Find(model.Id) is not DocFee docFee) return NotFound($"没有找到费用Id={model.Id}");
             if (_DbContext.PlJobs.Find(docFee.JobId) is not PlJob job) return NotFound($"没有找到业务Id={docFee.JobId}");
             #region 权限验证
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "F.2.4.4"))
+            if (!_AuthorizationManager.Demand(out string err, "F.2.4.4"))
             {
                 if (job.JobTypeId == ProjectContent.AeId)
                 {
-                    if (!_AuthorizationManager.Demand(out err, "D0.6.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                    if (!_AuthorizationManager.Demand(out string err2, "D0.6.4")) return StatusCode((int)HttpStatusCode.Forbidden, err2);
                 }
                 else if (job.JobTypeId == ProjectContent.AiId)
                 {
-                    if (!_AuthorizationManager.Demand(out err, "D1.6.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                    if (!_AuthorizationManager.Demand(out string err3, "D1.6.4")) return StatusCode((int)HttpStatusCode.Forbidden, err3);
                 }
                 else if (job.JobTypeId == ProjectContent.SeId)
                 {
-                    if (!_AuthorizationManager.Demand(out err, "D2.6.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                    if (!_AuthorizationManager.Demand(out string err4, "D2.6.4")) return StatusCode((int)HttpStatusCode.Forbidden, err4);
                 }
                 else if (job.JobTypeId == ProjectContent.SiId)
                 {
-                    if (!_AuthorizationManager.Demand(out err, "D3.6.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                    if (!_AuthorizationManager.Demand(out string err5, "D3.6.4")) return StatusCode((int)HttpStatusCode.Forbidden, err5);
                 }
             }
             #endregion 权限验证
@@ -672,7 +665,6 @@ namespace PowerLmsWebApi.Controllers
             var id = model.Id;
             var dbSet = _DbContext.DocFees;
             var item = dbSet.Find(id);
-            //if (item.JobState > 0) return BadRequest("业务已经开始，无法删除。");
             if (item is null) return BadRequest();
             _EntityManager.Remove(item);
             _DbContext.SaveChanges();

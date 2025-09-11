@@ -325,6 +325,7 @@ namespace PowerLmsServer.Services
         /// <summary>
         /// 批量获取Catalog Code到ID的映射
         /// 性能优化：一次查询获取所有需要的映射关系，避免N+1查询问题
+        /// 修复：解决同一Catalog Code有多条记录时的键重复错误
         /// </summary>
         /// <param name="catalogCodes">Catalog Code列表</param>
         /// <param name="orgId">组织ID，用于多租户数据隔离</param>
@@ -346,9 +347,42 @@ namespace PowerLmsServer.Services
             }
 
             // 性能优化：只查询需要的字段，避免加载整个实体
-            return query
-                .Select(x => new { x.Code, x.Id })
-                .ToDictionary(x => x.Code, x => x.Id);
+            var catalogList = query
+                .Select(x => new { x.Code, x.Id, x.OrgId })
+                .ToList();
+
+            // 修复键重复问题：安全地构建字典，优先选择当前组织的记录
+            var result = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
+            
+            foreach (var catalog in catalogList)
+            {
+                if (!result.ContainsKey(catalog.Code))
+                {
+                    result.Add(catalog.Code, catalog.Id);
+                }
+                else
+                {
+                    // 如果已存在同名Code，优先选择当前组织的记录
+                    if (catalog.OrgId == orgId)
+                    {
+                        result[catalog.Code] = catalog.Id; // 覆盖为当前组织的记录
+                        _Logger.LogDebug("Catalog Code {Code} 存在多条记录，优先选择当前组织 {OrgId} 的记录", catalog.Code, orgId);
+                    }
+                    else
+                    {
+                        _Logger.LogDebug("Catalog Code {Code} 存在重复，保留已选择的记录", catalog.Code);
+                    }
+                }
+            }
+
+            if (result.Count < catalogCodes.Count)
+            {
+                var foundCodes = result.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
+                var missingCodes = catalogCodes.Where(code => !foundCodes.Contains(code)).ToList();
+                _Logger.LogWarning("未找到以下Catalog Codes: {MissingCodes}，OrgId: {OrgId}", string.Join(",", missingCodes), orgId);
+            }
+
+            return result;
         }
 
         /// <summary>

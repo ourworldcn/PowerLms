@@ -129,7 +129,7 @@ namespace PowerLmsWebApi.Controllers.Financial
             return result;
         }
 
-        #endregion
+        #endregion HTTP接口
 
         #region 静态任务处理方法
 
@@ -146,10 +146,8 @@ namespace PowerLmsWebApi.Controllers.Financial
             string currentStep = "参数验证";
             try
             {
-                if (serviceProvider == null)
-                    throw new ArgumentNullException(nameof(serviceProvider), "服务提供者不能为空");
-                if (parameters == null)
-                    throw new ArgumentNullException(nameof(parameters), "任务参数不能为空");
+                _ = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider), "服务提供者不能为空");
+                _ = parameters ?? throw new ArgumentNullException(nameof(parameters), "任务参数不能为空");
 
                 currentStep = "解析服务依赖";
                 var dbContextFactory = serviceProvider.GetService<IDbContextFactory<PowerLmsUserDbContext>>() ??
@@ -197,8 +195,7 @@ namespace PowerLmsWebApi.Controllers.Financial
                     throw new InvalidOperationException("创建数据库上下文失败");
 
                 currentStep = "加载科目配置";
-                var subjectConfigs = LoadSubjectConfigurations(dbContext, orgId);
-                if (subjectConfigs == null)
+                var subjectConfigs = LoadSubjectConfigurations(dbContext, orgId) ??
                     throw new InvalidOperationException("LoadSubjectConfigurations 返回 null");
                 if (!subjectConfigs.Any())
                     throw new InvalidOperationException($"科目配置未找到，无法生成凭证。组织ID: {orgId}，任务ID: {taskId}");
@@ -217,8 +214,7 @@ namespace PowerLmsWebApi.Controllers.Financial
                     throw new InvalidOperationException("ApplyOrganizationFilterStatic 返回 null");
 
                 currentStep = "查询发票数据";
-                var invoices = invoicesQuery.ToList();
-                if (invoices == null)
+                var invoices = invoicesQuery.ToList() ??
                     throw new InvalidOperationException("发票查询返回 null");
                 if (!invoices.Any())
                     throw new InvalidOperationException($"没有找到符合条件的发票数据。任务ID: {taskId}，预期数量: {expectedCount}，实际数量: 0");
@@ -232,8 +228,7 @@ namespace PowerLmsWebApi.Controllers.Financial
                     .ToDictionary(g => g.Key, g => g.ToList());
 
                 currentStep = "转换为金蝶凭证格式";
-                var kingdeeVouchers = ConvertInvoicesToKingdeeVouchersWithConfig(invoices, invoiceItemsDict, subjectConfigs, dbContext);
-                if (kingdeeVouchers == null)
+                var kingdeeVouchers = ConvertInvoicesToKingdeeVouchersWithConfig(invoices, invoiceItemsDict, subjectConfigs, dbContext) ??
                     throw new InvalidOperationException("ConvertInvoicesToKingdeeVouchersWithConfig 返回 null");
                 if (!kingdeeVouchers.Any())
                     throw new InvalidOperationException($"生成的金蝶凭证记录为空。任务ID: {taskId}，发票数量: {invoices.Count}");
@@ -289,8 +284,7 @@ namespace PowerLmsWebApi.Controllers.Financial
                 {
                     OwHelper.DisposeAndRelease(ref memoryStream);
                 }
-                if (fileInfoRecord == null)
-                    throw new InvalidOperationException("fileService.CreateFile 返回 null");
+                _ = fileInfoRecord ?? throw new InvalidOperationException("fileService.CreateFile 返回 null");
 
                 currentStep = "验证最终文件并返回结果";
                 long actualFileSize = 0;
@@ -334,7 +328,7 @@ namespace PowerLmsWebApi.Controllers.Financial
             }
         }
 
-        #endregion
+        #endregion 静态任务处理方法
 
         #region 静态辅助方法
 
@@ -369,12 +363,9 @@ namespace PowerLmsWebApi.Controllers.Financial
             Dictionary<string, SubjectConfiguration> subjectConfigs,
             PowerLmsUserDbContext dbContext)
         {
-            if (invoices == null)
-                throw new ArgumentNullException(nameof(invoices));
-            if (subjectConfigs == null)
-                throw new ArgumentNullException(nameof(subjectConfigs));
-            if (dbContext == null)
-                throw new ArgumentNullException(nameof(dbContext));
+            _ = invoices ?? throw new ArgumentNullException(nameof(invoices));
+            _ = subjectConfigs ?? throw new ArgumentNullException(nameof(subjectConfigs));
+            _ = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
 
             invoiceItemsDict ??= new Dictionary<Guid, List<TaxInvoiceInfoItem>>();
 
@@ -440,15 +431,15 @@ namespace PowerLmsWebApi.Controllers.Financial
                     }
 
                     // 安全地处理字符串，确保不会超过DBF字段限制
-                    customerName = customerName.Length > 200 ? customerName.Substring(0, 200) : customerName;
-                    summary = summary.Length > 200 ? summary.Substring(0, 200) : summary;
-                    customerFinancialCode = customerFinancialCode.Length > 50 ? customerFinancialCode.Substring(0, 50) : customerFinancialCode;
+                    customerName = customerName.Length > 200 ? customerName[..200] : customerName;
+                    summary = summary.Length > 200 ? summary[..200] : summary;
+                    customerFinancialCode = customerFinancialCode.Length > 50 ? customerFinancialCode[..50] : customerFinancialCode;
 
                     // 构建完整描述：客户名+摘要+客户财务编码
                     var description = $"{customerName}*{summary}*{customerFinancialCode}";
                     if (description.Length > 500)
                     {
-                        description = description.Substring(0, 500);
+                        description = description[..500];
                     }
 
                     var customerCode = string.IsNullOrEmpty(customerFinancialCode) ?
@@ -686,7 +677,7 @@ namespace PowerLmsWebApi.Controllers.Financial
             return filteredQuery.Distinct();
         }
 
-        #endregion
+        #endregion 静态辅助方法
 
         #region 实例方法
 
@@ -797,7 +788,7 @@ namespace PowerLmsWebApi.Controllers.Financial
             }
         }
 
-        #endregion
+        #endregion 实例方法
     }
 
 }

@@ -509,7 +509,7 @@ namespace PowerLmsWebApi.Controllers.Financial
                     if (item.EmployeeId.HasValue)
                     {
                         var employee = dbContext.Accounts.Find(item.EmployeeId.Value);
-                        if (employee != null)
+                        if (employee is not null)
                         {
                             exportManager.PopulateAccountingDimensions(creditVoucher, 
                                 accountingCategory1: "职员",
@@ -567,7 +567,7 @@ namespace PowerLmsWebApi.Controllers.Financial
                     if (item.EmployeeId.HasValue)
                     {
                         var employee = dbContext.Accounts.Find(item.EmployeeId.Value);
-                        if (employee != null)
+                        if (employee is not null)
                         {
                             exportManager.PopulateAccountingDimensions(debitVoucher, 
                                 accountingCategory1: "职员",

@@ -711,7 +711,7 @@ namespace PowerLmsWebApi.Controllers.Financial
                 FGROUP = voucherGroup,
                 FNUM = voucherNumber,
                 FENTRYID = entryId,
-                FEXP = summary.Length > 500 ? summary.Substring(0, 500) : summary,
+                FEXP = summary.Length > 500 ? summary[..500] : summary,
                 FCYID = "RMB",
                 FEXCHRATE = 1.0000000m,
                 FPREPARE = preparerName,

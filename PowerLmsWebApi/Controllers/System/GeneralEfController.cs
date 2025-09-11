@@ -193,8 +193,7 @@ namespace PowerLmsWebApi.Controllers
             string permissionCode = GetPermissionCode(1); // 查询操作
             if (permissionCode != null)
             {
-                string errorMessage;
-                if (!_authorizationManager.Demand(out errorMessage, permissionCode))
+                if (!_authorizationManager.Demand(out string errorMessage, permissionCode))
                     return StatusCode((int)HttpStatusCode.Forbidden, errorMessage);
             }
 
@@ -265,8 +264,7 @@ namespace PowerLmsWebApi.Controllers
             string permissionCode = GetPermissionCode(2); // 添加操作
             if (permissionCode != null)
             {
-                string errorMessage;
-                if (!_authorizationManager.Demand(out errorMessage, permissionCode))
+                if (!_authorizationManager.Demand(out string errorMessage, permissionCode))
                     return StatusCode((int)HttpStatusCode.Forbidden, errorMessage);
             }
 
@@ -331,8 +329,7 @@ namespace PowerLmsWebApi.Controllers
             string permissionCode = GetPermissionCode(3); // 修改操作
             if (permissionCode != null)
             {
-                string errorMessage;
-                if (!_authorizationManager.Demand(out errorMessage, permissionCode))
+                if (!_authorizationManager.Demand(out string errorMessage, permissionCode))
                     return StatusCode((int)HttpStatusCode.Forbidden, errorMessage);
             }
 
@@ -419,8 +416,7 @@ namespace PowerLmsWebApi.Controllers
             string permissionCode = GetPermissionCode(4); // 删除操作
             if (permissionCode != null)
             {
-                string errorMessage;
-                if (!_authorizationManager.Demand(out errorMessage, permissionCode))
+                if (!_authorizationManager.Demand(out string errorMessage, permissionCode))
                     return StatusCode((int)HttpStatusCode.Forbidden, errorMessage);
             }
 
@@ -596,7 +592,7 @@ public class CustomerController : SimpleCrudController<PlCustomer, PlCustomerDto
         return _dbContext.PlCustomers;
     }
 
-    protected override string GetPermissionCode(int operation)
+    protected override String GetPermissionCode(int operation)
     {
         return operation switch
         {

@@ -54,15 +54,15 @@ namespace PowerLmsServer.Managers
             _Logger = logger;
         }
 
-        PowerLmsUserDbContext _DbContext;
+        private readonly PowerLmsUserDbContext _DbContext;
 
         /// <summary>
         /// 获取该管理器的数据库上下文。
         /// </summary>
         public PowerLmsUserDbContext DbContext => _DbContext;
-        OwContext _OwContext;
-        IMapper _Mapper;
-        ILogger<DataDicManager> _Logger;
+        private readonly OwContext _OwContext;
+        private readonly IMapper _Mapper;
+        private readonly ILogger<DataDicManager> _Logger;
 
         /// <summary>
         /// 复制数据字典。调用者需要自己保存更改。

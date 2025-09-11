@@ -54,12 +54,12 @@ namespace PowerLmsWebApi.Controllers
             _WfManager = owWfManager;
         }
 
-        private IServiceProvider _ServiceProvider;
-        private AccountManager _AccountManager;
-        private PowerLmsUserDbContext _DbContext;
-        EntityManager _EntityManager;
-        IMapper _Mapper;
-        OwWfManager _WfManager;
+        private readonly IServiceProvider _ServiceProvider;
+        private readonly AccountManager _AccountManager;
+        private readonly PowerLmsUserDbContext _DbContext;
+        private readonly EntityManager _EntityManager;
+        private readonly IMapper _Mapper;
+        private readonly OwWfManager _WfManager;
 
         /// <summary>
         /// 获取文档相关的流程信息。

@@ -57,7 +57,7 @@ namespace PowerLmsWebApi.Controllers
                     {
                         var reqConditions = conditional.Where(kv => kv.Key.StartsWith($"{nameof(DocFeeRequisition)}.", StringComparison.OrdinalIgnoreCase) || !kv.Key.Contains('.'))
                             .ToDictionary(kv => kv.Key.StartsWith($"{nameof(DocFeeRequisition)}.", StringComparison.OrdinalIgnoreCase) ? 
-                                kv.Key.Substring(nameof(DocFeeRequisition).Length + 1) : kv.Key, kv => kv.Value, StringComparer.OrdinalIgnoreCase);
+                                kv.Key[(nameof(DocFeeRequisition).Length + 1)..] : kv.Key, kv => kv.Value, StringComparer.OrdinalIgnoreCase);
                         dbSet = EfHelper.GenerateWhereAnd(dbSet, reqConditions);
                     }
                 }
@@ -133,7 +133,7 @@ namespace PowerLmsWebApi.Controllers
                         // 处理工作流条件
                         if (pair.Key.StartsWith("OwWf.", StringComparison.OrdinalIgnoreCase))
                         {
-                            string wfFieldName = pair.Key.Substring(5); // 去掉"OwWf."前缀
+                            string wfFieldName = pair.Key[5..]; // 去掉"OwWf."前缀
 
                             // 处理 State 的特殊情况
                             if (string.Equals(wfFieldName, "State", StringComparison.OrdinalIgnoreCase))
@@ -207,7 +207,7 @@ namespace PowerLmsWebApi.Controllers
                     {
                         var reqConditions = otherConditions.Where(kv => kv.Key.StartsWith($"{nameof(DocFeeRequisition)}.", StringComparison.OrdinalIgnoreCase) || !kv.Key.Contains('.'))
                             .ToDictionary(kv => kv.Key.StartsWith($"{nameof(DocFeeRequisition)}.", StringComparison.OrdinalIgnoreCase) ? 
-                                kv.Key.Substring(nameof(DocFeeRequisition).Length + 1) : kv.Key, kv => kv.Value, StringComparer.OrdinalIgnoreCase);
+                                kv.Key[(nameof(DocFeeRequisition).Length + 1)..] : kv.Key, kv => kv.Value, StringComparer.OrdinalIgnoreCase);
                         dbSet = EfHelper.GenerateWhereAnd(dbSet, reqConditions);
                     }
                 }
@@ -757,7 +757,7 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">回退成功。</response>
         /// <response code="400">回退失败，申请单不存在或其他业务错误。</response>
         /// <response code="401">无效令牌。</response>
-        /// <response code="403">权限不足。当前暂无专用权限控制，未来将增加权限控制。</response>
+        /// <response code="403">权限不足。使用E.2（审批撤销）权限，专门用于一键在任何情况下撤销的接口。</response>
         /// <response code="404">指定ID的申请单不存在。</response>
         /// <response code="500">回退过程中发生系统错误。</response>
         [HttpPost]
@@ -773,13 +773,11 @@ namespace PowerLmsWebApi.Controllers
 
             try
             {
-                // 1. 权限验证（目前无专用权限，注释说明未来增加权限控制）
-                // TODO: 未来需要增加专门的回退权限控制，如 "F.3.10" 或各业务类型特定权限
-                string err;
-                if (!_AuthorizationManager.Demand(out err, "F.3"))  // 暂时使用通用财务管理权限
+                // 1. 权限验证（使用E.2审批撤销权限，专门用于一键在任何情况下撤销的接口）
+                if (!_AuthorizationManager.Demand(out string err, "E.2"))  // 使用E.2审批撤销权限
                 {
                     _Logger.LogWarning("权限不足，用户{UserId}尝试回退主营业务费用申请单{RequisitionId}", context.User.Id, model.RequisitionId);
-                    return StatusCode((int)HttpStatusCode.Forbidden, "权限不足：当前暂无专用回退权限，未来将增加专门的权限控制");
+                    return StatusCode((int)HttpStatusCode.Forbidden, "权限不足：需要审批撤销权限（E.2）");
                 }
 
                 // 2. 获取DocFeeRequisitionManager

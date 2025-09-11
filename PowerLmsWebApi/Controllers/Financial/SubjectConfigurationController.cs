@@ -121,9 +121,8 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
 
             // 权限检查：需要B.11权限
-            string err;
             if (!context.User.IsAdmin())
-                if (!_AuthorizationManager.Demand(out err, "B.11")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!_AuthorizationManager.Demand(out string err, "B.11")) return StatusCode((int)HttpStatusCode.Forbidden, err);
 
             var result = new AddSubjectConfigurationReturnDto();
 
@@ -194,9 +193,8 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
 
             // 权限检查：需要B.11权限
-            string err;
             if (!context.User.IsAdmin())
-                if (!_AuthorizationManager.Demand(out err, "B.11")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!_AuthorizationManager.Demand(out string err, "B.11")) return StatusCode((int)HttpStatusCode.Forbidden, err);
 
             var result = new ModifySubjectConfigurationReturnDto();
 
@@ -350,9 +348,8 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
 
             // 权限检查：需要B.11权限
-            string err;
             if (!context.User.IsAdmin())
-                if (!_AuthorizationManager.Demand(out err, "B.11")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!_AuthorizationManager.Demand(out string err, "B.11")) return StatusCode((int)HttpStatusCode.Forbidden, err);
 
             var result = new RestoreSubjectConfigurationReturnDto();
 

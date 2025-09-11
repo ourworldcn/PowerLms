@@ -57,14 +57,14 @@ namespace PowerLmsWebApi.Controllers.System
             _Logger = logger;
         }
 
-        readonly PowerLmsUserDbContext _DbContext;
+        private readonly PowerLmsUserDbContext _DbContext;
         private readonly AccountManager _AccountManager;
-        readonly IServiceProvider _ServiceProvider;
-        EntityManager _EntityManager;
-        IMapper _Mapper;
-        readonly private AuthorizationManager _AuthorizationManager;
-        readonly OwFileService<PowerLmsUserDbContext> _FileService;
-        ILogger<FileController> _Logger;
+        private readonly IServiceProvider _ServiceProvider;
+        private readonly EntityManager _EntityManager;
+        private readonly IMapper _Mapper;
+        private readonly AuthorizationManager _AuthorizationManager;
+        private readonly OwFileService<PowerLmsUserDbContext> _FileService;
+        private readonly ILogger<FileController> _Logger;
 
         /// <summary>
         /// 存储文件的根目录。

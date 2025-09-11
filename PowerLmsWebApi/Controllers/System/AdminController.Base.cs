@@ -83,8 +83,7 @@ namespace PowerLmsWebApi.Controllers.System
         public ActionResult<AddPlCountryReturnDto> AddPlCountry(AddPlCountryParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "B.5")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out string err, "B.5")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new AddPlCountryReturnDto();
             model.Item.GenerateNewId();
             var id = model.Item.Id;
@@ -107,8 +106,7 @@ namespace PowerLmsWebApi.Controllers.System
         public ActionResult<ModifyPlCountryReturnDto> ModifyPlCountry(ModifyPlCountryParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "B.5")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out string err, "B.5")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ModifyPlCountryReturnDto();
             if (!_EntityManager.ModifyWithMarkDelete(model.Items))
             {
@@ -136,8 +134,7 @@ namespace PowerLmsWebApi.Controllers.System
         public ActionResult<RemovePlCountryReturnDto> RemovePlCountry(RemovePlCountryParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "B.5")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out string err, "B.5")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new RemovePlCountryReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.DD_PlCountrys;
@@ -167,8 +164,7 @@ namespace PowerLmsWebApi.Controllers.System
         public ActionResult<RestorePlCountryReturnDto> RestorePlCountry(RestorePlCountryParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "B.5")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out string err, "B.5")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new RestorePlCountryReturnDto();
             if (!_EntityManager.Restore<PlCountry>(model.Id))
             {
@@ -235,8 +231,7 @@ namespace PowerLmsWebApi.Controllers.System
         public ActionResult<AddPlCurrencyReturnDto> AddPlCurrency(AddPlCurrencyParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "B.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out string err, "B.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new AddPlCurrencyReturnDto();
             model.Item.GenerateNewId();
             var id = model.Item.Id;
@@ -247,7 +242,7 @@ namespace PowerLmsWebApi.Controllers.System
         }
 
         /// <summary>
-        /// 修改币种记录。
+        /// 修修改币种记录。
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
@@ -259,8 +254,7 @@ namespace PowerLmsWebApi.Controllers.System
         public ActionResult<ModifyPlCurrencyReturnDto> ModifyPlCurrency(ModifyPlCurrencyParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "B.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out string err, "B.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ModifyPlCurrencyReturnDto();
             if (!_EntityManager.ModifyWithMarkDelete(model.Items))
             {
@@ -288,8 +282,7 @@ namespace PowerLmsWebApi.Controllers.System
         public ActionResult<RemovePlCurrencyReturnDto> RemovePlCurrency(RemovePlCurrencyParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "B.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out string err, "B.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new RemovePlCurrencyReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.DD_PlCurrencys;
@@ -319,8 +312,7 @@ namespace PowerLmsWebApi.Controllers.System
         public ActionResult<RestorePlCurrencyReturnDto> RestorePlCurrency(RestorePlCurrencyParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "B.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out string err, "B.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new RestorePlCurrencyReturnDto();
             if (!_EntityManager.Restore<PlCurrency>(model.Id))
             {
@@ -564,8 +556,7 @@ namespace PowerLmsWebApi.Controllers.System
         public ActionResult<AddPlExchangeRateReturnDto> AddPlExchangeRate(AddPlExchangeRateParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "B.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out string err, "B.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new AddPlExchangeRateReturnDto();
             model.Item.GenerateNewId();
             var id = model.Item.Id;
@@ -588,8 +579,7 @@ namespace PowerLmsWebApi.Controllers.System
         public ActionResult<ModifyPlExchangeRateReturnDto> ModifyPlExchangeRate(ModifyPlExchangeRateParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "B.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out string err, "B.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ModifyPlExchangeRateReturnDto();
             if (!_EntityManager.Modify(model.Items))
             {
