@@ -269,7 +269,7 @@ namespace OW.Data
                 var cellValue = rowData[columnIndex];
                 if (string.IsNullOrWhiteSpace(cellValue)) continue;
                 var convertedValue = ConvertStringValue(cellValue, property.PropertyType);
-                if (convertedValue != null)
+                if (convertedValue is not null)
                 {
                     property.SetValue(entity, convertedValue);
                     hasValidData = true;

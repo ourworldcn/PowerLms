@@ -59,7 +59,7 @@ namespace OW.Data
         public string Remark { get; set; }
 
         /// <summary>
-        /// 上传人Id,可能是空。
+        /// 上传人 Id,可能是空。
         /// </summary>
         [Comment("操作员，可以更改相当于工作号的所有者")]
         public Guid? CreateBy { get; set; }
@@ -246,7 +246,7 @@ namespace OW.Data
             // 保存到数据库
             using var dbContext = _dbContextFactory.CreateDbContext();
             var plFileInfosProperty = typeof(TDbContext).GetProperty("PlFileInfos");
-            if (plFileInfosProperty == null)
+            if (plFileInfosProperty is null)
                 throw new InvalidOperationException($"数据库上下文 {typeof(TDbContext).Name} 不包含 PlFileInfos 属性");
 
             var plFileInfosDbSet = plFileInfosProperty.GetValue(dbContext) as DbSet<PlFileInfo>;
@@ -288,13 +288,13 @@ namespace OW.Data
             {
                 using var dbContext = _dbContextFactory.CreateDbContext();
                 var plFileInfosProperty = typeof(TDbContext).GetProperty("PlFileInfos");
-                if (plFileInfosProperty == null)
+                if (plFileInfosProperty is null)
                     throw new InvalidOperationException($"数据库上下文 {typeof(TDbContext).Name} 不包含 PlFileInfos 属性");
 
                 var plFileInfosDbSet = plFileInfosProperty.GetValue(dbContext) as DbSet<PlFileInfo>;
                 var fileInfo = plFileInfosDbSet.Find(fileId);
 
-                if (fileInfo == null) return false;
+                if (fileInfo is null) return false;
 
                 // 删除磁盘文件
                 var fullPath = GetFullPath(fileInfo.FilePath);

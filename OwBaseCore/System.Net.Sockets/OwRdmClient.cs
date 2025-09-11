@@ -159,7 +159,7 @@ namespace System.Net.Sockets
                     }
                 }
             //处理终止包
-            if (result.Count > 0 && !result[result.Count - 1].Kind.HasFlag(OwRdmDgramKind.EndDgram))    //若不是完整包
+            if (result.Count > 0 && !result[^1].Kind.HasFlag(OwRdmDgramKind.EndDgram))    //若不是完整包
                 result.Clear();
             for (int i = 0; i < result.Count; i++)   //移除已获取的包
             {
@@ -808,7 +808,7 @@ namespace System.Net.Sockets
                     }
                 }
             //处理终止包
-            if (result.Count > 0 && !result[result.Count - 1].Kind.HasFlag(OwRdmDgramKind.EndDgram))    //若不是完整包
+            if (result.Count > 0 && !result[^1].Kind.HasFlag(OwRdmDgramKind.EndDgram))    //若不是完整包
                 result.Clear();
             for (int i = 0; i < result.Count; i++) list.RemoveFirst();  //移除已获取的包
             return result;
@@ -1194,7 +1194,7 @@ namespace System.Net.Sockets
             {
                 for (var list = OwRdmDgram.RemoveFirstRange(_RecvData); list.Count > 0; list = OwRdmDgram.RemoveFirstRange(_RecvData))    //获取完整包
                 {
-                    _AckSeq = Math.Max((uint)list[list.Count - 1].Seq, _AckSeq.GetValueOrDefault());
+                    _AckSeq = Math.Max((uint)list[^1].Seq, _AckSeq.GetValueOrDefault());
                     var buff = OwRdmDgram.ToArray(list);
                     LoggerCallback?.Invoke($"确认完整数据包—— Seq =[{string.Join(",", list.Select(c => c))}]，总有效数据长度={buff.Length:0,0}字节");
 

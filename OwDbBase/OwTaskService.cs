@@ -397,7 +397,7 @@ namespace OW.Data
                 using (var dbContext = _dbContextFactory.CreateDbContext())
                 {
                     taskEntity = dbContext.Set<OwTaskStore>().Find(taskId);
-                    if (taskEntity == null)
+                    if (taskEntity is null)
                     {
                         _logger.LogWarning("未找到任务 {TaskId}", taskId);
                         return;
@@ -428,7 +428,7 @@ namespace OW.Data
 
                 currentStep = "查找方法";
                 var methodInfo = serviceType.GetMethod(taskEntity.MethodName, BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance);
-                if (methodInfo == null)
+                if (methodInfo is null)
                     throw new InvalidOperationException($"在服务 {taskEntity.ServiceTypeName} 中找不到方法 {taskEntity.MethodName}");
 
                 _logger.LogDebug("任务 {TaskId} 找到方法: {Method}, 是否静态: {IsStatic}", taskId, methodInfo.Name, methodInfo.IsStatic);
@@ -457,7 +457,7 @@ namespace OW.Data
                         // 为静态方法注入服务提供者
                         using var scope = _serviceProvider.CreateScope();
                         var scopedProvider = scope.ServiceProvider;
-                        if (scopedProvider == null)
+                        if (scopedProvider is null)
                             throw new InvalidOperationException("无法创建服务作用域");
 
                         _logger.LogDebug("任务 {TaskId} 开始执行静态方法（含服务提供者）", taskId);
@@ -478,11 +478,11 @@ namespace OW.Data
                     // 实例方法调用
                     using var scope = _serviceProvider.CreateScope();
                     var scopedProvider = scope.ServiceProvider;
-                    if (scopedProvider == null)
+                    if (scopedProvider is null)
                         throw new InvalidOperationException("无法创建服务作用域");
 
                     var service = scopedProvider.GetService(serviceType);
-                    if (service == null)
+                    if (service is null)
                         throw new InvalidOperationException($"无法从DI容器解析服务: {taskEntity.ServiceTypeName}");
 
                     currentStep = "执行实例方法";
@@ -1079,7 +1079,7 @@ namespace OW.Data
                         task.CompletedUtc = DateTime.UtcNow;
                         // 如果错误信息太长，截断它
                         task.ErrorMessage = errorMessage.Length > 8000 ? 
-                            errorMessage.Substring(0, 8000) + "\n...[错误信息已截断，完整信息请查看日志]" : 
+                            errorMessage[..8000] + "\n...[错误信息已截断，完整信息请查看日志]" : 
                             errorMessage;
                         
                         dbContext.SaveChanges();

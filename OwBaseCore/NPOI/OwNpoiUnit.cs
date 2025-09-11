@@ -130,7 +130,7 @@ namespace NPOI
                     foreach (var (columnIndex, property) in columnMappings) // 遍历所有列映射，设置属性值
                     {
                         var cell = dataRow.GetCell(columnIndex);
-                        if (cell != null && cell.CellType != CellType.Blank)
+                        if (cell is not null && cell.CellType != CellType.Blank)
                         {
                             try
                             {

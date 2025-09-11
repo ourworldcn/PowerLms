@@ -24,32 +24,23 @@ namespace OW.Data
         public static object[] GetEntityKeyValues<T>(this DbContext dbContext, T entity, out bool hasEmptyKey) where T : class
         {
             hasEmptyKey = false;
-
             // 获取主键信息
-            var entityType = dbContext.Model.FindEntityType(typeof(T));
-            if (entityType == null)
+            var entityType = dbContext.Model.FindEntityType(typeof(T)) ??
                 throw new InvalidOperationException($"找不到实体类型 {typeof(T).Name} 的元数据");
-
             var keyProperties = entityType.FindPrimaryKey()?.Properties;
             if (keyProperties == null || !keyProperties.Any())
                 throw new InvalidOperationException($"实体类型 {typeof(T).Name} 未定义主键");
-
             // 获取主键值
             var keyValues = new object[keyProperties.Count()];
-
             for (int index = 0; index < keyProperties.Count(); index++)
             {
                 var property = keyProperties.ElementAt(index);
                 // 获取属性信息
-                var propertyInfo = typeof(T).GetProperty(property.Name);
-
-                if (propertyInfo == null)
+                var propertyInfo = typeof(T).GetProperty(property.Name) ??
                     throw new InvalidOperationException($"无法获取属性 {property.Name} 的反射信息");
-
                 // 获取属性值
                 var value = propertyInfo.GetValue(entity);
                 keyValues[index] = value;
-
                 // 检查主键是否为默认值
                 if (value == null ||
                     (value is Guid guidValue && guidValue == Guid.Empty) ||
@@ -61,7 +52,6 @@ namespace OW.Data
                     break;
                 }
             }
-
             return keyValues;
         }
 
@@ -74,40 +64,31 @@ namespace OW.Data
         /// <param name="obj">要插入或更新的实体对象</param>
         public static void AddOrUpdate<T>(this DbContext dbContext, T obj) where T : class
         {
-            if (obj == null)
-                throw new ArgumentNullException(nameof(obj), "实体对象不能为空");
-
+            _ = obj ?? throw new ArgumentNullException(nameof(obj), "实体对象不能为空");
             try
             {
                 // 获取实体状态
                 var entry = dbContext.Entry(obj);
-
                 // 如果实体已经被跟踪且状态不是Detached，需要根据状态进行处理
                 if (entry.State != EntityState.Detached)
                 {
                     // 如果实体已经被跟踪，只需要根据需要设置状态
                     if (entry.State == EntityState.Added || entry.State == EntityState.Modified)
                         return; // 实体已经被标记为添加或修改，无需额外操作
-
                     if (entry.State == EntityState.Unchanged)
                         entry.State = EntityState.Modified; // 将未更改的实体标记为已修改
-
                     return;
                 }
-
                 // 获取主键值
                 var keyValues = GetEntityKeyValues(dbContext, obj, out bool hasEmptyKey);
-
                 // 如果主键为空或默认值，则添加实体
                 if (hasEmptyKey)
                 {
                     dbContext.Set<T>().Add(obj);
                     return;
                 }
-
                 // 尝试查找已存在的实体
                 var existingEntity = dbContext.Set<T>().Find(keyValues);
-
                 if (existingEntity == null)
                 {
                     // 实体不存在，添加新实体
@@ -135,9 +116,7 @@ namespace OW.Data
         /// <param name="entities">要插入或更新的实体集合</param>
         public static void AddOrUpdate<T>(this DbContext dbContext, IEnumerable<T> entities) where T : class
         {
-            if (entities == null)
-                throw new ArgumentNullException(nameof(entities), "实体集合不能为空");
-
+            _ = entities ?? throw new ArgumentNullException(nameof(entities), "实体集合不能为空");
             foreach (var entity in entities)
             {
                 dbContext.AddOrUpdate(entity);
@@ -157,11 +136,9 @@ namespace OW.Data
             {
                 throw new ArgumentException("无效的表名。", nameof(tableName));
             }
-
             // 查询信息架构视图，确保表名存在
             var tableExists = context.Database
                 .ExecuteSqlRaw($"SELECT CASE WHEN EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '{tableName}') THEN 1 ELSE 0 END");
-
             if (tableExists == 0)
             {
                 throw new ArgumentException("无效的表名。", nameof(tableName));
@@ -169,6 +146,5 @@ namespace OW.Data
             // 执行 TRUNCATE TABLE SQL 命令
             context.Database.ExecuteSqlRaw($"TRUNCATE TABLE {tableName}");
         }
-
     }
 }
