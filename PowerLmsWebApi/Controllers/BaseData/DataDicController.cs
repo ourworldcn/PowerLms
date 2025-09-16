@@ -112,7 +112,8 @@ namespace PowerLmsWebApi.Controllers
                     var allOrgs = _OrgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs.Values.ToArray();
                     var companyIds = allOrgs.Where(o => o.Otc == 2).Select(o => o.Id);
 
-                    foreach (var orgId in companyIds)
+                    // 修复Bug：排除本机构，避免重复创建
+                    foreach (var orgId in companyIds.Where(id => id != context.User.OrgId))
                     {
                         // 检查是否已存在相同Code的记录
                         if (_DbContext.DD_DailyFeesTypes.Any(f => f.OrgId == orgId && f.Code == model.Item.Code))

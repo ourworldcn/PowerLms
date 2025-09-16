@@ -104,25 +104,27 @@ PowerLms解决方案
 
 ## 📋 当前开发状态 (2025年1月)
 
-### ✅ 已完成 (重大功能)
+### ✅ 已完成 (核心功能)
+- **通用数据查询接口** ✅ - 支持多实体类型字段查询，灵活去重控制，明确switch case架构
+- **字典导入导出重构** ✅ - v2.0架构完成，动态表发现，按类型分别导出，统一服务设计
+- **收款结算单导出金蝶** ✅ - 七种凭证分录规则，多币种处理，混合业务识别，异步任务机制
 - **申请单审批回退机制** ✅ - 完整的工作流清理+状态回退+权限控制 
 - **账期管理机制** ✅ - 机构参数表+批量关闭+自动递增  
-- **数据导入导出架构** ✅ - v2.0重构完成，统一服务+简单字典专用API
 - **空运进口接口恢复** ✅ - 独立PlAirborneController创建完成
-- **财务日期联动** ✅ - AccountDate字段正确配置为计算字段
+- **字典导出"键重复"Bug修复** ✅ - 安全字典构建，优先级处理，错误提示优化
 
-### 🔴 紧急待修复 (阻塞项)
-- **费用过滤Bug** ❌ - `fee_id`参数过滤未生效，`GetDocFeeRequisitionItem`方法需修复
-- **OA申请单公司字段** ❌ - 需添加`CustomerId`字段关联客户资料表  
-- **空运接口架构重复** ❌ - PlJobController.EaDoc.cs与PlAirborneController重复，需统一
+### 🔴 紧急待修复 (阻塞项) - 目标：2月4日完成
+- **费用过滤Bug** ❌ - `fee_id`参数过滤未生效，`GetDocFeeRequisitionItem`方法需修复 (0.5天)
+- **OA申请单公司字段** ❌ - 需添加`CustomerId`字段关联客户资料表 (1天)
+- **空运接口架构重复** ❌ - PlJobController.EaDoc.cs与PlAirborneController重复，需统一 (1天)
 
 ### 🟡 功能增强任务 (中优先级)
-- **费用列表申请单详情** ❌ - 点击已申请金额显示关联申请单信息
-- **客户资料有效性管理** ❌ - 增加IsActive状态字段，软删除机制
-- **客户选择器增强** ❌ - 弹窗式选择器，多字段显示+模糊搜索
+- **费用列表申请单详情** ❌ - 点击已申请金额显示关联申请单信息 (1天)
+- **客户资料有效性管理** ❌ - 增加IsActive状态字段，软删除机制 (1.5天)
+- **客户选择器增强** ❌ - 弹窗式选择器，多字段显示+模糊搜索 (1天)
 
 ### ⏸️ 暂缓功能
-- **结算单导出金蝶** ⏸️ - 复杂业务逻辑，前端需预留"日常收款/付款"入口
+- **结算单导出金蝶** ⏸️ - 收款功能已完成，付款功能待后续规划
 
 ### 🏗️ 架构完成状态
 
@@ -180,6 +182,32 @@ var count = OwDataUnit.BulkInsertFromExcelWithStringList<T>(
 NpoiManager.WriteToDb() // 已标记 [Obsolete]
 ```
 
+### 通用数据查询接口使用
+```csharp
+// 支持的查询类型
+GET /api/CommonDataQuery/QueryData
+参数：
+- TableName: "OaExpenseRequisitions" | "DocFeeRequisitions"
+- FieldName: "ReceivingBank" | "ReceivingAccountName" | "BlanceAccountNo"
+- IsDistinct: true/false（是否去重）
+- MaxResults: 50（默认）| 最大200
+
+// 返回字段值列表，按字母排序
+```
+
+### 财务导出金蝶接口
+```csharp
+// 收款结算单导出
+POST /api/FinancialSystemExport/ExportSettlementReceipt
+参数：ExportSettlementReceiptParamsDto
+- ExportConditions: 查询条件（日期、币种、金额范围等）
+- ExportFormat: "DBF"（默认）
+- DisplayName: 显示名称（可选）
+- Remark: 备注信息（可选）
+
+// 返回异步任务ID和预期处理数量
+```
+
 ### 开发检查清单
 ```markdown
 ✅ 新功能开发必检项
@@ -188,6 +216,18 @@ NpoiManager.WriteToDb() // 已标记 [Obsolete]
 □ Excel处理 → OwDataUnit + OwNpoiUnit | □ 分次收付 → ActualFinancialTransaction
 □ 权限验证 | □ 多租户隔离 | □ 向后兼容 | □ 单元测试
 ```
+
+## 🎯 近期重点任务
+
+### 🔴 阻塞项修复 (最高优先级)
+1. **费用反查申请单明细过滤失败** - FinancialController.DocFeeRequisition.cs中fee_id过滤逻辑修复
+2. **OA费用申请单增加公司字段** - 添加CustomerId字段关联客户资料表
+3. **空运接口架构重复问题** - 统一PlJobController.EaDoc.cs和PlAirborneController
+
+### 🟡 功能增强 (中优先级)
+1. **费用列表申请单详情查询** - 根据费用ID查询关联申请单信息
+2. **客户资料有效性管理** - IsActive字段和状态切换API
+3. **客户选择器查询优化** - 多维度搜索和分页支持
 
 ---
 
