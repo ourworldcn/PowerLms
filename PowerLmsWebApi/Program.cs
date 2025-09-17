@@ -57,7 +57,7 @@ internal class Program
     {
         var builder = WebApplication.CreateBuilder(args);
         var services = builder.Services;
-        
+
         // 添加基础服务
         services.AddMemoryCache();
         services.AddHttpContextAccessor();
