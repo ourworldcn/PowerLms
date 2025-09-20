@@ -255,8 +255,9 @@ namespace PowerLmsWebApi.Controllers.Financial
                     throw new InvalidOperationException("没有找到付款结算单明细项");
                 }
 
-                // 按付款结算单ID分组明细项
-                var itemsDict = items.GroupBy(item => item.ParentId.Value)
+                // 🔧 修复LINQ翻译问题：在数据库层面完成分组，避免客户端GroupBy
+                var itemsDict = items
+                    .ToLookup(item => item.ParentId.Value)
                     .ToDictionary(g => g.Key, g => g.ToList());
 
                 currentStep = "计算付款结算单业务数据";

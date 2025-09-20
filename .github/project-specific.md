@@ -13,20 +13,6 @@
 - **无权限时处理**：如果没有找到合适的权限项，则暂时忽略权限问题
 - **开发阶段容错**：功能开发优先，权限验证可后续完善
 
-**具体实现：**
-```csharp
-// 权限验证模板
-if (_AuthorizationManager.Demand(out err, "具体叶子权限ID"))
-{
-    // 有权限，继续执行
-}
-else
-{
-    // 开发阶段：记录TODO，暂时允许继续
-    // TODO: 待确认具体权限节点后完善权限验证
-}
-```
-
 ### 1.2 重要权限节点分析
 
 **财务管理相关权限：**
@@ -35,15 +21,13 @@ else
 - `F.3.3` - 撤销(删除)结算
 - `F.3.4` - 结算单确认
 - `F.3.5` - 结算单取消确认
-- `F.6` - 财务接口（可能适用于导出金蝶功能）
+- `F.6` - 财务接口（适用于导出金蝶功能）
 
 **基础数据管理权限：**
 - `B.0` - 数据字典（适用于导入导出功能)
 - `B.1` - 本公司信息
 - `B.3` - 币种
 - `B.4` - 汇率
-- `B.5` - 国家
-- `B.6` - 港口
 
 **OA办公自动化权限：**
 - `OA.1` - 日常费用申请
@@ -51,36 +35,8 @@ else
 - `OA.1.2` - 日常费用拆分结算
 - `OA.1.3` - 日常费用撤销
 
-### 1.3 权限验证代码模式
-
-**标准权限验证：**
-```csharp
-public ActionResult<T> SomeAction(SomeParamsDto model)
-{
-    if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) 
-        return Unauthorized();
-    
-    // 权限验证
-    if (!_AuthorizationManager.Demand("具体权限节点"))
-        return StatusCode((int)HttpStatusCode.Forbidden, "权限不足");
-    
-    // 业务逻辑
-}
-```
-
-**多权限选择验证：**
-```csharp
-// 优先检查通用权限，再检查具体业务权限
-if (!_AuthorizationManager.Demand(out err, "F.2.4.1"))  // 通用费用管理权限
-{
-    if (job.JobTypeId == ProjectContent.AeId)
-    {
-        if (!_AuthorizationManager.Demand(out err, "D0.6.1")) // 空运出口费用明细
-            return StatusCode((int)HttpStatusCode.Forbidden, err);
-    }
-    // ... 其他业务类型权限检查
-}
-```
+**审批撤销权限：**
+- `E.2` - 审批撤销（主营业务费用申请单回退）
 
 ## 2. 🏗️ 架构设计原则
 
@@ -109,57 +65,15 @@ PowerLms解决方案架构
 ## 3. 🎯 开发模式和约束
 
 ### 3.1 Manager模式实现
-```csharp
-[OwAutoInjection(ServiceLifetime.Scoped)]
-public class BusinessManager
-{
-    private readonly PowerLmsUserDbContext _dbContext;
-    private readonly AuthorizationManager _authManager;
-    private readonly OwWfManager _workflowManager;
-    
-    // 业务逻辑方法 - 抛出业务异常，由控制器统一处理
-    public SomeResultDto DoSomething(SomeParamsDto parameters)
-    {
-        // 权限验证
-        if (!_authManager.Demand("具体权限"))
-            throw new UnauthorizedAccessException("权限不足");
-            
-        // 业务逻辑实现
-        // ...
-        
-        return result;
-    }
-}
-```
+- **业务逻辑集中**：所有核心业务逻辑在Manager层实现
+- **异常处理**：Manager层抛出业务异常，由控制器统一处理
+- **依赖注入**：使用`[OwAutoInjection(ServiceLifetime.Scoped)]`自动注入
+- **权限验证**：在Manager层进行权限验证，抛出UnauthorizedAccessException
 
 ### 3.2 控制器实现模式
-```csharp
-[HttpPost]
-public ActionResult<T> SomeAction(SomeParamsDto model)
-{
-    if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) 
-        return Unauthorized();
-    
-    try
-    {
-        var result = _businessManager.DoSomething(model);
-        return result;
-    }
-    catch (UnauthorizedAccessException ex)
-    {
-        return StatusCode((int)HttpStatusCode.Forbidden, ex.Message);
-    }
-    catch (ArgumentException ex)
-    {
-        return BadRequest(ex.Message);
-    }
-    catch (Exception ex)
-    {
-        // 记录日志并返回通用错误
-        return StatusCode((int)HttpStatusCode.InternalServerError, "操作失败");
-    }
-}
-```
+- **职责分离**：只做参数验证、权限检查、异常处理
+- **标准化返回**：统一的HTTP状态码和错误信息格式
+- **Token验证**：使用`_AccountManager.GetOrLoadContextByToken`进行身份验证
 
 ## 4. 🔧 技术规范
 
@@ -167,47 +81,24 @@ public ActionResult<T> SomeAction(SomeParamsDto model)
 - **审计字段**：所有实体包含 `CreateBy`, `CreateDateTime`, `ModifyBy`, `ModifyDateTime`
 - **多租户字段**：所有业务实体包含 `OrgId` 字段
 - **软删除支持**：重要业务实体支持软删除机制
+- **已结算金额字段**：申请单明细直接使用`TotalSettledAmount`字段，不再动态计算
 
 ### 4.2 数据库操作规范
 - **禁止自动迁移**：所有数据库变更通过手动迁移脚本
 - **查询优化**：大数据量查询使用 `AsNoTracking()`
 - **事务控制**：重要操作使用数据库事务确保一致性
+- **性能优化**：优先使用实体字段，避免复杂的动态计算和关联查询
 
 ### 4.3 Excel处理标准
-```csharp
-// ✅ 推荐：高性能方案
-var count = OwDataUnit.BulkInsertFromExcelWithStringList<T>(
-    sheet, dbContext, ignoreExisting: true, logger, "操作描述");
-
-// ❌ 禁止：废弃组件
-NpoiManager.WriteToDb() // 已标记 [Obsolete]
-```
+- **推荐方案**：使用`OwDataUnit.BulkInsertFromExcelWithStringList<T>`进行高性能批量操作
+- **禁止组件**：不使用已标记`[Obsolete]`的`NpoiManager`组件
 
 ## 5. 📊 导入导出功能特定规范
 
 ### 5.1 权限验证逻辑
-基于 TODO.md 中的技术债务，导入导出功能的权限验证需要：
-
-```csharp
-// TODO注释模板（当前使用）
-// TODO: 搜索权限文件，如果有叶子权限符合要求就使用，如果没有就不进行权限验证
-
-// 实现逻辑
-private bool CheckImportExportPermission(string tableType)
-{
-    // 1. 优先检查具体的导入导出权限
-    if (_authManager.Demand($"B.0.{tableType}.Import")) return true;
-    if (_authManager.Demand($"B.0.{tableType}.Export")) return true;
-    
-    // 2. 检查通用数据字典权限
-    if (_authManager.Demand("B.0")) return true;
-    
-    // 3. 没有找到合适权限时的处理
-    // 开发阶段：记录警告，允许继续（基于项目配置要求）
-    _logger.LogWarning($"未找到{tableType}的具体权限，暂时允许操作");
-    return true; // 暂时忽略权限问题
-}
-```
+- **优先级检查**：优先检查具体的导入导出权限，再检查通用数据字典权限
+- **开发阶段容错**：没有找到合适权限时，记录警告但允许继续
+- **TODO注释**：使用标准TODO注释标记待完善的权限验证
 
 ### 5.2 Excel Sheet命名规范
 - **统一使用实体类型名称**：如 `PlCountry`, `PlPort`, `SimpleDataDic`
@@ -228,48 +119,31 @@ private bool CheckImportExportPermission(string tableType)
 - **测试覆盖要求**：核心业务逻辑需要单元测试覆盖
 - **文档同步更新**：代码变更时同步更新相关文档
 
-## 7. 📝 临时输出.md 集成说明
+## 7. 📝 财务导出功能权限配置
 
-### 7.1 收款结算单导出金蝶功能权限分析
-基于 `临时输出.md` 中的功能设计，**收款结算单导出金蝶功能**的权限建议：
+### 7.1 收款结算单导出权限
+- **首选权限**：`F.6` - 财务接口（最符合功能定位）
+- **备选权限**：`F.3.2` - 修改结算（如果导出认为是结算数据的修改操作）
 
-**推荐权限节点：**
-- **首选**：`F.6` - 财务接口（最符合功能定位）
-- **备选**：`F.3.2` - 修改结算（如果导出认为是结算数据的修改操作）
-- **新增**：`F.6.1` - 导出金蝶凭证（如需要更细粒度控制）
+### 7.2 付款结算单导出权限
+- **复用权限**：与收款结算单使用相同的`F.6`财务接口权限
+- **权限控制一致性**：确保收付款导出功能的权限控制保持一致
 
-**权限验证实现：**
-```csharp
-// 收款结算单导出权限验证
-public ActionResult<ExportSettlementReceiptReturnDto> ExportSettlementReceipt(ExportSettlementReceiptParamsDto model)
-{
-    if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) 
-        return Unauthorized();
-    
-    // 权限验证：优先检查财务接口权限
-    if (!_AuthorizationManager.Demand("F.6"))
-    {
-        // 备选：检查结算修改权限
-        if (!_AuthorizationManager.Demand("F.3.2"))
-            return StatusCode((int)HttpStatusCode.Forbidden, "权限不足：需要财务接口或结算修改权限");
-    }
-    
-    // 业务逻辑...
-}
-```
+### 7.3 环境差异处理
+- **调试环境**：权限验证记录警告但允许继续，提供详细错误信息
+- **生产环境**：严格权限验证，无权限直接拒绝，用户友好的错误信息
 
-### 7.2 调试vs生产环境权限差异
-基于临时输出.md中的疑问，明确环境差异：
+## 8. 🔄 性能优化原则
 
-**调试环境：**
-- 权限验证：记录警告但允许继续
-- 数据验证：允许部分非关键错误
-- 错误处理：详细错误信息用于调试
+### 8.1 已结算金额字段使用
+- **直接字段访问**：申请单明细余额计算直接使用`item.Amount - item.TotalSettledAmount`
+- **避免动态计算**：不再使用复杂的关联查询动态计算已结算金额
+- **前端回写责任**：已结算金额的维护责任转移到前端和结算单保存逻辑
 
-**生产环境：**
-- 权限验证：严格验证，无权限直接拒绝
-- 数据验证：严格验证，确保数据完整性
-- 错误处理：用户友好的错误信息
+### 8.2 查询性能优化
+- **AsNoTracking使用**：大数据量查询必须使用AsNoTracking
+- **减少关联查询**：优先使用冗余字段，避免复杂的JOIN操作
+- **分页处理**：大量数据查询必须支持分页机制
 
 ---
 

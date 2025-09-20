@@ -72,9 +72,9 @@ namespace PowerLmsWebApi.Controllers
                 // 如果需要工作流状态过滤
                 if (model.WfState.HasValue)
                 {
-                    var tmpColl = _WfManager.GetWfNodeItemByOpertorId(context.User.Id, model.WfState.Value)
-                        .Select(c => c.Parent.Parent.DocId);
-                    dbSet = dbSet.Where(c => tmpColl.Contains(c.Id));
+                var tmpColl = _WfManager.GetWfNodeItemByOpertorId(context.User.Id, model.WfState.Value)
+                    .Select(c => c.Parent.Parent.DocId);
+                dbSet = dbSet.Where(c => tmpColl.Contains(c.Id));
                 }
 
                 // 应用排序和分页
@@ -585,10 +585,6 @@ namespace PowerLmsWebApi.Controllers
                 var jobs = jobIds.Any() ? _DbContext.PlJobs.Where(j => jobIds.Contains(j.Id)).AsNoTracking().ToDictionary(j => j.Id) : new Dictionary<Guid, PlJob>();
                 var bills = billIds.Any() ? _DbContext.DocBills.Where(b => billIds.Contains(b.Id)).AsNoTracking().ToDictionary(b => b.Id) : new Dictionary<Guid, DocBill>();
 
-                // 获取已结算金额
-                var itemIds = items.Select(x => x.Id).ToList();
-                var invoicedAmounts = requisitionManager.GetInvoicedAmounts(itemIds);
-
                 // 组装结果
                 foreach (var item in items)
                 {
@@ -606,9 +602,8 @@ namespace PowerLmsWebApi.Controllers
                         DocBill = bill
                     };
 
-                    // 计算余额：明细金额减去已结算金额
-                    var invoicedAmount = invoicedAmounts.GetValueOrDefault(item.Id, 0);
-                    resultItem.Remainder = item.Amount - invoicedAmount;
+                    // 计算余额：直接使用实体字段，不再动态计算已结算金额
+                    resultItem.Remainder = item.Amount - item.TotalSettledAmount;
 
                     result.Result.Add(resultItem);
                 }

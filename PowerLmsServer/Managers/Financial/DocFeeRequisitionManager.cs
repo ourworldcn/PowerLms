@@ -2,7 +2,7 @@
  * 项目：PowerLms | 模块：主营业务费用申请单管理
  * 功能：主营业务费用申请单的业务逻辑管理，包括回退、状态管理、子表查询等功能
  * 技术要点：依赖注入、服务层业务逻辑、工作流管理、单一实体查询
- * 作者：zc | 创建：2025-01 | 修改：2025-01-27 实现子表专一化查询服务，集中复杂连接查询逻辑
+ * 作者：zc | 创建：2025-01 | 修改：2025-01-31 移除动态计算已结算金额，直接使用实体字段
  */
 
 using Microsoft.EntityFrameworkCore;
@@ -86,26 +86,6 @@ namespace PowerLmsServer.Managers.Financial
                              select item;
                              
             return joinedQuery;
-        }
-
-        /// <summary>
-        /// 获取申请单明细的已结算金额字典。
-        /// </summary>
-        /// <param name="itemIds">申请单明细ID列表</param>
-        /// <returns>已结算金额字典，Key为明细ID，Value为已结算金额</returns>
-        public Dictionary<Guid, decimal> GetInvoicedAmounts(IEnumerable<Guid> itemIds)
-        {
-            if (itemIds == null || !itemIds.Any())
-                return new Dictionary<Guid, decimal>();
-
-            var itemIdList = itemIds.ToList();
-
-            return _DbContext.PlInvoicesItems
-                .Where(x => x.RequisitionItemId.HasValue && itemIdList.Contains(x.RequisitionItemId.Value))
-                .GroupBy(x => x.RequisitionItemId.Value)
-                .AsNoTracking()
-                .ToList()
-                .ToDictionary(g => g.Key, g => g.Sum(x => x.Amount));
         }
 
         /// <summary>
