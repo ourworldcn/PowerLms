@@ -1,60 +1,64 @@
-using System;
+ï»¿using System;
 using System.Buffers;
+using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using System.Runtime.Serialization;
 using System.Text;
+using System.Text.Json.Serialization;
 
 namespace OW
 {
     /// <summary>
-    /// ×Ö·û´®¹¤¾ßÀà£¬Ìá¹©ÃÜÂëÉú³É¡¢×Ö·û´®´¦ÀíµÈ¹¦ÄÜ¡£
+    /// å­—ç¬¦ä¸²å·¥å…·ç±»ï¼Œæä¾›å¯†ç ç”Ÿæˆã€å­—ç¬¦ä¸²å¤„ç†ç­‰åŠŸèƒ½ã€‚
     /// </summary>
     public static class OwStringUtils
     {
-        #region ÃÜÂëÉú³É¹¦ÄÜ
+        #region å¯†ç ç”ŸæˆåŠŸèƒ½
 
-        // ¶¨Òå×Ö·û¼¯³£Á¿
-        private static readonly char[] LowercaseChars = "abcdefghjkmnpqrstuvwxyz".ToCharArray(); // ÎŞl¡¢o
-        private static readonly char[] UppercaseChars = "ABCDEFGHJKMNPQRSTUVWXYZ".ToCharArray(); // ÎŞI¡¢O
-        private static readonly char[] NumberChars = "23456789".ToCharArray(); // ÎŞ0¡¢1
+        // å®šä¹‰å­—ç¬¦é›†å¸¸é‡
+        private static readonly char[] LowercaseChars = "abcdefghjkmnpqrstuvwxyz".ToCharArray(); // æ— lã€o
+        private static readonly char[] UppercaseChars = "ABCDEFGHJKMNPQRSTUVWXYZ".ToCharArray(); // æ— Iã€O
+        private static readonly char[] NumberChars = "23456789".ToCharArray(); // æ— 0ã€1
         private static readonly char[] SpecialChars = "!@#$%^&*()_+-=[]{}|;:,./?".ToCharArray();
 
         private static readonly char[] _defaultChars;
         private static readonly char[] _charsWithSpecial;
 
         /// <summary>
-        /// ¾²Ì¬¹¹Ôìº¯Êı£¬³õÊ¼»¯×Ö·û¼¯¡£
+        /// é™æ€æ„é€ å‡½æ•°ï¼Œåˆå§‹åŒ–å­—ç¬¦é›†ã€‚
         /// </summary>
         static OwStringUtils()
         {
-            // Ä¬ÈÏ×Ö·û¼¯£º²»Ò×»ìÏıµÄ´óĞ¡Ğ´×ÖÄ¸ºÍÊı×Ö
+            // é»˜è®¤å­—ç¬¦é›†ï¼šä¸æ˜“æ··æ·†çš„å¤§å°å†™å­—æ¯å’Œæ•°å­—
             _defaultChars = LowercaseChars
                 .Concat(UppercaseChars)
                 .Concat(NumberChars)
                 .ToArray();
 
-            // ´øÌØÊâ×Ö·ûµÄ×Ö·û¼¯
+            // å¸¦ç‰¹æ®Šå­—ç¬¦çš„å­—ç¬¦é›†
             _charsWithSpecial = _defaultChars
                 .Concat(SpecialChars)
                 .ToArray();
         }
 
         /// <summary>
-        /// Éú³ÉÖ¸¶¨³¤¶ÈµÄËæ»úÃÜÂë¡£
+        /// ç”ŸæˆæŒ‡å®šé•¿åº¦çš„éšæœºå¯†ç ã€‚
         /// </summary>
-        /// <param name="length">ÃÜÂë³¤¶È</param>
-        /// <param name="includeSpecialChars">ÊÇ·ñ°üº¬ÌØÊâ×Ö·û£¨Èç !@#$%^&amp;*()_+-=[]{}|;:,./?£©</param>
-        /// <returns>Éú³ÉµÄËæ»úÃÜÂë£¬Ä¬ÈÏÇé¿öÏÂÊÇ´óĞ¡Ğ´Ó¢ÎÄ×ÖÄ¸ºÍÊı×Ö£¬µ«ÎŞl¡¢o¡¢I¡¢O¡¢0¡¢1ÒÔ±ÜÃâ»ìÏı¡£</returns>
-        /// <exception cref="ArgumentOutOfRangeException">ÃÜÂë³¤¶È±ØĞë´óÓÚ0</exception>
+        /// <param name="length">å¯†ç é•¿åº¦</param>
+        /// <param name="includeSpecialChars">æ˜¯å¦åŒ…å«ç‰¹æ®Šå­—ç¬¦ï¼ˆå¦‚ !@#$%^&amp;*()_+-=[]{}|;:,./?ï¼‰</param>
+        /// <returns>ç”Ÿæˆçš„éšæœºå¯†ç ï¼Œé»˜è®¤æƒ…å†µä¸‹æ˜¯å¤§å°å†™è‹±æ–‡å­—æ¯å’Œæ•°å­—ï¼Œä½†æ— lã€oã€Iã€Oã€0ã€1ä»¥é¿å…æ··æ·†ã€‚</returns>
+        /// <exception cref="ArgumentOutOfRangeException">å¯†ç é•¿åº¦å¿…é¡»å¤§äº0</exception>
         public static string GeneratePassword(int length, bool includeSpecialChars = false)
         {
             if (length <= 0)
-                throw new ArgumentOutOfRangeException(nameof(length), "ÃÜÂë³¤¶È±ØĞë´óÓÚ0");
+                throw new ArgumentOutOfRangeException(nameof(length), "å¯†ç é•¿åº¦å¿…é¡»å¤§äº0");
 
-            // Ñ¡Ôñ×Ö·û¼¯
+            // é€‰æ‹©å­—ç¬¦é›†
             char[] chars = includeSpecialChars ? _charsWithSpecial : _defaultChars;
             int charSetLength = chars.Length;
 
-            // Ê¹ÓÃ string.Create ±ÜÃâÄÚ´æ¸´ÖÆ£¬Ö±½ÓÔÚ string µÄÄÚ²¿»º³åÇøÖĞ¹¹½¨
+            // ä½¿ç”¨ string.Create é¿å…å†…å­˜å¤åˆ¶ï¼Œç›´æ¥åœ¨ string çš„å†…éƒ¨ç¼“å†²åŒºä¸­æ„å»º
             return string.Create(length, (chars, charSetLength), (span, state) =>
             {
                 var (sourceChars, setLength) = state;
@@ -66,27 +70,27 @@ namespace OW
             });
         }
 
-        #endregion ÃÜÂëÉú³É¹¦ÄÜ
+        #endregion å¯†ç ç”ŸæˆåŠŸèƒ½
 
-        #region ×Ö·û´®´¦Àí¹¤¾ß
+        #region å­—ç¬¦ä¸²å¤„ç†å·¥å…·
 
         /// <summary>
-        /// ¼ì²é×Ö·û´®ÊÇ·ñÎªnull»ò¿Õ°××Ö·û´®¡£
+        /// æ£€æŸ¥å­—ç¬¦ä¸²æ˜¯å¦ä¸ºnullæˆ–ç©ºç™½å­—ç¬¦ä¸²ã€‚
         /// </summary>
-        /// <param name="value">Òª¼ì²éµÄ×Ö·û´®</param>
-        /// <returns>Èç¹û×Ö·û´®Îªnull¡¢¿Õ×Ö·û´®»ò½ö°üº¬¿Õ°××Ö·û£¬Ôò·µ»Øtrue£»·ñÔò·µ»Øfalse</returns>
+        /// <param name="value">è¦æ£€æŸ¥çš„å­—ç¬¦ä¸²</param>
+        /// <returns>å¦‚æœå­—ç¬¦ä¸²ä¸ºnullã€ç©ºå­—ç¬¦ä¸²æˆ–ä»…åŒ…å«ç©ºç™½å­—ç¬¦ï¼Œåˆ™è¿”å›trueï¼›å¦åˆ™è¿”å›false</returns>
         public static bool IsNullOrWhiteSpace(string value)
         {
             return string.IsNullOrWhiteSpace(value);
         }
 
         /// <summary>
-        /// °²È«½ØÈ¡×Ö·û´®£¬Èç¹û³¤¶È³¬³öÔò½ØÈ¡Ö¸¶¨³¤¶È¡£
+        /// å®‰å…¨æˆªå–å­—ç¬¦ä¸²ï¼Œå¦‚æœé•¿åº¦è¶…å‡ºåˆ™æˆªå–æŒ‡å®šé•¿åº¦ã€‚
         /// </summary>
-        /// <param name="value">Ô­×Ö·û´®</param>
-        /// <param name="maxLength">×î´ó³¤¶È</param>
-        /// <param name="suffix">³¬³ö³¤¶ÈÊ±µÄºó×º£¬Ä¬ÈÏÎª"..."</param>
-        /// <returns>½ØÈ¡ºóµÄ×Ö·û´®</returns>
+        /// <param name="value">åŸå­—ç¬¦ä¸²</param>
+        /// <param name="maxLength">æœ€å¤§é•¿åº¦</param>
+        /// <param name="suffix">è¶…å‡ºé•¿åº¦æ—¶çš„åç¼€ï¼Œé»˜è®¤ä¸º"..."</param>
+        /// <returns>æˆªå–åçš„å­—ç¬¦ä¸²</returns>
         public static string SafeSubstring(string value, int maxLength, string suffix = "...")
         {
             if (string.IsNullOrEmpty(value) || maxLength <= 0)
@@ -102,10 +106,10 @@ namespace OW
         }
 
         /// <summary>
-        /// ÒÆ³ı×Ö·û´®ÖĞµÄËùÓĞ¿Õ°××Ö·û¡£
+        /// ç§»é™¤å­—ç¬¦ä¸²ä¸­çš„æ‰€æœ‰ç©ºç™½å­—ç¬¦ã€‚
         /// </summary>
-        /// <param name="value">Ô­×Ö·û´®</param>
-        /// <returns>ÒÆ³ı¿Õ°××Ö·ûºóµÄ×Ö·û´®</returns>
+        /// <param name="value">åŸå­—ç¬¦ä¸²</param>
+        /// <returns>ç§»é™¤ç©ºç™½å­—ç¬¦åçš„å­—ç¬¦ä¸²</returns>
         public static string RemoveWhiteSpaces(string value)
         {
             if (string.IsNullOrEmpty(value))
@@ -115,10 +119,10 @@ namespace OW
         }
 
         /// <summary>
-        /// Ê××ÖÄ¸´óĞ´¡£
+        /// é¦–å­—æ¯å¤§å†™ã€‚
         /// </summary>
-        /// <param name="value">Ô­×Ö·û´®</param>
-        /// <returns>Ê××ÖÄ¸´óĞ´µÄ×Ö·û´®</returns>
+        /// <param name="value">åŸå­—ç¬¦ä¸²</param>
+        /// <returns>é¦–å­—æ¯å¤§å†™çš„å­—ç¬¦ä¸²</returns>
         public static string Capitalize(string value)
         {
             if (string.IsNullOrEmpty(value))
@@ -131,10 +135,10 @@ namespace OW
         }
 
         /// <summary>
-        /// ÍÕ·åÃüÃû×ª»»ÎªÏÂ»®ÏßÃüÃû¡£
+        /// é©¼å³°å‘½åè½¬æ¢ä¸ºä¸‹åˆ’çº¿å‘½åã€‚
         /// </summary>
-        /// <param name="value">ÍÕ·åÃüÃû×Ö·û´®</param>
-        /// <returns>ÏÂ»®ÏßÃüÃû×Ö·û´®</returns>
+        /// <param name="value">é©¼å³°å‘½åå­—ç¬¦ä¸²</param>
+        /// <returns>ä¸‹åˆ’çº¿å‘½åå­—ç¬¦ä¸²</returns>
         public static string CamelToSnakeCase(string value)
         {
             if (string.IsNullOrEmpty(value))
@@ -151,10 +155,10 @@ namespace OW
         }
 
         /// <summary>
-        /// ÏÂ»®ÏßÃüÃû×ª»»ÎªÍÕ·åÃüÃû¡£
+        /// ä¸‹åˆ’çº¿å‘½åè½¬æ¢ä¸ºé©¼å³°å‘½åã€‚
         /// </summary>
-        /// <param name="value">ÏÂ»®ÏßÃüÃû×Ö·û´®</param>
-        /// <returns>ÍÕ·åÃüÃû×Ö·û´®</returns>
+        /// <param name="value">ä¸‹åˆ’çº¿å‘½åå­—ç¬¦ä¸²</param>
+        /// <returns>é©¼å³°å‘½åå­—ç¬¦ä¸²</returns>
         public static string SnakeToCamelCase(string value)
         {
             if (string.IsNullOrEmpty(value))
@@ -174,11 +178,11 @@ namespace OW
         }
 
         /// <summary>
-        /// ×Ö·û´®¸ñÊ½»¯£¬ÀàËÆÓÚ string.Format µ«Ìá¹©¸üºÃµÄĞÔÄÜ¡£
+        /// å­—ç¬¦ä¸²æ ¼å¼åŒ–ï¼Œç±»ä¼¼äº string.Format ä½†æä¾›æ›´å¥½çš„æ€§èƒ½ã€‚
         /// </summary>
-        /// <param name="format">¸ñÊ½×Ö·û´®</param>
-        /// <param name="args">²ÎÊı</param>
-        /// <returns>¸ñÊ½»¯ºóµÄ×Ö·û´®</returns>
+        /// <param name="format">æ ¼å¼å­—ç¬¦ä¸²</param>
+        /// <param name="args">å‚æ•°</param>
+        /// <returns>æ ¼å¼åŒ–åçš„å­—ç¬¦ä¸²</returns>
         public static string FastFormat(string format, params object[] args)
         {
             if (args == null || args.Length == 0)
@@ -188,13 +192,13 @@ namespace OW
         }
 
         /// <summary>
-        /// ½«×Ö·û´®×ª»»ÎªÖ¸¶¨³¤¶ÈµÄ¹Ì¶¨×Ö·û´®£¬²»×ã²¿·ÖÓÃÖ¸¶¨×Ö·ûÌî³ä¡£
+        /// å°†å­—ç¬¦ä¸²è½¬æ¢ä¸ºæŒ‡å®šé•¿åº¦çš„å›ºå®šå­—ç¬¦ä¸²ï¼Œä¸è¶³éƒ¨åˆ†ç”¨æŒ‡å®šå­—ç¬¦å¡«å……ã€‚
         /// </summary>
-        /// <param name="value">Ô­×Ö·û´®</param>
-        /// <param name="totalWidth">Ä¿±ê³¤¶È</param>
-        /// <param name="paddingChar">Ìî³ä×Ö·û£¬Ä¬ÈÏÎª¿Õ¸ñ</param>
-        /// <param name="leftAlign">ÊÇ·ñ×ó¶ÔÆë£¬Ä¬ÈÏÎªtrue</param>
-        /// <returns>Ìî³äºóµÄ×Ö·û´®</returns>
+        /// <param name="value">åŸå­—ç¬¦ä¸²</param>
+        /// <param name="totalWidth">ç›®æ ‡é•¿åº¦</param>
+        /// <param name="paddingChar">å¡«å……å­—ç¬¦ï¼Œé»˜è®¤ä¸ºç©ºæ ¼</param>
+        /// <param name="leftAlign">æ˜¯å¦å·¦å¯¹é½ï¼Œé»˜è®¤ä¸ºtrue</param>
+        /// <returns>å¡«å……åçš„å­—ç¬¦ä¸²</returns>
         public static string PadToWidth(string value, int totalWidth, char paddingChar = ' ', bool leftAlign = true)
         {
             if (string.IsNullOrEmpty(value))
@@ -209,6 +213,56 @@ namespace OW
             return leftAlign ? value + padding : padding + value;
         }
 
-        #endregion ×Ö·û´®´¦Àí¹¤¾ß
+        #endregion å­—ç¬¦ä¸²å¤„ç†å·¥å…·
     }
+
+    #region è¾…åŠ©å·¥å…·ç±»
+
+    /// <summary>
+    /// åå°„å·¥å…·ç±»ï¼Œæä¾›å¯¹è±¡å±æ€§æå–åŠŸèƒ½ã€‚
+    /// PURPOSE: ä¸ºè°ƒè¯•å’Œåºåˆ—åŒ–æä¾›å¯¹è±¡å±æ€§å€¼çš„å¿«é€Ÿæå–
+    /// </summary>
+    public static class ReflectionUtils
+    {
+        /// <summary>
+        /// æå–å¯¹è±¡çš„æ‰€æœ‰å±æ€§åç§°å’Œå€¼å¯¹ã€‚
+        /// PURPOSE: å°†å¯¹è±¡çš„å±æ€§åå°„ä¸ºé”®å€¼å¯¹é›†åˆï¼Œç”¨äºæ—¥å¿—è®°å½•ã€è°ƒè¯•æˆ–æ•°æ®å¯¼å‡º
+        /// </summary>
+        /// <typeparam name="T">å¯¹è±¡ç±»å‹</typeparam>
+        /// <param name="data">è¦æå–å±æ€§çš„å¯¹è±¡</param>
+        /// <returns>å±æ€§åç§°å’Œå€¼çš„å…ƒç»„åˆ—è¡¨</returns>
+        /// <exception cref="ArgumentNullException">å½“dataå‚æ•°ä¸ºnullæ—¶æŠ›å‡º</exception>
+        public static List<(string Name, string Value)> ExtractProperties<T>(T data)
+        {
+            var result = new List<(string, string)>();
+            var pis = typeof(T).GetProperties();
+            string name, val;
+            var type = data!.GetType();
+            foreach (var pi in pis)
+            {
+                if (pi.GetCustomAttribute<IgnoreDataMemberAttribute>() is not null) continue;   //å¿½ç•¥
+                name = pi.GetCustomAttribute<JsonPropertyNameAttribute>()?.Name ?? pi.Name; //ä¼˜å…ˆJsonPropertyName
+                if (pi.PropertyType == typeof(string))
+                {
+                    if (pi.GetValue(data) is not string tmp || tmp == null) continue;
+                    val = tmp;
+                }
+                else if (pi.PropertyType.IsGenericType && typeof(Nullable<>) == pi.PropertyType.GetGenericTypeDefinition())    //è‹¥æ˜¯å¯ç©ºç±»å‹
+                {
+                    var tmp = pi.GetValue(data);
+                    if (tmp is null) continue;
+                    dynamic dyn = tmp;
+                    if (dyn is null) continue;
+                    val = dyn.ToString();
+                }
+                else
+                    val = pi.GetValue(data)?.ToString() ?? string.Empty;
+                result.Add((name, val));
+            }
+            return result;
+        }
+
+    }
+
+    #endregion è¾…åŠ©å·¥å…·ç±»
 }
