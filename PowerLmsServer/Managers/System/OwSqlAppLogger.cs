@@ -7,7 +7,7 @@
  * - 日志查看功能：提供系统日志管理界面，支持多维度日志查询和筛选
  * - 日志级别管理：支持不同级别的日志记录和展示
  * - 操作追踪：记录操作IP、操作类型、操作人员等关键信息
- * - 时间管理：精确记录操作时间，支持时间范围查询
+ * - 时间管理：精確記錄操作時間，支持時間範圍查詢
  * 
  * 日志字段设计：
  * - 日志级别(Log Level)：用于区分日志的重要程度和类型
@@ -199,7 +199,7 @@ namespace PowerLmsServer.Managers
             var userId = owContext?.User?.Id;
             var userMerchantId = userId.HasValue ? orgManager?.GetMerchantIdByUserId(userId.Value) : null;
             var merchant = userMerchantId.HasValue ? orgManager?.GetOrLoadOrgCacheItem(userMerchantId.Value)?.Merchant : null;
-            var companyName = merchant?.Name.DisplayName ?? "Unknown";
+            var companyName = merchant?.Name_DisplayName ?? "Unknown";
 
             // 通用日志记录
             var generalInfo = new GeneralInfoLogEntry

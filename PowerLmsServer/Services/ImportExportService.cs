@@ -3,7 +3,8 @@
  * 功能：统一的Excel导入导出处理，支持独立表字典和客户资料表的批量多Sheet处理
  * 包含表类型：
  * - 独立字典表：pl_Countries、pl_Ports、pl_CargoRoutes、pl_Currencies、pl_FeesTypes、
- *               pl_ExchangeRates、pl_UnitConversions、pl_ShippingContainersKinds等
+ *               pl_ExchangeRates、pl_UnitConversions、pl_ShippingContainersKinds、
+ *               JobNumberRule、OtherNumberRule、SubjectConfiguration、DailyFeesType等
  * - 客户资料主表：pl_Customers
  * - 客户资料子表：pl_CustomerContacts、pl_BusinessHeaders、pl_Tidans、pl_CustomerBlacklists、pl_LoadingAddrs
  * 技术要点：
@@ -12,7 +13,7 @@
  * - 重复数据覆盖策略，依赖关系验证
  * - 批量数据库操作和查询优化
  * - 多Sheet批量处理，Sheet名称直接使用数据库表名
- * 作者：zc | 创建：2025-01-27 | 修改：2025-01-27 简化为批量多表处理
+ * 作者：zc | 创建：2025-01-27 | 修改：2025-01-27 添加四个新的基础数据表支持
  */
 
 using Microsoft.AspNetCore.Http;
@@ -60,7 +61,8 @@ namespace PowerLmsServer.Services
 
         /// <summary>
         /// 获取支持的独立表字典类型列表
-        /// 包含：PlCountry、PlPort、PlCargoRoute、PlCurrency、FeesType、PlExchangeRate、UnitConversion、ShippingContainersKind
+        /// 包含：PlCountry、PlPort、PlCargoRoute、PlCurrency、FeesType、PlExchangeRate、UnitConversion、ShippingContainersKind、
+        ///       JobNumberRule、OtherNumberRule、SubjectConfiguration、DailyFeesType
         /// </summary>
         /// <returns>独立表字典类型名称和中文名称的元组集合</returns>
         public List<(string TypeName, string DisplayName)> GetSupportedDictionaryTypes()
@@ -150,13 +152,23 @@ namespace PowerLmsServer.Services
 
         /// <summary>
         /// 判断是否为独立表字典实体
-        /// 包含：PlCountry、PlPort、PlCargoRoute、PlCurrency、FeesType、PlExchangeRate、UnitConversion、ShippingContainersKind
+        /// 包含：PlCountry、PlPort、PlCargoRoute、PlCurrency、FeesType、PlExchangeRate、UnitConversion、ShippingContainersKind、
+        ///       JobNumberRule（工作号编码规则）、OtherNumberRule（其他编码规则）、SubjectConfiguration（财务科目配置）、DailyFeesType（日常费用种类）
         /// </summary>
         /// <param name="typeName">实体类型名称</param>
         /// <returns>是否为独立表字典实体</returns>
         private bool IsIndependentDictionaryEntity(string typeName)
         {
-            // 独立表字典实体通常以Pl开头或为FeesType等
+            // 新增的基础数据表类型：编码规则、科目配置、费用种类
+            if (typeName.Equals("JobNumberRule", StringComparison.OrdinalIgnoreCase) ||
+                typeName.Equals("OtherNumberRule", StringComparison.OrdinalIgnoreCase) ||
+                typeName.Equals("SubjectConfiguration", StringComparison.OrdinalIgnoreCase) ||
+                typeName.Equals("DailyFeesType", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            // 原有的独立表字典实体
             return typeName.StartsWith("Pl") && 
                    (typeName.Contains("Country") || 
                     typeName.Contains("Port") || 
@@ -211,7 +223,8 @@ namespace PowerLmsServer.Services
 
         /// <summary>
         /// 批量导出多个独立表字典类型到Excel（多Sheet结构）
-        /// 支持：PlCountry、PlPort、PlCargoRoute、PlCurrency、FeesType、PlExchangeRate、UnitConversion、ShippingContainersKind
+        /// 支持：PlCountry、PlPort、PlCargoRoute、PlCurrency、FeesType、PlExchangeRate、UnitConversion、ShippingContainersKind、
+        ///       JobNumberRule、OtherNumberRule、SubjectConfiguration、DailyFeesType
         /// 每个表类型对应一个Sheet，Sheet名称为实体类型名称
         /// 即使表无数据也会导出表头，便于客户填写数据模板
         /// </summary>
@@ -245,6 +258,10 @@ namespace PowerLmsServer.Services
                             "PlExchangeRate" => ExportEntityData<PlExchangeRate>(sheet, orgId),
                             "UnitConversion" => ExportEntityData<UnitConversion>(sheet, orgId),
                             "ShippingContainersKind" => ExportEntityData<ShippingContainersKind>(sheet, orgId),
+                            "JobNumberRule" => ExportEntityData<JobNumberRule>(sheet, orgId),
+                            "OtherNumberRule" => ExportEntityData<OtherNumberRule>(sheet, orgId),
+                            "SubjectConfiguration" => ExportEntityData<SubjectConfiguration>(sheet, orgId),
+                            "DailyFeesType" => ExportEntityData<DailyFeesType>(sheet, orgId),
                             _ => 0
                         };
                         totalExported += exportedCount;
@@ -274,7 +291,8 @@ namespace PowerLmsServer.Services
         /// <summary>
         /// 批量导入多个独立表字典类型（多Sheet结构）
         /// 自动识别Excel中的所有Sheet，根据Sheet名称匹配实体类型
-        /// 支持：PlCountry、PlPort、PlCargoRoute、PlCurrency、FeesType、PlExchangeRate、UnitConversion、ShippingContainersKind
+        /// 支持：PlCountry、PlPort、PlCargoRoute、PlCurrency、FeesType、PlExchangeRate、UnitConversion、ShippingContainersKind、
+        ///       JobNumberRule、OtherNumberRule、SubjectConfiguration、DailyFeesType
         /// Excel中Sheet名称必须使用实体类型名称（如：PlCountry、PlPort等）
         /// </summary>
         /// <param name="file">Excel文件</param>
@@ -310,6 +328,10 @@ namespace PowerLmsServer.Services
                                 "PlExchangeRate" => ImportEntityData<PlExchangeRate>(sheet, orgId, updateExisting),
                                 "UnitConversion" => ImportEntityData<UnitConversion>(sheet, orgId, updateExisting),
                                 "ShippingContainersKind" => ImportEntityData<ShippingContainersKind>(sheet, orgId, updateExisting),
+                                "JobNumberRule" => ImportEntityData<JobNumberRule>(sheet, orgId, updateExisting),
+                                "OtherNumberRule" => ImportEntityData<OtherNumberRule>(sheet, orgId, updateExisting),
+                                "SubjectConfiguration" => ImportEntityData<SubjectConfiguration>(sheet, orgId, updateExisting),
+                                "DailyFeesType" => ImportEntityData<DailyFeesType>(sheet, orgId, updateExisting),
                                 _ => 0
                             };
                             

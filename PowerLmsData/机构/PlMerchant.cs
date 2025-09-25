@@ -20,11 +20,29 @@ namespace PowerLms.Data
     [Comment("商户")]
     public class PlMerchant : GuidKeyObjectBase, IMarkDelete, ICreatorInfo
     {
+        #region 原Name属性展平
+
         /// <summary>
-        /// 名称类。
+        /// 正式名称，拥有相对稳定性。
         /// </summary>
-        [Comment("名称嵌入类")]
-        public PlOwnedName Name { get; set; }
+        [Comment("正式名称，拥有相对稳定性")]
+        [MaxLength(64)]
+        public string Name_Name { get; set; }
+
+        /// <summary>
+        /// 正式简称。对正式的组织机构通常简称也是规定的。
+        /// </summary>
+        [Comment("正式简称，对正式的组织机构通常简称也是规定的")]
+        [MaxLength(32)]
+        public string Name_ShortName { get; set; }
+
+        /// <summary>
+        /// 显示名，有时它是昵称或简称(系统内)的意思。
+        /// </summary>
+        [Comment("显示名，有时它是昵称或简称(系统内)的意思")]
+        public string Name_DisplayName { get; set; }
+
+        #endregion 原Name属性展平
 
         /// <summary>
         /// 描述。
@@ -39,10 +57,32 @@ namespace PowerLms.Data
         [Comment("快捷输入码。服务器不使用。")]
         public string ShortcutCode { get; set; }
 
+        #region 原Address属性展平
+
         /// <summary>
-        /// 机构地址。
+        /// 电话。
         /// </summary>
-        public PlSimpleOwnedAddress Address { get; set; }
+        [Comment("电话")]
+        [MaxLength(28)]
+        [Column("Address_Tel")]
+        public string Address_Tel { get; set; }
+
+        /// <summary>
+        /// 传真。
+        /// </summary>
+        [Comment("传真")]
+        [MaxLength(28)]
+        [Column("Address_Fax")]
+        public string Address_Fax { get; set; }
+
+        /// <summary>
+        /// 详细地址。
+        /// </summary>
+        [Comment("详细地址")]
+        [Column("Address_FullAddress")]
+        public string Address_FullAddress { get; set; }
+
+        #endregion 原Address属性展平
 
         /// <summary>
         /// 状态码。0=正常，1=停用。

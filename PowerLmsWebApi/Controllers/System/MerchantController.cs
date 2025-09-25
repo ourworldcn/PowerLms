@@ -51,7 +51,9 @@ namespace PowerLmsWebApi.Controllers
         /// 获取全部商户。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">查询的条件。支持 name，ShortName，displayname，ShortcutCode，Id。不区分大小写。</param>
+        /// <param name="conditional">已支持通用查询——除个别涉及敏感信息字段外，所有实体字段都可作为条件。
+        /// 通用条件写法：所有条件都是字符串，对区间的写法是用逗号分隔（字符串类型暂时不支持区间且都是模糊查询）如"2024-1-1,2024-1-2"。
+        /// 对强制取null的约束，则写"null"。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
@@ -63,28 +65,10 @@ namespace PowerLmsWebApi.Controllers
             var result = new GetAllMerchantReturnDto();
             var dbSet = _DbContext.Merchants;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-            foreach (var item in conditional)
-                if (string.Equals(item.Key, "name", StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.Name.Name.Contains(item.Value));
-                }
-                else if (string.Equals(item.Key, "Id", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (Guid.TryParse(item.Value, out var id))
-                        coll = coll.Where(c => c.Id == id);
-                }
-                else if (string.Equals(item.Key, "ShortName", StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.Name.ShortName.Contains(item.Value));
-                }
-                else if (string.Equals(item.Key, "displayname", StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.Name.DisplayName.Contains(item.Value));
-                }
-                else if (string.Equals(item.Key, "ShortcutCode", StringComparison.OrdinalIgnoreCase))
-                {
-                    coll = coll.Where(c => c.ShortcutCode.Contains(item.Value));
-                }
+            
+            // 使用通用查询
+            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+            
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;

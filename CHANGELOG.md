@@ -1,12 +1,100 @@
 ﻿# PowerLms 变更日志
 
 ## 功能变更总览
+- **商户实体结构优化：地址属性展平重构**：将PlMerchant实体中的复杂地址类型展平为独立属性，保持数据库字段映射不变，提升实体访问性能
+- **商户查询功能增强：支持通用查询条件**：为商户管理接口添加通用查询支持，与系统其他查询接口保持一致，提升查询灵活性
 - **性能优化：申请单明细已结算金额改为直接使用实体字段**：完全移除动态计算逻辑，直接使用TotalSettledAmount字段，大幅提升查询性能，简化代码结构
 - **重大功能发布：付款结算单导出金蝶功能完整实施**：实现复杂的六种凭证分录规则，支持多笔付款优先、手续费双分录自平衡、混合业务处理等高级财务场景，财务自动化核心功能再次扩展
 - **BUG修复：日常费用种类重复记录问题彻底解决**：修复新增日常费用种类时创建重复记录的逻辑错误，排除本机构避免重复创建
 - **新增通用数据查询接口**：支持多种实体类型的字段值查询，提供灵活的去重控制选项，未来将支持客户资料、工作号等更多实体
 - **BUG修复：字典导出"键重复"错误彻底解决**：修复币种等字典导出时的重复键异常，优化API选择错误提示
 - **收款结算单导出金蝶功能完整实施：** 实现复杂的七种凭证分录规则，支持多币种和混合业务场景，财务自动化核心功能正式上线
+
+---
+
+## [2025-01-31] - 商户实体结构优化
+
+### 业务变更（面向项目经理）
+
+#### 1. **商户地址属性展平：实体结构优化重构**
+- **结构简化**：将PlMerchant实体中的复杂地址类型（PlSimpleOwnedAddress）展平为三个独立属性
+- **性能提升**：简化实体属性访问，消除复杂类型的序列化开销，提升查询和绑定性能
+- **兼容性保障**：数据库字段映射保持不变（Address_Tel、Address_Fax、Address_FullAddress），确保现有数据完整性
+- **架构统一**：与Name属性展平保持一致的设计模式，提高实体结构的统一性
+
+### API变更（面向前端）
+
+#### 1. **PlMerchant实体属性变更**
+- **展平前的复杂结构**：
+  ```csharp
+  // 原有结构
+  public PlSimpleOwnedAddress Address { get; set; }
+  // 访问方式：merchant.Address.Tel
+  ```
+
+- **展平后的独立属性**：
+  ```csharp
+  // 新结构
+  public string Address_Tel { get; set; }
+  public string Address_Fax { get; set; }  
+  public string Address_FullAddress { get; set; }
+  // 访问方式：merchant.Address_Tel
+  ```
+
+#### 2. **数据库字段映射保持不变**
+- **字段名称**：Address_Tel、Address_Fax、Address_FullAddress
+- **数据类型**：保持原有约束（MaxLength等）
+- **注释信息**：保持原有的字段注释
+- **兼容性**：现有数据无需迁移，字段映射完全兼容
+
+#### 3. **影响范围和升级指导**
+- **前端影响**：需要调整属性访问方式，从嵌套访问改为直接属性访问
+- **序列化优化**：JSON序列化结构更扁平，减少嵌套层级
+- **查询性能**：EF查询时避免了复杂类型的处理开销
+
+---
+
+## [2025-01-31] - 商户查询功能增强
+
+### 业务变更（面向项目经理）
+
+#### 1. **商户管理查询功能全面增强**
+- **查询灵活性提升**：商户列表查询现已支持通用查询条件，可按任意字段进行精确过滤
+- **统一查询体验**：查询接口与系统其他模块保持一致，提供统一的用户体验
+- **支持复杂条件**：支持区间查询、模糊匹配、null值约束等多种查询模式
+
+### API变更（面向前端）
+
+#### 1. **GetAllMerchant接口增强**
+- **通用查询支持**：
+  ```
+  GET /api/Merchant/GetAllMerchant?conditional[Name_Name]=xxx&conditional[StatusCode]=0
+  
+  支持的查询条件格式：
+  - 字符串模糊查询：conditional[Name_Name]=商户名称
+  - 精确匹配：conditional[StatusCode]=0
+  - 区间查询：conditional[CreateDateTime]=2024-1-1,2024-12-31
+  - Null约束：conditional[Description]=null
+  - 地址查询：conditional[Address_Tel]=电话号码
+  ```
+
+#### 2. **移除的旧逻辑**
+- **手动条件处理代码**：移除了原有的硬编码条件处理逻辑
+  ```csharp
+  // 已移除：
+  foreach (var item in conditional)
+      if (string.Equals(item.Key, "name", StringComparison.OrdinalIgnoreCase))
+      {
+          coll = coll.Where(c => c.Name_Name.Contains(item.Value));
+      }
+  ```
+
+#### 3. **支持的商户字段查询**
+- **基础信息**：Name_Name、Name_ShortName、Name_DisplayName
+- **地址信息**：Address_Tel、Address_Fax、Address_FullAddress（展平后的新字段）
+- **状态管理**：StatusCode、IsDelete
+- **系统信息**：Id、CreateBy、CreateDateTime
+- **其他字段**：Description、ShortcutCode等所有PlMerchant实体字段
 
 ---
 
@@ -157,8 +245,14 @@
 
 ## 技术架构变更记录
 
+### 实体结构优化
+- **商户地址属性展平** 将PlMerchant中的复杂地址类型展平为独立属性，提升实体访问性能，保持数据库字段映射不变
+
 ### 性能优化
 - **申请单明细已结算金额直接使用实体字段** 消除动态计算逻辑，提升查询性能，简化代码结构
+
+### 查询接口统一
+- **商户查询功能增强** 为GetAllMerchant接口添加通用查询支持，与系统其他查询接口保持一致
 
 ### 分部类架构设计
 - **FinancialSystemExportController** 采用分部类模式，支持收款和付款结算单导出功能
