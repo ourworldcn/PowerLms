@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using ICSharpCode.SharpZipLib.Zip;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -7,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using OW.Data;
 using OW.DDD;
 using OW.EntityFrameworkCore;
+using OW.Forum;
 using PowerLms.Data;
 using PowerLms.Data.OA; // 添加OA命名空间
 using System;
@@ -574,6 +576,24 @@ namespace PowerLmsServer.EfData
         /// </summary>
         public DbSet<OwTaskStore> OwTaskStores { get; set; }
         #endregion 任务系统
+
+        #region 论坛系统
+
+        /// <summary>
+        /// 论坛板块表。
+        /// </summary>
+        public DbSet<OwForumCategory> OwForumCategories { get; set; }
+
+        /// <summary>
+        /// 论坛帖子表。
+        /// </summary>
+        public DbSet<OwPost> OwPosts { get; set; }
+
+        /// <summary>
+        /// 论坛回复表。
+        /// </summary>
+        public DbSet<OwReply> OwReplies { get; set; }
+        #endregion 论坛系统
     }
 
     /// <summary>

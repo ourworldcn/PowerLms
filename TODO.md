@@ -135,7 +135,17 @@ GET /api/Customer/GetCustomersForSelector
 
 ## 4. ✅ 已完成任务
 
-### 4.1 商户查询功能增强 ✅ **完成时间：2025-01-31**
+### 4.1 基础数据导入导出功能扩展 ✅ **完成时间：2025-01-31**
+- **完成内容：** ExportMultipleTables功能新增对JobNumberRule、OtherNumberRule、SubjectConfiguration和DailyFeesType的完整导入导出支持
+- **技术实现：** 
+  - 在IsIndependentDictionaryEntity方法中添加四个新实体的识别逻辑
+  - 在ExportDictionaries和ImportDictionaries的switch语句中添加对应处理
+  - 支持基于Code字段的现有记录更新策略
+  - **Bug修复：** 为OtherNumberRule实体添加缺少的[Comment("其他编码规则")]注释，修复导入导出服务无法识别该实体的问题
+- **覆盖范围：** 编码规则管理、财务科目配置、日常费用种类等核心基础数据管理
+- **支持功能：** 批量导出表头模板、多租户数据隔离、字段自动映射、Id和OrgId字段自动处理
+
+### 4.2 商户查询功能增强 ✅ **完成时间：2025-01-31**
 - **完成内容：** 为GetAllMerchant接口添加通用查询支持
 - **技术改进：** 移除硬编码条件处理，使用EfHelper.GenerateWhereAnd统一处理
 - **兼容性：** 与系统其他查询接口保持一致的查询体验

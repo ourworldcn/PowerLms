@@ -1,6 +1,9 @@
 ﻿# PowerLms 变更日志
 
 ## 功能变更总览
+- **功能确认：论坛控制器AuthorDisplayName自动填充已正确实现**：确认ForumCategoryController、PostController、ReplyController三个控制器在创建实体时，AuthorDisplayName未指定时能正确使用当前用户DisplayName，代码实现完整且编译通过
+- **BUG修复：OtherNumberRule实体缺少Comment注释导致导入导出失败**：为OtherNumberRule实体添加缺少的[Comment("其他编码规则")]注释，修复导入导出功能无法识别该实体的问题
+- **基础数据导入导出扩展：新增四个基础数据表支持**：ExportMultipleTables功能新增对JobNumberRule、OtherNumberRule、SubjectConfiguration和DailyFeesType的完整导入导出支持，覆盖编码规则、科目配置、费用种类等核心基础数据管理
 - **商户实体结构优化：地址属性展平重构**：将PlMerchant实体中的复杂地址类型展平为独立属性，保持数据库字段映射不变，提升实体访问性能
 - **商户查询功能增强：支持通用查询条件**：为商户管理接口添加通用查询支持，与系统其他查询接口保持一致，提升查询灵活性
 - **性能优化：申请单明细已结算金额改为直接使用实体字段**：完全移除动态计算逻辑，直接使用TotalSettledAmount字段，大幅提升查询性能，简化代码结构
@@ -9,6 +12,179 @@
 - **新增通用数据查询接口**：支持多种实体类型的字段值查询，提供灵活的去重控制选项，未来将支持客户资料、工作号等更多实体
 - **BUG修复：字典导出"键重复"错误彻底解决**：修复币种等字典导出时的重复键异常，优化API选择错误提示
 - **收款结算单导出金蝶功能完整实施：** 实现复杂的七种凭证分录规则，支持多币种和混合业务场景，财务自动化核心功能正式上线
+
+---
+
+## [2025-01-31] - 论坛控制器AuthorDisplayName功能确认
+
+### 业务变更（面向项目经理）
+
+#### 1. **论坛控制器AuthorDisplayName自动填充功能确认完成**
+- **功能范围**：ForumCategoryController、PostController、ReplyController三个论坛管理控制器
+- **实现机制**：在创建新的论坛板块、帖子或回复时，如果AuthorDisplayName字段为空，系统自动使用当前登录用户的DisplayName
+- **回退策略**：如果用户DisplayName也为空，则使用LoginName作为显示名称
+- **代码质量**：所有实现均已通过编译验证，逻辑完整且符合系统架构规范
+
+### API变更（面向前端）
+
+#### 1. **论坛实体创建接口自动字段填充确认**
+- **ForumCategoryController.AddOwForumCategory**：
+  ```csharp
+  if (string.IsNullOrWhiteSpace(model.Item.AuthorDisplayName))
+      model.Item.AuthorDisplayName = context.User.DisplayName ?? context.User.LoginName;
+  ```
+
+- **PostController.AddOwPost**：
+  ```csharp
+  if (string.IsNullOrWhiteSpace(model.Item.AuthorDisplayName))
+      model.Item.AuthorDisplayName = context.User.DisplayName ?? context.User.LoginName;
+  ```
+
+- **ReplyController.AddOwReply**：
+  ```csharp
+  if (string.IsNullOrWhiteSpace(model.Item.AuthorDisplayName))
+      model.Item.AuthorDisplayName = context.User.DisplayName ?? context.User.LoginName;
+  ```
+
+#### 2. **功能特点**
+- **用户体验**：前端无需强制要求用户输入显示名称，系统智能填充
+- **数据一致性**：确保所有论坛内容都有合适的作者显示名称
+- **兼容性**：不影响前端显式设置AuthorDisplayName的场景
+- **商户隔离**：配合完善的多租户权限控制，确保数据安全
+
+---
+
+## [2025-01-31] - OtherNumberRule导入导出Bug修复
+
+### 业务变更（面向项目经理）
+
+#### 1. **基础数据导入导出Bug紧急修复**
+- **问题背景**：四个基础数据实体（JobNumberRule、OtherNumberRule、SubjectConfiguration、DailyFeesType）无法通过导入导出功能识别
+- **根本原因**：数据库中的表Comment注释尚未通过迁移更新，EF Core元数据无法读取到实体注释信息
+- **问题表现**：GetSupportedTables接口返回空列表，ExportMultipleTables报错"不支持的表名称"
+- **临时解决方案**：在代码中硬编码支持的基础数据类型列表，确保功能立即可用
+- **后续计划**：等待数据库迁移完成后，移除硬编码逻辑，恢复基于数据库元数据的自动识别
+
+### API变更（面向前端）
+
+#### 1. **GetSupportedTables接口立即修复**
+- **修复前**：返回的Tables列表为空，导致前端无法获取支持的表类型
+- **修复后**：返回完整的基础数据表列表：
+  ```json
+  {
+    "Tables": [
+      {
+        "TableName": "DailyFeesType", 
+        "DisplayName": "日常费用种类字典"
+      },
+      {
+        "TableName": "FeesType",
+        "DisplayName": "费用种类"
+      },
+      {
+        "TableName": "JobNumberRule",
+        "DisplayName": "业务编码规则"
+      },
+      {
+        "TableName": "OtherNumberRule", 
+        "DisplayName": "其他编码规则"
+      },
+      {
+        "TableName": "SubjectConfiguration",
+        "DisplayName": "财务科目设置表"
+      }
+    ]
+  }
+  ```
+
+#### 2. **ExportMultipleTables和ImportMultipleTables功能恢复**
+- **功能恢复**：四个基础数据实体现在可以正常进行导入导出
+- **支持参数**：TableNames参数接受上述五个表名
+- **Excel格式**：每个实体对应一个Sheet，使用实体类型名称作为Sheet名称
+- **数据处理**：支持完整的字段映射、多租户隔离、Id/OrgId自动处理
+
+#### 3. **日志改进**
+- **新增日志**：添加"添加硬编码的基础数据类型支持"信息日志
+- **问题跟踪**：便于后续数据库迁移完成后的代码清理
+
+#### 4. **技术说明**
+- **临时性质**：此修复为临时方案，待数据库迁移完成后将恢复原有的基于元数据的自动识别机制
+- **向后兼容**：不影响现有的其他实体类型支持
+- **性能影响**：硬编码列表不会影响性能，反而可能略有提升
+
+---
+
+## [2025-01-31] - 基础数据导入导出功能扩展
+
+### 业务变更（面向项目经理）
+
+#### 1. **基础数据导入导出功能全面扩展：新增四个核心基础数据表支持**
+- **编码规则管理**：JobNumberRule（业务编码规则）和OtherNumberRule（其他编码规则）现已支持批量导入导出，便于统一的编码体系管理
+- **财务科目配置**：SubjectConfiguration（财务科目配置）支持导入导出，为金蝶财务系统对接和凭证生成提供基础数据管理
+- **日常费用管理**：DailyFeesType（日常费用种类）支持批量管理，与主营业务费用种类分开维护，专用于OA费用申请单的费用分类
+- **数据模板提供**：即使表无数据也会导出表头模板，便于客户填写标准化数据
+
+#### 2. **支持的基础数据表类型扩展**
+- **编码规则表**：
+  - JobNumberRule：业务编码规则（工作号、提单号等业务单据编码）
+  - OtherNumberRule：其他编码规则（自定义编码体系）
+- **财务配置表**：
+  - SubjectConfiguration：财务科目配置（金蝶对接科目映射）
+- **费用管理表**：
+  - DailyFeesType：日常费用种类（OA费用申请单专用）
+
+### API变更（面向前端）
+
+#### 1. **GetSupportedTables接口返回新增表类型**
+- **新增返回的表类型信息**：
+  ```json
+  {
+    "Tables": [
+      {
+        "TableName": "JobNumberRule",
+        "DisplayName": "业务编码规则"
+      },
+      {
+        "TableName": "OtherNumberRule", 
+        "DisplayName": "其他编码规则"
+      },
+      {
+        "TableName": "SubjectConfiguration",
+        "DisplayName": "财务科目设置表"
+      },
+      {
+        "TableName": "DailyFeesType",
+        "DisplayName": "日常费用种类字典"
+      }
+    ]
+  }
+  ```
+
+#### 2. **ExportMultipleTables接口扩展支持**
+- **新增支持的TableNames参数值**：
+  - "JobNumberRule" - 导出业务编码规则
+  - "OtherNumberRule" - 导出其他编码规则  
+  - "SubjectConfiguration" - 导出财务科目配置
+  - "DailyFeesType" - 导出日常费用种类
+
+#### 3. **ImportMultipleTables接口扩展支持**
+- **新增支持的Sheet名称**：Excel文件中Sheet名称可使用上述四个表类型名称
+- **字段处理规则**：
+  - **Id字段**：自动生成新的GUID
+  - **OrgId字段**：自动设置为当前登录用户的机构ID
+  - **其他字段**：根据Excel列标题与实体属性名称匹配
+- **更新策略**：支持基于Code字段的现有记录更新
+
+#### 4. **Excel文件结构要求**
+- **Sheet命名**：使用实体类型名称（JobNumberRule、OtherNumberRule等）
+- **列标题**：与实体属性名称完全匹配（排除Id、OrgId系统字段）
+- **数据校验**：自动处理多租户数据隔离和业务逻辑验证
+
+#### 5. **实际字段支持说明**
+- **JobNumberRule**：RuleString、CurrentNumber、RepeatMode、StartValue、RepeatDate、BusinessTypeId等
+- **OtherNumberRule**：Code、DisplayName、RuleString、CurrentNumber、RepeatMode、StartValue、RepeatDate等  
+- **SubjectConfiguration**：Code、SubjectNumber、DisplayName、VoucherGroup、AccountingCategory、Preparer、Remark等
+- **DailyFeesType**：Code、DisplayName、ShortName、Remark、SubjectCode等
 
 ---
 

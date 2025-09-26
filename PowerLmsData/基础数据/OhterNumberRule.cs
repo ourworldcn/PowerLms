@@ -13,6 +13,7 @@ namespace PowerLms.Data
     /// <summary>
     /// 其它编码规则类。
     /// </summary>
+    [Comment("其他编码规则")]
     [Index(nameof(OrgId), nameof(Code))]
     public class OtherNumberRule : GuidKeyObjectBase, IMarkDelete
     {
