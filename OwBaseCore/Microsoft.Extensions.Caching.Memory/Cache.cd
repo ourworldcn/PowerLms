@@ -50,55 +50,19 @@
     </TypeIdentifier>
     <Lollipop Position="0.2" />
   </Class>
-  <Class Name="Microsoft.Extensions.Caching.Memory.OwServerCacheOptions" BaseTypeListCollapsed="true">
-    <Position X="8" Y="2.75" Width="1.75" />
+  <Class Name="Microsoft.Extensions.Caching.Memory.OwMemoryCacheExtensions" Collapsed="true">
+    <Position X="7.25" Y="3.5" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>ACAAAAAgIAAAAAAAAAAAAAECAAIAAAgAAAAAoAAgAgA=</HashCode>
-      <FileName>Microsoft.Extensions.Caching.Memory\OwServerMemoryCache.cs</FileName>
-    </TypeIdentifier>
-    <Lollipop Position="0.2" />
-  </Class>
-  <Class Name="Microsoft.Extensions.Caching.Memory.CacheEntryHelper" Collapsed="true">
-    <Position X="8" Y="1.75" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAACAAAAAAAAAAAAAACAAAAAAAAAAAAAAAACBAAAAAA=</HashCode>
-      <FileName>Microsoft.Extensions.Caching.Memory\OwServerMemoryCache.cs</FileName>
+      <HashCode>AAAAACIAQAAEQAAAAAQAAAABAAAQAAAAAAAAACABAAg=</HashCode>
+      <FileName>Microsoft.Extensions.Caching.Memory\OwMemoryCacheExtensions.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="Microsoft.Extensions.Caching.Memory.OwServerCacheEntry" Collapsed="true" BaseTypeListCollapsed="true">
-    <Position X="11.5" Y="1.75" Width="1.5" />
-    <NestedTypes>
-      <Class Name="Microsoft.Extensions.Caching.Memory.OwServerCacheEntry.CacheEntryTokens" Collapsed="true">
-        <TypeIdentifier>
-          <NewMemberFileName>Microsoft.Extensions.Caching.Memory\OwServerMemoryCache.cs</NewMemberFileName>
-        </TypeIdentifier>
-      </Class>
-      <Struct Name="Microsoft.Extensions.Caching.Memory.OwServerCacheEntry.CacheEntryState" Collapsed="true">
-        <TypeIdentifier>
-          <NewMemberFileName>Microsoft.Extensions.Caching.Memory\OwServerMemoryCache.cs</NewMemberFileName>
-        </TypeIdentifier>
-      </Struct>
-    </NestedTypes>
+  <Class Name="Microsoft.Extensions.Caching.Memory.OwPriorityCallbackExtensions" Collapsed="true">
+    <Position X="9" Y="3.5" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>BBAIABQAAKCAwCQGEDAASAAAABQAAAAAgAAhAAYAAQI=</HashCode>
-      <FileName>Microsoft.Extensions.Caching.Memory\OwServerMemoryCache.cs</FileName>
+      <HashCode>AAAAAAggAQAAAgAABAAAAAQAEgAAABQAAAAAAAAIAAg=</HashCode>
+      <FileName>Microsoft.Extensions.Caching.Memory\OwMemoryCacheExtensions.cs</FileName>
     </TypeIdentifier>
-    <Lollipop Position="0.2" Collapsed="true" />
-  </Class>
-  <Class Name="Microsoft.Extensions.Caching.Memory.OwServerMemoryCache" BaseTypeListCollapsed="true">
-    <Position X="11" Y="2.75" Width="2.5" />
-    <NestedTypes>
-      <Struct Name="Microsoft.Extensions.Caching.Memory.OwServerMemoryCache.CompactPriorityEntry" Collapsed="true">
-        <TypeIdentifier>
-          <NewMemberFileName>Microsoft.Extensions.Caching.Memory\OwServerMemoryCache.cs</NewMemberFileName>
-        </TypeIdentifier>
-      </Struct>
-    </NestedTypes>
-    <TypeIdentifier>
-      <HashCode>CAAAIgBAkSAEgAEAAJAABAQQJAgAABAAABAACIACEAA=</HashCode>
-      <FileName>Microsoft.Extensions.Caching.Memory\OwServerMemoryCache.cs</FileName>
-    </TypeIdentifier>
-    <Lollipop Position="0.2" Collapsed="true" />
   </Class>
   <Font Name="Microsoft YaHei UI" Size="9" />
 </ClassDiagram>
