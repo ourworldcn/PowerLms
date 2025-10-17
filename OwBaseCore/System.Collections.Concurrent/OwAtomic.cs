@@ -2,7 +2,7 @@
  * 项目：[OwBaseCore] | 模块：[Collections/ConcurrentAtomic]
  * 功能：[.NET 分类型原子注册表，保证并发创建的原子性]
  * 技术要点：[纯静态 Shared 模式、ConcurrentDictionary 线程安全、与 SingletonLocker 协作]
- * 作者：zc | 创建：2025-10 | 修改：2025-10-03 [移动到 System.Collections.Concurrent 命名空间，修复语法错误]
+ * 作者：zc | 创建：2025-10 | 修改：2025-10-09 [重构 OwAtomic 为实例类，简化设计]
  */
 using System;
 using System.Collections.Concurrent;
@@ -44,14 +44,9 @@ namespace System.Collections.Concurrent
     /// OwAtomic&lt;CancellationTokenSource&gt;.Shared.TryRemoveAndDispose("cache-key");
     /// </code>
     /// </example>
-    public static class OwAtomic<T> where T : class
+    public class OwAtomic<T> where T : class
     {
-        #region 静态实例和核心存储
-        /// <summary>
-        /// 存储键值映射的并发字典。
-        /// </summary>
-        private static readonly ConcurrentDictionary<object, T> _map = new();
-
+        #region 静态共享实例
         /// <summary>
         /// 获取全局共享的原子注册表实例。
         /// </summary>
@@ -63,111 +58,121 @@ namespace System.Collections.Concurrent
         /// <para>特别适合与 <see cref="System.Threading.SingletonLocker"/> 配合使用时的锁定场景。</para>
         /// <para>注意：作为基础设施组件，资源会在应用程序结束时自动清理。</para>
         /// </remarks>
-        public static OwAtomicInstance Shared { get; } = new();
-        #endregion 静态实例和核心存储
+        public static OwAtomic<T> Shared { get; } = new OwAtomic<T>();
+        #endregion 静态共享实例
+
+        #region 核心存储和构造
+        /// <summary>
+        /// 存储键值映射的并发字典。
+        /// </summary>
+        private readonly ConcurrentDictionary<object, T> _map = new();
 
         /// <summary>
-        /// 提供原子注册表的具体操作实现。
+        /// 初始化 OwAtomic 的新实例。
         /// </summary>
-        public sealed class OwAtomicInstance
+        public OwAtomic()
         {
-            /// <summary>
-            /// 获取或按需创建与 key 关联的对象（原子操作）。
-            /// </summary>
-            /// <param name="key">用于唯一标识对象的键，不能为空。</param>
-            /// <param name="factory">当 key 不存在时创建对象的工厂，不能为空。</param>
-            /// <returns>返回与 key 关联的对象实例。</returns>
-            /// <exception cref="ArgumentNullException">当 key 或 factory 为 null 时抛出。</exception>
-            /// <remarks>
-            /// <para>此方法保证对于相同的 key，无论多少线程同时调用，都只会创建一个实例。</para>
-            /// <para>如果 key 已存在对应实例，则直接返回现有实例，不会调用工厂方法。</para>
-            /// </remarks>
-            public T GetOrCreate(object key, Func<object, T> factory)
-            {
-                ArgumentNullException.ThrowIfNull(key);
-                ArgumentNullException.ThrowIfNull(factory);
-                return _map.GetOrAdd(key, factory);
-            }
-
-            /// <summary>
-            /// 尝试获取与 key 关联的已创建对象。
-            /// </summary>
-            /// <param name="key">用于唯一标识对象的键，不能为空。</param>
-            /// <param name="value">若找到则返回对应对象，否则为 null。</param>
-            /// <returns>如果找到对象则返回 true，否则返回 false。</returns>
-            /// <exception cref="ArgumentNullException">当 key 为 null 时抛出。</exception>
-            /// <remarks>
-            /// 此方法仅查找已存在的对象，不会触发创建操作。
-            /// </remarks>
-            public bool TryGet(object key, out T value)
-            {
-                ArgumentNullException.ThrowIfNull(key);
-                return _map.TryGetValue(key, out value);
-            }
-
-            /// <summary>
-            /// 尝试从注册表中移除 key 并释放对象（若实现了释放接口）。
-            /// </summary>
-            /// <param name="key">要移除的键，不能为空。</param>
-            /// <returns>如果成功移除返回 true，否则（键不存在）返回 false。</returns>
-            /// <exception cref="ArgumentNullException">当 key 为 null 时抛出。</exception>
-            /// <remarks>
-            /// <para>如果对象实现了 <see cref="IDisposable"/> 或 <see cref="IAsyncDisposable"/> 接口，
-            /// 此方法会自动调用相应的释放方法。</para>
-            /// <para>对于 <see cref="IAsyncDisposable"/> 对象，会在后台线程异步释放。</para>
-            /// </remarks>
-            public bool TryRemoveAndDispose(object key)
-            {
-                ArgumentNullException.ThrowIfNull(key);
-                if (!_map.TryRemove(key, out var value)) return false;
-                TryDispose(value);
-                return true;
-            }
-
-            /// <summary>
-            /// 尝试从注册表中移除 key，但不释放对象。
-            /// </summary>
-            /// <param name="key">要移除的键，不能为空。</param>
-            /// <returns>如果成功移除返回 true，否则（键不存在）返回 false。</returns>
-            /// <exception cref="ArgumentNullException">当 key 为 null 时抛出。</exception>
-            /// <remarks>
-            /// 移除后的对象不会被自动释放，调用方需要自行管理对象生命周期。
-            /// </remarks>
-            public bool TryRemove(object key)
-            {
-                ArgumentNullException.ThrowIfNull(key);
-                return _map.TryRemove(key, out _);
-            }
-
-            /// <summary>
-            /// 清空注册表并释放所有已创建对象。
-            /// </summary>
-            /// <remarks>
-            /// <para>此方法主要用于测试或特殊清理场景，生产环境中应谨慎使用。</para>
-            /// <para>对于全局 Shared 实例，此操作会影响所有使用者。</para>
-            /// </remarks>
-            public void Clear()
-            {
-                foreach (var kv in _map)
-                {
-                    try
-                    {
-                        TryDispose(kv.Value);
-                    }
-                    catch { } // 忽略释放异常，避免影响清理流程
-                }
-                _map.Clear();
-            }
-
-            /// <summary>
-            /// 获取当前注册表中的对象数量。
-            /// </summary>
-            /// <value>返回已创建对象的数量。</value>
-            /// <remarks>
-            /// 此属性主要用于监控和诊断目的。
-            /// </remarks>
-            public int Count => _map.Count;
         }
+        #endregion 核心存储和构造
+
+        #region 核心操作方法
+        /// <summary>
+        /// 获取或按需创建与 key 关联的对象（原子操作）。
+        /// </summary>
+        /// <param name="key">用于唯一标识对象的键，不能为空。</param>
+        /// <param name="factory">当 key 不存在时创建对象的工厂，不能为空。</param>
+        /// <returns>返回与 key 关联的对象实例。</returns>
+        /// <exception cref="ArgumentNullException">当 key 或 factory 为 null 时抛出。</exception>
+        /// <remarks>
+        /// <para>此方法保证对于相同的 key，无论多少线程同时调用，都只会创建一个实例。</para>
+        /// <para>如果 key 已存在对应实例，则直接返回现有实例，不会调用工厂方法。</para>
+        /// </remarks>
+        public T GetOrCreate(object key, Func<object, T> factory)
+        {
+            ArgumentNullException.ThrowIfNull(key);
+            ArgumentNullException.ThrowIfNull(factory);
+            return _map.GetOrAdd(key, factory);
+        }
+
+        /// <summary>
+        /// 尝试获取与 key 关联的已创建对象。
+        /// </summary>
+        /// <param name="key">用于唯一标识对象的键，不能为空。</param>
+        /// <param name="value">若找到则返回对应对象，否则为 null。</param>
+        /// <returns>如果找到对象则返回 true，否则返回 false。</returns>
+        /// <exception cref="ArgumentNullException">当 key 为 null 时抛出。</exception>
+        /// <remarks>
+        /// 此方法仅查找已存在的对象，不会触发创建操作。
+        /// </remarks>
+        public bool TryGet(object key, out T value)
+        {
+            ArgumentNullException.ThrowIfNull(key);
+            return _map.TryGetValue(key, out value);
+        }
+
+        /// <summary>
+        /// 尝试从注册表中移除 key 并释放对象（若实现了释放接口）。
+        /// </summary>
+        /// <param name="key">要移除的键，不能为空。</param>
+        /// <returns>如果成功移除返回 true，否则（键不存在）返回 false。</returns>
+        /// <exception cref="ArgumentNullException">当 key 为 null 时抛出。</exception>
+        /// <remarks>
+        /// <para>如果对象实现了 <see cref="IDisposable"/> 或 <see cref="IAsyncDisposable"/> 接口，
+        /// 此方法会自动调用相应的释放方法。</para>
+        /// <para>对于 <see cref="IAsyncDisposable"/> 对象，会在后台线程异步释放。</para>
+        /// </remarks>
+        public bool TryRemoveAndDispose(object key)
+        {
+            ArgumentNullException.ThrowIfNull(key);
+            if (!_map.TryRemove(key, out var value)) return false;
+            TryDispose(value);
+            return true;
+        }
+
+        /// <summary>
+        /// 尝试从注册表中移除 key，但不释放对象。
+        /// </summary>
+        /// <param name="key">要移除的键，不能为空。</param>
+        /// <returns>如果成功移除返回 true，否则（键不存在）返回 false。</returns>
+        /// <exception cref="ArgumentNullException">当 key 为 null 时抛出。</exception>
+        /// <remarks>
+        /// 移除后的对象不会被自动释放，调用方需要自行管理对象生命周期。
+        /// </remarks>
+        public bool TryRemove(object key)
+        {
+            ArgumentNullException.ThrowIfNull(key);
+            return _map.TryRemove(key, out _);
+        }
+
+        /// <summary>
+        /// 清空注册表并释放所有已创建对象。
+        /// </summary>
+        /// <remarks>
+        /// <para>此方法主要用于测试或特殊清理场景，生产环境中应谨慎使用。</para>
+        /// <para>对于全局 Shared 实例，此操作会影响所有使用者。</para>
+        /// </remarks>
+        public void Clear()
+        {
+            foreach (var kv in _map)
+            {
+                try
+                {
+                    TryDispose(kv.Value);
+                }
+                catch { } // 忽略释放异常，避免影响清理流程
+            }
+            _map.Clear();
+        }
+
+        /// <summary>
+        /// 获取当前注册表中的对象数量。
+        /// </summary>
+        /// <value>返回已创建对象的数量。</value>
+        /// <remarks>
+        /// 此属性主要用于监控和诊断目的。
+        /// </remarks>
+        public int Count => _map.Count;
+        #endregion 核心操作方法
 
         #region 私有辅助方法
         /// <summary>
