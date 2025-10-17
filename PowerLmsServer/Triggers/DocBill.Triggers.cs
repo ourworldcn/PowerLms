@@ -125,7 +125,8 @@ namespace PowerLmsServer.Triggers
         }
 
         /// <summary>
-        /// 在 DocFeeRequisitionItem 添加/更改时，更新相关费用的合计金额。
+        /// 在 DocFeeRequisitionItem 添加/更改/删除时，更新相关费用的合计金额。
+        /// 修复说明：先物化查询再在内存中过滤掉Deleted状态的实体，避免将即将删除的明细包含在金额计算中。
         /// </summary>
         /// <param name="entities">当前实体条目集合。</param>
         /// <param name="service">服务提供者。</param>
@@ -142,9 +143,19 @@ namespace PowerLmsServer.Triggers
                     {
                         continue;
                     }
-                    var rItems = fee.GetRequisitionItems(dbContext).ToArray();
+                    
+                    // 修复：先物化查询（执行SQL并加载到内存）
+                    var allItems = fee.GetRequisitionItems(dbContext).ToArray();
+                    
+                    // 然后在内存中过滤掉标记为Deleted的实体
+                    // 这样在删除明细时，TotalRequestedAmount会正确减少
+                    var rItems = allItems.Where(item => dbContext.Entry(item).State != EntityState.Deleted).ToArray();
+                    
                     fee.TotalSettledAmount = rItems.Sum(c => c.TotalSettledAmount);
                     fee.TotalRequestedAmount = rItems.Sum(c => c.Amount);
+                    
+                    _Logger.LogDebug("更新费用ID:{FeeId}的TotalRequestedAmount={TotalRequested}, TotalSettledAmount={TotalSettled}", 
+                        id, fee.TotalRequestedAmount, fee.TotalSettledAmount);
                 }
             }
         }

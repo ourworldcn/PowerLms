@@ -30,8 +30,18 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllDocBillReturnDto();
 
-            var dbSet = _DbContext.DocBills;
-            var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
+            // ✅ 通过费用关联到工作号，实现OrgId过滤
+            // 数据关联链条：DocBill → DocFee → PlJob → OrgId
+            var query = from bill in _DbContext.DocBills
+                        join fee in _DbContext.DocFees on bill.Id equals fee.BillId
+                        join job in _DbContext.PlJobs on fee.JobId equals job.Id
+                        where job.OrgId == context.User.OrgId
+                        select bill;
+
+            // ✅ 去重（一个账单可能有多个费用）
+            var coll = query.Distinct().OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
+
+            // 应用查询条件
             foreach (var item in conditional)
                 if (string.Equals(item.Key, "Id", StringComparison.OrdinalIgnoreCase))
                 {
@@ -46,9 +56,8 @@ namespace PowerLmsWebApi.Controllers
                 {
                     if (Guid.TryParse(item.Value, out var id))
                     {
-
                         var collBillId = from job in _DbContext.PlJobs
-                                         where job.Id == id
+                                         where job.Id == id && job.OrgId == context.User.OrgId
                                          join fee in _DbContext.DocFees
                                          on job.Id equals fee.JobId
                                          where fee.BillId != null
@@ -108,6 +117,28 @@ namespace PowerLmsWebApi.Controllers
                 var entity = model.DocBill;
                 entity.GenerateIdIfEmpty();
 
+                // ✅ 验证费用存在性和OrgId一致性
+                var collFees = _DbContext.DocFees.Where(c => model.FeeIds.Contains(c.Id)).ToArray();
+                if (collFees.Length != model.FeeIds.Count)
+                {
+                    return BadRequest("至少一个费用ID不存在");
+                }
+
+                // ✅ 验证所有费用关联的工作号属于当前用户的机构
+                var feeJobIds = collFees.Where(f => f.JobId.HasValue).Select(f => f.JobId.Value).Distinct().ToArray();
+                if (feeJobIds.Length == 0)
+                {
+                    return BadRequest("费用必须关联到有效的工作号");
+                }
+
+                var jobs = _DbContext.PlJobs.Where(j => feeJobIds.Contains(j.Id)).ToArray();
+                if (jobs.Any(j => j.OrgId != context.User.OrgId))
+                {
+                    _Logger.LogWarning("尝试创建跨机构账单，用户机构：{UserOrgId}，费用关联机构：{FeeOrgIds}", 
+                        context.User.OrgId, string.Join(",", jobs.Select(j => j.OrgId)));
+                    return BadRequest("不能将不同机构的费用添加到同一账单");
+                }
+
                 // 权限检查
                 var collPerm = GetJobsFromFeeIds(model.FeeIds);
                 if (collPerm.Any())
@@ -136,13 +167,6 @@ namespace PowerLmsWebApi.Controllers
                     creatorInfo.CreateDateTime = OwHelper.WorldNow;
                 }
 
-                // 处理费用对象
-                var collFees = _DbContext.DocFees.Where(c => model.FeeIds.Contains(c.Id)).ToArray();
-                if (collFees.Length != model.FeeIds.Count)
-                {
-                    return BadRequest("至少一个费用ID不存在");
-                }
-
                 // 检查费用是否已关联其他账单
                 var linkedFeeIds = collFees.Where(c => c.BillId.HasValue && c.BillId != entity.Id).Select(c => c.Id).ToArray();
                 if (linkedFeeIds.Any())
@@ -160,7 +184,7 @@ namespace PowerLmsWebApi.Controllers
                 }
 
                 // 记录审计日志
-                _SqlAppLogger.LogGeneralInfo($"用户 {context.User.Id} 创建了账单ID:{entity.Id}，操作：AddDocBill");
+                _SqlAppLogger.LogGeneralInfo($"用户 {context.User.Id} 创建了账单ID:{entity.Id}，机构ID:{context.User.OrgId}，操作：AddDocBill");
 
                 _DbContext.SaveChanges();
 
@@ -199,11 +223,37 @@ namespace PowerLmsWebApi.Controllers
             if (existingBill == null)
                 return NotFound("指定Id的账单不存在");
 
+            // ✅ 验证账单属于当前用户的机构（通过费用关联）
+            var existingFee = _DbContext.DocFees.FirstOrDefault(f => f.BillId == existingBill.Id);
+            if (existingFee != null && existingFee.JobId.HasValue)
+            {
+                var existingJob = _DbContext.PlJobs.Find(existingFee.JobId.Value);
+                if (existingJob != null && existingJob.OrgId != context.User.OrgId)
+                {
+                    _Logger.LogWarning("尝试修改其他机构的账单，账单ID：{BillId}，用户机构：{UserOrgId}，账单机构：{BillOrgId}",
+                        existingBill.Id, context.User.OrgId, existingJob.OrgId);
+                    return StatusCode((int)HttpStatusCode.Forbidden, "无权修改其他机构的账单");
+                }
+            }
+
             // 处理费用对象 - 检查它们是否存在
             var collFees = _DbContext.DocFees.Where(c => model.FeeIds.Contains(c.Id)).ToList();
             if (collFees.Count != model.FeeIds.Count)
             {
                 return BadRequest("至少一个费用Id不存在。");
+            }
+
+            // ✅ 验证新关联的费用属于当前用户的机构
+            var newFeeJobIds = collFees.Where(f => f.JobId.HasValue).Select(f => f.JobId.Value).Distinct().ToArray();
+            if (newFeeJobIds.Length > 0)
+            {
+                var newJobs = _DbContext.PlJobs.Where(j => newFeeJobIds.Contains(j.Id)).ToArray();
+                if (newJobs.Any(j => j.OrgId != context.User.OrgId))
+                {
+                    _Logger.LogWarning("尝试关联其他机构的费用到账单，账单ID：{BillId}，用户机构：{UserOrgId}",
+                        existingBill.Id, context.User.OrgId);
+                    return BadRequest("不能将其他机构的费用关联到账单");
+                }
             }
 
             // 获取当前关联到此账单的所有费用
@@ -255,7 +305,7 @@ namespace PowerLmsWebApi.Controllers
                 _DbContext.SaveChanges();
 
                 // 记录日志
-                _SqlAppLogger.LogGeneralInfo($"修改账单.{nameof(DocBill)}.{model.DocBill.Id}");
+                _SqlAppLogger.LogGeneralInfo($"修改账单.{nameof(DocBill)}.{model.DocBill.Id}，机构ID:{context.User.OrgId}");
 
                 return result;
             }
@@ -286,6 +336,25 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveDocBillReturnDto();
+
+            var id = model.Id;
+            var dbSet = _DbContext.DocBills;
+            var item = dbSet.Find(id);
+            if (item is null) return BadRequest("找不到指定的账单");
+
+            // ✅ 验证账单属于当前用户的机构（通过费用关联）
+            var billFee = _DbContext.DocFees.FirstOrDefault(f => f.BillId == id);
+            if (billFee != null && billFee.JobId.HasValue)
+            {
+                var billJob = _DbContext.PlJobs.Find(billFee.JobId.Value);
+                if (billJob != null && billJob.OrgId != context.User.OrgId)
+                {
+                    _Logger.LogWarning("尝试删除其他机构的账单，账单ID：{BillId}，用户机构：{UserOrgId}，账单机构：{BillOrgId}",
+                        id, context.User.OrgId, billJob.OrgId);
+                    return StatusCode((int)HttpStatusCode.Forbidden, "无权删除其他机构的账单");
+                }
+            }
+
             var jobs = GetJobsFromBillIds(new Guid[] { model.Id });
             if (jobs.Any(c => c.JobTypeId == ProjectContent.AeId))   //若有空运出口业务
                 if (!_AuthorizationManager.Demand(out string err, "D0.7.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
@@ -296,11 +365,6 @@ namespace PowerLmsWebApi.Controllers
             if (jobs.Any(c => c.JobTypeId == ProjectContent.SiId))   //若有海运进口业务
                 if (!_AuthorizationManager.Demand(out string err, "D3.7.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
 
-            var id = model.Id;
-            var dbSet = _DbContext.DocBills;
-            var item = dbSet.Find(id);
-            if (item is null) return BadRequest("找不到指定的账单");
-
             // 检查关联费用是否已被申请
             var relatedFees = _DbContext.DocFees.Any(f => f.BillId == id);
             if (relatedFees)
@@ -310,6 +374,9 @@ namespace PowerLmsWebApi.Controllers
 
             _EntityManager.Remove(item);
             _DbContext.SaveChanges();
+
+            _SqlAppLogger.LogGeneralInfo($"删除账单.{nameof(DocBill)}.{id}，机构ID:{context.User.OrgId}");
+
             return result;
         }
 
@@ -326,13 +393,20 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetDocBillsByJobIdReturnDto();
-            var collJob = _DbContext.PlJobs.Where(c => model.Ids.Contains(c.Id));
-            if (collJob.Count() != model.Ids.Count) return NotFound();
+
+            // ✅ 验证所有工作号属于当前用户的机构
+            var collJob = _DbContext.PlJobs.Where(c => model.Ids.Contains(c.Id) && c.OrgId == context.User.OrgId);
+            if (collJob.Count() != model.Ids.Count) return NotFound("至少有一个指定Id的业务不存在或不属于当前机构");
+
             var allowAe = _AuthorizationManager.Demand(out string err, "D0.7.2");
             var allowAi = _AuthorizationManager.Demand(out string err2, "D1.7.2");
 
+            // ✅ 增加OrgId过滤
             var coll = from job in _DbContext.PlJobs
-                       where model.Ids.Contains(job.Id) && (allowAe || job.JobTypeId != ProjectContent.AeId) && (allowAi || job.JobTypeId != ProjectContent.AiId)
+                       where model.Ids.Contains(job.Id) && 
+                             job.OrgId == context.User.OrgId &&
+                             (allowAe || job.JobTypeId != ProjectContent.AeId) && 
+                             (allowAi || job.JobTypeId != ProjectContent.AiId)
 
                        join fee in _DbContext.DocFees
                        on job.Id equals fee.JobId
@@ -341,6 +415,7 @@ namespace PowerLmsWebApi.Controllers
                        on fee.BillId equals bill.Id
 
                        select new { job.Id, bill };
+
             var r = coll.ToArray().GroupBy(c => c.Id, c => c.bill);
             var collDto = r.Select(c =>
             {
