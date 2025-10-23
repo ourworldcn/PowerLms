@@ -576,14 +576,32 @@ namespace PowerLmsWebApi.Controllers
                 var feeIds = items.Select(x => x.FeeId).Where(x => x.HasValue).Select(x => x.Value).Distinct().ToList();
 
                 // 批量加载关联数据
-                var requisitions = parentIds.Any() ? _DbContext.DocFeeRequisitions.Where(r => parentIds.Contains(r.Id)).AsNoTracking().ToDictionary(r => r.Id) : new Dictionary<Guid, DocFeeRequisition>();
-                var fees = feeIds.Any() ? _DbContext.DocFees.Where(f => feeIds.Contains(f.Id)).AsNoTracking().ToDictionary(f => f.Id) : new Dictionary<Guid, DocFee>();
+                var requisitions = parentIds.Any() ? _DbContext.DocFeeRequisitions
+                    .Where(r => parentIds.Contains(r.Id))
+                    .AsNoTracking()
+                    .ToList()
+                    .ToDictionary(r => r.Id) : new Dictionary<Guid, DocFeeRequisition>();
+                
+                var fees = feeIds.Any() ? _DbContext.DocFees
+                    .Where(f => feeIds.Contains(f.Id))
+                    .AsNoTracking()
+                    .ToList()
+                    .ToDictionary(f => f.Id) : new Dictionary<Guid, DocFee>();
                 
                 var jobIds = fees.Values.Select(f => f.JobId).Where(x => x.HasValue).Select(x => x.Value).Distinct().ToList();
                 var billIds = fees.Values.Select(f => f.BillId).Where(x => x.HasValue).Select(x => x.Value).Distinct().ToList();
                 
-                var jobs = jobIds.Any() ? _DbContext.PlJobs.Where(j => jobIds.Contains(j.Id)).AsNoTracking().ToDictionary(j => j.Id) : new Dictionary<Guid, PlJob>();
-                var bills = billIds.Any() ? _DbContext.DocBills.Where(b => billIds.Contains(b.Id)).AsNoTracking().ToDictionary(b => b.Id) : new Dictionary<Guid, DocBill>();
+                var jobs = jobIds.Any() ? _DbContext.PlJobs
+                    .Where(j => jobIds.Contains(j.Id))
+                    .AsNoTracking()
+                    .ToList()
+                    .ToDictionary(j => j.Id) : new Dictionary<Guid, PlJob>();
+                
+                var bills = billIds.Any() ? _DbContext.DocBills
+                    .Where(b => billIds.Contains(b.Id))
+                    .AsNoTracking()
+                    .ToList()
+                    .ToDictionary(b => b.Id) : new Dictionary<Guid, DocBill>();
 
                 // 组装结果
                 foreach (var item in items)

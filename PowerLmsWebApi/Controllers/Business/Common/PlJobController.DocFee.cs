@@ -112,7 +112,10 @@ namespace PowerLmsWebApi.Controllers
                 var orgIds = _OrgManager.GetOrgIdsByCompanyId(currentCompany.Id).ToArray();
                 var userIds = _DbContext.AccountPlOrganizations.Where(c => orgIds.Contains(c.OrgId)).Select(c => c.UserId).Distinct().ToHashSet();   //所有相关人Id集合
                 var jobIds = r.Select(c => c.JobId).Distinct().ToHashSet();
-                var jobDic = _DbContext.PlJobs.Where(c => jobIds.Contains(c.Id)).AsEnumerable().ToDictionary(c => c.Id);
+                var jobDic = _DbContext.PlJobs
+                    .Where(c => jobIds.Contains(c.Id))
+                    .ToList() // 修复：先ToList()再ToDictionary()
+                    .ToDictionary(c => c.Id);
                 var d0Func = GetFunc("D0.6.2", ProjectContent.AeId);
                 var d1Func = GetFunc("D1.6.2", ProjectContent.AiId);
                 var d2Func = GetFunc("D2.6.2", ProjectContent.SeId);

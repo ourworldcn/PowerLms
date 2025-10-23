@@ -1,27 +1,26 @@
 ﻿/*
- * 项目：PowerLms财务系统 | 模块：收款结算单导出金蝶功能
- * 功能：收款结算单导出金蝶功能的DTO定义分部类
+ * 项目：PowerLms财务系统 | 模块：付款结算单导出金蝶功能
+ * 功能：付款结算单导出金蝶功能的DTO定义分部类
  * 技术要点：分部类模式、复杂业务DTO设计、12分录规则支持、国内外客户分类、代垫费用区分
- * 作者：zc | 创建：2025-01 | 修改：2025-01-31 收款结算单12分录模型重构
+ * 作者：zc | 创建：2025-01-31 | 修改：2025-01-31 付款结算单12分录模型实施
  */
 
 using PowerLms.Data;
 using PowerLmsWebApi.Dto;
-using System.ComponentModel.DataAnnotations;
 
 namespace PowerLmsWebApi.Controllers.Financial
 {
     /// <summary>
-    /// 财务系统导出控制器 - 收款结算单导出功能DTO定义
+    /// 财务系统导出控制器 - 付款结算单导出功能DTO定义
     /// </summary>
     public partial class FinancialSystemExportController
     {
-        #region 收款结算单导出DTO
+        #region 付款结算单导出DTO
 
         /// <summary>
-        /// 导出收款结算单为金蝶DBF格式文件参数DTO
+        /// 导出付款结算单为金蝶DBF格式文件参数DTO
         /// </summary>
-        public class ExportSettlementReceiptParamsDto : TokenDtoBase
+        public class ExportSettlementPaymentParamsDto : TokenDtoBase
         {
             /// <summary>
             /// 导出查询条件。支持结算日期、币种、金额范围等过滤条件。
@@ -45,9 +44,9 @@ namespace PowerLmsWebApi.Controllers.Financial
         }
 
         /// <summary>
-        /// 导出收款结算单为金蝶DBF格式文件返回值DTO
+        /// 导出付款结算单为金蝶DBF格式文件返回值DTO
         /// </summary>
-        public class ExportSettlementReceiptReturnDto : ReturnDtoBase
+        public class ExportSettlementPaymentReturnDto : ReturnDtoBase
         {
             /// <summary>
             /// 异步任务ID，用于跟踪导出进度
@@ -55,9 +54,9 @@ namespace PowerLmsWebApi.Controllers.Financial
             public Guid? TaskId { get; set; }
 
             /// <summary>
-            /// 预计导出的收款结算单数量
+            /// 预计导出的付款结算单数量
             /// </summary>
-            public int ExpectedSettlementReceiptCount { get; set; }
+            public int ExpectedSettlementPaymentCount { get; set; }
 
             /// <summary>
             /// 预计生成的凭证分录数量（基于12分录规则）
@@ -72,26 +71,26 @@ namespace PowerLmsWebApi.Controllers.Financial
 
         #endregion
 
-        #region 收款结算单导出内部DTO
+        #region 付款结算单导出内部DTO
 
         /// <summary>
-        /// 收款结算单导出计算结果DTO
-        /// 支持12分录模型，包含国内外客户分类、代垫费用区分、多笔收款处理
+        /// 付款结算单导出计算结果DTO
+        /// 支持12分录模型，包含国内外客户分类、代垫费用区分、多笔付款处理
         /// </summary>
-        public class SettlementReceiptCalculationDto
+        public class SettlementPaymentCalculationDto
         {
             /// <summary>
-            /// 收款结算单ID
+            /// 付款结算单ID
             /// </summary>
-            public Guid SettlementReceiptId { get; set; }
+            public Guid SettlementPaymentId { get; set; }
 
             /// <summary>
-            /// 往来单位名称
+            /// 往来单位名称（供应商/客户）
             /// </summary>
             public string CustomerName { get; set; }
 
             /// <summary>
-            /// 往来单位财务编码
+            /// 往来单位财务编码（应付科目用）
             /// </summary>
             public string CustomerFinanceCode { get; set; }
 
@@ -101,14 +100,14 @@ namespace PowerLmsWebApi.Controllers.Financial
             public bool IsDomestic { get; set; }
 
             /// <summary>
-            /// 收款单号
+            /// 付款单号
             /// </summary>
-            public string ReceiptNumber { get; set; }
+            public string PaymentNumber { get; set; }
 
             /// <summary>
-            /// 收款日期
+            /// 付款日期
             /// </summary>
-            public DateTime ReceiptDate { get; set; }
+            public DateTime PaymentDate { get; set; }
 
             /// <summary>
             /// 结算币种
@@ -126,50 +125,40 @@ namespace PowerLmsWebApi.Controllers.Financial
             public decimal SettlementExchangeRate { get; set; }
 
             /// <summary>
-            /// 应收-国外客户本位币金额
-            /// 计算公式：sum(if 国外客户，明细.收入=true，明细本次结算金额 × 明细原费用汇率)
-            /// </summary>
-            public decimal ReceivableForeignBaseCurrency { get; set; }
-
-            /// <summary>
-            /// 应收-国内客户（非代垫）本位币金额
-            /// 计算公式：sum(if 国内客户且非代垫，明细.收入=true，明细本次结算金额 × 明细原费用汇率)
-            /// </summary>
-            public decimal ReceivableDomesticCustomerBaseCurrency { get; set; }
-
-            /// <summary>
-            /// 应收-国内关税（代垫）本位币金额
-            /// 计算公式：sum(if 国内客户且代垫，明细.收入=true，明细本次结算金额 × 明细原费用汇率)
-            /// </summary>
-            public decimal ReceivableDomesticTariffBaseCurrency { get; set; }
-
-            /// <summary>
-            /// 应付-国外客户本位币金额（混合业务）
+            /// 应付-国外供应商本位币金额
             /// 计算公式：sum(if 国外客户，明细.支出=true，明细本次结算金额 × 明细原费用汇率)
             /// </summary>
             public decimal PayableForeignBaseCurrency { get; set; }
 
             /// <summary>
-            /// 应付-国内客户（非代垫）本位币金额（混合业务）
+            /// 应付-国内客户（非代垫）本位币金额
             /// 计算公式：sum(if 国内客户且非代垫，明细.支出=true，明细本次结算金额 × 明细原费用汇率)
             /// </summary>
             public decimal PayableDomesticCustomerBaseCurrency { get; set; }
 
             /// <summary>
-            /// 应付-国内关税（代垫）本位币金额（混合业务）
+            /// 应付-国内关税（代垫）本位币金额
             /// 计算公式：sum(if 国内客户且代垫，明细.支出=true，明细本次结算金额 × 明细原费用汇率)
             /// </summary>
             public decimal PayableDomesticTariffBaseCurrency { get; set; }
 
             /// <summary>
-            /// 预收金额（原币种）
+            /// 应收-国外客户本位币金额（混合业务）
+            /// 计算公式：sum(if 国外客户，明细.收入=true，明细本次结算金额 × 明细原费用汇率)
             /// </summary>
-            public decimal AdvancePaymentAmount { get; set; }
+            public decimal ReceivableForeignBaseCurrency { get; set; }
 
             /// <summary>
-            /// 预收金额本位币
+            /// 应收-国内客户（非代垫）本位币金额（混合业务）
+            /// 计算公式：sum(if 国内客户且非代垫，明细.收入=true，明细本次结算金额 × 明细原费用汇率)
             /// </summary>
-            public decimal AdvancePaymentBaseCurrency { get; set; }
+            public decimal ReceivableDomesticCustomerBaseCurrency { get; set; }
+
+            /// <summary>
+            /// 应收-国内关税（代垫）本位币金额（混合业务）
+            /// 计算公式：sum(if 国内客户且代垫，明细.收入=true，明细本次结算金额 × 明细原费用汇率)
+            /// </summary>
+            public decimal ReceivableDomesticTariffBaseCurrency { get; set; }
 
             /// <summary>
             /// 汇兑损益（本位币）
@@ -187,14 +176,14 @@ namespace PowerLmsWebApi.Controllers.Financial
             public decimal ServiceFeeBaseCurrency { get; set; }
 
             /// <summary>
-            /// 预收冲应收金额（原币种）
+            /// 预付金额（原币种）
             /// </summary>
-            public decimal AdvanceOffsetReceivableAmount { get; set; }
+            public decimal AdvancePaymentAmount { get; set; }
 
             /// <summary>
-            /// 预收冲应收本位币金额
+            /// 预付金额本位币
             /// </summary>
-            public decimal AdvanceOffsetReceivableBaseCurrency { get; set; }
+            public decimal AdvancePaymentBaseCurrency { get; set; }
 
             /// <summary>
             /// 是否混合业务（既有收入又有支出）
@@ -202,26 +191,57 @@ namespace PowerLmsWebApi.Controllers.Financial
             public bool IsMixedBusiness { get; set; }
 
             /// <summary>
-            /// 收款结算单明细信息（用于计算应收应付分类金额）
+            /// 付款结算单明细信息（用于计算应付应收分类金额）
             /// </summary>
-            public List<SettlementReceiptItemDto> Items { get; set; } = new List<SettlementReceiptItemDto>();
+            public List<SettlementPaymentItemDto> Items { get; set; } = new List<SettlementPaymentItemDto>();
 
             /// <summary>
-            /// 实际收款记录（优先使用，支持多笔收款）
+            /// 实际付款记录（优先使用，支持多笔付款）
             /// </summary>
             public List<ActualFinancialTransactionDto> ActualTransactions { get; set; } = new List<ActualFinancialTransactionDto>();
 
             /// <summary>
-            /// 银行信息（当无实际收款记录时使用）
+            /// 银行信息（当无实际付款记录时使用）
             /// </summary>
             public BankInfo BankInfo { get; set; }
+
+            #region 向后兼容属性（用于旧凭证生成逻辑）
+
+            /// <summary>
+            /// 供应商名称（向后兼容，映射到CustomerName）
+            /// </summary>
+            public string SupplierName => CustomerName;
+
+            /// <summary>
+            /// 供应商财务编码（向后兼容，映射到CustomerFinanceCode）
+            /// </summary>
+            public string SupplierFinanceCode => CustomerFinanceCode;
+
+            /// <summary>
+            /// 应付总额本位币（向后兼容，汇总所有应付金额）
+            /// </summary>
+            public decimal PayableTotalBaseCurrency => 
+                PayableForeignBaseCurrency + PayableDomesticCustomerBaseCurrency + PayableDomesticTariffBaseCurrency;
+
+            /// <summary>
+            /// 应收总额本位币（向后兼容，汇总所有应收金额）
+            /// </summary>
+            public decimal ReceivableTotalBaseCurrency => 
+                ReceivableForeignBaseCurrency + ReceivableDomesticCustomerBaseCurrency + ReceivableDomesticTariffBaseCurrency;
+
+            /// <summary>
+            /// 是否多笔付款（向后兼容，通过ActualTransactions判断）
+            /// </summary>
+            public bool HasMultiplePayments => ActualTransactions?.Count > 1;
+
+            #endregion
         }
 
         /// <summary>
-        /// 收款结算单明细DTO
+        /// 付款结算单明细DTO
         /// 增强支持国内外客户分类和代垫费用判断
         /// </summary>
-        public class SettlementReceiptItemDto
+        public class SettlementPaymentItemDto
         {
             /// <summary>
             /// 明细ID
@@ -263,43 +283,6 @@ namespace PowerLmsWebApi.Controllers.Financial
             /// 申请单明细ID
             /// </summary>
             public Guid? RequisitionItemId { get; set; }
-        }
-
-        /// <summary>
-        /// 实际收付交易记录DTO
-        /// 用于支持多笔收款场景，动态获取银行科目代码
-        /// </summary>
-        public class ActualFinancialTransactionDto
-        {
-            /// <summary>
-            /// 交易记录ID
-            /// </summary>
-            public Guid TransactionId { get; set; }
-
-            /// <summary>
-            /// 收款金额
-            /// </summary>
-            public decimal Amount { get; set; }
-
-            /// <summary>
-            /// 收款日期
-            /// </summary>
-            public DateTime TransactionDate { get; set; }
-
-            /// <summary>
-            /// 收款银行账户ID
-            /// </summary>
-            public Guid? BankAccountId { get; set; }
-
-            /// <summary>
-            /// 银行账户科目代码（从BankInfo.AAccountSubjectCode动态获取）
-            /// </summary>
-            public string BankSubjectCode { get; set; }
-
-            /// <summary>
-            /// 手续费金额
-            /// </summary>
-            public decimal ServiceFee { get; set; }
         }
 
         #endregion

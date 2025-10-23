@@ -373,8 +373,8 @@ namespace PowerLmsWebApi.Controllers.Financial
         #region 付款结算单核心业务逻辑
 
         /// <summary>
-        /// 计算付款结算单业务数据
-        /// 包括应付应收金额计算、混合业务识别、多笔付款检测、本位币转换等
+        /// 计算付款结算单业务数据（12分录模型）
+        /// 包括应付应收金额计算（按国内外+代垫分类）、混合业务识别、多笔付款检测、本位币转换等
         /// </summary>
         private static List<SettlementPaymentCalculationDto> CalculateSettlementPaymentData(
             List<PlInvoices> settlementPayments,
@@ -383,88 +383,144 @@ namespace PowerLmsWebApi.Controllers.Financial
             BusinessLogicManager businessLogicManager)
         {
             var results = new List<SettlementPaymentCalculationDto>();
-
+            
+            // 批量加载所有关联数据
+            var settlementPaymentIds = settlementPayments.Select(r => r.Id).ToList();
+            
+            // 修复：先ToList()再ToDictionary()
+            var customerIds = settlementPayments.Select(r => r.JiesuanDanweiId).Where(id => id.HasValue).Select(id => id.Value).Distinct().ToList();
+            var allCustomers = dbContext.PlCustomers.Where(c => customerIds.Contains(c.Id)).ToList().ToDictionary(c => c.Id);
+            
+            var allRequisitionItemIds = itemsDict.Values.SelectMany(items => items.Select(i => i.RequisitionItemId)).Where(id => id.HasValue).Select(id => id.Value).Distinct().ToList();
+            var allRequisitionItems = dbContext.DocFeeRequisitionItems.Where(ri => allRequisitionItemIds.Contains(ri.Id)).ToList().ToDictionary(ri => ri.Id);
+            
+            var allFeeIds = allRequisitionItems.Values.Select(ri => ri.FeeId).Where(id => id.HasValue).Select(id => id.Value).Distinct().ToList();
+            var allFees = dbContext.DocFees.Where(f => allFeeIds.Contains(f.Id)).ToList().ToDictionary(f => f.Id);
+            
+            var allFeeTypeIds = allFees.Values.Select(f => f.FeeTypeId).Where(id => id.HasValue).Select(id => id.Value).Distinct().ToList();
+            var allFeeTypes = dbContext.DD_FeesTypes.Where(ft => allFeeTypeIds.Contains(ft.Id)).ToList().ToDictionary(ft => ft.Id);
+            
+            // 修复：先ToList()再分组、转字典
+            var allTransactions = dbContext.ActualFinancialTransactions
+                .Where(t => settlementPaymentIds.Contains(t.ParentId.Value) && !t.IsDelete)
+                .OrderBy(t => t.TransactionDate)
+                .ToList();
+            var transactionsGrouped = allTransactions.GroupBy(t => t.ParentId.Value).ToDictionary(g => g.Key, g => g.ToList());
+            
+            var allBankAccountIds = allTransactions.Select(t => t.BankAccountId).Where(id => id.HasValue).Select(id => id.Value).Distinct().ToList();
+            var allBankAccounts = dbContext.BankInfos.Where(b => allBankAccountIds.Contains(b.Id)).ToList().ToDictionary(b => b.Id);
+            
+            var allBankIds = settlementPayments.Select(r => r.BankId).Where(id => id.HasValue).Select(id => id.Value).Distinct().ToList();
+            var allBanks = dbContext.BankInfos.Where(b => allBankIds.Contains(b.Id)).ToList().ToDictionary(b => b.Id);
+            
             foreach (var payment in settlementPayments)
             {
                 var items = itemsDict.GetValueOrDefault(payment.Id, new List<PlInvoicesItem>());
-                
-                // 获取本位币代码
                 var baseCurrency = businessLogicManager.GetBaseCurrencyCode(payment, dbContext) ?? "CNY";
+                var customer = allCustomers.GetValueOrDefault(payment.JiesuanDanweiId ?? Guid.Empty);
+                var customerName = customer?.Name_Name ?? "未知供应商";
+                var customerFinanceCode = customer?.FinanceCodeAP ?? "";
+                var isDomestic = customer?.IsDomestic ?? true;
+                var bankInfo = allBanks.GetValueOrDefault(payment.BankId ?? Guid.Empty);
+                var actualTransactions = transactionsGrouped.GetValueOrDefault(payment.Id, new List<ActualFinancialTransaction>());
                 
-                // 获取往来单位信息（供应商）
-                var supplier = dbContext.PlCustomers.Find(payment.JiesuanDanweiId);
-                var supplierName = supplier?.Name_Name ?? "未知供应商";
-                var supplierFinanceCode = supplier?.FinanceCodeAP ?? "";
-
-                // 获取银行信息
-                var bankInfo = dbContext.BankInfos.Find(payment.BankId);
-
-                // 计算应付应收金额和识别混合业务，使用正确的汇率计算
-                var (payableTotal, receivableTotal, isMixed, itemCalculations) = CalculatePaymentAmountsAndIdentifyMixedBusiness(items, dbContext, payment.PaymentExchangeRate ?? 1.0m);
-
-                // 检测多笔付款：如果明细项数量大于1，则认为是多笔付款
-                var hasMultiplePayments = items.Count > 1;
-
+                var (payableForeign, payableDomesticCustomer, payableDomesticTariff, 
+                     receivableForeign, receivableDomesticCustomer, receivableDomesticTariff, 
+                     isMixed, itemCalculations) = CalculatePaymentAmountsWithClassification(items, allRequisitionItems, allFees, allFeeTypes, isDomestic);
+                
+                var actualTransactionDtos = actualTransactions.Select(t => new ActualFinancialTransactionDto
+                {
+                    TransactionId = t.Id,
+                    Amount = t.Amount,
+                    TransactionDate = t.TransactionDate,
+                    BankAccountId = t.BankAccountId,
+                    BankSubjectCode = t.BankAccountId.HasValue && allBankAccounts.ContainsKey(t.BankAccountId.Value) ? allBankAccounts[t.BankAccountId.Value].AAccountSubjectCode : null,
+                    ServiceFee = t.ServiceFee
+                }).ToList();
+                
                 var calculation = new SettlementPaymentCalculationDto
                 {
                     SettlementPaymentId = payment.Id,
-                    SupplierName = supplierName,
-                    SupplierFinanceCode = supplierFinanceCode,
+                    CustomerName = customerName,
+                    CustomerFinanceCode = customerFinanceCode,
+                    IsDomestic = isDomestic,
                     PaymentNumber = payment.IoPingzhengNo ?? $"SP{payment.Id.ToString("N")[..8]}",
                     PaymentDate = payment.IoDateTime ?? DateTime.Now,
                     SettlementCurrency = payment.Currency ?? baseCurrency,
                     BaseCurrency = baseCurrency,
                     SettlementExchangeRate = payment.PaymentExchangeRate ?? 1.0m,
-                    PayableTotalBaseCurrency = payableTotal,
-                    ReceivableTotalBaseCurrency = receivableTotal,
+                    PayableForeignBaseCurrency = payableForeign,
+                    PayableDomesticCustomerBaseCurrency = payableDomesticCustomer,
+                    PayableDomesticTariffBaseCurrency = payableDomesticTariff,
+                    ReceivableForeignBaseCurrency = receivableForeign,
+                    ReceivableDomesticCustomerBaseCurrency = receivableDomesticCustomer,
+                    ReceivableDomesticTariffBaseCurrency = receivableDomesticTariff,
                     ExchangeLoss = payment.ExchangeLoss,
-                    ServiceFeeAmount = payment.ServiceFeeAmount ?? 0,
-                    ServiceFeeBaseCurrency = payment.ServiceFeeBaseCurrencyAmount ?? 0,
+                    ServiceFeeAmount = payment.ServiceFeeAmount ?? 0m,
+                    ServiceFeeBaseCurrency = payment.ServiceFeeBaseCurrencyAmount ?? 0m,
+                    AdvancePaymentAmount = payment.AdvancePaymentAmount ?? 0m,
+                    AdvancePaymentBaseCurrency = payment.AdvancePaymentBaseCurrencyAmount ?? 0m,
                     IsMixedBusiness = isMixed,
-                    HasMultiplePayments = hasMultiplePayments,
-                    BankInfo = bankInfo,
-                    Items = itemCalculations
+                    Items = itemCalculations,
+                    ActualTransactions = actualTransactionDtos,
+                    BankInfo = bankInfo
                 };
-
                 results.Add(calculation);
             }
-
             return results;
         }
 
         /// <summary>
-        /// 计算付款金额并识别混合业务
+        /// 计算应付应收金额并按国内外客户、代垫属性分类（12分录模型）
         /// </summary>
-        private static (decimal PayableTotal, decimal ReceivableTotal, bool IsMixed, List<SettlementPaymentItemDto> ItemCalculations) 
-            CalculatePaymentAmountsAndIdentifyMixedBusiness(List<PlInvoicesItem> items, PowerLmsUserDbContext dbContext, decimal settlementExchangeRate)
+        private static (decimal PayableForeign, decimal PayableDomesticCustomer, decimal PayableDomesticTariff, 
+                       decimal ReceivableForeign, decimal ReceivableDomesticCustomer, decimal ReceivableDomesticTariff, 
+                       bool IsMixed, List<SettlementPaymentItemDto> ItemCalculations) 
+            CalculatePaymentAmountsWithClassification(List<PlInvoicesItem> items, 
+                Dictionary<Guid, DocFeeRequisitionItem> requisitionItemDict, 
+                Dictionary<Guid, DocFee> feeDict, 
+                Dictionary<Guid, FeesType> feeTypeDict, 
+                bool isDomestic)
         {
             var itemCalculations = new List<SettlementPaymentItemDto>();
             var incomeCount = 0;
             var expenseCount = 0;
-            var payableTotal = 0m;
-            var receivableTotal = 0m;
-
+            var payableForeign = 0m;
+            var payableDomesticCustomer = 0m;
+            var payableDomesticTariff = 0m;
+            var receivableForeign = 0m;
+            var receivableDomesticCustomer = 0m;
+            var receivableDomesticTariff = 0m;
+            
             foreach (var item in items)
             {
-                // 通过申请单明细获取原费用信息
-                var requisitionItem = dbContext.DocFeeRequisitionItems.Find(item.RequisitionItemId);
-                var fee = requisitionItem != null ? dbContext.DocFees.Find(requisitionItem.FeeId) : null;
-
-                var isIncome = fee?.IO ?? false; // 付款单中默认认为是支出
+                var requisitionItem = item.RequisitionItemId.HasValue ? requisitionItemDict.GetValueOrDefault(item.RequisitionItemId.Value) : null;
+                var fee = requisitionItem != null && requisitionItem.FeeId.HasValue && feeDict.ContainsKey(requisitionItem.FeeId.Value) ? feeDict[requisitionItem.FeeId.Value] : null;
+                var feeType = fee != null && fee.FeeTypeId.HasValue && feeTypeDict.ContainsKey(fee.FeeTypeId.Value) ? feeTypeDict[fee.FeeTypeId.Value] : null;
+                var isIncome = fee?.IO ?? false;
                 var originalFeeExchangeRate = fee?.ExchangeRate ?? 1.0m;
-
-                // 统计收入支出数量
+                var isAdvanceFee = feeType?.IsDaiDian ?? false;
                 if (isIncome) incomeCount++;
                 else expenseCount++;
-
-                // 使用结算汇率进行本位币金额计算
-                var settlementAmountBaseCurrency = item.Amount * settlementExchangeRate;
-                
-                if (isIncome)
-                    receivableTotal += settlementAmountBaseCurrency;
+                var settlementAmountBaseCurrency = item.Amount * originalFeeExchangeRate;
+                if (isDomestic)
+                {
+                    if (isAdvanceFee)
+                    {
+                        if (isIncome) receivableDomesticTariff += settlementAmountBaseCurrency;
+                        else payableDomesticTariff += settlementAmountBaseCurrency;
+                    }
+                    else
+                    {
+                        if (isIncome) receivableDomesticCustomer += settlementAmountBaseCurrency;
+                        else payableDomesticCustomer += settlementAmountBaseCurrency;
+                    }
+                }
                 else
-                    payableTotal += settlementAmountBaseCurrency;
-
+                {
+                    if (isIncome) receivableForeign += settlementAmountBaseCurrency;
+                    else payableForeign += settlementAmountBaseCurrency;
+                }
                 itemCalculations.Add(new SettlementPaymentItemDto
                 {
                     ItemId = item.Id,
@@ -473,19 +529,19 @@ namespace PowerLmsWebApi.Controllers.Financial
                     SettlementAmountBaseCurrency = settlementAmountBaseCurrency,
                     OriginalFeeIO = isIncome,
                     OriginalFeeExchangeRate = originalFeeExchangeRate,
+                    IsAdvanceFee = isAdvanceFee,
                     RequisitionItemId = item.RequisitionItemId
                 });
             }
-
-            // 混合业务判断：既有收入又有支出
             var isMixed = incomeCount > 0 && expenseCount > 0;
-
-            return (payableTotal, receivableTotal, isMixed, itemCalculations);
+            return (payableForeign, payableDomesticCustomer, payableDomesticTariff, 
+                   receivableForeign, receivableDomesticCustomer, receivableDomesticTariff, 
+                   isMixed, itemCalculations);
         }
 
         /// <summary>
-        /// 生成付款结算单金蝶凭证分录（静态方法）
-        /// 实现六种凭证分录规则的完整逻辑
+        /// 生成付款结算单金蝶凭证分录（12分录模型静态方法）
+        /// 实现11个独立函数的完整业务逻辑
         /// </summary>
         private static List<KingdeeVoucher> GenerateSettlementPaymentVouchersStatic(
             List<SettlementPaymentCalculationDto> calculations,
@@ -494,210 +550,483 @@ namespace PowerLmsWebApi.Controllers.Financial
         {
             var vouchers = new List<KingdeeVoucher>();
             var voucherNumber = 1;
-
             var preparerName = subjectConfigs.GetValueOrDefault("SP_PREPARER")?.DisplayName ?? "系统导出";
             var voucherGroup = subjectConfigs.GetValueOrDefault("SP_VOUCHER_GROUP")?.VoucherGroup ?? "银";
-
             foreach (var calculation in calculations)
             {
                 var entryId = 0;
-
-                // 规则1：银行付款（贷方）- 必须生成
-                // 多笔付款优先逻辑：如果存在多笔付款，为每笔生成分录；否则使用结算单总金额
-                if (calculation.HasMultiplePayments)
+                vouchers.AddRange(GeneratePaymentBankVouchers(calculation, voucherNumber, ref entryId, voucherGroup, preparerName, subjectConfigs));
+                vouchers.AddRange(GeneratePayableDebitVouchers(calculation, voucherNumber, ref entryId, voucherGroup, preparerName, subjectConfigs));
+                if (calculation.IsMixedBusiness)
                 {
-                    // 多笔付款：为每笔付款生成独立的银行分录
-                    foreach (var item in calculation.Items)
-                    {
-                        var bankSubject = GetValidSubjectCode(
-                            calculation.BankInfo?.AAccountSubjectCode,
-                            subjectConfigs.GetValueOrDefault("SP_BANK_CREDIT")?.SubjectNumber,
-                            "1001001"); // 默认银行存款科目
-                        
-                        var bankVoucher = CreateBasePaymentVoucher(calculation, voucherNumber, entryId++, voucherGroup, preparerName);
-                        bankVoucher.FACCTID = bankSubject;
-                        bankVoucher.FDC = 1; // 贷方
-                        bankVoucher.FFCYAMT = item.Amount;
-                        bankVoucher.FDEBIT = 0;
-                        bankVoucher.FCREDIT = item.SettlementAmountBaseCurrency;
-                        bankVoucher.FCYID = calculation.SettlementCurrency;
-                        bankVoucher.FEXCHRATE = calculation.SettlementExchangeRate;
-
-                        vouchers.Add(bankVoucher);
-                    }
+                    vouchers.AddRange(GenerateReceivableCreditVouchers(calculation, voucherNumber, ref entryId, voucherGroup, preparerName, subjectConfigs));
                 }
-                else
-                {
-                    // 单笔付款：使用结算单的总付款金额
-                    var bankSubject = GetValidSubjectCode(
-                        calculation.BankInfo?.AAccountSubjectCode,
-                        subjectConfigs.GetValueOrDefault("SP_BANK_CREDIT")?.SubjectNumber,
-                        "1001001"); // 默认银行存款科目
-                    
-                    var totalPaymentAmount = calculation.PayableTotalBaseCurrency; // 使用应付总额作为银行付款金额
-                    
-                    var bankVoucher = CreateBasePaymentVoucher(calculation, voucherNumber, entryId++, voucherGroup, preparerName);
-                    bankVoucher.FACCTID = bankSubject;
-                    bankVoucher.FDC = 1; // 贷方
-                    bankVoucher.FFCYAMT = totalPaymentAmount / calculation.SettlementExchangeRate; // 转换为原币
-                    bankVoucher.FDEBIT = 0;
-                    bankVoucher.FCREDIT = totalPaymentAmount;
-                    bankVoucher.FCYID = calculation.SettlementCurrency;
-                    bankVoucher.FEXCHRATE = calculation.SettlementExchangeRate;
-
-                    vouchers.Add(bankVoucher);
-                }
-
-                // 规则2：应付账款冲销（借方）- 必须生成
-                if (calculation.PayableTotalBaseCurrency > 0)
-                {
-                    var payableSubject = GetValidSubjectCode(
-                        subjectConfigs.GetValueOrDefault("SP_PAYABLE_DEBIT")?.SubjectNumber,
-                        null,
-                        "203001"); // 默认应付账款科目
-                    
-                    var payableVoucher = CreateBasePaymentVoucher(calculation, voucherNumber, entryId++, voucherGroup, preparerName);
-                    payableVoucher.FACCTID = payableSubject;
-                    payableVoucher.FCLSNAME1 = "客户";
-                    payableVoucher.FOBJID1 = calculation.SupplierFinanceCode;
-                    payableVoucher.FOBJNAME1 = calculation.SupplierName;
-                    payableVoucher.FTRANSID = calculation.SupplierFinanceCode;
-                    payableVoucher.FDC = 0; // 借方
-                    payableVoucher.FFCYAMT = calculation.PayableTotalBaseCurrency;
-                    payableVoucher.FDEBIT = calculation.PayableTotalBaseCurrency;
-                    payableVoucher.FCREDIT = 0;
-                    payableVoucher.FCYID = calculation.BaseCurrency;
-                    payableVoucher.FEXCHRATE = 1.0000000m;
-
-                    vouchers.Add(payableVoucher);
-                }
-
-                // 规则3：应收账款增加（贷方）- 混合业务时生成
-                if (calculation.IsMixedBusiness && calculation.ReceivableTotalBaseCurrency > 0)
-                {
-                    var receivableSubject = GetValidSubjectCode(
-                        subjectConfigs.GetValueOrDefault("SP_RECEIVABLE_CREDIT")?.SubjectNumber,
-                        null,
-                        "113001"); // 默认应收账款科目
-                    
-                    var receivableVoucher = CreateBasePaymentVoucher(calculation, voucherNumber, entryId++, voucherGroup, preparerName);
-                    receivableVoucher.FACCTID = receivableSubject;
-                    receivableVoucher.FCLSNAME1 = "客户";
-                    receivableVoucher.FOBJID1 = calculation.SupplierFinanceCode;
-                    receivableVoucher.FOBJNAME1 = calculation.SupplierName;
-                    receivableVoucher.FTRANSID = calculation.SupplierFinanceCode;
-                    receivableVoucher.FDC = 1; // 贷方
-                    receivableVoucher.FFCYAMT = calculation.ReceivableTotalBaseCurrency;
-                    receivableVoucher.FDEBIT = 0;
-                    receivableVoucher.FCREDIT = calculation.ReceivableTotalBaseCurrency;
-                    receivableVoucher.FCYID = calculation.BaseCurrency;
-                    receivableVoucher.FEXCHRATE = 1.0000000m;
-
-                    vouchers.Add(receivableVoucher);
-                }
-
-                // 规则4：汇兑损益处理（借方）- 有汇率差异时生成
-                if (calculation.ExchangeLoss != 0)
-                {
-                    var exchangeLossSubject = GetValidSubjectCode(
-                        subjectConfigs.GetValueOrDefault("SP_EXCHANGE_LOSS")?.SubjectNumber,
-                        null,
-                        "603001"); // 默认汇兑损益科目
-                    
-                    var exchangeVoucher = CreateBasePaymentVoucher(calculation, voucherNumber, entryId++, voucherGroup, preparerName);
-                    exchangeVoucher.FACCTID = exchangeLossSubject;
-                    exchangeVoucher.FDC = calculation.ExchangeLoss > 0 ? 0 : 1; // 与收款相反：正数借方，负数贷方
-                    exchangeVoucher.FFCYAMT = Math.Abs(calculation.ExchangeLoss);
-                    exchangeVoucher.FDEBIT = calculation.ExchangeLoss > 0 ? Math.Abs(calculation.ExchangeLoss) : 0;
-                    exchangeVoucher.FCREDIT = calculation.ExchangeLoss < 0 ? Math.Abs(calculation.ExchangeLoss) : 0;
-                    exchangeVoucher.FCYID = calculation.BaseCurrency;
-                    exchangeVoucher.FEXCHRATE = 1.0000000m;
-
-                    vouchers.Add(exchangeVoucher);
-                }
-
-                // 规则5：手续费支出（借方）- 有手续费时生成
-                if (calculation.ServiceFeeAmount > 0 || calculation.ServiceFeeBaseCurrency > 0)
-                {
-                    var serviceFeeSubject = GetValidSubjectCode(
-                        subjectConfigs.GetValueOrDefault("SP_SERVICE_FEE_DEBIT")?.SubjectNumber,
-                        null,
-                        "603002"); // 默认财务费用科目
-                    
-                    var serviceFeeVoucher = CreateBasePaymentVoucher(calculation, voucherNumber, entryId++, voucherGroup, preparerName);
-                    serviceFeeVoucher.FACCTID = serviceFeeSubject;
-                    serviceFeeVoucher.FDC = 0; // 借方
-                    
-                    // 手续费汇率特殊处理
-                    if (calculation.ServiceFeeBaseCurrency > 0 && calculation.ServiceFeeAmount > 0)
-                    {
-                        // 原币+本位币同时存在：币种选结算币种，汇率取结算汇率
-                        serviceFeeVoucher.FFCYAMT = calculation.ServiceFeeAmount;
-                        serviceFeeVoucher.FCYID = calculation.SettlementCurrency;
-                        serviceFeeVoucher.FEXCHRATE = calculation.SettlementExchangeRate;
-                    }
-                    else
-                    {
-                        // 仅本位币手续费：币种选本位币，汇率为1
-                        serviceFeeVoucher.FFCYAMT = calculation.ServiceFeeBaseCurrency;
-                        serviceFeeVoucher.FCYID = calculation.BaseCurrency;
-                        serviceFeeVoucher.FEXCHRATE = 1.0000000m;
-                    }
-                    
-                    serviceFeeVoucher.FDEBIT = calculation.ServiceFeeBaseCurrency;
-                    serviceFeeVoucher.FCREDIT = 0;
-
-                    vouchers.Add(serviceFeeVoucher);
-                }
-
-                // 规则6：手续费银行扣款（贷方）- 与规则5配对生成
-                if (calculation.ServiceFeeAmount > 0 || calculation.ServiceFeeBaseCurrency > 0)
-                {
-                    var bankSubject = GetValidSubjectCode(
-                        calculation.BankInfo?.AAccountSubjectCode,
-                        subjectConfigs.GetValueOrDefault("SP_BANK_CREDIT")?.SubjectNumber,
-                        "1001001"); // 默认银行存款科目
-                    
-                    var serviceFeeBankVoucher = CreateBasePaymentVoucher(calculation, voucherNumber, entryId++, voucherGroup, preparerName);
-                    serviceFeeBankVoucher.FACCTID = bankSubject;
-                    serviceFeeBankVoucher.FDC = 1; // 贷方
-                    
-                    // 手续费汇率特殊处理（与规则5保持一致）
-                    if (calculation.ServiceFeeBaseCurrency > 0 && calculation.ServiceFeeAmount > 0)
-                    {
-                        // 原币+本位币同时存在：币种选结算币种，汇率取结算汇率
-                        serviceFeeBankVoucher.FFCYAMT = calculation.ServiceFeeAmount;
-                        serviceFeeBankVoucher.FCYID = calculation.SettlementCurrency;
-                        serviceFeeBankVoucher.FEXCHRATE = calculation.SettlementExchangeRate;
-                    }
-                    else
-                    {
-                        // 仅本位币手续费：币种选本位币，汇率为1
-                        serviceFeeBankVoucher.FFCYAMT = calculation.ServiceFeeBaseCurrency;
-                        serviceFeeBankVoucher.FCYID = calculation.BaseCurrency;
-                        serviceFeeBankVoucher.FEXCHRATE = 1.0000000m;
-                    }
-                    
-                    serviceFeeBankVoucher.FDEBIT = 0;
-                    serviceFeeBankVoucher.FCREDIT = calculation.ServiceFeeBaseCurrency;
-
-                    vouchers.Add(serviceFeeBankVoucher);
-                }
-
+                vouchers.AddRange(GeneratePaymentOtherVouchers(calculation, voucherNumber, ref entryId, voucherGroup, preparerName, subjectConfigs));
                 voucherNumber++;
             }
-
             return vouchers;
         }
 
         /// <summary>
-        /// 创建基础付款凭证对象
+        /// 规则1：生成银行付款贷方分录（1~N条必生成）
+        /// 优先使用ActualFinancialTransaction表，无记录则用结算单金额
         /// </summary>
-        private static KingdeeVoucher CreateBasePaymentVoucher(SettlementPaymentCalculationDto calculation, int voucherNumber, 
-            int entryId, string voucherGroup, string preparerName)
+        private static List<KingdeeVoucher> GeneratePaymentBankVouchers(
+            SettlementPaymentCalculationDto calculation, 
+            int voucherNumber, 
+            ref int entryId, 
+            string voucherGroup, 
+            string preparerName, 
+            Dictionary<string, SubjectConfiguration> subjectConfigs)
         {
-            var summary = $"{calculation.SupplierName}【支出】{calculation.PaymentNumber}";
-            
+            var vouchers = new List<KingdeeVoucher>();
+            if (calculation.ActualTransactions.Any())
+            {
+                foreach (var transaction in calculation.ActualTransactions)
+                {
+                    var bankSubject = GetValidSubjectCode(
+                        transaction.BankSubjectCode,
+                        calculation.BankInfo?.AAccountSubjectCode,
+                        subjectConfigs.GetValueOrDefault("SP_BANK_CREDIT")?.SubjectNumber,
+                        "1001001");
+                    var voucher = CreateBasePaymentVoucher(calculation, voucherNumber, entryId++, voucherGroup, preparerName);
+                    voucher.FACCTID = bankSubject;
+                    voucher.FDC = 1;
+                    voucher.FFCYAMT = transaction.Amount;
+                    voucher.FDEBIT = 0;
+                    voucher.FCREDIT = transaction.Amount * calculation.SettlementExchangeRate;
+                    voucher.FCYID = calculation.SettlementCurrency;
+                    voucher.FEXCHRATE = calculation.SettlementExchangeRate;
+                    vouchers.Add(voucher);
+                }
+            }
+            else
+            {
+                var bankSubject = GetValidSubjectCode(
+                    calculation.BankInfo?.AAccountSubjectCode,
+                    subjectConfigs.GetValueOrDefault("SP_BANK_CREDIT")?.SubjectNumber,
+                    "1001001");
+                var totalPaymentAmountBaseCurrency = calculation.PayableTotalBaseCurrency;
+                var voucher = CreateBasePaymentVoucher(calculation, voucherNumber, entryId++, voucherGroup, preparerName);
+                voucher.FACCTID = bankSubject;
+                voucher.FDC = 1;
+                voucher.FFCYAMT = totalPaymentAmountBaseCurrency / calculation.SettlementExchangeRate;
+                voucher.FDEBIT = 0;
+                voucher.FCREDIT = totalPaymentAmountBaseCurrency;
+                voucher.FCYID = calculation.SettlementCurrency;
+                voucher.FEXCHRATE = calculation.SettlementExchangeRate;
+                vouchers.Add(voucher);
+            }
+            return vouchers;
+        }
+
+        /// <summary>
+        /// 规则2：生成应付账款冲销借方分录（1~3条必生成）
+        /// </summary>
+        private static List<KingdeeVoucher> GeneratePayableDebitVouchers(
+            SettlementPaymentCalculationDto calculation, 
+            int voucherNumber, 
+            ref int entryId, 
+            string voucherGroup, 
+            string preparerName, 
+            Dictionary<string, SubjectConfiguration> subjectConfigs)
+        {
+            var vouchers = new List<KingdeeVoucher>();
+            if (calculation.IsDomestic)
+            {
+                if (calculation.PayableDomesticCustomerBaseCurrency > 0)
+                {
+                    vouchers.Add(GeneratePayableDebitDomesticCustomerVoucher(calculation, voucherNumber, entryId++, voucherGroup, preparerName, subjectConfigs));
+                }
+                if (calculation.PayableDomesticTariffBaseCurrency > 0)
+                {
+                    vouchers.Add(GeneratePayableDebitDomesticTariffVoucher(calculation, voucherNumber, entryId++, voucherGroup, preparerName, subjectConfigs));
+                }
+            }
+            else
+            {
+                if (calculation.PayableForeignBaseCurrency > 0)
+                {
+                    vouchers.Add(GeneratePayableDebitForeignVoucher(calculation, voucherNumber, entryId++, voucherGroup, preparerName, subjectConfigs));
+                }
+            }
+            return vouchers;
+        }
+
+        /// <summary>
+        /// 规则2A：应付账款-国外供应商
+        /// </summary>
+        private static KingdeeVoucher GeneratePayableDebitForeignVoucher(
+            SettlementPaymentCalculationDto calculation, 
+            int voucherNumber, 
+            int entryId, 
+            string voucherGroup, 
+            string preparerName, 
+            Dictionary<string, SubjectConfiguration> subjectConfigs)
+        {
+            var subject = GetValidSubjectCode(
+                subjectConfigs.GetValueOrDefault("SP_PAYABLE_DEBIT_OUT_CUS")?.SubjectNumber,
+                subjectConfigs.GetValueOrDefault("SP_PAYABLE_DEBIT")?.SubjectNumber,
+                "203001");
+            var voucher = CreateBasePaymentVoucher(calculation, voucherNumber, entryId, voucherGroup, preparerName);
+            voucher.FACCTID = subject;
+            voucher.FCLSNAME1 = "客户";
+            voucher.FOBJID1 = calculation.CustomerFinanceCode;
+            voucher.FOBJNAME1 = calculation.CustomerName;
+            voucher.FTRANSID = calculation.CustomerFinanceCode;
+            voucher.FDC = 0;
+            voucher.FFCYAMT = calculation.PayableForeignBaseCurrency;
+            voucher.FDEBIT = calculation.PayableForeignBaseCurrency;
+            voucher.FCREDIT = 0;
+            voucher.FCYID = calculation.BaseCurrency;
+            voucher.FEXCHRATE = 1.0000000m;
+            return voucher;
+        }
+
+        /// <summary>
+        /// 规则2B：应付账款-国内客户（非代垫）
+        /// </summary>
+        private static KingdeeVoucher GeneratePayableDebitDomesticCustomerVoucher(
+            SettlementPaymentCalculationDto calculation, 
+            int voucherNumber, 
+            int entryId, 
+            string voucherGroup, 
+            string preparerName, 
+            Dictionary<string, SubjectConfiguration> subjectConfigs)
+        {
+            var subject = GetValidSubjectCode(
+                subjectConfigs.GetValueOrDefault("SP_PAYABLE_DEBIT_IN_CUS")?.SubjectNumber,
+                subjectConfigs.GetValueOrDefault("SP_PAYABLE_DEBIT")?.SubjectNumber,
+                "203001");
+            var voucher = CreateBasePaymentVoucher(calculation, voucherNumber, entryId, voucherGroup, preparerName);
+            voucher.FACCTID = subject;
+            voucher.FCLSNAME1 = "客户";
+            voucher.FOBJID1 = calculation.CustomerFinanceCode;
+            voucher.FOBJNAME1 = calculation.CustomerName;
+            voucher.FTRANSID = calculation.CustomerFinanceCode;
+            voucher.FDC = 0;
+            voucher.FFCYAMT = calculation.PayableDomesticCustomerBaseCurrency;
+            voucher.FDEBIT = calculation.PayableDomesticCustomerBaseCurrency;
+            voucher.FCREDIT = 0;
+            voucher.FCYID = calculation.BaseCurrency;
+            voucher.FEXCHRATE = 1.0000000m;
+            return voucher;
+        }
+
+        /// <summary>
+        /// 规则2C：应付账款-国内关税（代垫）
+        /// </summary>
+        private static KingdeeVoucher GeneratePayableDebitDomesticTariffVoucher(
+            SettlementPaymentCalculationDto calculation, 
+            int voucherNumber, 
+            int entryId, 
+            string voucherGroup, 
+            string preparerName, 
+            Dictionary<string, SubjectConfiguration> subjectConfigs)
+        {
+            var subject = GetValidSubjectCode(
+                subjectConfigs.GetValueOrDefault("SP_PAYABLE_DEBIT_IN_TAR")?.SubjectNumber,
+                subjectConfigs.GetValueOrDefault("SP_PAYABLE_DEBIT")?.SubjectNumber,
+                "203001");
+            var voucher = CreateBasePaymentVoucher(calculation, voucherNumber, entryId, voucherGroup, preparerName);
+            voucher.FACCTID = subject;
+            voucher.FCLSNAME1 = "客户";
+            voucher.FOBJID1 = calculation.CustomerFinanceCode;
+            voucher.FOBJNAME1 = calculation.CustomerName;
+            voucher.FTRANSID = calculation.CustomerFinanceCode;
+            voucher.FDC = 0;
+            voucher.FFCYAMT = calculation.PayableDomesticTariffBaseCurrency;
+            voucher.FDEBIT = calculation.PayableDomesticTariffBaseCurrency;
+            voucher.FCREDIT = 0;
+            voucher.FCYID = calculation.BaseCurrency;
+            voucher.FEXCHRATE = 1.0000000m;
+            return voucher;
+        }
+
+        /// <summary>
+        /// 规则3：生成应收账款增加贷方分录（0~3条混合业务生成）
+        /// </summary>
+        private static List<KingdeeVoucher> GenerateReceivableCreditVouchers(
+            SettlementPaymentCalculationDto calculation, 
+            int voucherNumber, 
+            ref int entryId, 
+            string voucherGroup, 
+            string preparerName, 
+            Dictionary<string, SubjectConfiguration> subjectConfigs)
+        {
+            var vouchers = new List<KingdeeVoucher>();
+            if (calculation.IsDomestic)
+            {
+                if (calculation.ReceivableDomesticCustomerBaseCurrency > 0)
+                {
+                    vouchers.Add(GenerateReceivableCreditDomesticCustomerVoucher(calculation, voucherNumber, entryId++, voucherGroup, preparerName, subjectConfigs));
+                }
+                if (calculation.ReceivableDomesticTariffBaseCurrency > 0)
+                {
+                    vouchers.Add(GenerateReceivableCreditDomesticTariffVoucher(calculation, voucherNumber, entryId++, voucherGroup, preparerName, subjectConfigs));
+                }
+            }
+            else
+            {
+                if (calculation.ReceivableForeignBaseCurrency > 0)
+                {
+                    vouchers.Add(GenerateReceivableCreditForeignVoucher(calculation, voucherNumber, entryId++, voucherGroup, preparerName, subjectConfigs));
+                }
+            }
+            return vouchers;
+        }
+
+        /// <summary>
+        /// 规则3A：应收账款-国外客户（混合业务）
+        /// </summary>
+        private static KingdeeVoucher GenerateReceivableCreditForeignVoucher(
+            SettlementPaymentCalculationDto calculation, 
+            int voucherNumber, 
+            int entryId, 
+            string voucherGroup, 
+            string preparerName, 
+            Dictionary<string, SubjectConfiguration> subjectConfigs)
+        {
+            var subject = GetValidSubjectCode(
+                subjectConfigs.GetValueOrDefault("SP_RECEIVABLE_CREDIT_OUT_CUS")?.SubjectNumber,
+                subjectConfigs.GetValueOrDefault("SP_RECEIVABLE_CREDIT")?.SubjectNumber,
+                "113001");
+            var voucher = CreateBasePaymentVoucher(calculation, voucherNumber, entryId, voucherGroup, preparerName);
+            voucher.FACCTID = subject;
+            voucher.FCLSNAME1 = "客户";
+            voucher.FOBJID1 = calculation.CustomerFinanceCode;
+            voucher.FOBJNAME1 = calculation.CustomerName;
+            voucher.FTRANSID = calculation.CustomerFinanceCode;
+            voucher.FDC = 1;
+            voucher.FFCYAMT = calculation.ReceivableForeignBaseCurrency;
+            voucher.FDEBIT = 0;
+            voucher.FCREDIT = calculation.ReceivableForeignBaseCurrency;
+            voucher.FCYID = calculation.BaseCurrency;
+            voucher.FEXCHRATE = 1.0000000m;
+            return voucher;
+        }
+
+        /// <summary>
+        /// 规则3B：应收账款-国内客户（非代垫，混合业务）
+        /// </summary>
+        private static KingdeeVoucher GenerateReceivableCreditDomesticCustomerVoucher(
+            SettlementPaymentCalculationDto calculation, 
+            int voucherNumber, 
+            int entryId, 
+            string voucherGroup, 
+            string preparerName, 
+            Dictionary<string, SubjectConfiguration> subjectConfigs)
+        {
+            var subject = GetValidSubjectCode(
+                subjectConfigs.GetValueOrDefault("SP_RECEIVABLE_CREDIT_IN_CUS")?.SubjectNumber,
+                subjectConfigs.GetValueOrDefault("SP_RECEIVABLE_CREDIT")?.SubjectNumber,
+                "113001");
+            var voucher = CreateBasePaymentVoucher(calculation, voucherNumber, entryId, voucherGroup, preparerName);
+            voucher.FACCTID = subject;
+            voucher.FCLSNAME1 = "客户";
+            voucher.FOBJID1 = calculation.CustomerFinanceCode;
+            voucher.FOBJNAME1 = calculation.CustomerName;
+            voucher.FTRANSID = calculation.CustomerFinanceCode;
+            voucher.FDC = 1;
+            voucher.FFCYAMT = calculation.ReceivableDomesticCustomerBaseCurrency;
+            voucher.FDEBIT = 0;
+            voucher.FCREDIT = calculation.ReceivableDomesticCustomerBaseCurrency;
+            voucher.FCYID = calculation.BaseCurrency;
+            voucher.FEXCHRATE = 1.0000000m;
+            return voucher;
+        }
+
+        /// <summary>
+        /// 规则3C：应收账款-国内关税（代垫，混合业务）
+        /// </summary>
+        private static KingdeeVoucher GenerateReceivableCreditDomesticTariffVoucher(
+            SettlementPaymentCalculationDto calculation, 
+            int voucherNumber, 
+            int entryId, 
+            string voucherGroup, 
+            string preparerName, 
+            Dictionary<string, SubjectConfiguration> subjectConfigs)
+        {
+            var subject = GetValidSubjectCode(
+                subjectConfigs.GetValueOrDefault("SP_RECEIVABLE_CREDIT_IN_TAR")?.SubjectNumber,
+                subjectConfigs.GetValueOrDefault("SP_RECEIVABLE_CREDIT")?.SubjectNumber,
+                "113001");
+            var voucher = CreateBasePaymentVoucher(calculation, voucherNumber, entryId, voucherGroup, preparerName);
+            voucher.FACCTID = subject;
+            voucher.FCLSNAME1 = "客户";
+            voucher.FOBJID1 = calculation.CustomerFinanceCode;
+            voucher.FOBJNAME1 = calculation.CustomerName;
+            voucher.FTRANSID = calculation.CustomerFinanceCode;
+            voucher.FDC = 1;
+            voucher.FFCYAMT = calculation.ReceivableDomesticTariffBaseCurrency;
+            voucher.FDEBIT = 0;
+            voucher.FCREDIT = calculation.ReceivableDomesticTariffBaseCurrency;
+            voucher.FCYID = calculation.BaseCurrency;
+            voucher.FEXCHRATE = 1.0000000m;
+            return voucher;
+        }
+
+        /// <summary>
+        /// 规则4-7：生成其他科目分录（条件生成）
+        /// </summary>
+        private static List<KingdeeVoucher> GeneratePaymentOtherVouchers(
+            SettlementPaymentCalculationDto calculation, 
+            int voucherNumber, 
+            ref int entryId, 
+            string voucherGroup, 
+            string preparerName, 
+            Dictionary<string, SubjectConfiguration> subjectConfigs)
+        {
+            var vouchers = new List<KingdeeVoucher>();
+            if (calculation.ExchangeLoss != 0)
+            {
+                vouchers.Add(GeneratePaymentExchangeLossVoucher(calculation, voucherNumber, entryId++, voucherGroup, preparerName, subjectConfigs));
+            }
+            if (calculation.ServiceFeeAmount > 0 || calculation.ServiceFeeBaseCurrency > 0)
+            {
+                vouchers.Add(GeneratePaymentServiceFeeDebitVoucher(calculation, voucherNumber, entryId++, voucherGroup, preparerName, subjectConfigs));
+                vouchers.Add(GeneratePaymentServiceFeeCreditVoucher(calculation, voucherNumber, entryId++, voucherGroup, preparerName, subjectConfigs));
+            }
+            if (calculation.AdvancePaymentAmount > 0)
+            {
+                vouchers.Add(GenerateAdvancePaymentVoucher(calculation, voucherNumber, entryId++, voucherGroup, preparerName, subjectConfigs));
+            }
+            return vouchers;
+        }
+
+        /// <summary>
+        /// 规则4：汇兑损益分录
+        /// </summary>
+        private static KingdeeVoucher GeneratePaymentExchangeLossVoucher(
+            SettlementPaymentCalculationDto calculation, 
+            int voucherNumber, 
+            int entryId, 
+            string voucherGroup, 
+            string preparerName, 
+            Dictionary<string, SubjectConfiguration> subjectConfigs)
+        {
+            var subject = GetValidSubjectCode(
+                subjectConfigs.GetValueOrDefault("SP_EXCHANGE_LOSS")?.SubjectNumber,
+                "603001");
+            var voucher = CreateBasePaymentVoucher(calculation, voucherNumber, entryId, voucherGroup, preparerName);
+            voucher.FACCTID = subject;
+            voucher.FDC = calculation.ExchangeLoss > 0 ? 0 : 1;
+            voucher.FFCYAMT = Math.Abs(calculation.ExchangeLoss);
+            voucher.FDEBIT = calculation.ExchangeLoss > 0 ? Math.Abs(calculation.ExchangeLoss) : 0;
+            voucher.FCREDIT = calculation.ExchangeLoss < 0 ? Math.Abs(calculation.ExchangeLoss) : 0;
+            voucher.FCYID = calculation.BaseCurrency;
+            voucher.FEXCHRATE = 1.0000000m;
+            return voucher;
+        }
+
+        /// <summary>
+        /// 规则5：手续费支出借方分录
+        /// </summary>
+        private static KingdeeVoucher GeneratePaymentServiceFeeDebitVoucher(
+            SettlementPaymentCalculationDto calculation, 
+            int voucherNumber, 
+            int entryId, 
+            string voucherGroup, 
+            string preparerName, 
+            Dictionary<string, SubjectConfiguration> subjectConfigs)
+        {
+            var subject = GetValidSubjectCode(
+                subjectConfigs.GetValueOrDefault("SP_SERVICE_FEE_DEBIT")?.SubjectNumber,
+                "603002");
+            var voucher = CreateBasePaymentVoucher(calculation, voucherNumber, entryId, voucherGroup, preparerName);
+            voucher.FACCTID = subject;
+            voucher.FDC = 0;
+            if (calculation.ServiceFeeBaseCurrency > 0 && calculation.ServiceFeeAmount > 0)
+            {
+                voucher.FFCYAMT = calculation.ServiceFeeAmount;
+                voucher.FCYID = calculation.SettlementCurrency;
+                voucher.FEXCHRATE = calculation.SettlementExchangeRate;
+            }
+            else
+            {
+                voucher.FFCYAMT = calculation.ServiceFeeBaseCurrency;
+                voucher.FCYID = calculation.BaseCurrency;
+                voucher.FEXCHRATE = 1.0000000m;
+            }
+            voucher.FDEBIT = calculation.ServiceFeeBaseCurrency;
+            voucher.FCREDIT = 0;
+            return voucher;
+        }
+
+        /// <summary>
+        /// 规则6：手续费银行扣款贷方分录（与规则5配对）
+        /// </summary>
+        private static KingdeeVoucher GeneratePaymentServiceFeeCreditVoucher(
+            SettlementPaymentCalculationDto calculation, 
+            int voucherNumber, 
+            int entryId, 
+            string voucherGroup, 
+            string preparerName, 
+            Dictionary<string, SubjectConfiguration> subjectConfigs)
+        {
+            var subject = GetValidSubjectCode(
+                calculation.BankInfo?.AAccountSubjectCode,
+                subjectConfigs.GetValueOrDefault("SP_BANK_CREDIT")?.SubjectNumber,
+                "1001001");
+            var voucher = CreateBasePaymentVoucher(calculation, voucherNumber, entryId, voucherGroup, preparerName);
+            voucher.FACCTID = subject;
+            voucher.FDC = 1;
+            if (calculation.ServiceFeeBaseCurrency > 0 && calculation.ServiceFeeAmount > 0)
+            {
+                voucher.FFCYAMT = calculation.ServiceFeeAmount;
+                voucher.FCYID = calculation.SettlementCurrency;
+                voucher.FEXCHRATE = calculation.SettlementExchangeRate;
+            }
+            else
+            {
+                voucher.FFCYAMT = calculation.ServiceFeeBaseCurrency;
+                voucher.FCYID = calculation.BaseCurrency;
+                voucher.FEXCHRATE = 1.0000000m;
+            }
+            voucher.FDEBIT = 0;
+            voucher.FCREDIT = calculation.ServiceFeeBaseCurrency;
+            return voucher;
+        }
+
+        /// <summary>
+        /// 规则7：预付款借方分录
+        /// </summary>
+        private static KingdeeVoucher GenerateAdvancePaymentVoucher(
+            SettlementPaymentCalculationDto calculation, 
+            int voucherNumber, 
+            int entryId, 
+            string voucherGroup, 
+            string preparerName, 
+            Dictionary<string, SubjectConfiguration> subjectConfigs)
+        {
+            var subject = GetValidSubjectCode(
+                subjectConfigs.GetValueOrDefault("SP_ADVANCE_CREDIT")?.SubjectNumber,
+                "123101");
+            var voucher = CreateBasePaymentVoucher(calculation, voucherNumber, entryId, voucherGroup, preparerName);
+            voucher.FACCTID = subject;
+            voucher.FCLSNAME1 = "客户";
+            voucher.FOBJID1 = calculation.CustomerFinanceCode;
+            voucher.FOBJNAME1 = calculation.CustomerName;
+            voucher.FTRANSID = calculation.CustomerFinanceCode;
+            voucher.FDC = 0;
+            voucher.FFCYAMT = calculation.AdvancePaymentAmount;
+            voucher.FDEBIT = calculation.AdvancePaymentBaseCurrency;
+            voucher.FCREDIT = 0;
+            voucher.FCYID = calculation.SettlementCurrency;
+            voucher.FEXCHRATE = calculation.SettlementExchangeRate;
+            return voucher;
+        }
+
+        #endregion
+
+        #region 辅助方法
+
+        /// <summary>
+        /// 创建付款单基础凭证对象
+        /// </summary>
+        private static KingdeeVoucher CreateBasePaymentVoucher(SettlementPaymentCalculationDto calculation, int voucherNumber, int entryId, string voucherGroup, string preparerName)
+        {
+            var summary = $"{calculation.CustomerName}【支出】{calculation.PaymentNumber}";
             return new KingdeeVoucher
             {
                 Id = Guid.NewGuid(),
@@ -714,6 +1043,127 @@ namespace PowerLmsWebApi.Controllers.Financial
                 FMODULE = "GL",
                 FDELETED = false
             };
+        }
+
+        #endregion
+
+        #region 配置验证和组织权限辅助方法
+
+        /// <summary>
+        /// 验证付款结算单科目配置完整性
+        /// </summary>
+        private List<string> ValidateSettlementPaymentSubjectConfiguration(Guid? orgId)
+        {
+            var requiredCodes = new List<string>
+            {
+                "SP_BANK_CREDIT", "SP_PAYABLE_DEBIT", "SP_PAYABLE_DEBIT_IN_CUS", "SP_PAYABLE_DEBIT_IN_TAR", "SP_PAYABLE_DEBIT_OUT_CUS",
+                "SP_RECEIVABLE_CREDIT", "SP_RECEIVABLE_CREDIT_IN_CUS", "SP_RECEIVABLE_CREDIT_IN_TAR", "SP_RECEIVABLE_CREDIT_OUT_CUS",
+                "SP_EXCHANGE_LOSS", "SP_SERVICE_FEE_DEBIT", "SP_SERVICE_FEE_CREDIT", "SP_ADVANCE_CREDIT",
+                "SP_PREPARER", "SP_VOUCHER_GROUP"
+            };
+            var existingCodes = _DbContext.SubjectConfigurations
+                .Where(c => !c.IsDelete && c.OrgId == orgId && requiredCodes.Contains(c.Code))
+                .Select(c => c.Code)
+                .ToList();
+            return requiredCodes.Except(existingCodes).ToList();
+        }
+
+        /// <summary>
+        /// 付款结算单组织权限过滤
+        /// </summary>
+        private IQueryable<PlInvoices> ApplyOrganizationFilterForSettlementPayments(IQueryable<PlInvoices> query, Account user)
+        {
+            if (user == null) return query.Where(i => false);
+            if (user.IsSuperAdmin) return query;
+            var merchantId = _OrgManager.GetMerchantIdByUserId(user.Id);
+            if (!merchantId.HasValue) return query.Where(i => false);
+            HashSet<Guid?> allowedOrgIds;
+            if (user.IsMerchantAdmin)
+            {
+                var allOrgIds = _OrgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs.Keys.ToList();
+                allowedOrgIds = new HashSet<Guid?>(allOrgIds.Cast<Guid?>());
+                allowedOrgIds.Add(merchantId.Value);
+            }
+            else
+            {
+                var companyId = user.OrgId.HasValue ? _OrgManager.GetCompanyIdByOrgId(user.OrgId.Value) : null;
+                if (!companyId.HasValue) return query.Where(i => false);
+                var companyOrgIds = _OrgManager.GetOrgIdsByCompanyId(companyId.Value).ToList();
+                allowedOrgIds = new HashSet<Guid?>(companyOrgIds.Cast<Guid?>());
+                allowedOrgIds.Add(merchantId.Value);
+            }
+            var filteredQuery = from invoice in query
+                                join invoiceItem in _DbContext.PlInvoicesItems
+                                    on invoice.Id equals invoiceItem.ParentId into itemGroup
+                                from item in itemGroup.DefaultIfEmpty()
+                                join requisitionItem in _DbContext.DocFeeRequisitionItems
+                                    on item.RequisitionItemId equals requisitionItem.Id into reqItemGroup
+                                from reqItem in reqItemGroup.DefaultIfEmpty()
+                                join requisition in _DbContext.DocFeeRequisitions
+                                    on reqItem.ParentId equals requisition.Id into reqGroup
+                                from req in reqGroup.DefaultIfEmpty()
+                                where allowedOrgIds.Contains(req.OrgId)
+                                select invoice;
+            return filteredQuery.Distinct();
+        }
+
+        /// <summary>
+        /// 加载付款结算单科目配置（静态版本）
+        /// </summary>
+        private static Dictionary<string, SubjectConfiguration> LoadSettlementPaymentSubjectConfigurations(PowerLmsUserDbContext dbContext, Guid? orgId)
+        {
+            var requiredCodes = new List<string>
+            {
+                "SP_BANK_CREDIT", "SP_PAYABLE_DEBIT", "SP_PAYABLE_DEBIT_IN_CUS", "SP_PAYABLE_DEBIT_IN_TAR", "SP_PAYABLE_DEBIT_OUT_CUS",
+                "SP_RECEIVABLE_CREDIT", "SP_RECEIVABLE_CREDIT_IN_CUS", "SP_RECEIVABLE_CREDIT_IN_TAR", "SP_RECEIVABLE_CREDIT_OUT_CUS",
+                "SP_EXCHANGE_LOSS", "SP_SERVICE_FEE_DEBIT", "SP_SERVICE_FEE_CREDIT", "SP_ADVANCE_CREDIT",
+                "SP_PREPARER", "SP_VOUCHER_GROUP"
+            };
+            var configs = dbContext.SubjectConfigurations
+                .Where(c => !c.IsDelete && c.OrgId == orgId && requiredCodes.Contains(c.Code))
+                .ToList();
+            return configs.ToDictionary(c => c.Code, c => c);
+        }
+
+        /// <summary>
+        /// 付款结算单组织权限过滤（静态版本）
+        /// </summary>
+        private static IQueryable<PlInvoices> ApplyOrganizationFilterForSettlementPaymentsStatic(IQueryable<PlInvoices> query, Account user,
+            PowerLmsUserDbContext dbContext, IServiceProvider serviceProvider)
+        {
+            if (user == null) return query.Where(i => false);
+            if (user.IsSuperAdmin) return query;
+            var orgManager = serviceProvider.GetRequiredService<OrgManager<PowerLmsUserDbContext>>();
+            var merchantId = orgManager.GetMerchantIdByUserId(user.Id);
+            if (!merchantId.HasValue) return query.Where(i => false);
+            HashSet<Guid?> allowedOrgIds;
+            if (user.IsMerchantAdmin)
+            {
+                var allOrgIds = orgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs.Keys.ToList();
+                allowedOrgIds = new HashSet<Guid?>(allOrgIds.Cast<Guid?>());
+                allowedOrgIds.Add(merchantId.Value);
+            }
+            else
+            {
+                var companyId = user.OrgId.HasValue ? orgManager.GetCompanyIdByOrgId(user.OrgId.Value) : null;
+                if (!companyId.HasValue) return query.Where(i => false);
+                var companyOrgIds = orgManager.GetOrgIdsByCompanyId(companyId.Value).ToList();
+                allowedOrgIds = new HashSet<Guid?>(companyOrgIds.Cast<Guid?>());
+                allowedOrgIds.Add(merchantId.Value);
+            }
+            var filteredQuery = from invoice in query
+                                join invoiceItem in dbContext.PlInvoicesItems
+                                    on invoice.Id equals invoiceItem.ParentId into itemGroup
+                                from item in itemGroup.DefaultIfEmpty()
+                                join requisitionItem in dbContext.DocFeeRequisitionItems
+                                    on item.RequisitionItemId equals requisitionItem.Id into reqItemGroup
+                                from reqItem in reqItemGroup.DefaultIfEmpty()
+                                join requisition in dbContext.DocFeeRequisitions
+                                    on reqItem.ParentId equals requisition.Id into reqGroup
+                                from req in reqGroup.DefaultIfEmpty()
+                                where allowedOrgIds.Contains(req.OrgId)
+                                select invoice;
+            return filteredQuery.Distinct();
         }
 
         /// <summary>
@@ -746,155 +1196,6 @@ namespace PowerLmsWebApi.Controllers.Financial
                 {"FFCYAMT", NativeDbType.Numeric}, {"FDEBIT", NativeDbType.Numeric}, {"FCREDIT", NativeDbType.Numeric}, 
                 {"FPREPARE", NativeDbType.Char}, {"FMODULE", NativeDbType.Char}, {"FDELETED", NativeDbType.Logical}
             };
-        }
-
-        #endregion
-
-        #region 付款结算单导出辅助方法
-
-        /// <summary>
-        /// 验证付款结算单科目配置完整性
-        /// </summary>
-        /// <param name="orgId">组织ID</param>
-        /// <returns>缺失的科目配置代码列表</returns>
-        private List<string> ValidateSettlementPaymentSubjectConfiguration(Guid? orgId)
-        {
-            var requiredCodes = new List<string>
-            {
-                "SP_PAYABLE_DEBIT",        // 规则2：应付账款借方科目
-                "SP_RECEIVABLE_CREDIT",    // 规则3：应收账款贷方科目（混合业务）
-                "SP_EXCHANGE_LOSS",        // 规则4：汇兑损益科目
-                "SP_SERVICE_FEE_DEBIT",    // 规则5：手续费借方科目
-                "SP_PREPARER",             // 制单人
-                "SP_VOUCHER_GROUP"         // 凭证字
-            };
-
-            var existingCodes = _DbContext.SubjectConfigurations
-                .Where(c => !c.IsDelete && c.OrgId == orgId && requiredCodes.Contains(c.Code))
-                .Select(c => c.Code)
-                .ToList();
-
-            return requiredCodes.Except(existingCodes).ToList();
-        }
-
-        /// <summary>
-        /// 付款结算单组织权限过滤
-        /// </summary>
-        /// <param name="query">查询对象</param>
-        /// <param name="user">用户账号</param>
-        /// <returns>过滤后的查询</returns>
-        private IQueryable<PlInvoices> ApplyOrganizationFilterForSettlementPayments(IQueryable<PlInvoices> query, Account user)
-        {
-            if (user == null) return query.Where(i => false);
-            if (user.IsSuperAdmin) return query;
-
-            var merchantId = _OrgManager.GetMerchantIdByUserId(user.Id);
-            if (!merchantId.HasValue) return query.Where(i => false);
-
-            HashSet<Guid?> allowedOrgIds;
-
-            if (user.IsMerchantAdmin)
-            {
-                // 商户管理员可以访问整个商户下的所有组织机构
-                var allOrgIds = _OrgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs.Keys.ToList();
-                allowedOrgIds = new HashSet<Guid?>(allOrgIds.Cast<Guid?>());
-                allowedOrgIds.Add(merchantId.Value);
-            }
-            else
-            {
-                // 普通用户只能访问其当前登录的公司及下属机构
-                var companyId = user.OrgId.HasValue ? _OrgManager.GetCompanyIdByOrgId(user.OrgId.Value) : null;
-                if (!companyId.HasValue) return query.Where(i => false);
-
-                var companyOrgIds = _OrgManager.GetOrgIdsByCompanyId(companyId.Value).ToList();
-                allowedOrgIds = new HashSet<Guid?>(companyOrgIds.Cast<Guid?>());
-                allowedOrgIds.Add(merchantId.Value);
-            }
-
-            // 通过关联申请单和费用来进行组织权限过滤
-            var filteredQuery = from invoice in query
-                                join invoiceItem in _DbContext.PlInvoicesItems
-                                    on invoice.Id equals invoiceItem.ParentId into itemGroup
-                                from item in itemGroup.DefaultIfEmpty()
-                                join requisitionItem in _DbContext.DocFeeRequisitionItems
-                                    on item.RequisitionItemId equals requisitionItem.Id into reqItemGroup
-                                from reqItem in reqItemGroup.DefaultIfEmpty()
-                                join requisition in _DbContext.DocFeeRequisitions
-                                    on reqItem.ParentId equals requisition.Id into reqGroup
-                                from req in reqGroup.DefaultIfEmpty()
-                                where allowedOrgIds.Contains(req.OrgId)
-                                select invoice;
-
-            return filteredQuery.Distinct();
-        }
-
-        #endregion
-
-        #region 付款结算单导出静态辅助方法
-
-        /// <summary>
-        /// 加载付款结算单科目配置（静态版本）
-        /// </summary>
-        private static Dictionary<string, SubjectConfiguration> LoadSettlementPaymentSubjectConfigurations(PowerLmsUserDbContext dbContext, Guid? orgId)
-        {
-            var requiredCodes = new List<string>
-            {
-                "SP_PAYABLE_DEBIT", "SP_RECEIVABLE_CREDIT", "SP_EXCHANGE_LOSS", "SP_SERVICE_FEE_DEBIT",
-                "SP_PREPARER", "SP_VOUCHER_GROUP"
-            };
-
-            var configs = dbContext.SubjectConfigurations
-                .Where(c => !c.IsDelete && c.OrgId == orgId && requiredCodes.Contains(c.Code))
-                .ToList();
-
-            return configs.ToDictionary(c => c.Code, c => c);
-        }
-
-        /// <summary>
-        /// 付款结算单组织权限过滤（静态版本）
-        /// </summary>
-        private static IQueryable<PlInvoices> ApplyOrganizationFilterForSettlementPaymentsStatic(IQueryable<PlInvoices> query, Account user,
-            PowerLmsUserDbContext dbContext, IServiceProvider serviceProvider)
-        {
-            if (user == null) return query.Where(i => false);
-            if (user.IsSuperAdmin) return query;
-
-            var orgManager = serviceProvider.GetRequiredService<OrgManager<PowerLmsUserDbContext>>();
-            var merchantId = orgManager.GetMerchantIdByUserId(user.Id);
-            if (!merchantId.HasValue) return query.Where(i => false);
-
-            HashSet<Guid?> allowedOrgIds;
-
-            if (user.IsMerchantAdmin)
-            {
-                var allOrgIds = orgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs.Keys.ToList();
-                allowedOrgIds = new HashSet<Guid?>(allOrgIds.Cast<Guid?>());
-                allowedOrgIds.Add(merchantId.Value);
-            }
-            else
-            {
-                var companyId = user.OrgId.HasValue ? orgManager.GetCompanyIdByOrgId(user.OrgId.Value) : null;
-                if (!companyId.HasValue) return query.Where(i => false);
-
-                var companyOrgIds = orgManager.GetOrgIdsByCompanyId(companyId.Value).ToList();
-                allowedOrgIds = new HashSet<Guid?>(companyOrgIds.Cast<Guid?>());
-                allowedOrgIds.Add(merchantId.Value);
-            }
-
-            var filteredQuery = from invoice in query
-                                join invoiceItem in dbContext.PlInvoicesItems
-                                    on invoice.Id equals invoiceItem.ParentId into itemGroup
-                                from item in itemGroup.DefaultIfEmpty()
-                                join requisitionItem in dbContext.DocFeeRequisitionItems
-                                    on item.RequisitionItemId equals requisitionItem.Id into reqItemGroup
-                                from reqItem in reqItemGroup.DefaultIfEmpty()
-                                join requisition in dbContext.DocFeeRequisitions
-                                    on reqItem.ParentId equals requisition.Id into reqGroup
-                                from req in reqGroup.DefaultIfEmpty()
-                                where allowedOrgIds.Contains(req.OrgId)
-                                select invoice;
-
-            return filteredQuery.Distinct();
         }
 
         #endregion

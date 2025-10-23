@@ -789,6 +789,54 @@ namespace PowerLmsWebApi.Controllers.Financial
         }
 
         #endregion 实例方法
+        
+        #region 共享辅助方法
+        
+        /// <summary>
+        /// 获取有效的科目代码（支持可变参数回退）
+        /// </summary>
+        private static string GetValidSubjectCode(params string[] candidates)
+        {
+            foreach (var candidate in candidates)
+            {
+                if (!string.IsNullOrWhiteSpace(candidate) && candidate.Trim().Length > 0)
+                {
+                    return candidate.Trim();
+                }
+            }
+            throw new InvalidOperationException("无法获取有效的科目代码，请检查科目配置");
+        }
+        
+        /// <summary>
+        /// 验证凭证数据完整性
+        /// </summary>
+        private static void ValidateVoucherDataIntegrity(List<KingdeeVoucher> vouchers)
+        {
+            var errors = new List<string>();
+            var voucherGroups = vouchers.GroupBy(v => v.FNUM);
+            foreach (var group in voucherGroups)
+            {
+                var totalDebit = group.Sum(v => v.FDEBIT ?? 0);
+                var totalCredit = group.Sum(v => v.FCREDIT ?? 0);
+                if (Math.Abs(totalDebit - totalCredit) > 0.01m)
+                {
+                    errors.Add($"凭证号 {group.Key} 借贷不平衡，借方: {totalDebit}, 贷方: {totalCredit}");
+                }
+            }
+            foreach (var voucher in vouchers)
+            {
+                if (string.IsNullOrEmpty(voucher.FACCTID))
+                    errors.Add($"凭证 {voucher.FNUM}-{voucher.FENTRYID} 缺少科目代码");
+                if (string.IsNullOrEmpty(voucher.FEXP))
+                    errors.Add($"凭证 {voucher.FNUM}-{voucher.FENTRYID} 缺少摘要");
+            }
+            if (errors.Any())
+            {
+                throw new InvalidOperationException($"凭证数据验证失败：{string.Join("; ", errors)}");
+            }
+        }
+        
+        #endregion 共享辅助方法
     }
 
 }
