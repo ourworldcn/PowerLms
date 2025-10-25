@@ -256,17 +256,20 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<AddOrgReturnDto> AddOrg(AddOrgParamsDto model)
         {
-            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) 
+                return Unauthorized();
             var result = new AddOrgReturnDto();
             model.Item.GenerateNewId();
             var id = model.Item.Id;
-            _DbContext.PlOrganizations.Add(model.Item);
+            
+            // 使用事务包裹所有数据库操作
+            using var transaction = _DbContext.Database.BeginTransaction();
             try
             {
-                _DbContext.SaveChanges();
-                result.Id = id;
-
-                // 自动为新机构创建默认参数
+                // 1. 添加机构
+                _DbContext.PlOrganizations.Add(model.Item);
+                
+                // 2. 自动为新机构创建默认参数
                 var parameter = new PlOrganizationParameter
                 {
                     OrgId = id,
@@ -277,13 +280,61 @@ namespace PowerLmsWebApi.Controllers
                 };
                 _DbContext.PlOrganizationParameters.Add(parameter);
 
-                // 使相关商户缓存失效
-                // 如果是顶层组织机构（ParentId为null），直接使用其MerchantId
+                // 3. 如果需要复制字典
+                if (model.IsCopyDataDic)
+                {
+                    var merch = _DbContext.PlOrganizations.Find(id);
+                    if (merch != null)
+                    {
+                        // 复制简单字典
+                        var baseCatalogs = _DbContext.DD_DataDicCatalogs
+                            .Where(c => c.OrgId == null)
+                            .AsNoTracking()
+                            .ToList();
+                        foreach (var catalog in baseCatalogs)
+                        {
+                            _DataManager.CopyTo(catalog, id);
+                        }
+                        _DataManager.CopyAllSpecialDataDicBase(id);
+
+                        // 复制全局财务科目设置(OrgId=null)到新组织机构
+                        var globalSubjectConfigs = _DbContext.SubjectConfigurations
+                            .Where(c => c.OrgId == null && !c.IsDelete)
+                            .AsNoTracking()
+                            .ToList();
+
+                        foreach (var globalConfig in globalSubjectConfigs)
+                        {
+                            var newConfig = new SubjectConfiguration
+                            {
+                                Id = Guid.NewGuid(),
+                                OrgId = id,
+                                Code = globalConfig.Code,
+                                SubjectNumber = globalConfig.SubjectNumber,
+                                DisplayName = globalConfig.DisplayName,
+                                Remark = globalConfig.Remark,
+                                IsDelete = false,
+                                CreateBy = context.User?.Id,
+                                CreateDateTime = OwHelper.WorldNow
+                            };
+                            _DbContext.SubjectConfigurations.Add(newConfig);
+                        }
+                    }
+                }
+
+                // 4. 一次性保存所有更改
+                _DbContext.SaveChanges();
+                
+                // 5. 提交事务
+                transaction.Commit();
+                
+                result.Id = id;
+                
+                // 6. 只有事务成功提交后才失效缓存
                 if (model.Item.ParentId == null && model.Item.MerchantId.HasValue)
                 {
                     _OrgManager.InvalidateOrgCaches(model.Item.MerchantId.Value);
                 }
-                // 如果有父级，则通过父级查找关联的商户ID
                 else if (model.Item.ParentId.HasValue)
                 {
                     var merchantId = _OrgManager.GetMerchantIdByOrgId(model.Item.Id);
@@ -292,48 +343,18 @@ namespace PowerLmsWebApi.Controllers
                         _OrgManager.InvalidateOrgCaches(merchantId.Value);
                     }
                 }
-
-                if (model.IsCopyDataDic) //若需要复制字典
-                {
-                    var r = CopyDataDic(new CopyDataDicParamsDto { Token = model.Token, Id = id });
-
-                    // 复制全局财务科目设置(OrgId=null)到新组织机构
-                    var globalSubjectConfigs = _DbContext.SubjectConfigurations
-                        .Where(c => c.OrgId == null && !c.IsDelete)
-                        .AsNoTracking()
-                        .ToList();
-
-                    foreach (var globalConfig in globalSubjectConfigs)
-                    {
-                        var newConfig = new SubjectConfiguration
-                        {
-                            Id = Guid.NewGuid(),
-                            OrgId = id, // 设置为新组织机构ID
-                            Code = globalConfig.Code,
-                            SubjectNumber = globalConfig.SubjectNumber,
-                            DisplayName = globalConfig.DisplayName,
-                            Remark = globalConfig.Remark,
-                            IsDelete = false, // 新创建的不应被标记删除
-                            CreateBy = context.User?.Id,
-                            CreateDateTime = OwHelper.WorldNow
-                        };
-                        _DbContext.SubjectConfigurations.Add(newConfig);
-                    }
-
-                    if (globalSubjectConfigs.Any())
-                    {
-                        _DbContext.SaveChanges(); // 保存财务科目设置
-                    }
-                }
-
-                // 最终保存机构参数
-                _DbContext.SaveChanges();
-                _Logger.LogInformation("为新机构 {orgId} 自动创建了默认参数配置", id);
+                
+                _Logger.LogInformation("成功创建机构 {orgId}，名称：{orgName}，并为其创建了默认参数配置", 
+                    id, model.Item.Name_Name);
             }
             catch (Exception err)
             {
+                // 回滚事务
+                transaction.Rollback();
+                _Logger.LogError(err, "创建机构失败: {message}", err.Message);
                 return BadRequest(err.Message);
             }
+            
             return result;
         }
 

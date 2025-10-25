@@ -208,12 +208,20 @@ namespace PowerLmsServer.Services
             {
                 // 从EF Core的元数据中获取表注释
                 var comment = entityType.GetComment();
-                return comment;
+                if (!string.IsNullOrWhiteSpace(comment))
+                {
+                    return comment;
+                }
+                // 回退策略：使用实体类型名称作为显示名称
+                var typeName = entityType.ClrType.Name;
+                _Logger.LogDebug("实体 {EntityType} 的Comment注释为空，使用类型名作为显示名称", typeName);
+                return typeName;
             }
             catch (Exception ex)
             {
                 _Logger.LogWarning(ex, "获取实体 {EntityType} 的注释时发生错误", entityType.ClrType.Name);
-                return null;
+                // 异常时也返回类型名称
+                return entityType.ClrType.Name;
             }
         }
 

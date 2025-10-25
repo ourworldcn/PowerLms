@@ -144,18 +144,20 @@ namespace PowerLmsWebApi.Controllers
                 #endregion 业务表单关联过滤
 
                 #region 权限判定
-                var r = coll.AsEnumerable();    //设计备注：如果结果集小则没问题；如果结果集大虽然这导致巨大内存消耗，但在此问题规模下，用内存替换cpu消耗是合理的置换代价
-                if (!_AuthorizationManager.Demand(out string err, "F.2"))  //若无通用查看权限
+                HashSet<Guid> userIds = null;
+                if (!_AuthorizationManager.Demand(out string err, "F.2"))
                 {
                     var currentCompany = _OrgManager.GetCurrentCompanyByUser(context.User);
                     if (currentCompany == null)
                     {
-                        // 如果用户未登录任何公司，返回空结果
                         return result;
                     }
-                    
                     var orgIds = _OrgManager.GetOrgIdsByCompanyId(currentCompany.Id).ToArray();
-                    var userIds = _DbContext.AccountPlOrganizations.Where(c => orgIds.Contains(c.OrgId)).Select(c => c.UserId).Distinct().ToHashSet();   //所有相关人Id集合
+                    userIds = _DbContext.AccountPlOrganizations.Where(c => orgIds.Contains(c.OrgId)).Select(c => c.UserId).Distinct().ToHashSet();
+                }
+                var r = coll.AsEnumerable();
+                if (userIds != null)
+                {
                     var d0Func = GetFunc("D0.1.1.1", ProjectContent.AeId);
                     var d1Func = GetFunc("D1.1.1.1", ProjectContent.AiId);
                     var d2Func = GetFunc("D2.1.1.1", ProjectContent.SeId);
@@ -172,19 +174,19 @@ namespace PowerLmsWebApi.Controllers
                     Func<PlJob, bool> GetFunc(string prefix, Guid typeId)
                     {
                         Func<PlJob, bool> result;
-                        if (_AuthorizationManager.Demand(out err, $"{prefix}.3"))    //公司级别权限
+                        if (_AuthorizationManager.Demand(out err, $"{prefix}.3"))
                         {
                             result = c => c.JobTypeId == typeId;
                         }
-                        else if (_AuthorizationManager.Demand(out err, $"{prefix}.2"))   //同组级别权限
+                        else if (_AuthorizationManager.Demand(out err, $"{prefix}.2"))
                         {
                             result = c => c.JobTypeId == typeId && c.OperatorId != null && userIds.Contains(c.OperatorId.Value);
                         }
-                        else if (_AuthorizationManager.Demand(out err, $"{prefix}.1"))   //本人级别权限
+                        else if (_AuthorizationManager.Demand(out err, $"{prefix}.1"))
                         {
                             result = c => c.JobTypeId == typeId && c.OperatorId == context.User.Id;
                         }
-                        else //此类无权限
+                        else
                             result = c => false;
                         return result;
                     }
