@@ -62,22 +62,23 @@ namespace System
         /// <summary>使用指定的可处置对象集合创建包装器。</summary>
         /// <param name="disposers">要在Dispose时处置的对象集合</param>
         /// <returns>处置包装器实例</returns>
-        // 移除MethodImpl - 这是一个复杂方法，不适合内联
+        /// <remarks>方法逻辑较复杂，不适合内联；在处置过程中仅在出现异常时才按需分配异常列表并可选择聚合处理。</remarks>
         public static DisposerWrapper Create(IEnumerable<IDisposable> disposers) =>
-            Create(c =>
-            {
-                List<Exception> exceptions = new List<Exception>(); // 收集处置过程中的异常
-                foreach (var item in c)
-                {
-                    try { item.Dispose(); } // 尝试处置每个对象
-                    catch (Exception err) { exceptions.Add(err); } // 记录异常
-                }
-                if (exceptions.Count > 0) // 如果有异常
-                {
-                    AggregateException aggregate = new AggregateException(exceptions);
-                    // 这里可以进一步处理聚合异常
-                }
-            }, disposers);
+ Create(c =>
+ {
+     //仅在确有异常时才分配列表
+     List<Exception> exceptions = null;
+     foreach (var item in c)
+     {
+         try { item.Dispose(); }
+         catch (Exception err) { (exceptions ??= new List<Exception>()).Add(err); }
+     }
+     if (exceptions != null && exceptions.Count > 0)
+     {
+         var aggregate = new AggregateException(exceptions);
+         // 可在此记录或抛出 aggregate
+     }
+ }, disposers);
 
         /// <summary>使用SingletonLocker锁定指定对象创建包装器。</summary>
         /// <typeparam name="T">要锁定的对象类型</typeparam>
@@ -87,14 +88,14 @@ namespace System
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static DisposerWrapper Create<T>(T lockObject, TimeSpan timeout) where T : class
         {
-            if (SingletonLocker.TryEnter(lockObject, timeout)) // 尝试获取锁
+            if (SingletonLocker.TryEnter(lockObject, timeout))
             {
-                return Create(() => SingletonLocker.Exit(lockObject)); // 创建在处置时自动解锁的包装器
+                return Create(() => SingletonLocker.Exit(lockObject));
             }
-            return null; // 获取锁失败返回null
+            return null;
         }
 
-        #endregion
+        #endregion 创建方法
 
         #region 实例成员
 
@@ -108,17 +109,18 @@ namespace System
         private bool _IsInPool; // 标记是否在对象池中
 
         /// <summary>执行处置操作并将此实例返回到对象池。</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public void Dispose()
         {
-            if (!_IsInPool && !_Disposed) // 如果不在池中且未处置
+            if (!_IsInPool && !_Disposed)
             {
-                DisposeAction?.Invoke(); // 执行处置操作
-                _Disposed = true; // 标记为已处置
-                Pool.Return(this); // 返回到对象池
+                DisposeAction?.Invoke();
+                _Disposed = true;
+                Pool.Return(this);
             }
         }
 
-        #endregion
+        #endregion 实例成员
     }
 
     /// <summary>清理代码帮助器结构。实测比使用对象池要快20%左右。</summary>
@@ -143,22 +145,26 @@ namespace System
         public readonly T State;
 
         /// <summary>判断此结构是不是一个空结构。</summary>
-        public readonly bool IsEmpty { get => Action is null; }
+        public readonly bool IsEmpty => Action is null;
 
-        #endregion
+        #endregion 构造和属性
 
         #region 处置方法
 
         /// <summary>处置函数。配合c#的using语法使用。</summary>
-        // 这个方法非常关键且简短，适合 AggressiveInlining
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        /// <remarks>这个方法非常关键且简短，适合 AggressiveInlining。</remarks>
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public readonly void Dispose()
         {
-            try { Action?.Invoke(State); } // 尝试执行清理操作
-            catch (Exception err) { Debug.WriteLine(err.Message); } // 记录异常但不传播
+#if DEBUG
+            try { Action?.Invoke(State); }
+            catch (Exception err) { Debug.WriteLine(err.Message); }
+#else
+            Action?.Invoke(State);
+#endif
         }
 
-        #endregion
+        #endregion 处置方法
     }
 
     /// <summary>提供创建DisposeHelper的静态方法。</summary>
@@ -171,20 +177,17 @@ namespace System
         /// <param name="action">清理操作</param>
         /// <param name="state">状态参数</param>
         /// <returns>DisposeHelper实例</returns>
-        // 这里使用NoInlining更合适，因为这个方法实际上只是一个创建对象的工厂
-        [MethodImpl(MethodImplOptions.NoInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static DisposeHelper<T> Create<T>(Action<T> action, T state) =>
-            new DisposeHelper<T>(action, state);
+        new DisposeHelper<T>(action, state);
 
         /// <summary>返回一个空的结构。</summary>
         /// <typeparam name="T">状态参数类型</typeparam>
         /// <returns>空的DisposeHelper结构</returns>
-        // 这个方法简单且可能被频繁调用，适合两种优化
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static DisposeHelper<T> Empty<T>() =>
-            new DisposeHelper<T>(null, default);
+        public static DisposeHelper<T> Empty<T>() => default;
 
-        #endregion
+        #endregion 基本创建方法
 
         #region 锁定相关方法
 
@@ -195,10 +198,9 @@ namespace System
         /// <param name="lockObject">锁定对象。</param>
         /// <param name="timeout">超时。</param>
         /// <returns><see cref="DisposeHelper{T}.IsEmpty"/>是true则说明锁定失败。</returns>
-        // 只保留AggressiveInlining，移除AggressiveOptimization
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static DisposeHelper<T> Create<T>(Func<T, TimeSpan, bool> lockFunc, Action<T> unlockFunc, T lockObject, TimeSpan timeout) =>
-            lockFunc(lockObject, timeout) ? new DisposeHelper<T>(unlockFunc, lockObject) : new DisposeHelper<T>(null, default);
+            lockFunc(lockObject, timeout) ? new DisposeHelper<T>(unlockFunc, lockObject) : default;
 
         /// <summary>使用SingletonLocker锁定对象并创建一个可释放结构</summary>
         /// <typeparam name="T">锁对象类型</typeparam>
@@ -207,9 +209,9 @@ namespace System
         /// <returns>可释放结构，IsEmpty为true表示锁定失败</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static DisposeHelper<T> CreateWithSingletonLocker<T>(T lockObject, TimeSpan timeout) where T : class =>
-            SingletonLocker.TryEnter(lockObject, timeout)
-                ? new DisposeHelper<T>(obj => SingletonLocker.Exit(obj), lockObject)
-                : Empty<T>();
+        SingletonLocker.TryEnter(lockObject, timeout)
+        ? new DisposeHelper<T>(static obj => SingletonLocker.Exit(obj), lockObject)
+        : Empty<T>();
 
         /// <summary>按顺序锁定一组对象，并返回一个可以释放的结构。</summary>
         /// <typeparam name="T">锁对象类型</typeparam>
@@ -218,13 +220,12 @@ namespace System
         /// <param name="lockObject">要锁定的对象集合</param>
         /// <param name="timeout">超时</param>
         /// <returns><see cref="DisposeHelper{T}.IsEmpty"/>是true则说明锁定失败，此时没有任何对象被锁定。</returns>
-        // 只保留AggressiveInlining，移除AggressiveOptimization
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static DisposeHelper<IEnumerable<T>> CreateMuti<T>(Func<T, TimeSpan, bool> lockFunc, Action<T> unlockFunc, IEnumerable<T> lockObject, TimeSpan timeout) =>
-            OwHelper.TryEnterAll(lockObject, lockFunc, unlockFunc, timeout)
-                ? new DisposeHelper<IEnumerable<T>>(c => c.SafeForEach(c1 => unlockFunc(c1)), lockObject.Reverse())
-                : Empty<IEnumerable<T>>();
+        public static DisposeHelper<IEnumerable<T>> CreateMulti<T>(Func<T, TimeSpan, bool> lockFunc, Action<T> unlockFunc, IEnumerable<T> lockObject, TimeSpan timeout) =>
+        OwHelper.TryEnterAll(lockObject, lockFunc, unlockFunc, timeout)
+        ? new DisposeHelper<IEnumerable<T>>(c => c.SafeForEach(c1 => unlockFunc(c1)), lockObject.Reverse())
+        : Empty<IEnumerable<T>>();
 
-        #endregion
+        #endregion 锁定相关方法
     }
 }
