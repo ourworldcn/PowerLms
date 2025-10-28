@@ -2,6 +2,7 @@
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <RootNamespace></RootNamespace>
+    <!--<LangVersion>7.3</LangVersion>-->
     <Authors>OW</Authors>
     <AssemblyName>OwBaseCore</AssemblyName>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
@@ -26,10 +27,15 @@
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="6.0.3" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="6.0.1" />
     <PackageReference Include="Microsoft.Extensions.ObjectPool" Version="6.0.36" />
+    <PackageReference Include="NPOI" Version="2.6.2" />
   </ItemGroup>
 
   <ItemGroup>
     <None Include="System.Net.Sockets\SocketAsynServerDemo.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="NPOI\" />
   </ItemGroup>
 
 </Project>
