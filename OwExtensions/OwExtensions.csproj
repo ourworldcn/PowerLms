@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>OwExtensions</RootNamespace>
+    <AssemblyName>OwExtensions</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 第三方库依赖将在需要时添加 -->
+  <!-- 示例: <PackageReference Include="NPOI" Version="2.x.x" /> -->
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OwDbBase\OwDbBase.csproj" />
+  </ItemGroup>
+
+</Project>
