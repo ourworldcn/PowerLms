@@ -75,6 +75,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Docs", "Docs", "{02EA681E-C
 		Docs\服务器配置.md = Docs\服务器配置.md
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OwExtensions", "..\bak\OwExtensions\OwExtensions.csproj", "{160F751F-03BA-854E-28D7-E0484DD4490E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -101,6 +103,10 @@ Global
 		{9B055F1C-190C-4335-8F77-140E5FA4B4BD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9B055F1C-190C-4335-8F77-140E5FA4B4BD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9B055F1C-190C-4335-8F77-140E5FA4B4BD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{160F751F-03BA-854E-28D7-E0484DD4490E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{160F751F-03BA-854E-28D7-E0484DD4490E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{160F751F-03BA-854E-28D7-E0484DD4490E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{160F751F-03BA-854E-28D7-E0484DD4490E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -110,6 +116,7 @@ Global
 		{5B64427F-E0BB-476C-B395-DDF5F2CC526A} = {7B7A10B0-656B-4E84-80C4-4AE68642DE06}
 		{9B055F1C-190C-4335-8F77-140E5FA4B4BD} = {7B7A10B0-656B-4E84-80C4-4AE68642DE06}
 		{02EA681E-C7D8-13C7-8484-4AC65E1B71E8} = {485FC0C8-DBF6-4F3C-9AD3-C57F52100CD2}
+		{160F751F-03BA-854E-28D7-E0484DD4490E} = {7B7A10B0-656B-4E84-80C4-4AE68642DE06}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {5C76520A-489A-4E63-A407-9AD37BF5AD6C}

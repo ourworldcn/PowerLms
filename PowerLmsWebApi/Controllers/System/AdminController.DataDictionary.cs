@@ -195,7 +195,7 @@ namespace PowerLmsWebApi.Controllers.System
             if (!_AuthorizationManager.Demand(out err, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ImportDataDicReturnDto();
             var srTask = _DbContext.DD_SystemResources.FindAsync(rId).AsTask();
-            var workbook = WorkbookFactory.Create(formFile.OpenReadStream()); // 直接使用WorkbookFactory.Create
+            var workbook = WorkbookFactory.Create(formFile.OpenReadStream());
             var sheet = workbook.GetSheetAt(0);
             var sr = srTask.Result;
             switch (sr.Name)
@@ -203,8 +203,8 @@ namespace PowerLmsWebApi.Controllers.System
                 case nameof(_DbContext.Multilinguals):
                     {
                         _DbContext.TruncateTable(nameof(_DbContext.Multilinguals));
-                        // 使用 OwDataUnit 替代 NpoiManager.WriteToDb，性能更好
-                        var count = OwDataUnit.BulkInsert<Multilingual>(
+                        // 使用 OwNpoiDataUnit.BulkInsertFromExcel 替代 OwDataUnit.BulkInsert
+                        var count = OwNpoiDataUnit.BulkInsertFromExcel<Multilingual>(
                             sheet, _DbContext, ignoreExisting: true);
                         _Logger?.LogInformation("成功导入多语言数据：{count}条记录", count);
                         _DbContext.SaveChanges();

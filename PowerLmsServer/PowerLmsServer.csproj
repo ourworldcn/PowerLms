@@ -34,6 +34,8 @@
     <!-- 最佳实践：遵循分层架构，业务层只依赖数据层 -->
     <!-- OwDbBase 的功能通过 PowerLmsData 传递获得 -->
     <ProjectReference Include="..\PowerLmsData\PowerLmsData.csproj" />
+    <!-- 引用OwExtensions以获取NPOI支持 -->
+    <ProjectReference Include="..\..\Bak\OwExtensions\OwExtensions.csproj" />
   </ItemGroup>
 
   <ItemGroup>
