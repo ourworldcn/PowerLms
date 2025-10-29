@@ -32,4 +32,8 @@
     <None Include="System.Net.Sockets\SocketAsynServerDemo.cs" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Tests\" />
+  </ItemGroup>
+
 </Project>

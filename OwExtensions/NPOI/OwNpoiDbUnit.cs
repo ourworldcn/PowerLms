@@ -32,30 +32,30 @@ namespace NPOI
     /// NPOI + EF Core 数据集成工具类
     /// 提供Excel到数据库的高性能批量导入功能
     /// </summary>
-    public static class OwNpoiDataUnit
+    public static class OwNpoiDbUnit
     {
         #region Excel批量插入方法
 
         /// <summary>
         /// 从Excel工作表批量插入数据到数据库
-   /// </summary>
-  /// <typeparam name="TEntity">实体类型</typeparam>
-      /// <param name="sheet">数据源：Excel工作表</param>
+        /// </summary>
+        /// <typeparam name="TEntity">实体类型</typeparam>
+        /// <param name="sheet">数据源：Excel工作表</param>
         /// <param name="dbContext">目标：数据库上下文</param>
-/// <param name="ignoreExisting">配置：是否按主键忽略重复数据</param>
+        /// <param name="ignoreExisting">配置：是否按主键忽略重复数据</param>
         /// <returns>成功插入的记录数</returns>
         /// <exception cref="ArgumentNullException">当<paramref name="sheet"/>或<paramref name="dbContext"/>为null时抛出</exception>
-   /// <exception cref="InvalidOperationException">当Excel处理或数据库操作失败时抛出</exception>
+        /// <exception cref="InvalidOperationException">当Excel处理或数据库操作失败时抛出</exception>
         public static int BulkInsertFromExcel<TEntity>(ISheet sheet, DbContext dbContext, bool ignoreExisting = true)
             where TEntity : class, new()
         {
             if (sheet == null) throw new ArgumentNullException(nameof(sheet));
-          if (dbContext == null) throw new ArgumentNullException(nameof(dbContext));
-     using var allRows = OwNpoiUnit.GetStringList(sheet, out var columnHeaders);
-       if (columnHeaders.Count == 0 || allRows.Count == 0) return 0;
-  var entities = ConvertToEntities<TEntity>(allRows, columnHeaders);
-          if (entities.Count == 0) return 0;
-   return BulkInsertEntities(entities, dbContext, ignoreExisting);
+            if (dbContext == null) throw new ArgumentNullException(nameof(dbContext));
+            using var allRows = OwNpoiUnit.GetStringList(sheet, out var columnHeaders);
+            if (columnHeaders.Count == 0 || allRows.Count == 0) return 0;
+            var entities = ConvertToEntities<TEntity>(allRows, columnHeaders);
+            if (entities.Count == 0) return 0;
+            return BulkInsertEntities(entities, dbContext, ignoreExisting);
         }
 
         /// <summary>
@@ -65,18 +65,18 @@ namespace NPOI
         /// <param name="dbContext">目标：数据库上下文</param>
         /// <param name="entityType">目标：实体类型</param>
         /// <param name="ignoreExisting">配置：是否按主键忽略重复数据</param>
-  /// <returns>成功插入的记录数</returns>
+        /// <returns>成功插入的记录数</returns>
         /// <exception cref="ArgumentNullException">当参数为null时抛出</exception>
         /// <exception cref="InvalidOperationException">当反射调用失败时抛出</exception>
         public static int BulkInsertFromExcel(ISheet sheet, DbContext dbContext, Type entityType, bool ignoreExisting = true)
-   {
+        {
             if (sheet == null) throw new ArgumentNullException(nameof(sheet));
-      if (dbContext == null) throw new ArgumentNullException(nameof(dbContext));
-       if (entityType == null) throw new ArgumentNullException(nameof(entityType));
+            if (dbContext == null) throw new ArgumentNullException(nameof(dbContext));
+            if (entityType == null) throw new ArgumentNullException(nameof(entityType));
             var targetMethod = GetGenericBulkInsertMethod();
-     var genericMethod = targetMethod.MakeGenericMethod(entityType);
-          return (int)genericMethod.Invoke(null, new object[] { sheet, dbContext, ignoreExisting });
-}
+            var genericMethod = targetMethod.MakeGenericMethod(entityType);
+            return (int)genericMethod.Invoke(null, new object[] { sheet, dbContext, ignoreExisting });
+        }
 
         #endregion
 
@@ -84,44 +84,44 @@ namespace NPOI
 
         /// <summary>
         /// 批量插入实体集合（内部使用）
-/// </summary>
+        /// </summary>
         private static int BulkInsertEntities<TEntity>(List<TEntity> entities, DbContext dbContext, bool ignoreExisting)
             where TEntity : class
-     {
-      if (entities == null || entities.Count == 0) return 0;
-        var bulkConfig = CreateBulkConfig(ignoreExisting, typeof(TEntity), dbContext);
- dbContext.BulkInsertOrUpdate(entities, bulkConfig);
-          return entities.Count;
-      }
+        {
+            if (entities == null || entities.Count == 0) return 0;
+            var bulkConfig = CreateBulkConfig(ignoreExisting, typeof(TEntity), dbContext);
+            dbContext.BulkInsertOrUpdate(entities, bulkConfig);
+            return entities.Count;
+        }
 
         /// <summary>
- /// 创建批量操作配置对象
+        /// 创建批量操作配置对象
         /// </summary>
         private static BulkConfig CreateBulkConfig(bool ignoreExisting, Type entityType, DbContext dbContext)
         {
-   var config = new BulkConfig
+            var config = new BulkConfig
             {
-       BatchSize = 1000,
-        BulkCopyTimeout = 300,
-  SetOutputIdentity = false,
-             PreserveInsertOrder = false,
- UseTempDB = false,
-        };
-       if (ignoreExisting)
-    {
- config.PropertiesToExcludeOnUpdate = GetDatabaseMappedPropertiesFromMetadata(entityType, dbContext);
-     }
+                BatchSize = 1000,
+                BulkCopyTimeout = 300,
+                SetOutputIdentity = false,
+                PreserveInsertOrder = false,
+                UseTempDB = false,
+            };
+            if (ignoreExisting)
+            {
+                config.PropertiesToExcludeOnUpdate = GetDatabaseMappedPropertiesFromMetadata(entityType, dbContext);
+            }
             return config;
         }
 
         /// <summary>
         /// 从EF Core元数据获取实际映射到数据库的属性名列表
-   /// </summary>
+        /// </summary>
         private static List<string> GetDatabaseMappedPropertiesFromMetadata(Type entityType, DbContext dbContext)
-     {
+        {
             var entityTypeMetadata = dbContext.Model.FindEntityType(entityType);
             if (entityTypeMetadata == null)
-        throw new InvalidOperationException($"找不到实体类型 {entityType.Name} 的EF Core元数据，请确保该实体已配置在DbContext中");
+                throw new InvalidOperationException($"找不到实体类型 {entityType.Name} 的EF Core元数据，请确保该实体已配置在DbContext中");
             return entityTypeMetadata.GetProperties()
      .Where(p => !p.IsShadowProperty())
      .Select(p => p.Name)
@@ -132,17 +132,17 @@ namespace NPOI
         /// 获取泛型BulkInsertFromExcel方法的反射信息
         /// </summary>
         private static MethodInfo GetGenericBulkInsertMethod()
-   {
-    var methods = typeof(OwNpoiDataUnit).GetMethods(BindingFlags.Public | BindingFlags.Static);
-        var targetMethod = methods.FirstOrDefault(m =>
- m.Name == nameof(BulkInsertFromExcel) &&
-m.IsGenericMethodDefinition &&
-                m.GetParameters().Length == 3 &&
-   m.GetParameters()[0].ParameterType == typeof(ISheet) &&
-      m.GetParameters()[1].ParameterType == typeof(DbContext) &&
-         m.GetParameters()[2].ParameterType == typeof(bool));
- return targetMethod ?? throw new InvalidOperationException($"未找到匹配的泛型BulkInsertFromExcel方法");
-   }
+        {
+            var methods = typeof(OwNpoiDbUnit).GetMethods(BindingFlags.Public | BindingFlags.Static);
+            var targetMethod = methods.FirstOrDefault(m =>
+     m.Name == nameof(BulkInsertFromExcel) &&
+    m.IsGenericMethodDefinition &&
+                    m.GetParameters().Length == 3 &&
+       m.GetParameters()[0].ParameterType == typeof(ISheet) &&
+          m.GetParameters()[1].ParameterType == typeof(DbContext) &&
+             m.GetParameters()[2].ParameterType == typeof(bool));
+            return targetMethod ?? throw new InvalidOperationException($"未找到匹配的泛型BulkInsertFromExcel方法");
+        }
 
         /// <summary>
         /// 将字符串数组转换为实体列表
@@ -150,17 +150,17 @@ m.IsGenericMethodDefinition &&
         private static List<TEntity> ConvertToEntities<TEntity>(PooledList<PooledList<string>> allRows, PooledList<string> columnHeaders)
           where TEntity : class, new()
         {
-var entities = new List<TEntity>();
- var propertyMapping = CreatePropertyMapping<TEntity>(columnHeaders);
-       if (propertyMapping.Count == 0)
-       throw new InvalidOperationException($"实体类型{typeof(TEntity).Name}没有找到匹配的属性列");
-       for (int rowIndex = 0; rowIndex < allRows.Count; rowIndex++)
+            var entities = new List<TEntity>();
+            var propertyMapping = CreatePropertyMapping<TEntity>(columnHeaders);
+            if (propertyMapping.Count == 0)
+                throw new InvalidOperationException($"实体类型{typeof(TEntity).Name}没有找到匹配的属性列");
+            for (int rowIndex = 0; rowIndex < allRows.Count; rowIndex++)
             {
- using var currentRow = allRows[rowIndex];
-var entity = CreateEntity<TEntity>(currentRow, propertyMapping);
-           if (entity != null) entities.Add(entity);
-     }
-   return entities;
+                using var currentRow = allRows[rowIndex];
+                var entity = CreateEntity<TEntity>(currentRow, propertyMapping);
+                if (entity != null) entities.Add(entity);
+            }
+            return entities;
         }
 
         /// <summary>
@@ -171,16 +171,16 @@ var entity = CreateEntity<TEntity>(currentRow, propertyMapping);
             var properties = typeof(TEntity).GetProperties(BindingFlags.Public | BindingFlags.Instance)
      .Where(p => p.CanWrite)
              .ToDictionary(p => p.Name, p => p, StringComparer.OrdinalIgnoreCase);
- var mapping = new Dictionary<int, PropertyInfo>();
+            var mapping = new Dictionary<int, PropertyInfo>();
             for (int i = 0; i < columnHeaders.Count; i++)
-        {
-        var columnName = columnHeaders[i]?.Trim();
-         if (!string.IsNullOrEmpty(columnName) && properties.TryGetValue(columnName, out var property))
+            {
+                var columnName = columnHeaders[i]?.Trim();
+                if (!string.IsNullOrEmpty(columnName) && properties.TryGetValue(columnName, out var property))
                 {
                     mapping[i] = property;
-        }
-          }
-     return mapping;
+                }
+            }
+            return mapping;
         }
 
         /// <summary>
@@ -190,19 +190,19 @@ var entity = CreateEntity<TEntity>(currentRow, propertyMapping);
        where TEntity : class, new()
         {
             var entity = new TEntity();
-          bool hasValidData = false;
- foreach (var (columnIndex, property) in propertyMapping)
-  {
+            bool hasValidData = false;
+            foreach (var (columnIndex, property) in propertyMapping)
+            {
                 if (columnIndex >= rowData.Count) continue;
                 var cellValue = rowData[columnIndex];
-     if (string.IsNullOrWhiteSpace(cellValue)) continue;
-    var convertedValue = ConvertStringValue(cellValue, property.PropertyType);
-       if (convertedValue is not null)
-      {
-        property.SetValue(entity, convertedValue);
-    hasValidData = true;
-   }
-  }
+                if (string.IsNullOrWhiteSpace(cellValue)) continue;
+                var convertedValue = ConvertStringValue(cellValue, property.PropertyType);
+                if (convertedValue is not null)
+                {
+                    property.SetValue(entity, convertedValue);
+                    hasValidData = true;
+                }
+            }
             return hasValidData ? entity : null;
         }
 
@@ -210,29 +210,29 @@ var entity = CreateEntity<TEntity>(currentRow, propertyMapping);
         /// 字符串值类型转换
         /// </summary>
         private static object ConvertStringValue(string value, Type targetType)
-    {
-     if (string.IsNullOrWhiteSpace(value)) return null;
-       var actualType = Nullable.GetUnderlyingType(targetType) ?? targetType;
-   return actualType.Name switch
+        {
+            if (string.IsNullOrWhiteSpace(value)) return null;
+            var actualType = Nullable.GetUnderlyingType(targetType) ?? targetType;
+            return actualType.Name switch
             {
                 nameof(String) => value.Trim(),
-             nameof(Guid) => Guid.TryParse(value, out var guid) ? guid : null,
-            nameof(DateTime) => DateTime.TryParse(value, out var dateTime) ? dateTime : null,
-          nameof(Boolean) => ParseBooleanValue(value),
-      _ when actualType.IsEnum => Enum.TryParse(actualType, value, true, out var enumValue) ? enumValue : null,
-          _ => Convert.ChangeType(value, actualType)
-         };
+                nameof(Guid) => Guid.TryParse(value, out var guid) ? guid : null,
+                nameof(DateTime) => DateTime.TryParse(value, out var dateTime) ? dateTime : null,
+                nameof(Boolean) => ParseBooleanValue(value),
+                _ when actualType.IsEnum => Enum.TryParse(actualType, value, true, out var enumValue) ? enumValue : null,
+                _ => Convert.ChangeType(value, actualType)
+            };
         }
 
         /// <summary>
         /// 解析布尔值，支持中文和多种格式
         /// </summary>
-    private static bool ParseBooleanValue(string value)
+        private static bool ParseBooleanValue(string value)
         {
-   if (bool.TryParse(value, out var boolValue)) return boolValue;
-    var lowerValue = value.ToLower().Trim();
-      return lowerValue is "是" or "true" or "1" or "yes";
-      }
+            if (bool.TryParse(value, out var boolValue)) return boolValue;
+            var lowerValue = value.ToLower().Trim();
+            return lowerValue is "是" or "true" or "1" or "yes";
+        }
 
         #endregion
     }
