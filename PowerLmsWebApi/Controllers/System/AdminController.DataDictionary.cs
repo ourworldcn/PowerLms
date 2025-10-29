@@ -204,7 +204,7 @@ namespace PowerLmsWebApi.Controllers.System
                     {
                         _DbContext.TruncateTable(nameof(_DbContext.Multilinguals));
                         // 使用 OwNpoiDataUnit.BulkInsertFromExcel 替代 OwDataUnit.BulkInsert
-                        var count = OwNpoiDataUnit.BulkInsertFromExcel<Multilingual>(
+                        var count = OwNpoiDbUnit.BulkInsertFromExcel<Multilingual>(
                             sheet, _DbContext, ignoreExisting: true);
                         _Logger?.LogInformation("成功导入多语言数据：{count}条记录", count);
                         _DbContext.SaveChanges();
