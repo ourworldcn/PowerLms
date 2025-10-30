@@ -25,7 +25,7 @@ namespace System.Collections.Generic
     /// <item><description>并发修改检测 - 枚举期间检测集合修改，抛出异常</description></item>
     /// </list>
     /// 
-    /// 性能优势：
+    /// 性能优势:
     /// <list type="number">
     /// <item><description>减少 GC 压力 - 复用 ArrayPool 中的数组</description></item>
     /// <item><description>避免 LOH 分配 - 大数组复用避免进入大对象堆</description></item>
@@ -35,47 +35,54 @@ namespace System.Collections.Generic
     /// 线程安全：
     /// <para>
     /// 此类型<b>不是线程安全的</b>。如果需要从多个线程访问，必须提供外部同步。
-    /// 枚举期间会检测并发修改，如果检测到集合被修改，会抛出 <see cref="InvalidOperationException"/>。
+    /// </para>
+    /// <para>
+    /// <b>Fail-Fast 机制</b>：版本号使用 <c>volatile</c> 修饰，确保并发修改能被枚举线程<b>尽快检测到</b>。
+    /// 当检测到集合在枚举期间被修改时，会立即抛出 <see cref="InvalidOperationException"/>。
+    /// 注意：这不能防止数据竞争或保证线程安全，仅用于快速暴露并发使用问题。
+    /// </para>
+    /// <para>
+    /// 多线程使用时，必须使用 <c>lock</c> 或其他同步机制保护所有操作，
+    /// 或改用线程安全集合如 <see cref="System.Collections.Concurrent.ConcurrentBag{T}"/>。
     /// </para>
     /// </remarks>
     public class PooledListBase<T> : IList<T>, IDisposable
     {
-        /// <summary>内部缓冲区数组</summary>
         private T[] _Buffer;
+        private int _Count;
+        private bool _isDisposed;
+        private volatile int _version;
+        private const int DefaultCapacity = 8;
+
+        #region 属性
 
         /// <summary>
         /// 获取内部缓冲区的引用。
         /// </summary>
-        /// <remarks>
-        /// 提供给派生类访问底层数组的能力，用于高级操作。
-        /// 注意：不要在 Count 之外的索引访问元素。
-        /// </remarks>
         protected T[] Buffer => _Buffer;
 
-        /// <summary>当前元素数量</summary>
-        private int _Count;
-
-        /// <summary>资源是否已释放标志</summary>
-        private bool _isDisposed;
+        /// <summary>
+        /// 获取或设置列表中实际包含的元素数。
+        /// </summary>
+        public int Count => _Count;
 
         /// <summary>
-        /// 版本号，用于检测并发修改。
-        /// 每次修改集合（添加、删除、清空等）时原子递增。
-        /// 使用 Interlocked 操作确保多线程环境下的原子性和可见性。
+        /// 获取一个值，该值指示列表是否为只读。
         /// </summary>
-        private int _version;
+        public bool IsReadOnly => false;
 
-        /// <summary>默认初始容量</summary>
-        private const int DefaultCapacity = 8;
+        /// <summary>
+        /// 获取列表的容量。
+        /// </summary>
+        public int Capacity => _Buffer.Length;
+
+        #endregion
 
         #region 构造函数
+
         /// <summary>
-        /// 初始化 <see cref="PooledListBase{T}"/> 类的新实例，使用默认容量。
+        /// 初始化列表的新实例，使用默认容量。
         /// </summary>
-        /// <remarks>
-        /// 默认容量为 8，与 <see cref="List{T}"/> 保持一致。
-        /// 数组从 <see cref="ArrayPool{T}.Shared"/> 租用。
-        /// </remarks>
         public PooledListBase()
         {
             _Buffer = ArrayPool<T>.Shared.Rent(DefaultCapacity);
@@ -83,74 +90,42 @@ namespace System.Collections.Generic
         }
 
         /// <summary>
-        /// 初始化 <see cref="PooledListBase{T}"/> 类的新实例，具有指定的初始容量。
+        /// 初始化列表的新实例，具有指定的初始容量。
         /// </summary>
-        /// <param name="capacity">新列表最初可以存储的元素数</param>
+        /// <param name="capacity">新列表最初可以存储的元素数，小于8则视同为8.</param>
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="capacity"/> 小于 0</exception>
-        /// <remarks>
-        /// 如果 <paramref name="capacity"/> 为 0，使用空数组以避免不必要的池分配。
-        /// 否则从 ArrayPool 租用至少能容纳指定数量元素的数组。
-        /// </remarks>
         public PooledListBase(int capacity)
         {
             if (capacity < 0)
                 throw new ArgumentOutOfRangeException(nameof(capacity), "容量不能为负数");
-            _Buffer = capacity == 0 ? Array.Empty<T>() : ArrayPool<T>.Shared.Rent(capacity);
+            _Buffer = capacity < 8 ? ArrayPool<T>.Shared.Rent(8) : ArrayPool<T>.Shared.Rent(capacity);
             _Count = 0;
         }
 
         /// <summary>
-        /// 初始化 <see cref="PooledListBase{T}"/> 类的新实例，包含从指定集合复制的元素。
+        /// 初始化列表的新实例，包含从指定集合复制的元素。
         /// </summary>
         /// <param name="collection">一个集合，其元素被复制到新列表中</param>
         /// <exception cref="ArgumentNullException"><paramref name="collection"/> 为 null</exception>
-        /// <remarks>
-        /// 初始容量设置为默认值，然后通过 <see cref="AddRange"/> 添加元素。
-        /// 如果集合实现了 <see cref="ICollection{T}"/>，将使用优化的批量复制。
-        /// </remarks>
         public PooledListBase(IEnumerable<T> collection)
         {
             ArgumentNullException.ThrowIfNull(collection);
-            _Buffer = ArrayPool<T>.Shared.Rent(DefaultCapacity);
+            int capacity = collection is ICollection<T> c ? c.Count : DefaultCapacity;
+            _Buffer = capacity < 8 ? ArrayPool<T>.Shared.Rent(8) : ArrayPool<T>.Shared.Rent(capacity);
             _Count = 0;
             AddRange(collection);
         }
+
         #endregion
 
         #region IList<T> 接口实现
-
-        /// <summary>
-        /// 获取列表中实际包含的元素数。
-        /// </summary>
-        /// <value>列表中实际包含的元素数</value>
-        /// <remarks>
-        /// 内部设置器允许派生类直接修改计数，用于高级操作。
-        /// 注意：直接修改计数可能导致不一致状态，需谨慎使用。
-        /// </remarks>
-        public int Count
-        {
-            get => _Count;
-            internal set => _Count = value;
-        }
-
-        /// <summary>
-        /// 获取一个值，该值指示 <see cref="PooledListBase{T}"/> 是否为只读。
-        /// </summary>
-        /// <value>始终返回 false</value>
-        public bool IsReadOnly => false;
 
         /// <summary>
         /// 获取或设置指定索引处的元素。
         /// </summary>
         /// <param name="index">要获取或设置的元素的从零开始的索引</param>
         /// <returns>指定索引处的元素</returns>
-        /// <exception cref="ArgumentOutOfRangeException">
-        /// <paramref name="index"/> 小于 0 或大于等于 <see cref="Count"/>
-        /// </exception>
-        /// <remarks>
-        /// 此属性使用 <see cref="MethodImplOptions.AggressiveInlining"/> 优化，
-        /// 以获得接近数组访问的性能。边界检查使用无符号比较优化。
-        /// </remarks>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="index"/> 小于 0 或大于等于 <see cref="Count"/></exception>
         public T this[int index]
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -170,17 +145,23 @@ namespace System.Collections.Generic
         }
 
         /// <summary>
-        /// 将对象添加到 <see cref="PooledListBase{T}"/> 的结尾处。
+        /// 确定列表中特定项的索引。
         /// </summary>
-        /// <param name="item">要添加的对象，对于引用类型可以为 null</param>
-        /// <remarks>
-        /// 此方法是热路径，使用快慢路径分离优化：
-        /// <list type="bullet">
-        /// <item><description>快速路径：容量足够时直接添加（已内联）</description></item>
-        /// <item><description>慢速路径：需要扩容时调用非内联方法</description></item>
-        /// </list>
-        /// 时间复杂度：摊销 O(1)
-        /// </remarks>
+        /// <param name="item">要在列表中查找的对象</param>
+        /// <returns>如果在列表中找到 <paramref name="item"/>，则为该项的从零开始的索引；否则为 -1</returns>
+        public int IndexOf(T item) => Array.IndexOf(_Buffer, item, 0, _Count);
+
+        /// <summary>
+        /// 确定列表是否包含特定值。
+        /// </summary>
+        /// <param name="item">要在列表中查找的对象</param>
+        /// <returns>如果在列表中找到 <paramref name="item"/>，则为 true；否则为 false</returns>
+        public bool Contains(T item) => IndexOf(item) >= 0;
+
+        /// <summary>
+        /// 将对象添加到列表的结尾处。
+        /// </summary>
+        /// <param name="item">要添加到列表末尾的对象</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Add(T item)
         {
@@ -190,7 +171,7 @@ namespace System.Collections.Generic
             {
                 buffer[count] = item;
                 _Count = count + 1;
-                Interlocked.Increment(ref _version);
+                _version++;
             }
             else
             {
@@ -198,60 +179,37 @@ namespace System.Collections.Generic
             }
         }
 
-        /// <summary>
-        /// 在需要扩容时添加元素（慢速路径）。
-        /// </summary>
-        /// <param name="item">要添加的元素</param>
-        /// <remarks>
-        /// 使用 <see cref="MethodImplOptions.NoInlining"/> 避免膨胀快速路径的代码。
-        /// 此方法处理扩容和添加元素的完整逻辑。
-        /// </remarks>
         [MethodImpl(MethodImplOptions.NoInlining)]
         private void AddWithResize(T item)
         {
             EnsureCapacity(_Count + 1);
             _Buffer[_Count++] = item;
-            Interlocked.Increment(ref _version);
+            _version++;
         }
 
         /// <summary>
-        /// 将元素插入 <see cref="PooledListBase{T}"/> 的指定索引处。
+        /// 将元素插入列表的指定索引处。
         /// </summary>
         /// <param name="index">应插入 <paramref name="item"/> 的从零开始的索引</param>
-        /// <param name="item">要插入的对象，对于引用类型可以为 null</param>
-        /// <exception cref="ArgumentOutOfRangeException">
-        /// <paramref name="index"/> 小于 0 或大于 <see cref="Count"/>
-        /// </exception>
-        /// <remarks>
-        /// 如果需要，会自动扩容。
-        /// 索引之后的元素会向后移动一个位置。
-        /// 时间复杂度：O(n)，其中 n 是 Count - index
-        /// </remarks>
+        /// <param name="item">要插入的对象</param>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="index"/> 小于 0 或大于 <see cref="Count"/></exception>
         public void Insert(int index, T item)
         {
             if ((uint)index > (uint)_Count)
                 throw new ArgumentOutOfRangeException(nameof(index));
-            if (_Count == _Buffer.Length)
-                EnsureCapacity(_Count + 1);
+            EnsureCapacity(_Count + 1);
             if (index < _Count)
-                Array.Copy(_Buffer, index, _Buffer, index + 1, _Count - index);
+                _Buffer.AsSpan(index, _Count - index).CopyTo(_Buffer.AsSpan(index + 1));
             _Buffer[index] = item;
             _Count++;
-            Interlocked.Increment(ref _version);
+            _version++;
         }
 
         /// <summary>
-        /// 从 <see cref="PooledListBase{T}"/> 中移除特定对象的第一个匹配项。
+        /// 从列表中移除特定对象的第一个匹配项。
         /// </summary>
-        /// <param name="item">要从 <see cref="PooledListBase{T}"/> 中移除的对象</param>
-        /// <returns>
-        /// 如果成功移除 <paramref name="item"/>，则为 true；
-        /// 否则为 false。如果在原始 <see cref="PooledListBase{T}"/> 中没有找到 <paramref name="item"/>，该值也为 false
-        /// </returns>
-        /// <remarks>
-        /// 使用 <see cref="IndexOf"/> 查找元素，然后调用 <see cref="RemoveAt"/> 移除。
-        /// 时间复杂度：O(n)
-        /// </remarks>
+        /// <param name="item">要从列表中移除的对象</param>
+        /// <returns>如果成功移除 <paramref name="item"/>，则为 true；否则为 false。如果在列表中没有找到 <paramref name="item"/>，此方法也会返回 false</returns>
         public bool Remove(T item)
         {
             int index = IndexOf(item);
@@ -264,154 +222,89 @@ namespace System.Collections.Generic
         }
 
         /// <summary>
-        /// 移除 <see cref="PooledListBase{T}"/> 的指定索引处的元素。
+        /// 移除列表的指定索引处的元素。
         /// </summary>
         /// <param name="index">要移除的元素的从零开始的索引</param>
-        /// <exception cref="ArgumentOutOfRangeException">
-        /// <paramref name="index"/> 小于 0 或大于等于 <see cref="Count"/>
-        /// </exception>
-        /// <remarks>
-        /// 索引之后的元素会向前移动一个位置。
-        /// 如果 T 是引用类型或包含引用，会自动清理最后一个槽位以防止内存泄漏。
-        /// 时间复杂度：O(n)，其中 n 是 Count - index
-        /// </remarks>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="index"/> 小于 0 或大于等于 <see cref="Count"/></exception>
         public void RemoveAt(int index)
         {
             if ((uint)index >= (uint)_Count)
                 throw new ArgumentOutOfRangeException(nameof(index));
             _Count--;
             if (index < _Count)
-                Array.Copy(_Buffer, index + 1, _Buffer, index, _Count - index);
+                _Buffer.AsSpan(index + 1, _Count - index).CopyTo(_Buffer.AsSpan(index));
             if (RuntimeHelpers.IsReferenceOrContainsReferences<T>())
                 _Buffer[_Count] = default;
-            Interlocked.Increment(ref _version);
+            _version++;
         }
 
         /// <summary>
-        /// 从 <see cref="PooledListBase{T}"/> 中移除所有元素。
+        /// 从列表中移除所有元素。
         /// </summary>
         /// <remarks>
-        /// 如果 T 是引用类型或包含引用，会清理所有槽位以防止内存泄漏。
-        /// 不会归还数组到池，以便后续重用。
-        /// 时间复杂度：O(n) 如果需要清理，否则 O(1)
+        /// <para><see cref="Count"/> 被设置为 0，并且释放对其他对象的引用。</para>
+        /// <para>对于引用类型或包含引用的值类型，会自动清理内部数组以避免内存泄漏。</para>
         /// </remarks>
         public void Clear()
         {
             int count = _Count;
             _Count = 0;
+            _version++;
             if (RuntimeHelpers.IsReferenceOrContainsReferences<T>() && count > 0)
                 Array.Clear(_Buffer, 0, count);
-            Interlocked.Increment(ref _version);
         }
 
         /// <summary>
-        /// 确定 <see cref="PooledListBase{T}"/> 中特定项的索引。
+        /// 从特定的索引开始，将列表的元素复制到数组中。
         /// </summary>
-        /// <param name="item">要在 <see cref="PooledListBase{T}"/> 中定位的对象</param>
-        /// <returns>
-        /// 如果在列表中找到 <paramref name="item"/>，则为该项的从零开始的索引；
-        /// 否则为 -1
-        /// </returns>
-        /// <remarks>
-        /// 使用默认相等比较器比较元素。
-        /// 时间复杂度：O(n)
-        /// </remarks>
-        public int IndexOf(T item) => Array.IndexOf(_Buffer, item, 0, _Count);
-
-        /// <summary>
-        /// 确定 <see cref="PooledListBase{T}"/> 是否包含特定值。
-        /// </summary>
-        /// <param name="item">要在 <see cref="PooledListBase{T}"/> 中定位的对象</param>
-        /// <returns>
-        /// 如果在 <see cref="PooledListBase{T}"/> 中找到 <paramref name="item"/>，则为 true；
-        /// 否则为 false
-        /// </returns>
-        /// <remarks>
-        /// 内部调用 <see cref="IndexOf"/> 实现。
-        /// 时间复杂度：O(n)
-        /// </remarks>
-        public bool Contains(T item) => IndexOf(item) >= 0;
-
-        /// <summary>
-        /// 从特定的 <see cref="Array"/> 索引开始，将 <see cref="PooledListBase{T}"/> 的元素复制到一个 <see cref="Array"/> 中。
-        /// </summary>
-        /// <param name="array">
-        /// 一维 <see cref="Array"/>，它是从 <see cref="PooledListBase{T}"/> 复制的元素的目标。
-        /// <see cref="Array"/> 必须具有从零开始的索引
-        /// </param>
-        /// <param name="arrayIndex">
-        /// <paramref name="array"/> 中从零开始的索引，从此处开始复制
-        /// </param>
+        /// <param name="array">作为从列表复制的元素的目标位置的一维数组</param>
+        /// <param name="arrayIndex"><paramref name="array"/> 中从零开始的索引，从此处开始复制</param>
         /// <exception cref="ArgumentNullException"><paramref name="array"/> 为 null</exception>
-        /// <exception cref="ArgumentOutOfRangeException">
-        /// <paramref name="arrayIndex"/> 小于 0 或目标数组空间不足
-        /// </exception>
-        /// <remarks>
-        /// 使用 <see cref="Array.Copy"/> 进行高效的批量复制。
-        /// 时间复杂度：O(n)
-        /// </remarks>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="arrayIndex"/> 小于 0 或大于 <paramref name="array"/> 的长度减去 <see cref="Count"/></exception>
         public void CopyTo(T[] array, int arrayIndex)
         {
-            if (array == null)
-                throw new ArgumentNullException(nameof(array));
+            ArgumentNullException.ThrowIfNull(array);
             if (arrayIndex < 0 || arrayIndex > array.Length - _Count)
                 throw new ArgumentOutOfRangeException(nameof(arrayIndex));
-            Array.Copy(_Buffer, 0, array, arrayIndex, _Count);
+            _Buffer.AsSpan(0, _Count).CopyTo(array.AsSpan(arrayIndex));
         }
 
         /// <summary>
-        /// 返回循环访问 <see cref="PooledListBase{T}"/> 的枚举器（结构体版本）。
+        /// 返回循环访问列表的枚举器（结构体版本）。
         /// </summary>
-        /// <returns>用于 <see cref="PooledListBase{T}"/> 的 <see cref="Enumerator"/></returns>
+        /// <returns>用于循环访问列表的 <see cref="Enumerator"/></returns>
         /// <remarks>
-        /// 返回结构体枚举器避免装箱开销，提供最佳性能。
-        /// 枚举器在创建时捕获列表快照，不会检测并发修改。
+        /// 此方法返回结构体枚举器，避免了堆分配，提供更好的性能。
         /// </remarks>
         public Enumerator GetEnumerator() => new Enumerator(this);
 
         /// <summary>
-        /// 返回循环访问集合的枚举器（IEnumerator&lt;T&gt; 接口实现）。
+        /// 返回循环访问集合的枚举器。
         /// </summary>
-        /// <returns>可用于循环访问集合的枚举器</returns>
+        /// <returns>可用于循环访问集合的 <see cref="IEnumerator{T}"/></returns>
         IEnumerator<T> IEnumerable<T>.GetEnumerator() => GetEnumerator();
 
         /// <summary>
-        /// 返回循环访问集合的枚举器（非泛型接口实现）。
+        /// 返回循环访问集合的枚举器。
         /// </summary>
-        /// <returns>可用于循环访问集合的枚举器</returns>
+        /// <returns>可用于循环访问集合的 <see cref="IEnumerator"/></returns>
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
         #endregion
 
-        #region 性能优化核心
-        /// <summary>
-        /// 获取 <see cref="PooledListBase{T}"/> 实际包含的元素数可以在不调整大小的情况下包含的元素总数。
-        /// </summary>
-        /// <value>
-        /// <see cref="PooledListBase{T}"/> 在需要调整大小之前可以包含的元素数
-        /// </value>
-        /// <remarks>
-        /// 容量总是大于等于 <see cref="Count"/>。
-        /// 由于使用 ArrayPool，实际容量可能大于请求的容量。
-        /// </remarks>
-        public int Capacity => _Buffer.Length;
+        #region 性能优化方法
 
         /// <summary>
-        /// 将指定集合的元素添加到 <see cref="PooledListBase{T}"/> 的末尾。
+        /// 将指定集合的元素添加到列表的末尾。
         /// </summary>
-        /// <param name="collection">
-        /// 一个集合，其元素应被添加到 <see cref="PooledListBase{T}"/> 的末尾。
-        /// 集合本身不能为 null，但它可以包含为 null 的元素（如果类型 T 为引用类型）
-        /// </param>
+        /// <param name="collection">要添加其元素的集合</param>
         /// <exception cref="ArgumentNullException"><paramref name="collection"/> 为 null</exception>
         /// <remarks>
-        /// 优化实现：
+        /// 性能优化：
         /// <list type="bullet">
-        /// <item><description>对于 T[] 数组：使用 Span 复制</description></item>
-        /// <item><description>对于 List&lt;T&gt;：使用 CollectionsMarshal.AsSpan 零复制访问</description></item>
-        /// <item><description>对于其他 ICollection&lt;T&gt;：使用 CopyTo 批量复制</description></item>
-        /// <item><description>对于 IEnumerable&lt;T&gt;：逐个添加元素</description></item>
+        /// <item><description>如果集合实现了 ICollection&lt;T&gt;，使用高性能批量复制</description></item>
+        /// <item><description>否则逐个添加元素，利用 Add 方法的内联优化</description></item>
         /// </list>
-        /// 时间复杂度：O(n)，其中 n 是集合元素数量
         /// </remarks>
         public void AddRange(IEnumerable<T> collection)
         {
@@ -419,26 +312,10 @@ namespace System.Collections.Generic
             if (collection is ICollection<T> c)
             {
                 int count = c.Count;
-                if (count > 0)
-                {
-                    EnsureCapacity(_Count + count);
-                    if (collection is T[] array)
-                    {
-                        var source = new ReadOnlySpan<T>(array);
-                        var dest = new Span<T>(_Buffer, _Count, count);
-                        source.CopyTo(dest);
-                    }
-                    else if (collection is List<T> list)
-                    {
-                        CollectionsMarshal.AsSpan(list).CopyTo(new Span<T>(_Buffer, _Count, count));
-                    }
-                    else
-                    {
-                        c.CopyTo(_Buffer, _Count);
-                    }
-                    _Count += count;
-                    Interlocked.Increment(ref _version);
-                }
+                EnsureCapacity(_Count + count);
+                collection.FastCopyTo(_Buffer, _Count);
+                _Count += count;
+                _version++;
             }
             else
             {
@@ -448,12 +325,43 @@ namespace System.Collections.Generic
         }
 
         /// <summary>
+        /// 从列表中移除指定范围的元素。
+        /// </summary>
+        /// <param name="index">要移除的元素范围的起始索引</param>
+        /// <param name="count">要移除的元素数</param>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// <paramref name="index"/> 小于 0 或大于等于 <see cref="Count"/>
+        /// 或 <paramref name="count"/> 小于 0
+        /// 或 <paramref name="index"/> + <paramref name="count"/> 大于 <see cref="Count"/>
+        /// </exception>
+        public void RemoveRange(int index, int count)
+        {
+            if ((uint)index >= (uint)Count)
+                throw new ArgumentOutOfRangeException(nameof(index));
+            if (count < 0 || index + count > Count)
+                throw new ArgumentOutOfRangeException(nameof(count));
+            if (count == 0)
+                return;
+            int remainingCount = Count - (index + count);
+            if (remainingCount > 0)
+            {
+                _Buffer.AsSpan(index + count, remainingCount).CopyTo(_Buffer.AsSpan(index));
+            }
+            _Count -= count;
+            if (RuntimeHelpers.IsReferenceOrContainsReferences<T>())
+            {
+                Array.Clear(_Buffer, _Count, count);
+            }
+            _version++;
+        }
+
+        /// <summary>
         /// 确保容量至少为指定的最小值。
         /// </summary>
         /// <param name="min">所需的最小容量</param>
         /// <remarks>
-        /// 如果当前容量小于 <paramref name="min"/>，容量会增加。
-        /// 使用内联优化快速路径（容量足够时）。
+        /// 仅当当前容量不足时才会触发扩容操作。
+        /// 扩容策略由 <see cref="GrowCapacity"/> 方法实现。
         /// </remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected void EnsureCapacity(int min)
@@ -463,59 +371,45 @@ namespace System.Collections.Generic
         }
 
         /// <summary>
-        /// 增加容量以容纳至少指定数量的元素（慢速路径）。
+        /// 扩展数组容量。采用 ArrayPool 的智能分配策略。
+        /// ArrayPool 会自动将容量向上调整到最近的2的幂（如16, 32, 64, 128...），
+        /// 从而实现高效的倍增策略和内存池复用。
         /// </summary>
         /// <param name="min">所需的最小容量</param>
         /// <remarks>
-        /// 增长策略：
-        /// <list type="number">
-        /// <item><description>容量翻倍（或使用 DefaultCapacity 如果当前为空）</description></item>
-        /// <item><description>不超过 Array.MaxLength</description></item>
-        /// <item><description>至少满足 min 要求</description></item>
-        /// </list>
-        /// 
-        /// 性能优化：
+        /// ArrayPool 内部优化：
         /// <list type="bullet">
-        /// <item><description>使用 Span.CopyTo 自动利用硬件加速（SIMD）</description></item>
-        /// <item><description>.NET 运行时会根据类型和数据量自动选择最优复制策略</description></item>
-        /// <item><description>ArrayPool 自动对齐到最优桶大小（通常为2的幂）</description></item>
+        /// <item><description>自动向上取到2的幂（如101→128, 600→1024）</description></item>
+        /// <item><description>维护多个大小桶，提高复用率</description></item>
+        /// <item><description>避免频繁分配，减少内存碎片</description></item>
+        /// <item><description>大数组自动进入合适的池桶，避免LOH碎片</description></item>
         /// </list>
-        /// 
-        /// 旧数组自动归还到 ArrayPool。
         /// </remarks>
         [MethodImpl(MethodImplOptions.NoInlining)]
         private void GrowCapacity(int min)
         {
-            int newCapacity = _Buffer.Length == 0 ? DefaultCapacity : _Buffer.Length * 2;
-            if ((uint)newCapacity > Array.MaxLength)
-                newCapacity = Array.MaxLength;
-            if (newCapacity < min)
-                newCapacity = min;
+            int newCapacity = Math.Max(DefaultCapacity, min);
             var newItems = ArrayPool<T>.Shared.Rent(newCapacity);
             if (_Count > 0)
             {
-                new ReadOnlySpan<T>(_Buffer, 0, _Count).CopyTo(new Span<T>(newItems, 0, _Count));
+                _Buffer.AsSpan(0, _Count).CopyTo(newItems.AsSpan());
             }
             ReturnPooledArray(ref _Buffer);
             _Buffer = newItems;
         }
 
         /// <summary>
-        /// 将数组归还到 ArrayPool，并替换为空数组。
+        /// 归还数组到 ArrayPool。使用 Interlocked 确保线程安全。
         /// </summary>
         /// <typeparam name="TElement">数组元素类型</typeparam>
-        /// <param name="array">要归还的数组引用</param>
+        /// <param name="array">要归还的数组引用，归还后会被替换为空数组</param>
         /// <remarks>
-        /// 优化策略：
+        /// 安全特性：
         /// <list type="bullet">
-        /// <item><description>使用 Interlocked.Exchange 原子替换，确保线程安全</description></item>
-        /// <item><description>值类型跳过清理（clearArray: false），提升性能约 50μs/100KB</description></item>
-        /// <item><description>引用类型必须清理（clearArray: true），防止内存泄漏</description></item>
-        /// <item><description>捕获异常防止池错误影响程序稳定性</description></item>
+        /// <item><description>使用 Interlocked.Exchange 保证原子操作</description></item>
+        /// <item><description>引用类型数组会被清空，避免内存泄漏</description></item>
+        /// <item><description>捕获异常，防止归还失败影响主逻辑</description></item>
         /// </list>
-        /// 
-        /// 性能提升：
-        /// 对于值类型（如 byte, int），跳过清理可节省约 50μs/100KB 的开销。
         /// </remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void ReturnPooledArray<TElement>(ref TElement[] array)
@@ -533,177 +427,153 @@ namespace System.Collections.Generic
                 Debug.WriteLine($"归还数组到 ArrayPool 时出错: {ex.Message}");
             }
         }
+
         #endregion
 
-        #region IDisposable
-        /// <summary>
-        /// 执行与释放或重置非托管资源关联的应用程序定义的任务。
-        /// </summary>
-        /// <remarks>
-        /// 释放时会将内部数组归还到 ArrayPool。
-        /// 建议使用 using 语句确保及时释放：
-        /// <code>
-        /// using var list = new PooledList&lt;int&gt;();
-        /// // 使用列表...
-        /// // 退出 using 块时自动释放
-        /// </code>
-        /// </remarks>
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
+        #region 容量管理
 
         /// <summary>
-        /// 释放由 <see cref="PooledListBase{T}"/> 占用的非托管资源，还可以另外再释放托管资源。
+        /// 将容量设置为列表中的实际元素数目（如果该数目小于当前容量）。
         /// </summary>
-        /// <param name="disposing">
-        /// 如果为 true，则释放托管资源和非托管资源；
-        /// 如果为 false，则仅释放非托管资源
-        /// </param>
         /// <remarks>
-        /// 派生类可以重写此方法以释放额外的资源。
-        /// 使用 _isDisposed 标志防止重复释放。
+        /// <para>此方法可用于最小化集合的内存开销。</para>
+        /// <para>行为说明：</para>
+        /// <list type="bullet">
+        /// <item><description>空列表：归还当前缓冲区，恢复到默认容量</description></item>
+        /// <item><description>如果 ArrayPool 返回的数组不比当前小，则不进行收缩</description></item>
+        /// <item><description>成功收缩后，归还旧缓冲区到 ArrayPool</description></item>
+        /// </list>
+        /// <para>适用场景：批量操作后释放多余内存。</para>
+        /// <para>注意：此操作会使当前正在进行的枚举失效。</para>
         /// </remarks>
-        protected virtual void Dispose(bool disposing)
+        public void TrimExcess()
         {
-            if (!_isDisposed)
+            if (_Count == 0)
             {
-                if (disposing)
+                if (_Buffer.Length > DefaultCapacity)
+                {
                     ReturnPooledArray(ref _Buffer);
-                _isDisposed = true;
+                    _Buffer = ArrayPool<T>.Shared.Rent(DefaultCapacity);
+                    _version++;
+                }
+                return;
             }
+            var buffTmp = ArrayPool<T>.Shared.Rent(_Count);
+            if (buffTmp.Length >= _Buffer.Length)
+            {
+                ArrayPool<T>.Shared.Return(buffTmp, false);
+                return;
+            }
+            _Buffer.AsSpan(0, _Count).CopyTo(buffTmp);
+            ReturnPooledArray(ref _Buffer);
+            _Buffer = buffTmp;
+            _version++;
         }
         #endregion
 
         #region 结构体枚举器
+
         /// <summary>
-        /// 枚举 <see cref="PooledListBase{T}"/> 的元素（结构体实现）。
+        /// 枚举列表的元素（结构体实现，避免装箱开销）。
         /// </summary>
         /// <remarks>
-        /// 结构体枚举器优势：
+        /// 性能优化：
         /// <list type="bullet">
-        /// <item><description>避免装箱分配，减少 GC 压力</description></item>
-        /// <item><description>枚举性能提升 3-5 倍</description></item>
-        /// <item><description>内联优化 MoveNext 提供最佳性能</description></item>
+        /// <item><description>结构体实现，foreach 时不会装箱分配</description></item>
+        /// <item><description>直接访问内部缓冲区，无额外开销</description></item>
+        /// <item><description>版本检测，枚举期间集合修改会抛出异常</description></item>
         /// </list>
-        /// 
-        /// 并发修改检测：
-        /// <para>
-        /// 枚举器在创建时捕获列表的版本号。
-        /// 如果在枚举期间列表被修改（添加、删除、清空等），版本号会改变，
-        /// <see cref="MoveNext"/> 会抛出 <see cref="InvalidOperationException"/>。
-        /// </para>
-        /// 
-        /// 注意：
-        /// <para>
-        /// 此检测<b>不是线程安全的</b>，仅用于检测明显的编程错误。
-        /// 多线程环境下必须提供外部同步机制。
-        /// </para>
         /// </remarks>
         public struct Enumerator : IEnumerator<T>
         {
-            /// <summary>内部缓冲区快照</summary>
-            private readonly T[] _buffer;
-
-            /// <summary>元素数量快照</summary>
-            private readonly int _count;
-
-            /// <summary>当前索引位置</summary>
-            private int _index;
-
-            /// <summary>枚举器创建时的版本号</summary>
-            private readonly int _version;
-
-            /// <summary>列表引用，用于版本检查</summary>
             private readonly PooledListBase<T> _list;
+            private readonly int _version;
+            private int _index;
+            private T _current;
 
             /// <summary>
-            /// 初始化枚举器。
+            /// 初始化枚举器实例。
             /// </summary>
             /// <param name="list">要枚举的列表</param>
             internal Enumerator(PooledListBase<T> list)
             {
                 _list = list;
-                _buffer = list._Buffer;
-                _count = list._Count;
                 _version = list._version;
-                _index = -1;
+                _index = 0;
+                _current = default;
             }
 
             /// <summary>
-            /// 获取集合中位于枚举器当前位置的元素。
+            /// 获取枚举器当前位置的元素。
             /// </summary>
-            /// <value>集合中位于枚举器当前位置的元素</value>
-            /// <exception cref="InvalidOperationException">
-            /// 枚举已结束，或集合在枚举期间被修改
-            /// </exception>
-            public T Current
-            {
-                get
-                {
-                    if (_index < 0 || _index >= _count)
-                        throw new InvalidOperationException("枚举已结束");
-                    return _buffer[_index];
-                }
-            }
+            public T Current => _current;
 
             /// <summary>
-            /// 获取集合中的当前元素（非泛型接口实现）。
+            /// 获取枚举器当前位置的元素（非泛型版本）。
             /// </summary>
-            /// <value>集合中的当前元素</value>
             object IEnumerator.Current => Current;
 
             /// <summary>
-            /// 使枚举器前进到集合的下一个元素。
+            /// 将枚举器推进到集合的下一个元素。
             /// </summary>
-            /// <returns>
-            /// 如果枚举器已成功地推进到下一个元素，则为 true；
-            /// 如果枚举器传递到集合的末尾，则为 false
-            /// </returns>
-            /// <exception cref="InvalidOperationException">
-            /// 集合在枚举期间被修改
-            /// </exception>
-            /// <remarks>
-            /// 使用内联优化，提供接近手写循环的性能。
-            /// 每次调用都会检查版本号，确保集合未被修改。
-            /// 使用 Volatile.Read 确保读取到最新的版本号。
-            /// </remarks>
+            /// <returns>如果枚举器成功推进到下一个元素，则为 true；如果枚举器传递到集合的末尾，则为 false</returns>
+            /// <exception cref="InvalidOperationException">集合在枚举期间被修改</exception>
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool MoveNext()
             {
-                if (_version != Volatile.Read(ref _list._version))
+                if (_version != _list._version)
                     throw new InvalidOperationException("集合在枚举期间被修改");
-                int index = _index + 1;
-                if (index < _count)
+                if ((uint)_index < (uint)_list._Count)
                 {
-                    _index = index;
+                    _current = _list._Buffer[_index];
+                    _index++;
                     return true;
                 }
+                _index = _list._Count + 1;
+                _current = default;
                 return false;
             }
 
             /// <summary>
             /// 将枚举器设置为其初始位置，该位置位于集合中第一个元素之前。
             /// </summary>
-            /// <exception cref="InvalidOperationException">
-            /// 集合在枚举期间被修改
-            /// </exception>
+            /// <exception cref="InvalidOperationException">集合在枚举期间被修改</exception>
             public void Reset()
             {
-                if (_version != Volatile.Read(ref _list._version))
+                if (_version != _list._version)
                     throw new InvalidOperationException("集合在枚举期间被修改");
-                _index = -1;
+                _index = 0;
+                _current = default;
             }
 
             /// <summary>
-            /// 执行与释放或重置非托管资源关联的应用程序定义的任务。
+            /// 释放枚举器使用的资源（结构体无需释放资源）。
             /// </summary>
-            /// <remarks>
-            /// 结构体枚举器无需释放资源，此方法为空实现。
-            /// </remarks>
             public void Dispose() { }
         }
+
+        #endregion
+
+        #region IDisposable 实现
+
+        /// <summary>
+        /// 释放由列表占用的资源。
+        /// </summary>
+        /// <remarks>
+        /// <para>调用此方法后，列表将不再可用。</para>
+        /// <para>此方法将内部缓冲区归还到 <see cref="ArrayPool{T}"/>，并重置计数为 0。</para>
+        /// <para>建议在不再需要列表时调用此方法，以便及时释放内存资源。</para>
+        /// </remarks>
+        public void Dispose()
+        {
+            if (!_isDisposed)
+            {
+                ReturnPooledArray(ref _Buffer);
+                _Count = 0;
+                _isDisposed = true;
+            }
+        }
+
         #endregion
     }
 }

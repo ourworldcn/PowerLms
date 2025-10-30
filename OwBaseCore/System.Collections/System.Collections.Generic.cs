@@ -1,9 +1,9 @@
-﻿
-using System.Buffers;
+﻿using System.Buffers;
 using System.Diagnostics;
 using System.Diagnostics.Tracing;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace System.Collections.Generic
 {
@@ -57,7 +57,6 @@ namespace System.Collections.Generic
         /// <returns></returns>
         public static ICollection<T> TryToCollection<T>(this IEnumerable<T> source) => source is ICollection<T> coll ? coll : source.ToArray();
 
-
         /// <summary>
         /// 尝试在不强制枚举的情况下确定序列中的元素数,若不能则用 Count() 数量。
         /// </summary>
@@ -78,17 +77,7 @@ namespace System.Collections.Generic
             {
                 var pool = ArrayPool<T>.Shared;
                 var array = pool.Rent(count);
-                if (source is ICollection<T> collection)
-                    collection.CopyTo(array, 0);
-                else
-                {
-                    int index = 0;
-                    foreach (var item in source)
-                    {
-                        array[index++] = item;
-                    }
-                }
-
+                source.FastCopyTo(array, 0);
                 return new PooledArray<T>(array, count, pool);
             }
             else
@@ -138,5 +127,78 @@ namespace System.Collections.Generic
                 _pool?.Return(_array, clearArray: true);
             }
         }
+
+        /// <summary>
+        /// 高性能复制IEnumerable元素到数组。
+        /// 优化点：
+        /// 1. 对数组使用Span&lt;T&gt;.CopyTo（零成本抽象，JIT内联优化）
+        /// 2. 对List&lt;T&gt;使用CollectionsMarshal获取内部数组直接复制（.NET 5+）
+        /// 3. 对ICollection&lt;T&gt;使用原生CopyTo方法
+        /// 4. 使用Span&lt;T&gt;减少边界检查，提升写入性能
+        /// 5. 使用无符号整数比较优化边界检查
+        /// 6. 对空集合提前返回，避免不必要的操作
+        /// </summary>
+        /// <typeparam name="T">元素类型</typeparam>
+        /// <param name="source">源集合</param>
+        /// <param name="array">目标数组</param>
+        /// <param name="arrayIndex">目标数组起始索引</param>
+        public static void FastCopyTo<T>(this IEnumerable<T> source, T[] array, int arrayIndex)
+        {
+            ArgumentNullException.ThrowIfNull(source);
+            ArgumentNullException.ThrowIfNull(array);
+            if ((uint)arrayIndex > (uint)array.Length) throw new ArgumentOutOfRangeException(nameof(arrayIndex));
+            switch (source)
+            {
+                case T[] sourceArray:
+                    if (sourceArray.Length == 0) break;
+                    if (sourceArray.Length > array.Length - arrayIndex)
+                        throw new ArgumentException("目标数组空间不足");
+                    sourceArray.AsSpan().CopyTo(array.AsSpan(arrayIndex));
+                    break;
+                case List<T> list:
+                    if (list.Count == 0) break;
+                    if (list.Count > array.Length - arrayIndex)
+                        throw new ArgumentException("目标数组空间不足");
+#if NET5_0_OR_GREATER
+                    var listSpan = CollectionsMarshal.AsSpan(list);
+                    listSpan.CopyTo(array.AsSpan(arrayIndex));
+#else
+                    list.CopyTo(array, arrayIndex);
+#endif
+                    break;
+                case ICollection<T> collection:
+                    if (collection.Count == 0) break;
+                    if (collection.Count > array.Length - arrayIndex)
+                        throw new ArgumentException("目标数组空间不足");
+                    collection.CopyTo(array, arrayIndex);
+                    break;
+                default:
+                    if (source.TryGetNonEnumeratedCount(out int count))
+                    {
+                        if (count == 0) break;
+                        if (count > array.Length - arrayIndex)
+                            throw new ArgumentException("目标数组空间不足");
+                        var span = array.AsSpan(arrayIndex, count);
+                        int index = 0;
+                        foreach (var item in source)
+                        {
+                            span[index++] = item;
+                        }
+                    }
+                    else
+                    {
+                        var span = array.AsSpan(arrayIndex);
+                        int index = 0;
+                        foreach (var item in source)
+                        {
+                            if ((uint)index >= (uint)span.Length)
+                                throw new ArgumentException("目标数组空间不足");
+                            span[index++] = item;
+                        }
+                    }
+                    break;
+            }
+        }
+
     }
 }
