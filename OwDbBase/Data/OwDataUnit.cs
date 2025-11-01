@@ -62,56 +62,61 @@ namespace OW.Data
         {
             if (entities == null) throw new ArgumentNullException(nameof(entities));
             if (dbContext == null) throw new ArgumentNullException(nameof(dbContext));
-            var entityList = entities.ToList(); // 转换为List便于多次迭代
-            if (entityList.Count == 0) return 0; // 空集合直接返回
-            if (ignoreExisting) // 分支A：忽略重复数据，仅插入新数据
+            var entityList = entities.ToList();
+            if (entityList.Count == 0) return 0;
+            if (ignoreExisting)
             {
-                var primaryKeyProperties = GetPrimaryKeyProperties(typeof(TEntity), dbContext); // 获取主键属性
-                if (primaryKeyProperties.Any()) // 有主键则检测重复
-                {
-                    var dbSet = dbContext.Set<TEntity>();
-                    var existingKeys = new HashSet<object>(); // 收集待查询的主键值
-                    foreach (var entity in entityList)
-                    {
-                        var keyValues = primaryKeyProperties.Select(p => p.GetValue(entity)).ToArray();
-                        var compositeKey = keyValues.Length == 1 ? keyValues[0] : string.Join("|", keyValues); // 单键直接用，复合键用"|"连接
-                        existingKeys.Add(compositeKey);
-                    }
-                    var existingEntities = dbSet.AsNoTracking().Where(e => existingKeys.Contains(primaryKeyProperties.Length == 1 ? primaryKeyProperties[0].GetValue(e) : string.Join("|", primaryKeyProperties.Select(p => p.GetValue(e))))).ToList(); // 查询数据库中已存在的实体（只读查询）
-                    var existingKeysInDb = new HashSet<object>(); // 收集数据库中已存在的主键值
-                    foreach (var entity in existingEntities)
-                    {
-                        var keyValues = primaryKeyProperties.Select(p => p.GetValue(entity)).ToArray();
-                        var compositeKey = keyValues.Length == 1 ? keyValues[0] : string.Join("|", keyValues);
-                        existingKeysInDb.Add(compositeKey);
-                    }
-                    entityList = entityList.Where(entity => { var keyValues = primaryKeyProperties.Select(p => p.GetValue(entity)).ToArray(); var compositeKey = keyValues.Length == 1 ? keyValues[0] : string.Join("|", keyValues); return !existingKeysInDb.Contains(compositeKey); }).ToList(); // 过滤掉已存在的实体，只保留新数据
-                }
-                if (entityList.Count == 0) return 0; // 全部重复，无需插入
-                var bulkConfig = new BulkConfig // 批量插入配置
-                {
-                    BatchSize = 1000, // 每批1000条
-                    BulkCopyTimeout = 300, // 超时5分钟
-                    SetOutputIdentity = false, // 不回写自增主键
-                    PreserveInsertOrder = false, // 不保持插入顺序（提升性能）
-                    UseTempDB = false, // 不使用临时数据库（减少IO）
-                };
-                dbContext.BulkInsert(entityList, bulkConfig); // 执行批量插入（仅新数据）
-                return entityList.Count; // 返回实际插入数量
+                entityList = FilterExistingEntities(entityList, dbContext);
+                if (entityList.Count == 0) return 0;
             }
-            else // 分支B：覆盖更新重复数据，插入或更新
+            var bulkConfig = CreateBulkConfig();
+            if (ignoreExisting)
+                dbContext.BulkInsert(entityList, bulkConfig);
+            else
+                dbContext.BulkInsertOrUpdate(entityList, bulkConfig);
+            return entityList.Count;
+        }
+
+        /// <summary>
+        /// 批量插入实体集合到数据库（自定义去重字段）
+        /// </summary>
+        /// <typeparam name="TEntity">实体类型</typeparam>
+        /// <typeparam name="TKey">去重字段类型</typeparam>
+        /// <param name="entities">数据源：要插入的实体集合</param>
+        /// <param name="dbContext">目标：数据库上下文</param>
+        /// <param name="uniqueKeySelector">去重字段选择器，如 e => e.Code 或 e => new { e.Name, e.Type }</param>
+        /// <param name="ignoreExisting">配置：是否忽略重复数据</param>
+        /// <returns>实际插入的新记录数</returns>
+        /// <exception cref="ArgumentNullException">当参数为null时抛出</exception>
+        /// <remarks>
+        /// 使用示例：
+        /// <code>
+        /// // 按Code字段去重
+        /// BulkInsert(items, dbContext, e => e.Code);
+        /// 
+        /// // 按多字段组合去重
+        /// BulkInsert(items, dbContext, e => new { e.Name, e.Type });
+        /// </code>
+        /// </remarks>
+        public static int BulkInsert<TEntity, TKey>(IEnumerable<TEntity> entities, DbContext dbContext,
+            Func<TEntity, TKey> uniqueKeySelector, bool ignoreExisting = true) where TEntity : class
+        {
+            if (entities == null) throw new ArgumentNullException(nameof(entities));
+            if (dbContext == null) throw new ArgumentNullException(nameof(dbContext));
+            if (uniqueKeySelector == null) throw new ArgumentNullException(nameof(uniqueKeySelector));
+            var entityList = entities.ToList();
+            if (entityList.Count == 0) return 0;
+            if (ignoreExisting)
             {
-                var bulkConfig = new BulkConfig
-                {
-                    BatchSize = 1000,
-                    BulkCopyTimeout = 300,
-                    SetOutputIdentity = false,
-                    PreserveInsertOrder = false,
-                    UseTempDB = false,
-                };
-                dbContext.BulkInsertOrUpdate(entityList, bulkConfig); // 执行批量插入或更新
-                return entityList.Count; // 返回处理总数（包含插入和更新）
+                entityList = FilterExistingEntitiesByCustomKey(entityList, dbContext, uniqueKeySelector);
+                if (entityList.Count == 0) return 0;
             }
+            var bulkConfig = CreateBulkConfig();
+            if (ignoreExisting)
+                dbContext.BulkInsert(entityList, bulkConfig);
+            else
+                dbContext.BulkInsertOrUpdate(entityList, bulkConfig);
+            return entityList.Count;
         }
 
         /// <summary>
@@ -139,6 +144,109 @@ namespace OW.Data
         #region 私有辅助方法
 
         /// <summary>
+        /// 过滤已存在的实体，只保留新数据
+        /// </summary>
+        private static List<TEntity> FilterExistingEntities<TEntity>(List<TEntity> entityList, DbContext dbContext)
+      where TEntity : class
+        {
+            var primaryKeyProperties = GetPrimaryKeyProperties(typeof(TEntity), dbContext);
+            if (!primaryKeyProperties.Any()) return entityList;
+            var existingKeys = CollectEntityKeys(entityList, primaryKeyProperties);
+            var existingKeysInDb = QueryExistingKeys<TEntity>(dbContext, primaryKeyProperties, existingKeys);
+            return entityList.Where(entity =>
+           {
+               var compositeKey = BuildCompositeKey(entity, primaryKeyProperties);
+               return !existingKeysInDb.Contains(compositeKey);
+           }).ToList();
+        }
+
+        /// <summary>
+        /// 按自定义字段过滤已存在的实体
+        /// </summary>
+        private static List<TEntity> FilterExistingEntitiesByCustomKey<TEntity, TKey>(
+            List<TEntity> entityList, DbContext dbContext, Func<TEntity, TKey> uniqueKeySelector)
+            where TEntity : class
+        {
+            var dbSet = dbContext.Set<TEntity>();
+            var candidateKeys = new HashSet<TKey>(entityList.Select(uniqueKeySelector));
+            var allDbEntities = dbSet.AsNoTracking().ToList();
+            var existingKeys = new HashSet<TKey>(allDbEntities.Select(uniqueKeySelector).Where(k => candidateKeys.Contains(k)));
+            return entityList.Where(e => !existingKeys.Contains(uniqueKeySelector(e))).ToList();
+        }
+
+        /// <summary>
+        /// 收集实体集合的主键值
+        /// </summary>
+        private static HashSet<object> CollectEntityKeys<TEntity>(List<TEntity> entityList, PropertyInfo[] primaryKeyProperties)
+        {
+            var keys = new HashSet<object>();
+            foreach (var entity in entityList)
+            {
+                var compositeKey = BuildCompositeKey(entity, primaryKeyProperties);
+                keys.Add(compositeKey);
+            }
+            return keys;
+        }
+
+        /// <summary>
+        /// 构造复合主键字符串
+        /// </summary>
+        private static object BuildCompositeKey<TEntity>(TEntity entity, PropertyInfo[] primaryKeyProperties)
+        {
+            var keyValues = primaryKeyProperties.Select(p => p.GetValue(entity)).ToArray();
+            return keyValues.Length == 1 ? keyValues[0] : string.Join("|", keyValues);
+        }
+
+        /// <summary>
+        /// 查询数据库中已存在的主键值
+        /// </summary>
+        private static HashSet<object> QueryExistingKeys<TEntity>(DbContext dbContext, PropertyInfo[] primaryKeyProperties, HashSet<object> candidateKeys)
+     where TEntity : class
+        {
+            var dbSet = dbContext.Set<TEntity>();
+            var existingKeys = new HashSet<object>();
+            if (primaryKeyProperties.Length == 1)
+            {
+                var pkProperty = primaryKeyProperties[0];
+                var allDbKeys = dbSet.AsNoTracking()
+                   .Select(e => EF.Property<object>(e, pkProperty.Name))
+               .ToList();
+                foreach (var key in allDbKeys)
+                {
+                    if (candidateKeys.Contains(key))
+                        existingKeys.Add(key);
+                }
+            }
+            else
+            {
+                var allEntities = dbSet.AsNoTracking().ToList();
+                foreach (var entity in allEntities)
+                {
+                    var keyValues = primaryKeyProperties.Select(p => p.GetValue(entity)).ToArray();
+                    var compositeKey = string.Join("|", keyValues);
+                    if (candidateKeys.Contains(compositeKey))
+                        existingKeys.Add(compositeKey);
+                }
+            }
+            return existingKeys;
+        }
+
+        /// <summary>
+        /// 创建批量操作配置
+        /// </summary>
+        private static BulkConfig CreateBulkConfig()
+        {
+            return new BulkConfig
+            {
+                BatchSize = 1000,
+                BulkCopyTimeout = 300,
+                SetOutputIdentity = false,
+                PreserveInsertOrder = false,
+                UseTempDB = false,
+            };
+        }
+
+        /// <summary>
         /// 获取实体类型的主键属性
         /// </summary>
         /// <param name="entityType">实体类型</param>
@@ -164,13 +272,13 @@ namespace OW.Data
         {
             var methods = typeof(OwDataUnit).GetMethods(BindingFlags.Public | BindingFlags.Static);
             var targetMethod = methods.FirstOrDefault(m =>
-                  m.Name == nameof(BulkInsert) &&
-                m.IsGenericMethodDefinition &&
-                 m.GetParameters().Length == 3 &&
-               m.GetParameters()[0].ParameterType.IsGenericType &&
-            m.GetParameters()[0].ParameterType.GetGenericTypeDefinition() == typeof(IEnumerable<>) &&
+              m.Name == nameof(BulkInsert) &&
+            m.IsGenericMethodDefinition &&
+                   m.GetParameters().Length == 3 &&
+          m.GetParameters()[0].ParameterType.IsGenericType &&
+          m.GetParameters()[0].ParameterType.GetGenericTypeDefinition() == typeof(IEnumerable<>) &&
                    m.GetParameters()[1].ParameterType == typeof(DbContext) &&
-               m.GetParameters()[2].ParameterType == typeof(bool));
+            m.GetParameters()[2].ParameterType == typeof(bool));
             return targetMethod ?? throw new InvalidOperationException($"未找到匹配的泛型BulkInsert方法");
         }
 
