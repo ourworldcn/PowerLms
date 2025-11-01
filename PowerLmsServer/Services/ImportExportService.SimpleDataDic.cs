@@ -47,7 +47,7 @@ namespace PowerLmsServer.Services
                 var query = _DbContext.Set<DataDicCatalog>()
                     .AsNoTracking()
                     .Select(x => new { x.Code, x.DisplayName, x.OrgId });
-                
+
                 // 多租户数据隔离：获取当前组织或全局的字典目录
                 if (orgId.HasValue)
                 {
@@ -138,10 +138,10 @@ namespace PowerLmsServer.Services
             {
                 // 性能优化：批量查询所有需要的DataDicCatalog，避免多次数据库查询
                 var catalogMapping = GetCatalogMappingBatch(catalogCodes, orgId);
-                
+
                 _Logger.LogInformation("开始导出，传入的CatalogCodes: {CatalogCodes}", string.Join(",", catalogCodes));
                 _Logger.LogInformation("数据库映射结果: {MappingCount} 个匹配项", catalogMapping.Count);
-                
+
                 using var workbook = new HSSFWorkbook();
                 int totalExported = 0;
                 int createdSheets = 0;
@@ -149,18 +149,18 @@ namespace PowerLmsServer.Services
                 foreach (var catalogCode in catalogCodes)
                 {
                     _Logger.LogInformation("处理CatalogCode: {CatalogCode}", catalogCode);
-                    
+
                     if (catalogMapping.TryGetValue(catalogCode, out var catalogId))
                     {
                         _Logger.LogInformation("找到映射 {CatalogCode} -> {CatalogId}，创建Sheet", catalogCode, catalogId);
-                        
+
                         try
                         {
                             var sheet = workbook.CreateSheet(catalogCode);
                             var exportedCount = ExportSimpleDictionaryToSheet(sheet, catalogCode, catalogId, orgId);
                             totalExported += exportedCount;
                             createdSheets++;
-                            
+
                             _Logger.LogInformation("成功创建Sheet {CatalogCode}，导出 {Count} 条记录", catalogCode, exportedCount);
                         }
                         catch (Exception ex)
@@ -257,23 +257,23 @@ namespace PowerLmsServer.Services
                 {
                     var sheet = workbook.GetSheetAt(i);
                     var sheetName = sheet.SheetName;
-                    
+
                     try
                     {
                         if (catalogMapping.TryGetValue(sheetName, out var catalogId))
                         {
                             var importedCount = ImportSimpleDictionaryFromSheet(sheet, sheetName, catalogId, orgId, updateExisting, propertyMappings);
-                            
+
                             result.SheetResults.Add(new SheetImportResult
                             {
                                 SheetName = sheetName,
                                 ImportedCount = importedCount,
                                 Success = true
                             });
-                            
+
                             result.TotalImportedCount += importedCount;
                             result.ProcessedSheets++;
-                            
+
                             _Logger.LogInformation("导入简单字典Sheet {SheetName} 成功，共 {Count} 条记录", sheetName, importedCount);
                         }
                         else
@@ -285,7 +285,7 @@ namespace PowerLmsServer.Services
                                 Success = false,
                                 ErrorMessage = $"未找到对应的Catalog Code: {sheetName}"
                             });
-                            
+
                             _Logger.LogWarning("导入简单字典Sheet {SheetName} 失败：未找到对应的Catalog Code", sheetName);
                         }
                     }
@@ -298,15 +298,15 @@ namespace PowerLmsServer.Services
                             Success = false,
                             ErrorMessage = ex.Message
                         });
-                        
+
                         _Logger.LogWarning(ex, "导入简单字典Sheet {SheetName} 失败", sheetName);
                     }
                 }
 
                 // 性能优化：批量保存所有更改
                 _DbContext.SaveChanges();
-                
-                _Logger.LogInformation("导入简单字典完成，共处理 {ProcessedSheets} 个Sheet，导入 {TotalCount} 条记录", 
+
+                _Logger.LogInformation("导入简单字典完成，共处理 {ProcessedSheets} 个Sheet，导入 {TotalCount} 条记录",
                     result.ProcessedSheets, result.TotalImportedCount);
 
                 return result;
@@ -335,7 +335,7 @@ namespace PowerLmsServer.Services
             var query = _DbContext.Set<DataDicCatalog>()
                 .AsNoTracking()
                 .Where(x => catalogCodes.Contains(x.Code));
-            
+
             // 多租户数据隔离
             if (orgId.HasValue)
             {
@@ -353,7 +353,7 @@ namespace PowerLmsServer.Services
 
             // 修复键重复问题：安全地构建字典，优先选择当前组织的记录
             var result = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
-            
+
             foreach (var catalog in catalogList)
             {
                 if (!result.ContainsKey(catalog.Code))
@@ -395,12 +395,12 @@ namespace PowerLmsServer.Services
         private Dictionary<string, PropertyInfo> GetSimpleDataDicPropertyMappings()
         {
             var properties = typeof(SimpleDataDic).GetProperties()
-                .Where(p => p.CanWrite && 
+                .Where(p => p.CanWrite &&
                            !p.Name.Equals("DataDicId", StringComparison.OrdinalIgnoreCase) &&
                            !p.Name.Equals("Id", StringComparison.OrdinalIgnoreCase));
 
             var result = new Dictionary<string, PropertyInfo>(StringComparer.OrdinalIgnoreCase);
-            
+
             foreach (var property in properties)
             {
                 try
@@ -445,7 +445,7 @@ namespace PowerLmsServer.Services
 
             // 性能优化：预先计算要导出的属性，避免重复反射
             var properties = typeof(SimpleDataDic).GetProperties()
-                .Where(p => p.CanRead && 
+                .Where(p => p.CanRead &&
                            (p.PropertyType.IsValueType || p.PropertyType == typeof(string)) &&
                            !p.Name.Equals("DataDicId", StringComparison.OrdinalIgnoreCase) &&
                            !p.Name.Equals("Id", StringComparison.OrdinalIgnoreCase))
@@ -470,7 +470,7 @@ namespace PowerLmsServer.Services
             {
                 var dataRow = sheet.CreateRow(i + 1);
                 var item = data[i];
-                
+
                 for (int j = 0; j < properties.Length; j++)
                 {
                     var value = properties[j].GetValue(item);
@@ -483,7 +483,7 @@ namespace PowerLmsServer.Services
 
         /// <summary>
         /// 从Sheet导入简单字典数据
-        /// 性能优化：批量数据库操作和预计算的属性映射
+        /// 性能优化：使用OwDataUnit.BulkInsert的按Code字段去重功能
         /// </summary>
         /// <param name="sheet">Excel工作表</param>
         /// <param name="catalogCode">分类代码，用于日志记录</param>
@@ -495,53 +495,36 @@ namespace PowerLmsServer.Services
         private int ImportSimpleDictionaryFromSheet(ISheet sheet, string catalogCode, Guid catalogId, Guid? orgId, bool updateExisting, Dictionary<string, PropertyInfo> propertyMappings)
         {
             if (sheet.LastRowNum < 1) return 0; // 没有数据行
-
             var headerRow = sheet.GetRow(0);
             if (headerRow == null) return 0;
-
             // 性能优化：预先计算列映射，避免重复查找
             var columnMappings = new Dictionary<int, PropertyInfo>();
             for (int i = 0; i <= headerRow.LastCellNum; i++)
             {
-                var cell = headerRow.GetCell(i);
-                if (cell != null && !string.IsNullOrWhiteSpace(cell.StringCellValue))
+                var cellHeader = headerRow.GetCell(i);
+                if (cellHeader != null && !string.IsNullOrWhiteSpace(cellHeader.StringCellValue))
                 {
-                    var columnName = cell.StringCellValue.Trim();
+                    var columnName = cellHeader.StringCellValue.Trim();
                     if (propertyMappings.TryGetValue(columnName, out var property))
                     {
                         columnMappings[i] = property;
                     }
                 }
             }
-
-            var importedCount = 0;
-            var dbSet = _DbContext.Set<SimpleDataDic>();
             var entitiesToAdd = new List<SimpleDataDic>();
-            
-            // 性能优化：如果需要更新，预先查询现有记录并建立映射
-            Dictionary<string, SimpleDataDic> existingEntities = null;
-            if (updateExisting)
-            {
-                existingEntities = dbSet
-                    .Where(x => x.DataDicId == catalogId)
-                    .ToDictionary(x => x.Code ?? "", x => x);
-            }
-
             for (int rowIndex = 1; rowIndex <= sheet.LastRowNum; rowIndex++)
             {
                 var row = sheet.GetRow(rowIndex);
                 if (row == null) continue;
-
                 var entity = new SimpleDataDic();
                 var hasData = false;
-
                 // 填充实体属性
                 foreach (var mapping in columnMappings)
                 {
-                    var cell = row.GetCell(mapping.Key);
-                    if (cell != null)
+                    var cellData = row.GetCell(mapping.Key);
+                    if (cellData != null)
                     {
-                        var value = GetCellValue(cell, mapping.Value.PropertyType);
+                        var value = GetCellValue(cellData, mapping.Value.PropertyType);
                         if (value != null)
                         {
                             mapping.Value.SetValue(entity, value);
@@ -549,38 +532,24 @@ namespace PowerLmsServer.Services
                         }
                     }
                 }
-
                 if (!hasData) continue;
-
                 // 设置关联信息
                 entity.DataDicId = catalogId;
                 entity.Id = Guid.NewGuid();
                 entity.CreateDateTime = DateTime.Now;
-
-                // 性能优化：使用预先查询的映射检查是否需要更新
-                if (updateExisting && !string.IsNullOrEmpty(entity.Code) && 
-                    existingEntities?.TryGetValue(entity.Code, out var existing) == true)
-                {
-                    // 更新现有记录
-                    foreach (var mapping in columnMappings)
-                    {
-                        var value = mapping.Value.GetValue(entity);
-                        mapping.Value.SetValue(existing, value);
-                    }
-                    continue;
-                }
-
                 entitiesToAdd.Add(entity);
-                importedCount++;
             }
-
-            // 性能优化：批量添加实体，减少数据库操作次数
+            // 性能优化：使用OwDataUnit.BulkInsert按Code字段去重批量插入
             if (entitiesToAdd.Any())
             {
-                dbSet.AddRange(entitiesToAdd);
+                return OW.Data.OwDataUnit.BulkInsert(
+                       entitiesToAdd,
+              _DbContext,
+              e => e.Code,  // 按Code字段去重
+              !updateExisting  // ignoreExisting参数：updateExisting=false时忽略重复
+                    );
             }
-
-            return importedCount;
+            return 0;
         }
 
         #endregion

@@ -134,7 +134,7 @@ namespace PowerLmsWebApi.Controllers
                 var jobs = _DbContext.PlJobs.Where(j => feeJobIds.Contains(j.Id)).ToArray();
                 if (jobs.Any(j => j.OrgId != context.User.OrgId))
                 {
-                    _Logger.LogWarning("尝试创建跨机构账单，用户机构：{UserOrgId}，费用关联机构：{FeeOrgIds}", 
+                    _Logger.LogWarning("尝试创建跨机构账单，用户机构：{UserOrgId}，费用关联机构：{FeeOrgIds}",
                         context.User.OrgId, string.Join(",", jobs.Select(j => j.OrgId)));
                     return BadRequest("不能将不同机构的费用添加到同一账单");
                 }
@@ -336,12 +336,10 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveDocBillReturnDto();
-
             var id = model.Id;
             var dbSet = _DbContext.DocBills;
             var item = dbSet.Find(id);
             if (item is null) return BadRequest("找不到指定的账单");
-
             // ✅ 验证账单属于当前用户的机构（通过费用关联）
             var billFee = _DbContext.DocFees.FirstOrDefault(f => f.BillId == id);
             if (billFee != null && billFee.JobId.HasValue)
@@ -350,33 +348,31 @@ namespace PowerLmsWebApi.Controllers
                 if (billJob != null && billJob.OrgId != context.User.OrgId)
                 {
                     _Logger.LogWarning("尝试删除其他机构的账单，账单ID：{BillId}，用户机构：{UserOrgId}，账单机构：{BillOrgId}",
-                        id, context.User.OrgId, billJob.OrgId);
+                    id, context.User.OrgId, billJob.OrgId);
                     return StatusCode((int)HttpStatusCode.Forbidden, "无权删除其他机构的账单");
                 }
             }
-
             var jobs = GetJobsFromBillIds(new Guid[] { model.Id });
             if (jobs.Any(c => c.JobTypeId == ProjectContent.AeId))   //若有空运出口业务
                 if (!_AuthorizationManager.Demand(out string err, "D0.7.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             if (jobs.Any(c => c.JobTypeId == ProjectContent.AeId))   //若有空运进口业务
                 if (!_AuthorizationManager.Demand(out string err, "D1.7.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-            if (jobs.Any(c => c.JobTypeId == ProjectContent.SeId))   //若有海运出口业务
+            if (jobs.Any(c => c.JobTypeId == ProjectContent.SeId)) //若有海运出口业务
                 if (!_AuthorizationManager.Demand(out string err, "D2.7.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             if (jobs.Any(c => c.JobTypeId == ProjectContent.SiId))   //若有海运进口业务
                 if (!_AuthorizationManager.Demand(out string err, "D3.7.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-
-            // 检查关联费用是否已被申请
-            var relatedFees = _DbContext.DocFees.Any(f => f.BillId == id);
-            if (relatedFees)
+            // 检查账单关联的费用是否已被申请单使用
+            var usedFeeIds = (from fee in _DbContext.DocFees
+                              where fee.BillId == id
+                              join requisitionItem in _DbContext.DocFeeRequisitionItems on fee.Id equals requisitionItem.FeeId
+                              select fee.Id).ToList();
+            if (usedFeeIds.Any())
             {
                 return BadRequest($"账单(ID:{id})关联的费用已被申请，无法删除账单");
             }
-
             _EntityManager.Remove(item);
             _DbContext.SaveChanges();
-
             _SqlAppLogger.LogGeneralInfo($"删除账单.{nameof(DocBill)}.{id}，机构ID:{context.User.OrgId}");
-
             return result;
         }
 
@@ -403,9 +399,9 @@ namespace PowerLmsWebApi.Controllers
 
             // ✅ 增加OrgId过滤
             var coll = from job in _DbContext.PlJobs
-                       where model.Ids.Contains(job.Id) && 
+                       where model.Ids.Contains(job.Id) &&
                              job.OrgId == context.User.OrgId &&
-                             (allowAe || job.JobTypeId != ProjectContent.AeId) && 
+                             (allowAe || job.JobTypeId != ProjectContent.AeId) &&
                              (allowAi || job.JobTypeId != ProjectContent.AiId)
 
                        join fee in _DbContext.DocFees
