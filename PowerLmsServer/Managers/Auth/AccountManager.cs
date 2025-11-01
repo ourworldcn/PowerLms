@@ -315,7 +315,7 @@ namespace PowerLmsServer.Managers
         /// <returns>指定id的账号，没有找到则返回null。</returns>
         public virtual Account GetAccountById(Guid id)
         {
-            string cacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId<Account>(id);
+            string cacheKey = OwCacheExtensions.GetCacheKeyFromId<Account>(id);
             return _MemoryCache.Get<Account>(cacheKey);
         }
 
@@ -328,56 +328,55 @@ namespace PowerLmsServer.Managers
         {
             using var dw = Lock(id.ToString(), Timeout.InfiniteTimeSpan);
 
-            string cacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId<Account>(id);
+            string cacheKey = OwCacheExtensions.GetCacheKeyFromId<Account>(id);
 
             return _MemoryCache.GetOrCreate(cacheKey, entry =>
             {
-                var user = LoadById(OwMemoryCacheExtensions.GetIdFromCacheKey(entry.Key as string) ?? id);
-                if (user == null) return null;
+                // ? 启用优先级驱逐回调
+                entry.EnablePriorityEvictionCallback(_MemoryCache);
+                
+          var user = LoadById(OwCacheExtensions.GetIdFromCacheKey(entry.Key as string) ?? id);
+            if (user == null) return null;
 
-                // 配置缓存项
-                ConfigureCacheEntry(entry, user);
+      // 配置缓存项
+      ConfigureCacheEntry(entry, user);
 
-                return user;
+      return user;
             });
         }
 
         /// <summary>
-        /// 配置缓存条目属性
+        /// 配置用户缓存的缓存项。
         /// </summary>
-        /// <param name="entry">缓存条目</param>
+        /// <param name="entry">缓存项</param>
         /// <param name="account">账号对象</param>
         private void ConfigureCacheEntry(ICacheEntry entry, Account account)
         {
-            // 设置滑动过期时间
-            entry.SetSlidingExpiration(TimeSpan.FromMinutes(15));
-
-            // 创建取消令牌源并注册到缓存中
-            // 使用OwMemoryCacheExtensions的RegisterCancellationToken方法
-            // 此方法会自动处理令牌源的生命周期和回调
-            entry.RegisterCancellationToken(_MemoryCache);
-
-            // 注册逐出回调处理Token映射和资源释放
-            entry.RegisterPostEvictionCallback((key, value, reason, state) =>
-            {
-                if (value is Account acc && acc?.Token.HasValue == true)
-                {
-                    // 释放数据库上下文
-                    using var dbContext = acc?.DbContext;
+     // 设置用户缓存过期时间
+     entry.SetSlidingExpiration(TimeSpan.FromMinutes(15));
+    // 启用优先级驱逐回调
+            entry.EnablePriorityEvictionCallback(_MemoryCache);
+   // 获取取消令牌源并注册到过期令牌列表
+         var cts = _MemoryCache.GetCancellationTokenSource(entry.Key);
+            entry.ExpirationTokens.Add(new CancellationChangeToken(cts.Token));
+ // 注册驱逐回调,清理Token映射和数据库上下文
+         entry.RegisterPostEvictionCallback((key, value, reason, state) =>
+    {
+            if (value is Account acc && acc?.Token.HasValue == true)
+      {
+ // 释放数据库上下文
+   using var dbContext = acc?.DbContext;
                     dbContext?.SaveChanges();
-
-                    // 从Token映射字典中移除
-                    Token2KeyDic.TryRemove(acc.Token.Value, out _);
-                }
-            });
-
-            // 更新Token到Id的映射
+    // 从Token映射字典中移除
+   Token2KeyDic.TryRemove(acc.Token.Value, out _);
+      }
+         });
+            // 建立Token到Id的映射
             if (account?.Token.HasValue == true)
             {
                 Token2KeyDic.AddOrUpdate(account.Token.Value, account.IdString, (_, _) => account.IdString);
-            }
-        }
-
+       }
+ }
         #endregion 用Id获取账号及相关
 
         /// <summary>
@@ -415,28 +414,29 @@ namespace PowerLmsServer.Managers
         /// 使指定用户Id的缓存失效。
         /// </summary>
         /// <param name="userId">用户Id</param>
-        /// <returns>如果成功使缓存失效则返回true，否则返回false</returns>
+     /// <returns>如果成功使缓存失效则返回true,否则返回false</returns>
         public bool InvalidateUserCache(Guid userId)
         {
-            string cacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId<Account>(userId);
-
-            // 使用OwMemoryCacheExtensions的CancelSource方法触发取消令牌
-            // 这将自动通过已注册的回调处理资源释放和缓存移除
-            if (_MemoryCache.CancelSource(cacheKey))
-            {
-                return true;
-            }
-
-            // 如果没有找到对应的取消令牌源，直接尝试从缓存中移除
-            // 注意：正常情况下不应该走到这里，因为所有缓存条目都应该有关联的取消令牌
-            if (_MemoryCache.TryGetValue(cacheKey, out _))
-            {
-                _MemoryCache.Remove(cacheKey);
-                return true;
-            }
-
-            return false;
-        }
+  string cacheKey = OwCacheExtensions.GetCacheKeyFromId<Account>(userId);
+   // 获取取消令牌源并取消
+        var cts = _MemoryCache.GetCancellationTokenSource(cacheKey);
+            if (cts != null && !cts.IsCancellationRequested)
+   {
+      try
+  {
+    cts.Cancel();
+         return true;
+          }
+   catch { /* 忽略可能的异常 */ }
+         }
+   // 如果没有找到取消令牌源,尝试直接从缓存中移除
+   if (_MemoryCache.TryGetValue(cacheKey, out _))
+   {
+   _MemoryCache.Remove(cacheKey);
+       return true;
+}
+       return false;
+       }
 
         /// <summary>
         /// 根据令牌使用户缓存失效。
@@ -459,7 +459,8 @@ namespace PowerLmsServer.Managers
         /// <returns>取消令牌源，如果不存在则返回null</returns>
         public CancellationTokenSource GetUserCacheTokenSource(Guid userId)
         {
-            string cacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId<Account>(userId);
+            string cacheKey = OwCacheExtensions.GetCacheKeyFromId<Account>(userId);
+            // ? 修正：调用 GetCancellationTokenSourceV2
             return _MemoryCache.GetCancellationTokenSource(cacheKey);
         }
 
@@ -552,3 +553,4 @@ namespace PowerLmsServer.Managers
         }
     }
 }
+

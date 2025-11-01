@@ -72,7 +72,7 @@ namespace PowerLmsServer.Managers
         /// <returns>用户所属的商户ID，未找到返回null。</returns>
         public Guid? GetMerchantIdByUserId(Guid userId)
         {
-            var cacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId(userId, "UserToMerchant.");
+            var cacheKey = OwCacheExtensions.GetCacheKeyFromId(userId, "UserToMerchant.");
             
             // 先尝试从缓存获取
             if (_MemoryCache.TryGetValue(cacheKey, out Guid? cachedMerchantId))
@@ -104,7 +104,7 @@ namespace PowerLmsServer.Managers
         /// <returns>机构所属的商户Id，未找到返回null。</returns>
         public Guid? GetMerchantIdByOrgId(Guid orgId)
         {
-            var cacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId(orgId, "OrgToMerchant.");
+            var cacheKey = OwCacheExtensions.GetCacheKeyFromId(orgId, "OrgToMerchant.");
             
             // 先尝试从缓存获取
             if (_MemoryCache.TryGetValue(cacheKey, out Guid? cachedMerchantId))
@@ -136,7 +136,7 @@ namespace PowerLmsServer.Managers
         /// <returns>机构的缓存数据。</returns>
         public OrgCacheItem<TDbContext> GetOrLoadOrgCacheItem(Guid merchId)
         {
-            var cacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId(merchId, "OrgCacheItem.");
+            var cacheKey = OwCacheExtensions.GetCacheKeyFromId(merchId, "OrgCacheItem.");
             
             return _MemoryCache.GetOrCreate(cacheKey, entry =>
             {
@@ -256,29 +256,19 @@ namespace PowerLmsServer.Managers
         public int InvalidateOrgCaches(Guid merchantId)
         {
             var count = 0;
-            
-            // 获取缓存项以便清理相关的ID映射缓存
-            var orgCacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId(merchantId, "OrgCacheItem.");
-            if (_MemoryCache.TryGetValue(orgCacheKey, out OrgCacheItem<TDbContext> cacheItem))
-            {
-                // 清理所有相关的 OrgToMerchant 缓存
-                var orgIds = new List<Guid> { merchantId }; // 包含商户ID本身
-                if (cacheItem.Orgs != null)
-                    orgIds.AddRange(cacheItem.Orgs.Keys);
-                
-                foreach (var orgId in orgIds)
-                {
-                    var idCacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId(orgId, "OrgToMerchant.");
-                    if (_MemoryCache.CancelSource(idCacheKey))
-                        count++;
-                }
-            }
-            
-            // 使主缓存失效
-            if (_MemoryCache.CancelSource(orgCacheKey))
-                count++;
-            
-            return count;
+            var orgCacheKey = OwCacheExtensions.GetCacheKeyFromId(merchantId, "OrgCacheItem.");
+   // 使用新API: 获取取消令牌源并取消
+            var cts = _MemoryCache.GetCancellationTokenSource(orgCacheKey);
+            if (cts != null && !cts.IsCancellationRequested)
+     {
+      try
+       {
+   cts.Cancel();
+      count++;
+  }
+      catch { /* 忽略可能的异常 */ }
+         }
+   return count;
         }
 
         /// <summary>
@@ -288,77 +278,205 @@ namespace PowerLmsServer.Managers
         /// <returns>是否成功失效。</returns>
         public bool InvalidateUserMerchantCache(Guid userId)
         {
-            var cacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId(userId, "UserToMerchant.");
-            return _MemoryCache.CancelSource(cacheKey);
+       var cacheKey = OwCacheExtensions.GetCacheKeyFromId(userId, "UserToMerchant.");
+   // 使用新API: 获取取消令牌源并取消
+            var cts = _MemoryCache.GetCancellationTokenSource(cacheKey);
+     if (cts != null && !cts.IsCancellationRequested)
+            {
+             try
+          {
+     cts.Cancel();
+            return true;
+      }
+     catch { /* 忽略可能的异常 */ }
+   }
+  return false;
         }
 
-        /// <summary>
+    /// <summary>
         /// 使指定组织的商户查找缓存失效。
         /// </summary>
-        /// <param name="orgId">组织ID。</param>
+   /// <param name="orgId">组织ID。</param>
         /// <returns>失效的缓存数量。</returns>
-        public int InvalidateOrgMerchantCache(Guid orgId)
+ public int InvalidateOrgMerchantCache(Guid orgId)
         {
-            var count = 0;
-            
+     var count = 0;
             // 1. 首先失效单个映射缓存
-            var orgCacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId(orgId, "OrgToMerchant.");
-            if (_MemoryCache.CancelSource(orgCacheKey))
-                count++;
-            
-            // 2. 🔥 关键修复：如果组织结构发生变化，必须失效整个商户的主缓存
-            // 因为主缓存中的组织列表可能已经过期
+            var orgCacheKey = OwCacheExtensions.GetCacheKeyFromId(orgId, "OrgToMerchant.");
+    var cts = _MemoryCache.GetCancellationTokenSource(orgCacheKey);
+    if (cts != null && !cts.IsCancellationRequested)
+            {
+    try
+         {
+             cts.Cancel();
+   count++;
+     }
+     catch { /* 忽略可能的异常 */ }
+       }
+          // 2. 🔥 关键修复：如果组织结构发生变化，必须失效整个商户的主缓存
+// 因为主缓存中的组织列表可能已经过期
             using var dbContext = _DbContextFactory.CreateDbContext();
-            var merchantId = ResolveMerchantIdFromDatabaseCore(dbContext, orgId);
-            if (merchantId.HasValue)
-            {
-                // 失效整个商户的缓存，确保组织列表是最新的
-                var mainCacheCount = InvalidateOrgCaches(merchantId.Value);
-                count += mainCacheCount;
-                
-                // 记录日志以便调试
-                System.Diagnostics.Debug.WriteLine($"组织 {orgId} 缓存失效导致商户 {merchantId} 的 {mainCacheCount} 个缓存项失效");
+       var merchantId = ResolveMerchantIdFromDatabaseCore(dbContext, orgId);
+       if (merchantId.HasValue)
+    {
+    // 失效整个商户的缓存，确保组织列表是最新的
+          var mainCacheCount = InvalidateOrgCaches(merchantId.Value);
+    count += mainCacheCount;
+     // 记录日志以便调试
+    System.Diagnostics.Debug.WriteLine($"组织 {orgId} 缓存失效导致商户 {merchantId} 的 {mainCacheCount} 个缓存项失效");
+   }
+      else
+       {
+  // 如果无法确定商户ID（比如组织已被删除），记录警告但不阻断流程
+            System.Diagnostics.Debug.WriteLine($"无法确定组织 {orgId} 的商户ID进行缓存失效");
+    }
+         return count;
+   }
+
+     /// <summary>
+        /// 批量使指定组织的商户查找缓存失效。适用于批量操作场景。
+    /// </summary>
+        /// <param name="orgIds">组织ID集合。</param>
+ /// <returns>失效的缓存数量。</returns>
+        public int InvalidateOrgMerchantCaches(IEnumerable<Guid> orgIds)
+    {
+      if (orgIds == null) return 0;
+  var count = 0;
+    var processedMerchants = new HashSet<Guid>(); // 避免重复处理同一商户
+          using var dbContext = _DbContextFactory.CreateDbContext();
+            foreach (var orgId in orgIds)
+        {
+      // 失效单个映射缓存
+     var orgCacheKey = OwCacheExtensions.GetCacheKeyFromId(orgId, "OrgToMerchant.");
+      var cts = _MemoryCache.GetCancellationTokenSource(orgCacheKey);
+         if (cts != null && !cts.IsCancellationRequested)
+    {
+    try
+              {
+  cts.Cancel();
+ count++;
+          }
+    catch { /* 忽略可能的异常 */ }
+         }
+            // 尝试获取商户ID并失效主缓存
+       var merchantId = ResolveMerchantIdFromDatabaseCore(dbContext, orgId);
+                if (merchantId.HasValue && processedMerchants.Add(merchantId.Value)) // 如果是第一次处理这个商户
+     {
+var mainCacheCount = InvalidateOrgCaches(merchantId.Value);
+         count += mainCacheCount;
+    }
             }
-            else
+        return count;
+        }
+        #endregion
+
+        #region 辅助方法
+        /// <summary>
+        /// 配置组织缓存条目。
+        /// </summary>
+        /// <param name="entry">缓存条目。</param>
+        /// <param name="merchantId">商户ID。</param>
+        private void ConfigureOrgCacheEntry(ICacheEntry entry, Guid merchantId)
+        {
+   // 设置缓存过期策略
+     entry.SetSlidingExpiration(TimeSpan.FromMinutes(30));
+entry.SetAbsoluteExpiration(TimeSpan.FromHours(12));
+            entry.SetPriority(CacheItemPriority.Normal);
+
+     // 启用优先级驱逐回调
+            entry.EnablePriorityEvictionCallback(_MemoryCache);
+
+            // 获取取消令牌源并注册到过期令牌列表
+      var cts = _MemoryCache.GetCancellationTokenSource(entry.Key);
+     entry.ExpirationTokens.Add(new CancellationChangeToken(cts.Token));
+
+            // 注册后置逐出回调，用于清理资源
+            entry.RegisterPostEvictionCallback((key, value, reason, state) =>
             {
-                // 如果无法确定商户ID（比如组织已被删除），记录警告但不阻断流程
-                System.Diagnostics.Debug.WriteLine($"无法确定组织 {orgId} 的商户ID进行缓存失效");
-            }
-            
-            return count;
+    if (value is OrgCacheItem<TDbContext> cacheItem && cacheItem.DbContext != null)
+           {
+      try
+       {
+  cacheItem.DbContext.Dispose(); // 释放数据库上下文
+  }
+              catch { /* 忽略释放时的异常 */ }
+      }
+});
         }
 
         /// <summary>
-        /// 批量使指定组织的商户查找缓存失效。适用于批量操作场景。
+        /// 配置ID查找缓存条目。
         /// </summary>
-        /// <param name="orgIds">组织ID集合。</param>
-        /// <returns>失效的缓存数量。</returns>
-        public int InvalidateOrgMerchantCaches(IEnumerable<Guid> orgIds)
+        /// <param name="entry">缓存条目。</param>
+        private void ConfigureIdLookupCacheEntry(ICacheEntry entry)
+     {
+            // ID查找缓存过期时间较短，因为数据相对简单
+            entry.SetSlidingExpiration(TimeSpan.FromMinutes(15));
+         entry.SetAbsoluteExpiration(TimeSpan.FromHours(6));
+            entry.SetPriority(CacheItemPriority.Low);
+
+            // 启用优先级驱逐回调
+            entry.EnablePriorityEvictionCallback(_MemoryCache);
+
+      // 获取取消令牌源并注册到过期令牌列表
+ var cts = _MemoryCache.GetCancellationTokenSource(entry.Key);
+ entry.ExpirationTokens.Add(new CancellationChangeToken(cts.Token));
+        }
+
+        /// <summary>
+  /// 配置ID查找缓存选项。(已废弃,不再使用)
+        /// </summary>
+        /// <param name="options">缓存选项。</param>
+        [Obsolete("不再使用此方法,请使用 ConfigureIdLookupCacheEntry(ICacheEntry) 代替")]
+        private void ConfigureIdLookupCacheEntry(MemoryCacheEntryOptions options)
+  {
+            // 此方法已废弃,保留仅为兼容性
+        }
+        #endregion
+
+        #region 新增或更改的代码
+        
+        /// <summary>
+        /// 初始化 OrgToMerchant 缓存映射，避免后续再次查询数据库。
+        /// </summary>
+        /// <param name="cacheItem">已加载的组织缓存项。</param>
+        private void InitializeOrgToMerchantCache(OrgCacheItem<TDbContext> cacheItem)
+     {
+      if (cacheItem?.Merchant == null) return;
+
+            var merchantId = cacheItem.Merchant.Id;
+            
+// 为商户ID本身建立映射缓存
+            var merchantCacheKey = OwCacheExtensions.GetCacheKeyFromId(merchantId, "OrgToMerchant.");
+      var merchantEntry = _MemoryCache.CreateEntry(merchantCacheKey);
+            ConfigureIdLookupCacheEntry(merchantEntry);
+    merchantEntry.Value = (Guid?)merchantId;
+         merchantEntry.Dispose();
+
+            // 为所有组织机构建立到商户的映射缓存
+            if (cacheItem.Orgs != null)
+      {
+    // 获取主缓存的取消令牌源，用于建立依赖关系
+     var mainCacheKey = OwCacheExtensions.GetCacheKeyFromId(merchantId, "OrgCacheItem.");
+      var mainTokenSource = _MemoryCache.GetCancellationTokenSource(mainCacheKey);
+         
+ foreach (var orgId in cacheItem.Orgs.Keys)
         {
-            if (orgIds == null) return 0;
-            
-            var count = 0;
-            var processedMerchants = new HashSet<Guid>(); // 避免重复处理同一商户
-            
-            using var dbContext = _DbContextFactory.CreateDbContext();
-            
-            foreach (var orgId in orgIds)
-            {
-                // 失效单个映射缓存
-                var orgCacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId(orgId, "OrgToMerchant.");
-                if (_MemoryCache.CancelSource(orgCacheKey))
-                    count++;
-                
-                // 尝试获取商户ID并失效主缓存
-                var merchantId = ResolveMerchantIdFromDatabaseCore(dbContext, orgId);
-                if (merchantId.HasValue && processedMerchants.Add(merchantId.Value)) // 如果是第一次处理这个商户
-                {
-                    var mainCacheCount = InvalidateOrgCaches(merchantId.Value);
-                    count += mainCacheCount;
-                }
-            }
-            
-            return count;
+    var orgCacheKey = OwCacheExtensions.GetCacheKeyFromId(orgId, "OrgToMerchant.");
+      
+            var orgEntry = _MemoryCache.CreateEntry(orgCacheKey);
+        ConfigureIdLookupCacheEntry(orgEntry);
+    
+      // 添加对主缓存的依赖，当主缓存失效时这些映射也失效
+        if (mainTokenSource != null)
+   {
+      orgEntry.AddExpirationToken(new CancellationChangeToken(mainTokenSource.Token));
+         }
+         
+       orgEntry.Value = (Guid?)merchantId;
+      orgEntry.Dispose();
+    }
+       }
         }
         #endregion
 
@@ -368,256 +486,154 @@ namespace PowerLmsServer.Managers
         /// </summary>
         /// <param name="userId">用户ID。</param>
         /// <returns>商户ID。</returns>
-        private Guid ResolveMerchantIdByUserIdFromDatabase(Guid userId)
+ private Guid ResolveMerchantIdByUserIdFromDatabase(Guid userId)
         {
-            using var dbContext = _DbContextFactory.CreateDbContext();
+     using var dbContext = _DbContextFactory.CreateDbContext();
             
-            // 使用泛型方法访问AccountPlOrganizations实体
-            var userOrg = dbContext.Set<AccountPlOrganization>()
-                .AsNoTracking()
-                .Where(c => c.UserId == userId)
-                .FirstOrDefault();
+   // 使用泛型方法访问AccountPlOrganizations实体
+      var userOrg = dbContext.Set<AccountPlOrganization>()
+            .AsNoTracking()
+    .Where(c => c.UserId == userId)
+        .FirstOrDefault();
 
-            if (userOrg == null)
-                throw new InvalidOperationException($"用户 {userId} 未找到所属组织机构");
+        if (userOrg == null)
+     throw new InvalidOperationException($"用户 {userId} 未找到所属组织机构");
 
             var merchantId = ResolveMerchantIdFromDatabaseCore(dbContext, userOrg.OrgId);
-            if (!merchantId.HasValue)
-                throw new InvalidOperationException($"用户 {userId} 所属组织机构 {userOrg.OrgId} 未找到关联的商户");
-                
-            return merchantId.Value;
+  if (!merchantId.HasValue)
+          throw new InvalidOperationException($"用户 {userId} 所属组织机构 {userOrg.OrgId} 未找到关联的商户");
+    
+         return merchantId.Value;
         }
 
         /// <summary>
         /// 从数据库解析用户的商户ID的核心逻辑。
-        /// </summary>
-        /// <param name="dbContext">数据库上下文。</param>
-        /// <param name="userId">用户ID。</param>
+     /// </summary>
+    /// <param name="dbContext">数据库上下文。</param>
+      /// <param name="userId">用户ID。</param>
         /// <returns>商户ID，未找到返回null。</returns>
-        private static Guid? ResolveMerchantIdByUserIdFromDatabaseCore(TDbContext dbContext, Guid userId)
+      private static Guid? ResolveMerchantIdByUserIdFromDatabaseCore(TDbContext dbContext, Guid userId)
         {
-            // 使用泛型方法访问AccountPlOrganizations实体
-            var userOrg = dbContext.Set<AccountPlOrganization>()
-                .AsNoTracking()
-                .Where(c => c.UserId == userId)
-                .FirstOrDefault();
+      // 使用泛型方法访问AccountPlOrganizations实体
+  var userOrg = dbContext.Set<AccountPlOrganization>()
+     .AsNoTracking()
+      .Where(c => c.UserId == userId)
+       .FirstOrDefault();
 
             if (userOrg == null)
-                return null; // 用户未找到所属组织机构
+       return null; // 用户未找到所属组织机构
 
             return ResolveMerchantIdFromDatabaseCore(dbContext, userOrg.OrgId);
-        }
+  }
 
         /// <summary>
-        /// 从数据库解析商户ID的核心逻辑。
+    /// 从数据库解析商户ID的核心逻辑。
         /// </summary>
         /// <param name="dbContext">数据库上下文。</param>
         /// <param name="orgId">机构或商户ID。</param>
         /// <returns>商户ID，未找到返回null。</returns>
-        private static Guid? ResolveMerchantIdFromDatabaseCore(TDbContext dbContext, Guid orgId)
+ private static Guid? ResolveMerchantIdFromDatabaseCore(TDbContext dbContext, Guid orgId)
         {
-            // 首先尝试作为商户ID查找，使用Set<T>()方法
-            var merchant = dbContext.Set<PlMerchant>().Find(orgId);
-            if (merchant is not null)
-                return merchant.Id;
+    // 首先尝试作为商户ID查找，使用Set<T>()方法
+    var merchant = dbContext.Set<PlMerchant>().Find(orgId);
+         if (merchant is not null)
+    return merchant.Id;
 
             // 然后尝试作为组织机构ID查找，递归向上查找商户
-            var org = dbContext.Set<PlOrganization>().Find(orgId);
-            while (org != null)
-            {
-                if (org.ParentId is null) // 到达顶层组织
-                {
-                    if (org.MerchantId.HasValue)
-                        return org.MerchantId.Value;
-                    // 顶层组织未关联商户，这是数据不一致的情况，返回null而不抛异常
-                    return null;
-                }
-                org = dbContext.Set<PlOrganization>().Find(org.ParentId);
+     var org = dbContext.Set<PlOrganization>().Find(orgId);
+       while (org != null)
+      {
+          if (org.ParentId is null) // 到达顶层组织
+      {
+             if (org.MerchantId.HasValue)
+           return org.MerchantId.Value;
+           // 顶层组织未关联商户，这是数据不一致的情况，返回null而不抛异常
+           return null;
+             }
+ org = dbContext.Set<PlOrganization>().Find(org.ParentId);
             }
 
-            // 未找到对应的商户或组织机构，返回null
-            return null;
+      // 未找到对应的商户或组织机构，返回null
+   return null;
         }
 
         /// <summary>
         /// 从数据库加载完整的商户和组织缓存项。
         /// </summary>
-        /// <param name="merchantId">商户ID。</param>
+    /// <param name="merchantId">商户ID。</param>
         /// <returns>完整的缓存项。</returns>
-        private OrgCacheItem<TDbContext> LoadOrgCacheItemFromDatabase(Guid merchantId)
+    private OrgCacheItem<TDbContext> LoadOrgCacheItemFromDatabase(Guid merchantId)
         {
             var dbContext = _DbContextFactory.CreateDbContext();
             
             try
-            {
-                // 加载商户信息，使用Set<T>()方法
-                var merchant = dbContext.Set<PlMerchant>().FirstOrDefault(c => c.Id == merchantId);
-                if (merchant is null)
-                    throw new InvalidOperationException($"商户 {merchantId} 未找到");
-
-                // 加载该商户下的所有组织机构，使用Include预加载导航属性提高性能
-                var rootOrgs = dbContext.Set<PlOrganization>()
-                    .Where(c => c.MerchantId == merchantId && c.ParentId == null)
-                    .Include(c => c.Parent)
-                    .Include(c => c.Children)
-                    .AsEnumerable();
-
-                var orgsDict = new ConcurrentDictionary<Guid, PlOrganization>();
-                if (rootOrgs.Any())
-                {
-                    // 获取所有子孙组织机构
-                    var allOrgs = rootOrgs.SelectMany(c => OwHelper.GetAllSubItemsOfTree(new[] { c }, d => d.Children));
-                    foreach (var org in allOrgs)
-                        orgsDict.TryAdd(org.Id, org);
-
-                    // 确保导航属性被正确加载
-                    EnsureNavigationPropertiesLoaded(orgsDict.Values);
-                }
-
-                return new OrgCacheItem<TDbContext>
-                {
-                    Merchant = merchant,
-                    _Orgs = orgsDict,
-                    DbContext = dbContext
-                };
-            }
-            catch
-            {
-                dbContext?.Dispose(); // 出现异常时释放资源
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// 初始化 OrgToMerchant 缓存映射，避免后续再次查询数据库。
-        /// </summary>
-        /// <param name="cacheItem">已加载的组织缓存项。</param>
-        private void InitializeOrgToMerchantCache(OrgCacheItem<TDbContext> cacheItem)
         {
-            if (cacheItem?.Merchant == null) return;
+     // 加载商户信息，使用Set<T>()方法
+                var merchant = dbContext.Set<PlMerchant>().FirstOrDefault(c => c.Id == merchantId);
+ if (merchant is null)
+     throw new InvalidOperationException($"商户 {merchantId} 未找到");
 
-            var merchantId = cacheItem.Merchant.Id;
-            
-            // 为商户ID本身建立映射缓存
-            var merchantCacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId(merchantId, "OrgToMerchant.");
-            var merchantEntry = _MemoryCache.CreateEntry(merchantCacheKey);
-            ConfigureIdLookupCacheEntry(merchantEntry);
-            merchantEntry.Value = (Guid?)merchantId;
-            merchantEntry.Dispose();
+    // 加载该商户下的所有组织机构，使用Include预加载导航属性提高性能
+              var rootOrgs = dbContext.Set<PlOrganization>()
+       .Where(c => c.MerchantId == merchantId && c.ParentId == null)
+      .Include(c => c.Parent)
+        .Include(c => c.Children)
+  .AsEnumerable();
 
-            // 为所有组织机构建立到商户的映射缓存
-            if (cacheItem.Orgs != null)
-            {
-                // 获取主缓存的取消令牌源，用于建立依赖关系
-                var mainCacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId(merchantId, "OrgCacheItem.");
-                var mainTokenSource = _MemoryCache.GetCancellationTokenSource(mainCacheKey);
-                
-                foreach (var orgId in cacheItem.Orgs.Keys)
-                {
-                    var orgCacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId(orgId, "OrgToMerchant.");
-                    
-                    var orgEntry = _MemoryCache.CreateEntry(orgCacheKey);
-                    ConfigureIdLookupCacheEntry(orgEntry);
-                    
-                    // 添加对主缓存的依赖，当主缓存失效时这些映射也失效
-                    if (mainTokenSource != null)
-                    {
-                        orgEntry.AddExpirationToken(new CancellationChangeToken(mainTokenSource.Token));
-                    }
-                    
-                    orgEntry.Value = (Guid?)merchantId;
-                    orgEntry.Dispose();
+      var orgsDict = new ConcurrentDictionary<Guid, PlOrganization>();
+     if (rootOrgs.Any())
+      {
+       // 获取所有子孙组织机构
+         var allOrgs = rootOrgs.SelectMany(c => OwHelper.GetAllSubItemsOfTree(new[] { c }, d => d.Children));
+       foreach (var org in allOrgs)
+    orgsDict.TryAdd(org.Id, org);
+
+         // 确保导航属性被正确加载
+           EnsureNavigationPropertiesLoaded(orgsDict.Values);
                 }
-            }
+
+      return new OrgCacheItem<TDbContext>
+      {
+  Merchant = merchant,
+         _Orgs = orgsDict,
+        DbContext = dbContext
+       };
+      }
+      catch
+            {
+      dbContext?.Dispose(); // 出现异常时释放资源
+         throw;
+       }
         }
 
         /// <summary>
         /// 确保导航属性被正确加载。
-        /// </summary>
+      /// </summary>
         /// <param name="orgs">组织机构集合。</param>
         [MethodImpl(MethodImplOptions.NoOptimization)]
         private static void EnsureNavigationPropertiesLoaded(IEnumerable<PlOrganization> orgs)
         {
-            foreach (var org in orgs)
-            {
-                var _ = org.Parent; // 触发Parent属性的延迟加载
+       foreach (var org in orgs)
+  {
+         var _ = org.Parent; // 触发Parent属性的延迟加载
             }
         }
-
-        /// <summary>
-        /// 配置组织缓存条目。
-        /// </summary>
-        /// <param name="entry">缓存条目。</param>
-        /// <param name="merchantId">商户ID。</param>
-        private void ConfigureOrgCacheEntry(ICacheEntry entry, Guid merchantId)
-        {
-            // 设置缓存过期策略
-            entry.SetSlidingExpiration(TimeSpan.FromMinutes(30));
-            entry.SetAbsoluteExpiration(TimeSpan.FromHours(12));
-            entry.SetPriority(CacheItemPriority.Normal);
-
-            // 注册取消令牌以支持主动失效
-            entry.RegisterCancellationToken(_MemoryCache);
-
-            // 注册后置逐出回调，用于清理资源
-            entry.RegisterPostEvictionCallback((key, value, reason, state) =>
-            {
-                if (value is OrgCacheItem<TDbContext> cacheItem && cacheItem.DbContext != null)
-                {
-                    try
-                    {
-                        cacheItem.DbContext.Dispose(); // 释放数据库上下文
-                    }
-                    catch { /* 忽略释放时的异常 */ }
-                }
-            });
-        }
-
-        /// <summary>
-        /// 配置ID查找缓存条目。
-        /// </summary>
-        /// <param name="entry">缓存条目。</param>
-        private void ConfigureIdLookupCacheEntry(ICacheEntry entry)
-        {
-            // ID查找缓存过期时间较短，因为数据相对简单
-            entry.SetSlidingExpiration(TimeSpan.FromMinutes(15));
-            entry.SetAbsoluteExpiration(TimeSpan.FromHours(6));
-            entry.SetPriority(CacheItemPriority.Low);
-
-            // 注册取消令牌以支持主动失效
-            entry.RegisterCancellationToken(_MemoryCache);
-        }
-
-        /// <summary>
-        /// 配置ID查找缓存选项。
-        /// </summary>
-        /// <param name="options">缓存选项。</param>
-        private void ConfigureIdLookupCacheEntry(MemoryCacheEntryOptions options)
-        {
-            // ID查找缓存过期时间较短，因为数据相对简单
-            options.SetSlidingExpiration(TimeSpan.FromMinutes(15));
-            options.SetAbsoluteExpiration(TimeSpan.FromHours(6));
-            options.SetPriority(CacheItemPriority.Low);
-
-            // 注册取消令牌以支持主动失效
-            options.RegisterCancellationToken(_MemoryCache, Guid.NewGuid());
-        }
-        #endregion
+    #endregion
     }
 
     /// <summary>
     /// 注册 <see cref="OrgManager{TDbContext}"/> 服务到服务集合中。
-    /// </summary>
+ /// </summary>
     public static class OrgManagerExtensions
     {
         /// <summary>
-        /// 注册 OrgManager 服务。
+      /// 注册 OrgManager 服务。
         /// </summary>
         /// <typeparam name="TDbContext">数据库上下文类型。</typeparam>
         /// <param name="services">服务集合。</param>
         /// <returns>服务集合。</returns>
         public static IServiceCollection AddOrgManager<TDbContext>(this IServiceCollection services) 
-            where TDbContext : OwDbContext
+      where TDbContext : OwDbContext
         {
             return services.AddScoped<OrgManager<TDbContext>>();
         }

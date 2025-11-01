@@ -77,7 +77,7 @@ namespace PowerLmsServer.Managers
         /// <returns>指定商户下所有角色，如果没找到则返回null。</returns>
         public ConcurrentDictionary<Guid, PlRole> GetRolesByMerchantId(Guid merchId)
         {
-            string cacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId(merchId, ".Roles");
+            string cacheKey = OwCacheExtensions.GetCacheKeyFromId(merchId, ".Roles");
             return _Cache.TryGetValue(cacheKey, out ConcurrentDictionary<Guid, PlRole> roles) ? roles : null;
         }
 
@@ -88,10 +88,13 @@ namespace PowerLmsServer.Managers
         /// <returns>商户下所有角色。</returns>
         public ConcurrentDictionary<Guid, PlRole> GetOrLoadRolesByMerchantId(Guid merchId)
         {
-            string cacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId(merchId, ".Roles");
+            string cacheKey = OwCacheExtensions.GetCacheKeyFromId(merchId, ".Roles");
 
             return _Cache.GetOrCreate(cacheKey, entry =>
             {
+                // ✅ 启用优先级驱逐回调
+                entry.EnablePriorityEvictionCallback(_Cache);
+                
                 // 获取商户和组织信息
                 var cacheItem = _OrgManager.GetOrLoadOrgCacheItem(merchId);
                 if (cacheItem.Merchant == null) return new ConcurrentDictionary<Guid, PlRole>();
@@ -117,8 +120,12 @@ namespace PowerLmsServer.Managers
             // 设置滑动过期时间
             entry.SetSlidingExpiration(TimeSpan.FromMinutes(30));
 
-            // 使用OwMemoryCacheExtensions注册取消令牌
-            entry.RegisterCancellationToken(_Cache);
+            // 启用优先级驱逐回调
+            entry.EnablePriorityEvictionCallback(_Cache);
+
+            // 获取取消令牌源并注册到过期令牌列表
+            var cts = _Cache.GetCancellationTokenSource(entry.Key);
+            entry.ExpirationTokens.Add(new CancellationChangeToken(cts.Token));
         }
 
         /// <summary>
@@ -170,8 +177,12 @@ namespace PowerLmsServer.Managers
             // 设置滑动过期时间
             entry.SetSlidingExpiration(TimeSpan.FromMinutes(15));
 
-            // 使用OwMemoryCacheExtensions注册取消令牌
-            entry.RegisterCancellationToken(_Cache);
+            // 启用优先级驱逐回调
+            entry.EnablePriorityEvictionCallback(_Cache);
+
+            // 获取取消令牌源并注册到过期令牌列表
+            var cts = _Cache.GetCancellationTokenSource(entry.Key);
+            entry.ExpirationTokens.Add(new CancellationChangeToken(cts.Token));
         }
 
         /// <summary>
@@ -181,8 +192,19 @@ namespace PowerLmsServer.Managers
         /// <returns>如果成功使缓存失效则返回true，否则返回false</returns>
         public bool InvalidateRoleCache(Guid merchantId)
         {
-            string cacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId(merchantId, ".Roles");
-            return _Cache.CancelSource(cacheKey);
+            string cacheKey = OwCacheExtensions.GetCacheKeyFromId(merchantId, ".Roles");
+            // 使用新API: 获取取消令牌源并取消
+            var cts = _Cache.GetCancellationTokenSource(cacheKey);
+            if (cts != null && !cts.IsCancellationRequested)
+            {
+                try
+                {
+                    cts.Cancel();
+                    return true;
+                }
+                catch { /* 忽略可能的异常 */ }
+            }
+            return false;
         }
 
         /// <summary>
@@ -202,7 +224,7 @@ namespace PowerLmsServer.Managers
         /// <returns>用户当前登录公司的所有角色，如果没找到则返回null。</returns>
         public ConcurrentDictionary<Guid, PlRole> GetCurrentRoles(Guid userId)
         {
-            string cacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId(userId, ".CurrentRoles");
+            string cacheKey = OwCacheExtensions.GetCacheKeyFromId(userId, ".CurrentRoles");
             return _Cache.TryGetValue(cacheKey, out ConcurrentDictionary<Guid, PlRole> roles) ? roles : null;
         }
 
@@ -213,8 +235,19 @@ namespace PowerLmsServer.Managers
         /// <returns>如果成功使缓存失效则返回true，否则返回false</returns>
         public bool InvalidateUserRolesCache(Guid userId)
         {
-            string cacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId(userId, ".CurrentRoles");
-            return _Cache.CancelSource(cacheKey);
+            string cacheKey = OwCacheExtensions.GetCacheKeyFromId(userId, ".CurrentRoles");
+            // 使用新API: 获取取消令牌源并取消
+            var cts = _Cache.GetCancellationTokenSource(cacheKey);
+            if (cts != null && !cts.IsCancellationRequested)
+            {
+                try
+                {
+                    cts.Cancel();
+                    return true;
+                }
+                catch { /* 忽略可能的异常 */ }
+            }
+            return false;
         }
 
         /// <summary>
@@ -224,10 +257,13 @@ namespace PowerLmsServer.Managers
         /// <returns>所有当前有效角色的字典。未登录到公司则返回空字典。</returns>
         public ConcurrentDictionary<Guid, PlRole> GetOrLoadCurrentRolesByUser(Account user)
         {
-            string cacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId(user.Id, ".CurrentRoles");
+            string cacheKey = OwCacheExtensions.GetCacheKeyFromId(user.Id, ".CurrentRoles");
 
             return _Cache.GetOrCreate(cacheKey, entry =>
             {
+                // ✅ 启用优先级驱逐回调
+                entry.EnablePriorityEvictionCallback(_Cache);
+                
                 // 加载用户角色数据
                 PowerLmsUserDbContext db = user.DbContext;
                 var rolesData = LoadCurrentRolesByUser(user, ref db);

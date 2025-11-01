@@ -88,7 +88,18 @@ namespace PowerLmsServer.Managers
         /// <returns>如果成功使缓存失效则返回true，否则返回false</returns>
         public bool InvalidatePermissionCache()
         {
-            return _Cache.CancelSource(PermissionsCacheKey);
+            // ✅ 使用新API: 获取取消令牌源并取消
+            var cts = _Cache.GetCancellationTokenSource(PermissionsCacheKey);
+            if (cts != null && !cts.IsCancellationRequested)
+            {
+                try
+                {
+                    cts.Cancel();
+                    return true;
+                }
+                catch { /* 忽略可能的异常 */ }
+            }
+            return false;
         }
 
         /// <summary>
@@ -98,22 +109,25 @@ namespace PowerLmsServer.Managers
         public ConcurrentDictionary<string, PlPermission> GetOrLoadPermissions()
         {
             return _Cache.GetOrCreate(PermissionsCacheKey, entry =>
-            {
-                var db = _DbContextFactory.CreateDbContext();
-                try
-                {
-                    var permissions = LoadPermission(ref db);
+{
+    // ? 启用优先级驱逐回调
+    entry.EnablePriorityEvictionCallback(_Cache);
 
-                    // 配置缓存条目
-                    ConfigurePermissionsCacheEntry(entry);
+    var db = _DbContextFactory.CreateDbContext();
+    try
+    {
+        var permissions = LoadPermission(ref db);
 
-                    return permissions;
-                }
-                finally
-                {
-                    db?.Dispose();
-                }
-            });
+        // 配置缓存条目
+        ConfigurePermissionsCacheEntry(entry);
+
+        return permissions;
+    }
+    finally
+    {
+        db?.Dispose();
+    }
+});
         }
 
         /// <summary>
@@ -125,8 +139,12 @@ namespace PowerLmsServer.Managers
             // 设置滑动过期时间
             entry.SetSlidingExpiration(TimeSpan.FromMinutes(30));
 
-            // 使用OwMemoryCacheExtensions注册取消令牌
-            entry.RegisterCancellationToken(_Cache);
+            // ✅ 启用优先级驱逐回调
+            entry.EnablePriorityEvictionCallback(_Cache);
+
+            // ✅ 获取取消令牌源并注册到过期令牌列表
+            var cts = _Cache.GetCancellationTokenSource(entry.Key);
+            entry.ExpirationTokens.Add(new CancellationChangeToken(cts.Token));
         }
 
         #endregion 所有权限对象及相关
@@ -138,7 +156,7 @@ namespace PowerLmsServer.Managers
         /// <returns>指定用户的当前权限，没有则返回null</returns>
         public ConcurrentDictionary<string, PlPermission> GetCurrentPermissions(Guid userId)
         {
-            string cacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId(userId, ".CurrentPermissions");
+            string cacheKey = OwCacheExtensions.GetCacheKeyFromId(userId, ".CurrentPermissions");
             return _Cache.TryGetValue(cacheKey, out ConcurrentDictionary<string, PlPermission> permissions) ? permissions : null;
         }
 
@@ -149,8 +167,19 @@ namespace PowerLmsServer.Managers
         /// <returns>如果成功使缓存失效则返回true，否则返回false</returns>
         public bool InvalidateUserPermissionsCache(Guid userId)
         {
-            string cacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId(userId, ".CurrentPermissions");
-            return _Cache.CancelSource(cacheKey);
+            string cacheKey = OwCacheExtensions.GetCacheKeyFromId(userId, ".CurrentPermissions");
+            // ✅ 使用新API: 获取取消令牌源并取消
+            var cts = _Cache.GetCancellationTokenSource(cacheKey);
+            if (cts != null && !cts.IsCancellationRequested)
+            {
+                try
+                {
+                    cts.Cancel();
+                    return true;
+                }
+                catch { /* 忽略可能的异常 */ }
+            }
+            return false;
         }
 
         /// <summary>
@@ -184,18 +213,21 @@ namespace PowerLmsServer.Managers
         /// <returns>用户当前的所有权限</returns>
         public ConcurrentDictionary<string, PlPermission> GetOrLoadUserCurrentPermissions(Account user)
         {
-            string cacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId(user.Id, ".CurrentPermissions");
+            string cacheKey = OwCacheExtensions.GetCacheKeyFromId(user.Id, ".CurrentPermissions");
 
             return _Cache.GetOrCreate(cacheKey, entry =>
-            {
-                var db = user.DbContext;
-                var permissions = LoadCurrentPermissionsByUser(user, ref db);
+   {
+       // ? 启用优先级驱逐回调
+       entry.EnablePriorityEvictionCallback(_Cache);
 
-                // 配置缓存条目
-                ConfigureUserPermissionsCacheEntry(entry, user.Id);
+       var db = user.DbContext;
+       var permissions = LoadCurrentPermissionsByUser(user, ref db);
 
-                return permissions;
-            });
+       // 配置缓存条目
+       ConfigureUserPermissionsCacheEntry(entry, user.Id);
+
+       return permissions;
+   });
         }
 
         /// <summary>
@@ -208,8 +240,12 @@ namespace PowerLmsServer.Managers
             // 设置滑动过期时间
             entry.SetSlidingExpiration(TimeSpan.FromMinutes(15));
 
-            // 使用OwMemoryCacheExtensions注册取消令牌
-            entry.RegisterCancellationToken(_Cache);
+            // ✅ 启用优先级驱逐回调
+            entry.EnablePriorityEvictionCallback(_Cache);
+
+            // ✅ 获取取消令牌源并注册到过期令牌列表
+            var cts = _Cache.GetCancellationTokenSource(entry.Key);
+            entry.ExpirationTokens.Add(new CancellationChangeToken(cts.Token));
 
             // 添加权限和角色更改的依赖关系
             // 获取全局权限缓存的取消令牌源
@@ -220,7 +256,7 @@ namespace PowerLmsServer.Managers
             }
 
             // 获取用户角色缓存的取消令牌源
-            string rolesCacheKey = OwMemoryCacheExtensions.GetCacheKeyFromId(userId, ".CurrentRoles");
+            string rolesCacheKey = OwCacheExtensions.GetCacheKeyFromId(userId, ".CurrentRoles");
             var rolesTokenSource = _Cache.GetCancellationTokenSource(rolesCacheKey);
             if (rolesTokenSource != null)
             {
@@ -229,3 +265,4 @@ namespace PowerLmsServer.Managers
         }
     }
 }
+

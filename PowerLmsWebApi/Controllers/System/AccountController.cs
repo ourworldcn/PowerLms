@@ -617,7 +617,7 @@ namespace PowerLmsWebApi.Controllers
                 }
                 
                 // 失效当前用户的组织机构缓存
-                _Cache.Remove(OwMemoryCacheExtensions.GetCacheKeyFromId(id, ".CurrentOrgs")); //失效当前组织机构缓存
+                _Cache.Remove(OwCacheExtensions.GetCacheKeyFromId(id, ".CurrentOrgs")); //失效当前组织机构缓存
             }
             catch (Exception ex)
             {
@@ -656,7 +656,7 @@ namespace PowerLmsWebApi.Controllers
                 context.User.OrgId = model.CurrentOrgId;
 
                 // 取消当前用户的组织机构缓存
-                _Cache.Remove(OwMemoryCacheExtensions.GetCacheKeyFromId(context.User.Id, ".CurrentOrgs"));
+                _Cache.Remove(OwCacheExtensions.GetCacheKeyFromId(context.User.Id, ".CurrentOrgs"));
             }
 
             context.User.CurrentLanguageTag = model.LanguageTag;
@@ -730,8 +730,8 @@ namespace PowerLmsWebApi.Controllers
             var targetUser = _AccountManager.GetOrLoadById(tmpUser.Id);
             if (targetUser == null) return BadRequest("指定账号不存在。");
 
-            if (context.User.IsSuperAdmin && !targetUser.IsMerchantAdmin) return BadRequest("超管不能重置普通用户的密码。");
-            else if (context.User.IsMerchantAdmin && targetUser.IsAdmin()) return BadRequest("商管只能重置普通用户的密码。");
+            if (context.User.IsSuperAdmin && !targetUser.IsMerchantAdmin) return BadRequest("超管不能重置普通用户的密码.");
+            else if (context.User.IsMerchantAdmin && targetUser.IsAdmin()) return BadRequest("商管只能重置普通用户的密码.");
 
             var result = new ResetPwdReturnDto { };
             //生成密码
@@ -777,7 +777,7 @@ namespace PowerLmsWebApi.Controllers
 
             // 同时处理组织机构ID和商户ID
             var allValidIds = new HashSet<Guid>(orgIds.Concat(merchantIds));
-            var cacheKey = userMerchantId.HasValue ? OwMemoryCacheExtensions.GetCacheKeyFromId(userMerchantId.Value, ".Orgs") : null;
+            var cacheKey = userMerchantId.HasValue ? OwCacheExtensions.GetCacheKeyFromId(userMerchantId.Value, ".Orgs") : null;
 
             // 删除不在当前列表中的关联
             var removes = _DbContext.AccountPlOrganizations.Where(c => c.UserId == model.UserId && !allValidIds.Contains(c.OrgId));
@@ -796,15 +796,36 @@ namespace PowerLmsWebApi.Controllers
 
             // 取消相关缓存
             if (cacheKey != null)
-                _Cache.CancelSource(cacheKey);
+            {
+            // ✅ 使用新API: 获取取消令牌源并取消
+       var cts = _Cache.GetCancellationTokenSource(cacheKey);
+      if (cts != null && !cts.IsCancellationRequested)
+        {
+             try
+         {
+    cts.Cancel();
+          }
+     catch { /* 忽略可能的异常 */ }
+     }
+       }
 
-            // 如果有修改过用户与商户的关联，也应该清除用户相关的缓存
+   // 如果有修改过用户与商户的关联，也应该清除用户相关的缓存
             if (merchantIds.Length > 0)
             {
-                _Cache.CancelSource(OwMemoryCacheExtensions.GetCacheKeyFromId(model.UserId, ".CurrentOrgs"));
-            }
+           var currentOrgsCacheKey = OwCacheExtensions.GetCacheKeyFromId(model.UserId, ".CurrentOrgs");
+ // ✅ 使用新API: 获取取消令牌源并取消
+         var currentOrgsCts = _Cache.GetCancellationTokenSource(currentOrgsCacheKey);
+            if (currentOrgsCts != null && !currentOrgsCts.IsCancellationRequested)
+  {
+           try
+   {
+         currentOrgsCts.Cancel();
+       }
+         catch { /* 忽略可能的异常 */ }
+                }
+    }
 
-            return result;
+  return result;
         }
 
         #endregion 用户相关
