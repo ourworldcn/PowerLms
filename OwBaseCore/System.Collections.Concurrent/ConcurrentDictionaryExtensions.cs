@@ -84,7 +84,7 @@ namespace System.Collections.Concurrent
                     Monitor.TryEnter(value, remainingTimeout, ref lockTaken);
                     if (!lockTaken) return default;  // 超时
 
-                                                     // 双重检查：验证值未被替换
+                    // 双重检查：验证值未被替换
                     if (ReferenceEquals(value, dictionary.TryGetValue(key, out var current) ? current : null))
                         return new DisposeHelper<TValue>(static v => Monitor.Exit(v), value);
 

@@ -1,8 +1,8 @@
 ﻿/*
  * 项目：OwBaseCore | 模块：IMemoryCache 高级特性扩展
  * 功能：提供缓存Key的引用计数、优先级驱逐回调和依赖管理功能
- * 技术要点：引用计数、优先级队列、取消令牌、Interlocked原子操作、延迟构造、DisposeHelper零分配、双重检查锁
- * 作者：zc | 创建：2025-01-19 | 修改：2025-01-31 增加取消令牌支持
+ * 技术要点：引用计数、优先级队列、取消令牌、Interlocked原子操作、延迟构造、DisposeHelper零分配、双重检查锁、FirstKeyOptimizedWeakTable
+ * 作者：zc | 创建：2025-01-19 | 修改：2025-02-01 使用 FirstKeyOptimizedWeakTable 简化 StateMap 缓存
  */
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Primitives;
@@ -22,7 +22,32 @@ namespace Microsoft.Extensions.Caching.Memory
     public static class OwCacheExtensions
     {
         public const string GuidString = "A3B7C1D5-8E2F-4A9B-B6C3-7D4E9F1A2B5C";
-        private const string CacheEntryStateMapKey = $"CacheEntryStateMap.{GuidString}";
+
+        #region StateMap 缓存管理（基于 FirstKeyOptimizedWeakTable）
+
+        /// <summary>StateMap 缓存实例（自动处理第一个键切换和多实例场景）</summary>
+        /// <remarks>
+        /// 使用 FirstKeyOptimizedWeakTable 自动实现：
+        /// - 热路径优化：99% 的调用约 1ns
+        /// - 自适应切换：IMemoryCache 实例被 GC 后自动切换到新实例
+        /// - 多实例支持：测试环境或特殊场景自动降级到 ConditionalWeakTable
+        /// - 零内存泄漏：弱引用确保 IMemoryCache 可被正常回收
+        /// </remarks>
+        private static readonly FirstKeyOptimizedWeakTable<IMemoryCache, ConcurrentDictionary<object, CacheEntryState>> s_stateMapCache = new();
+
+        /// <summary>StateMap 值工厂函数（静态复用，避免热路径重复分配）</summary>
+        private static readonly Func<IMemoryCache, ConcurrentDictionary<object, CacheEntryState>> s_stateMapFactory = static _ => new ConcurrentDictionary<object, CacheEntryState>();
+
+        /// <summary>
+        /// 获取指定缓存实例的状态映射字典（热路径优化，支持自适应切换）。
+        /// </summary>
+        /// <param name="cache">缓存实例</param>
+        /// <returns>状态映射字典</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static ConcurrentDictionary<object, CacheEntryState> GetCacheEntryStateMap(this IMemoryCache cache) =>
+            s_stateMapCache.GetOrAdd(cache, s_stateMapFactory);
+
+        #endregion StateMap 缓存管理
 
         private sealed class CacheEntryState
         {
@@ -53,17 +78,6 @@ namespace Microsoft.Extensions.Caching.Memory
         }
 
         private static readonly Func<object, CacheEntryState> s_stateFactory = static _ => new CacheEntryState();
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static ConcurrentDictionary<object, CacheEntryState> GetCacheEntryStateMap(this IMemoryCache cache) =>
-            cache.GetOrCreate(CacheEntryStateMapKey, static e =>
-            {
-                // ✅ 状态映射字典本身也需要启用优先级驱逐回调
-                // 注意：这里不能调用 EnablePriorityEvictionCallback，因为会导致循环依赖
-                // StateMap 本身设置为 NeverRemove，不需要额外的驱逐回调
-                e.SetPriority(CacheItemPriority.NeverRemove);
-                return new ConcurrentDictionary<object, CacheEntryState>();
-            });
 
         /// <summary>获取或创建状态并加锁，保证返回有效状态</summary>
         private static DisposeHelper<CacheEntryState> GetOrCreateAndLockState(IMemoryCache cache, object key)
@@ -96,11 +110,9 @@ namespace Microsoft.Extensions.Caching.Memory
         {
             ArgumentNullException.ThrowIfNull(cache);
             ArgumentNullException.ThrowIfNull(key);
-            using (var lockedState = GetOrCreateAndLockState(cache, key))
-            {
-                lockedState.State.AddRef();
-                return new DisposeHelper<object>(static s => ((CacheEntryState)s).Release(), lockedState.State);
-            }
+            using var lockedState = GetOrCreateAndLockState(cache, key);
+            lockedState.State.AddRef();
+            return new DisposeHelper<object>(static s => ((CacheEntryState)s).Release(), lockedState.State);
         }
 
         /// <summary>
@@ -191,7 +203,6 @@ namespace Microsoft.Extensions.Caching.Memory
             using var lockedState = cache.GetCacheEntryStateMap().GetAndLock(key);
             if (lockedState.State == null) return;
             var entryState = lockedState.State;
-
             // 释放引用计数
             entryState.Release();
 
@@ -329,8 +340,6 @@ namespace Microsoft.Extensions.Caching.Memory
         {
             if (string.IsNullOrEmpty(key))
                 return null;
-
-            // 如果有前缀，检查键是否以前缀开头
             if (prefix is not null)
             {
                 if (!key.StartsWith(prefix, StringComparison.Ordinal))
@@ -338,28 +347,19 @@ namespace Microsoft.Extensions.Caching.Memory
                     OwHelper.SetLastErrorAndMessage(400, $"格式错误：前缀不匹配，期望'{prefix}'");
                     return null;
                 }
-
-                // 移除前缀，使用Span提高性能
                 key = key[prefix.Length..];
             }
-
-            // 确保剩余部分至少等于GUID的长度
             if (key.Length < IdKeyLength)
             {
                 OwHelper.SetLastErrorAndMessage(400, $"格式错误：GUID部分长度不足，需要{IdKeyLength}个字符");
                 return null;
             }
-
-            // 提取GUID部分（取前IdKeyLength个字符）
             var guidSpan = key.AsSpan(0, IdKeyLength);
-
-            // 尝试解析GUID，使用Span版本提高性能
             if (!Guid.TryParse(guidSpan, out var id))
             {
                 OwHelper.SetLastErrorAndMessage(400, "格式错误：无效的GUID格式");
                 return null;
             }
-
             return id;
         }
 
@@ -373,7 +373,6 @@ namespace Microsoft.Extensions.Caching.Memory
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Guid? GetIdFromCacheKey<T>(string key, string prefix = null)
         {
-            // 如果未提供前缀，使用类型名称作为前缀
             prefix ??= $"{typeof(T).Name}.";
             return GetIdFromCacheKey(key, prefix);
         }
@@ -387,7 +386,6 @@ namespace Microsoft.Extensions.Caching.Memory
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static string GetCacheKeyFromId(Guid id, string prefix = null)
         {
-            // 使用标准格式（含连字符）生成GUID字符串
             return $"{prefix ?? string.Empty}{id:D}";
         }
 
@@ -401,7 +399,6 @@ namespace Microsoft.Extensions.Caching.Memory
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static string GetCacheKeyFromId<T>(Guid id, string prefix = null)
         {
-            // 如果未提供前缀，使用类型名称作为前缀
             prefix ??= $"{typeof(T).Name}.";
             return GetCacheKeyFromId(id, prefix);
         }
