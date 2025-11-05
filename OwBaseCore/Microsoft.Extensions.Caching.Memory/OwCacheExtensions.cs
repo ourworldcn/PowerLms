@@ -9,6 +9,7 @@ using Microsoft.Extensions.Primitives;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -51,7 +52,6 @@ namespace Microsoft.Extensions.Caching.Memory
 
         private sealed class CacheEntryState
         {
-            private int _refCount;
             private PriorityQueue<PostEvictionCallbackRegistration, int> _callbackQueue;
             private CancellationTokenSource _cancellationTokenSource;
             public bool IsCallbackRegistered;
@@ -60,10 +60,6 @@ namespace Microsoft.Extensions.Caching.Memory
                    static () => new PriorityQueue<PostEvictionCallbackRegistration, int>();
             private static readonly Func<CancellationTokenSource> s_ctsFactory =
            static () => new CancellationTokenSource();
-
-            public void AddRef() => Interlocked.Increment(ref _refCount);
-            public void Release() => Interlocked.Decrement(ref _refCount);
-            public int RefCount => Volatile.Read(ref _refCount);
 
             public PriorityQueue<PostEvictionCallbackRegistration, int> Queue =>
                 LazyInitializer.EnsureInitialized(ref _callbackQueue, s_queueFactory);
@@ -75,6 +71,28 @@ namespace Microsoft.Extensions.Caching.Memory
 
             /// <summary>检查是否已创建取消令牌源</summary>
             public bool HasCancellationTokenSource => Volatile.Read(ref _cancellationTokenSource) != null;
+
+            /// <summary>清理所有资源</summary>
+            public void Cleanup()
+            {
+                // ✅ 清理回调队列
+                if (HasQueue)
+                {
+                    _callbackQueue.Clear();
+                    _callbackQueue = null;
+                }
+
+                // ✅ 处置取消令牌源
+                if (HasCancellationTokenSource)
+                {
+                    try
+                    {
+                        _cancellationTokenSource?.Dispose();
+                    }
+                    catch { }
+                    _cancellationTokenSource = null;
+                }
+            }
         }
 
         private static readonly Func<object, CacheEntryState> s_stateFactory = static _ => new CacheEntryState();
@@ -92,54 +110,48 @@ namespace Microsoft.Extensions.Caching.Memory
             }
         }
 
-        #region 引用计数管理
+        #region 引用计数管理（已废弃 - 保留 API 兼容性）
 
         /// <summary>
-        /// 为指定键增加引用计数（+1），返回 DisposeHelper，Dispose 时自动减少计数（-1）。
+        /// [已废弃] 为指定键增加引用计数（兼容旧代码，实际无操作）。
         /// </summary>
         /// <param name="cache">缓存实例</param>
         /// <param name="key">缓存键</param>
-        /// <returns>DisposeHelper，Dispose 时自动减少引用计数</returns>
+        /// <returns>空的 DisposeHelper（Dispose 无操作）</returns>
         /// <remarks>
-        /// <para><strong>语义</strong>：引用计数>0表示缓存项仍在内存中活跃，即使缓存中已无法获取。</para>
-        /// <para><strong>创建者</strong>：调用但不释放返回值，维持长期引用。</para>
-        /// <para><strong>使用者</strong>：使用 using 语句自动释放，临时引用。</para>
-        /// <para><strong>跨线程安全</strong>：支持不同线程增减引用，使用Interlocked原子操作保证线程安全。</para>
+        /// <para><strong>废弃说明</strong>：引用计数机制已移除，此方法仅保留 API 兼容性。</para>
+        /// <para><strong>新设计</strong>：状态生命周期直接绑定到缓存项，无需手动管理引用计数。</para>
+        /// <para><strong>迁移建议</strong>：移除所有 <c>using(cache.AddKeyRef(key))</c> 调用，功能不受影响。</para>
         /// </remarks>
+        [Obsolete("引用计数机制已废弃，状态现在自动跟随缓存项生命周期管理")]
         public static DisposeHelper<object> AddKeyRef(this IMemoryCache cache, object key)
         {
             ArgumentNullException.ThrowIfNull(cache);
             ArgumentNullException.ThrowIfNull(key);
-            using var lockedState = GetOrCreateAndLockState(cache, key);
-            lockedState.State.AddRef();
-            return new DisposeHelper<object>(static s => ((CacheEntryState)s).Release(), lockedState.State);
+            return DisposeHelper.Empty<object>();
         }
 
         /// <summary>
-        /// 手动释放指定键的一个引用（引用计数-1）。
+        /// [已废弃] 手动释放指定键的一个引用（兼容旧代码，实际无操作）。
         /// </summary>
         /// <param name="cache">缓存实例</param>
         /// <param name="key">缓存键</param>
-        /// <remarks>通常应该使用 using(cache.AddKeyRef(key)) 自动管理，此方法用于特殊场景。</remarks>
+        [Obsolete("引用计数机制已废弃")]
         public static void ReleaseKeyRef(this IMemoryCache cache, object key)
         {
-            ArgumentNullException.ThrowIfNull(cache);
-            ArgumentNullException.ThrowIfNull(key);
-            if (cache.GetCacheEntryStateMap().TryGetValue(key, out var state))
-                state.Release();
+            // 无操作
         }
 
         /// <summary>
-        /// 获取指定键的当前引用计数。
+        /// [已废弃] 获取指定键的当前引用计数（始终返回 0）。
         /// </summary>
         /// <param name="cache">缓存实例</param>
         /// <param name="key">缓存键</param>
-        /// <returns>当前引用计数，键不存在返回0</returns>
+        /// <returns>始终返回 0</returns>
+        [Obsolete("引用计数机制已废弃")]
         public static int GetKeyRefCount(this IMemoryCache cache, object key)
         {
-            ArgumentNullException.ThrowIfNull(cache);
-            ArgumentNullException.ThrowIfNull(key);
-            return cache.GetCacheEntryStateMap().TryGetValue(key, out var state) ? state.RefCount : 0;
+            return 0;
         }
 
         #endregion
@@ -155,8 +167,8 @@ namespace Microsoft.Extensions.Caching.Memory
         /// <param name="priority">优先级（值越小优先级越高，默认10）</param>
         /// <returns>传入的缓存条目（支持链式调用）</returns>
         /// <remarks>
-        /// <para>此方法会自动增加该键的引用计数（+1），标记缓存项在内存中活跃。</para>
-        /// <para>只有当缓存项被驱逐且引用计数归零时，驱逐回调才会真正执行清理操作。</para>
+        /// <para>首次调用时自动注册框架驱逐回调，后续调用仅追加优先级回调。</para>
+        /// <para>回调按优先级顺序执行，执行完毕后自动清理所有资源。</para>
         /// <para>使用内部锁保护回调队列的并发安全。</para>
         /// </remarks>
         public static ICacheEntry EnablePriorityEvictionCallback(this ICacheEntry entry, IMemoryCache cache, PostEvictionCallbackRegistration registration = null, int priority = 10)
@@ -168,7 +180,6 @@ namespace Microsoft.Extensions.Caching.Memory
                 var state = lockedState.State;
                 if (!state.IsCallbackRegistered)
                 {
-                    state.AddRef();
                     entry.RegisterPostEvictionCallback(ExecuteCallbacks, cache);
                     state.IsCallbackRegistered = true;
                 }
@@ -203,16 +214,11 @@ namespace Microsoft.Extensions.Caching.Memory
             using var lockedState = cache.GetCacheEntryStateMap().GetAndLock(key);
             if (lockedState.State == null) return;
             var entryState = lockedState.State;
-            // 释放引用计数
-            entryState.Release();
 
-            // ✅ 无论是否有队列，都需要检查并处置 CancellationTokenSource
-            var shouldCleanup = entryState.RefCount <= 0;
-
-            // 如果有队列，执行优先级回调
+            // ✅ 执行优先级回调
+            List<Exception> exceptions = null;
             if (entryState.HasQueue)
             {
-                List<Exception> exceptions = null;
                 while (entryState.Queue.Count > 0)
                 {
                     var cb = entryState.Queue.Dequeue();
@@ -226,47 +232,28 @@ namespace Microsoft.Extensions.Caching.Memory
                         exceptions.Add(ex);
                     }
                 }
-
-                // ✅ 如果有异常，延迟抛出以确保资源清理完成
-                if (exceptions is not null && shouldCleanup)
-                {
-                    // 清理资源后再抛出异常
-                    CleanupState(cache, key, entryState);
-                    throw new AggregateException("优先级驱逐回调执行时发生异常", exceptions);
-                }
-                else if (exceptions is not null)
-                {
-                    throw new AggregateException("优先级驱逐回调执行时发生异常", exceptions);
-                }
             }
 
-            // ✅ 清理资源（如果引用计数归零）
-            if (shouldCleanup)
+            // ✅ 清理所有资源（无论是否有异常）
+            CleanupState(cache, key, entryState);
+
+            // ✅ 如果有异常，抛出（在清理之后）
+            if (exceptions is not null)
             {
-                CleanupState(cache, key, entryState);
+                throw new AggregateException("优先级驱逐回调执行时发生异常", exceptions);
             }
         }
 
-        /// <summary>清理 CacheEntryState 的资源（处置 CancellationTokenSource 并移除状态映射）</summary>
+        /// <summary>清理 CacheEntryState 的所有资源</summary>
         /// <param name="cache">缓存实例</param>
         /// <param name="key">缓存键</param>
         /// <param name="entryState">要清理的状态</param>
         private static void CleanupState(IMemoryCache cache, object key, CacheEntryState entryState)
         {
-            // ✅ 处置 CancellationTokenSource（如果已创建）
-            if (entryState.HasCancellationTokenSource)
-            {
-                try
-                {
-                    entryState.CancellationTokenSource?.Dispose();
-                }
-                catch
-                {
-                    // 忽略处置异常，避免影响驱逐流程
-                }
-            }
+            // ✅ 清理状态内部资源
+            entryState.Cleanup();
 
-            // ✅ 从状态映射中移除条目
+          // ✅ 从状态映射中移除条目
             cache.GetCacheEntryStateMap().TryRemove(key, out _);
         }
 
@@ -282,7 +269,7 @@ namespace Microsoft.Extensions.Caching.Memory
         /// <returns>与键关联的取消令牌源</returns>
         /// <remarks>
         /// <para>此方法总是返回有效的取消令牌源，无论是否启用了优先级驱逐。</para>
-        /// <para>如果已启用优先级驱逐回调（通过 EnablePriorityEvictionCallback），则会自动注册取消回调，确保缓存项被驱逐时令牌被取消。</para>
+        /// <para>如果已启用优先级驱逐回调，令牌会自动注册取消回调，确保缓存项被驱逐时令牌被取消。</para>
         /// <para>如果未启用优先级驱逐回调，令牌仍然可用，但不会在驱逐时自动取消。</para>
         /// <para>取消回调的优先级为 1024，确保在大多数用户回调之后执行。</para>
         /// <para>返回的令牌源由缓存基础设施管理，调用者不应手动 Dispose。</para>
