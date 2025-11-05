@@ -3,6 +3,7 @@ using System.Buffers;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -44,6 +45,12 @@ namespace System.Collections.Generic
     /// <para>
     /// 多线程使用时，必须使用 <c>lock</c> 或其他同步机制保护所有操作，
     /// 或改用线程安全集合如 <see cref="System.Collections.Concurrent.ConcurrentBag{T}"/>。
+    /// </para>
+    /// <para>
+    /// <b>资源管理</b>：本类实现了 <see cref="IDisposable"/> 接口和终结器模式。
+    /// 建议使用 <c>using</c> 语句或手动调用 <see cref="Dispose"/> 方法及时释放资源。
+    /// 如果忘记调用 Dispose，终结器会在 GC 回收时自动归还数组，但这会增加 GC 压力和延迟。
+    /// 最佳实践：始终使用 <c>using var list = new PooledList&lt;T&gt;();</c>
     /// </para>
     /// </remarks>
     public class PooledListBase<T> : IList<T>, IDisposable
@@ -114,6 +121,37 @@ namespace System.Collections.Generic
             _Buffer = capacity < 8 ? ArrayPool<T>.Shared.Rent(8) : ArrayPool<T>.Shared.Rent(capacity);
             _Count = 0;
             AddRange(collection);
+        }
+
+        /// <summary>
+        /// 终结器：在 GC 回收时归还数组到 ArrayPool（备用机制）
+        /// </summary>
+        /// <remarks>
+        /// <para><b>重要提示</b>：终结器仅在 Dispose 未被调用时作为安全网运行。</para>
+        /// <para>
+        /// <b>性能影响</b>：
+        /// <list type="bullet">
+        /// <item><description>对象会被提升到 GC 的终结队列，延迟回收</description></item>
+        /// <item><description>增加 GC 压力，可能触发额外的 Gen2 回收</description></item>
+        /// <item><description>终结器在单独的线程执行，可能造成延迟</description></item>
+        /// </list>
+        /// </para>
+        /// <para>
+        /// <b>最佳实践</b>：始终使用 <c>using</c> 语句或手动调用 <see cref="Dispose"/>，
+        /// 避免依赖终结器。终结器仅作为最后的安全机制。
+        /// </para>
+        /// <para>
+        /// <b>应用程序域卸载</b>：当应用程序域卸载时，CLR 不保证终结器会执行。
+        /// 对于长期运行的应用程序，这通常不是问题，但在 AppDomain 卸载场景下，
+        /// 数组可能不会被归还。这是可接受的，因为 ArrayPool 本身也会被回收。
+        /// ArrayPool.Return 即使在 AppDomain 卸载过程中调用也是安全的，
+        /// 因为其内部有异常保护，最坏情况是数组无法归还而被 GC 回收。
+        /// </para>
+        /// </remarks>
+        ~PooledListBase()
+        {
+            // ✅ 即使在 AppDomain 卸载时，Dispose(false) 也是安全的
+            Dispose(false);
         }
 
         #endregion
@@ -302,20 +340,24 @@ namespace System.Collections.Generic
         /// <remarks>
         /// 性能优化：
         /// <list type="bullet">
-        /// <item><description>如果集合实现了 ICollection&lt;T&gt;，使用高性能批量复制</description></item>
-        /// <item><description>否则逐个添加元素，利用 Add 方法的内联优化</description></item>
+        /// <item><description>优先使用 FastCopyTo 批量复制（已针对 ICollection 优化）</description></item>
+        /// <item><description>对无法获取数量的枚举器，逐个添加并利用 Add 的内联优化</description></item>
+        /// <item><description>空集合提前返回，避免修改版本号和不必要的操作</description></item>
         /// </list>
         /// </remarks>
         public void AddRange(IEnumerable<T> collection)
         {
             ArgumentNullException.ThrowIfNull(collection);
-            if (collection is ICollection<T> c)
+
+            if (collection.TryGetNonEnumeratedCount(out int count))
             {
-                int count = c.Count;
-                EnsureCapacity(_Count + count);
-                collection.FastCopyTo(_Buffer, _Count);
-                _Count += count;
-                _version++;
+                if (count > 0)  // ✅ 仅当有元素时才执行
+                {
+                    EnsureCapacity(_Count + count);
+                    collection.FastCopyTo(_Buffer, _Count);
+                    _Count += count;
+                    _version++;
+                }
             }
             else
             {
@@ -340,19 +382,21 @@ namespace System.Collections.Generic
                 throw new ArgumentOutOfRangeException(nameof(index));
             if (count < 0 || index + count > Count)
                 throw new ArgumentOutOfRangeException(nameof(count));
-            if (count == 0)
-                return;
-            int remainingCount = Count - (index + count);
-            if (remainingCount > 0)
+
+            if (count > 0)  // ✅ 仅当有元素需要移除时才执行
             {
-                _Buffer.AsSpan(index + count, remainingCount).CopyTo(_Buffer.AsSpan(index));
+                int remainingCount = Count - (index + count);
+                if (remainingCount > 0)
+                {
+                    _Buffer.AsSpan(index + count, remainingCount).CopyTo(_Buffer.AsSpan(index));
+                }
+                _Count -= count;
+                if (RuntimeHelpers.IsReferenceOrContainsReferences<T>())
+                {
+                    Array.Clear(_Buffer, _Count, count);
+                }
+                _version++;
             }
-            _Count -= count;
-            if (RuntimeHelpers.IsReferenceOrContainsReferences<T>())
-            {
-                Array.Clear(_Buffer, _Count, count);
-            }
-            _version++;
         }
 
         /// <summary>
@@ -448,26 +492,32 @@ namespace System.Collections.Generic
         /// </remarks>
         public void TrimExcess()
         {
-            if (_Count == 0)
+            // ✅ 使用模式匹配简化逻辑
+            switch ((_Count, _Buffer.Length))
             {
-                if (_Buffer.Length > DefaultCapacity)
-                {
+                case (0, > DefaultCapacity):
+                    // 空列表且缓冲区大于默认容量：收缩到默认容量
                     ReturnPooledArray(ref _Buffer);
                     _Buffer = ArrayPool<T>.Shared.Rent(DefaultCapacity);
                     _version++;
-                }
-                return;
+                    break;
+
+                case ( > 0, var currentCapacity):
+                    // 非空列表：尝试收缩到实际元素数量
+                    var newBuffer = ArrayPool<T>.Shared.Rent(_Count);
+                    if (newBuffer.Length < currentCapacity)
+                    {
+                        _Buffer.AsSpan(0, _Count).CopyTo(newBuffer);
+                        ReturnPooledArray(ref _Buffer);
+                        _Buffer = newBuffer;
+                        _version++;
+                    }
+                    else
+                    {
+                        ArrayPool<T>.Shared.Return(newBuffer, false);
+                    }
+                    break;
             }
-            var buffTmp = ArrayPool<T>.Shared.Rent(_Count);
-            if (buffTmp.Length >= _Buffer.Length)
-            {
-                ArrayPool<T>.Shared.Return(buffTmp, false);
-                return;
-            }
-            _Buffer.AsSpan(0, _Count).CopyTo(buffTmp);
-            ReturnPooledArray(ref _Buffer);
-            _Buffer = buffTmp;
-            _version++;
         }
         #endregion
 
@@ -563,17 +613,71 @@ namespace System.Collections.Generic
         /// <para>调用此方法后，列表将不再可用。</para>
         /// <para>此方法将内部缓冲区归还到 <see cref="ArrayPool{T}"/>，并重置计数为 0。</para>
         /// <para>建议在不再需要列表时调用此方法，以便及时释放内存资源。</para>
+        /// <para>可以安全地多次调用此方法（幂等性）。</para>
         /// </remarks>
         public void Dispose()
         {
-            if (!_isDisposed)
+            Dispose(true);
+            GC.SuppressFinalize(this);  // ✅ 阻止终结器运行，避免双重清理
+        }
+
+        /// <summary>
+        /// 释放资源的核心实现（支持 Dispose 模式）
+        /// </summary>
+        /// <param name="disposing">
+        /// true 表示从 <see cref="Dispose()"/> 方法调用（用户显式释放）；
+        /// false 表示从终结器调用（GC 自动回收）
+        /// </param>
+        /// <remarks>
+        /// <para><b>Dispose 模式最佳实践</b>：</para>
+        /// <list type="bullet">
+        /// <item><description>disposing = true：可以安全访问托管对象（如 _Buffer）</description></item>
+        /// <item><description>disposing = false：不应访问其他托管对象（可能已被 GC 回收）</description></item>
+        /// <item><description>无论哪种情况，都应释放非托管资源（ArrayPool 的数组可安全归还）</description></item>
+        /// </list>
+        /// <para>
+        /// 在本实现中，<c>_Buffer</c> 是托管数组引用，但 ArrayPool 的归还操作是线程安全的，
+        /// 即使在终结器线程中调用也是安全的。
+        /// </para>
+        /// <para>
+        /// <b>AppDomain 卸载安全性</b>：ArrayPool.Shared.Return() 内部有异常保护，
+        /// 即使在 AppDomain 卸载过程中被调用，也不会抛出异常或导致崩溃。
+        /// 最坏情况是数组无法归还到池中，而是被 GC 正常回收。
+        /// </para>
+        /// </remarks>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_isDisposed)
+                return;
+
+            try
             {
-                ReturnPooledArray(ref _Buffer);
+                // ✅ 安全检查：确保 _Buffer 不为空且未被卸载
+                // 在 AppDomain 卸载时，这些检查可能避免访问已释放的内存
+                var buffer = _Buffer;
+                if (buffer != null && buffer.Length > 0)
+                {
+                    // ✅ ArrayPool.Return 是异常安全的：
+                    // - 内部有 try-catch 保护
+                    // - 即使在 AppDomain 卸载时调用也安全
+                    // - 最坏情况：数组无法归还，被 GC 回收
+                    ReturnPooledArray(ref _Buffer);
+                }
                 _Count = 0;
+            }
+            catch (Exception ex)
+            {
+                // ✅ 双重保护：即使 ReturnPooledArray 抛出异常（极端情况）
+                // 也不会导致终结器线程崩溃
+                // 注意：终结器中抛出未处理异常会导致进程终止（.NET Framework）
+                // 或仅终止终结器线程（.NET Core/5+），但仍应避免
+                Debug.WriteLine($"PooledListBase.Dispose 时出错 (disposing={disposing}): {ex.Message}");
+            }
+            finally
+            {
                 _isDisposed = true;
             }
         }
-
         #endregion
     }
 }

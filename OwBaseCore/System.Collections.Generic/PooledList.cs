@@ -3,6 +3,7 @@ using System.Buffers;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.CompilerServices;
 
 namespace System.Collections.Generic
@@ -349,4 +350,37 @@ namespace System.Collections.Generic
 
         #endregion
     }
+
+
+    /// <summary>
+    /// <see cref="PooledList{T}"/> 的扩展方法集合
+    /// </summary>
+    public static class PooledListExtensions
+    {
+        /// <summary>
+        /// 从 <see cref="IEnumerable{T}"/> 创建 <see cref="PooledList{T}"/>，可选预分配容量以避免动态扩容
+        /// </summary>
+        /// <typeparam name="T">元素类型</typeparam>
+        /// <param name="source">源集合</param>
+        /// <param name="capacityHint">容量提示，仅在无法获取集合数量时使用</param>
+        /// <returns>包含源集合所有元素的 <see cref="PooledList{T}"/> 实例</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> 为 null</exception>
+        /// <remarks>
+        /// 容量分配策略：
+        /// <list type="bullet">
+        /// <item><description>如果源集合能获取数量（ICollection、数组、某些LINQ查询）：使用实际数量（由 AddRange 自动处理）</description></item>
+        /// <item><description>如果无法获取数量且提供了 <paramref name="capacityHint"/>：使用提示容量避免多次扩容</description></item>
+        /// <item><description>否则：使用默认容量（首次分配8个元素），根据实际需要动态扩容</description></item>
+        /// </list>
+        /// </remarks>
+        public static PooledList<T> ToPooledList<T>(this IEnumerable<T> source, int capacityHint = 0)
+        {
+            var result = source.TryGetNonEnumeratedCount(out var count)
+               ? new PooledList<T>(count)              // 能获取数量：用实际数量
+               : new PooledList<T>(capacityHint);      // 不能获取数量：用提示（0 时等价于默认）
+            result.AddRange(source);
+            return result;
+        }
+    }
+
 }

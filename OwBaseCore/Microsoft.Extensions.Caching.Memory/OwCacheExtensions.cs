@@ -206,58 +206,68 @@ namespace Microsoft.Extensions.Caching.Memory
             // 释放引用计数
             entryState.Release();
 
-            // 如果没有队列，清理资源后返回
-            if (!entryState.HasQueue)
-            {
-                if (entryState.RefCount <= 0)
-                {
-                    // 清理取消令牌源（如果存在）
-                    if (entryState.HasCancellationTokenSource)
-                    {
-                        try
-                        {
-                            entryState.CancellationTokenSource?.Dispose();
-                        }
-                        catch { }
-                    }
-                    cache.GetCacheEntryStateMap().TryRemove(key, out _);
-                }
-                return;
-            }
+            // ✅ 无论是否有队列，都需要检查并处置 CancellationTokenSource
+            var shouldCleanup = entryState.RefCount <= 0;
 
-            // ✅ 执行优先级队列中的所有回调（包括取消令牌回调）
-            List<Exception> exceptions = null;
-            while (entryState.Queue.Count > 0)
+            // 如果有队列，执行优先级回调
+            if (entryState.HasQueue)
             {
-                var cb = entryState.Queue.Dequeue();
-                try
+                List<Exception> exceptions = null;
+                while (entryState.Queue.Count > 0)
                 {
-                    cb.EvictionCallback(key, value, reason, cb.State);
-                }
-                catch (Exception ex)
-                {
-                    exceptions ??= new List<Exception>();
-                    exceptions.Add(ex);
-                }
-            }
-
-            // 清理资源
-            if (entryState.RefCount <= 0)
-            {
-                // 清理取消令牌源（如果存在）
-                if (entryState.HasCancellationTokenSource)
-                {
+                    var cb = entryState.Queue.Dequeue();
                     try
                     {
-                        entryState.CancellationTokenSource?.Dispose();
+                        cb.EvictionCallback(key, value, reason, cb.State);
                     }
-                    catch { }
+                    catch (Exception ex)
+                    {
+                        exceptions ??= new List<Exception>();
+                        exceptions.Add(ex);
+                    }
                 }
-                cache.GetCacheEntryStateMap().TryRemove(key, out _);
+
+                // ✅ 如果有异常，延迟抛出以确保资源清理完成
+                if (exceptions is not null && shouldCleanup)
+                {
+                    // 清理资源后再抛出异常
+                    CleanupState(cache, key, entryState);
+                    throw new AggregateException("优先级驱逐回调执行时发生异常", exceptions);
+                }
+                else if (exceptions is not null)
+                {
+                    throw new AggregateException("优先级驱逐回调执行时发生异常", exceptions);
+                }
             }
 
-            if (exceptions is not null)
-                throw new AggregateException("优先级驱逐回调执行时发生异常", exceptions);
+            // ✅ 清理资源（如果引用计数归零）
+            if (shouldCleanup)
+            {
+                CleanupState(cache, key, entryState);
+            }
+        }
+
+        /// <summary>清理 CacheEntryState 的资源（处置 CancellationTokenSource 并移除状态映射）</summary>
+        /// <param name="cache">缓存实例</param>
+        /// <param name="key">缓存键</param>
+        /// <param name="entryState">要清理的状态</param>
+        private static void CleanupState(IMemoryCache cache, object key, CacheEntryState entryState)
+        {
+            // ✅ 处置 CancellationTokenSource（如果已创建）
+            if (entryState.HasCancellationTokenSource)
+            {
+                try
+                {
+                    entryState.CancellationTokenSource?.Dispose();
+                }
+                catch
+                {
+                    // 忽略处置异常，避免影响驱逐流程
+                }
+            }
+
+            // ✅ 从状态映射中移除条目
+            cache.GetCacheEntryStateMap().TryRemove(key, out _);
         }
 
         #endregion
@@ -276,6 +286,7 @@ namespace Microsoft.Extensions.Caching.Memory
         /// <para>如果未启用优先级驱逐回调，令牌仍然可用，但不会在驱逐时自动取消。</para>
         /// <para>取消回调的优先级为 1024，确保在大多数用户回调之后执行。</para>
         /// <para>返回的令牌源由缓存基础设施管理，调用者不应手动 Dispose。</para>
+        /// <para><strong>资源管理</strong>：CancellationTokenSource 会在缓存项被驱逐且引用计数归零时自动处置，无需手动管理。</para>
         /// </remarks>
         public static CancellationTokenSource GetCancellationTokenSource(this IMemoryCache cache, object key)
         {
@@ -287,6 +298,9 @@ namespace Microsoft.Extensions.Caching.Memory
             // ✅ 如果已启用优先级回调且尚未注册取消令牌回调，则注册
             if (state.IsCallbackRegistered && !state.HasCancellationTokenSource)
             {
+                // ✅ 先创建令牌源，再注册回调（确保回调中有有效的令牌源）
+                var cts = state.CancellationTokenSource;
+
                 // ✅ 使用标准 API 注册取消令牌回调
                 // 优先级 1024：让大多数用户回调（优先级 0-1023）先执行
                 // 这样用户回调可以依赖令牌尚未取消的状态进行清理
@@ -306,7 +320,7 @@ namespace Microsoft.Extensions.Caching.Memory
                                 catch { }
                             }
                         },
-                        State = state.CancellationTokenSource // 传递令牌源作为状态
+                        State = cts // 传递令牌源作为状态
                     }, priority: 1024); // 优先级 1024，在大多数用户回调之后执行
                 }
                 catch (InvalidOperationException)
