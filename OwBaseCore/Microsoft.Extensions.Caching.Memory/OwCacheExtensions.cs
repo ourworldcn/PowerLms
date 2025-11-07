@@ -17,7 +17,7 @@ using System.Threading;
 namespace Microsoft.Extensions.Caching.Memory
 {
     /// <summary>
-    /// IMemoryCache 高级特性扩展，提供引用计数、优先级驱逐回调和依赖管理功能。
+    /// IMemoryCache 高级特性扩展，提供引用计数、优先级驱逐和依赖管理功能。
     /// </summary>
     [Guid(GuidString)]
     public static class OwCacheExtensions
@@ -52,25 +52,26 @@ namespace Microsoft.Extensions.Caching.Memory
 
         private sealed class CacheEntryState
         {
-            private PriorityQueue<PostEvictionCallbackRegistration, int> _callbackQueue;
-            private CancellationTokenSource _cancellationTokenSource;
             public bool IsCallbackRegistered;
-
+            private PriorityQueue<PostEvictionCallbackRegistration, int> _callbackQueue;
             private static readonly Func<PriorityQueue<PostEvictionCallbackRegistration, int>> s_queueFactory =
-                   static () => new PriorityQueue<PostEvictionCallbackRegistration, int>();
-            private static readonly Func<CancellationTokenSource> s_ctsFactory =
-           static () => new CancellationTokenSource();
+                static () => new PriorityQueue<PostEvictionCallbackRegistration, int>();
 
             public PriorityQueue<PostEvictionCallbackRegistration, int> Queue =>
                 LazyInitializer.EnsureInitialized(ref _callbackQueue, s_queueFactory);
             public bool HasQueue => Volatile.Read(ref _callbackQueue) != null;
 
-            /// <summary>获取或创建取消令牌源</summary>
-            public CancellationTokenSource CancellationTokenSource =>
-                LazyInitializer.EnsureInitialized(ref _cancellationTokenSource, s_ctsFactory);
+            private static readonly Func<CancellationTokenSource> s_ctsFactory =
+                static () => new CancellationTokenSource();
+
+            private CancellationTokenSource _cancellationTokenSource;
 
             /// <summary>检查是否已创建取消令牌源</summary>
             public bool HasCancellationTokenSource => Volatile.Read(ref _cancellationTokenSource) != null;
+
+            /// <summary>获取或创建取消令牌源</summary>
+            public CancellationTokenSource CancellationTokenSource =>
+                LazyInitializer.EnsureInitialized(ref _cancellationTokenSource, s_ctsFactory);
 
             /// <summary>清理所有资源</summary>
             public void Cleanup()
@@ -109,52 +110,6 @@ namespace Microsoft.Extensions.Caching.Memory
                     return lockedState;
             }
         }
-
-        #region 引用计数管理（已废弃 - 保留 API 兼容性）
-
-        /// <summary>
-        /// [已废弃] 为指定键增加引用计数（兼容旧代码，实际无操作）。
-        /// </summary>
-        /// <param name="cache">缓存实例</param>
-        /// <param name="key">缓存键</param>
-        /// <returns>空的 DisposeHelper（Dispose 无操作）</returns>
-        /// <remarks>
-        /// <para><strong>废弃说明</strong>：引用计数机制已移除，此方法仅保留 API 兼容性。</para>
-        /// <para><strong>新设计</strong>：状态生命周期直接绑定到缓存项，无需手动管理引用计数。</para>
-        /// <para><strong>迁移建议</strong>：移除所有 <c>using(cache.AddKeyRef(key))</c> 调用，功能不受影响。</para>
-        /// </remarks>
-        [Obsolete("引用计数机制已废弃，状态现在自动跟随缓存项生命周期管理")]
-        public static DisposeHelper<object> AddKeyRef(this IMemoryCache cache, object key)
-        {
-            ArgumentNullException.ThrowIfNull(cache);
-            ArgumentNullException.ThrowIfNull(key);
-            return DisposeHelper.Empty<object>();
-        }
-
-        /// <summary>
-        /// [已废弃] 手动释放指定键的一个引用（兼容旧代码，实际无操作）。
-        /// </summary>
-        /// <param name="cache">缓存实例</param>
-        /// <param name="key">缓存键</param>
-        [Obsolete("引用计数机制已废弃")]
-        public static void ReleaseKeyRef(this IMemoryCache cache, object key)
-        {
-            // 无操作
-        }
-
-        /// <summary>
-        /// [已废弃] 获取指定键的当前引用计数（始终返回 0）。
-        /// </summary>
-        /// <param name="cache">缓存实例</param>
-        /// <param name="key">缓存键</param>
-        /// <returns>始终返回 0</returns>
-        [Obsolete("引用计数机制已废弃")]
-        public static int GetKeyRefCount(this IMemoryCache cache, object key)
-        {
-            return 0;
-        }
-
-        #endregion
 
         #region 优先级驱逐回调
 
@@ -253,7 +208,7 @@ namespace Microsoft.Extensions.Caching.Memory
             // ✅ 清理状态内部资源
             entryState.Cleanup();
 
-          // ✅ 从状态映射中移除条目
+            // ✅ 从状态映射中移除条目
             cache.GetCacheEntryStateMap().TryRemove(key, out _);
         }
 
