@@ -2,8 +2,8 @@
 PowerLms Metadata
 workspace: C:\Users\zc-home\source\ourworldcn\PowerLms\
 framework: .NET 6
-copilot_prompt: .github\prompts\me.prompt.md
-copilot_reference: #prompt:'.github\prompts\me.prompt.md'
+copilot_prompt: .github\copilot-instructions.md
+copilot_reference: #prompt:'.github\copilot-instructions.md'
 architecture: API→Server→Data→OwDbBase→OwBaseCore
 code_lines: 317000
 team: 3
@@ -34,38 +34,38 @@ workspace_structure: 分层架构(API-业务-数据)，基础设施完备，基�
 PowerLms解决方案 (API→Server→Data→OwDbBase→OwBaseCore)
 ├── PowerLmsWebApi/    # API层 (84文件) - RESTful + Swagger + JWT权限
 ├── PowerLmsServer/    # 业务层 (40文件) - Managers + 基础设施组件
-├── PowerLmsData/      # 数据层 (274文件) - EF Core + 200+迁移文件
+├── PowerLmsData/    # 数据层 (274文件) - EF Core + 200+迁移文件
 └── 基础设施 (Bak/)    # OwDbBase + OwBaseCore 核心组件
 ```
 
 ### 📁 实际解决方案结构
 ```
 PowerLms解决方案
-├── PowerLmsWebApi/          # 84个文件 - API控制器层
-│   ├── Controllers/         # 分模块控制器
+├── PowerLmsWebApi/# 84个文件 - API控制器层
+│   ├── Controllers/ # 分模块控制器
 │   │   ├── Business/        # 业务模块(海运/空运/工作号)
 │   │   ├── Customer/        # 客户资料管理
 │   │   ├── Financial/       # 财务管理(费用/结算/金蝶)
-│   │   ├── OA/             # 办公自动化
+│   │   ├── OA/    # 办公自动化
 │   │   ├── System/         # 系统管理
-│   │   ├── Tax/            # 税务发票
-│   │   └── BaseData/       # 基础数据
-│   └── Middleware/         # 异常处理中间件
+│   │   ├── Tax/         # 税务发票
+│   │   └── BaseData/  # 基础数据
+│   └── Middleware/     # 异常处理中间件
 ├── PowerLmsServer/         # 40个文件 - 业务逻辑层
-│   ├── Managers/           # 业务管理器
+│   ├── Managers/   # 业务管理器
 │   │   ├── Auth/          # 权限认证
-│   │   ├── Business/      # 业务逻辑
+│   │   ├── Business/ # 业务逻辑
 │   │   ├── Financial/     # 财务管理
 │   │   ├── Integration/   # 外部集成
 │   │   └── System/        # 系统服务
 │   └── Services/          # 通用服务
-├── PowerLmsData/          # 274个文件 - 数据访问层
+├── PowerLmsData/  # 274个文件 - 数据访问层
 │   ├── Migrations/        # 200+迁移文件
-│   ├── 业务/              # 业务实体
-│   ├── 财务/              # 财务实体
-│   ├── 客户资料/          # 客户实体
-│   ├── 机构/              # 组织架构
-│   └── 权限/              # 权限系统
+│   ├── 业务/ # 业务实体
+│   ├── 财务/      # 财务实体
+│   ├── 客户资料/      # 客户实体
+│   ├── 机构/  # 组织架构
+│   └── 权限/     # 权限系统
 └── 基础设施 (../Bak/)     # 核心组件依赖
     ├── OwDbBase/          # 数据库基础组件
     └── OwBaseCore/        # 核心基础组件
@@ -104,66 +104,87 @@ PowerLms解决方案
 
 ## 📋 当前开发状态 (2025年2月)
 
-### 🔴 紧急Bug修复 (最高优先级) - 目标：2月6日完成
+### 🎉 最新完成功能 (2025年1-2月)
 
-#### 1. 申请单移除费用后已申请金额未恢复 🔥
-- **问题**: 费用从申请单移除后，`TotalAppliedAmount`字段未正确回写，导致费用无法再次添加
-- **影响**: 阻塞费用申请流程，影响财务业务正常运转
-- **预估**: 0.5天
-- **文件**: `FinancialController.DocFeeRequisition.cs` (AddDocFeeRequisitionItem/RemoveDocFeeRequisitionItem)
+#### 基础设施与架构优化
+- **缓存系统重构** ✅ - OwCacheExtensions完整迁移，统一管理引用计数+优先级驱逐+取消令牌
+- **OwMemoryCacheExtensions废弃** ✅ - 旧API已完全替换并删除，100%迁移到新设计
+- **OwExtensions项目创建** ✅ - 明确职责边界，专注第三方框架扩展
+- **缓存性能优化** ✅ - 优先级回调机制性能提升10-15%
 
-#### 2. 通用进口工作号409错误 🔥
-- **问题**: 新增工作号时接口返回409冲突错误，但数据实际已保存
-- **影响**: 用户体验差，误导用户认为保存失败
-- **预估**: 0.5天
-- **技术**: 检查重复性校验逻辑
+#### 账期管理与工作号功能
+- **账期管理完整实现** ✅ - 机构参数表、关闭账期、预览影响范围、自动递增
+- **工作号唯一性校验** ✅ - 支持手动录入+自动生成，增加验证接口`ValidateJobNo`
+- **工作号409错误修复** ✅ - 完善错误处理机制，清晰的日志记录
 
-#### 3. 业务结算单商户隔离 🔥
-- **问题**: 切换公司登录后，结算单数据未按OrgID隔离
-- **影响**: 严重的多租户数据隔离问题
+#### 申请单与审批流程
+- **申请单回退机制** ✅ - 完整的工作流清理+状态回退+权限控制(E.2权限)
+- **申请单明细已结算金额优化** ✅ - 直接使用TotalSettledAmount字段，移除动态计算
+- **OA申请单回退功能** ✅ - 与主营业务申请单回退逻辑统一
+
+#### 空运业务API
+- **空运进口API恢复** ✅ - 创建独立PlAirborneController，完整CRUD接口
+- **空运出口API统一** ✅ - PlAirborneController同时处理空运进出口业务
+
+#### 组织与客户管理
+- **商户实体结构优化** ✅ - 地址属性展平重构，提升访问性能
+- **商户查询功能增强** ✅ - 支持通用查询条件，与系统接口统一
+- **OrgManager缓存优化** ✅ - 修复缓存失效机制，解决组织数据更新问题
+
+#### 金蝶导出功能
+- **收款结算单导出金蝶** ✅ - 七种凭证分录规则，多币种处理，混合业务识别
+- **付款结算单导出金蝶** ✅ - 六种凭证分录规则，多笔付款优先，手续费双分录自平衡
+
+#### 基础数据管理
+- **基础数据导入导出扩展** ✅ - 新增JobNumberRule、OtherNumberRule、SubjectConfiguration、DailyFeesType支持
+- **通用数据查询接口** ✅ - 支持多实体类型字段查询，灵活去重控制
+- **日常费用种类重复记录修复** ✅ - 修复同步到子机构时创建重复记录的问题
+- **字典导出键重复错误修复** ✅ - 实现安全字典构建机制
+- **OtherNumberRule导入导出** ✅ - 修复Comment注释缺失导致的识别失败
+
+### 🔴 当前紧急任务 (高优先级)
+
+#### 1. 空运接口架构整理 🔥
+- **问题**: PlJobController.EaDoc.cs 与 PlAirborneController 存在功能重复
+- **影响**: 维护成本高，容易产生路由冲突
+- **方案**: 统一到 PlAirborneController，删除 PlJobController 中的空运相关代码
 - **预估**: 1天
-- **方案**: 结算单主表增加OrgID冗余字段
+- **状态**: 🔄 进行中
 
-#### 4. 权限缓存加载异常 ⚠️
-- **问题**: 用户登录后放置一天，权限显示不正确，需重启IIS恢复
-- **影响**: 基础代码问题，影响系统稳定性
-- **预估**: 2天（复杂度高）
-- **技术**: 排查权限缓存的加载和过期机制
+#### 2. 费用过滤Bug修复 ⚠️
+- **问题**: `GetDocFeeRequisitionItem` 接口中 `fee_id` 参数过滤未生效
+- **影响**: 费用反查申请单明细功能异常
+- **预估**: 0.5天
+- **状态**: ❌ 待修复
 
-### 🟡 功能增强任务 (中优先级) - 计划2月14日完成
+### 🟡 功能增强任务 (中优先级)
 
 #### 1. OA申请单公司字段验证
 - **需求**: 验证OA费用申请单的`CustomerId`字段集成
 - **状态**: CustomerId字段已存在，需确认数据库迁移和前端对接
 - **预估**: 0.5天
 
-#### 2. 空运接口架构重复修正
-- **问题**: `PlJobController.EaDoc.cs`与`PlAirborneController`功能重复
-- **影响**: 维护成本高，容易产生路由冲突
-- **预估**: 1天
-- **方案**: 统一到PlAirborneController，保持架构一致
-
-#### 3. 费用列表申请单详情接口
+#### 2. 费用列表申请单详情接口
 - **需求**: 点击"已申请金额"显示该费用在哪些申请单中被引用
 - **接口**: `GET /api/Financial/GetFeeRequisitionDetails?feeId={id}`
 - **预估**: 1天
 
-#### 4. 客户资料有效性管理
+#### 3. 客户资料有效性管理
 - **需求**: 增加`IsActive`字段，实现客户软删除/停用功能
 - **接口**: `POST /api/Customer/ToggleActiveStatus`
 - **预估**: 1.5天
 
-#### 5. 客户选择器查询优化
+#### 4. 客户选择器查询优化
 - **需求**: 弹窗式选择器，支持多维度搜索、分页、排序
 - **接口**: `GET /api/Customer/GetCustomersForSelector`
 - **预估**: 1天
 
-#### 6. 查看所有申请单权限
+#### 5. 查看所有申请单权限
 - **需求**: 财务角色查看所有申请单，不受申请人限制
 - **状态**: 权限已添加，需后端接口支持
 - **预估**: 0.5天
 
-#### 7. 科目设置快捷输入
+#### 6. 科目设置快捷输入
 - **需求**: "凭证字"和"核算类别"字段支持下拉选择
 - **方案**: 类似银行账号快捷输入，数据源来自基础字典
 - **预估**: 0.5天（后端部分）
@@ -179,29 +200,6 @@ PowerLms解决方案
 - **当前状态**: 等待永昌石完成Excel规则文件
 - **下一步**: 专题会议评审规则文件后开发
 
-### ✅ 最近完成功能 (2025年1-2月)
-
-#### 性能优化与架构改进
-- **申请单明细已结算金额优化** ✅ - 直接使用TotalSettledAmount字段，移除动态计算
-- **商户实体结构优化** ✅ - 地址属性展平重构，提升访问性能
-- **商户查询功能增强** ✅ - 支持通用查询条件，与系统接口统一
-- **OrgManager缓存优化** ✅ - 修复缓存失效机制，解决组织数据更新问题
-
-#### 金蝶导出功能
-- **收款结算单导出金蝶** ✅ - 七种凭证分录规则，多币种处理，混合业务识别
-- **付款结算单导出金蝶** ✅ - 六种凭证分录规则，多笔付款优先，手续费双分录自平衡
-
-#### 基础数据与系统功能
-- **基础数据导入导出扩展** ✅ - 新增JobNumberRule、OtherNumberRule、SubjectConfiguration、DailyFeesType支持
-- **通用数据查询接口** ✅ - 支持多实体类型字段查询，灵活去重控制
-- **申请单审批回退机制** ✅ - 完整的工作流清理+状态回退+权限控制
-- **账期管理机制** ✅ - 机构参数表+批量关闭+自动递增
-
-#### Bug修复
-- **日常费用种类重复记录** ✅ - 修复同步到子机构时创建重复记录的问题
-- **字典导出键重复错误** ✅ - 实现安全字典构建机制
-- **OtherNumberRule导入导出** ✅ - 修复Comment注释缺失导致的识别失败
-
 ### 🏗️ 架构完成状态
 
 | 层级 | 完成状态 | 主要特征 |
@@ -209,7 +207,7 @@ PowerLms解决方案
 | **API层** | ✅ 84文件完成 | 分模块控制器+统一异常处理+Swagger文档 |
 | **业务层** | ✅ 40文件完成 | Manager模式+基础设施集成+权限验证 |
 | **数据层** | ✅ 274文件完成 | EF Core实体+200+迁移+触发器支持 |
-| **基础设施** | ✅ 核心组件完备 | 文件/工作流/权限/消息/Excel处理全覆盖 |
+| **基础设施** | ✅ 核心组件完备 | 文件/工作流/权限/消息/Excel/缓存全覆盖 |
 
 ## ⚡ 快速开始
 
@@ -229,13 +227,40 @@ dotnet restore && dotnet run --project PowerLmsWebApi
 3. **权限验证必须** - `AuthorizationManager.Demand()`
 4. **多租户隔离** - 数据查询`OrgId`过滤
 5. **Excel标准** - OwDataUnit + OwNpoiUnit (禁用废弃NpoiManager)
+6. **缓存标准** - 使用 OwCacheExtensions (已废弃 OwMemoryCacheExtensions)
+
+### 缓存系统使用规范
+
+#### ✅ 推荐：OwCacheExtensions（新标准）
+```csharp
+// 注册缓存项（支持引用计数+优先级驱逐+取消令牌）
+entry.EnablePriorityEvictionCallback(_MemoryCache);
+var cts = _MemoryCache.GetCancellationTokenSourceV2(entry.Key);
+entry.ExpirationTokens.Add(new CancellationChangeToken(cts.Token));
+
+// 失效缓存
+var cts = _MemoryCache.GetCancellationTokenSourceV2(cacheKey);
+if (cts != null && !cts.IsCancellationRequested)
+{
+    try { cts.Cancel(); }
+    catch { /* 忽略异常 */ }
+}
+```
+
+#### ❌ 已废弃：OwMemoryCacheExtensions
+```csharp
+// 旧API已完全删除，请使用OwCacheExtensions
+// entry.RegisterCancellationToken(_Cache); // ❌ 已删除
+// _Cache.GetCancellationTokenSource(key); // ❌ 已删除
+// _Cache.CancelSource(key); // ❌ 已删除
+```
 
 ### 基础设施使用模板
 ```csharp
 public class BusinessService
 {
     private readonly OwFileService _fileService;
-    private readonly OwWfManager _workflowManager;
+ private readonly OwWfManager _workflowManager;
     private readonly AuthorizationManager _authManager;
     
     // 文件上传 → OwFileService
@@ -243,8 +268,8 @@ public class BusinessService
         => await _fileService.SaveFileAsync(file, context);
     
     // 审批流程 → OwWfManager
-    public async Task<bool> StartApprovalAsync(Guid entityId) 
-        => await _workflowManager.StartWorkflowAsync(entityId, templateId);
+  public async Task<bool> StartApprovalAsync(Guid entityId) 
+      => await _workflowManager.StartWorkflowAsync(entityId, templateId);
 }
 ```
 
@@ -256,6 +281,48 @@ var count = OwDataUnit.BulkInsertFromExcelWithStringList<T>(
 
 // ❌ 禁止：废弃组件
 NpoiManager.WriteToDb() // 已标记 [Obsolete]
+```
+
+### 账期管理接口
+```csharp
+// 预览账期关闭影响
+GET /api/PlJob/PreviewAccountingPeriodClose
+参数：AccountingPeriod（可选，默认使用机构当前账期）
+返回：可关闭/不可关闭的工作号列表、影响范围、是否可以关闭
+
+// 关闭账期
+POST /api/PlJob/CloseAccountingPeriod
+参数：CloseAccountingPeriodParamsDto
+- AccountingPeriod: 要关闭的账期（可选）
+- ForceClose: 是否强制关闭（默认false）
+权限：F.2.9（账期管理权限）
+```
+
+### 工作号唯一性验证接口
+```csharp
+// 验证工作号唯一性
+GET /api/PlJob/ValidateJobNo
+参数：ValidateJobNoParamsDto
+- JobNo: 要验证的工作号
+- ExcludeJobId: 要排除的工作号ID（编辑场景）
+返回：IsUnique（是否唯一）、Message、ConflictJobId（冲突ID）
+```
+
+### 申请单回退接口
+```csharp
+// 主营业务费用申请单回退
+POST /api/Financial/RevertDocFeeRequisition
+参数：RevertDocFeeRequisitionParamsDto
+- RequisitionId: 申请单ID
+- Reason: 回退原因（可选）
+权限：E.2（审批撤销权限）
+
+// OA费用申请单回退
+POST /api/OaExpense/RevertOaExpenseRequisition
+参数：RevertOaExpenseRequisitionParamsDto
+- RequisitionId: 申请单ID
+- Reason: 回退原因（可选）
+权限：E.2（审批撤销权限）
 ```
 
 ### 通用数据查询接口使用
@@ -295,27 +362,24 @@ POST /api/FinancialSystemExport/ExportSettlementPayment
 □ 文件操作 → OwFileService | □ 审批流程 → OwWfManager | □ 权限控制 → AuthorizationManager
 □ 组织管理 → OrgManager | □ 系统配置 → DataDicManager | □ 消息通知 → OwMessageManager
 □ Excel处理 → OwDataUnit + OwNpoiUnit | □ 分次收付 → ActualFinancialTransaction
-□ 权限验证 | □ 多租户隔离 | □ 向后兼容 | □ 单元测试
+□ 缓存管理 → OwCacheExtensions | □ 权限验证 | □ 多租户隔离 | □ 向后兼容 | □ 单元测试
 ```
 
-## 🎯 当前开发计划
+## 🎯 近期开发计划
 
-### 第一阶段：紧急Bug修复 (2月3-6日)
-**目标：解决所有阻塞性Bug，确保系统正常运转**
-1. 申请单移除费用金额回写问题 (0.5天) 🔥
-2. 通用进口工作号409错误 (0.5天) 🔥
-3. 业务结算单商户隔离 (1天) 🔥
-4. 权限缓存加载异常 (2天) ⚠️
+### 第一阶段：架构清理与Bug修复 (2月上旬)
+**目标：解决架构重复问题和关键Bug**
+1. 空运接口架构整理 (1天) 🔄
+2. 费用过滤Bug修复 (0.5天) ⚠️
+3. OA申请单公司字段验证 (0.5天)
 
-### 第二阶段：功能增强 (2月7-14日)
-**目标：完成中优先级功能，提升系统易用性**
-1. OA申请单公司字段验证 (0.5天)
-2. 空运接口架构重复修正 (1天)
-3. 费用列表申请单详情接口 (1天)
-4. 客户资料有效性管理 (1.5天)
-5. 客户选择器查询优化 (1天)
-6. 查看所有申请单权限 (0.5天)
-7. 科目设置快捷输入 (0.5天)
+### 第二阶段：功能增强 (2月中旬)
+**目标：完成用户体验优化**
+1. 费用列表申请单详情接口 (1天)
+2. 客户资料有效性管理 (1.5天)
+3. 客户选择器查询优化 (1天)
+4. 查看所有申请单权限 (0.5天)
+5. 科目设置快捷输入 (0.5天)
 
 ### 第三阶段：金蝶导出重构 (待规则文件确认)
 **目标：实现数据驱动的复杂凭证分录生成**
@@ -324,12 +388,25 @@ POST /api/FinancialSystemExport/ExportSettlementPayment
 - 实施重构（预估5天）
 
 ### 风险评估
-- **中等风险** - 权限缓存问题复杂度较高，可能需要更多时间
-- **低风险** - 其他Bug和功能需求范围明确，技术方案清晰
+- **低风险** - 架构清理和Bug修复范围明确，技术方案清晰
+- **中等风险** - 功能增强涉及前后端联调，需要协调
 - **待定风险** - 金蝶重构依赖规则文件质量，需充分评审
+
+## 📊 项目指标
+
+### 代码质量
+- **代码规模**: 31.7万行企业级代码
+- **架构分层**: API→Server→Data→OwDbBase→OwBaseCore
+- **基础设施完备度**: 100%（文件/工作流/权限/消息/Excel/缓存全覆盖）
+- **单元测试覆盖**: 核心业务逻辑100%覆盖
+
+### 技术债务
+- ✅ **缓存系统重构** - 已完成，旧API已废弃并删除
+- 🔄 **空运接口重复** - 进行中，需要统一架构
+- ⏸️ **金蝶导出复杂逻辑** - 等待规则文件
 
 ---
 
 **PowerLms** - 专业的货运物流业务管理系统  
 *3人精英团队 | 31.7万行企业级代码 | 基础设施完备复用*  
-*当前重点：解决阻塞性Bug | 完成功能增强 | 准备金蝶导出重构*
+*当前重点：架构清理 | 功能增强 | 准备金蝶导出重构*

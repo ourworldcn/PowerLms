@@ -14,13 +14,14 @@
  * 
  * 作者：GitHub Copilot
  * 创建时间：2024
- * 最后修改：2024-12-19 - 修复审批意见丢失问题并完成DTO类分离
+ * 最后修改：2025-02-06 - 增强客户端错误数据防御和诊断日志
  */
 
 using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using NPOI.HSSF.UserModel;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
@@ -43,8 +44,9 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="mapper"></param>
         /// <param name="entityManager"></param>
         /// <param name="owWfManager"></param>
+        /// <param name="logger"></param>
         public WfController(IServiceProvider serviceProvider, AccountManager accountManager, PowerLmsUserDbContext dbContext, IMapper mapper, EntityManager entityManager,
-            OwWfManager owWfManager)
+               OwWfManager owWfManager, ILogger<WfController> logger)
         {
             _ServiceProvider = serviceProvider;
             _AccountManager = accountManager;
@@ -52,6 +54,7 @@ namespace PowerLmsWebApi.Controllers
             _Mapper = mapper;
             _EntityManager = entityManager;
             _WfManager = owWfManager;
+            _Logger = logger;
         }
 
         private readonly IServiceProvider _ServiceProvider;
@@ -60,6 +63,7 @@ namespace PowerLmsWebApi.Controllers
         private readonly EntityManager _EntityManager;
         private readonly IMapper _Mapper;
         private readonly OwWfManager _WfManager;
+        private readonly ILogger<WfController> _Logger;
 
         /// <summary>
         /// 获取文档相关的流程信息。
@@ -193,14 +197,44 @@ namespace PowerLmsWebApi.Controllers
             if (node is null) return result;
 
             var ttNode = _DbContext.WfTemplateNodes.Include(c => c.Children).FirstOrDefault(c => c.Id == node.TemplateId);
-            if (ttNode?.NextId is null) return result;
+
+            // 🔧 增强诊断：记录模板节点信息
+            if (ttNode?.NextId is null)
+            {
+                _Logger.LogWarning(
+                        "工作流节点无下一节点：DocId={DocId}, 当前节点模板ID={TemplateId}, 当前节点显示名={NodeName}, NextId为null，流程将无法继续流转",
+                  model.DocId, node.TemplateId, ttNode?.DisplayName ?? "未知");
+                return result;
+            }
 
             result.Template = ttNode.Parent; //模板信息
 
             var nextNode = _DbContext.WfTemplateNodes.Find(ttNode.NextId);
 
+            // 🔧 增强诊断：验证下一个节点是否存在
+            if (nextNode == null)
+            {
+                _Logger.LogError(
+                    "工作流模板配置错误：NextId指向的节点不存在！DocId={DocId}, 当前节点={CurrentNode}, NextId={NextId}",
+                 model.DocId, ttNode.Id, ttNode.NextId);
+                return result;
+            }
+
+            // 🔧 增强诊断：检查下一个节点是否有审批人
+            if (!nextNode.Children.Any(c => c.OperationKind == 0))
+            {
+                _Logger.LogWarning(
+            "工作流节点未配置审批人：DocId={DocId}, 下一节点ID={NextNodeId}, 下一节点显示名={NextNodeName}，前端将收到空列表",
+       model.DocId, nextNode.Id, nextNode.DisplayName);
+            }
+
             var coll = nextNode.Children.Select(c => _Mapper.Map<OwWfTemplateNodeItemDto>(c));
             result.Result.AddRange(coll);
+
+            _Logger.LogInformation(
+           "获取下一节点审批人成功：DocId={DocId}, 当前节点={CurrentNode}, 下一节点={NextNode}, 审批人数量={ApproverCount}",
+ model.DocId, ttNode.Id, nextNode.Id, result.Result.Count);
+
             return result;
         }
 
@@ -227,13 +261,29 @@ namespace PowerLmsWebApi.Controllers
             if (!string.IsNullOrEmpty(model.Comment) && model.Comment.Length > 1000)
                 return BadRequest("审批意见不能超过1000字符");
 
+            // 🔧 增强日志：记录请求参数
+            _Logger.LogInformation(
+       "工作流发送请求：DocId={DocId}, TemplateId={TemplateId}, Approval={Approval}, NextOpertorId={NextOpertorId}, User={UserId}",
+           model.DocId, model.TemplateId, model.Approval, model.NextOpertorId, context.User.Id);
+
             // 改进模板查询 - 使用FirstOrDefault并添加AsSplitQuery优化
             var template = _DbContext.WfTemplates
                 .Include(c => c.Children).ThenInclude(c => c.Children)
-                .AsSplitQuery() // 避免笛卡尔积
-                .FirstOrDefault(c => c.Id == model.TemplateId);
-            if (template is null) 
+       .AsSplitQuery() // 避免笛卡尔积
+  .FirstOrDefault(c => c.Id == model.TemplateId);
+            if (template is null)
+            {
+                _Logger.LogWarning("工作流模板不存在：TemplateId={TemplateId}", model.TemplateId);
                 return NotFound("指定的工作流模板不存在");
+            }
+
+            // 🔧 增强诊断：记录模板节点配置
+            var templateNodeCount = template.Children.Count;
+            var templateNodeInfo = string.Join(", ", template.Children.Select(n =>
+           $"{n.DisplayName}(NextId={(n.NextId.HasValue ? n.NextId.ToString() : "null")})"));
+            _Logger.LogInformation(
+                 "工作流模板配置：TemplateId={TemplateId}, 节点数={NodeCount}, 节点链表=[{NodeInfo}]",
+                       template.Id, templateNodeCount, templateNodeInfo);
 
             var wfs = _DbContext.OwWfs.Where(c => c.DocId == model.DocId && c.TemplateId == model.TemplateId && c.State == 0);  //所有可能的流程
             if (wfs.Count() > 1) return BadRequest("一个文档针对一个模板只能有一个流程");
@@ -242,6 +292,11 @@ namespace PowerLmsWebApi.Controllers
             OwWfTemplateNode ttCurrentNode = default; //当前节点的模板
             if (wf is null)  //若没有流程正在执行
             {
+                // 🔧 增强日志：创建新流程
+                _Logger.LogInformation(
+                 "创建新工作流实例：DocId={DocId}, TemplateId={TemplateId}, User={UserId}",
+                   model.DocId, model.TemplateId, context.User.Id);
+
                 //创建流程及首节点
                 wf = new OwWf()
                 {
@@ -249,7 +304,32 @@ namespace PowerLmsWebApi.Controllers
                     TemplateId = model.TemplateId,
                     State = 0,
                 };
-                ttCurrentNode = _WfManager.GetFirstNodes(template).SingleOrDefault(c => _WfManager.Contains(context.User.Id, c)); //首节点模板
+
+                var firstNodes = _WfManager.GetFirstNodes(template).ToList();
+                // 🔧 增强验证：检查首节点配置
+                if (!firstNodes.Any())
+                {
+                    _Logger.LogError(
+                     "工作流模板配置错误：未找到首节点！TemplateId={TemplateId}, 所有节点都被其他节点的NextId引用",
+                      template.Id);
+                    return BadRequest("工作流模板配置错误：未找到首节点，请联系系统管理员检查模板配置");
+                }
+
+                ttCurrentNode = firstNodes.SingleOrDefault(c => _WfManager.Contains(context.User.Id, c)); //首节点模板
+
+                // 🔧 增强验证：检查当前用户是否在首节点审批人列表中
+                if (ttCurrentNode == null)
+                {
+                    var firstNodeNames = string.Join(", ", firstNodes.Select(n => n.DisplayName));
+                    _Logger.LogWarning(
+                       "当前用户不在首节点审批人列表中：User={UserId}, FirstNodes=[{FirstNodeNames}]",
+                             context.User.Id, firstNodeNames);
+                    return BadRequest($"当前用户不在首节点审批人列表中，无法发起流程。首节点：{firstNodeNames}");
+                }
+
+                _Logger.LogInformation(
+            "创建首节点：NodeTemplateId={NodeTemplateId}, NodeDisplayName={NodeDisplayName}",
+            ttCurrentNode.Id, ttCurrentNode.DisplayName);
 
                 currentNode = new OwWfNode
                 {
@@ -276,30 +356,89 @@ namespace PowerLmsWebApi.Controllers
             }
             else if (wf.State != 0)
             {
+                _Logger.LogWarning(
+                            "尝试操作已结束的工作流：WfId={WfId}, State={State}, DocId={DocId}",
+              wf.Id, wf.State, model.DocId);
                 return BadRequest("文档所处流程已经结束。");
             }
             currentNode ??= wf.Children.OrderBy(c => c.ArrivalDateTime).Last();   //当前节点
             ttCurrentNode = _DbContext.WfTemplateNodes.Find(currentNode.TemplateId);  //当前节点的模板
 
+            // 🔧 增强验证：检查当前节点模板是否存在
+            if (ttCurrentNode == null)
+            {
+                _Logger.LogError(
+              "工作流节点模板不存在：NodeId={NodeId}, TemplateId={TemplateId}",
+                   currentNode.Id, currentNode.TemplateId);
+                return BadRequest("工作流节点模板不存在，流程数据可能已损坏");
+            }
+
+            _Logger.LogInformation(
+           "当前节点信息：NodeId={NodeId}, NodeTemplateId={NodeTemplateId}, NodeDisplayName={NodeDisplayName}, NextId={NextId}",
+               currentNode.Id, ttCurrentNode.Id, ttCurrentNode.DisplayName, ttCurrentNode.NextId);
+
             var currentNodeItem = currentNode.Children.FirstOrDefault(c => c.OperationKind == 0 && c.OpertorId == context.User.Id); //当前审批人
             if (currentNodeItem is null)
+            {
+                _Logger.LogWarning(
+               "非法的投递目标：当前用户不在当前节点审批人列表中，NodeId={NodeId}, User={UserId}",
+              currentNode.Id, context.User.Id);
                 return BadRequest("非法的投递目标");
+            }
 
             if (model.NextOpertorId is Guid nextOpertorId)    //若需要流转
             {
+                // 🔧 增强验证：检查是否有下一个节点
+                if (ttCurrentNode.NextId == null)
+                {
+                    _Logger.LogWarning(
+                           "客户端传入了NextOpertorId但当前节点没有下一节点：DocId={DocId}, CurrentNode={CurrentNode}, NextOpertorId={NextOpertorId}",
+                model.DocId, ttCurrentNode.Id, nextOpertorId);
+                    return BadRequest("当前节点已是最后一个节点，无法流转。请使用Approval参数结束流程。");
+                }
+
                 currentNodeItem.IsSuccess = true;
                 currentNodeItem.Comment = model.Comment;
 
                 var nextTItem = _DbContext.WfTemplateNodeItems.FirstOrDefault(c => c.ParentId == ttCurrentNode.NextId &&
-                    c.OpertorId == nextOpertorId);    //下一个操作人的模板
+               c.OpertorId == nextOpertorId);    //下一个操作人的模板
+
+                // 🔧 增强诊断：详细记录验证失败原因
                 if (nextTItem == null)
                 {
-                    return BadRequest($"指定下一个操作人Id={model.NextOpertorId},但它不是合法的下一个操作人。");
+                    var nextNodeId = ttCurrentNode.NextId.Value;
+                    var nextNode = _DbContext.WfTemplateNodes
+                   .Include(n => n.Children)
+                    .FirstOrDefault(n => n.Id == nextNodeId);
+
+                    if (nextNode == null)
+                    {
+                        _Logger.LogError(
+                           "工作流模板配置错误：NextId指向的节点不存在！CurrentNode={CurrentNode}, NextId={NextId}",
+              ttCurrentNode.Id, nextNodeId);
+                        return BadRequest($"工作流模板配置错误：下一个节点不存在（NextId={nextNodeId}），请联系系统管理员");
+                    }
+
+                    var validApprovers = nextNode.Children.Where(c => c.OperationKind == 0).Select(c => c.OpertorId).ToList();
+                    var validApproverNames = _DbContext.Accounts
+                    .Where(a => validApprovers.Contains(a.Id))
+               .Select(a => a.DisplayName)
+                   .ToList();
+
+                    _Logger.LogWarning(
+          "客户端传入的NextOpertorId不在下一节点审批人列表中：NextOpertorId={NextOpertorId}, NextNode={NextNode}, ValidApprovers=[{ValidApprovers}]",
+           nextOpertorId, nextNode.DisplayName, string.Join(", ", validApproverNames));
+
+                    return BadRequest($"指定下一个操作人Id={model.NextOpertorId},但它不是合法的下一个操作人。下一节点『{nextNode.DisplayName}』的有效审批人：{string.Join("、", validApproverNames)}");
                 }
 
                 var nextTNode = nextTItem.Parent;    //下一个节点模板
 
-                var nextNode = new OwWfNode
+                _Logger.LogInformation(
+                  "流转到下一节点：CurrentNode={CurrentNode}, NextNode={NextNode}, NextNodeName={NextNodeName}, NextOpertor={NextOpertor}",
+                 ttCurrentNode.Id, nextTNode.Id, nextTNode.DisplayName, nextOpertorId);
+
+                var nextNode2 = new OwWfNode
                 {
                     ParentId = wf.Id,
                     Parent = wf,
@@ -315,31 +454,74 @@ namespace PowerLmsWebApi.Controllers
                     OperationKind = 0,
                     OpertorId = model.NextOpertorId,
                     OpertorDisplayName = nextOpId.DisplayName,
-                    Parent = nextNode,
-                    ParentId = nextNode.Id,
+                    Parent = nextNode2,
+                    ParentId = nextNode2.Id,
                 };
-                nextNode.Children.Add(nextItem);
-                wf.Children.Add(nextNode);
+                nextNode2.Children.Add(nextItem);
+                wf.Children.Add(nextNode2);
             }
             else //流程结束
             {
+                // 🔧 增强日志：记录流程结束
+                _Logger.LogInformation(
+              "工作流流程结束：WfId={WfId}, DocId={DocId}, CurrentNode={CurrentNode}, Approval={Approval}, TotalNodes={TotalNodes}",
+                     wf.Id, model.DocId, ttCurrentNode.Id, model.Approval, wf.Children.Count);
+
+                // 🔧 增强验证：检查是否还有下一个节点但客户端未传NextOpertorId
+                if (ttCurrentNode.NextId != null)
+                {
+                    _Logger.LogWarning(
+                "⚠️ 潜在的客户端错误：当前节点还有下一节点（NextId={NextId}），但客户端未传NextOpertorId，流程将提前结束。" +
+           "这可能是因为：1) 下一节点未配置审批人；2) 前端调用GetNextNodeItemsByDocId返回空列表；3) 前端逻辑错误。",
+                    ttCurrentNode.NextId);
+
+                    // 检查下一节点是否有审批人
+                    var nextNode = _DbContext.WfTemplateNodes
+              .Include(n => n.Children)
+                   .FirstOrDefault(n => n.Id == ttCurrentNode.NextId);
+                    if (nextNode != null)
+                    {
+                        var hasApprovers = nextNode.Children.Any(c => c.OperationKind == 0);
+                        if (!hasApprovers)
+                        {
+                            _Logger.LogWarning(
+                                "⚠️ 工作流模板配置问题：下一节点『{NextNodeName}』(Id={NextNodeId})未配置审批人，导致流程无法继续",
+                                    nextNode.DisplayName, nextNode.Id);
+                        }
+                        else
+                        {
+                            var approverCount = nextNode.Children.Count(c => c.OperationKind == 0);
+                            _Logger.LogWarning(
+                         "⚠️ 客户端错误：下一节点『{NextNodeName}』(Id={NextNodeId})有{ApproverCount}个审批人，但客户端未选择并传递NextOpertorId",
+                             nextNode.DisplayName, nextNode.Id, approverCount);
+                        }
+                    }
+                }
+
                 // 修复审批意见丢失问题 - 保持与其他分支的一致性
                 currentNodeItem.Comment = model.Comment;
                 if (model.Approval == 0)   //若通过
                 {
                     wf.State = 1;
                     currentNodeItem.IsSuccess = true;
+                    _Logger.LogInformation("工作流成功完成：WfId={WfId}, TotalNodes={TotalNodes}", wf.Id, wf.Children.Count);
                 }
                 else if (model.Approval == 1) //若拒绝
                 {
                     wf.State = 2;
                     currentNodeItem.IsSuccess = false;
+                    _Logger.LogInformation("工作流被终止：WfId={WfId}, TotalNodes={TotalNodes}", wf.Id, wf.Children.Count);
                 }
                 else
                     return BadRequest($"{nameof(model.Approval)} 参数值非法。");
             }
             _DbContext.SaveChanges();
             result.WfId = wf.Id;
+
+            _Logger.LogInformation(
+                "工作流操作成功：WfId={WfId}, State={State}, TotalNodes={TotalNodes}",
+            wf.Id, wf.State, wf.Children.Count);
+
             return result;
         }
     }

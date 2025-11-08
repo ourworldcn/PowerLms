@@ -332,36 +332,53 @@ namespace PowerLmsWebApi.Controllers
                 orgIds = model.OrgIds.Distinct().ToArray();
                 if (orgIds.Length != model.OrgIds.Count) return BadRequest($"{nameof(model.OrgIds)} 存在重复键值");
 
-                // 验证所有ID是否存在（商户或组织机构）
-                var merchantCount = _DbContext.Merchants.Count(c => orgIds.Contains(c.Id));
-                var orgCount = _DbContext.PlOrganizations.Count(c => orgIds.Contains(c.Id));
-                if (merchantCount + orgCount != orgIds.Length) 
-                    return BadRequest($"{nameof(model.OrgIds)} 至少一个键值的实体不存在");
+         // 验证所有ID是否存在（商户或组织机构）
+        var merchantCount = _DbContext.Merchants.Count(c => orgIds.Contains(c.Id));
+           var orgCount = _DbContext.PlOrganizations.Count(c => orgIds.Contains(c.Id));
+         if (merchantCount + orgCount != orgIds.Length) 
+            return BadRequest($"{nameof(model.OrgIds)} 至少一个键值的实体不存在");
 
-                // 非超管权限检查：只能操作自己商户范围内的组织机构
-                if (!context.User.IsSuperAdmin)
-                {
-                    if (!context.User.IsAdmin()) return BadRequest("仅超管和商管才可创建用户");
-                    
-                    // 获取当前商管所属商户
-                    var currentMerchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
-                    if (!currentMerchantId.HasValue) return Unauthorized("未找到用户所属商户");
+             // 非超管权限检查：只能操作自己商户范围内的组织机构
+    if (!context.User.IsSuperAdmin)
+     {
+         if (!context.User.IsAdmin()) return BadRequest("仅超管和商管才可创建用户");
+         
+    // 获取当前商管所属商户
+       var currentMerchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
+          if (!currentMerchantId.HasValue) return Unauthorized("未找到用户所属商户");
 
-                    // 验证所有指定的组织机构ID都属于当前商户
-                    bool allBelongToMerchant = orgIds.All(c => _OrgManager.GetMerchantIdByOrgId(c) == currentMerchantId);
-                    if (!allBelongToMerchant) return BadRequest("商户管理员仅可以设置商户和其下属的机构id");
-                    
-                    merchantIdForNewAccount = currentMerchantId.Value; // 记录商户ID供后续使用
-                }
-            }
+        // 验证所有指定的组织机构ID都属于当前商户
+         bool allBelongToMerchant = orgIds.All(c => _OrgManager.GetMerchantIdByOrgId(c) == currentMerchantId);
+   if (!allBelongToMerchant) return BadRequest("商户管理员仅可以设置商户和其下属的机构id");
+     
+     merchantIdForNewAccount = currentMerchantId.Value; // 记录商户ID供后续使用
+  }
+  }
             else if (isCreatingMerchantAdmin && !context.User.IsSuperAdmin)
             {
-                // 商管创建商管但未指定组织机构时，自动关联到当前商户
+         // 商管创建商管但未指定组织机构时，自动关联到当前商户
                 var currentMerchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
-                if (!currentMerchantId.HasValue) return Unauthorized("未找到用户所属商户");
+      if (!currentMerchantId.HasValue) return Unauthorized("未找到用户所属商户");
 
+      merchantIdForNewAccount = currentMerchantId.Value;
+     _Logger.LogInformation("商管 {OperatorId} 创建商管账户 {LoginName} 时未指定机构，自动归属到商户 {MerchantId}",
+   context.User.Id, model.Item.LoginName, currentMerchantId.Value);
+          }
+            else if (!context.User.IsSuperAdmin && (model.OrgIds == null || model.OrgIds.Count == 0))
+ {
+           // 🔧 Bug修复：商管创建普通用户但未指定组织机构时，自动关联到当前商户
+        // 这是修复"用户消失"问题的关键逻辑
+                if (!context.User.IsAdmin()) return BadRequest("仅超管和商管才可创建用户");
+ 
+ var currentMerchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
+     if (!currentMerchantId.HasValue) return Unauthorized("未找到用户所属商户");
+         
+    // 自动归属到当前商户
                 merchantIdForNewAccount = currentMerchantId.Value;
-            }
+        
+           _Logger.LogInformation("商管 {OperatorId} 创建普通用户 {LoginName} 时未指定机构，自动归属到商户 {MerchantId}",
+         context.User.Id, model.Item.LoginName, currentMerchantId.Value);
+    }
 
             // 创建账户
             var pwd = model.Pwd;

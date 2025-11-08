@@ -377,7 +377,6 @@ namespace PowerLmsWebApi.Controllers.System
                     {
                         // 获取当前登录机构及其所有子机构包含下属公司的所有机构Id
                         var allOrgs = _OrgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs.Values.ToArray();
-
                         var allOrgIds = allOrgs.Select(c => c.Id).ToList();  // 获取所有机构ID
 
                         var currentCompany = _OrgManager.GetCurrentCompanyByUser(context.User);
@@ -422,28 +421,46 @@ namespace PowerLmsWebApi.Controllers.System
 
                 // 导入汇率记录到目标机构
                 int importedCount = 0;
+                int skippedCount = 0;
                 foreach (var sourceRate in sourceRates)
                 {
-                    // 创建新汇率对象，为其分配新的ID
-                    var newRate = new PlExchangeRate
+                    // 🔧 Bug修复：检查目标机构是否已存在相同的汇率
+                    var exists = _DbContext.DD_PlExchangeRates
+                        .Any(r => r.OrgId == targetOrgId &&
+                                  r.BusinessTypeId == sourceRate.BusinessTypeId &&
+                                  r.SCurrency == sourceRate.SCurrency &&
+                                  r.DCurrency == sourceRate.DCurrency &&
+                                  r.BeginDate == sourceRate.BeginDate &&
+                                  r.EndData == sourceRate.EndData);
+                    if (!exists)
                     {
-                        Id = Guid.NewGuid(),
-                        OrgId = targetOrgId,
-                        ShortcutName = sourceRate.ShortcutName,
-                        IsDelete = false,
+                        // 创建新汇率对象，为其分配新的ID
+                        var newRate = new PlExchangeRate
+                        {
+                            Id = Guid.NewGuid(),
+                            OrgId = targetOrgId,
+                            ShortcutName = sourceRate.ShortcutName,
+                            IsDelete = false,
 
-                        BusinessTypeId = sourceRate.BusinessTypeId,
-                        SCurrency = sourceRate.SCurrency,
-                        DCurrency = sourceRate.DCurrency,
-                        Radix = sourceRate.Radix,
-                        Exchange = sourceRate.Exchange,
-                        BeginDate = sourceRate.BeginDate,
-                        EndData = sourceRate.EndData
-                    };
+                            BusinessTypeId = sourceRate.BusinessTypeId,
+                            SCurrency = sourceRate.SCurrency,
+                            DCurrency = sourceRate.DCurrency,
+                            Radix = sourceRate.Radix,
+                            Exchange = sourceRate.Exchange,
+                            BeginDate = sourceRate.BeginDate,
+                            EndData = sourceRate.EndData
+                        };
 
-                    // 添加到数据库
-                    _DbContext.DD_PlExchangeRates.Add(newRate);
-                    importedCount++;
+                        // 添加到数据库
+                        _DbContext.DD_PlExchangeRates.Add(newRate);
+                        importedCount++;
+                    }
+                    else
+                    {
+                        skippedCount++;
+                        _Logger.LogDebug("汇率已存在，跳过：业务类型={BusinessTypeId}, {SCurrency} -> {DCurrency}, 日期：{BeginDate} - {EndData}",
+                            sourceRate.BusinessTypeId, sourceRate.SCurrency, sourceRate.DCurrency, sourceRate.BeginDate, sourceRate.EndData);
+                    }
                 }
 
                 // 保存更改
@@ -451,14 +468,18 @@ namespace PowerLmsWebApi.Controllers.System
 
                 // 设置返回结果
                 result.HasError = false;
-                result.DebugMessage = $"成功导入{importedCount}条汇率记录";
-
+                result.DebugMessage = skippedCount > 0
+                    ? $"成功导入{importedCount}条汇率记录，跳过{skippedCount}条已存在的记录"
+                    : $"成功导入{importedCount}条汇率记录";
+                _Logger.LogInformation("汇率导入完成：成功{ImportedCount}条，跳过{SkippedCount}条，目标机构{OrgId}",
+                    importedCount, skippedCount, targetOrgId);
                 return result;
             }
             catch (Exception ex)
             {
+                _Logger.LogError(ex, "导入汇率时发生错误");
                 result.HasError = true;
-                result.DebugMessage = "导入汇率时发生错误：" + ex.ToString();
+                result.DebugMessage = "导入汇率时发生错误：" + ex.Message;
                 return result;
             }
         }

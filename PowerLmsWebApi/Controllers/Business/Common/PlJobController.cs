@@ -707,7 +707,8 @@ namespace PowerLmsWebApi.Controllers
             destJob.OperatorId = context.User.Id;    // 设置操作人
             destJob.OrgId = context.User.OrgId;    // 设置所属机构
             destJob.AuditDateTime = null;    // 清空审核时间
-            destJob.AuditOperatorId = null;    // 清空审核人
+            destJob.AuditOperatorId = null;  // 清空审核人
+            destJob.AccountDate = null;    // 🔧 清空财务日期，由前端根据新工作号的开航/到港日期重新计算
 
             // 处理业务单对象
             var tmpDoc = _JobManager.GetBusinessDoc(srcJob.Id, _DbContext);

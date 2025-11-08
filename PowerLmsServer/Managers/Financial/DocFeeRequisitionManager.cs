@@ -2,7 +2,7 @@
  * 项目：PowerLms | 模块：主营业务费用申请单管理
  * 功能：主营业务费用申请单的业务逻辑管理，包括回退、状态管理、子表查询等功能
  * 技术要点：依赖注入、服务层业务逻辑、工作流管理、单一实体查询
- * 作者：zc | 创建：2025-01 | 修改：2025-01-31 移除动态计算已结算金额，直接使用实体字段
+ * 作者：zc | 创建：2025-01 | 修改：2025-02-06 修复费用过滤Bug，bill表改为左连接
  */
 
 using Microsoft.EntityFrameworkCore;
@@ -55,36 +55,38 @@ namespace PowerLmsServer.Managers.Financial
         public IQueryable<DocFeeRequisitionItem> GetAllDocFeeRequisitionItemQuery(Dictionary<string, string> conditional = null, Guid? orgId = null)
         {
             conditional ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            
+
             // 第一步：逐一生成条件字典
             var itemConditions = conditional.Where(p => p.Key.StartsWith($"{nameof(DocFeeRequisitionItem)}.", StringComparison.OrdinalIgnoreCase) || !p.Key.Contains('.')).ToDictionary(p => p.Key.StartsWith($"{nameof(DocFeeRequisitionItem)}.", StringComparison.OrdinalIgnoreCase) ? p.Key[(nameof(DocFeeRequisitionItem).Length + 1)..] : p.Key, p => p.Value, StringComparer.OrdinalIgnoreCase);
             var jobConditions = conditional.Where(p => p.Key.StartsWith($"{nameof(PlJob)}.", StringComparison.OrdinalIgnoreCase)).ToDictionary(p => p.Key[(nameof(PlJob).Length + 1)..], p => p.Value, StringComparer.OrdinalIgnoreCase);
             var feeConditions = conditional.Where(p => p.Key.StartsWith($"{nameof(DocFee)}.", StringComparison.OrdinalIgnoreCase)).ToDictionary(p => p.Key[(nameof(DocFee).Length + 1)..], p => p.Value, StringComparer.OrdinalIgnoreCase);
             var requisitionConditions = conditional.Where(p => p.Key.StartsWith($"{nameof(DocFeeRequisition)}.", StringComparison.OrdinalIgnoreCase)).ToDictionary(p => p.Key[(nameof(DocFeeRequisition).Length + 1)..], p => p.Value, StringComparer.OrdinalIgnoreCase);
             var billConditions = conditional.Where(p => p.Key.StartsWith($"{nameof(DocBill)}.", StringComparison.OrdinalIgnoreCase)).ToDictionary(p => p.Key[(nameof(DocBill).Length + 1)..], p => p.Value, StringComparer.OrdinalIgnoreCase);
-            
+
             // 第二步：生成各个子查询的过滤
             var itemsQuery = EfHelper.GenerateWhereAnd(_DbContext.DocFeeRequisitionItems.AsQueryable(), itemConditions) ?? _DbContext.DocFeeRequisitionItems.AsQueryable();
             var jobsQuery = EfHelper.GenerateWhereAnd(_DbContext.PlJobs.AsQueryable(), jobConditions) ?? _DbContext.PlJobs.AsQueryable();
             var feesQuery = EfHelper.GenerateWhereAnd(_DbContext.DocFees.AsQueryable(), feeConditions) ?? _DbContext.DocFees.AsQueryable();
-            
+
             // 在申请单子查询中直接应用OrgId过滤
             var requisitionsQuery = EfHelper.GenerateWhereAnd(_DbContext.DocFeeRequisitions.AsQueryable(), requisitionConditions) ?? _DbContext.DocFeeRequisitions.AsQueryable();
             if (orgId.HasValue)
             {
                 requisitionsQuery = requisitionsQuery.Where(req => req.OrgId == orgId.Value);
             }
-            
+
             var billsQuery = EfHelper.GenerateWhereAnd(_DbContext.DocBills.AsQueryable(), billConditions) ?? _DbContext.DocBills.AsQueryable();
-            
+
             // 第三步：把子查询连接起来
-            var joinedQuery = from item in itemsQuery 
-                             join req in requisitionsQuery on item.ParentId equals req.Id 
-                             join fee in feesQuery on item.FeeId equals fee.Id 
-                             join job in jobsQuery on fee.JobId equals job.Id 
-                             join bill in billsQuery on fee.BillId equals bill.Id 
-                             select item;
-                             
+            // 🔧 Bug修复：将bill表的内连接改为左连接，避免无账单关联的费用数据丢失
+            var joinedQuery = from item in itemsQuery
+                              join req in requisitionsQuery on item.ParentId equals req.Id
+                              join fee in feesQuery on item.FeeId equals fee.Id
+                              join job in jobsQuery on fee.JobId equals job.Id
+                              join bill in billsQuery on fee.BillId equals bill.Id into billGroup
+                              from bill in billGroup.DefaultIfEmpty()
+                              select item;
+
             return joinedQuery;
         }
 
