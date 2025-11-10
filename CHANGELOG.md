@@ -1,5 +1,153 @@
 ﻿# 📝 变更日志
 
+## [2025-02-06] - 🐛 Bug修复：费用种类OrgId过滤逻辑错误
+
+### 🎯 业务变更（面向项目经理）
+
+#### 费用种类数据隔离修复
+- **功能名称**：费用种类查询权限控制
+- **问题描述**：普通用户可以看到其他公司的费用种类，违反多租户数据隔离原则
+- **修复效果**：现在用户只能看到所属公司的费用种类，符合业务要求
+- **业务价值**：
+  - 确保数据隔离，防止跨公司数据泄露
+  - 下拉选择器只显示正确的费用种类选项
+  - 符合多租户系统的安全要求
+
+### 📊 API变更（面向前端）
+
+#### 行为变更
+1. `GET /api/Admin/GetAllFeesType` - 获取费用种类接口（✅ 行为修正）
+   - **修复前**：普通用户可以看到所有公司的费用种类
+   - **修复后**：普通用户只能看到当前登录公司的费用种类
+
+#### 权限规则变化
+| 用户类型 | 修复前 | 修复后 |
+|---------|--------|--------|
+| 超管 | 看全局费用种类（OrgId=null） | ✅ 不变 |
+| 商管（OrgId=null） | 看所有公司的费用种类 ❌ | 看商户级费用种类（OrgId=merchantId） ✅ |
+| 公司用户（Otc=2） | 看所有公司的费用种类 ❌ | 看当前公司的费用种类（OrgId=companyId） ✅ |
+| 下属机构用户（Otc=4） | 看所有公司的费用种类 ❌ | 看所属公司的费用种类（OrgId=companyId） ✅ |
+
+#### 典型场景对比
+```diff
+场景：用户登录到公司A（CompanyA.Id），查询费用种类
+
+- ❌ 修复前：返回所有公司的费用种类（CompanyA, CompanyB, CompanyC...）
++ ✅ 修复后：仅返回公司A的费用种类（CompanyA）
+```
+
+```diff
+场景：用户登录到部门B（DepartmentB.Id），所属公司为CompanyA
+
+- ❌ 修复前：返回所有公司的费用种类（CompanyA, CompanyB, CompanyC...）
++ ✅ 修复后：仅返回公司A的费用种类（CompanyA）
+```
+
+### 🔧 技术细节
+
+#### 修复的文件
+1. `PowerLmsWebApi/Controllers/System/AdminController.cs`
+
+#### 核心变更（OrgId过滤逻辑）
+```csharp
+// ❌ 修复前：返回所有公司的费用种类（Line 897-920）
+else
+{
+    var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
+    if (merchantId.HasValue)
+    {
+var allOrgs = _OrgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs.Values.ToArray();
+        var companyIds = allOrgs.Where(o => o.Otc == 2).Select(o => (Guid?)o.Id).ToHashSet();
+        companyIds.Add(merchantId); // 包含商户ID和所有公司ID
+        coll = coll.Where(c => companyIds.Contains(c.OrgId)); // ❌ 返回所有公司数据
+    }
+}
+
+// ✅ 修复后：正确处理context.User.OrgId
+else
+{
+    var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
+    if (!merchantId.HasValue) return BadRequest("未知的商户Id");
+    
+    if (context.User.OrgId is null) // 商管
+    {
+        coll = coll.Where(c => c.OrgId == merchantId); // ✅ 仅返回商户级数据
+    }
+    else // 普通用户
+    {
+      // 获取当前用户登录机构所属的公司ID
+   var companyId = _OrgManager.GetCompanyIdByOrgId(context.User.OrgId.Value);
+        if (!companyId.HasValue) return BadRequest("无法确定用户所属的公司");
+     
+        coll = coll.Where(c => c.OrgId == companyId.Value); // ✅ 仅返回当前公司数据
+    }
+}
+```
+
+#### 根本原因分析
+**为什么会有这个Bug？**
+
+1. **历史遗留代码**：
+   - 与其他字典接口（GetAllPlPort、GetAllPlCargoRoute、GetAllUnitConversion）对比
+   - 其他接口都正确处理了 `context.User.OrgId`
+   - 唯独 `GetAllFeesType` 遗漏了这个判断
+
+2. **逻辑偏差**：
+   ```csharp
+   // ❌ 错误理解：认为费用种类是全局配置
+   var companyIds = allOrgs.Where(o => o.Otc == 2)...;
+   
+   // ✅ 正确理解：费用种类是公司级配置，需要数据隔离
+   ```
+
+3. **开发疏忽**：
+   - `AddFeesType` 方法正确设置了 `model.Item.OrgId = context.User.OrgId`
+   - 但 `GetAllFeesType` 却没有对应的过滤逻辑
+
+#### 参考对比（正确的实现）
+**GetAllPlPort**（Line 116-132）：
+```csharp
+if (_AccountManager.IsAdmin(context.User))  
+    coll = coll.Where(c => c.OrgId == null);
+else
+{
+    var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
+    if (!merchantId.HasValue) return BadRequest("未知的商户Id");
+    
+    if (context.User.OrgId is null) // 商管
+    {
+        coll = coll.Where(c => c.OrgId == merchantId); // ✅ 正确
+    }
+    else // 普通用户
+    {
+        coll = coll.Where(c => c.OrgId == context.User.OrgId); // ✅ 正确
+    }
+}
+```
+
+#### 影响范围
+- **数据隔离提升**：用户只能看到所属公司的数据
+- **安全性增强**：防止跨租户数据泄露
+- **用户体验改善**：下拉列表只显示有效选项，避免混乱
+- **零破坏性变更**：所有正常使用场景不受影响
+- **Bug修复**：解决数据显示错误的问题
+
+### 📝 测试建议（面向测试）
+
+#### 关键测试场景
+1. ✅ **超管查询费用种类** - 应返回全局费用种类（OrgId=null）
+2. ✅ **商管查询费用种类** - 应仅返回商户级费用种类
+3. ✅ **公司A用户查询费用种类** - 应仅返回公司A的费用种类（之前返回所有公司）
+4. ✅ **下属机构B用户查询费用种类** - 应返回所属公司A的费用种类（之前返回所有公司）
+5. ✅ **多公司环境验证** - 公司A用户不应看到公司B的费用种类
+
+#### 回归测试
+- ✅ 验证费用方案功能是否正常（依赖费用种类查询）
+- ✅ 验证费用录入界面下拉选择器（应只显示当前公司的费用种类）
+- ✅ 验证财务结算功能（涉及费用种类筛选）
+
+---
+
 ## [2025-02-06] - 🔧 工作流诊断增强：防御客户端错误数据
 
 ### 🎯 业务变更（面向项目经理）

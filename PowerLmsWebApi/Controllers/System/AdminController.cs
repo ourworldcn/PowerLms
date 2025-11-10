@@ -522,7 +522,17 @@ namespace PowerLmsWebApi.Controllers.System
 
         #region 费用种类相关
         /// <summary>
-        /// 获取费用种类。超管可以不受限制，其他用户最多仅能看到其所属公司/机构下的实体。
+        /// 获取费用种类。
+        /// 数据隔离规则：
+        /// - 超管：查看全局费用种类（OrgId=null）
+        /// - 商管（OrgId=null）：查看商户级费用种类（OrgId=merchantId）
+        /// - 普通用户：查看当前登录机构所属公司的费用种类（OrgId=companyId）
+        /// 
+        /// 注意：按系统设计约定，用户登录到的是具体机构，数据隔离以机构为单位。
+        /// 费用种类的OrgId通常设置为公司级别（Otc=2），因此：
+        /// - 登录到公司A：查看OrgId=公司A的费用种类
+        /// - 登录到部门A1（所属公司A）：查看OrgId=公司A的费用种类
+        /// 不包含同公司下其他机构独立配置的费用种类。
         /// </summary>
         /// <param name="model"></param>
         /// <param name="conditional">支持通用查询的条件。</param>
@@ -537,30 +547,34 @@ namespace PowerLmsWebApi.Controllers.System
             var result = new GetAllFeesTypeReturnDto();
             var dbSet = _DbContext.DD_FeesTypes;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-            if (_AccountManager.IsAdmin(context.User))  //若是超管
+
+            if (_AccountManager.IsAdmin(context.User))  // 超管
                 coll = coll.Where(c => c.OrgId == null);
             else
             {
-                // 获取用户管辖范围内的公司型组织机构ID
                 var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
-                if (merchantId.HasValue)
+                if (!merchantId.HasValue) return BadRequest("未知的商户Id");
+
+                if (context.User.OrgId is null) // 商管
                 {
-                    var allOrgs = _OrgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs.Values.ToArray();
-                    var companyIds = allOrgs.Where(o => o.Otc == 2).Select(o => (Guid?)o.Id).ToHashSet();
-                    companyIds.Add(merchantId); // 添加商户ID
-                    coll = coll.Where(c => companyIds.Contains(c.OrgId));
+                    coll = coll.Where(c => c.OrgId == merchantId);
                 }
-                else
+                else // 普通用户
                 {
-                    coll = coll.Where(c => false); // 没有商户信息，返回空结果
+                    // 获取当前用户登录机构所属的公司ID
+                    // 注意：这里只查询公司级别的费用种类，不包含同公司下其他机构的费用种类
+                    var companyId = _OrgManager.GetCompanyIdByOrgId(context.User.OrgId.Value);
+                    if (!companyId.HasValue) return BadRequest("无法确定用户所属的公司");
+
+                    coll = coll.Where(c => c.OrgId == companyId.Value);
                 }
             }
+
             coll = EfHelper.GenerateWhereAnd(coll, conditional);
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }
-
         /// <summary>
         /// 增加费用种类记录。
         /// </summary>
