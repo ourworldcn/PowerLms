@@ -9,6 +9,19 @@ namespace System.Collections.Concurrent
     public static class ConcurrentDictionaryExtensions
     {
         /// <summary>
+        /// 为每个 TValue 类型缓存 Monitor.Exit 委托实例。
+        /// </summary>
+        /// <typeparam name="TValue">值类型</typeparam>
+        /// <remarks>
+        /// <para>每个 TValue 类型创建一个委托实例，后续调用零分配。</para>
+        /// <para>静态只读字段，由 CLR 保证线程安全初始化。</para>
+        /// </remarks>
+        private static class ExitActionCache<TValue> where TValue : class
+        {
+            public static readonly Action<TValue> Instance = static v => Monitor.Exit(v);
+        }
+
+        /// <summary>
         /// 获取并发字典中的值并加锁，使用双重检查锁模式验证有效性。
         /// </summary>
         /// <typeparam name="TKey">键类型</typeparam>
@@ -21,6 +34,7 @@ namespace System.Collections.Concurrent
         /// <para>成功时返回持有锁的 DisposeHelper，调用方负责在 using 块中使用。</para>
         /// <para>失败时返回 default，State 为 null。</para>
         /// <para><strong>线程安全</strong>：保证 TryGetValue 和锁操作的原子性。</para>
+        /// <para><strong>性能优化</strong>：使用泛型缓存委托实例，每个 TValue 类型只分配一次（约 40 字节），后续调用零分配。</para>
         /// <para><strong>性能提示</strong>：此方法为高性能版本，不支持超时机制。如需超时保护以防止死锁，请使用带 TimeSpan 参数的重载。</para>
         /// </remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -35,7 +49,7 @@ namespace System.Collections.Concurrent
             // 4. 移除 try-catch 可减少异常处理开销并允许 JIT 内联优化
             // 性能优化：优先检查快路径（值未改变），仅在失败时才再次查找
             if (ReferenceEquals(value, dictionary.TryGetValue(key, out var current) ? current : null))
-                return new DisposeHelper<TValue>(static v => Monitor.Exit(v), value);
+                return new DisposeHelper<TValue>(ExitActionCache<TValue>.Instance, value);
             Monitor.Exit(value);
             return default;
         }
@@ -56,21 +70,18 @@ namespace System.Collections.Concurrent
         /// <para><strong>线程安全</strong>：保证 TryGetValue 和锁操作的原子性。</para>
         /// <para><strong>超时机制</strong>：防止死锁导致线程永久阻塞。建议在可能发生死锁的场景中使用此重载。</para>
         /// <para><strong>重试机制</strong>：双重检查失败时，如果还有剩余超时时间，会自动重试直到成功或超时。</para>
-        /// <para><strong>性能优化</strong>：当 timeout 为 <see cref="Timeout.InfiniteTimeSpan"/> 时，会自动转发到无超时的高性能版本。</para>
+        /// <para><strong>性能优化</strong>：当 timeout 为 <see cref="Timeout.InfiniteTimeSpan"/> 时，会自动转发到无超时的高性能版本。使用泛型缓存委托实例，真正实现零分配。</para>
         /// <para><strong>性能提示</strong>：由于需要异常处理机制和可能的重试，此重载的性能略低于无超时版本。如果确定不会死锁，优先使用无参数重载。</para>
         /// </remarks>
         /// <exception cref="ArgumentOutOfRangeException">timeout 参数为负值且不等于 <see cref="Timeout.InfiniteTimeSpan"/>。</exception>
         public static DisposeHelper<TValue> GetAndLock<TKey, TValue>(this ConcurrentDictionary<TKey, TValue> dictionary, TKey key,
             TimeSpan timeout) where TValue : class
         {
-            // ✅ 性能优化：无限超时时直接转发到高性能无参版本
-            // 避免不必要的 while 循环、try-catch 和时间计算开销
             if (timeout == Timeout.InfiniteTimeSpan)
                 return GetAndLock(dictionary, key);
 
             if (!dictionary.TryGetValue(key, out var value)) return default;
 
-            // 计算截止时间（用于重试逻辑）
             var deadline = Environment.TickCount64 + (long)timeout.TotalMilliseconds;
 
             while (true)
@@ -78,33 +89,25 @@ namespace System.Collections.Concurrent
                 bool lockTaken = false;
                 try
                 {
-                    // 计算剩余超时时间
                     var remainingTimeout = TimeSpan.FromMilliseconds(Math.Max(0, deadline - Environment.TickCount64));
 
                     Monitor.TryEnter(value, remainingTimeout, ref lockTaken);
-                    if (!lockTaken) return default;  // 超时
+                    if (!lockTaken) return default;
 
-                    // 双重检查：验证值未被替换
                     if (ReferenceEquals(value, dictionary.TryGetValue(key, out var current) ? current : null))
-                        return new DisposeHelper<TValue>(static v => Monitor.Exit(v), value);
+                        return new DisposeHelper<TValue>(ExitActionCache<TValue>.Instance, value);
 
-                    // 验证失败：值已被替换，释放锁并准备重试
                     Monitor.Exit(value);
                     lockTaken = false;
 
-                    // 检查是否还有剩余时间
                     if (Environment.TickCount64 >= deadline)
-                        return default;  // 超时，不再重试
+                        return default;
 
-                    // 重新获取最新的值
                     if (!dictionary.TryGetValue(key, out value))
-                        return default;  // 键已被移除
-
-                    // 继续循环重试
+                        return default;
                 }
                 catch
                 {
-                    // 确保异常情况下锁被正确释放
                     if (lockTaken)
                         Monitor.Exit(value);
                     throw;

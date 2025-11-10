@@ -34,7 +34,7 @@ namespace System.Threading
         /// <param name="str">测试值相等的对象。参数名应改为obj以避免混淆</param>
         /// <returns>如果 key 值相等的实例在暂存池中，则返回池中对象的引用；否则返回 null。</returns>
         /// <remarks>
-        /// 此方法使用对象的 <see cref="Object.Equals(object)"/> 方法和 <see cref="Object.GetHashCode"/> 方法来确定值相等性。
+        /// 此方法使用对象的 <see cref="object.Equals(object)"/> 方法和 <see cref="object.GetHashCode"/> 方法来确定值相等性。
         /// </remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static object IsInterned(object str) => _Data.TryGetValue(str, out var tmp) ? tmp : null;
