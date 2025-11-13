@@ -87,7 +87,7 @@ namespace System
         }
 
         /// <summary>
-        /// 
+        /// 试图把对象转换为浮点数。
         /// </summary>
         /// <param name="obj"></param>
         /// <param name="result"></param>
@@ -135,7 +135,7 @@ namespace System
         }
 
         /// <summary>
-        /// 又字符串试图转换为Guid类型。
+        /// 由字符串试图转换为Guid类型。
         /// </summary>
         /// <param name="str"></param>
         /// <param name="result"></param>
@@ -148,7 +148,7 @@ namespace System
                 result = default;
                 return false;
             }
-            else if (str.EndsWith("=="))
+            if (str.EndsWith("=="))
             {
                 Span<byte> buff = stackalloc byte[16];
                 if (!Convert.TryFromBase64String(str, buff, out var length) || length != 16)
@@ -159,42 +159,51 @@ namespace System
                 result = new Guid(buff);
                 return true;
             }
-            else
-                return Guid.TryParse(str, out result);
+            return Guid.TryParse(str, out result);
         }
 
         /// <summary>
         /// 尽可能转换为Guid类型。
         /// </summary>
-        /// <param name="obj">是null会立即返回flase。</param>
+        /// <param name="obj">是null会立即返回false。</param>
         /// <param name="result"></param>
         /// <returns>true成功转换，false未成功。</returns>
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         public static bool TryGetGuid([AllowNull] object obj, out Guid result)
         {
-            bool succ = false;
-            if (obj is null) result = default;
-            else if (obj is Guid id)
+            if (obj is null)
+            {
+                result = default;
+                return false;
+            }
+            if (obj is Guid id)
             {
                 result = id;
-                succ = true;
+                return true;
             }
-            else if (obj is string str) succ = TryToGuid(str, out result);
-            else if (obj is byte[] ary && ary.Length == 16)
+            if (obj is string str)
+            {
+                return TryToGuid(str, out result);
+            }
+            if (obj is byte[] ary && ary.Length == 16)
             {
                 try
                 {
                     result = new Guid(ary);
-                    succ = true;
+                    return true;
                 }
                 catch (Exception)
                 {
                     result = default;
+                    return false;
                 }
             }
-            else if (obj is JsonElement jsonElement && jsonElement.TryGetGuid(out result)) succ = true;
-            else result = default;
-            return succ;
+            if (obj is JsonElement jsonElement && jsonElement.TryGetGuid(out result))
+            {
+                return true;
+            }
+            result = default;
+            return false;
         }
 
         /// <summary>
@@ -206,20 +215,22 @@ namespace System
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         public static bool TryGetBoolean(object obj, out bool result)
         {
-            bool success = false;
             if (obj is bool b)
             {
                 result = b;
-                success = true;
+                return true;
             }
-            else if (obj is string str && bool.TryParse(str, out result)) success = true;
-            else if (TryToDecimal(obj, out var deci))
+            if (obj is string str && bool.TryParse(str, out result))
+            {
+                return true;
+            }
+            if (TryToDecimal(obj, out var deci))
             {
                 result = deci != decimal.Zero;
-                success = true;
+                return true;
             }
-            else result = default;
-            return success;
+            result = default;
+            return false;
         }
 
         /// <summary>
@@ -233,14 +244,13 @@ namespace System
         /// <returns>true转换成功，false转换失败</returns>
         public static bool TryChangeType(string val, Type type, out object result)
         {
-            result = null;
-            // 字符串类型快速路径
-            if (type == typeof(string))
+            // 快速路径：字符串类型（使用 ReferenceEquals 避免虚方法调用）
+            if (ReferenceEquals(type, typeof(string)))
             {
                 result = val;
                 return true;
             }
-            // null 值处理
+            // null 值处理（保持不区分大小写）
             if (val is null || string.Equals(val, "null", StringComparison.OrdinalIgnoreCase))
             {
                 if (type.IsClass || (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>)))
@@ -248,18 +258,20 @@ namespace System
                     result = null;
                     return true;
                 }
-                return false; // 不可空类型不能接受 null 值，基础库不提供详细错误信息
+                result = null;
+                return false;
             }
-            // 可空类型处理
+            // Nullable 类型处理（递归调用自身）
             if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
             {
                 var underlyingType = Nullable.GetUnderlyingType(type);
                 if (TryChangeType(val, underlyingType, out var underlyingResult))
                 {
-                    result = Activator.CreateInstance(type, underlyingResult);
+                    result = underlyingResult;
                     return true;
                 }
-                return false; // 递归转换失败
+                result = null;
+                return false;
             }
             // 直接转换
             if (TryDirectConvert(val, type, out result))
@@ -273,94 +285,99 @@ namespace System
         /// <summary>
         /// 高性能直接转换层：使用 TypeCode 和内联优化，覆盖95%+的使用场景
         /// </summary>
-        /// <param name="val">要转换的字符串值</param>
-        /// <param name="type">目标类型</param>
-        /// <param name="result">转换结果</param>
-        /// 
-        /// <returns>是否转换成功</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         private static bool TryDirectConvert(string val, Type type, out object result)
         {
-            result = null;
-
-            // 使用 TypeCode 优化分支预测，直接静态调用获得最佳性能
             var typeCode = Type.GetTypeCode(type);
-            var success = typeCode switch
+            switch (typeCode)
             {
-                // 空值类型
-                TypeCode.Empty => (result = null, true).Item2,
-                TypeCode.DBNull => (result = DBNull.Value, true).Item2,
-
-                // 常用数值类型（按使用频率排序）
-                TypeCode.Int32 => TryParseAndAssign(int.TryParse(val, out var r), r, out result),
-                TypeCode.Decimal => TryParseAndAssign(decimal.TryParse(val, out var r), r, out result),
-                TypeCode.Double => TryParseAndAssign(double.TryParse(val, out var r), r, out result),
-                TypeCode.Single => TryParseAndAssign(float.TryParse(val, out var r), r, out result),
-                TypeCode.Int64 => TryParseAndAssign(long.TryParse(val, out var r), r, out result),
-                TypeCode.Boolean => TryParseAndAssign(bool.TryParse(val, out var r), r, out result),
-                TypeCode.DateTime => TryParseAndAssign(DateTime.TryParse(val, out var r), r, out result),
-
-                // 整数类型（完整覆盖）
-                TypeCode.Byte => TryParseAndAssign(byte.TryParse(val, out var r), r, out result),
-                TypeCode.SByte => TryParseAndAssign(sbyte.TryParse(val, out var r), r, out result),
-                TypeCode.Int16 => TryParseAndAssign(short.TryParse(val, out var r), r, out result),
-                TypeCode.UInt16 => TryParseAndAssign(ushort.TryParse(val, out var r), r, out result),
-                TypeCode.UInt32 => TryParseAndAssign(uint.TryParse(val, out var r), r, out result),
-                TypeCode.UInt64 => TryParseAndAssign(ulong.TryParse(val, out var r), r, out result),
-
-                // 字符和字符串类型
-                TypeCode.Char => TryParseAndAssign(char.TryParse(val, out var r), r, out result),
-                TypeCode.String => (result = val, true).Item2, // 字符串直接返回
-
-                // 复杂对象类型
-                TypeCode.Object => TryConvertObjectType(val, type, out result), // 处理 Guid 和枚举
-
-                // 其他未知类型交给反射层处理
-                _ => false,
-            };
-            return success;
-        }
-
-        /// <summary>
-        /// 处理 TypeCode.Object 类型的直接转换（如 Guid、枚举等）
-        /// </summary>
-        /// <param name="val">要转换的字符串值</param>
-        /// <param name="type">目标类型</param>
-        /// <param name="result">转换结果</param>
-        /// <returns>是否转换成功</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool TryConvertObjectType(string val, Type type, out object result)
-        {
-            // 处理常见的 Object 类型，保持静态调用性能
-            if (type == typeof(Guid))
-            {
-                return TryParseAndAssign(Guid.TryParse(val, out var guidResult), guidResult, out result);
-            }
-
-            if (type.IsEnum)
-            {
-                return TryParseAndAssign(Enum.TryParse(type, val, true, out var enumResult), enumResult, out result);
-            }
-
-            result = null;
-            return false; // 不支持的 Object 类型交给反射层
-        }
-
-        /// <summary>
-        /// 辅助方法：统一处理 TryParse 结果的赋值逻辑
-        /// </summary>
-        /// <typeparam name="T">解析结果的类型</typeparam>
-        /// <param name="success">TryParse 是否成功</param>
-        /// <param name="value">解析的值</param>
-        /// <param name="result">输出结果</param>
-        /// <returns>是否成功</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool TryParseAndAssign<T>(bool success, T value, out object result)
-        {
-            if (success)
-            {
-                result = value;
-                return true;
+                case TypeCode.Empty:
+                    result = null;
+                    return true;
+                case TypeCode.DBNull:
+                    result = DBNull.Value;
+                    return true;
+                case TypeCode.Int32:
+                    if (int.TryParse(val, out var intVal)) { result = intVal; return true; }
+                    break;
+                case TypeCode.Decimal:
+                    if (decimal.TryParse(val, out var decVal)) { result = decVal; return true; }
+                    break;
+                case TypeCode.Double:
+                    if (double.TryParse(val, out var dblVal)) { result = dblVal; return true; }
+                    break;
+                case TypeCode.Single:
+                    if (float.TryParse(val, out var fltVal)) { result = fltVal; return true; }
+                    break;
+                case TypeCode.Int64:
+                    if (long.TryParse(val, out var lngVal)) { result = lngVal; return true; }
+                    break;
+                case TypeCode.Boolean:
+                    if (bool.TryParse(val, out var boolVal)) { result = boolVal; return true; }
+                    break;
+                case TypeCode.DateTime:
+                    if (DateTime.TryParse(val, out var dtVal)) { result = dtVal; return true; }
+                    break;
+                case TypeCode.Byte:
+                    if (byte.TryParse(val, out var byteVal)) { result = byteVal; return true; }
+                    break;
+                case TypeCode.SByte:
+                    if (sbyte.TryParse(val, out var sbyteVal)) { result = sbyteVal; return true; }
+                    break;
+                case TypeCode.Int16:
+                    if (short.TryParse(val, out var shortVal)) { result = shortVal; return true; }
+                    break;
+                case TypeCode.UInt16:
+                    if (ushort.TryParse(val, out var ushortVal)) { result = ushortVal; return true; }
+                    break;
+                case TypeCode.UInt32:
+                    if (uint.TryParse(val, out var uintVal)) { result = uintVal; return true; }
+                    break;
+                case TypeCode.UInt64:
+                    if (ulong.TryParse(val, out var ulongVal)) { result = ulongVal; return true; }
+                    break;
+                case TypeCode.Char:
+                    if (char.TryParse(val, out var charVal)) { result = charVal; return true; }
+                    break;
+                case TypeCode.String:
+                    result = val;
+                    return true;
+                case TypeCode.Object:
+                    // 处理常见的 Object 类型：Guid 和 枚举
+                    if (type == typeof(Guid))
+                    {
+                        if (Guid.TryParse(val, out var guidResult))
+                        {
+                            result = guidResult;
+                            return true;
+                        }
+                        break;
+                    }
+                    if (type.IsEnum)
+                    {
+                        // 优先尝试按名称解析（不区分大小写）
+                        if (Enum.TryParse(type, val, true, out var enumResult))
+                        {
+                            // 验证解析结果：确保是有效的枚举值
+                            if (Enum.IsDefined(type, enumResult))
+                            {
+                                result = enumResult;
+                                return true;
+                            }
+                            // 如果是数值字符串解析出了未定义的值，尝试严格验证
+                            if (int.TryParse(val, out _))
+                            {
+                                // 是数值但未定义，拒绝转换
+                                break;
+                            }
+                            // 非数值且 TryParse 成功但 IsDefined 失败的情况
+                            // 说明可能是组合标志位（Flags），接受这个结果
+                            result = enumResult;
+                            return true;
+                        }
+                        break;
+                    }
+                    break; // 其他 Object 类型交给反射层
             }
             result = null;
             return false;
@@ -374,40 +391,265 @@ namespace System
         /// <summary>
         /// 使用缓存反射转换类型（优化版兜底方案）
         /// </summary>
-        /// <param name="val">要转换的字符串值</param>
-        /// <param name="type">目标类型</param>
-        /// <param name="result">转换结果</param>
-        /// <returns>是否转换成功</returns>
         private static bool TryConvertUsingReflection(string val, Type type, out object result)
         {
-            result = default;
             try
             {
-                // 从缓存获取或创建 TryParse 方法信息
                 var tryParseMethod = _tryParseMethodCache.GetOrAdd(type, t =>
-                {
-                    return t.GetMethod("TryParse", BindingFlags.Static | BindingFlags.Public | BindingFlags.FlattenHierarchy,
-                        null, new[] { typeof(string), t.MakeByRefType() }, null);
-                });
+                        t.GetMethod("TryParse", BindingFlags.Static | BindingFlags.Public | BindingFlags.FlattenHierarchy,
+                     null, new[] { typeof(string), t.MakeByRefType() }, null));
                 if (tryParseMethod == null)
                 {
-                    return false; // 不支持 TryParse 方法
+                    result = null;
+                    return false;
                 }
-                var parameters = new object[] { val, null }; // 准备参数数组
-                var success = (bool)tryParseMethod.Invoke(null, parameters); // 调用 TryParse
+                var parameters = new object[] { val, null };
+                var success = (bool)tryParseMethod.Invoke(null, parameters);
                 if (success)
                 {
-                    result = parameters[1]; // 获取解析结果
+                    result = parameters[1];
                     return true;
                 }
-                return false; // 转换失败
             }
             catch (Exception)
             {
-                return false; // 反射转换失败
             }
+            result = null;
+            return false;
         }
+
+        /// <summary>
+        /// 高性能的将字符串转换为指定类型，失败时抛出异常
+        /// </summary>
+        /// <typeparam name="T">目标类型</typeparam>
+        /// <param name="val">要转换的字符串</param>
+        /// <returns>转换后的值</returns>
+        /// <exception cref="InvalidCastException">无法转换为目标类型时抛出</exception>
+        /// <exception cref="ArgumentNullException">当 val 为 null 且目标类型不可为 null 时抛出</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        public static T To<T>(string val)
+        {
+            var targetType = typeof(T);
+            if (val is null && targetType.IsValueType && Nullable.GetUnderlyingType(targetType) == null)
+            {
+                throw new ArgumentNullException(nameof(val), $"无法将 null 转换为值类型 {targetType.Name}");
+            }
+            if (TryChangeType(val, targetType, out var result))
+            {
+                return (T)result;
+            }
+            throw new InvalidCastException($"无法将字符串 '{val}' 转换为类型 {targetType.Name}");
+        }
+
+        /// <summary>
+        /// 高性能的将字符串转换为指定类型，失败时返回默认值
+        /// </summary>
+        /// <typeparam name="T">目标类型</typeparam>
+        /// <param name="val">要转换的字符串</param>
+        /// <param name="defaultValue">转换失败时返回的默认值</param>
+        /// <returns>转换后的值，失败时返回 defaultValue</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        public static T ToOrDefault<T>(string val, T defaultValue = default)
+        {
+            if (TryChangeType(val, typeof(T), out var result))
+            {
+                return (T)result;
+            }
+            return defaultValue;
+        }
+
         #endregion 试图转换类型
+
+        #region 数值类型转换
+
+        /// <summary>
+        /// 高性能数值类型转换（支持所有数值类型互转）
+        /// </summary>
+        /// <param name="value">源数值</param>
+        /// <param name="targetType">目标数值类型</param>
+        /// <param name="result">转换结果</param>
+        /// <returns>true成功，false失败（类型不支持）</returns>
+        /// <remarks>
+        /// 性能优化：展开switch，无try-catch，无子函数调用
+        /// 溢出策略：checked上下文，溢出时抛出OverflowException向上传递
+        /// 支持类型：sbyte, byte, short, ushort, int, uint, long, ulong, float, double, decimal
+        /// </remarks>
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+        public static bool TryConvertNumeric(object value, Type targetType, out object? result)
+        {
+            if (value == null)
+            {
+                result = null;
+                return false;
+            }
+            // 处理 Nullable 类型
+            var actualTargetType = Nullable.GetUnderlyingType(targetType) ?? targetType;
+            // 获取 TypeCode
+            var sourceTypeCode = Type.GetTypeCode(value.GetType());
+            var targetTypeCode = Type.GetTypeCode(actualTargetType);
+            // 验证是数值类型
+            if (sourceTypeCode < TypeCode.SByte || sourceTypeCode > TypeCode.Decimal ||
+                targetTypeCode < TypeCode.SByte || targetTypeCode > TypeCode.Decimal)
+            {
+                result = null;
+                return false;
+            }
+            // ✅ checked上下文：溢出抛异常（向上传递）
+            checked
+            {
+                // ✅ 展开所有转换路径（11×11=121）
+                result = (sourceTypeCode, targetTypeCode) switch
+                {
+                    // SByte → 所有类型
+                    (TypeCode.SByte, TypeCode.SByte) => (sbyte)value,
+                    (TypeCode.SByte, TypeCode.Byte) => (byte)(sbyte)value,
+                    (TypeCode.SByte, TypeCode.Int16) => (short)(sbyte)value,
+                    (TypeCode.SByte, TypeCode.UInt16) => (ushort)(sbyte)value,
+                    (TypeCode.SByte, TypeCode.Int32) => (int)(sbyte)value,
+                    (TypeCode.SByte, TypeCode.UInt32) => (uint)(sbyte)value,
+                    (TypeCode.SByte, TypeCode.Int64) => (long)(sbyte)value,
+                    (TypeCode.SByte, TypeCode.UInt64) => (ulong)(sbyte)value,
+                    (TypeCode.SByte, TypeCode.Single) => (float)(sbyte)value,
+                    (TypeCode.SByte, TypeCode.Double) => (double)(sbyte)value,
+                    (TypeCode.SByte, TypeCode.Decimal) => (decimal)(sbyte)value,
+
+                    // Byte → 所有类型
+                    (TypeCode.Byte, TypeCode.SByte) => (sbyte)(byte)value,
+                    (TypeCode.Byte, TypeCode.Byte) => (byte)value,
+                    (TypeCode.Byte, TypeCode.Int16) => (short)(byte)value,
+                    (TypeCode.Byte, TypeCode.UInt16) => (ushort)(byte)value,
+                    (TypeCode.Byte, TypeCode.Int32) => (int)(byte)value,
+                    (TypeCode.Byte, TypeCode.UInt32) => (uint)(byte)value,
+                    (TypeCode.Byte, TypeCode.Int64) => (long)(byte)value,
+                    (TypeCode.Byte, TypeCode.UInt64) => (ulong)(byte)value,
+                    (TypeCode.Byte, TypeCode.Single) => (float)(byte)value,
+                    (TypeCode.Byte, TypeCode.Double) => (double)(byte)value,
+                    (TypeCode.Byte, TypeCode.Decimal) => (decimal)(byte)value,
+
+                    // Int16 → 所有类型
+                    (TypeCode.Int16, TypeCode.SByte) => (sbyte)(short)value,
+                    (TypeCode.Int16, TypeCode.Byte) => (byte)(short)value,
+                    (TypeCode.Int16, TypeCode.Int16) => (short)value,
+                    (TypeCode.Int16, TypeCode.UInt16) => (ushort)(short)value,
+                    (TypeCode.Int16, TypeCode.Int32) => (int)(short)value,
+                    (TypeCode.Int16, TypeCode.UInt32) => (uint)(short)value,
+                    (TypeCode.Int16, TypeCode.Int64) => (long)(short)value,
+                    (TypeCode.Int16, TypeCode.UInt64) => (ulong)(short)value,
+                    (TypeCode.Int16, TypeCode.Single) => (float)(short)value,
+                    (TypeCode.Int16, TypeCode.Double) => (double)(short)value,
+                    (TypeCode.Int16, TypeCode.Decimal) => (decimal)(short)value,
+
+                    // UInt16 → 所有类型
+                    (TypeCode.UInt16, TypeCode.SByte) => (sbyte)(ushort)value,
+                    (TypeCode.UInt16, TypeCode.Byte) => (byte)(ushort)value,
+                    (TypeCode.UInt16, TypeCode.Int16) => (short)(ushort)value,
+                    (TypeCode.UInt16, TypeCode.UInt16) => (ushort)value,
+                    (TypeCode.UInt16, TypeCode.Int32) => (int)(ushort)value,
+                    (TypeCode.UInt16, TypeCode.UInt32) => (uint)(ushort)value,
+                    (TypeCode.UInt16, TypeCode.Int64) => (long)(ushort)value,
+                    (TypeCode.UInt16, TypeCode.UInt64) => (ulong)(ushort)value,
+                    (TypeCode.UInt16, TypeCode.Single) => (float)(ushort)value,
+                    (TypeCode.UInt16, TypeCode.Double) => (double)(ushort)value,
+                    (TypeCode.UInt16, TypeCode.Decimal) => (decimal)(ushort)value,
+
+                    // Int32 → 所有类型
+                    (TypeCode.Int32, TypeCode.SByte) => (sbyte)(int)value,
+                    (TypeCode.Int32, TypeCode.Byte) => (byte)(int)value,
+                    (TypeCode.Int32, TypeCode.Int16) => (short)(int)value,
+                    (TypeCode.Int32, TypeCode.UInt16) => (ushort)(int)value,
+                    (TypeCode.Int32, TypeCode.Int32) => (int)value,
+                    (TypeCode.Int32, TypeCode.UInt32) => (uint)(int)value,
+                    (TypeCode.Int32, TypeCode.Int64) => (long)(int)value,
+                    (TypeCode.Int32, TypeCode.UInt64) => (ulong)(int)value,
+                    (TypeCode.Int32, TypeCode.Single) => (float)(int)value,
+                    (TypeCode.Int32, TypeCode.Double) => (double)(int)value,
+                    (TypeCode.Int32, TypeCode.Decimal) => (decimal)(int)value,
+
+                    // UInt32 → 所有类型
+                    (TypeCode.UInt32, TypeCode.SByte) => (sbyte)(uint)value,
+                    (TypeCode.UInt32, TypeCode.Byte) => (byte)(uint)value,
+                    (TypeCode.UInt32, TypeCode.Int16) => (short)(uint)value,
+                    (TypeCode.UInt32, TypeCode.UInt16) => (ushort)(uint)value,
+                    (TypeCode.UInt32, TypeCode.Int32) => (int)(uint)value,
+                    (TypeCode.UInt32, TypeCode.UInt32) => (uint)value,
+                    (TypeCode.UInt32, TypeCode.Int64) => (long)(uint)value,
+                    (TypeCode.UInt32, TypeCode.UInt64) => (ulong)(uint)value,
+                    (TypeCode.UInt32, TypeCode.Single) => (float)(uint)value,
+                    (TypeCode.UInt32, TypeCode.Double) => (double)(uint)value,
+                    (TypeCode.UInt32, TypeCode.Decimal) => (decimal)(uint)value,
+
+                    // Int64 → 所有类型
+                    (TypeCode.Int64, TypeCode.SByte) => (sbyte)(long)value,
+                    (TypeCode.Int64, TypeCode.Byte) => (byte)(long)value,
+                    (TypeCode.Int64, TypeCode.Int16) => (short)(long)value,
+                    (TypeCode.Int64, TypeCode.UInt16) => (ushort)(long)value,
+                    (TypeCode.Int64, TypeCode.Int32) => (int)(long)value,
+                    (TypeCode.Int64, TypeCode.UInt32) => (uint)(long)value,
+                    (TypeCode.Int64, TypeCode.Int64) => (long)value,
+                    (TypeCode.Int64, TypeCode.UInt64) => (ulong)(long)value,
+                    (TypeCode.Int64, TypeCode.Single) => (float)(long)value,
+                    (TypeCode.Int64, TypeCode.Double) => (double)(long)value,
+                    (TypeCode.Int64, TypeCode.Decimal) => (decimal)(long)value,
+
+                    // UInt64 → 所有类型
+                    (TypeCode.UInt64, TypeCode.SByte) => (sbyte)(ulong)value,
+                    (TypeCode.UInt64, TypeCode.Byte) => (byte)(ulong)value,
+                    (TypeCode.UInt64, TypeCode.Int16) => (short)(ulong)value,
+                    (TypeCode.UInt64, TypeCode.UInt16) => (ushort)(ulong)value,
+                    (TypeCode.UInt64, TypeCode.Int32) => (int)(ulong)value,
+                    (TypeCode.UInt64, TypeCode.UInt32) => (uint)(ulong)value,
+                    (TypeCode.UInt64, TypeCode.Int64) => (long)(ulong)value,
+                    (TypeCode.UInt64, TypeCode.UInt64) => (ulong)value,
+                    (TypeCode.UInt64, TypeCode.Single) => (float)(ulong)value,
+                    (TypeCode.UInt64, TypeCode.Double) => (double)(ulong)value,
+                    (TypeCode.UInt64, TypeCode.Decimal) => (decimal)(ulong)value,
+
+                    // Single → 所有类型
+                    (TypeCode.Single, TypeCode.SByte) => (sbyte)(float)value,
+                    (TypeCode.Single, TypeCode.Byte) => (byte)(float)value,
+                    (TypeCode.Single, TypeCode.Int16) => (short)(float)value,
+                    (TypeCode.Single, TypeCode.UInt16) => (ushort)(float)value,
+                    (TypeCode.Single, TypeCode.Int32) => (int)(float)value,
+                    (TypeCode.Single, TypeCode.UInt32) => (uint)(float)value,
+                    (TypeCode.Single, TypeCode.Int64) => (long)(float)value,
+                    (TypeCode.Single, TypeCode.UInt64) => (ulong)(float)value,
+                    (TypeCode.Single, TypeCode.Single) => (float)value,
+                    (TypeCode.Single, TypeCode.Double) => (double)(float)value,
+                    (TypeCode.Single, TypeCode.Decimal) => (decimal)(float)value,
+
+                    // Double → 所有类型
+                    (TypeCode.Double, TypeCode.SByte) => (sbyte)(double)value,
+                    (TypeCode.Double, TypeCode.Byte) => (byte)(double)value,
+                    (TypeCode.Double, TypeCode.Int16) => (short)(double)value,
+                    (TypeCode.Double, TypeCode.UInt16) => (ushort)(double)value,
+                    (TypeCode.Double, TypeCode.Int32) => (int)(double)value,
+                    (TypeCode.Double, TypeCode.UInt32) => (uint)(double)value,
+                    (TypeCode.Double, TypeCode.Int64) => (long)(double)value,
+                    (TypeCode.Double, TypeCode.UInt64) => (ulong)(double)value,
+                    (TypeCode.Double, TypeCode.Single) => (float)(double)value,
+                    (TypeCode.Double, TypeCode.Double) => (double)value,
+                    (TypeCode.Double, TypeCode.Decimal) => (decimal)(double)value,
+
+                    // Decimal → 所有类型
+                    (TypeCode.Decimal, TypeCode.SByte) => (sbyte)(decimal)value,
+                    (TypeCode.Decimal, TypeCode.Byte) => (byte)(decimal)value,
+                    (TypeCode.Decimal, TypeCode.Int16) => (short)(decimal)value,
+                    (TypeCode.Decimal, TypeCode.UInt16) => (ushort)(decimal)value,
+                    (TypeCode.Decimal, TypeCode.Int32) => (int)(decimal)value,
+                    (TypeCode.Decimal, TypeCode.UInt32) => (uint)(decimal)value,
+                    (TypeCode.Decimal, TypeCode.Int64) => (long)(decimal)value,
+                    (TypeCode.Decimal, TypeCode.UInt64) => (ulong)(decimal)value,
+                    (TypeCode.Decimal, TypeCode.Single) => (float)(decimal)value,
+                    (TypeCode.Decimal, TypeCode.Double) => (double)(decimal)value,
+                    (TypeCode.Decimal, TypeCode.Decimal) => (decimal)value,
+
+                    _ => throw new InvalidOperationException($"不支持的转换: {sourceTypeCode} → {targetTypeCode}")
+                };
+            }
+            return true;
+        }
+
+        #endregion 数值类型转换
 
         #region 字典相关转换
 
@@ -421,7 +663,7 @@ namespace System
             foreach (var item in dic)
             {
                 stringBuilder.Append(item.Key).Append('=');
-                if (TryToDecimal(item.Value, out _))   //如果可以转换为数字
+                if (TryToDecimal(item.Value, out _))
                 {
                     stringBuilder.Append(item.Value.ToString()).Append(',');
                 }
@@ -430,13 +672,15 @@ namespace System
                     var ary = item.Value as decimal[];
                     stringBuilder.AppendJoin('|', ary.Select(c => c.ToString())).Append(',');
                 }
-                else //字符串
+                else
                 {
                     stringBuilder.Append(item.Value?.ToString()).Append(',');
                 }
             }
-            if (stringBuilder.Length > 0 && stringBuilder[^1] == ',')   //若尾部是逗号
+            if (stringBuilder.Length > 0 && stringBuilder[^1] == ',')
+            {
                 stringBuilder.Remove(stringBuilder.Length - 1, 1);
+            }
         }
 
         /// <summary>
@@ -447,35 +691,41 @@ namespace System
         public static void Copy(string str, IDictionary<string, object> dic)
         {
             if (string.IsNullOrWhiteSpace(str))
+            {
                 return;
+            }
             var coll = str.Replace(Environment.NewLine, " ").Trim(' ', '"').Split(OwHelper.CommaArrayWithCN, StringSplitOptions.RemoveEmptyEntries);
             foreach (var item in coll)
             {
                 var guts = item.Split('=', StringSplitOptions.RemoveEmptyEntries);
                 if (2 != guts.Length)
                 {
-                    if (item.IndexOf('=') <= 0 || item.Count(c => c == '=') != 1)  //若是xxx= 格式，解释为xxx=null
-                        throw new InvalidCastException($"数据格式错误:'{str}'");   //TO DO
+                    if (item.IndexOf('=') <= 0 || item.Count(c => c == '=') != 1)
+                    {
+                        throw new InvalidCastException($"数据格式错误:'{str}'");
+                    }
                 }
                 else if (2 < guts.Length)
-                    throw new InvalidCastException($"数据格式错误:'{str}'");   //TO DO
+                {
+                    throw new InvalidCastException($"数据格式错误:'{str}'");
+                }
                 var keyName = string.Intern(guts[0].Trim());
                 var val = guts.Length < 2 ? null : guts?[1]?.Trim();
                 if (val is null)
                 {
                     dic[keyName] = null;
                 }
-                else if (val.Contains('|'))  //若是序列属性
+                else if (val.Contains('|'))
                 {
                     var seq = val.Split('|', StringSplitOptions.RemoveEmptyEntries);
                     var ary = seq.Select(c => decimal.Parse(c.Trim())).ToArray();
                     dic[keyName] = ary;
                 }
-                else if (decimal.TryParse(val, out decimal num))   //若是数值属性
+                else if (decimal.TryParse(val, out decimal num))
                 {
                     dic[keyName] = num;
                 }
-                else //若是字符串属性
+                else
                 {
                     dic[keyName] = val;
                 }
@@ -509,9 +759,13 @@ namespace System
         public static Guid ToGuid(string str)
         {
             if (string.IsNullOrWhiteSpace(str))
+            {
                 return Guid.Empty;
+            }
             if (!TryToGuid(str, out var result))
+            {
                 throw new FormatException($"不是有效的Guid数据格式——{str}");
+            }
             return result;
         }
 
@@ -523,7 +777,7 @@ namespace System
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static string ToBase64String(this Guid guid)
         {
-            Span<byte> span = stackalloc byte[/*Marshal.SizeOf<Guid>()*/16];
+            Span<byte> span = stackalloc byte[16];
             var b = guid.TryWriteBytes(span);
             Debug.Assert(b);
             return Convert.ToBase64String(span);
@@ -538,25 +792,30 @@ namespace System
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         public static bool TryGetDateTime(object obj, out DateTime result)
         {
-            bool b = false;
             if (obj is null)
+            {
                 result = default;
-            else if (obj is DateTime dt)
+                return false;
+            }
+            if (obj is DateTime dt)
             {
                 result = dt;
-                b = true;
+                return true;
             }
-            else if (obj is string str && DateTime.TryParse(str, out result))
-                b = true;
-            else if (obj is JsonElement jsonElement && DateTime.TryParse(jsonElement.GetString(), out result))
-                b = true;
-            else
-                result = default;
-            return b;
+            if (obj is string str && DateTime.TryParse(str, out result))
+            {
+                return true;
+            }
+            if (obj is JsonElement jsonElement && DateTime.TryParse(jsonElement.GetString(), out result))
+            {
+                return true;
+            }
+            result = default;
+            return false;
         }
 
         /// <summary>
-        /// 
+        /// 将对象序列化为URI安全的字符串
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="obj">null,return <see cref="string.Empty"/></param>
@@ -564,12 +823,14 @@ namespace System
         public static string ToUriString<T>(T obj) where T : new()
         {
             if (obj is null)
+            {
                 return string.Empty;
+            }
             return Uri.EscapeDataString(JsonSerializer.Serialize(obj, typeof(T)));
         }
 
         /// <summary>
-        /// 
+        /// 从URI字符串反序列化对象
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="str"><see cref="string.IsNullOrWhiteSpace(string?)"/>return true,return new T()</param>
@@ -577,7 +838,9 @@ namespace System
         public static T FromUriString<T>(string str) where T : new()
         {
             if (string.IsNullOrWhiteSpace(str))
+            {
                 return new T();
+            }
             return (T)JsonSerializer.Deserialize(Uri.UnescapeDataString(str), typeof(T));
         }
     }

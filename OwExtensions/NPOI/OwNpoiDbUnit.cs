@@ -18,7 +18,6 @@
  */
 
 using Microsoft.EntityFrameworkCore;
-using EFCore.BulkExtensions;
 using NPOI.SS.UserModel;
 using System;
 using System.Buffers;
@@ -26,11 +25,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
-namespace NPOI
+namespace OwExtensions.NPOI
 {
     /// <summary>
-    /// NPOI + EF Core 数据集成工具类
-    /// 提供Excel到数据库的高性能批量导入功能
+    /// NPOI + EF Core 数据集成工具类，提供Excel到数据库的高性能批量导入功能
     /// </summary>
     public static class OwNpoiDbUnit
     {
@@ -89,43 +87,54 @@ namespace NPOI
             where TEntity : class
         {
             if (entities == null || entities.Count == 0) return 0;
-            var bulkConfig = CreateBulkConfig(ignoreExisting, typeof(TEntity), dbContext);
-            dbContext.BulkInsertOrUpdate(entities, bulkConfig);
-            return entities.Count;
-        }
-
-        /// <summary>
-        /// 创建批量操作配置对象
-        /// </summary>
-        private static BulkConfig CreateBulkConfig(bool ignoreExisting, Type entityType, DbContext dbContext)
-        {
-            var config = new BulkConfig
-            {
-                BatchSize = 1000,
-                BulkCopyTimeout = 300,
-                SetOutputIdentity = false,
-                PreserveInsertOrder = false,
-                UseTempDB = false,
-            };
+            // 简化实现：直接使用 EF Core 的 AddRange + SaveChanges
+            // 移除 EFCore.BulkExtensions 依赖，避免包冲突
             if (ignoreExisting)
             {
-                config.PropertiesToExcludeOnUpdate = GetDatabaseMappedPropertiesFromMetadata(entityType, dbContext);
+                // 忽略已存在记录：先查询主键，只添加不存在的
+                var existingKeys = GetExistingPrimaryKeys(dbContext, entities);
+                var entitiesToAdd = entities.Where(e => !existingKeys.Contains(GetEntityKey(dbContext, e))).ToList();
+                dbContext.AddRange(entitiesToAdd);
+                dbContext.SaveChanges();
+                return entitiesToAdd.Count;
             }
-            return config;
+            else
+            {
+                // 直接添加所有记录
+                dbContext.AddRange(entities);
+                dbContext.SaveChanges();
+                return entities.Count;
+            }
         }
 
         /// <summary>
-        /// 从EF Core元数据获取实际映射到数据库的属性名列表
+        /// 获取实体的主键值
         /// </summary>
-        private static List<string> GetDatabaseMappedPropertiesFromMetadata(Type entityType, DbContext dbContext)
+        private static object GetEntityKey<TEntity>(DbContext dbContext, TEntity entity) where TEntity : class
         {
-            var entityTypeMetadata = dbContext.Model.FindEntityType(entityType);
-            if (entityTypeMetadata == null)
-                throw new InvalidOperationException($"找不到实体类型 {entityType.Name} 的EF Core元数据，请确保该实体已配置在DbContext中");
-            return entityTypeMetadata.GetProperties()
-     .Where(p => !p.IsShadowProperty())
-     .Select(p => p.Name)
-         .ToList();
+            var entityType = dbContext.Model.FindEntityType(typeof(TEntity));
+            var key = entityType?.FindPrimaryKey();
+            if (key == null || key.Properties.Count != 1)
+                throw new NotSupportedException("仅支持单主键实体");
+            var property = key.Properties[0];
+            return property.PropertyInfo.GetValue(entity);
+        }
+
+        /// <summary>
+        /// 获取已存在的主键集合
+        /// </summary>
+        private static HashSet<object> GetExistingPrimaryKeys<TEntity>(DbContext dbContext, List<TEntity> entities) where TEntity : class
+        {
+            var entityType = dbContext.Model.FindEntityType(typeof(TEntity));
+            var key = entityType?.FindPrimaryKey();
+            if (key == null || key.Properties.Count != 1)
+                throw new NotSupportedException("仅支持单主键实体");
+            var property = key.Properties[0];
+            var keys = entities.Select(e => property.PropertyInfo.GetValue(e)).Where(k => k != null).ToList();
+            // 查询数据库中已存在的主键
+            var dbSet = dbContext.Set<TEntity>();
+            var existingEntities = dbSet.Where(e => keys.Contains(property.PropertyInfo.GetValue(e))).ToList();
+            return existingEntities.Select(e => property.PropertyInfo.GetValue(e)).ToHashSet();
         }
 
         /// <summary>
@@ -136,11 +145,11 @@ namespace NPOI
             var methods = typeof(OwNpoiDbUnit).GetMethods(BindingFlags.Public | BindingFlags.Static);
             var targetMethod = methods.FirstOrDefault(m =>
      m.Name == nameof(BulkInsertFromExcel) &&
-    m.IsGenericMethodDefinition &&
-                    m.GetParameters().Length == 3 &&
-       m.GetParameters()[0].ParameterType == typeof(ISheet) &&
-          m.GetParameters()[1].ParameterType == typeof(DbContext) &&
-             m.GetParameters()[2].ParameterType == typeof(bool));
+     m.IsGenericMethodDefinition &&
+          m.GetParameters().Length == 3 &&
+     m.GetParameters()[0].ParameterType == typeof(ISheet) &&
+       m.GetParameters()[1].ParameterType == typeof(DbContext) &&
+      m.GetParameters()[2].ParameterType == typeof(bool));
             return targetMethod ?? throw new InvalidOperationException($"未找到匹配的泛型BulkInsertFromExcel方法");
         }
 

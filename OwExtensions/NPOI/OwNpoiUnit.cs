@@ -30,13 +30,12 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace NPOI
+namespace OwExtensions.NPOI
 {
     /// <summary>
-    /// 提供NPOI相关的扩展方法和工具类。
-    /// 高性能Excel数据处理的基础库组件，支持字符串数组处理和实体转换。
+    /// 提供NPOI相关的扩展方法和工具类，高性能Excel数据处理的基础库组件
     /// </summary>
-    static public class OwNpoiUnit
+    public static class OwNpoiUnit
     {
         #region Excel数据读取方法
 
@@ -102,8 +101,8 @@ namespace NPOI
             var result = new List<T>();
             var type = typeof(T);
             var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-          .Where(p => p.CanWrite)
-              .ToDictionary(p => p.Name, p => p, StringComparer.OrdinalIgnoreCase);
+                .Where(p => p.CanWrite)
+                .ToDictionary(p => p.Name, p => p, StringComparer.OrdinalIgnoreCase);
             var headerRow = sheet.GetRow(sheet.FirstRowNum);
             if (headerRow == null) throw new InvalidOperationException("工作表第一行为空，无法获取列名");
             var columnMappings = new List<(int columnIndex, PropertyInfo property)>();

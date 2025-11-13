@@ -13,14 +13,13 @@
     <PackageReference Include="NPOI" Version="2.6.2" />
   
     <!-- EF Core 批量操作扩展 -->
-    <PackageReference Include="EFCore.BulkExtensions" Version="6.8.1" />
     
     <!-- EF Core 核心库（用于DbContext） -->
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="6.0.36" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\OwBaseCore\OwBaseCore.csproj" />
+    <ProjectReference Include="..\OwDbBase\OwDbBase.csproj" />
   </ItemGroup>
 
 </Project>
