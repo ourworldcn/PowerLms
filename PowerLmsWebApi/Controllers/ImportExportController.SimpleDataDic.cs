@@ -29,10 +29,13 @@
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using OW.Data;
 using PowerLms.Data;
 using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
+using System.Reflection;
+using NPOI.SS.UserModel;
 
 namespace PowerLmsWebApi.Controllers
 {
@@ -62,24 +65,24 @@ namespace PowerLmsWebApi.Controllers
         [HttpGet]
         public ActionResult<GetSimpleDictionaryCatalogCodesReturnDto> GetSimpleDictionaryCatalogCodes([FromQuery] GetSimpleDictionaryCatalogCodesParamsDto paramsDto)
         {
-            if (_AccountManager.GetOrLoadContextByToken(paramsDto.Token, _ServiceProvider) is not OwContext context) 
+            if (_AccountManager.GetOrLoadContextByToken(paramsDto.Token, _ServiceProvider) is not OwContext context)
                 return Unauthorized();
 
             var result = new GetSimpleDictionaryCatalogCodesReturnDto();
-            
+
             try
             {
                 var orgId = GetUserOrgId(context);
-                
+
                 var catalogCodes = _ImportExportService.GetAvailableCatalogCodes(orgId);
-                result.CatalogCodes = catalogCodes.Select(x => new CatalogCodeInfo 
-                { 
-                    Code = x.Code, 
-                    DisplayName = x.DisplayName 
+                result.CatalogCodes = catalogCodes.Select(x => new CatalogCodeInfo
+                {
+                    Code = x.Code,
+                    DisplayName = x.DisplayName
                 }).ToList();
-                
+
                 _Logger.LogInformation("获取简单字典Catalog Code列表成功，共返回 {Count} 个分类代码", result.CatalogCodes.Count);
-                
+
                 return result;
             }
             catch (Exception ex)
@@ -118,7 +121,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpGet]
         public ActionResult ExportSimpleDictionary([FromQuery] ExportSimpleDictionaryParamsDto paramsDto)
         {
-            if (_AccountManager.GetOrLoadContextByToken(paramsDto.Token, _ServiceProvider) is not OwContext context) 
+            if (_AccountManager.GetOrLoadContextByToken(paramsDto.Token, _ServiceProvider) is not OwContext context)
                 return Unauthorized();
 
             try
@@ -129,9 +132,9 @@ namespace PowerLmsWebApi.Controllers
                 }
 
                 var orgId = GetUserOrgId(context);
-                
+
                 var fileBytes = _ImportExportService.ExportSimpleDictionaries(paramsDto.CatalogCodes, orgId);
-                
+
                 var fileName = $"SimpleDataDic_{string.Join("_", paramsDto.CatalogCodes.Take(3))}{(paramsDto.CatalogCodes.Count > 3 ? "_etc" : "")}_{DateTime.Now:yyyyMMdd_HHmmss}.xls";
 
                 // 二进制模式下载，确保跨浏览器兼容性
@@ -183,7 +186,7 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<ImportSimpleDictionaryReturnDto> ImportSimpleDictionary(IFormFile formFile, [FromForm] ImportSimpleDictionaryParamsDto paramsDto)
         {
-            if (_AccountManager.GetOrLoadContextByToken(paramsDto.Token, _ServiceProvider) is not OwContext context) 
+            if (_AccountManager.GetOrLoadContextByToken(paramsDto.Token, _ServiceProvider) is not OwContext context)
                 return Unauthorized();
 
             var result = new ImportSimpleDictionaryReturnDto();
@@ -199,18 +202,20 @@ namespace PowerLmsWebApi.Controllers
                 }
 
                 var orgId = GetUserOrgId(context);
-                
-                var importResult = _ImportExportService.ImportSimpleDictionaries(formFile, orgId, !paramsDto.DeleteExisting);
-                
+                var createAccountId = context.User?.Id;
+                // 先创建 IWorkbook 对象
+                using var workbook = WorkbookFactory.Create(formFile.OpenReadStream());
+
+                // 调用修改后的方法（添加createAccountId参数）
+                var importResult = _ImportExportService.ImportSimpleDictionaries(workbook, orgId, createAccountId, paramsDto.DeleteExisting);
+
                 result.ImportedCount = importResult.TotalImportedCount;
                 result.ProcessedSheets = importResult.ProcessedSheets;
-                
+
                 // 组装详细信息
-                result.Details = importResult.SheetResults.Select(x => 
-                    x.Success 
-                        ? $"Sheet '{x.SheetName}': 成功导入 {x.ImportedCount} 条记录"
-                        : $"Sheet '{x.SheetName}': 导入失败 - {x.ErrorMessage}"
-                ).ToList();
+                result.Details = importResult.SheetResults.Select(
+                    x => x.Success ? $"Sheet '{x.SheetName}': 成功导入 {x.ImportedCount} 条记录" : $"Sheet '{x.SheetName}': 导入失败 - {x.ErrorMessage}")
+                    .ToList();
 
                 if (importResult.TotalImportedCount > 0)
                 {

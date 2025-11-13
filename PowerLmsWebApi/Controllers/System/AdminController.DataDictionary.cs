@@ -24,8 +24,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NPOI.HSSF.UserModel;
-using NPOI; // 添加NPOI引用以使用OwNpoiUnit.WriteToExcel
-using NPOI.SS.UserModel; // 添加WorkbookFactory引用
+using NPOI.SS.UserModel;
+using OwExtensions.NPOI; // 添加OwExtensions.NPOI命名空间
 using PowerLms.Data;
 using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;

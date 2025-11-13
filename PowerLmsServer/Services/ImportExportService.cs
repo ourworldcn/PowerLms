@@ -23,6 +23,7 @@ using Microsoft.Extensions.Logging;
 using NPOI.HSSF.UserModel;
 using NPOI.SS.UserModel;
 using OW.Data;
+using OwExtensions.NPOI;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
@@ -303,25 +304,22 @@ namespace PowerLmsServer.Services
         ///       JobNumberRule、OtherNumberRule、SubjectConfiguration、DailyFeesType
         /// Excel中Sheet名称必须使用实体类型名称（如：PlCountry、PlPort等）
         /// </summary>
-        /// <param name="file">Excel文件</param>
+        /// <param name="workbook">Excel工作簿对象</param>
         /// <param name="orgId">组织ID，用于多租户数据隔离</param>
         /// <param name="updateExisting">是否更新已存在的记录</param>
         /// <returns>导入结果</returns>
-        public MultiTableImportResult ImportDictionaries(IFormFile file, Guid? orgId, bool updateExisting = true)
+        public MultiTableImportResult ImportDictionaries(IWorkbook workbook, Guid? orgId, bool updateExisting = true)
         {
+            ArgumentNullException.ThrowIfNull(workbook);
             try
             {
-                using var workbook = WorkbookFactory.Create(file.OpenReadStream());
                 var result = new MultiTableImportResult();
-
                 var supportedTypes = GetSupportedDictionaryTypes().ToDictionary(x => x.TypeName, x => x.TypeName, StringComparer.OrdinalIgnoreCase);
-
                 // 处理每个Sheet
                 for (int i = 0; i < workbook.NumberOfSheets; i++)
                 {
                     var sheet = workbook.GetSheetAt(i);
                     var sheetName = sheet.SheetName;
-
                     try
                     {
                         if (supportedTypes.TryGetValue(sheetName, out var tableType))
@@ -342,18 +340,14 @@ namespace PowerLmsServer.Services
                                 "DailyFeesType" => ImportEntityData<DailyFeesType>(sheet, orgId, updateExisting),
                                 _ => 0
                             };
-
                             result.SheetResults.Add(new TableImportResult
                             {
                                 TableName = sheetName,
                                 ImportedCount = importedCount,
                                 Success = true
                             });
-
                             result.TotalImportedCount += importedCount;
                             result.ProcessedSheets++;
-
-                            _Logger.LogInformation("导入独立表字典Sheet {TableName} 成功，共 {Count} 条记录", sheetName, importedCount);
                         }
                         else
                         {
@@ -364,7 +358,6 @@ namespace PowerLmsServer.Services
                                 Success = false,
                                 ErrorMessage = $"不支持的表类型: {sheetName}"
                             });
-
                             _Logger.LogWarning("导入独立表字典Sheet {TableName} 失败：不支持的表类型", sheetName);
                         }
                     }
@@ -377,17 +370,13 @@ namespace PowerLmsServer.Services
                             Success = false,
                             ErrorMessage = ex.Message
                         });
-
                         _Logger.LogWarning(ex, "导入独立表字典Sheet {TableName} 失败", sheetName);
                     }
                 }
-
-                // 批量保存所有更改
+                // ✅ 统一保存所有更改（与ImportSimpleDictionaries一致）
                 _DbContext.SaveChanges();
-
                 _Logger.LogInformation("批量导入独立表字典完成，共处理 {ProcessedSheets} 个Sheet，导入 {TotalCount} 条记录",
                     result.ProcessedSheets, result.TotalImportedCount);
-
                 return result;
             }
             catch (Exception ex)
@@ -468,26 +457,23 @@ namespace PowerLmsServer.Services
         /// 支持客户主表和所有客户子表
         /// Excel中Sheet名称必须使用实体类型名称（如：PlCustomer、PlCustomerContact等）
         /// </summary>
-        /// <param name="file">Excel文件</param>
+        /// <param name="workbook">Excel工作簿对象</param>
         /// <param name="orgId">组织ID，用于多租户数据隔离</param>
         /// <param name="updateExisting">是否更新已存在的记录</param>
         /// <returns>导入结果</returns>
-        public MultiTableImportResult ImportCustomerTables(IFormFile file, Guid? orgId, bool updateExisting = true)
+        public MultiTableImportResult ImportCustomerTables(IWorkbook workbook, Guid? orgId, bool updateExisting = true)
         {
+            ArgumentNullException.ThrowIfNull(workbook);
             try
             {
-                using var workbook = WorkbookFactory.Create(file.OpenReadStream());
                 var result = new MultiTableImportResult();
-
                 var supportedTypes = GetSupportedCustomerSubTableTypes().ToDictionary(x => x.TypeName, x => x.TypeName, StringComparer.OrdinalIgnoreCase);
                 supportedTypes.Add("PlCustomer", "PlCustomer"); // 添加客户主表支持
-
                 // 处理每个Sheet
                 for (int i = 0; i < workbook.NumberOfSheets; i++)
                 {
                     var sheet = workbook.GetSheetAt(i);
                     var sheetName = sheet.SheetName;
-
                     try
                     {
                         if (supportedTypes.TryGetValue(sheetName, out var tableType))
@@ -562,6 +548,137 @@ namespace PowerLmsServer.Services
         #region 通用数据处理私有方法
 
         /// <summary>
+        /// 把指定数据源填充到数据库上下文中。
+        /// 重要：假定数据库上下本文地已经加载了所有相关数据，排重仅在本地进行，以增强效率。
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="TKey"></typeparam>
+        /// <param name="source"></param>
+        /// <param name="existingData">已存在数据的集合</param>
+        /// <param name="keySelector">计算业务键的表达式</param>
+        /// <param name="isUpdate">true覆盖模式(对可以软删除的软删除后新建，否则直接覆盖)，false忽略已有数据。
+        /// 软删除定义 <see cref="IMarkDelete"/>。 </param>
+        public FillResult FillToDbContext<T, TKey>(
+            IEnumerable<T> source,
+            IEnumerable<T> existingData,
+            Func<T, TKey> keySelector,
+            bool isUpdate = false)
+            where T : class
+            where TKey : notnull
+        {
+            ArgumentNullException.ThrowIfNull(source);
+            ArgumentNullException.ThrowIfNull(existingData);
+            ArgumentNullException.ThrowIfNull(keySelector);
+            var result = new FillResult();
+            var dbSet = _DbContext.Set<T>();
+            var sourceList = source as IList<T> ?? source.ToList();
+            if (!sourceList.Any()) return result;
+
+            // ✅ 使用ILookup处理可能的重复键（更容错）
+            ILookup<TKey, T> existingLookup;
+            try
+            {
+                existingLookup = existingData.AsEnumerable()  // 避免Linq to SQL问题
+                    .ToLookup(keySelector);
+            }
+            catch (Exception ex)
+            {
+                _Logger.LogError(ex, "构建业务键索引时发生错误，表: {EntityType}", typeof(T).Name);
+                throw new InvalidOperationException($"构建业务键索引失败: {ex.Message}", ex);
+            }
+
+            // ✅ 正确识别软删除：检查是否实现IMarkDelete接口
+            var supportsMarkDelete = typeof(IMarkDelete).IsAssignableFrom(typeof(T));
+
+            foreach (var entity in sourceList)
+            {
+                result.TotalCount++;
+                TKey key;
+                try
+                {
+                    key = keySelector(entity);
+                }
+                catch (Exception ex)
+                {
+                    _Logger.LogWarning(ex, "无法提取实体的业务键，跳过该实体，表: {EntityType}", typeof(T).Name);
+                    result.SkippedCount++;
+                    continue;
+                }
+                if (key == null)
+                {
+                    _Logger.LogWarning("实体的业务键为null，跳过该实体，表: {EntityType}", typeof(T).Name);
+                    result.SkippedCount++;
+                    continue;
+                }
+
+                // ✅ 查找所有匹配的现有记录（可能有多个重复）
+                var existingRecords = existingLookup[key];
+
+                if (existingRecords.Any())
+                {
+                    // ✅ 发现重复数据，记录警告
+                    if (existingRecords.Count() > 1)
+                    {
+                        _Logger.LogWarning("发现重复业务键 {Key}，共 {Count} 条记录，表: {EntityType}",
+                            key, existingRecords.Count(), typeof(T).Name);
+                    }
+
+                    if (isUpdate)
+                    {
+                        // ✅ 覆盖模式：处理所有重复记录
+                        foreach (var existing in existingRecords)
+                        {
+                            if (supportsMarkDelete)
+                            {
+                                // ✅ 支持软删除：标记所有重复记录为删除
+                                ((IMarkDelete)existing).IsDelete = true;
+                                result.DeletedCount++;
+                            }
+                            else
+                            {
+                                // ✅ 不支持软删除：仅更新第一条记录，其余物理删除
+                                if (existing == existingRecords.First())
+                                {
+                                    _DbContext.Entry(existing).CurrentValues.SetValues(entity);
+                                }
+                                else
+                                {
+                                    // 额外的重复记录直接物理删除
+                                    _DbContext.Remove(existing);
+                                    _Logger.LogWarning("物理删除重复记录，业务键: {Key}，表: {EntityType}", key, typeof(T).Name);
+                                }
+                                result.DeletedCount++;
+                            }
+                        }
+
+                        // ✅ 添加新实体（仅添加一次）
+                        if (supportsMarkDelete || existingRecords.Count() > 1)
+                        {
+                            dbSet.Add(entity);
+                        }
+                        result.AddedCount++;
+                    }
+                    else
+                    {
+                        // ✅ 追加模式：跳过已存在数据
+                        result.SkippedCount++;
+                    }
+                }
+                else
+                {
+                    // ✅ 新数据：直接添加
+                    dbSet.Add(entity);
+                    result.AddedCount++;
+                }
+            }
+
+            _Logger.LogInformation(
+                "填充完成：总数={Total}，新增={Added}，删除={Deleted}，跳过={Skipped}，表={EntityType}",
+                result.TotalCount, result.AddedCount, result.DeletedCount, result.SkippedCount, typeof(T).Name);
+            return result;
+        }
+
+        /// <summary>
         /// 导出实体数据到工作表
         /// 即使没有数据也会创建表头，便于客户填写数据模板
         /// 排除字段：Id（系统生成）、OrgId（自动设置）
@@ -575,7 +692,6 @@ namespace PowerLmsServer.Services
             try
             {
                 var data = GetEntityDataByOrgId<T>(orgId);
-
                 // 获取可导出的属性，排除Id、OrgId列和复杂类型
                 var properties = typeof(T).GetProperties()
                     .Where(p => p.CanRead &&
@@ -584,32 +700,27 @@ namespace PowerLmsServer.Services
                                !p.Name.Equals("OrgId", StringComparison.OrdinalIgnoreCase) &&
                                !IsComplexType(p.PropertyType))
                     .ToArray();
-
                 // 创建表头（即使没有数据也要创建表头）
                 var headerRow = sheet.CreateRow(0);
                 for (int i = 0; i < properties.Length; i++)
                 {
                     headerRow.CreateCell(i).SetCellValue(properties[i].Name);
                 }
-
                 // 如果没有数据，记录日志但仍返回成功（已创建表头）
                 if (!data.Any())
                 {
                     _Logger.LogInformation("表 {EntityType} 没有数据，已导出表头模板", typeof(T).Name);
                     return 0;
                 }
-
                 // 填充数据
                 for (int i = 0; i < data.Count; i++)
                 {
                     var dataRow = sheet.CreateRow(i + 1);
                     var item = data[i];
-
                     for (int j = 0; j < properties.Length; j++)
                     {
                         var value = properties[j].GetValue(item);
                         var propertyType = properties[j].PropertyType;
-
                         // 枚举类型导出为数字值，提升兼容性（支持数据库直接存储值）
                         if (value != null && propertyType.IsEnum)
                         {
@@ -625,7 +736,6 @@ namespace PowerLmsServer.Services
                         }
                     }
                 }
-
                 return data.Count;
             }
             catch (Exception ex)
@@ -636,13 +746,16 @@ namespace PowerLmsServer.Services
         }
 
         /// <summary>
-        /// 导入实体数据
-        /// 使用OwDataUnit.BulkInsert实现高性能批量插入，自动处理重复数据
+        /// 导入实体数据（重构版 - 使用FillToDbContext）
+        /// 新策略：按业务键判断重复，支持真正的覆盖导入
+        /// - 有Code属性：使用Code作为业务键
+        /// - UnitConversion：使用(Basic, Rim)复合键
+        /// - PlExchangeRate：无业务键，直接添加（允许同一货币对不同时间段的多个汇率）
         /// </summary>
         /// <typeparam name="T">实体类型</typeparam>
         /// <param name="sheet">Excel工作表</param>
         /// <param name="orgId">组织ID，用于多租户数据隔离</param>
-        /// <param name="updateExisting">是否更新已存在的记录</param>
+        /// <param name="updateExisting">true=软删除重复数据后导入（对不能软删除的对象则直接更新），false=仅导入新数据</param>
         /// <returns>导入的记录数</returns>
         private int ImportEntityData<T>(ISheet sheet, Guid? orgId, bool updateExisting) where T : class, new()
         {
@@ -659,89 +772,73 @@ namespace PowerLmsServer.Services
             }
             try
             {
-                var propertyList = typeof(T).GetProperties().Where(p => p.CanWrite && !p.Name.Equals("Id", StringComparison.OrdinalIgnoreCase) && !p.Name.Equals("OrgId", StringComparison.OrdinalIgnoreCase) && !IsComplexType(p.PropertyType)).ToList();
-                var properties = new Dictionary<string, PropertyInfo>(StringComparer.OrdinalIgnoreCase);
-                foreach (var property in propertyList)
-                {
-                    if (!properties.ContainsKey(property.Name))
-                    {
-                        properties.Add(property.Name, property);
-                    }
-                    else
-                    {
-                        _Logger.LogWarning("发现重复属性名称: {PropertyName} 在实体 {EntityType} 中，已跳过", property.Name, typeof(T).Name);
-                    }
-                }
-                var columnMappings = new Dictionary<int, PropertyInfo>();
-                for (int i = 0; i <= headerRow.LastCellNum; i++)
-                {
-                    var cell = headerRow.GetCell(i);
-                    if (cell != null && !string.IsNullOrWhiteSpace(cell.StringCellValue))
-                    {
-                        var columnName = cell.StringCellValue.Trim();
-                        if (properties.ContainsKey(columnName))
-                        {
-                            columnMappings[i] = properties[columnName];
-                        }
-                        else
-                        {
-                            _Logger.LogDebug("列 {ColumnName} 在实体 {EntityType} 中未找到对应属性", columnName, typeof(T).Name);
-                        }
-                    }
-                }
-                if (!columnMappings.Any())
-                {
-                    _Logger.LogWarning("表 {EntityType} 的Sheet {SheetName} 没有有效的列映射", typeof(T).Name, sheet.SheetName);
-                    return 0;
-                }
-                var entities = new List<T>(); // 收集所有实体
-                for (int rowIndex = 1; rowIndex <= sheet.LastRowNum; rowIndex++)
-                {
-                    var row = sheet.GetRow(rowIndex);
-                    if (row == null) continue;
-                    try
-                    {
-                        var entity = new T();
-                        var hasData = false;
-                        foreach (var mapping in columnMappings) // 填充实体属性（排除Id和OrgId）
-                        {
-                            var cell = row.GetCell(mapping.Key);
-                            if (cell != null)
-                            {
-                                var value = GetCellValue(cell, mapping.Value.PropertyType);
-                                if (value != null)
-                                {
-                                    mapping.Value.SetValue(entity, value);
-                                    hasData = true;
-                                }
-                            }
-                        }
-                        if (!hasData) continue;
-                        var idProperty = typeof(T).GetProperty("Id"); // 自动设置Id字段：生成新的GUID
-                        if (idProperty != null && idProperty.PropertyType == typeof(Guid))
-                        {
-                            idProperty.SetValue(entity, Guid.NewGuid());
-                        }
-                        var orgIdProperty = typeof(T).GetProperty("OrgId"); // 自动设置OrgId字段：使用当前登录用户的机构ID
-                        if (orgIdProperty != null)
-                        {
-                            orgIdProperty.SetValue(entity, orgId);
-                        }
-                        entities.Add(entity); // 添加到批量插入列表
-                    }
-                    catch (Exception ex)
-                    {
-                        _Logger.LogError(ex, "解析第 {RowIndex} 行数据时发生错误，表: {EntityType}, Sheet: {SheetName}", rowIndex, typeof(T).Name, sheet.SheetName);
-                    }
-                }
+                // ✅ 步骤1: 读取Excel数据
+                var entities = ReadEntitiesFromSheet<T>(sheet, orgId);
                 if (entities.Count == 0)
                 {
                     _Logger.LogInformation("表 {EntityType} 没有有效数据可导入", typeof(T).Name);
                     return 0;
                 }
-                var importedCount = OwDataUnit.BulkInsert(entities, _DbContext, ignoreExisting: !updateExisting); // 使用 OwDataUnit.BulkInsert 批量插入（自动处理重复数据）
-                _Logger.LogInformation("表 {EntityType} 导入完成，实际插入: {ImportedCount}/{TotalCount}", typeof(T).Name, importedCount, entities.Count);
-                return importedCount;
+
+                var entityType = typeof(T);
+                var typeName = entityType.Name;
+
+                // ✅ 步骤2: 特殊处理 - PlExchangeRate（无业务键，直接添加）
+                if (typeName == "PlExchangeRate")
+                {
+                    // PlExchangeRate允许同一货币对不同时间段的多个汇率，直接添加
+                    _DbContext.Set<T>().AddRange(entities);
+                    _Logger.LogInformation("表 {EntityType} 准备导入 {Count} 条记录（无业务键去重）", typeName, entities.Count);
+                    return entities.Count;
+                }
+
+                // ✅ 步骤3: 特殊处理 - UnitConversion（使用Basic+Rim复合键）
+                if (typeName == "UnitConversion")
+                {
+                    var basicProperty = entityType.GetProperty("Basic");
+                    var rimProperty = entityType.GetProperty("Rim");
+
+                    if (basicProperty != null && rimProperty != null)
+                    {
+                        // 预加载现有数据
+                        var existingData = GetEntityDataByOrgId<T>(orgId);
+
+                        // 使用复合键(Basic + Rim)
+                        var result = FillToDbContext(
+                            entities,
+                            existingData,
+                            e => $"{basicProperty.GetValue(e)}|{rimProperty.GetValue(e)}",
+                            updateExisting);
+
+                        _Logger.LogInformation("表 {EntityType} 导入完成：新增{Added}条，删除{Deleted}条，跳过{Skipped}条（使用Basic+Rim复合键）",
+                            typeName, result.AddedCount, result.DeletedCount, result.SkippedCount);
+                        return result.AddedCount;
+                    }
+                }
+
+                // ✅ 步骤4: 标准处理 - 有Code属性的实体
+                var codeProperty = entityType.GetProperty("Code");
+                if (codeProperty != null)
+                {
+                    // 预加载现有数据（仅查询一次）
+                    var existingData = GetEntityDataByOrgId<T>(orgId);
+
+                    // 使用FillToDbContext统一处理
+                    var result = FillToDbContext(
+                        entities,
+                        existingData,
+                        e => codeProperty.GetValue(e) as string ?? string.Empty,
+                        updateExisting);
+
+                    _Logger.LogInformation("表 {EntityType} 导入完成：新增{Added}条，删除{Deleted}条，跳过{Skipped}条（使用Code）",
+                        typeName, result.AddedCount, result.DeletedCount, result.SkippedCount);
+                    return result.AddedCount;
+                }
+
+                // ✅ 步骤5: 其他无业务键的实体，直接添加
+                _DbContext.Set<T>().AddRange(entities);
+                _Logger.LogInformation("表 {EntityType} 准备导入 {Count} 条记录（无业务键）", typeName, entities.Count);
+                return entities.Count;
             }
             catch (Exception ex)
             {
@@ -751,34 +848,88 @@ namespace PowerLmsServer.Services
         }
 
         /// <summary>
-        /// 获取指定类型的实体数据
-        /// 支持多租户数据隔离，使用AsNoTracking提升查询性能
+        /// 从Excel工作表读取实体数据（使用OwNpoiExtensions扩展方法）
+        /// </summary>
+        /// <typeparam name="T">实体类型</typeparam>
+        /// <param name="sheet">Excel工作表</param>
+        /// <param name="orgId">组织ID</param>
+        /// <returns>实体列表</returns>
+        private List<T> ReadEntitiesFromSheet<T>(ISheet sheet, Guid? orgId) where T : class, new()
+        {
+            // ✅ 使用OwNpoiExtensions.ReadEntities扩展方法
+            var entities = new List<T>();
+
+            // 排除Id、OrgId和计算属性（IdString、Base64IdString）
+            var excludedProperties = new[] { "Id", "OrgId", "IdString", "Base64IdString" };
+
+            try
+            {
+                // ✅ 调用扩展方法（自动处理列映射、属性过滤、复杂类型排除）
+                sheet.ReadEntities(entities, excludedProperties);
+
+                // ✅ 手动设置OrgId（如果实体有OrgId属性）
+                var orgIdProperty = typeof(T).GetProperty("OrgId");
+                if (orgIdProperty != null && orgId.HasValue)
+                {
+                    foreach (var entity in entities)
+                    {
+                        orgIdProperty.SetValue(entity, orgId);
+                    }
+                }
+
+                _Logger.LogDebug("从Sheet读取 {Count} 条数据，表: {EntityType}", entities.Count, typeof(T).Name);
+            }
+            catch (Exception ex)
+            {
+                _Logger.LogError(ex, "读取Sheet数据时发生错误，表: {EntityType}", typeof(T).Name);
+                throw;
+            }
+
+            return entities;
+        }
+
+        /// <summary>
+        /// 获取指定类型的实体数据（排除软删除数据）
+        /// 支持多租户数据隔离，启用 EF Core 变更跟踪以支持后续修改操作
         /// </summary>
         /// <typeparam name="T">实体类型</typeparam>
         /// <param name="orgId">组织ID</param>
-        /// <returns>实体数据列表</returns>
+        /// <returns>实体数据列表（不包含软删除数据，启用变更跟踪）</returns>
         private List<T> GetEntityDataByOrgId<T>(Guid? orgId) where T : class
         {
             try
             {
                 var entityType = typeof(T);
-                var query = _DbContext.Set<T>().AsNoTracking();
-
-                if (entityType.GetProperty("OrgId") != null) // 如果实体有OrgId属性，则按OrgId过滤
+                // ✅ 移除 AsNoTracking()，启用 EF Core 变更跟踪
+                IQueryable<T> query = _DbContext.Set<T>();
+                var parameter = Expression.Parameter(entityType, "x");
+                Expression? whereExpression = null;
+                // ✅ 过滤1：OrgId（如果实体有OrgId属性）
+                if (entityType.GetProperty("OrgId") != null)
                 {
-                    var parameter = Expression.Parameter(entityType, "x");
-                    var property = Expression.Property(parameter, "OrgId");
-                    var constant = Expression.Constant(orgId, typeof(Guid?));
-                    var equals = Expression.Equal(property, constant);
-                    var lambda = Expression.Lambda<Func<T, bool>>(equals, parameter);
-
+                    var orgIdProperty = Expression.Property(parameter, "OrgId");
+                    var orgIdConstant = Expression.Constant(orgId, typeof(Guid?));
+                    whereExpression = Expression.Equal(orgIdProperty, orgIdConstant);
+                }
+                // ✅ 过滤2：软删除（如果实体实现IMarkDelete接口）
+                if (typeof(IMarkDelete).IsAssignableFrom(entityType))
+                {
+                    var isDeleteProperty = Expression.Property(parameter, "IsDelete");
+                    var falseConstant = Expression.Constant(false, typeof(bool));
+                    var isDeleteCondition = Expression.Equal(isDeleteProperty, falseConstant);
+                    whereExpression = whereExpression == null
+                        ? isDeleteCondition
+                        : Expression.AndAlso(whereExpression, isDeleteCondition);
+                }
+                // 应用过滤条件
+                if (whereExpression != null)
+                {
+                    var lambda = Expression.Lambda<Func<T, bool>>(whereExpression, parameter);
                     query = query.Where(lambda);
                 }
-
                 var result = query.ToList();
-                _Logger.LogDebug("获取实体数据 {EntityType}，OrgId: {OrgId}，记录数: {Count}",
+                _Logger.LogDebug("获取实体数据 {EntityType}，OrgId: {OrgId}，记录数: {Count}（已排除软删除，启用变更跟踪）",
                     typeof(T).Name, orgId, result.Count);
-
                 return result;
             }
             catch (Exception ex)
@@ -805,93 +956,34 @@ namespace PowerLmsServer.Services
             return false;
         }
 
-        /// <summary>
-        /// 获取单元格值并转换为指定类型
-        /// </summary>
-        /// <param name="cell">Excel单元格</param>
-        /// <param name="targetType">目标类型</param>
-        /// <returns>转换后的值</returns>
-        private object GetCellValue(ICell cell, Type targetType)
-        {
-            if (cell == null) return null;
+        #endregion
 
-            try
-            {
-                var cellType = cell.CellType == CellType.Formula ? cell.CachedFormulaResultType : cell.CellType;
-
-                return cellType switch
-                {
-                    CellType.String => ConvertValue(cell.StringCellValue, targetType),
-                    CellType.Numeric => ConvertValue(cell.NumericCellValue, targetType),
-                    CellType.Boolean => ConvertValue(cell.BooleanCellValue, targetType),
-                    CellType.Blank => null,
-                    _ => null
-                };
-            }
-            catch (Exception ex)
-            {
-                _Logger.LogWarning(ex, "转换单元格值时发生错误，目标类型: {TargetType}", targetType.Name);
-                return null;
-            }
-        }
+        #region 填充结果类型定义
 
         /// <summary>
-        /// 值类型转换
+        /// 数据填充结果统计
         /// </summary>
-        /// <param name="value">原始值</param>
-        /// <param name="targetType">目标类型</param>
-        /// <returns>转换后的值</returns>
-        private object ConvertValue(object value, Type targetType)
+        public class FillResult
         {
-            if (value == null) return null;
-            if (targetType == typeof(string)) return value.ToString();
-            if (targetType == typeof(Guid) || targetType == typeof(Guid?))
-            {
-                if (Guid.TryParse(value.ToString(), out var guid))
-                    return guid;
-                return targetType == typeof(Guid?) ? null : Guid.NewGuid();
-            }
-            var underlyingType = Nullable.GetUnderlyingType(targetType) ?? targetType;
-            if (underlyingType.IsEnum)
-            {
-                try
-                {
-                    var valueStr = value.ToString().Trim();
-                    if (int.TryParse(valueStr, out var numValue))
-                    {
-                        if (Enum.IsDefined(underlyingType, numValue))
-                        {
-                            var enumVal = Enum.ToObject(underlyingType, numValue);
-                            _Logger.LogDebug("枚举转换成功（数字）：{NumValue} -> {EnumType}.{EnumValue}",
-                      numValue, underlyingType.Name, enumVal);
-                            return enumVal;
-                        }
-                    }
-                    if (Enum.TryParse(underlyingType, valueStr, true, out var enumValue))
-                    {
-                        _Logger.LogDebug("枚举转换成功（文字）：{ValueStr} -> {EnumType}.{EnumValue}",
-                         valueStr, underlyingType.Name, enumValue);
-                        return enumValue;
-                    }
-                    _Logger.LogWarning("枚举转换失败：值 '{ValueStr}' 无法解析为枚举类型 {EnumType}，将使用默认值",
-                  valueStr, underlyingType.Name);
-                    return targetType.IsValueType ? Activator.CreateInstance(targetType) : null;
-                }
-                catch (Exception ex)
-                {
-                    _Logger.LogError(ex, "枚举转换时发生异常：值 '{Value}', 目标类型 {TargetType}",
-                       value, targetType.Name);
-                    return targetType.IsValueType ? Activator.CreateInstance(targetType) : null;
-                }
-            }
-            try
-            {
-                return Convert.ChangeType(value, underlyingType);
-            }
-            catch
-            {
-                return targetType.IsValueType ? Activator.CreateInstance(targetType) : null;
-            }
+            /// <summary>
+            /// 总数据量
+            /// </summary>
+            public int TotalCount { get; set; }
+
+            /// <summary>
+            /// 新增数量
+            /// </summary>
+            public int AddedCount { get; set; }
+
+            /// <summary>
+            /// 删除数量（软删除+物理删除）
+            /// </summary>
+            public int DeletedCount { get; set; }
+
+            /// <summary>
+            /// 跳过数量（追加模式下已存在的实体）
+            /// </summary>
+            public int SkippedCount { get; set; }
         }
 
         #endregion

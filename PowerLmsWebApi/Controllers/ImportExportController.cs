@@ -92,10 +92,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetSupportedTablesReturnDto> GetSupportedTables([FromQuery] GetSupportedTablesParamsDto paramsDto)
         {
             if (_AccountManager.GetOrLoadContextByToken(paramsDto.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            
             var result = new GetSupportedTablesReturnDto();
-            _Logger.LogInformation("开始获取支持的表列表");
-            
             try
             {
                 var orgId = GetUserOrgId(context);
@@ -108,7 +105,6 @@ namespace PowerLmsWebApi.Controllers
                     TableName = x.TypeName, 
                     DisplayName = x.DisplayName 
                 }));
-                _Logger.LogDebug("获取独立字典表类型 {Count} 个", dictionaryTypes.Count);
 
                 // 获取所有客户子表
                 var customerSubTypes = _ImportExportService.GetSupportedCustomerSubTableTypes();
@@ -117,7 +113,6 @@ namespace PowerLmsWebApi.Controllers
                     TableName = x.TypeName, 
                     DisplayName = x.DisplayName 
                 }));
-                _Logger.LogDebug("获取客户子表类型 {Count} 个", customerSubTypes.Count);
 
                 // 添加客户主表
                 allTables.Add(new TableInfo 
@@ -127,8 +122,6 @@ namespace PowerLmsWebApi.Controllers
                 });
 
                 result.Tables = allTables.OrderBy(x => x.TableName).ToList();
-                
-                _Logger.LogInformation("获取支持的表列表成功，共返回 {Count} 个表（不包括SimpleDataDic简单字典）", result.Tables.Count);
                 
                 return result;
             }
@@ -169,8 +162,6 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(paramsDto.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             
-            _Logger.LogInformation("开始批量导出表，表名称: {TableNames}", string.Join(",", paramsDto.TableNames ?? new List<string>()));
-            
             try
             {
                 if (paramsDto.TableNames == null || !paramsDto.TableNames.Any())
@@ -180,7 +171,6 @@ namespace PowerLmsWebApi.Controllers
                 }
 
                 var orgId = GetUserOrgId(context);
-                _Logger.LogDebug("用户机构ID: {OrgId}", orgId);
                 
                 // 分离独立表字典和客户资料表
                 var dictionaryTypes = _ImportExportService.GetSupportedDictionaryTypes().Select(x => x.TypeName).ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -190,9 +180,6 @@ namespace PowerLmsWebApi.Controllers
                 var dictionaryTables = paramsDto.TableNames.Where(x => dictionaryTypes.Contains(x)).ToList();
                 var customerTables = paramsDto.TableNames.Where(x => customerSubTypes.Contains(x)).ToList();
                 var unsupportedTables = paramsDto.TableNames.Except(dictionaryTables).Except(customerTables).ToList();
-
-                _Logger.LogDebug("表类型分析 - 独立字典表: {DictionaryCount}, 客户资料表: {CustomerCount}, 不支持: {UnsupportedCount}", 
-                    dictionaryTables.Count, customerTables.Count, unsupportedTables.Count);
 
                 if (unsupportedTables.Any())
                 {
@@ -212,13 +199,11 @@ namespace PowerLmsWebApi.Controllers
                 // 如果只有独立表字典
                 if (dictionaryTables.Any() && !customerTables.Any())
                 {
-                    _Logger.LogInformation("执行独立表字典导出，表数量: {Count}", dictionaryTables.Count);
                     fileBytes = _ImportExportService.ExportDictionaries(dictionaryTables, orgId);
                 }
                 // 如果只有客户资料表
                 else if (customerTables.Any() && !dictionaryTables.Any())
                 {
-                    _Logger.LogInformation("执行客户资料表导出，表数量: {Count}", customerTables.Count);
                     fileBytes = _ImportExportService.ExportCustomerTables(customerTables, orgId);
                 }
                 // 如果混合了两种类型，需要合并处理
@@ -229,8 +214,6 @@ namespace PowerLmsWebApi.Controllers
                 }
                 
                 var fileName = $"MultiTables_{string.Join("_", paramsDto.TableNames.Take(3))}{(paramsDto.TableNames.Count > 3 ? "_etc" : "")}_{DateTime.Now:yyyyMMdd_HHmmss}.xls";
-
-                _Logger.LogInformation("批量导出成功，文件名: {FileName}, 文件大小: {FileSize} bytes", fileName, fileBytes.Length);
 
                 // 二进制模式下载，确保跨浏览器兼容性
                 Response.Headers.Add("Content-Disposition", $"attachment; filename=\"{fileName}\"");
@@ -275,11 +258,7 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<ImportMultipleTablesReturnDto> ImportMultipleTables(IFormFile formFile, [FromForm] ImportMultipleTablesParamsDto paramsDto)
         {
             if (_AccountManager.GetOrLoadContextByToken(paramsDto.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            
             var result = new ImportMultipleTablesReturnDto();
-            _Logger.LogInformation("开始批量导入，删除现有数据: {DeleteExisting}, 文件大小: {FileSize} bytes", 
-                paramsDto.DeleteExisting, formFile?.Length ?? 0);
-
             try
             {
                 if (formFile == null || formFile.Length == 0)
@@ -290,7 +269,6 @@ namespace PowerLmsWebApi.Controllers
                     result.DebugMessage = "请选择要导入的Excel文件";
                     return BadRequest(result);
                 }
-
                 // 验证文件格式
                 var fileExtension = Path.GetExtension(formFile.FileName)?.ToLowerInvariant();
                 if (fileExtension != ".xls" && fileExtension != ".xlsx")
@@ -301,66 +279,44 @@ namespace PowerLmsWebApi.Controllers
                     result.DebugMessage = "只支持.xls或.xlsx格式的Excel文件";
                     return BadRequest(result);
                 }
-
                 var orgId = GetUserOrgId(context);
-                _Logger.LogDebug("用户机构ID: {OrgId}, 文件名: {FileName}", orgId, formFile.FileName);
-                
+                // ✅ 先创建 IWorkbook 对象
+                using var workbook = NPOI.SS.UserModel.WorkbookFactory.Create(formFile.OpenReadStream());
                 bool hasSuccessfulImport = false;
-                
                 // 先尝试作为独立表字典导入
                 try
                 {
-                    _Logger.LogDebug("尝试作为独立表字典导入");
-                    var dictionaryResult = _ImportExportService.ImportDictionaries(formFile, orgId, !paramsDto.DeleteExisting);
+                    var dictionaryResult = _ImportExportService.ImportDictionaries(workbook, orgId, paramsDto.DeleteExisting);
                     if (dictionaryResult.ProcessedSheets > 0)
                     {
                         result.ImportedCount = dictionaryResult.TotalImportedCount;
                         result.ProcessedSheets = dictionaryResult.ProcessedSheets;
                         result.DebugMessage = $"导入独立表字典完成，共处理 {dictionaryResult.ProcessedSheets} 个Sheet，导入 {dictionaryResult.TotalImportedCount} 条记录";
                         hasSuccessfulImport = true;
-                        
-                        _Logger.LogInformation("独立表字典导入成功，处理Sheet数: {ProcessedSheets}, 导入记录数: {ImportedCount}", 
-                            dictionaryResult.ProcessedSheets, dictionaryResult.TotalImportedCount);
-                        
                         return result;
-                    }
-                    else
-                    {
-                        _Logger.LogDebug("独立表字典导入未处理任何Sheet");
                     }
                 }
                 catch (Exception ex)
                 {
                     _Logger.LogWarning(ex, "独立表字典导入尝试失败，继续尝试客户资料表导入");
                 }
-                
                 // 再尝试作为客户资料表导入
                 try
                 {
-                    _Logger.LogDebug("尝试作为客户资料表导入");
-                    var customerResult = _ImportExportService.ImportCustomerTables(formFile, orgId, !paramsDto.DeleteExisting);
+                    var customerResult = _ImportExportService.ImportCustomerTables(workbook, orgId, !paramsDto.DeleteExisting);
                     if (customerResult.ProcessedSheets > 0)
                     {
                         result.ImportedCount = customerResult.TotalImportedCount;
                         result.ProcessedSheets = customerResult.ProcessedSheets;
                         result.DebugMessage = $"导入客户资料表完成，共处理 {customerResult.ProcessedSheets} 个Sheet，导入 {customerResult.TotalImportedCount} 条记录";
                         hasSuccessfulImport = true;
-                        
-                        _Logger.LogInformation("客户资料表导入成功，处理Sheet数: {ProcessedSheets}, 导入记录数: {ImportedCount}", 
-                            customerResult.ProcessedSheets, customerResult.TotalImportedCount);
-                        
                         return result;
-                    }
-                    else
-                    {
-                        _Logger.LogDebug("客户资料表导入未处理任何Sheet");
                     }
                 }
                 catch (Exception ex)
                 {
                     _Logger.LogWarning(ex, "客户资料表导入尝试失败");
                 }
-                
                 // 如果两种方式都没有成功处理任何Sheet
                 if (!hasSuccessfulImport)
                 {
@@ -370,7 +326,6 @@ namespace PowerLmsWebApi.Controllers
                     result.DebugMessage = "Excel文件中没有识别到支持的表类型Sheet。请确保Sheet名称使用正确的实体类型名称（如：PlCountry、PlCustomer等）";
                     return BadRequest(result);
                 }
-                
                 return result;
             }
             catch (Exception ex)
