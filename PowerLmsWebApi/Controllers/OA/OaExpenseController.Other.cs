@@ -156,6 +156,36 @@ namespace PowerLmsWebApi.Controllers.OA
                     return result;
                 }
 
+                // 🔑 自动状态同步：如果申请单在审批中但工作流已完成，先自动切换到待结算状态
+                if (requisition.Status == OaExpenseStatus.InApproval)
+                {
+                    // 检查工作流状态
+                    var workflow = _DbContext.OwWfs.FirstOrDefault(w => w.DocId == requisition.Id);
+                    if (workflow != null && workflow.State == 1) // 工作流已成功完成
+                    {
+                        // InApproval → ApprovedPendingSettlement
+                        requisition.Status = OaExpenseStatus.ApprovedPendingSettlement;
+                        requisition.AuditDateTime = OwHelper.WorldNow;
+                        
+                        // 从工作流中获取最后审批人
+                        var lastApprover = workflow.Children
+                            .OrderByDescending(n => n.ArrivalDateTime)
+                            .SelectMany(n => n.Children.Where(i => i.OperationKind == 0 && i.IsSuccess == true))
+                            .FirstOrDefault();
+                        
+                        if (lastApprover != null)
+                        {
+                            requisition.AuditOperatorId = lastApprover.OpertorId;
+                        }
+                        
+                        _Logger.LogInformation(
+                            "自动同步申请单状态：RequisitionId={RequisitionId}, " +
+                            "OldStatus=InApproval, NewStatus=ApprovedPendingSettlement, " +
+                            "触发接口=SettleOaExpenseRequisition",
+                            requisition.Id);
+                    }
+                }
+
                 // 状态检查：必须是审批完成待结算状态
                 if (requisition.Status != OaExpenseStatus.ApprovedPendingSettlement)
                 {
@@ -174,7 +204,7 @@ namespace PowerLmsWebApi.Controllers.OA
                     return result;
                 }
 
-                // 执行结算操作
+                // 执行结算操作：ApprovedPendingSettlement → SettledPendingConfirm
                 requisition.Status = OaExpenseStatus.SettledPendingConfirm;
                 requisition.SettlementOperatorId = context.User.Id;
                 requisition.SettlementDateTime = OwHelper.WorldNow;
@@ -514,6 +544,65 @@ namespace PowerLmsWebApi.Controllers.OA
                     .Where(c => resultIds.Contains(c.DocId.Value))
                     .ToArray();
 
+                // 🔑 自动同步工作流状态到申请单状态
+                int syncedCount = 0;
+                foreach (var requisition in prb.Result)
+                {
+                    var wf = wfsArray.FirstOrDefault(d => d.DocId == requisition.Id);
+                    if (wf != null && requisition.Status == OaExpenseStatus.InApproval)
+                    {
+                        // 需要重新附加到上下文才能修改（因为使用了AsNoTracking）
+                        var trackedRequisition = _DbContext.OaExpenseRequisitions.Find(requisition.Id);
+                        if (trackedRequisition != null)
+                        {
+                            // 工作流已完成但申请单还在审批中 → 自动切换到待结算
+                            if (wf.State == 1 && trackedRequisition.Status == OaExpenseStatus.InApproval)
+                            {
+                                trackedRequisition.Status = OaExpenseStatus.ApprovedPendingSettlement;
+                                trackedRequisition.AuditDateTime = OwHelper.WorldNow;
+                                
+                                // 从工作流中获取最后审批人
+                                var lastApprover = wf.Children
+                                    .OrderByDescending(n => n.ArrivalDateTime)
+                                    .SelectMany(n => n.Children.Where(i => i.OperationKind == 0 && i.IsSuccess == true))
+                                    .FirstOrDefault();
+                                
+                                if (lastApprover != null)
+                                {
+                                    trackedRequisition.AuditOperatorId = lastApprover.OpertorId;
+                                }
+                                
+                                syncedCount++;
+                                _Logger.LogInformation(
+                                    "自动同步申请单状态：RequisitionId={RequisitionId}, " +
+                                    "OldStatus=InApproval, NewStatus=ApprovedPendingSettlement, " +
+                                    "触发接口=GetAllOaExpenseRequisitionWithWf",
+                                    requisition.Id);
+                            }
+                            // 工作流被拒绝但申请单还在审批中 → 自动回退到草稿
+                            else if (wf.State == 2 && trackedRequisition.Status == OaExpenseStatus.InApproval)
+                            {
+                                trackedRequisition.Status = OaExpenseStatus.Draft;
+                                trackedRequisition.AuditDateTime = null;
+                                trackedRequisition.AuditOperatorId = null;
+                                syncedCount++;
+                                _Logger.LogInformation(
+                                    "自动同步申请单状态（拒绝）：RequisitionId={RequisitionId}, " +
+                                    "OldStatus=InApproval, NewStatus=Draft, " +
+                                    "触发接口=GetAllOaExpenseRequisitionWithWf",
+                                    requisition.Id);
+                            }
+                        }
+                    }
+                }
+
+                // 保存状态同步的更改
+                if (syncedCount > 0)
+                {
+                    _DbContext.SaveChanges();
+                    _Logger.LogInformation("本次查询自动同步了 {Count} 个申请单的状态", syncedCount);
+                }
+
                 // 组装结果
                 foreach (var requisition in prb.Result)
                 {
@@ -537,7 +626,5 @@ namespace PowerLmsWebApi.Controllers.OA
 
             return result;
         }
-
-
     }
 }

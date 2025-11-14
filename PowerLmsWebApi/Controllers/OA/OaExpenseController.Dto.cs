@@ -87,34 +87,6 @@ namespace PowerLmsWebApi.Controllers.OA
         {
         }
 
-        /// <summary>
-        /// 审核OA费用申请单功能的参数封装类。
-        /// 已废弃：请使用新的结算和确认流程。
-        /// </summary>
-        [Obsolete("已废弃原有审核接口，请使用SettleOaExpenseRequisitionParamsDto和ConfirmOaExpenseRequisitionParamsDto实现两步式处理")]
-        public class AuditOaExpenseRequisitionParamsDto : TokenDtoBase
-        {
-            /// <summary>
-            /// 申请单ID。
-            /// </summary>
-            [Required]
-            public Guid RequisitionId { get; set; }
-
-            /// <summary>
-            /// 是否审核通过。true表示审核通过，false表示取消审核。
-            /// </summary>
-            public bool IsAudit { get; set; }
-        }
-
-        /// <summary>
-        /// 审核OA费用申请单功能的返回值封装类。
-        /// 已废弃：请使用新的结算和确认流程。
-        /// </summary>
-        [Obsolete("已废弃原有审核接口，请使用SettleOaExpenseRequisitionReturnDto和ConfirmOaExpenseRequisitionReturnDto")]
-        public class AuditOaExpenseRequisitionReturnDto : ReturnDtoBase
-        {
-        }
-
         #endregion
 
         #region 新增结算确认相关DTO

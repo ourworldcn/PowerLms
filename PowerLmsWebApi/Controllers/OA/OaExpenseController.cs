@@ -31,6 +31,7 @@ namespace PowerLmsWebApi.Controllers.OA
         private readonly IMapper _Mapper;
         private readonly AuthorizationManager _AuthorizationManager;
         private readonly OaExpenseManager _OaExpenseManager;
+        private readonly OrgManager<PowerLmsUserDbContext> _OrgManager;
 
         /// <summary>
         /// 构造函数。
@@ -43,7 +44,8 @@ namespace PowerLmsWebApi.Controllers.OA
             OwWfManager wfManager,
             IMapper mapper,
             AuthorizationManager authorizationManager,
-            OaExpenseManager oaExpenseManager)
+            OaExpenseManager oaExpenseManager,
+            OrgManager<PowerLmsUserDbContext> orgManager)
         {
             _DbContext = dbContext;
             _ServiceProvider = serviceProvider;
@@ -54,6 +56,7 @@ namespace PowerLmsWebApi.Controllers.OA
             _Mapper = mapper;
             _AuthorizationManager = authorizationManager;
             _OaExpenseManager = oaExpenseManager;
+            _OrgManager = orgManager;
         }
 
         #region OA费用申请单主表操作
@@ -66,7 +69,7 @@ namespace PowerLmsWebApi.Controllers.OA
         /// 通用条件写法:所有条件都是字符串，对区间的写法是用逗号分隔（字符串类型暂时不支持区间且都是模糊查询）如"2024-1-1,2024-1-2"。
         /// 对强制取null的约束，则写"null"。</param>
         /// <returns>OA费用申请单列表</returns>
-        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode。</response>
+        /// <response code="200">未发生系统级错误。但是可能出现应用错误，具体参见 HasError 和 ErrorCode。</response>
         /// <response code="401">无效令牌。</response>
         /// <response code="403">权限不足。</response>
         [HttpGet]
@@ -80,14 +83,9 @@ namespace PowerLmsWebApi.Controllers.OA
 
             try
             {
-                var dbSet = _DbContext.OaExpenseRequisitions.Where(c => c.OrgId == context.User.OrgId);
-
-                // 非超管用户权限过滤
-                if (!context.User.IsSuperAdmin)
-                {
-                    // 只能看自己创建/登记的申请单（CreateBy记录创建人/登记人/申请人）
-                    dbSet = dbSet.Where(r => r.CreateBy == context.User.Id);
-                }
+                // 🔧 修复权限过滤：使用机构管理器获取同公司所有机构ID
+                var allowedOrgIds = GetOrgIds(context.User, _OrgManager);
+                var dbSet = _DbContext.OaExpenseRequisitions.Where(c => allowedOrgIds.Contains(c.OrgId.Value));
 
                 // 确保条件字典不区分大小写
                 var normalizedConditional = conditional != null ?
@@ -127,7 +125,7 @@ namespace PowerLmsWebApi.Controllers.OA
         /// </summary>
         /// <param name="model">申请单信息</param>
         /// <returns>创建结果</returns>
-        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode。</response>
+        /// <response code="200">未发生系统级错误。但是可能出现应用错误，具体参见 HasError 和 ErrorCode。</response>
         /// <response code="401">无效令牌。</response>
         /// <response code="403">权限不足。</response>
         [HttpPost]
@@ -176,7 +174,7 @@ namespace PowerLmsWebApi.Controllers.OA
         /// </summary>
         /// <param name="model">申请单信息</param>
         /// <returns>修改结果</returns>
-        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode。</response>
+        /// <response code="200">未发生系统级错误。但是可能出现应用错误，具体参见 HasError 和 ErrorCode。</response>
         /// <response code="401">无效令牌。</response>
         /// <response code="404">指定Id的申请单不存在。</response>
         [HttpPut]
@@ -291,7 +289,7 @@ namespace PowerLmsWebApi.Controllers.OA
         /// </summary>
         /// <param name="model">删除参数</param>
         /// <returns>删除结果</returns>
-        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode。</response>
+        /// <response code="200">未发生系统级错误。但是可能出现应用错误，具体参见 HasError 和 ErrorCode。</response>
         /// <response code="401">无效令牌。</response>
         /// <response code="404">指定Id的申请单不存在。</response>
         [HttpDelete]
@@ -342,100 +340,6 @@ namespace PowerLmsWebApi.Controllers.OA
                 result.HasError = true;
                 result.ErrorCode = 500;
                 result.DebugMessage = $"删除OA费用申请单时发生错误: {ex.Message}";
-            }
-
-            return result;
-        }
-
-        /// <summary>
-        /// 审核或取消审核OA费用申请单。
-        /// 已废弃：请使用新的结算和确认流程
-        /// </summary>
-        /// <param name="model">审核参数</param>
-        /// <returns>审核结果</returns>
-        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode。</response>
-        /// <response code="401">无效令牌。</response>
-        /// <response code="403">权限不足。</response>
-        /// <response code="404">指定Id的申请单不存在。</response>
-        [Obsolete("已废弃原有审核接口，请使用SettleOaExpenseRequisition和ConfirmOaExpenseRequisition实现两步式处理")]
-        [HttpPost]
-        public ActionResult<AuditOaExpenseRequisitionReturnDto> AuditOaExpenseRequisition(AuditOaExpenseRequisitionParamsDto model)
-        {
-            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
-                return Unauthorized();
-
-            var result = new AuditOaExpenseRequisitionReturnDto();
-
-            try
-            {
-                var existing = _DbContext.OaExpenseRequisitions.Find(model.RequisitionId);
-                if (existing == null)
-                {
-                    result.HasError = true;
-                    result.ErrorCode = 404;
-                    result.DebugMessage = "指定的OA费用申请单不存在";
-                    return result;
-                }
-
-                // TODO: 这里需要添加更复杂的审核权限检查
-                // 暂时只允许超管和申请单所属组织的用户审核
-                if (!context.User.IsSuperAdmin && existing.OrgId != context.User.OrgId)
-                {
-                    result.HasError = true;
-                    result.ErrorCode = 403;
-                    result.DebugMessage = "权限不足，无法审核此申请单";
-                    return result;
-                }
-
-                if (model.IsAudit)
-                {
-                    // 审核通过前进行金额一致性校验
-                    if (!existing.ValidateAmountConsistency(_DbContext))
-                    {
-                        var itemsSum = existing.GetItemsAmountSum(_DbContext);
-                        result.HasError = true;
-                        result.ErrorCode = 400;
-                        result.DebugMessage = $"明细金额合计({itemsSum:F2})与主单金额({existing.Amount:F2})不一致，请检查明细项后再提交审核";
-                        _Logger.LogWarning("申请单{RequisitionId}金额校验失败: 主单金额={MainAmount:F2}, 明细合计={ItemsSum:F2}", 
-                            model.RequisitionId, existing.Amount, itemsSum);
-                        return result;
-                    }
-
-                    // 检查是否有明细项（如果需要的话）
-                    var itemsCount = existing.GetItems(_DbContext).Count();
-                    if (itemsCount == 0)
-                    {
-                        result.HasError = true;
-                        result.ErrorCode = 400;
-                        result.DebugMessage = "申请单必须包含至少一个明细项才能审核";
-                        _Logger.LogWarning("申请单{RequisitionId}审核失败: 没有明细项", model.RequisitionId);
-                        return result;
-                    }
-
-                    // 审核通过
-                    existing.AuditDateTime = OwHelper.WorldNow;
-                    existing.AuditOperatorId = context.User.Id;
-                    
-                    _Logger.LogInformation("申请单审核通过，审核人: {UserId}, 申请单ID: {RequisitionId}, 主单金额: {Amount:F2}, 明细项数: {ItemsCount}", 
-                        context.User.Id, model.RequisitionId, existing.Amount, itemsCount);
-                }
-                else
-                {
-                    // 取消审核
-                    existing.AuditDateTime = null;
-                    existing.AuditOperatorId = null;
-                    _Logger.LogInformation("申请单取消审核，操作人: {UserId}, 申请单ID: {RequisitionId}", 
-                        context.User.Id, model.RequisitionId);
-                }
-
-                _DbContext.SaveChanges();
-            }
-            catch (Exception ex)
-            {
-                _Logger.LogError(ex, "审核OA费用申请单时发生错误");
-                result.HasError = true;
-                result.ErrorCode = 500;
-                result.DebugMessage = $"审核OA费用申请单时发生错误: {ex.Message}";
             }
 
             return result;

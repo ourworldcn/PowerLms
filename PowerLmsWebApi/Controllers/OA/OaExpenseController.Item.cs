@@ -24,10 +24,10 @@ namespace PowerLmsWebApi.Controllers.OA
         /// </summary>
         /// <param name="model">分页和查询参数</param>
         /// <param name="conditional">查询的条件。实体属性名不区分大小写。
-        /// 通用条件写法:所有条件都是字符串，对区间的写法是用逗号分隔（字符串类型暂时不支持区间且都是模糊查询）如"2024-1-1,2024-1-2"。
-        /// 对强制取null的约束，则写"null"。</param>
+        /// 通用条件写法:所有条件都是字符串,对区间的写法是用逗号分隔(字符串类型暂时不支持区间且都是模糊查询)如"2024-1-1,2024-1-2"。
+        /// 对强制取null的约束,则写"null"。</param>
         /// <returns>OA费用申请单明细列表</returns>
-        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode。</response>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误,具体参见 HasError 和 ErrorCode。</response>
         /// <response code="401">无效令牌。</response>
         /// <response code="403">权限不足。</response>
         [HttpGet]
@@ -36,35 +36,28 @@ namespace PowerLmsWebApi.Controllers.OA
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
                 return Unauthorized();
-
             var result = new GetAllOaExpenseRequisitionItemReturnDto();
-
             try
             {
                 var dbSet = _DbContext.OaExpenseRequisitionItems;
-
                 // 确保条件字典不区分大小写
                 var normalizedConditional = conditional != null ?
                     new Dictionary<string, string>(conditional, StringComparer.OrdinalIgnoreCase) :
                     null;
-
                 // 应用通用条件查询
                 var coll = EfHelper.GenerateWhereAnd(dbSet, normalizedConditional);
-
-                // 权限过滤：只显示用户有权限查看的申请单的明细（废弃ApplicantId，统一使用CreateBy）
+                // 权限过滤:使用GetOrgIdsByCompanyId获取同公司下所有机构ID(包括下属机构)
                 if (!context.User.IsSuperAdmin)
                 {
+                    var allowedOrgIds = _OrgManager.GetOrgIdsByCompanyId(context.User.OrgId.Value);
                     var accessibleRequisitionIds = _DbContext.OaExpenseRequisitions
-                        .Where(r => r.OrgId == context.User.OrgId && r.CreateBy == context.User.Id)
+                        .Where(r => allowedOrgIds.Contains(r.OrgId.Value))
                         .Select(r => r.Id)
                         .ToList();
-
                     coll = coll.Where(i => i.ParentId != null && accessibleRequisitionIds.Contains(i.ParentId.Value));
                 }
-
                 // 排序
                 coll = coll.OrderBy(model.OrderFieldName, model.IsDesc);
-
                 // 使用EntityManager进行分页
                 var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
                 result.Total = prb.Total;
@@ -77,7 +70,6 @@ namespace PowerLmsWebApi.Controllers.OA
                 result.ErrorCode = 500;
                 result.DebugMessage = $"获取OA费用申请单明细列表时发生错误: {ex.Message}";
             }
-
             return result;
         }
 
@@ -103,7 +95,7 @@ namespace PowerLmsWebApi.Controllers.OA
                 // 🔧 权限验证 - 使用 OA.1.2 权限：日常费用拆分结算（子表增删改权限）
                 if (!_AuthorizationManager.Demand(out var err, "OA.1.2"))
                 {
-                    _Logger.LogWarning("权限检查失败 - 用户: {UserId}, 权限: OA.1.2, 错误信息: {Error}", 
+                    _Logger.LogWarning("权限检查失败 - 用户: {UserId}, 权限: OA.1.2, 错误信息: {Error}",
                         context.User.Id, err);
                     result.HasError = true;
                     result.ErrorCode = 403;
@@ -183,7 +175,7 @@ namespace PowerLmsWebApi.Controllers.OA
                 // 🔧 权限验证 - 使用 OA.1.2 权限：日常费用拆分结算（子表增删改权限）
                 if (!_AuthorizationManager.Demand(out var err, "OA.1.2"))
                 {
-                    _Logger.LogWarning("权限检查失败 - 用户: {UserId}, 权限: OA.1.2, 错误信息: {Error}", 
+                    _Logger.LogWarning("权限检查失败 - 用户: {UserId}, 权限: OA.1.2, 错误信息: {Error}",
                         context.User.Id, err);
                     result.HasError = true;
                     result.ErrorCode = 403;
@@ -278,7 +270,7 @@ namespace PowerLmsWebApi.Controllers.OA
                 // 🔧 权限验证 - 使用 OA.1.2 权限：日常费用拆分结算（子表增删改权限）
                 if (!_AuthorizationManager.Demand(out var err, "OA.1.2"))
                 {
-                    _Logger.LogWarning("权限检查失败 - 用户: {UserId}, 权限: OA.1.2, 错误信息: {Error}", 
+                    _Logger.LogWarning("权限检查失败 - 用户: {UserId}, 权限: OA.1.2, 错误信息: {Error}",
                         context.User.Id, err);
                     result.HasError = true;
                     result.ErrorCode = 403;
@@ -353,9 +345,9 @@ namespace PowerLmsWebApi.Controllers.OA
             {
                 // 查询当月所有使用该凭证字的明细记录
                 var voucherPattern = $"{period}-{voucherCharacter}-";
-                
+
                 var maxSequence = _DbContext.OaExpenseRequisitionItems
-                    .Where(item => item.VoucherNumber != null && 
+                    .Where(item => item.VoucherNumber != null &&
                                    item.VoucherNumber.StartsWith(voucherPattern) &&
                                    item.SettlementDateTime.Year == year)
                     .AsEnumerable() // 切换到客户端评估以支持复杂的字符串操作
@@ -399,7 +391,7 @@ namespace PowerLmsWebApi.Controllers.OA
             try
             {
                 return _DbContext.OaExpenseRequisitionItems
-                    .Any(item => item.VoucherNumber == voucherNumber && 
+                    .Any(item => item.VoucherNumber == voucherNumber &&
                                 item.SettlementDateTime.Year == year);
             }
             catch (Exception ex)
