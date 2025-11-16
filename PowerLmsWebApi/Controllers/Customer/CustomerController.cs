@@ -62,7 +62,7 @@ namespace PowerLmsWebApi.Controllers
             [FromQuery] Dictionary<string, string> conditional = null)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!_AuthorizationManager.Demand(out string err, "C.1.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            //if (!_AuthorizationManager.Demand(out string err, "C.1.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new GetAllCustomerReturnDto();
             Guid[] allOrg = Array.Empty<Guid>();
             var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
@@ -74,28 +74,6 @@ namespace PowerLmsWebApi.Controllers
             var dbSet = _DbContext.PlCustomers.Where(c => c.OrgId == context.User.OrgId);
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             coll = EfHelper.GenerateWhereAnd(coll, conditional);
-            //foreach (var item in conditional)
-            //    if (string.Equals(item.Key, "name", StringComparison.OrdinalIgnoreCase))
-            //    {
-            //        coll = coll.Where(c => c.Name.Name.Contains(item.Value));
-            //    }
-            //    else if (string.Equals(item.Key, "Id", StringComparison.OrdinalIgnoreCase))
-            //    {
-            //        if (Guid.TryParse(item.Value, out var id))
-            //            coll = coll.Where(c => c.Id == id);
-            //    }
-            //    else if (string.Equals(item.Key, "ShortName", StringComparison.OrdinalIgnoreCase))
-            //    {
-            //        coll = coll.Where(c => c.Name.ShortName.Contains(item.Value));
-            //    }
-            //    else if (string.Equals(item.Key, "displayname", StringComparison.OrdinalIgnoreCase))
-            //    {
-            //        coll = coll.Where(c => c.Name.DisplayName.Contains(item.Value));
-            //    }
-            //    else if (string.Equals(item.Key, "Keyword", StringComparison.OrdinalIgnoreCase))
-            //    {
-            //        coll = coll.Where(c => c.Keyword.Contains(item.Value));
-            //    }
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
@@ -132,7 +110,7 @@ namespace PowerLmsWebApi.Controllers
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
-        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="200">未发生系统级错误。但可能出现应用错误,具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">指定Id的客户不存在。</response>  
         /// <response code="403">权限不足。</response>  
@@ -147,6 +125,8 @@ namespace PowerLmsWebApi.Controllers
             {
                 _DbContext.Entry(item).Property(c => c.OrgId).IsModified = false;
                 // 禁止修改客户有效性字段，需要使用专门的接口
+                // 先恢复IsValid的原始值，再标记为不修改
+                _DbContext.Entry(item).Property(c => c.IsValid).CurrentValue = _DbContext.Entry(item).Property(c => c.IsValid).OriginalValue;
                 _DbContext.Entry(item).Property(c => c.IsValid).IsModified = false;
             }
             _DbContext.SaveChanges();

@@ -33,11 +33,6 @@ namespace PowerLmsServer.Managers
         /// 获取的组织机构列表。键是机构的Id，值是机构对象。
         /// </summary>
         public IReadOnlyDictionary<Guid, PlOrganization> Orgs { get => _Orgs ??= new ConcurrentDictionary<Guid, PlOrganization>(); }
-
-        /// <summary>
-        /// 获取或设置数据库上下文。仅查询和加载数据时使用。
-        /// </summary>
-        public TDbContext DbContext { get; internal set; }
     }
 
     /// <summary>
@@ -378,30 +373,15 @@ var mainCacheCount = InvalidateOrgCaches(merchantId.Value);
         /// <param name="merchantId">商户ID。</param>
         private void ConfigureOrgCacheEntry(ICacheEntry entry, Guid merchantId)
         {
-   // 设置缓存过期策略
-     entry.SetSlidingExpiration(TimeSpan.FromMinutes(30));
-entry.SetAbsoluteExpiration(TimeSpan.FromHours(12));
+            // 设置缓存过期策略
+            entry.SetSlidingExpiration(TimeSpan.FromMinutes(30));
+            entry.SetAbsoluteExpiration(TimeSpan.FromHours(12));
             entry.SetPriority(CacheItemPriority.Normal);
-
-     // 启用优先级驱逐回调
+            // 启用优先级驱逐回调
             entry.EnablePriorityEvictionCallback(_MemoryCache);
-
             // 获取取消令牌源并注册到过期令牌列表
-      var cts = _MemoryCache.GetCancellationTokenSource(entry.Key);
-     entry.ExpirationTokens.Add(new CancellationChangeToken(cts.Token));
-
-            // 注册后置逐出回调，用于清理资源
-            entry.RegisterPostEvictionCallback((key, value, reason, state) =>
-            {
-    if (value is OrgCacheItem<TDbContext> cacheItem && cacheItem.DbContext != null)
-           {
-      try
-       {
-  cacheItem.DbContext.Dispose(); // 释放数据库上下文
-  }
-              catch { /* 忽略释放时的异常 */ }
-      }
-});
+            var cts = _MemoryCache.GetCancellationTokenSource(entry.Key);
+            entry.ExpirationTokens.Add(new CancellationChangeToken(cts.Token));
         }
 
         /// <summary>
@@ -564,61 +544,54 @@ entry.SetAbsoluteExpiration(TimeSpan.FromHours(12));
         /// <returns>完整的缓存项。</returns>
     private OrgCacheItem<TDbContext> LoadOrgCacheItemFromDatabase(Guid merchantId)
         {
-            var dbContext = _DbContextFactory.CreateDbContext();
-            
-            try
-        {
-     // 加载商户信息，使用Set<T>()方法
-                var merchant = dbContext.Set<PlMerchant>().FirstOrDefault(c => c.Id == merchantId);
- if (merchant is null)
-     throw new InvalidOperationException($"商户 {merchantId} 未找到");
-
-    // 加载该商户下的所有组织机构，使用Include预加载导航属性提高性能
-              var rootOrgs = dbContext.Set<PlOrganization>()
-       .Where(c => c.MerchantId == merchantId && c.ParentId == null)
-      .Include(c => c.Parent)
-        .Include(c => c.Children)
-  .AsEnumerable();
-
-      var orgsDict = new ConcurrentDictionary<Guid, PlOrganization>();
-     if (rootOrgs.Any())
-      {
-       // 获取所有子孙组织机构
-         var allOrgs = rootOrgs.SelectMany(c => OwHelper.GetAllSubItemsOfTree(new[] { c }, d => d.Children));
-       foreach (var org in allOrgs)
-    orgsDict.TryAdd(org.Id, org);
-
-         // 确保导航属性被正确加载
-           EnsureNavigationPropertiesLoaded(orgsDict.Values);
-                }
-
-      return new OrgCacheItem<TDbContext>
-      {
-  Merchant = merchant,
-         _Orgs = orgsDict,
-        DbContext = dbContext
-       };
-      }
-      catch
+            using var dbContext = _DbContextFactory.CreateDbContext();
+            // ✅ 使用 AsNoTracking 确保返回只读对象
+            var merchant = dbContext.Set<PlMerchant>()
+                .AsNoTracking()
+                .FirstOrDefault(c => c.Id == merchantId);
+            if (merchant is null)
+                throw new InvalidOperationException($"商户 {merchantId} 未找到");
+            // ✅ 一次性预加载所有组织机构及其导航属性
+            var rootOrgs = dbContext.Set<PlOrganization>()
+                .AsNoTracking()
+                .Where(c => c.MerchantId == merchantId && c.ParentId == null)
+                .Include(c => c.Parent)
+                .Include(c => c.Children)
+                .ToList(); // ✅ 立即执行查询，确保所有数据已加载
+            var orgsDict = new ConcurrentDictionary<Guid, PlOrganization>();
+            if (rootOrgs.Any())
             {
-      dbContext?.Dispose(); // 出现异常时释放资源
-         throw;
-       }
+                // ✅ 递归加载所有子孙组织机构
+                // 由于使用了 Include(c => c.Children)，所有子机构已经预加载
+                var allOrgs = rootOrgs.SelectMany(c => OwHelper.GetAllSubItemsOfTree(new[] { c }, d => d.Children));
+                foreach (var org in allOrgs)
+                    orgsDict.TryAdd(org.Id, org);
+                // ✅ 触发所有导航属性加载，确保完全物化
+                foreach (var org in orgsDict.Values)
+                {
+                    var _ = org.Parent; // 触发 Parent 属性
+                    var __ = org.Children; // 触发 Children 属性
+                }
+            }
+            // ✅ 返回纯数据对象，DbContext 在 using 结束时自动释放
+            return new OrgCacheItem<TDbContext>
+            {
+                Merchant = merchant,
+                _Orgs = orgsDict
+            };
         }
 
         /// <summary>
-        /// 确保导航属性被正确加载。
-      /// </summary>
+        /// 确保导航属性被正确加载。(已废弃，不再需要)
+        /// </summary>
         /// <param name="orgs">组织机构集合。</param>
+        [Obsolete("不再需要此方法，导航属性已在加载时通过 Include 预加载")]
         [MethodImpl(MethodImplOptions.NoOptimization)]
         private static void EnsureNavigationPropertiesLoaded(IEnumerable<PlOrganization> orgs)
         {
-       foreach (var org in orgs)
-  {
-         var _ = org.Parent; // 触发Parent属性的延迟加载
-            }
+            // 此方法已废弃，保留仅为兼容性
         }
-    #endregion
+        #endregion
     }
 
     /// <summary>

@@ -6,6 +6,7 @@
  */
 
 using Microsoft.Extensions.DependencyInjection;
+using PowerLms.Data;
 using PowerLms.Data.OA;
 using PowerLmsServer.EfData;
 using System;
@@ -30,6 +31,7 @@ namespace PowerLmsServer.Managers.OA
 
         private readonly PowerLmsUserDbContext _DbContext;
         private readonly OwSqlAppLogger _SqlAppLogger;
+        private readonly JobManager _JobManager;
 
         /// <summary>
         /// 回退OA费用申请单到初始状态。

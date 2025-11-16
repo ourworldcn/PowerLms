@@ -659,30 +659,57 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<SetUserInfoReturnDto> SetUserInfo(SetUserInfoParams model, [FromServices] PermissionManager permissionManager)
         {
-            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) 
+                return Unauthorized();
+            
             var result = new SetUserInfoReturnDto();
 
+            // ✅ 步骤1: 验证和准备修改
+            bool needSave = false;
+            
             if (context.User.OrgId != model.CurrentOrgId)
             {
                 var merchantId = _OrgManager.GetMerchantIdByOrgId(model.CurrentOrgId);
-                if (!merchantId.HasValue) return BadRequest("错误的当前组织机构Id。");
+                if (!merchantId.HasValue) 
+                    return BadRequest("错误的当前组织机构Id。");
+                
                 var orgs = _OrgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs;
-                if (!orgs.TryGetValue(model.CurrentOrgId, out var currentOrg)) return BadRequest("错误的当前组织机构Id。");
+                if (!orgs.TryGetValue(model.CurrentOrgId, out var currentOrg)) 
+                    return BadRequest("错误的当前组织机构Id。");
+                
                 if (currentOrg.Otc != 2)
                     return BadRequest("错误的当前组织机构Id——不是公司。");
-                context.User.OrgId = model.CurrentOrgId;
-
-                // 取消当前用户的组织机构缓存
-                _Cache.Remove(OwCacheExtensions.GetCacheKeyFromId(context.User.Id, ".CurrentOrgs"));
+                
+                needSave = true;
+            }
+            
+            if (context.User.CurrentLanguageTag != model.LanguageTag)
+            {
+                needSave = true;
             }
 
-            context.User.CurrentLanguageTag = model.LanguageTag;
-            context.Nop();
-            context.SaveChanges();
+            // ✅ 步骤2: 如果需要保存,在范围DbContext中加载并修改
+            if (needSave)
+            {
+                var user = _DbContext.Accounts.Find(context.User.Id);
+                if (user == null) 
+                    return NotFound("用户不存在");
+                
+                user.OrgId = model.CurrentOrgId;
+                user.CurrentLanguageTag = model.LanguageTag;
+                user.LastModifyDateTimeUtc = OwHelper.WorldNow;
+                
+                _DbContext.SaveChanges();
+                
+                // ✅ 步骤3: 失效缓存
+                _AccountManager.InvalidateUserCache(context.User.Id);
+                _Cache.Remove(OwCacheExtensions.GetCacheKeyFromId(context.User.Id, ".CurrentOrgs"));
+            }
 
             // 获取用户权限并添加到结果中
             var userPermissions = permissionManager.GetOrLoadUserCurrentPermissions(context.User);
             result.Permissions.AddRange(userPermissions.Values);
+            
             return result;
         }
 
@@ -696,12 +723,17 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<NopReturnDto> Nop(NopParamsDto model)
         {
-            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) 
+                return Unauthorized();
+            
             var result = new NopReturnDto();
-            context.User.Token = Guid.NewGuid();
-            context.Nop();
-            context.SaveChanges();
-            result.NewToken = context.User.Token.Value;
+            
+            // ✅ 使用AccountManager.UpdateToken方法更新令牌(内部已处理数据库保存和缓存失效)
+            var newToken = _AccountManager.UpdateToken(context.User.Id, Guid.NewGuid());
+            if (!newToken.HasValue)
+                return BadRequest("更新令牌失败");
+            
+            result.NewToken = newToken.Value;
             return result;
         }
 
@@ -716,13 +748,29 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<ModifyPwdReturnDto> ModifyPwd([FromBody] ModifyPwdParamsDto model)
         {
-            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) 
+                return Unauthorized();
+            
             var result = new ModifyPwdReturnDto();
-            if (!context.User.IsPwd(model.OldPwd)) return BadRequest();
-            context.User.SetPwd(model.NewPwd);
-            context.User.State &= 0b_1111_1101;
-            lock (context.User.DbContext)
-                context.User.DbContext.SaveChanges();
+            
+            // ✅ 步骤1: 验证旧密码(使用缓存的只读用户对象)
+            if (!context.User.IsPwd(model.OldPwd)) 
+                return BadRequest();
+            
+            // ✅ 步骤2: 在范围DbContext中加载用户并修改密码
+            var user = _DbContext.Accounts.Find(context.User.Id);
+            if (user == null) 
+                return NotFound("用户不存在");
+            
+            user.SetPwd(model.NewPwd);
+            user.State &= 0b_1111_1101;
+            
+            // ✅ 步骤3: 保存
+            _DbContext.SaveChanges();
+            
+            // ✅ 步骤4: 失效缓存
+            _AccountManager.InvalidateUserCache(context.User.Id);
+            
             return result;
         }
 
@@ -738,20 +786,26 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<ResetPwdReturnDto> ResetPwd(ResetPwdParamsDto model)
         {
-            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            if (!context.User.IsAdmin()) return StatusCode((int)HttpStatusCode.Forbidden, "只有超管或商管可以使用此功能");
-            if (_DbContext.Accounts.FirstOrDefault(c => c.Id == model.Id) is not Account tmpUser)
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) 
+                return Unauthorized();
+            
+            if (!context.User.IsAdmin()) 
+                return StatusCode((int)HttpStatusCode.Forbidden, "只有超管或商管可以使用此功能");
+            
+            // ✅ 步骤1: 从缓存获取目标用户信息(只读,用于权限检查)
+            var targetUser = _AccountManager.GetOrLoadById(model.Id);
+            if (targetUser == null) 
                 return BadRequest("指定账号不存在。");
 
-            // 修改: 使用 GetOrLoadAccountById 替代 GetOrLoadCacheItemById
-            var targetUser = _AccountManager.GetOrLoadById(tmpUser.Id);
-            if (targetUser == null) return BadRequest("指定账号不存在。");
-
-            if (context.User.IsSuperAdmin && !targetUser.IsMerchantAdmin) return BadRequest("超管不能重置普通用户的密码.");
-            else if (context.User.IsMerchantAdmin && targetUser.IsAdmin()) return BadRequest("商管只能重置普通用户的密码.");
+            // ✅ 步骤2: 权限检查
+            if (context.User.IsSuperAdmin && !targetUser.IsMerchantAdmin) 
+                return BadRequest("超管不能重置普通用户的密码.");
+            else if (context.User.IsMerchantAdmin && targetUser.IsAdmin()) 
+                return BadRequest("商管只能重置普通用户的密码.");
 
             var result = new ResetPwdReturnDto { };
-            //生成密码
+            
+            // ✅ 步骤3: 生成密码
             Span<char> span = stackalloc char[8];
             for (int i = span.Length - 1; i >= 0; i--)
             {
@@ -759,9 +813,19 @@ namespace PowerLmsWebApi.Controllers
             }
             result.Pwd = new string(span);
 
-            targetUser.SetPwd(result.Pwd);
-            lock (targetUser.DbContext)
-                targetUser.DbContext.SaveChanges();
+            // ✅ 步骤4: 在范围DbContext中加载并修改密码
+            var userInDb = _DbContext.Accounts.Find(model.Id);
+            if (userInDb == null) 
+                return BadRequest("指定账号不存在。");
+            
+            userInDb.SetPwd(result.Pwd);
+            
+            // ✅ 步骤5: 保存
+            _DbContext.SaveChanges();
+            
+            // ✅ 步骤6: 失效缓存
+            _AccountManager.InvalidateUserCache(model.Id);
+            
             return result;
         }
 

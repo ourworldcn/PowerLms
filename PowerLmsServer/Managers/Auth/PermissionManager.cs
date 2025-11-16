@@ -58,7 +58,21 @@ namespace PowerLmsServer.Managers
             IDictionary<string, PlPermission> dic;
             lock (dbContext)
             {
-                dic = dbContext.PlPermissions.Include(c => c.Children).Include(c => c.Parent).AsEnumerable().ToDictionary(c => c.Name);
+                // ✅ 使用 AsNoTracking 确保返回只读对象
+                // ✅ 使用 Include 一次性预加载所有导航属性
+                // ✅ 使用 ToList() 立即执行查询，确保所有数据已加载
+                var permissions = dbContext.PlPermissions
+                    .AsNoTracking()
+                    .Include(c => c.Children)
+                    .Include(c => c.Parent)
+                    .ToList();
+                dic = permissions.ToDictionary(c => c.Name);
+                // ✅ 触发所有导航属性加载，确保完全物化
+                foreach (var perm in dic.Values)
+                {
+                    var _ = perm.Parent; // 触发 Parent 属性
+                    var __ = perm.Children; // 触发 Children 属性
+                }
                 PermissionLoaded(dic);
             }
             return new ConcurrentDictionary<string, PlPermission>(dic);
@@ -216,18 +230,22 @@ namespace PowerLmsServer.Managers
             string cacheKey = OwCacheExtensions.GetCacheKeyFromId(user.Id, ".CurrentPermissions");
 
             return _Cache.GetOrCreate(cacheKey, entry =>
-   {
-       // ? 启用优先级驱逐回调
-       entry.EnablePriorityEvictionCallback(_Cache);
+            {
+                // ✅ 启用优先级驱逐回调
+                entry.EnablePriorityEvictionCallback(_Cache);
 
-       var db = user.DbContext;
-       var permissions = LoadCurrentPermissionsByUser(user, ref db);
+                // ✅ 修复: 创建独立的 DbContext
+                PowerLmsUserDbContext db = null;
+                var permissions = LoadCurrentPermissionsByUser(user, ref db);
+                
+                // ✅ 确保释放 DbContext
+                db?.Dispose();
 
-       // 配置缓存条目
-       ConfigureUserPermissionsCacheEntry(entry, user.Id);
+                // 配置缓存条目
+                ConfigureUserPermissionsCacheEntry(entry, user.Id);
 
-       return permissions;
-   });
+                return permissions;
+            });
         }
 
         /// <summary>

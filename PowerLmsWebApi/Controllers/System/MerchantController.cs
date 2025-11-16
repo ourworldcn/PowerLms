@@ -28,7 +28,8 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="dataManager"></param>
         /// <param name="entityManager"></param>
         /// <param name="mapper"></param>
-        public MerchantController(PowerLmsUserDbContext dbContext, AccountManager accountManager, IServiceProvider serviceProvider, DataDicManager dataManager, EntityManager entityManager, IMapper mapper)
+        /// <param name="orgManager"></param>
+        public MerchantController(PowerLmsUserDbContext dbContext, AccountManager accountManager, IServiceProvider serviceProvider, DataDicManager dataManager, EntityManager entityManager, IMapper mapper, OrgManager<PowerLmsUserDbContext> orgManager)
         {
             _DbContext = dbContext;
             _AccountManager = accountManager;
@@ -36,6 +37,7 @@ namespace PowerLmsWebApi.Controllers
             _DataManager = dataManager;
             _EntityManager = entityManager;
             _Mapper = mapper;
+            _OrgManager = orgManager;
         }
 
         readonly PowerLmsUserDbContext _DbContext;
@@ -44,6 +46,7 @@ namespace PowerLmsWebApi.Controllers
         readonly DataDicManager _DataManager;
         readonly EntityManager _EntityManager;
         private readonly IMapper _Mapper;
+        private readonly OrgManager<PowerLmsUserDbContext> _OrgManager;
 
         #region 简单CRUD
 
@@ -89,6 +92,8 @@ namespace PowerLmsWebApi.Controllers
             var result = new ModifyMerchantReturnDto();
             if (!_EntityManager.Modify(new[] { model.Merchant })) return NotFound();
             _DbContext.SaveChanges();
+            // ✅ 驱逐商户相关缓存
+            _OrgManager.InvalidateOrgCaches(model.Merchant.Id);
             return result;
         }
 

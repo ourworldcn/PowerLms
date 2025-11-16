@@ -105,6 +105,14 @@ namespace PowerLms.Data.OA
         public Guid? OrgId { get; set; }
 
         /// <summary>
+        /// 申请编号。唯一标识申请单的编号，由系统根据"其他编码规则"自动生成。
+        /// 用于区分同一人提交的多笔金额相同的申请。
+        /// </summary>
+        [Comment("申请编号。唯一标识申请单的编号")]
+        [MaxLength(128)]
+        public string ApplicationNumber { get; set; }
+
+        /// <summary>
         /// 申请人Id（员工账号Id）。
         /// 已废弃：请使用 CreateBy 字段记录创建人/登记人/申请人信息。
         /// </summary>

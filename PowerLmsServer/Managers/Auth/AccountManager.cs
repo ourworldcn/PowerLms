@@ -294,17 +294,13 @@ namespace PowerLmsServer.Managers
         /// <returns></returns>
         public virtual Account LoadById(Guid id)
         {
-            var db = _DbContextFactory.CreateDbContext();
-            Account user;
-            lock (db)
-                if (db.Accounts.FirstOrDefault(c => c.Id == id) is not Account tmp)
-                {
-                    using var dw = db;
-                    return null;
-                }
-                else
-                    user = tmp;
-            Loaded(user, db);
+            // ✅ 使用 using 确保 DbContext 立即释放
+            using var db = _DbContextFactory.CreateDbContext();
+            
+            // ✅ 使用 AsNoTracking 避免跟踪
+            var user = db.Accounts.AsNoTracking().FirstOrDefault(c => c.Id == id);
+            
+            // ✅ 返回纯数据对象，无 DbContext
             return user;
         }
 
@@ -334,14 +330,14 @@ namespace PowerLmsServer.Managers
             {
                 // ? 启用优先级驱逐回调
                 entry.EnablePriorityEvictionCallback(_MemoryCache);
-                
-          var user = LoadById(OwCacheExtensions.GetIdFromCacheKey(entry.Key as string) ?? id);
-            if (user == null) return null;
 
-      // 配置缓存项
-      ConfigureCacheEntry(entry, user);
+                var user = LoadById(OwCacheExtensions.GetIdFromCacheKey(entry.Key as string) ?? id);
+                if (user == null) return null;
 
-      return user;
+                // 配置缓存项
+                ConfigureCacheEntry(entry, user);
+
+                return user;
             });
         }
 
@@ -352,31 +348,34 @@ namespace PowerLmsServer.Managers
         /// <param name="account">账号对象</param>
         private void ConfigureCacheEntry(ICacheEntry entry, Account account)
         {
-     // 设置用户缓存过期时间
-     entry.SetSlidingExpiration(TimeSpan.FromMinutes(15));
-    // 启用优先级驱逐回调
+            // 设置用户缓存过期时间
+            entry.SetSlidingExpiration(TimeSpan.FromMinutes(15));
+            // 启用优先级驱逐回调
             entry.EnablePriorityEvictionCallback(_MemoryCache);
-   // 获取取消令牌源并注册到过期令牌列表
-         var cts = _MemoryCache.GetCancellationTokenSource(entry.Key);
+            // 获取取消令牌源并注册到过期令牌列表
+            var cts = _MemoryCache.GetCancellationTokenSource(entry.Key);
             entry.ExpirationTokens.Add(new CancellationChangeToken(cts.Token));
- // 注册驱逐回调,清理Token映射和数据库上下文
-         entry.RegisterPostEvictionCallback((key, value, reason, state) =>
-    {
-            if (value is Account acc && acc?.Token.HasValue == true)
-      {
- // 释放数据库上下文
-   using var dbContext = acc?.DbContext;
-                    dbContext?.SaveChanges();
-    // 从Token映射字典中移除
-   Token2KeyDic.TryRemove(acc.Token.Value, out _);
-      }
-         });
+            
+            // ✅ 修改驱逐回调: 只清理Token映射,不处理DbContext
+            entry.RegisterPostEvictionCallback((key, value, reason, state) =>
+            {
+                if (value is Account acc && acc?.Token.HasValue == true)
+                {
+                    // ❌ 移除 DbContext 处理
+                    // using var dbContext = acc?.DbContext;
+                    // dbContext?.SaveChanges();
+                    
+                    // ✅ 只清理Token映射
+                    Token2KeyDic.TryRemove(acc.Token.Value, out _);
+                }
+            });
+            
             // 建立Token到Id的映射
             if (account?.Token.HasValue == true)
             {
                 Token2KeyDic.AddOrUpdate(account.Token.Value, account.IdString, (_, _) => account.IdString);
-       }
- }
+            }
+        }
         #endregion 用Id获取账号及相关
 
         /// <summary>
@@ -386,7 +385,10 @@ namespace PowerLmsServer.Managers
         /// <param name="db"></param>
         public void Loaded(Account user, PowerLmsUserDbContext db)
         {
-            user.DbContext = db;
+            // ❌ 不再附加 DbContext
+            // user.DbContext = db;
+            
+            // ✅ 如果需要在加载后做其他操作,可以在这里添加
         }
 
         #endregion 加载用户对象及相关
@@ -414,29 +416,29 @@ namespace PowerLmsServer.Managers
         /// 使指定用户Id的缓存失效。
         /// </summary>
         /// <param name="userId">用户Id</param>
-     /// <returns>如果成功使缓存失效则返回true,否则返回false</returns>
+        /// <returns>如果成功使缓存失效则返回true,否则返回false</returns>
         public bool InvalidateUserCache(Guid userId)
         {
-  string cacheKey = OwCacheExtensions.GetCacheKeyFromId<Account>(userId);
-   // 获取取消令牌源并取消
-        var cts = _MemoryCache.GetCancellationTokenSource(cacheKey);
+            string cacheKey = OwCacheExtensions.GetCacheKeyFromId<Account>(userId);
+            // 获取取消令牌源并取消
+            var cts = _MemoryCache.GetCancellationTokenSource(cacheKey);
             if (cts != null && !cts.IsCancellationRequested)
-   {
-      try
-  {
-    cts.Cancel();
-         return true;
-          }
-   catch { /* 忽略可能的异常 */ }
-         }
-   // 如果没有找到取消令牌源,尝试直接从缓存中移除
-   if (_MemoryCache.TryGetValue(cacheKey, out _))
-   {
-   _MemoryCache.Remove(cacheKey);
-       return true;
-}
-       return false;
-       }
+            {
+                try
+                {
+                    cts.Cancel();
+                    return true;
+                }
+                catch { /* 忽略可能的异常 */ }
+            }
+            // 如果没有找到取消令牌源,尝试直接从缓存中移除
+            if (_MemoryCache.TryGetValue(cacheKey, out _))
+            {
+                _MemoryCache.Remove(cacheKey);
+                return true;
+            }
+            return false;
+        }
 
         /// <summary>
         /// 根据令牌使用户缓存失效。
@@ -476,27 +478,32 @@ namespace PowerLmsServer.Managers
             // 使用锁以确保原子性操作
             using var dw = Lock(userId.ToString(), Timeout.InfiniteTimeSpan);
 
-            // 获取账号（这会自动处理缓存和数据库加载）
-            var account = GetOrLoadById(userId);
+            // ✅ 步骤1: 创建独立的 DbContext
+            using var dbContext = _DbContextFactory.CreateDbContext();
+
+            // ✅ 步骤2: 加载实体
+            var account = dbContext.Accounts.Find(userId);
             if (account == null) return null;
 
-            // 记录旧令牌，以便从映射中移除
+            // ✅ 步骤3: 修改数据
             var oldToken = account.Token;
-
-            // 设置新令牌和更新时间
             account.Token = newToken ?? Guid.NewGuid();
             account.LastModifyDateTimeUtc = OwHelper.WorldNow;
 
-            // 如果有旧令牌，从映射中移除
+            // ✅ 步骤4: 保存到数据库
+            dbContext.SaveChanges();
+
+            // ✅ 步骤5: 更新 Token 映射
             if (oldToken.HasValue)
             {
                 Token2KeyDic.TryRemove(oldToken.Value, out _);
             }
 
-            // 添加新的令牌映射
-            // 注意：这里直接添加映射而不依赖缓存项的回调
             Token2KeyDic[account.Token.Value] = account.IdString;
-            SaveAccount(userId);
+
+            // ✅ 步骤6: 失效缓存
+            InvalidateUserCache(userId);
+
             return account.Token;
         }
 
@@ -506,50 +513,10 @@ namespace PowerLmsServer.Managers
         /// </summary>
         /// <param name="userId">要保存的账号ID</param>
         /// <returns>是否成功保存</returns>
+        [Obsolete("缓存的Account不再有DbContext,应直接在范围DbContext中保存", true)]
         public bool SaveAccount(Guid userId)
         {
-            if (userId == Guid.Empty)
-            {
-                OwHelper.SetLastErrorAndMessage(400, "账号ID不能为空。");
-                return false;
-            }
-            // 获取账号对象
-            var account = GetAccountById(userId);
-            if (account == null)
-            {
-                OwHelper.SetLastErrorAndMessage(404, "未找到指定的账号。");
-                return false;
-            }
-
-            // 使用TaskDispatcher排队保存任务
-            return TaskDispatcher.Enqueue(
-                account.IdString,      // 任务类型标识
-                parameter =>                  // 执行任务的函数
-                {
-                    if (parameter is not Account user)   //忽略不是Account类型的参数
-                        return true;
-                    try
-                    {
-                        // 保存更改
-                        user.DbContext?.SaveChanges();
-                        return true;
-                    }
-                    catch (DbUpdateConcurrencyException)
-                    {
-                        // 处理并发异常
-                        OwHelper.SetLastErrorAndMessage(409, "保存账号时发生并发冲突。");
-                        return false;
-                    }
-                    catch (Exception ex)
-                    {
-                        // 记录异常
-                        OwHelper.SetLastErrorAndMessage(500, $"保存账号时发生错误：{ex.Message}");
-                        return false;
-                    }
-                },
-                account,       // 任务参数
-                true          // 需要锁定
-            );
+            throw new NotSupportedException("缓存的Account不再有DbContext,请直接在范围DbContext中保存");
         }
     }
 }

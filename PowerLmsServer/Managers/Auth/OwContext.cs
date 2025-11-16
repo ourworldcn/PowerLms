@@ -45,9 +45,12 @@ namespace PowerLmsServer.Managers
         /// <summary>
         /// 标记当前进行了一次有效操作，这将导致延迟清理时间。
         /// </summary>
+        [Obsolete("此方法已废弃。请使用AccountManager.UpdateToken()方法更新令牌。", true)]
         public void Nop()
         {
-            User.LastModifyDateTimeUtc = OwHelper.WorldNow;
+            // ❌ 废弃原因: 此方法会修改缓存中的只读User对象,违反"只读缓存"原则
+            // ✅ 正确做法: 调用 AccountManager.UpdateToken(user.Id, newToken)
+            throw new NotSupportedException("此方法已废弃。请使用AccountManager.UpdateToken()方法更新令牌。");
         }
 
         /// <summary>
@@ -56,6 +59,7 @@ namespace PowerLmsServer.Managers
         /// <returns></returns>
         public int SaveChanges()
         {
+            // ✅ 直接使用范围DbContext保存
             int result = ServiceProvider.GetRequiredService<PowerLmsUserDbContext>().SaveChanges();
             return result;
         }

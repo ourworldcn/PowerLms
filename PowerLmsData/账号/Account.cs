@@ -145,16 +145,6 @@ namespace PowerLms.Data
         public ConcurrentDictionary<string, object> RuntimeProperties { get => _RuntimeProperties; }
 
         /// <summary>
-        /// 获取或设置存储使用的数据库上下文。
-        /// </summary>
-        [NotMapped, JsonIgnore]
-        public PowerLmsUserDbContext DbContext
-        {
-            get => RuntimeProperties.GetValueOrDefault(nameof(DbContext), null) as PowerLmsUserDbContext;
-            set => RuntimeProperties[nameof(DbContext)] = value;
-        }
-
-        /// <summary>
         /// 获取或设置用户所属的商户Id。可能为null。
         /// </summary>
         [NotMapped, JsonIgnore]

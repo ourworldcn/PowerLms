@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Net;
+using PowerLmsServer;
 
 namespace PowerLmsWebApi.Controllers.OA
 {
@@ -138,18 +139,15 @@ namespace PowerLmsWebApi.Controllers.OA
 
             try
             {
-                var entity = model.Item; // 更新为使用 Item 属性
-                entity.GenerateNewId(); // 强制生成Id
+                var entity = model.Item;
+                entity.GenerateNewId();
                 entity.OrgId = context.User.OrgId;
-                entity.CreateBy = context.User.Id; // CreateBy就是登记人
+                entity.CreateBy = context.User.Id;
                 entity.CreateDateTime = OwHelper.WorldNow;
 
-                // 注意：ApplicantId字段已废弃，统一使用CreateBy记录创建人/登记人/申请人
-                // 处理申请模式：当前所有人员角色都通过CreateBy记录
-                // 无论是代人登记还是自己申请，CreateBy都记录当前登录用户
-                // 不再使用ApplicantId字段
+                // 申请编号由前端调用 GeneratedOtherNumber 接口获取后传入
+                // 这里不再自动生成，而是使用前端传入的值
                 
-                // 初始化审核字段
                 entity.AuditDateTime = null;
                 entity.AuditOperatorId = null;
 
@@ -157,6 +155,9 @@ namespace PowerLmsWebApi.Controllers.OA
                 _DbContext.SaveChanges();
 
                 result.Id = entity.Id;
+                
+                _Logger.LogInformation("成功创建OA费用申请单 - 申请单ID: {RequisitionId}, 申请编号: {ApplicationNumber}, 操作人: {UserId}",
+                    entity.Id, entity.ApplicationNumber, context.User.Id);
             }
             catch (Exception ex)
             {

@@ -57,7 +57,6 @@ namespace PowerLmsWebApi.Controllers
             var result = new GeneratedJobNumberReturnDto();
             using var dw = DisposeHelper.Create((key, timeout) => SingletonLocker.TryEnter(key, timeout), key => SingletonLocker.Exit(key), model.RuleId.ToString(), TimeSpan.FromSeconds(2)); //锁定该规则
             result.Result = _JobNumber.Generated(jnr, context?.User, OwHelper.WorldNow);
-            context.Nop();
             _DbContext.SaveChanges();
             return result;
         }
@@ -78,7 +77,6 @@ namespace PowerLmsWebApi.Controllers
             if (_DbContext.DD_OtherNumberRules.Find(model.RuleId) is not OtherNumberRule jnr) return BadRequest($"指定的规则不存在，Id={model.RuleId}");
             using var dw = DisposeHelper.Create((key, timeout) => SingletonLocker.TryEnter(key, timeout), key => SingletonLocker.Exit(key), model.RuleId.ToString(), TimeSpan.FromSeconds(2)); //锁定该规则
             result.Result = _JobNumber.Generated(jnr, context?.User, OwHelper.WorldNow);
-            context.Nop();
             _DbContext.SaveChanges();
             return result;
         }

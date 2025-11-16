@@ -2,21 +2,9 @@
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Primitives;
-using NPOI.SS.Formula.Functions;
-using NPOI.Util;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
-using System;
-using System.Collections;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Security.Principal;
-using System.Text;
-using System.Threading.Tasks;
-using static NPOI.HSSF.Util.HSSFColor;
 
 namespace PowerLmsServer.Managers
 {
@@ -29,7 +17,8 @@ namespace PowerLmsServer.Managers
         /// <summary>
         /// 构造函数。
         /// </summary>
-        public RoleManager(OrgManager<PowerLmsUserDbContext> orgManager, IMemoryCache cache, IDbContextFactory<PowerLmsUserDbContext> dbContextFactory, AccountManager accountManager)
+        public RoleManager(OrgManager<PowerLmsUserDbContext> orgManager, IMemoryCache cache, IDbContextFactory<PowerLmsUserDbContext> dbContextFactory, 
+            AccountManager accountManager)
         {
             _OrgManager = orgManager;
             _Cache = cache;
@@ -58,12 +47,12 @@ namespace PowerLmsServer.Managers
             
             lock (dbContext)
             {
-                // 查询商户下的所有角色：
-                // 1. 直接从属于商户的角色 (OrgId = merchId)
-                // 2. 从属于商户下属机构的角色 (OrgId in orgIds)
+                // ✅ 使用 AsNoTracking 确保返回只读对象
+                // ✅ 使用 ToList() 立即执行查询
                 var roles = dbContext.PlRoles
+                    .AsNoTracking()
                     .Where(c => c.OrgId.HasValue && orgIds.Contains(c.OrgId.Value))
-                    .AsEnumerable()
+                    .ToList()
                     .ToDictionary(c => c.Id);
                 
                 return new ConcurrentDictionary<Guid, PlRole>(roles);
@@ -95,13 +84,16 @@ namespace PowerLmsServer.Managers
                 // ✅ 启用优先级驱逐回调
                 entry.EnablePriorityEvictionCallback(_Cache);
                 
-                // 获取商户和组织信息
+                // 获取商户和组织信息(只用于验证商户存在)
                 var cacheItem = _OrgManager.GetOrLoadOrgCacheItem(merchId);
                 if (cacheItem.Merchant == null) return new ConcurrentDictionary<Guid, PlRole>();
 
-                // 加载角色数据
-                PowerLmsUserDbContext db = cacheItem.DbContext;
+                // ✅ 修复: 创建独立的 DbContext
+                PowerLmsUserDbContext db = null;
                 var rolesData = LoadByMerchantId(merchId, ref db);
+                
+                // ✅ 确保释放 DbContext
+                db?.Dispose();
 
                 // 配置缓存条目
                 ConfigureRolesCacheEntry(entry, rolesData);
@@ -140,31 +132,28 @@ namespace PowerLmsServer.Managers
             if (user.OrgId == null) return new ConcurrentDictionary<Guid, PlRole>();
             var companyId = _OrgManager.GetCompanyIdByOrgId(user.OrgId.Value);
             if (!companyId.HasValue) return new ConcurrentDictionary<Guid, PlRole>();
-            
             var orgIds = _OrgManager.GetOrgIdsByCompanyId(companyId.Value).ToHashSet();
-            
             // 获取用户所属商户ID
             var merchantId = _OrgManager.GetMerchantIdByUserId(user.Id);
             if (!merchantId.HasValue) return new ConcurrentDictionary<Guid, PlRole>();
-            
             orgIds.Add(merchantId.Value); // 添加商户ID本身到查询范围
-
             db ??= _DbContextFactory.CreateDbContext();
             HashSet<Guid> hsRoleIds;
             lock (db)
-                hsRoleIds = db.PlAccountRoles.Where(c => c.UserId == user.Id).Select(c => c.RoleId).ToHashSet(); // 所有直属角色Id集合
-
+                hsRoleIds = db.PlAccountRoles
+                    .AsNoTracking()
+                    .Where(c => c.UserId == user.Id)
+                    .Select(c => c.RoleId)
+                    .ToHashSet(); // 所有直属角色Id集合
             if (hsRoleIds.Count == 0) return new ConcurrentDictionary<Guid, PlRole>(); // 如果用户没有角色，直接返回空字典
-
-            // 查询用户的直属角色，包括：
-            // 1. 直接从属于商户的角色 (OrgId = merchantId)
-            // 2. 从属于用户有效机构的角色 (OrgId in orgIds)
+            // ✅ 使用 AsNoTracking 确保返回只读对象
+            // ✅ 使用 ToList() 立即执行查询
             var userRoles = db.PlRoles
+                .AsNoTracking()
                 .Where(c => hsRoleIds.Contains(c.Id) && 
                            c.OrgId.HasValue && orgIds.Contains(c.OrgId.Value))
-                .AsEnumerable()
+                .ToList()
                 .ToDictionary(c => c.Id);
-
             return new ConcurrentDictionary<Guid, PlRole>(userRoles);
         }
 
@@ -264,9 +253,12 @@ namespace PowerLmsServer.Managers
                 // ✅ 启用优先级驱逐回调
                 entry.EnablePriorityEvictionCallback(_Cache);
                 
-                // 加载用户角色数据
-                PowerLmsUserDbContext db = user.DbContext;
+                // ✅ 修复: 创建独立的 DbContext
+                PowerLmsUserDbContext db = null;
                 var rolesData = LoadCurrentRolesByUser(user, ref db);
+                
+                // ✅ 确保释放 DbContext
+                db?.Dispose();
 
                 // 配置缓存条目
                 ConfigureCurrentRolesCacheEntry(entry);
