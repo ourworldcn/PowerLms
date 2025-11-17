@@ -101,9 +101,11 @@ namespace PowerLmsWebApi.Controllers
                     var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
                     if (!merchantId.HasValue) return Unauthorized("未找到用户所属商户");
 
-                    var orgIds = _OrgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs.Keys.ToArray();
+                    // ✅ 修复: 获取机构ID集合并添加商户ID本身
+                    var orgIds = _OrgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs.Keys.ToList();
+                    orgIds.Add(merchantId.Value); // ✅ 关键修复: 包含商户ID,使商管账户能被查询到
 
-                    // 查找所有与这些组织机构关联的用户ID
+                    // 查找所有与这些组织机构或商户关联的用户ID
                     var userIds = _DbContext.AccountPlOrganizations
                         .Where(c => orgIds.Contains(c.OrgId))
                         .Select(c => c.UserId)
