@@ -58,23 +58,26 @@ namespace PowerLmsServer.Managers
             IDictionary<string, PlPermission> dic;
             lock (dbContext)
             {
-                // ✅ 使用 AsNoTracking 确保返回只读对象
-                // ✅ 使用 Include 一次性预加载所有导航属性
-                // ✅ 使用 ToList() 立即执行查询，确保所有数据已加载
+                // ✅ 双重保障策略:
+                // 1. 使用 Include 显式预加载导航属性（避免大部分延迟加载）
+                // 2. 手动触发所有导航属性（确保完全加载）
                 var permissions = dbContext.PlPermissions
-                    .AsNoTracking()
-                    .Include(c => c.Children)
-                    .Include(c => c.Parent)
-                    .ToList();
+                    .Include(c => c.Children)  // ✅ 预加载子权限
+                    .Include(c => c.Parent)    // ✅ 预加载父权限
+                    .ToList();  // ✅ 立即执行查询
+
                 dic = permissions.ToDictionary(c => c.Name);
-                // ✅ 触发所有导航属性加载，确保完全物化
+
+                // ✅ 手动触发所有导航属性加载，确保完全物化
                 foreach (var perm in dic.Values)
                 {
                     var _ = perm.Parent; // 触发 Parent 属性
                     var __ = perm.Children; // 触发 Children 属性
                 }
+
                 PermissionLoaded(dic);
             }
+            // DbContext 释放后不影响已加载数据的使用
             return new ConcurrentDictionary<string, PlPermission>(dic);
         }
 
@@ -123,25 +126,22 @@ namespace PowerLmsServer.Managers
         public ConcurrentDictionary<string, PlPermission> GetOrLoadPermissions()
         {
             return _Cache.GetOrCreate(PermissionsCacheKey, entry =>
-{
-    // ? 启用优先级驱逐回调
-    entry.EnablePriorityEvictionCallback(_Cache);
+                {
+                    var db = _DbContextFactory.CreateDbContext();
+                    try
+                    {
+                        var permissions = LoadPermission(ref db);
 
-    var db = _DbContextFactory.CreateDbContext();
-    try
-    {
-        var permissions = LoadPermission(ref db);
+                        // 配置缓存条目（包含优先级驱逐回调）
+                        ConfigurePermissionsCacheEntry(entry);
 
-        // 配置缓存条目
-        ConfigurePermissionsCacheEntry(entry);
-
-        return permissions;
-    }
-    finally
-    {
-        db?.Dispose();
-    }
-});
+                        return permissions;
+                    }
+                    finally
+                    {
+                        db?.Dispose();
+                    }
+                });
         }
 
         /// <summary>
@@ -153,12 +153,10 @@ namespace PowerLmsServer.Managers
             // 设置滑动过期时间
             entry.SetSlidingExpiration(TimeSpan.FromMinutes(30));
 
-            // ✅ 启用优先级驱逐回调
+            // ✅ 启用优先级驱逐回调（会自动注册CTS用于直接失效）
             entry.EnablePriorityEvictionCallback(_Cache);
 
-            // ✅ 获取取消令牌源并注册到过期令牌列表
-            var cts = _Cache.GetCancellationTokenSource(entry.Key);
-            entry.ExpirationTokens.Add(new CancellationChangeToken(cts.Token));
+            // ❌ 移除：全局权限缓存不依赖其他缓存，不需要添加依赖令牌
         }
 
         #endregion 所有权限对象及相关
@@ -231,17 +229,14 @@ namespace PowerLmsServer.Managers
 
             return _Cache.GetOrCreate(cacheKey, entry =>
             {
-                // ✅ 启用优先级驱逐回调
-                entry.EnablePriorityEvictionCallback(_Cache);
-
                 // ✅ 修复: 创建独立的 DbContext
                 PowerLmsUserDbContext db = null;
                 var permissions = LoadCurrentPermissionsByUser(user, ref db);
-                
+
                 // ✅ 确保释放 DbContext
                 db?.Dispose();
 
-                // 配置缓存条目
+                // 配置缓存条目（包含优先级驱逐回调）
                 ConfigureUserPermissionsCacheEntry(entry, user.Id);
 
                 return permissions;
@@ -258,22 +253,18 @@ namespace PowerLmsServer.Managers
             // 设置滑动过期时间
             entry.SetSlidingExpiration(TimeSpan.FromMinutes(15));
 
-            // ✅ 启用优先级驱逐回调
+            // ✅ 启用优先级驱逐回调（会自动注册CTS用于直接失效）
             entry.EnablePriorityEvictionCallback(_Cache);
 
-            // ✅ 获取取消令牌源并注册到过期令牌列表
-            var cts = _Cache.GetCancellationTokenSource(entry.Key);
-            entry.ExpirationTokens.Add(new CancellationChangeToken(cts.Token));
-
-            // 添加权限和角色更改的依赖关系
-            // 获取全局权限缓存的取消令牌源
+            // ✅ 添加依赖关系：用户权限依赖全局权限和用户角色
+            // 当全局权限缓存失效时，用户权限缓存自动失效
             var permissionsTokenSource = _Cache.GetCancellationTokenSource(PermissionsCacheKey);
             if (permissionsTokenSource != null)
             {
                 entry.AddExpirationToken(new CancellationChangeToken(permissionsTokenSource.Token));
             }
 
-            // 获取用户角色缓存的取消令牌源
+            // 当用户角色缓存失效时，用户权限缓存自动失效
             string rolesCacheKey = OwCacheExtensions.GetCacheKeyFromId(userId, ".CurrentRoles");
             var rolesTokenSource = _Cache.GetCancellationTokenSource(rolesCacheKey);
             if (rolesTokenSource != null)

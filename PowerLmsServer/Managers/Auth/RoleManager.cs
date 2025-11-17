@@ -81,9 +81,6 @@ namespace PowerLmsServer.Managers
 
             return _Cache.GetOrCreate(cacheKey, entry =>
             {
-                // ✅ 启用优先级驱逐回调
-                entry.EnablePriorityEvictionCallback(_Cache);
-                
                 // 获取商户和组织信息(只用于验证商户存在)
                 var cacheItem = _OrgManager.GetOrLoadOrgCacheItem(merchId);
                 if (cacheItem.Merchant == null) return new ConcurrentDictionary<Guid, PlRole>();
@@ -95,7 +92,7 @@ namespace PowerLmsServer.Managers
                 // ✅ 确保释放 DbContext
                 db?.Dispose();
 
-                // 配置缓存条目
+                // 配置缓存条目（包含优先级驱逐回调）
                 ConfigureRolesCacheEntry(entry, rolesData);
 
                 return rolesData;
@@ -112,12 +109,10 @@ namespace PowerLmsServer.Managers
             // 设置滑动过期时间
             entry.SetSlidingExpiration(TimeSpan.FromMinutes(30));
 
-            // 启用优先级驱逐回调
+            // ✅ 启用优先级驱逐回调（会自动注册CTS用于直接失效）
             entry.EnablePriorityEvictionCallback(_Cache);
 
-            // 获取取消令牌源并注册到过期令牌列表
-            var cts = _Cache.GetCancellationTokenSource(entry.Key);
-            entry.ExpirationTokens.Add(new CancellationChangeToken(cts.Token));
+            // ❌ 移除：商户角色缓存不依赖其他缓存，不需要添加依赖令牌
         }
 
         /// <summary>
@@ -161,17 +156,27 @@ namespace PowerLmsServer.Managers
         /// 配置当前用户角色缓存条目属性
         /// </summary>
         /// <param name="entry">缓存条目</param>
-        private void ConfigureCurrentRolesCacheEntry(ICacheEntry entry)
+        /// <param name="userId">用户ID</param>
+        private void ConfigureCurrentRolesCacheEntry(ICacheEntry entry, Guid userId)
         {
             // 设置滑动过期时间
             entry.SetSlidingExpiration(TimeSpan.FromMinutes(15));
 
-            // 启用优先级驱逐回调
+            // ✅ 启用优先级驱逐回调（会自动注册CTS用于直接失效）
             entry.EnablePriorityEvictionCallback(_Cache);
 
-            // 获取取消令牌源并注册到过期令牌列表
-            var cts = _Cache.GetCancellationTokenSource(entry.Key);
-            entry.ExpirationTokens.Add(new CancellationChangeToken(cts.Token));
+            // ✅ 修复：添加对商户角色缓存的依赖
+            // 当用户角色关联的商户角色缓存失效时，用户角色缓存自动失效
+            var merchantId = _OrgManager.GetMerchantIdByUserId(userId);
+            if (merchantId.HasValue)
+            {
+                string merchantRolesCacheKey = OwCacheExtensions.GetCacheKeyFromId(merchantId.Value, ".Roles");
+                var merchantRolesTokenSource = _Cache.GetCancellationTokenSource(merchantRolesCacheKey);
+                if (merchantRolesTokenSource != null)
+                {
+                    entry.AddExpirationToken(new CancellationChangeToken(merchantRolesTokenSource.Token));
+                }
+            }
         }
 
         /// <summary>
@@ -250,9 +255,6 @@ namespace PowerLmsServer.Managers
 
             return _Cache.GetOrCreate(cacheKey, entry =>
             {
-                // ✅ 启用优先级驱逐回调
-                entry.EnablePriorityEvictionCallback(_Cache);
-                
                 // ✅ 修复: 创建独立的 DbContext
                 PowerLmsUserDbContext db = null;
                 var rolesData = LoadCurrentRolesByUser(user, ref db);
@@ -260,8 +262,8 @@ namespace PowerLmsServer.Managers
                 // ✅ 确保释放 DbContext
                 db?.Dispose();
 
-                // 配置缓存条目
-                ConfigureCurrentRolesCacheEntry(entry);
+                // 配置缓存条目（包含优先级驱逐回调）
+                ConfigureCurrentRolesCacheEntry(entry, user.Id);
 
                 return rolesData;
             });

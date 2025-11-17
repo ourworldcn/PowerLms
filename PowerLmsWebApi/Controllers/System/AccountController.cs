@@ -231,25 +231,51 @@ namespace PowerLmsWebApi.Controllers
 
         /// <summary>
         /// 登录。随后应调用Account/SetUserInfo。通过Account/GetAccountInfo可以获取自身信息。
-        /// 调用此接口后，需创建用户成功。否则无法正常使用。
+        /// 调用此接口后,需创建用户成功。否则无法正常使用。
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。</response>  
-        /// <response code="400">参数错误，这里特指用户名或密码不正确。</response>  
+        /// <response code="400">参数错误,这里特指用户名或密码不正确。</response>  
         /// <response code="409">验证码错误。</response>  
         [HttpPost]
         public ActionResult<LoginReturnDto> Login(LoginParamsDto model)
         {
             var result = new LoginReturnDto();
+
+            // ✅ 开发环境优化: DEBUG模式下跳过验证码验证
 #if !DEBUG
             if (!_CaptchaManager.Verify(model.CaptchaId, model.Answer, _DbContext))
             {
-                return Conflict();
+                return Conflict("验证码错误或已过期");
             }
+#else
+            _Logger.LogDebug("开发环境: 跳过验证码验证");
 #endif
-            var pwdHash = Account.GetPwdHash(model.Pwd);
+
             Account user;
+
+#if DEBUG
+            // ✅ 开发环境优化: DEBUG模式下跳过密码验证,只验证用户名
+            _Logger.LogDebug("开发环境: 跳过密码验证,仅验证用户名");
+            switch (model.EvidenceType)
+            {
+                case 1:
+                    user = _DbContext.Accounts.FirstOrDefault(c => c.LoginName == model.LoginName);
+                    break;
+                case 2:
+                    user = _DbContext.Accounts.FirstOrDefault(c => c.EMail == model.LoginName);
+                    break;
+                case 4:
+                    user = _DbContext.Accounts.FirstOrDefault(c => c.Mobile == model.LoginName);
+                    break;
+                default:
+                    return BadRequest($"不认识的EvidenceType类型:{model.EvidenceType}");
+            }
+            if (user is null) return BadRequest($"用户名不存在: {model.LoginName}");
+#else
+            // ✅ 生产环境: 完整的用户名和密码验证
+            var pwdHash = Account.GetPwdHash(model.Pwd);
             switch (model.EvidenceType)
             {
                 case 1:
@@ -266,14 +292,19 @@ namespace PowerLmsWebApi.Controllers
             }
             if (user is null) return BadRequest("用户名或密码不正确。");
             if (!user.IsPwd(model.Pwd)) return BadRequest("用户名或密码不正确。");
-            //用Id加载或获取用户对象
+#endif
+
+            //用Id加载或获取用户对象(只读缓存)
             user = _AccountManager.GetOrLoadById(user.Id);
             if (user is null)
                 return BadRequest("用户数据结构损坏。");
 
             result.Token = Guid.NewGuid();
             _AccountManager.UpdateToken(user.Id, result.Token);
-            user.CurrentLanguageTag = model.LanguageTag;
+
+            // ❌ 移除: 不能修改缓存中的只读用户对象
+            // user.CurrentLanguageTag = model.LanguageTag;
+
             //设置直属组织机构信息。
             var orgIds = _DbContext.AccountPlOrganizations.Where(c => c.UserId == user.Id).Select(c => c.OrgId);
             result.Orgs.AddRange(_DbContext.PlOrganizations.Where(c => orgIds.Contains(c.Id)));
@@ -282,12 +313,17 @@ namespace PowerLmsWebApi.Controllers
             if (_OrgManager.GetMerchantIdByUserId(user.Id) is Guid merchId) //若找到商户Id
             {
                 result.MerchantId = merchId;
-                if (result.User.IsMerchantAdmin)
-                    result.User.OrgId ??= merchId;
+
+                // ❌ 移除: 不能修改缓存中的只读用户对象
+                // if (result.User.IsMerchantAdmin)
+                //     result.User.OrgId ??= merchId;
             }
-            //_DbContext.SaveChanges();
+
             if (_AccountManager.GetOrLoadContextByToken(result.Token, _ServiceProvider) is OwContext context)
                 _AppLogger.LogGeneralInfo("登录");
+
+            _Logger.LogInformation("用户 {LoginName} ({UserId}) 成功登录", user.LoginName, user.Id);
+
             return result;
         }
 
@@ -308,11 +344,11 @@ namespace PowerLmsWebApi.Controllers
             // 检查要创建的账户类型权限
             bool isCreatingAdmin = (model.Item.State & 4) != 0; // 是否要创建超管
             bool isCreatingMerchantAdmin = (model.Item.State & 8) != 0; // 是否要创建商管
-            
+
             // 权限验证：只有超管可以创建超管
             if (isCreatingAdmin && !context.User.IsSuperAdmin)
                 return BadRequest("仅超管可以创建超管账户");
-            
+
             // 权限验证：只有超管或商管可以创建商管
             if (isCreatingMerchantAdmin && !context.User.IsAdmin())
                 return BadRequest("仅超管或商管可以创建商管账户");
@@ -328,59 +364,59 @@ namespace PowerLmsWebApi.Controllers
             // 处理组织机构ID验证和权限检查
             Guid[]? orgIds = null;
             Guid? merchantIdForNewAccount = null; // 新账户所属商户ID（用于商管账户）
-            
+
             if (model.OrgIds != null && model.OrgIds.Count > 0)
             {
                 orgIds = model.OrgIds.Distinct().ToArray();
                 if (orgIds.Length != model.OrgIds.Count) return BadRequest($"{nameof(model.OrgIds)} 存在重复键值");
 
-         // 验证所有ID是否存在（商户或组织机构）
-        var merchantCount = _DbContext.Merchants.Count(c => orgIds.Contains(c.Id));
-           var orgCount = _DbContext.PlOrganizations.Count(c => orgIds.Contains(c.Id));
-         if (merchantCount + orgCount != orgIds.Length) 
-            return BadRequest($"{nameof(model.OrgIds)} 至少一个键值的实体不存在");
+                // 验证所有ID是否存在（商户或组织机构）
+                var merchantCount = _DbContext.Merchants.Count(c => orgIds.Contains(c.Id));
+                var orgCount = _DbContext.PlOrganizations.Count(c => orgIds.Contains(c.Id));
+                if (merchantCount + orgCount != orgIds.Length)
+                    return BadRequest($"{nameof(model.OrgIds)} 至少一个键值的实体不存在");
 
-             // 非超管权限检查：只能操作自己商户范围内的组织机构
-    if (!context.User.IsSuperAdmin)
-     {
-         if (!context.User.IsAdmin()) return BadRequest("仅超管和商管才可创建用户");
-         
-    // 获取当前商管所属商户
-       var currentMerchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
-          if (!currentMerchantId.HasValue) return Unauthorized("未找到用户所属商户");
+                // 非超管权限检查：只能操作自己商户范围内的组织机构
+                if (!context.User.IsSuperAdmin)
+                {
+                    if (!context.User.IsAdmin()) return BadRequest("仅超管和商管才可创建用户");
 
-        // 验证所有指定的组织机构ID都属于当前商户
-         bool allBelongToMerchant = orgIds.All(c => _OrgManager.GetMerchantIdByOrgId(c) == currentMerchantId);
-   if (!allBelongToMerchant) return BadRequest("商户管理员仅可以设置商户和其下属的机构id");
-     
-     merchantIdForNewAccount = currentMerchantId.Value; // 记录商户ID供后续使用
-  }
-  }
+                    // 获取当前商管所属商户
+                    var currentMerchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
+                    if (!currentMerchantId.HasValue) return Unauthorized("未找到用户所属商户");
+
+                    // 验证所有指定的组织机构ID都属于当前商户
+                    bool allBelongToMerchant = orgIds.All(c => _OrgManager.GetMerchantIdByOrgId(c) == currentMerchantId);
+                    if (!allBelongToMerchant) return BadRequest("商户管理员仅可以设置商户和其下属的机构id");
+
+                    merchantIdForNewAccount = currentMerchantId.Value; // 记录商户ID供后续使用
+                }
+            }
             else if (isCreatingMerchantAdmin && !context.User.IsSuperAdmin)
             {
-         // 商管创建商管但未指定组织机构时，自动关联到当前商户
+                // 商管创建商管但未指定组织机构时，自动关联到当前商户
                 var currentMerchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
-      if (!currentMerchantId.HasValue) return Unauthorized("未找到用户所属商户");
+                if (!currentMerchantId.HasValue) return Unauthorized("未找到用户所属商户");
 
-      merchantIdForNewAccount = currentMerchantId.Value;
-     _Logger.LogInformation("商管 {OperatorId} 创建商管账户 {LoginName} 时未指定机构，自动归属到商户 {MerchantId}",
-   context.User.Id, model.Item.LoginName, currentMerchantId.Value);
-          }
-            else if (!context.User.IsSuperAdmin && (model.OrgIds == null || model.OrgIds.Count == 0))
- {
-           // 🔧 Bug修复：商管创建普通用户但未指定组织机构时，自动关联到当前商户
-        // 这是修复"用户消失"问题的关键逻辑
-                if (!context.User.IsAdmin()) return BadRequest("仅超管和商管才可创建用户");
- 
- var currentMerchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
-     if (!currentMerchantId.HasValue) return Unauthorized("未找到用户所属商户");
-         
-    // 自动归属到当前商户
                 merchantIdForNewAccount = currentMerchantId.Value;
-        
-           _Logger.LogInformation("商管 {OperatorId} 创建普通用户 {LoginName} 时未指定机构，自动归属到商户 {MerchantId}",
-         context.User.Id, model.Item.LoginName, currentMerchantId.Value);
-    }
+                _Logger.LogInformation("商管 {OperatorId} 创建商管账户 {LoginName} 时未指定机构，自动归属到商户 {MerchantId}",
+              context.User.Id, model.Item.LoginName, currentMerchantId.Value);
+            }
+            else if (!context.User.IsSuperAdmin && (model.OrgIds == null || model.OrgIds.Count == 0))
+            {
+                // 🔧 Bug修复：商管创建普通用户但未指定组织机构时，自动关联到当前商户
+                // 这是修复"用户消失"问题的关键逻辑
+                if (!context.User.IsAdmin()) return BadRequest("仅超管和商管才可创建用户");
+
+                var currentMerchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
+                if (!currentMerchantId.HasValue) return Unauthorized("未找到用户所属商户");
+
+                // 自动归属到当前商户
+                merchantIdForNewAccount = currentMerchantId.Value;
+
+                _Logger.LogInformation("商管 {OperatorId} 创建普通用户 {LoginName} 时未指定机构，自动归属到商户 {MerchantId}",
+              context.User.Id, model.Item.LoginName, currentMerchantId.Value);
+            }
 
             // 创建账户
             var pwd = model.Pwd;
@@ -389,22 +425,22 @@ namespace PowerLmsWebApi.Controllers
 
             result.Pwd = pwd;
             result.Result = _DbContext.Accounts.Find(newUserId);
-            
+
             if (result.Result != null)
             {
                 // 添加组织机构关联关系
                 var organizationRelations = new List<AccountPlOrganization>();
-                
+
                 // 1. 添加明确指定的组织机构关联
                 if (orgIds != null && orgIds.Length > 0)
                 {
-                    organizationRelations.AddRange(orgIds.Select(orgId => new AccountPlOrganization 
-                    { 
-                        UserId = newUserId, 
-                        OrgId = orgId 
+                    organizationRelations.AddRange(orgIds.Select(orgId => new AccountPlOrganization
+                    {
+                        UserId = newUserId,
+                        OrgId = orgId
                     }));
                 }
-                
+
                 // 2. 商管创建商管时，自动关联到调用者所属商户
                 if (isCreatingMerchantAdmin && merchantIdForNewAccount.HasValue)
                 {
@@ -412,14 +448,14 @@ namespace PowerLmsWebApi.Controllers
                     bool alreadyLinkedToMerchant = organizationRelations.Any(r => r.OrgId == merchantIdForNewAccount.Value);
                     if (!alreadyLinkedToMerchant)
                     {
-                        organizationRelations.Add(new AccountPlOrganization 
-                        { 
-                            UserId = newUserId, 
-                            OrgId = merchantIdForNewAccount.Value 
+                        organizationRelations.Add(new AccountPlOrganization
+                        {
+                            UserId = newUserId,
+                            OrgId = merchantIdForNewAccount.Value
                         });
                     }
                 }
-                
+
                 // 批量添加组织机构关联关系
                 if (organizationRelations.Count > 0)
                 {
@@ -476,7 +512,7 @@ namespace PowerLmsWebApi.Controllers
             var account = list[0];
             bool isTargetSuperAdmin = (account.State & 4) != 0; //目标是否为超管
             bool isTargetMerchantAdmin = (account.State & 8) != 0; //目标是否为商管
-            
+
             // 权限检查：验证是否有权修改目标账户
             if (context.User.IsSuperAdmin) //超管权限
             {
@@ -486,7 +522,7 @@ namespace PowerLmsWebApi.Controllers
             {
                 if (isTargetSuperAdmin) //商管不能修改超管
                     return StatusCode((int)HttpStatusCode.Forbidden, "商管不能修改超管账户");
-                
+
                 if (isTargetMerchantAdmin) //商管修改商管需要验证同商户
                 {
                     var operatorMerchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id); //获取操作者商户
@@ -494,7 +530,7 @@ namespace PowerLmsWebApi.Controllers
 
                     var targetMerchantId = _OrgManager.GetMerchantIdByUserId(account.Id); //获取目标用户商户
                     if (!targetMerchantId.HasValue) return Unauthorized("未找到目标用户所属商户");
-                    
+
                     if (operatorMerchantId.Value != targetMerchantId.Value) //验证是否同商户
                         return StatusCode((int)HttpStatusCode.Forbidden, "商管只能在同商户内设置商管权限");
                 }
@@ -511,39 +547,39 @@ namespace PowerLmsWebApi.Controllers
             {
                 if (!context.User.IsSuperAdmin) //只有超管可以设置超管权限
                     return base.StatusCode((int)HttpStatusCode.UnavailableForLegalReasons, "只有超管可以设置超管权限");
-                
+
                 if (model.IsAdmin.Value)
                     account.State |= 4; //设置为超管
                 else
                     account.State &= 255 - 4; //取消超管
             }
-            
+
             if (model.IsMerchantAdmin.HasValue) //修改商管权限
             {
                 if (!context.User.IsAdmin()) //只有超管或商管可以设置商管权限
                     return base.StatusCode((int)HttpStatusCode.UnavailableForLegalReasons, "只有管理员可以设置商管权限");
-                
+
                 if (model.IsMerchantAdmin.Value)
                     account.State |= 8; //设置为商管
                 else
                     account.State &= 255 - 8; //取消商管
             }
-            
+
             var entityAccount = _DbContext.Entry(account);
             entityAccount.Property(c => c.PwdHash).IsModified = false; //密码不可修改
             entityAccount.Property(c => c.Token).IsModified = false; //令牌不可修改
             entityAccount.Property(c => c.NodeNum).IsModified = false; //节点号不可修改
             entityAccount.Property(c => c.OrgId).IsModified = false; //组织机构ID不可修改
-            
+
             _DbContext.SaveChanges();
-            
+
             // 缓存失效处理
             try
             {
                 _AccountManager.InvalidateUserCache(account.Id); //失效用户缓存
                 _RoleManager.InvalidateUserRolesCache(account.Id); //失效用户角色缓存
                 _PermissionManager.InvalidateUserPermissionsCache(account.Id); //失效用户权限缓存
-                
+
                 if (_OrgManager.GetMerchantIdByOrgId(account.OrgId.Value) is Guid merchantId) //若找到商户Id
                 {
                     _OrgManager.InvalidateOrgCaches(merchantId); //失效商户缓存
@@ -553,7 +589,7 @@ namespace PowerLmsWebApi.Controllers
             {
                 _Logger.LogWarning(ex, "修改用户 {UserId} 后缓存失效时发生警告", account.Id); //记录缓存失效警告
             }
-            
+
             _Logger.LogInformation("用户 {OperatorId} 修改了账户 {TargetId} 的信息", context.User.Id, account.Id); //记录修改操作日志
             _AppLogger.LogGeneralInfo($"修改账户.{account.Id}"); //记录系统日志
             return result;
@@ -579,10 +615,10 @@ namespace PowerLmsWebApi.Controllers
             if (item is null) return NotFound(); //若没有指定id的对象
 
             if (id == context.User.Id) return BadRequest("不能删除自己的账户"); //不能删除自己
-            
+
             bool isTargetSuperAdmin = (item.State & 4) != 0; //目标是否为超管
             bool isTargetMerchantAdmin = (item.State & 8) != 0; //目标是否为商管
-            
+
             if (context.User.IsSuperAdmin) //超管权限检查
             {
                 // 超管可以删除超管和商管，无限制
@@ -590,7 +626,7 @@ namespace PowerLmsWebApi.Controllers
             else if (context.User.IsMerchantAdmin) //商管权限检查
             {
                 if (isTargetSuperAdmin) return BadRequest("商管不能删除超管"); //商管不能删除超管
-                
+
                 if (isTargetMerchantAdmin) //商管删除商管需要验证同商户
                 {
                     var operatorMerchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id); //获取操作者商户
@@ -598,20 +634,20 @@ namespace PowerLmsWebApi.Controllers
 
                     var targetMerchantId = _OrgManager.GetMerchantIdByUserId(item.Id); //获取目标用户商户
                     if (!targetMerchantId.HasValue) return Unauthorized("未找到目标用户所属商户");
-                    
+
                     if (operatorMerchantId.Value != targetMerchantId.Value) //验证是否同商户
                         return StatusCode((int)HttpStatusCode.Forbidden, "商管只能删除同商户的商管");
                 }
             }
             else //普通用户权限检查
             {
-                if (isTargetSuperAdmin || isTargetMerchantAdmin) 
+                if (isTargetSuperAdmin || isTargetMerchantAdmin)
                     return BadRequest("只有超管或商管可以删除管理员账户");
             }
-            
+
             // 删除前记录用户相关信息（用于缓存失效）
             var userMerchantId = _OrgManager.GetMerchantIdByUserId(id); //获取用户所属商户
-            
+
             _DbContext.Accounts.Remove(item); //删除账户
             _DbContext.AccountPlOrganizations.RemoveRange(_DbContext.AccountPlOrganizations.Where(c => c.UserId == id)); //删除组织机构关联
             _DbContext.PlAccountRoles.RemoveRange(_DbContext.PlAccountRoles.Where(c => c.UserId == id)); //删除角色关联
@@ -622,19 +658,19 @@ namespace PowerLmsWebApi.Controllers
             {
                 // 使用AccountManager的缓存失效方法（避免循环引用）
                 _AccountManager.InvalidateUserCache(id); //失效用户缓存
-                
+
                 // 失效角色相关缓存
                 _RoleManager.InvalidateUserRolesCache(id); //失效用户角色缓存
-                
+
                 // 失效权限相关缓存  
                 _PermissionManager.InvalidateUserPermissionsCache(id); //失效用户权限缓存
-                
+
                 // 如果用户属于某个商户，失效商户相关缓存
                 if (userMerchantId.HasValue)
                 {
                     _OrgManager.InvalidateOrgCaches(userMerchantId.Value); //失效商户缓存
                 }
-                
+
                 // 失效当前用户的组织机构缓存
                 _Cache.Remove(OwCacheExtensions.GetCacheKeyFromId(id, ".CurrentOrgs")); //失效当前组织机构缓存
             }
@@ -643,7 +679,7 @@ namespace PowerLmsWebApi.Controllers
                 _Logger.LogWarning(ex, "删除用户 {UserId} 后缓存失效时发生警告", id); //记录缓存失效警告，不影响删除操作
             }
 
-            _Logger.LogInformation("用户 {OperatorId} 删除了账户 {TargetId} ({LoginName})", 
+            _Logger.LogInformation("用户 {OperatorId} 删除了账户 {TargetId} ({LoginName})",
                 context.User.Id, id, item.LoginName); //记录删除操作日志
             _AppLogger.LogGeneralInfo($"删除账户.{id}"); //记录系统日志
 
@@ -661,30 +697,30 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<SetUserInfoReturnDto> SetUserInfo(SetUserInfoParams model, [FromServices] PermissionManager permissionManager)
         {
-            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) 
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
                 return Unauthorized();
-            
+
             var result = new SetUserInfoReturnDto();
 
             // ✅ 步骤1: 验证和准备修改
             bool needSave = false;
-            
+
             if (context.User.OrgId != model.CurrentOrgId)
             {
                 var merchantId = _OrgManager.GetMerchantIdByOrgId(model.CurrentOrgId);
-                if (!merchantId.HasValue) 
+                if (!merchantId.HasValue)
                     return BadRequest("错误的当前组织机构Id。");
-                
+
                 var orgs = _OrgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs;
-                if (!orgs.TryGetValue(model.CurrentOrgId, out var currentOrg)) 
+                if (!orgs.TryGetValue(model.CurrentOrgId, out var currentOrg))
                     return BadRequest("错误的当前组织机构Id。");
-                
+
                 if (currentOrg.Otc != 2)
                     return BadRequest("错误的当前组织机构Id——不是公司。");
-                
+
                 needSave = true;
             }
-            
+
             if (context.User.CurrentLanguageTag != model.LanguageTag)
             {
                 needSave = true;
@@ -694,15 +730,15 @@ namespace PowerLmsWebApi.Controllers
             if (needSave)
             {
                 var user = _DbContext.Accounts.Find(context.User.Id);
-                if (user == null) 
+                if (user == null)
                     return NotFound("用户不存在");
-                
+
                 user.OrgId = model.CurrentOrgId;
                 user.CurrentLanguageTag = model.LanguageTag;
                 user.LastModifyDateTimeUtc = OwHelper.WorldNow;
-                
+
                 _DbContext.SaveChanges();
-                
+
                 // ✅ 步骤3: 失效缓存
                 _AccountManager.InvalidateUserCache(context.User.Id);
                 _Cache.Remove(OwCacheExtensions.GetCacheKeyFromId(context.User.Id, ".CurrentOrgs"));
@@ -711,7 +747,7 @@ namespace PowerLmsWebApi.Controllers
             // 获取用户权限并添加到结果中
             var userPermissions = permissionManager.GetOrLoadUserCurrentPermissions(context.User);
             result.Permissions.AddRange(userPermissions.Values);
-            
+
             return result;
         }
 
@@ -725,16 +761,16 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<NopReturnDto> Nop(NopParamsDto model)
         {
-            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) 
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
                 return Unauthorized();
-            
+
             var result = new NopReturnDto();
-            
+
             // ✅ 使用AccountManager.UpdateToken方法更新令牌(内部已处理数据库保存和缓存失效)
             var newToken = _AccountManager.UpdateToken(context.User.Id, Guid.NewGuid());
             if (!newToken.HasValue)
                 return BadRequest("更新令牌失败");
-            
+
             result.NewToken = newToken.Value;
             return result;
         }
@@ -750,29 +786,29 @@ namespace PowerLmsWebApi.Controllers
         [HttpPut]
         public ActionResult<ModifyPwdReturnDto> ModifyPwd([FromBody] ModifyPwdParamsDto model)
         {
-            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) 
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
                 return Unauthorized();
-            
+
             var result = new ModifyPwdReturnDto();
-            
+
             // ✅ 步骤1: 验证旧密码(使用缓存的只读用户对象)
-            if (!context.User.IsPwd(model.OldPwd)) 
+            if (!context.User.IsPwd(model.OldPwd))
                 return BadRequest();
-            
+
             // ✅ 步骤2: 在范围DbContext中加载用户并修改密码
             var user = _DbContext.Accounts.Find(context.User.Id);
-            if (user == null) 
+            if (user == null)
                 return NotFound("用户不存在");
-            
+
             user.SetPwd(model.NewPwd);
             user.State &= 0b_1111_1101;
-            
+
             // ✅ 步骤3: 保存
             _DbContext.SaveChanges();
-            
+
             // ✅ 步骤4: 失效缓存
             _AccountManager.InvalidateUserCache(context.User.Id);
-            
+
             return result;
         }
 
@@ -788,25 +824,25 @@ namespace PowerLmsWebApi.Controllers
         [HttpPost]
         public ActionResult<ResetPwdReturnDto> ResetPwd(ResetPwdParamsDto model)
         {
-            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) 
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
                 return Unauthorized();
-            
-            if (!context.User.IsAdmin()) 
+
+            if (!context.User.IsAdmin())
                 return StatusCode((int)HttpStatusCode.Forbidden, "只有超管或商管可以使用此功能");
-            
+
             // ✅ 步骤1: 从缓存获取目标用户信息(只读,用于权限检查)
             var targetUser = _AccountManager.GetOrLoadById(model.Id);
-            if (targetUser == null) 
+            if (targetUser == null)
                 return BadRequest("指定账号不存在。");
 
             // ✅ 步骤2: 权限检查
-            if (context.User.IsSuperAdmin && !targetUser.IsMerchantAdmin) 
+            if (context.User.IsSuperAdmin && !targetUser.IsMerchantAdmin)
                 return BadRequest("超管不能重置普通用户的密码.");
-            else if (context.User.IsMerchantAdmin && targetUser.IsAdmin()) 
+            else if (context.User.IsMerchantAdmin && targetUser.IsAdmin())
                 return BadRequest("商管只能重置普通用户的密码.");
 
             var result = new ResetPwdReturnDto { };
-            
+
             // ✅ 步骤3: 生成密码
             Span<char> span = stackalloc char[8];
             for (int i = span.Length - 1; i >= 0; i--)
@@ -817,17 +853,17 @@ namespace PowerLmsWebApi.Controllers
 
             // ✅ 步骤4: 在范围DbContext中加载并修改密码
             var userInDb = _DbContext.Accounts.Find(model.Id);
-            if (userInDb == null) 
+            if (userInDb == null)
                 return BadRequest("指定账号不存在。");
-            
+
             userInDb.SetPwd(result.Pwd);
-            
+
             // ✅ 步骤5: 保存
             _DbContext.SaveChanges();
-            
+
             // ✅ 步骤6: 失效缓存
             _AccountManager.InvalidateUserCache(model.Id);
-            
+
             return result;
         }
 
@@ -880,35 +916,35 @@ namespace PowerLmsWebApi.Controllers
             // 取消相关缓存
             if (cacheKey != null)
             {
-            // ✅ 使用新API: 获取取消令牌源并取消
-       var cts = _Cache.GetCancellationTokenSource(cacheKey);
-      if (cts != null && !cts.IsCancellationRequested)
-        {
-             try
-         {
-    cts.Cancel();
-          }
-     catch { /* 忽略可能的异常 */ }
-     }
-       }
+                // ✅ 使用新API: 获取取消令牌源并取消
+                var cts = _Cache.GetCancellationTokenSource(cacheKey);
+                if (cts != null && !cts.IsCancellationRequested)
+                {
+                    try
+                    {
+                        cts.Cancel();
+                    }
+                    catch { /* 忽略可能的异常 */ }
+                }
+            }
 
-   // 如果有修改过用户与商户的关联，也应该清除用户相关的缓存
+            // 如果有修改过用户与商户的关联，也应该清除用户相关的缓存
             if (merchantIds.Length > 0)
             {
-           var currentOrgsCacheKey = OwCacheExtensions.GetCacheKeyFromId(model.UserId, ".CurrentOrgs");
- // ✅ 使用新API: 获取取消令牌源并取消
-         var currentOrgsCts = _Cache.GetCancellationTokenSource(currentOrgsCacheKey);
-            if (currentOrgsCts != null && !currentOrgsCts.IsCancellationRequested)
-  {
-           try
-   {
-         currentOrgsCts.Cancel();
-       }
-         catch { /* 忽略可能的异常 */ }
+                var currentOrgsCacheKey = OwCacheExtensions.GetCacheKeyFromId(model.UserId, ".CurrentOrgs");
+                // ✅ 使用新API: 获取取消令牌源并取消
+                var currentOrgsCts = _Cache.GetCancellationTokenSource(currentOrgsCacheKey);
+                if (currentOrgsCts != null && !currentOrgsCts.IsCancellationRequested)
+                {
+                    try
+                    {
+                        currentOrgsCts.Cancel();
+                    }
+                    catch { /* 忽略可能的异常 */ }
                 }
-    }
+            }
 
-  return result;
+            return result;
         }
 
         #endregion 用户相关

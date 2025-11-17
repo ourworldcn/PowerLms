@@ -350,21 +350,17 @@ namespace PowerLmsServer.Managers
         {
             // 设置用户缓存过期时间
             entry.SetSlidingExpiration(TimeSpan.FromMinutes(15));
-            // 启用优先级驱逐回调
+            
+            // ✅ 启用优先级驱逐回调（会自动注册CTS用于直接失效）
             entry.EnablePriorityEvictionCallback(_MemoryCache);
-            // 获取取消令牌源并注册到过期令牌列表
-            var cts = _MemoryCache.GetCancellationTokenSource(entry.Key);
-            entry.ExpirationTokens.Add(new CancellationChangeToken(cts.Token));
+            
+            // ❌ 移除：用户缓存不依赖其他缓存，不需要添加依赖令牌
             
             // ✅ 修改驱逐回调: 只清理Token映射,不处理DbContext
             entry.RegisterPostEvictionCallback((key, value, reason, state) =>
             {
                 if (value is Account acc && acc?.Token.HasValue == true)
                 {
-                    // ❌ 移除 DbContext 处理
-                    // using var dbContext = acc?.DbContext;
-                    // dbContext?.SaveChanges();
-                    
                     // ✅ 只清理Token映射
                     Token2KeyDic.TryRemove(acc.Token.Value, out _);
                 }

@@ -379,9 +379,6 @@ namespace PowerLmsServer.Managers
             entry.SetPriority(CacheItemPriority.Normal);
             // 启用优先级驱逐回调
             entry.EnablePriorityEvictionCallback(_MemoryCache);
-            // 获取取消令牌源并注册到过期令牌列表
-            var cts = _MemoryCache.GetCancellationTokenSource(entry.Key);
-            entry.ExpirationTokens.Add(new CancellationChangeToken(cts.Token));
         }
 
         /// <summary>
@@ -397,10 +394,6 @@ namespace PowerLmsServer.Managers
 
             // 启用优先级驱逐回调
             entry.EnablePriorityEvictionCallback(_MemoryCache);
-
-            // 获取取消令牌源并注册到过期令牌列表
-            var cts = _MemoryCache.GetCancellationTokenSource(entry.Key);
-            entry.ExpirationTokens.Add(new CancellationChangeToken(cts.Token));
         }
 
         /// <summary>
