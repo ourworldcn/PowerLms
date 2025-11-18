@@ -643,6 +643,7 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="model"></param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">超额申请或其他业务错误。</response>
         /// <response code="401">无效令牌。</response>  
         /// <response code="403">权限不足。</response>  
         [HttpPost]
@@ -653,17 +654,35 @@ namespace PowerLmsWebApi.Controllers
                 _Logger.LogWarning("无效的令牌{token}", model.Token);
                 return Unauthorized();
             }
-
             var result = new AddDocFeeRequisitionItemReturnDto();
             var entity = model.DocFeeRequisitionItem;
+            if (!entity.FeeId.HasValue)
+            {
+                result.HasError = true;
+                result.ErrorCode = 400;
+                result.DebugMessage = "申请单明细必须关联费用（FeeId不能为空）";
+                return BadRequest(result);
+            }
+            if (!DocFee.ValidateRequisitionItemAmount(
+                entity.FeeId.Value,
+                entity.Amount,
+                null,
+                _DbContext,
+                out string errorMessage))
+            {
+                result.HasError = true;
+                result.ErrorCode = 400;
+                result.DebugMessage = errorMessage;
+                _Logger.LogWarning("申请单明细超额：FeeId={FeeId}, Amount={Amount}, 错误={Error}",
+                    entity.FeeId.Value, entity.Amount, errorMessage);
+                return BadRequest(result);
+            }
             entity.GenerateNewId();
             _DbContext.DocFeeRequisitionItems.Add(model.DocFeeRequisitionItem);
             var req = _DbContext.DocFeeRequisitions.Find(model.DocFeeRequisitionItem.ParentId);
-            //计算合计
             var parent = _DbContext.DocFeeRequisitions.Find(model.DocFeeRequisitionItem.ParentId);
             if (parent is null) return BadRequest("没有找到 指定的 ParentId 实体");
             _DbContext.SaveChanges();
-
             result.Id = model.DocFeeRequisitionItem.Id;
             return result;
         }
@@ -674,6 +693,7 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="model"></param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">超额申请或其他业务错误。</response>
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">指定Id的业务费用申请单明细不存在。</response>  
         [HttpPut]
@@ -681,10 +701,30 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyDocFeeRequisitionItemReturnDto();
+            var entity = model.DocFeeRequisitionItem;
+            if (!entity.FeeId.HasValue)
+            {
+                result.HasError = true;
+                result.ErrorCode = 400;
+                result.DebugMessage = "申请单明细必须关联费用（FeeId不能为空）";
+                return BadRequest(result);
+            }
+            if (!DocFee.ValidateRequisitionItemAmount(
+                entity.FeeId.Value,
+                entity.Amount,
+                entity.Id,
+                _DbContext,
+                out string errorMessage))
+            {
+                result.HasError = true;
+                result.ErrorCode = 400;
+                result.DebugMessage = errorMessage;
+                _Logger.LogWarning("修改申请单明细超额：Id={Id}, FeeId={FeeId}, Amount={Amount}, 错误={Error}",
+                    entity.Id, entity.FeeId.Value, entity.Amount, errorMessage);
+                return BadRequest(result);
+            }
             if (!_EntityManager.Modify(new[] { model.DocFeeRequisitionItem })) return NotFound();
-            //忽略不可更改字段
-            var entity = _DbContext.Entry(model.DocFeeRequisitionItem);
-            //计算合计
+            var entryEntity = _DbContext.Entry(model.DocFeeRequisitionItem);
             var parent = _DbContext.DocFeeRequisitions.Find(model.DocFeeRequisitionItem.ParentId);
             if (parent is null) return BadRequest("没有找到 指定的 ParentId 实体");
             _DbContext.SaveChanges();
@@ -723,6 +763,7 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="model"></param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">超额申请或其他业务错误。</response>
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">指定Id的业务费用申请单不存在。</response>  
         [HttpPut]
@@ -732,26 +773,47 @@ namespace PowerLmsWebApi.Controllers
             var result = new SetDocFeeRequisitionItemReturnDto();
             var fr = _DbContext.DocFeeRequisitions.Find(model.FrId);
             if (fr is null) return NotFound();
-            var aryIds = model.Items.Select(c => c.Id).ToArray();   //指定的Id
-            var existsIds = _DbContext.DocFeeRequisitionItems.Where(c => c.ParentId == fr.Id).Select(c => c.Id).ToArray();    //已经存在的Id
-            //更改
+            var aryIds = model.Items.Select(c => c.Id).ToArray();
+            var existsIds = _DbContext.DocFeeRequisitionItems.Where(c => c.ParentId == fr.Id).Select(c => c.Id).ToArray();
+            var modifiesIds = aryIds.Intersect(existsIds).ToArray();
+            var addIds = aryIds.Except(existsIds).ToArray();
+            foreach (var item in model.Items.Where(c => addIds.Contains(c.Id) || modifiesIds.Contains(c.Id)))
+            {
+                if (!item.FeeId.HasValue)
+                {
+                    result.HasError = true;
+                    result.ErrorCode = 400;
+                    result.DebugMessage = "申请单明细必须关联费用（FeeId不能为空）";
+                    return BadRequest(result);
+                }
+                var excludeItemId = modifiesIds.Contains(item.Id) ? item.Id : (Guid?)null;
+                if (!DocFee.ValidateRequisitionItemAmount(
+                    item.FeeId.Value,
+                    item.Amount,
+                    excludeItemId,
+                    _DbContext,
+                    out string errorMessage))
+                {
+                    result.HasError = true;
+                    result.ErrorCode = 400;
+                    result.DebugMessage = $"明细项(Id={item.Id})超额：{errorMessage}";
+                    _Logger.LogWarning("批量设置申请单明细超额：ItemId={Id}, FeeId={FeeId}, Amount={Amount}, 错误={Error}",
+                        item.Id, item.FeeId.Value, item.Amount, errorMessage);
+                    return BadRequest(result);
+                }
+            }
             var modifies = model.Items.Where(c => existsIds.Contains(c.Id));
             foreach (var item in modifies)
             {
                 _DbContext.Entry(item).CurrentValues.SetValues(item);
                 _DbContext.Entry(item).State = EntityState.Modified;
             }
-            //增加
-            var addIds = aryIds.Except(existsIds).ToArray();
             var adds = model.Items.Where(c => addIds.Contains(c.Id)).ToArray();
             Array.ForEach(adds, c => c.GenerateNewId());
             _DbContext.AddRange(adds);
-            //删除
             var removeIds = existsIds.Except(aryIds).ToArray();
             _DbContext.RemoveRange(_DbContext.DocFeeRequisitionItems.Where(c => removeIds.Contains(c.Id)));
-
             _DbContext.SaveChanges();
-            //后处理
             result.Result.AddRange(model.Items);
             return result;
         }

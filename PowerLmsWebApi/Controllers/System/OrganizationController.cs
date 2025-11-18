@@ -62,34 +62,27 @@ namespace PowerLmsWebApi.Controllers
             var result = new GetOrgReturnDto();
             if (_AccountManager.GetOrLoadContextByToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
             if (!rootId.HasValue && !context.User.IsAdmin()) return StatusCode((int)HttpStatusCode.Forbidden, "只有商管可以获取全商户的机构");
-            if (context.User.IsSuperAdmin)   //若是超管
+            if (context.User.IsSuperAdmin) //若是超管
             {
-                // 如果没有指定rootId，超管可以查看所有组织机构
-                if (!rootId.HasValue)
+                if (!rootId.HasValue) //如果没有指定rootId，超管可以查看所有组织机构
                 {
-                    // 获取所有顶级组织机构（没有父级的组织机构）
-                    var allTopOrgs = _DbContext.PlOrganizations
+                    var allTopOrgs = _DbContext.PlOrganizations //获取所有顶级组织机构（没有父级的组织机构）
                         .Where(o => o.ParentId == null)
                         .Include(o => o.Children)
                         .ToList();
-
                     result.Result.AddRange(allTopOrgs);
                 }
                 else
                 {
-                    // 如果指定了rootId，获取此组织机构及其所有子机构
-                    var rootOrg = _DbContext.PlOrganizations
+                    var rootOrg = _DbContext.PlOrganizations //如果指定了rootId，获取此组织机构及其所有子机构
                         .Include(o => o.Children)
                         .FirstOrDefault(o => o.Id == rootId.Value);
-
                     if (rootOrg == null)
                     {
-                        // 检查是否为商户ID
-                        var merchantOrgs = _DbContext.PlOrganizations
+                        var merchantOrgs = _DbContext.PlOrganizations //检查是否为商户ID
                             .Where(o => o.MerchantId == rootId.Value && o.ParentId == null)
                             .Include(o => o.Children)
                             .ToList();
-
                         if (merchantOrgs.Any())
                         {
                             result.Result.AddRange(merchantOrgs);
@@ -104,20 +97,18 @@ namespace PowerLmsWebApi.Controllers
                         result.Result.Add(rootOrg);
                     }
                 }
-
                 return result;
             }
             var merchantId = _OrgManager.GetMerchantIdByOrgId(context.User.OrgId.Value);
             if (!merchantId.HasValue) return BadRequest("未知的商户Id");
-
             var allOrgItems = _OrgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs;
-            if (_OrgManager.GetOrLoadOrgCacheItem(merchantId.Value).Merchant is not PlMerchant merch)    //若找不到商户
+            if (_OrgManager.GetOrLoadOrgCacheItem(merchantId.Value).Merchant is not PlMerchant merch) //若找不到商户
                 return BadRequest("找不到用户所属的商户");
-            var orgs = _OrgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs;  //获取其所有机构
+            var orgs = _OrgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs; //获取其所有机构
             if (rootId.HasValue) //若指定了根机构
             {
                 if (!orgs.TryGetValue(rootId.Value, out PlOrganization org) && rootId.Value != merch.Id) return BadRequest($"找不到指定的机构，Id={rootId}");
-                if (context.User.IsMerchantAdmin)    //若是商管
+                if (context.User.IsMerchantAdmin) //若是商管
                 {
                     if (org is not null)
                         result.Result.Add(org);
@@ -135,7 +126,7 @@ namespace PowerLmsWebApi.Controllers
             }
             else //若没有指定根
             {
-                if (context.User.IsMerchantAdmin)    //若是商管
+                if (context.User.IsMerchantAdmin) //若是商管
                 {
                     result.Result.AddRange(orgs.Values.Where(c => c.Parent is null));
                 }
@@ -167,37 +158,26 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlOrganizationReturnDto();
-
-            // 获取基础查询
-            var dbSet = _DbContext.PlOrganizations;
+            var dbSet = _DbContext.PlOrganizations; //获取基础查询
             var query = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-
-            // 处理条件过滤
-            if (conditional != null && conditional.Count > 0)
+            if (conditional != null && conditional.Count > 0) //处理条件过滤
             {
-                // 提取AccountPlOrganization过滤条件
                 const string accountOrgPrefix = "AccountPlOrganization.";
                 var accountOrgConditions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 var orgConditions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-                // 分离两种类型的条件
-                foreach (var condition in conditional)
+                foreach (var condition in conditional) //分离两种类型的条件
                 {
                     if (condition.Key.StartsWith(accountOrgPrefix, StringComparison.OrdinalIgnoreCase))
                     {
-                        // AccountPlOrganization前缀条件
                         string propName = condition.Key.Substring(accountOrgPrefix.Length);
                         accountOrgConditions.Add(propName, condition.Value);
                     }
                     else
                     {
-                        // 直接的PlOrganization属性条件
                         orgConditions.Add(condition.Key, condition.Value);
                     }
                 }
-
-                // 应用PlOrganization直接属性条件
-                if (orgConditions.Count > 0)
+                if (orgConditions.Count > 0) //应用PlOrganization直接属性条件
                 {
                     var filteredQuery = EfHelper.GenerateWhereAnd(query, orgConditions);
                     if (filteredQuery == null)
@@ -206,33 +186,23 @@ namespace PowerLmsWebApi.Controllers
                     }
                     query = filteredQuery;
                 }
-
-                // 应用AccountPlOrganization关联条件
-                if (accountOrgConditions.Count > 0)
+                if (accountOrgConditions.Count > 0) //应用AccountPlOrganization关联条件
                 {
-                    // 构建子查询，获取满足条件的OrgId
                     var accountOrgQuery = _DbContext.AccountPlOrganizations.AsQueryable();
                     var filteredAccountOrgQuery = EfHelper.GenerateWhereAnd(accountOrgQuery, accountOrgConditions);
-
                     if (filteredAccountOrgQuery == null)
                     {
                         return BadRequest(OwHelper.GetLastErrorMessage());
                     }
-
-                    // 获取满足条件的OrgId
                     var orgIds = filteredAccountOrgQuery.Select(ao => ao.OrgId).Distinct();
-
-                    // 应用到主查询
                     query = query.Where(org => orgIds.Contains(org.Id));
                 }
             }
             try
             {
-                // 获取分页数据
                 var prb = _EntityManager.GetAll(query, model.StartIndex, model.Count);
                 _Mapper.Map(prb, result, opt =>
                 {
-                    // 设置忽略的属性
                     opt.Items["IgnoreProps"] = new HashSet<string> { nameof(PlOrganization.Parent), nameof(PlOrganization.Children) };
                 });
             }
@@ -261,16 +231,11 @@ namespace PowerLmsWebApi.Controllers
             var result = new AddOrgReturnDto();
             model.Item.GenerateNewId();
             var id = model.Item.Id;
-            
-            // 使用事务包裹所有数据库操作
-            using var transaction = _DbContext.Database.BeginTransaction();
+            using var transaction = _DbContext.Database.BeginTransaction(); //使用事务包裹所有数据库操作
             try
             {
-                // 1. 添加机构
-                _DbContext.PlOrganizations.Add(model.Item);
-                
-                // 2. 自动为新机构创建默认参数
-                var parameter = new PlOrganizationParameter
+                _DbContext.PlOrganizations.Add(model.Item); //1. 添加机构
+                var parameter = new PlOrganizationParameter //2. 自动为新机构创建默认参数
                 {
                     OrgId = id,
                     CurrentAccountingPeriod = DateTime.Now.ToString("yyyyMM"),
@@ -279,15 +244,12 @@ namespace PowerLmsWebApi.Controllers
                     BillFooter = model.Item.Name_Name ?? ""
                 };
                 _DbContext.PlOrganizationParameters.Add(parameter);
-
-                // 3. 如果需要复制字典
-                if (model.IsCopyDataDic)
+                if (model.IsCopyDataDic) //3. 如果需要复制字典
                 {
                     var merch = _DbContext.PlOrganizations.Find(id);
                     if (merch != null)
                     {
-                        // 复制简单字典
-                        var baseCatalogs = _DbContext.DD_DataDicCatalogs
+                        var baseCatalogs = _DbContext.DD_DataDicCatalogs //复制简单字典
                             .Where(c => c.OrgId == null)
                             .AsNoTracking()
                             .ToList();
@@ -296,13 +258,10 @@ namespace PowerLmsWebApi.Controllers
                             _DataManager.CopyTo(catalog, id);
                         }
                         _DataManager.CopyAllSpecialDataDicBase(id);
-
-                        // 复制全局财务科目设置(OrgId=null)到新组织机构
-                        var globalSubjectConfigs = _DbContext.SubjectConfigurations
+                        var globalSubjectConfigs = _DbContext.SubjectConfigurations //复制全局财务科目设置(OrgId=null)到新组织机构
                             .Where(c => c.OrgId == null && !c.IsDelete)
                             .AsNoTracking()
                             .ToList();
-
                         foreach (var globalConfig in globalSubjectConfigs)
                         {
                             var newConfig = new SubjectConfiguration
@@ -321,17 +280,10 @@ namespace PowerLmsWebApi.Controllers
                         }
                     }
                 }
-
-                // 4. 一次性保存所有更改
-                _DbContext.SaveChanges();
-                
-                // 5. 提交事务
-                transaction.Commit();
-                
+                _DbContext.SaveChanges(); //4. 一次性保存所有更改
+                transaction.Commit(); //5. 提交事务
                 result.Id = id;
-                
-                // 6. 只有事务成功提交后才失效缓存
-                if (model.Item.ParentId == null && model.Item.MerchantId.HasValue)
+                if (model.Item.ParentId == null && model.Item.MerchantId.HasValue) //6. 只有事务成功提交后才失效缓存
                 {
                     _OrgManager.InvalidateOrgCaches(model.Item.MerchantId.Value);
                 }
@@ -343,18 +295,14 @@ namespace PowerLmsWebApi.Controllers
                         _OrgManager.InvalidateOrgCaches(merchantId.Value);
                     }
                 }
-                
-                _Logger.LogInformation("成功创建机构 {orgId}，名称：{orgName}，并为其创建了默认参数配置", 
-                    id, model.Item.Name_Name);
+                _Logger.LogInformation("成功创建机构 {orgId}，名称：{orgName}", id, model.Item.Name_Name);
             }
             catch (Exception err)
             {
-                // 回滚事务
                 transaction.Rollback();
                 _Logger.LogError(err, "创建机构失败: {message}", err.Message);
                 return BadRequest(err.Message);
             }
-            
             return result;
         }
 
@@ -371,13 +319,10 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
                 return Unauthorized(OwHelper.GetLastErrorMessage());
-
             if (!_AuthorizationManager.Demand(out string err, "B.1"))
                 return StatusCode((int)HttpStatusCode.Forbidden, err);
-
             var result = new ModifyOrgReturnDto();
             Dictionary<Guid, List<PlOrganization>> orgDict = new();
-
             foreach (var org in model.Items)
             {
                 var no = _DbContext.PlOrganizations.Find(org.Id);
@@ -386,40 +331,29 @@ namespace PowerLmsWebApi.Controllers
                     _Logger.LogWarning("修改组织机构失败：找不到ID为 {orgId} 的组织机构", org.Id);
                     return NotFound($"找不到ID为 {org.Id} 的组织机构");
                 }
-                // 保存子机构到一个字典中
-                orgDict[no.Id] = no.Children.ToList();
+                orgDict[no.Id] = no.Children.ToList(); //保存子机构到一个字典中
             }
-
-            // 直接修改实体，不需要预先加载
-            var list = new List<PlOrganization>();
+            var list = new List<PlOrganization>(); //直接修改实体，不需要预先加载
             if (!_EntityManager.Modify(model.Items, list))
                 return NotFound();
-
             try
             {
-                // 保存修改但明确告知EF Core不要跟踪Parent和Children属性的变化
-                foreach (var org in model.Items)
+                foreach (var org in model.Items) //保存修改但明确告知EF Core不要跟踪Parent和Children属性的变化
                 {
                     var no = _DbContext.PlOrganizations.Find(org.Id);
                     var entry = _DbContext.Entry(no);
                     entry.Property(c => c.ParentId).IsModified = false;
-                    //entry.Property(c => c.MerchantId).IsModified = false; //应该允许修改
                     entry.Navigation(nameof(PlOrganization.Parent)).IsModified = false;
-                    //entry.Collection(nameof(PlOrganization.Children)).IsModified = false; //实测无法按预期工作
                     no.Children.Clear();
-                    no.Children.AddRange(orgDict[no.Id]); // 恢复子机构
+                    no.Children.AddRange(orgDict[no.Id]); //恢复子机构
                 }
-
                 _DbContext.SaveChanges();
-
-                // 使商户和组织机构缓存失效
-                var merchIds = list
+                var merchIds = list //使商户和组织机构缓存失效
                     .Select(c => _OrgManager.GetMerchantIdByOrgId(c.Id))
                     .Where(id => id.HasValue)
                     .Distinct()
                     .Select(id => id.Value)
                     .ToArray();
-
                 foreach (var merchId in merchIds)
                 {
                     _OrgManager.InvalidateOrgCaches(merchId);
@@ -429,7 +363,6 @@ namespace PowerLmsWebApi.Controllers
             {
                 return BadRequest(excp.Message);
             }
-
             return result;
         }
 
@@ -485,137 +418,64 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpDelete]
-        public ActionResult<RemoveOrgReturnDto> RemoveOrg([FromBody] RemoveOrgParamsDto model)
+        public ActionResult<RemoveOrgReturnDto> RemoveOrg([FromBody] RemoveOrgParamsDto model,
+            [FromServices] RoleManager roleManager, [FromServices] PermissionManager permissionManager)
         {
-            _Logger.LogInformation("开始执行删除组织机构操作，组织ID: {orgId}", model.Id);
-
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
-            {
-                _Logger.LogWarning("删除组织机构失败：无效令牌 {token}", model.Token);
                 return Unauthorized();
-            }
-
-            _Logger.LogDebug("用户 {userId} ({loginName}) 尝试删除组织机构 {orgId}",
-                context.User.Id, context.User.LoginName, model.Id);
-
             var result = new RemoveOrgReturnDto();
             var id = model.Id;
-            var dbSet = _DbContext.PlOrganizations;
-
-            // 查找组织机构
-            var item = dbSet.Find(id);
+            var item = _DbContext.PlOrganizations.Find(id);
             if (item is null)
-            {
-                _Logger.LogWarning("删除组织机构失败：找不到ID为 {orgId} 的组织机构", id);
                 return BadRequest($"找不到ID为 {id} 的组织机构");
-            }
-
-            // 检查是否有子组织机构（非叶子节点不能删除）
             if (item.Children != null && item.Children.Count > 0)
-            {
-                _Logger.LogWarning("删除组织机构失败：组织机构 {orgId} ({orgName}) 包含 {childCount} 个子组织机构，需要先删除子组织机构",
-                    id, item.Name_DisplayName, item.Children.Count);
                 return BadRequest($"组织机构 '{item.Name_DisplayName}' 包含子组织机构，请先删除子组织机构");
-            }
-
-            // 检查是否有角色指向该组织机构
             var rolesPointingToOrg = _DbContext.PlRoles.Where(r => r.OrgId == id).ToList();
             if (rolesPointingToOrg.Any())
-            {
-                _Logger.LogWarning("删除组织机构失败：存在 {count} 个角色指向组织机构 {orgId} ({orgName})",
-                    rolesPointingToOrg.Count, id, item.Name_DisplayName);
                 return BadRequest($"组织机构 '{item.Name_DisplayName}' 有 {rolesPointingToOrg.Count} 个角色与其关联，请先删除这些角色");
-            }
-
-            // 检查是否有关联业务
             if (HasBusinessRelatedToOrg(id))
-            {
-                _Logger.LogWarning("删除组织机构失败：组织机构 {orgId} ({orgName}) 存在关联业务，无法删除",
-                    id, item.Name_DisplayName);
                 return BadRequest($"组织机构 '{item.Name_DisplayName}' 存在关联业务，无法删除");
-            }
-
             try
             {
-                // 在删除组织机构前，先获取关联的商户ID
-                Guid? merchantId = null;
-
-                // 如果是顶层组织机构（ParentId为null），直接使用其MerchantId
-                if (item.ParentId == null && item.MerchantId.HasValue)
-                {
-                    merchantId = item.MerchantId;
-                    _Logger.LogDebug("组织机构 {orgId} 是顶层组织机构，直接关联到商户 {merchantId}", id, merchantId);
-                }
-                // 否则尝试通过组织机构ID找到关联的商户ID
-                else
-                {
-                    merchantId = _OrgManager.GetMerchantIdByOrgId(model.Id);
-                    if (merchantId.HasValue)
-                    {
-                        _Logger.LogDebug("组织机构 {orgId} 关联到商户 {merchantId}", id, merchantId);
-                    }
-                    else
-                    {
-                        _Logger.LogWarning("无法确定组织机构 {orgId} 所属的商户ID", id);
-                    }
-                }
-
-                // 记录删除前的组织机构信息
-                _Logger.LogInformation("准备删除组织机构: ID={orgId}, 名称='{orgName}', 父ID={parentId}, 商户ID={merchantId}",
-                    item.Id, item.Name_DisplayName, item.ParentId, merchantId);
-
-                // 1. 删除机构参数
+                Guid? merchantId = item.ParentId == null && item.MerchantId.HasValue
+                    ? item.MerchantId
+                    : _OrgManager.GetMerchantIdByOrgId(model.Id);
                 var parameter = _DbContext.PlOrganizationParameters.FirstOrDefault(p => p.OrgId == id);
                 if (parameter != null)
                 {
                     _DbContext.PlOrganizationParameters.Remove(parameter);
-                    _Logger.LogInformation("删除组织机构 {orgId} 的参数配置", id);
                 }
-
-                // 2. 删除用户-机构关系
                 var userOrgRelations = _DbContext.AccountPlOrganizations
                     .Where(ao => ao.OrgId == id)
                     .ToList();
-
+                var affectedUserIds = userOrgRelations.Select(r => r.UserId).Distinct().ToList();
                 if (userOrgRelations.Any())
                 {
-                    _Logger.LogInformation("删除组织机构 {orgId} 的 {count} 个用户-机构关系", id, userOrgRelations.Count);
                     _DbContext.AccountPlOrganizations.RemoveRange(userOrgRelations);
                     _DbContext.SaveChanges();
                 }
-
-                // 3. 执行删除组织机构操作
                 _EntityManager.Remove(item);
                 _DbContext.SaveChanges();
-
-                _Logger.LogInformation("成功删除组织机构 {orgId}", id);
-
-                // 删除成功后，如果有关联的商户ID，则使缓存失效
                 if (merchantId.HasValue)
                 {
-                    _Logger.LogDebug("正在使商户 {merchantId} 的缓存失效", merchantId.Value);
                     _OrgManager.InvalidateOrgCaches(merchantId.Value);
-                    _Logger.LogInformation("已成功使商户 {merchantId} 的缓存失效", merchantId.Value);
                 }
+                if (affectedUserIds.Any())
+                {
+                    foreach (var userId in affectedUserIds)
+                    {
+                        roleManager.InvalidateUserRolesCache(userId);
+                        permissionManager.InvalidateUserPermissionsCache(userId);
+                    }
+                }
+                _Logger.LogInformation("成功删除组织机构 {orgName} (ID:{orgId})，影响 {userCount} 个用户",
+                    item.Name_DisplayName, id, affectedUserIds.Count);
             }
             catch (Exception ex)
             {
-                // 捕获并记录所有异常
                 _Logger.LogError(ex, "删除组织机构 {orgId} 时发生异常", id);
-
-                // 记录更详细的上下文信息
-                _Logger.LogError("异常上下文: 用户={userId}, 组织机构ID={orgId}, 组织机构名称='{orgName}'",
-                    context.User.Id, id, item.Name_DisplayName);
-
-                // 返回带有详细错误信息的BadRequest结果
-                return BadRequest(new
-                {
-                    ErrorMessage = "删除组织机构时发生错误",
-                    Details = ex.Message,
-                    OrgId = id
-                });
+                return BadRequest($"删除组织机构失败: {ex.Message}");
             }
-
             return result;
         }
 
@@ -626,39 +486,20 @@ namespace PowerLmsWebApi.Controllers
         /// <returns>true表示有关联业务，false表示没有关联业务</returns>
         private bool HasBusinessRelatedToOrg(Guid orgId)
         {
-            _Logger.LogInformation("开始检查组织机构 {orgId} 的业务关联", orgId);
-
             try
             {
-                // 检查业务总表多种关联方式
-                if (_DbContext.PlJobs != null && _DbContext.PlJobs.Any(j => j.OrgId == orgId))
-                {
-                    _Logger.LogInformation("组织机构 {orgId} 在业务单中存在关联，无法删除", orgId);
+                if (_DbContext.PlJobs != null && _DbContext.PlJobs.Any(j => j.OrgId == orgId)) //检查业务总表关联
                     return true;
-                }
-
-                // 检查客户资料关联
-                if (_DbContext.PlCustomers != null && _DbContext.PlCustomers.Any(c => c.OrgId == orgId))
-                {
-                    _Logger.LogInformation("组织机构 {orgId} 在客户资料中存在关联，无法删除", orgId);
+                if (_DbContext.PlCustomers != null && _DbContext.PlCustomers.Any(c => c.OrgId == orgId)) //检查客户资料关联
                     return true;
-                }
-
-                // 检查银行信息关联
-                if (_DbContext.BankInfos != null && _DbContext.BankInfos.Any(b => b.ParentId == orgId))
-                {
-                    _Logger.LogInformation("组织机构 {orgId} 存在关联银行信息，无法删除", orgId);
+                if (_DbContext.BankInfos != null && _DbContext.BankInfos.Any(b => b.ParentId == orgId)) //检查银行信息关联
                     return true;
-                }
-
-                _Logger.LogInformation("组织机构 {orgId} 没有发现任何关联业务", orgId);
                 return false;
             }
             catch (Exception ex)
             {
                 _Logger.LogError(ex, "检查组织机构 {orgId} 业务关联时发生异常", orgId);
-                // 为安全起见，发生异常时阻止删除
-                return true;
+                return true; //为安全起见，发生异常时阻止删除
             }
         }
 
@@ -700,7 +541,6 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllAccountPlOrganizationReturnDto();
-
             var dbSet = _DbContext.AccountPlOrganizations;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             foreach (var item in conditional)
@@ -776,7 +616,7 @@ namespace PowerLmsWebApi.Controllers
             var merch = _DbContext.PlOrganizations.Find(model.Id);
             if (merch == null) return NotFound();
             #region 复制简单字典
-            var baseCatalogs = _DbContext.DD_DataDicCatalogs.Where(c => c.OrgId == null).AsNoTracking();  //基本字典目录集合
+            var baseCatalogs = _DbContext.DD_DataDicCatalogs.Where(c => c.OrgId == null).AsNoTracking(); //基本字典目录集合
             foreach (var catalog in baseCatalogs)
             {
                 _DataManager.CopyTo(catalog, model.Id);
@@ -803,7 +643,6 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllBankInfoReturnDto();
-
             var dbSet = _DbContext.BankInfos;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             foreach (var item in conditional)
@@ -884,7 +723,5 @@ namespace PowerLmsWebApi.Controllers
         }
 
         #endregion 开户行信息
-
     }
-
 }

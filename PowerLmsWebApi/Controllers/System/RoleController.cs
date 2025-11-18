@@ -73,90 +73,69 @@ namespace PowerLmsWebApi.Controllers
 
             try
             {
-                // 根据用户权限限制查询范围
                 IQueryable<PlRole> query;
 
                 if (context.User.IsSuperAdmin)
                 {
-                    // 超级管理员可以查看所有角色
                     query = _DbContext.PlRoles.AsNoTracking();
-                    _Logger.LogDebug("超级管理员查询所有角色");
                 }
                 else if (context.User.IsMerchantAdmin)
                 {
-                    // 商户管理员只能查看其所属商户下的角色
                     var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
                     if (!merchantId.HasValue) return Unauthorized("未找到用户所属商户");
 
                     var allRoles = _RoleManager.GetOrLoadRolesByMerchantId(merchantId.Value);
                     
-                    // 获取商户下的所有机构ID
                     var orgIds = _OrgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs.Keys.ToHashSet();
-                    orgIds.Add(merchantId.Value); // 添加商户ID本身
+                    orgIds.Add(merchantId.Value);
 
                     query = _DbContext.PlRoles
                         .Where(r => r.OrgId.HasValue && orgIds.Contains(r.OrgId.Value))
                         .AsNoTracking();
-
-                    _Logger.LogDebug("商户管理员查询角色: 商户 {MerchantId} 下找到 {Count} 个相关机构",
-                        merchantId, orgIds.Count);
                 }
                 else
                 {
-                    // 普通用户只能查看其当前有效机构下的角色
                     var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
                     if (!merchantId.HasValue) return Unauthorized("未找到用户所属商户");
 
                     var roles = _RoleManager.GetOrLoadRolesByMerchantId(merchantId.Value);
                     
-                    // 获取用户当前有效的机构
                     var currentCompany = _OrgManager.GetCurrentCompanyByUser(context.User);
                     if (currentCompany == null)
                     {
                         result.Result = new List<PlRole>();
-                        _Logger.LogDebug("普通用户未关联任何机构，返回空角色列表");
                         return result;
                     }
                     
                     var orgIds = _OrgManager.GetOrgIdsByCompanyId(currentCompany.Id).ToHashSet();
-                    orgIds.Add(merchantId.Value); // 支持直接归属商户的角色
+                    orgIds.Add(merchantId.Value);
 
                     query = _DbContext.PlRoles
                         .Where(r => r.OrgId.HasValue && orgIds.Contains(r.OrgId.Value))
                         .AsNoTracking();
-
-                    _Logger.LogDebug("普通用户查询角色: 在 {Count} 个有效机构范围内查询",
-                        orgIds.Count);
                 }
 
-                // 应用排序
                 query = query.OrderBy(model.OrderFieldName, model.IsDesc);
 
-                // 处理条件过滤
                 if (conditional != null && conditional.Count > 0)
                 {
-                    // 提取AccountRole过滤条件
                     const string accountRolePrefix = "AccountRole.";
                     var accountRoleConditions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                     var roleConditions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-                    // 分离两种类型的条件
                     foreach (var condition in conditional)
                     {
                         if (condition.Key.StartsWith(accountRolePrefix, StringComparison.OrdinalIgnoreCase))
                         {
-                            // AccountRole前缀条件
                             string propName = condition.Key.Substring(accountRolePrefix.Length);
                             accountRoleConditions.Add(propName, condition.Value);
                         }
                         else
                         {
-                            // 直接的PlRole属性条件
                             roleConditions.Add(condition.Key, condition.Value);
                         }
                     }
 
-                    // 应用PlRole直接属性条件
                     if (roleConditions.Count > 0)
                     {
                         var filteredQuery = EfHelper.GenerateWhereAnd(query, roleConditions);
@@ -167,10 +146,8 @@ namespace PowerLmsWebApi.Controllers
                         query = filteredQuery;
                     }
 
-                    // 应用AccountRole关联条件
                     if (accountRoleConditions.Count > 0)
                     {
-                        // 构建子查询，获取满足条件的RoleId
                         var accountRoleQuery = _DbContext.PlAccountRoles.AsQueryable();
                         var filteredAccountRoleQuery = EfHelper.GenerateWhereAnd(accountRoleQuery, accountRoleConditions);
 
@@ -179,23 +156,17 @@ namespace PowerLmsWebApi.Controllers
                             return BadRequest(OwHelper.GetLastErrorMessage());
                         }
 
-                        // 获取满足条件的RoleId
                         var roleIds = filteredAccountRoleQuery.Select(ar => ar.RoleId).Distinct();
-
-                        // 应用到主查询
                         query = query.Where(role => roleIds.Contains(role.Id));
                     }
                 }
 
-                // 获取分页数据
                 var prb = _EntityManager.GetAll(query, model.StartIndex, model.Count);
                 _Mapper.Map(prb, result);
-
-                _Logger.LogInformation("用户 {UserId} 查询角色列表，返回 {Count} 条记录",
-                    context.User.Id, result.Result?.Count ?? 0);
             }
             catch (Exception ex)
             {
+                // ✅ 只保留异常日志
                 _Logger.LogError(ex, "获取角色列表时发生错误");
                 result.HasError = true;
                 result.ErrorCode = 500;

@@ -346,6 +346,43 @@ namespace PowerLms.Data
         [Comment("申请单明细id")]
         public Guid? RequisitionItemId { get; set; }
 
+        #region 金额计算方法
+
+        /// <summary>
+        /// 计算指定申请单明细的已结算金额（汇总所有关联的结算单明细）。
+        /// </summary>
+        /// <param name="requisitionItemId">申请单明细ID</param>
+        /// <param name="dbContext">数据库上下文</param>
+        /// <returns>已结算金额（2位小数精度）</returns>
+        /// <exception cref="ArgumentNullException">dbContext为空时抛出</exception>
+        /// <remarks>
+        /// 计算公式：sum(PlInvoicesItem.Amount × PlInvoicesItem.ExchangeRate)，结果四舍五入到2位小数
+        /// 注意事项：
+        /// 1. 正确过滤已删除实体，避免重复计算
+        /// 2. 先物化查询，再内存过滤，确保正确处理事务内删除
+        /// 3. 计算结果四舍五入到2位小数，与 DocFeeRequisitionItem.TotalSettledAmount 字段精度一致
+        /// 4. 如果没有关联的结算单明细，返回 0
+        /// 5. 此方法计算的是多个 PlInvoicesItem 的汇总结果，因此放在 PlInvoicesItem 类中
+        /// </remarks>
+        public static decimal CalculateTotalSettledAmountForRequisitionItem(Guid requisitionItemId, DbContext dbContext)
+        {
+            if (dbContext == null)
+                throw new ArgumentNullException(nameof(dbContext));
+            var allInvoiceItems = dbContext.Set<PlInvoicesItem>()
+                .Where(c => c.RequisitionItemId == requisitionItemId)
+                .ToArray();
+            if (allInvoiceItems.Length == 0)
+                return 0m;
+            var validInvoiceItems = allInvoiceItems
+                .Where(item => dbContext.Entry(item).State != EntityState.Deleted)
+                .ToArray();
+            if (validInvoiceItems.Length == 0)
+                return 0m;
+            return validInvoiceItems
+                .Sum(c => Math.Round(c.Amount * c.ExchangeRate, 2, MidpointRounding.AwayFromZero));
+        }
+
+        #endregion 金额计算方法
     }
 
     /// <summary>

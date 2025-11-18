@@ -126,7 +126,7 @@ namespace PowerLmsServer.Triggers
 
         /// <summary>
         /// 在 DocFeeRequisitionItem 添加/更改/删除时，更新相关费用的合计金额。
-        /// 修复说明：先物化查询再在内存中过滤掉Deleted状态的实体，避免将即将删除的明细包含在金额计算中。
+        /// 重构说明：使用 DocFee 类中的静态计算方法，避免重复计算逻辑，提高代码可维护性。
         /// </summary>
         /// <param name="entities">当前实体条目集合。</param>
         /// <param name="service">服务提供者。</param>
@@ -134,7 +134,11 @@ namespace PowerLmsServer.Triggers
         public void Saving(IEnumerable<EntityEntry> entities, IServiceProvider service, Dictionary<object, object> states)
         {
             var dbContext = entities.First().Context;
-            var feeIds = new HashSet<Guid>(entities.Select(c => c.Entity).OfType<DocFeeRequisitionItem>().Where(c => c.FeeId.HasValue).Select(c => c.FeeId.Value));
+            var feeIds = new HashSet<Guid>(entities
+                .Select(c => c.Entity)
+                .OfType<DocFeeRequisitionItem>()
+                .Where(c => c.FeeId.HasValue)
+                .Select(c => c.FeeId.Value));
             foreach (var id in feeIds)
             {
                 if (dbContext.Set<DocFee>().Find(id) is DocFee fee)
@@ -143,17 +147,8 @@ namespace PowerLmsServer.Triggers
                     {
                         continue;
                     }
-                    
-                    // 修复：先物化查询（执行SQL并加载到内存）
-                    var allItems = fee.GetRequisitionItems(dbContext).ToArray();
-                    
-                    // 然后在内存中过滤掉标记为Deleted的实体
-                    // 这样在删除明细时，TotalRequestedAmount会正确减少
-                    var rItems = allItems.Where(item => dbContext.Entry(item).State != EntityState.Deleted).ToArray();
-                    
-                    fee.TotalSettledAmount = rItems.Sum(c => c.TotalSettledAmount);
-                    fee.TotalRequestedAmount = rItems.Sum(c => c.Amount);
-                    
+                    fee.TotalRequestedAmount = DocFee.CalculateTotalRequestedAmount(id, dbContext);
+                    fee.TotalSettledAmount = DocFee.CalculateTotalSettledAmount(id, dbContext);
                     _Logger.LogDebug("更新费用ID:{FeeId}的TotalRequestedAmount={TotalRequested}, TotalSettledAmount={TotalSettled}", 
                         id, fee.TotalRequestedAmount, fee.TotalSettledAmount);
                 }

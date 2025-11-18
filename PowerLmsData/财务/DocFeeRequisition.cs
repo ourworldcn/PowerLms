@@ -191,72 +191,14 @@ namespace PowerLms.Data
         [Comment("已经结算的金额。计算属性。")]
         [Precision(18, 2)]
         public decimal TotalSettledAmount { get; set; }
-        ///// <summary>
-        ///// 费用所属工作号。从源费用或工作号带出显示在明细列表
-        ///// </summary>
-        //[MaxLength(64)]
-        //[Comment("费用所属工作号。从源费用或工作号带出显示在明细列表")]
-        //public string JobNo { get; set; }
 
-        ///// <summary>
-        ///// 操作员Id,从源费用或工作号带出显示在明细列表
-        ///// </summary>
-        //[Comment("操作员Id,从源费用或工作号带出显示在明细列表")]
-        //public Guid? OpertorId { get; set; }
-
-        ///// <summary>
-        ///// 业务员Id,从源费用或工作号带出显示在明细列表
-        ///// </summary>
-        //[Comment("业务员Id,从源费用或工作号带出显示在明细列表")]
-        //public Guid? SalesId { get; set; }
-
-        ///// <summary>
-        ///// 费用种类Id，从源费用或工作号带出显示在明细列表
-        ///// </summary>
-        //[Comment("费用种类Id，从源费用或工作号带出显示在明细列表")]
-        //public Guid? FeeTypeId { get; set; }
-
-        ///// <summary>
-        ///// 单价,从源费用或工作号带出显示在明细列表。
-        ///// </summary>
-        //[Comment("单价,从源费用或工作号带出显示在明细列表")]
-        //[Precision(18, 4)]
-        //public decimal Price { get; set; }
-
-        ///// <summary>
-        ///// 数量,从源费用或工作号带出显示在明细列表。
-        ///// </summary>
-        //[Comment("数量,从源费用或工作号带出显示在明细列表")]
-        //[Precision(18, 4)]
-        //public decimal Count { get; set; }
-
-        ///// <summary>
-        ///// 币种。标准货币缩写。从源费用或工作号带出显示在明细列表
-        ///// </summary>
-        //[MaxLength(4), Unicode(false)]
-        //[Comment("币种。标准货币缩写。从源费用或工作号带出显示在明细列表")]
-        //public string Currency { get; set; }
-
-        ///// <summary>
-        ///// 主单号.从源费用或工作号带出显示在明细列表
-        ///// </summary>
-        //[Comment("主单号,从源费用或工作号带出显示在明细列表")]
-        //[MaxLength(128)]
-        //public string MblNo { get; set; }
-
-        ///// <summary>
-        ///// 分单号字符串，/分隔多个分单号.从源费用或工作号带出显示在明细列表
-        ///// </summary>
-        //[Comment("分单号字符串，/分隔多个分单号,从源费用或工作号带出显示在明细列表")]
-        //public string HblNoString { get; set; }
-
-        ///// <summary>
-        ///// 运输工具号，空运显示为航班号，海运显示为船名、陆运显示为卡车号.
-        ///// </summary>
-        //[Comment("运输工具号，空运显示为航班号，海运显示为船名、陆运显示为卡车号")]
-        //[MaxLength(64)]
-        //public string CarrierNo { get; set; }
-
+        /// <summary>
+        /// 行版本号。用于开放式并发控制，防止并发更新时的数据覆盖问题。
+        /// EF Core 会在更新时自动检查此字段，如果值不匹配则抛出 DbUpdateConcurrencyException。
+        /// </summary>
+        [Timestamp]
+        [Comment("行版本号，用于开放式并发控制")]
+        public byte[] RowVersion { get; set; }
     }
 
     public static class DocFeeRequisitionExtensions

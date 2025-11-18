@@ -263,6 +263,10 @@ namespace PowerLmsServer.Triggers
     /// - 实时更新，保证申请单与结算单数据的一致性
     /// - 级联计算，确保主从表数据同步
     /// - 异常处理，计算失败不影响主要业务流程
+    /// 
+    /// 重构说明：
+    /// - 使用 PlInvoicesItem.CalculateTotalSettledAmountForRequisitionItem 统一计算方法
+    /// - 消除重复代码，提高可维护性
     /// </summary>
     [OwAutoInjection(ServiceLifetime.Scoped, ServiceType = typeof(IDbContextSaving<PlInvoicesItem>))]
     public class DocFeeRequisitionTotalSettledAmountTriggerHandler : IDbContextSaving<PlInvoicesItem>
@@ -272,7 +276,7 @@ namespace PowerLmsServer.Triggers
         /// 
         /// 处理流程：
         /// 1. 从变化的结算单明细中提取关联的申请单明细ID
-        /// 2. 重新计算这些申请单明细的已结算金额总和
+        /// 2. 使用统一计算方法重新计算这些申请单明细的已结算金额总和
         /// 3. 级联更新对应申请单主表的已结算金额合计
         /// 4. 排除已删除的记录，确保计算准确性
         /// 
@@ -292,44 +296,30 @@ namespace PowerLmsServer.Triggers
         public void Saving(IEnumerable<EntityEntry> entity, IServiceProvider serviceProvider, Dictionary<object, object> states)
         {
             var db = entity.First().Context;
-            
-            // 收集关联申请单明细的ID
             var requisitionItemIds = new HashSet<Guid>(
                 entity.Select(c => c.Entity).OfType<PlInvoicesItem>().Where(c => c.RequisitionItemId.HasValue).Select(c => c.RequisitionItemId.Value));
             var requisitionIds = new HashSet<Guid>();
-            
-            // 更新申请单明细的已结算金额
             foreach (var id in requisitionItemIds)
             {
                 if (db.Set<DocFeeRequisitionItem>().Find(id) is DocFeeRequisitionItem reqItem)
                 {
-                    // 跳过已删除的申请单明细
                     if(db.Entry(reqItem).State == EntityState.Deleted)
                     {
                         continue;
                     }
-                    
-                    // 重新计算该明细项的已结算金额总和
-                    reqItem.TotalSettledAmount = reqItem.GetInvoicesItems(db).AsEnumerable().Sum(c => c.GetDAmount());
-                    
-                    // 收集需要更新的申请单主表ID
+                    reqItem.TotalSettledAmount = PlInvoicesItem.CalculateTotalSettledAmountForRequisitionItem(id, db);
                     if (reqItem.ParentId is Guid parentId)
                         requisitionIds.Add(parentId);
                 }
             }
-
-            // 级联更新申请单主表的已结算金额合计
             foreach (var id in requisitionIds)
             {
                 if (db.Set<DocFeeRequisition>().Find(id) is DocFeeRequisition req)
                 {
-                    // 跳过已删除的申请单
                     if (db.Entry(req).State == EntityState.Deleted)
                     {
                         continue;
                     }
-                    
-                    // 重新计算申请单的已结算金额合计
                     req.TotalSettledAmount = req.GetChildren(db).AsEnumerable().Sum(c => c.TotalSettledAmount);
                 }
             }

@@ -533,9 +533,9 @@ namespace PowerLmsWebApi.Controllers
             //if (!_AuthorizationManager.Demand(out var err, "D0.1.5.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new RemovePlTidanReturnDto();
             var id = model.Id;
-            var dbSet = _DbContext.PlCustomerTaxInfos;
+            var dbSet = _DbContext.PlCustomerTidans; // ✅ 修复：使用正确的表
             var item = dbSet.Find(id);
-            if (item is null) return BadRequest();
+            if (item is null) return NotFound(); // ✅ 修复：返回NotFound而不是BadRequest
             _EntityManager.Remove(item);
             _DbContext.SaveChanges();
             return result;
@@ -715,9 +715,9 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemovePlLoadingAddrReturnDto();
             var id = model.Id;
-            var dbSet = _DbContext.PlCustomerTaxInfos;
+            var dbSet = _DbContext.PlCustomerLoadingAddrs; // ✅ 修复：使用正确的表
             var item = dbSet.Find(id);
-            if (item is null) return BadRequest();
+            if (item is null) return NotFound(); // ✅ 修复：返回NotFound而不是BadRequest
             _EntityManager.Remove(item);
             _DbContext.SaveChanges();
             return result;

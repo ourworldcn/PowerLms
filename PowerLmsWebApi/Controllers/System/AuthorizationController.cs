@@ -129,19 +129,27 @@ namespace PowerLmsWebApi.Controllers
             var oldRole = _DbContext.PlRoles.Find(model.PlRole.Id);
             var oldOrgId = oldRole?.OrgId;
 
+            // 获取受影响的用户ID列表
+            var affectedUserIds = _DbContext.PlAccountRoles
+                .Where(c => c.RoleId == model.PlRole.Id)
+                .Select(c => c.UserId)
+                .ToList();
+
             if (!_EntityManager.Modify(new[] { model.PlRole })) return NotFound();
             var newRole = _DbContext.PlRoles.Find(model.PlRole.Id);
             newRole.OrgId = newOrgId;
 
             _DbContext.SaveChanges();
 
-            // 更新以适应新的缓存管理接口
+            // 级联失效所有相关缓存
+            // 1. 失效组织缓存
             if (oldOrgId.HasValue)
             {
                 var oldMerchId = _OrgManager.GetMerchantIdByOrgId(oldOrgId.Value);
                 if (oldMerchId.HasValue)
                 {
                     _OrgManager.InvalidateOrgCaches(oldMerchId.Value);
+                    _RoleManager.InvalidateRoleCache(oldMerchId.Value);
                 }
             }
 
@@ -151,7 +159,22 @@ namespace PowerLmsWebApi.Controllers
                 if (newMerchId.HasValue)
                 {
                     _OrgManager.InvalidateOrgCaches(newMerchId.Value);
+                    _RoleManager.InvalidateRoleCache(newMerchId.Value);
                 }
+            }
+
+            // 2. 失效受影响用户的角色和权限缓存
+            if (affectedUserIds.Any())
+            {
+                foreach (var userId in affectedUserIds)
+                {
+                    _RoleManager.InvalidateUserRolesCache(userId);
+                    _PermissionManager.InvalidateUserPermissionsCache(userId);
+                }
+
+                // ✅ 只保留成功总结日志
+                _Logger.LogInformation("修改角色 {RoleId}，已失效 {Count} 个用户的缓存",
+                    model.PlRole.Id, affectedUserIds.Count);
             }
 
             return result;
@@ -182,13 +205,15 @@ namespace PowerLmsWebApi.Controllers
                 merchantId = _OrgManager.GetMerchantIdByOrgId(item.OrgId.Value);
             }
 
+            List<Guid> affectedUserIds = new List<Guid>();
+
             try
             {
                 // 删除角色-用户关联关系
                 var userRoles = _DbContext.PlAccountRoles.Where(c => c.RoleId == id).ToList();
                 if (userRoles.Any())
                 {
-                    _Logger.LogInformation("删除角色 {roleId} 的 {count} 个用户关联关系", id, userRoles.Count);
+                    affectedUserIds = userRoles.Select(r => r.UserId).Distinct().ToList();
                     _DbContext.PlAccountRoles.RemoveRange(userRoles);
                 }
 
@@ -196,7 +221,6 @@ namespace PowerLmsWebApi.Controllers
                 var rolePermissions = _DbContext.PlRolePermissions.Where(rp => rp.RoleId == id).ToList();
                 if (rolePermissions.Any())
                 {
-                    _Logger.LogInformation("删除角色 {roleId} 的 {count} 个权限关联关系", id, rolePermissions.Count);
                     _DbContext.PlRolePermissions.RemoveRange(rolePermissions);
                 }
 
@@ -204,17 +228,31 @@ namespace PowerLmsWebApi.Controllers
                 _EntityManager.Remove(item);
                 _DbContext.SaveChanges();
 
-                // 更新缓存
+                // 级联失效所有相关缓存
                 if (merchantId.HasValue)
                 {
                     _OrgManager.InvalidateOrgCaches(merchantId.Value);
+                    _RoleManager.InvalidateRoleCache(merchantId.Value);
                 }
 
-                _Logger.LogInformation("成功删除角色: {roleName}(ID:{roleId})", item.Name_Name, id);
+                // 失效受影响用户的角色和权限缓存
+                if (affectedUserIds.Any())
+                {
+                    foreach (var userId in affectedUserIds)
+                    {
+                        _RoleManager.InvalidateUserRolesCache(userId);
+                        _PermissionManager.InvalidateUserPermissionsCache(userId);
+                    }
+                }
+
+                // ✅ 只保留成功总结日志
+                _Logger.LogInformation("成功删除角色 {roleName} (ID:{roleId})，影响 {userCount} 个用户",
+                    item.Name_Name, id, affectedUserIds.Count);
             }
             catch (Exception ex)
             {
-                _Logger.LogError(ex, "删除角色 {roleId} 及其关联关系时发生错误", id);
+                // ✅ 只保留异常日志
+                _Logger.LogError(ex, "删除角色 {roleId} 时发生错误", id);
                 result.HasError = true;
                 result.DebugMessage = $"删除角色失败: {ex.Message}";
                 return result;
@@ -401,8 +439,9 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.PlAccountRoles.Add(model.AccountRole);
             _DbContext.SaveChanges();
 
-            // 更新以适应新的缓存管理接口
-            _RoleManager.InvalidateUserRolesCache(model.AccountRole.UserId);
+            // ✅ 清理：移除重复调用
+            _RoleManager.InvalidateUserRolesCache(model.AccountRole.UserId);             // 失效角色缓存
+            _PermissionManager.InvalidateUserPermissionsCache(model.AccountRole.UserId); // 失效权限缓存
 
             return result;
         }
@@ -427,8 +466,9 @@ namespace PowerLmsWebApi.Controllers
             _EntityManager.Remove(item);
             _DbContext.SaveChanges();
 
-            // 更新以适应新的缓存管理接口
-            _RoleManager.InvalidateUserRolesCache(model.UserId);
+            // ✅ 清理：移除重复调用
+            _RoleManager.InvalidateUserRolesCache(model.UserId);             // 失效角色缓存
+            _PermissionManager.InvalidateUserPermissionsCache(model.UserId); // 失效权限缓存
 
             return result;
         }
@@ -485,10 +525,11 @@ namespace PowerLmsWebApi.Controllers
 
             var userIds = _DbContext.PlAccountRoles.Where(c => model.RolePermission.RoleId == c.RoleId).Select(c => c.UserId).ToArray();
 
-            // 更新以适应新的缓存管理接口
+            // ✅ 清理：移除重复调用
             foreach (var userId in userIds)
             {
-                _RoleManager.InvalidateUserRolesCache(userId);
+                _RoleManager.InvalidateUserRolesCache(userId);             // 失效角色缓存
+                _PermissionManager.InvalidateUserPermissionsCache(userId); // 失效权限缓存
             }
 
             return result;
@@ -542,7 +583,8 @@ namespace PowerLmsWebApi.Controllers
             var ids = new HashSet<Guid>(model.UserIds);
             if (ids.Count != model.UserIds.Count) return BadRequest($"{nameof(model.UserIds)}中有重复键值。");
 
-            var count = _DbContext.PlRoles.Count(c => ids.Contains(c.Id));
+            // ✅ 修复：检查用户ID应该查询Accounts表，而不是PlRoles表
+            var count = _DbContext.Accounts.Count(c => ids.Contains(c.Id));
             if (count != ids.Count) return BadRequest($"{nameof(model.UserIds)}中至少有一个用户Id不存在。");
 
             var removes = _DbContext.PlAccountRoles.Where(c => c.RoleId == model.RoleId && !ids.Contains(c.UserId));
@@ -552,10 +594,11 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.PlAccountRoles.AddRange(adds.Select(c => new AccountRole { RoleId = model.RoleId, UserId = c }));
             _DbContext.SaveChanges();
 
-            // 更新以适应新的缓存管理接口
+            // ✅ 清理：移除重复调用
             foreach (var userId in model.UserIds)
             {
-                _PermissionManager.InvalidateUserPermissionsCache(userId);
+                _RoleManager.InvalidateUserRolesCache(userId); //失效角色缓存
+                _PermissionManager.InvalidateUserPermissionsCache(userId); //失效权限缓存
             }
 
             return result;
@@ -588,11 +631,16 @@ namespace PowerLmsWebApi.Controllers
 
             var userIds = _DbContext.PlAccountRoles.Where(c => model.RoleId == c.RoleId).Select(c => c.UserId).ToArray();
 
-            // 更新以适应新的缓存管理接口
+            // ✅ 清理：移除重复调用
             foreach (var userId in userIds)
             {
-                _AccountManager.InvalidateUserCache(userId);
+                _AccountManager.InvalidateUserCache(userId);              // 失效用户缓存
+                _PermissionManager.InvalidateUserPermissionsCache(userId); // 失效权限缓存
+                _RoleManager.InvalidateUserRolesCache(userId);             // 失效角色缓存
             }
+
+            _Logger.LogInformation("用户 {OperatorId} 修改了角色 {RoleId} 的权限，影响 {Count} 个用户",
+                context.User.Id, model.RoleId, userIds.Length);
 
             return result;
         }

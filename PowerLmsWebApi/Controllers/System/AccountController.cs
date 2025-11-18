@@ -69,7 +69,7 @@ namespace PowerLmsWebApi.Controllers
         /// </summary>
         /// <param name="model"></param>
         /// <param name="conditional">查询的条件。支持 通用查询条件。<br/>
-        /// 特别地支持 IsAdmin("true"=限定超管,"false"=限定非超管) IsMerchantAdmin（"true"=限定商户管,"false"=限定非商户管）；
+        /// 特别地支持 IsAdmin("true"=限定超管,"false"=限定非超管) IsMerchantAdmin（"true"=限定商户管,"false"=限定非商户管）;
         /// OrgId 指定其所属的组织机构Id(明确直属的组织机构Id)。<br/>
         /// 普通用户（非超管也非商管）最多只能看到当前登录的同一个公司及其下属机构/公司内的所有用户</param>
         /// <returns></returns>
@@ -86,106 +86,81 @@ namespace PowerLmsWebApi.Controllers
 
             try
             {
-                // 初始查询
-                var coll = _DbContext.Accounts.AsNoTracking();
+                var coll = _DbContext.Accounts.AsNoTracking(); // 初始查询
 
-                // 根据用户角色限制查询范围
-                if (context.User.IsSuperAdmin)
+                if (context.User.IsSuperAdmin) // 根据用户角色限制查询范围
                 {
-                    // 超级管理员可以查看所有用户，不做限制
-                    _Logger.LogDebug("超级管理员查询所有用户");
+                    // 超级管理员可以查看所有用户
                 }
                 else if (_AccountManager.IsMerchantAdmin(context.User))
                 {
-                    // 商户管理员可以查看该商户下的所有用户
                     var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
                     if (!merchantId.HasValue) return Unauthorized("未找到用户所属商户");
 
-                    // ✅ 修复: 获取机构ID集合并添加商户ID本身
                     var orgIds = _OrgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs.Keys.ToList();
-                    orgIds.Add(merchantId.Value); // ✅ 关键修复: 包含商户ID,使商管账户能被查询到
+                    orgIds.Add(merchantId.Value); // 包含商户ID,使商管账户能被查询到
 
-                    // 查找所有与这些组织机构或商户关联的用户ID
-                    var userIds = _DbContext.AccountPlOrganizations
+                    var userIds = _DbContext.AccountPlOrganizations // 查找所有与这些组织机构或商户关联的用户ID
                         .Where(c => orgIds.Contains(c.OrgId))
                         .Select(c => c.UserId)
                         .Distinct()
                         .ToArray();
 
-                    // 添加商户管理员自身（防止遗漏）
-                    if (!userIds.Contains(context.User.Id))
+                    if (!userIds.Contains(context.User.Id)) // 添加商户管理员自身（防止遗漏）
                     {
                         userIds = userIds.Append(context.User.Id).ToArray();
                     }
 
                     coll = coll.Where(c => userIds.Contains(c.Id));
-                    _Logger.LogDebug("商户管理员查询用户: 找到 {count} 个用户关联到商户 {merchantId}",
-                        userIds.Length, merchantId);
                 }
                 else
                 {
-                    // 普通用户只能查看当前登录公司及其子机构内的用户
-                    // 获取当前用户登录的公司
-                    var currentCompany = _OrgManager.GetCurrentCompanyByUser(context.User);
+                    var currentCompany = _OrgManager.GetCurrentCompanyByUser(context.User); // 获取当前用户登录的公司
                     if (currentCompany == null)
                     {
-                        // 如果用户未登录到任何公司，返回空结果
-                        _Logger.LogDebug("普通用户未登录到任何公司，返回空结果");
-                        result.Result = new List<Account>();
+                        result.Result = new List<Account>(); // 如果用户未登录到任何公司，返回空结果
                         return result;
                     }
 
-                    // 获取当前公司及所有子机构的ID
-                    var companyAndChildrenOrgs = OwHelper.GetAllSubItemsOfTree(currentCompany, c => c.Children)
+                    var companyAndChildrenOrgs = OwHelper.GetAllSubItemsOfTree(currentCompany, c => c.Children) // 获取当前公司及所有子机构的ID
                         .Select(c => c.Id)
                         .ToArray();
 
-                    // 查找这些组织机构下的所有用户ID
-                    var userIds = _DbContext.AccountPlOrganizations
+                    var userIds = _DbContext.AccountPlOrganizations // 查找这些组织机构下的所有用户ID
                         .Where(c => companyAndChildrenOrgs.Contains(c.OrgId))
                         .Select(c => c.UserId)
                         .Distinct()
                         .ToArray();
 
-                    // 添加当前用户自身（防止遗漏）
-                    if (!userIds.Contains(context.User.Id))
+                    if (!userIds.Contains(context.User.Id)) // 添加当前用户自身（防止遗漏）
                     {
                         userIds = userIds.Append(context.User.Id).ToArray();
                     }
 
                     coll = coll.Where(c => userIds.Contains(c.Id));
-                    _Logger.LogDebug("普通用户查询: 当前公司 {companyName}(ID:{companyId}) 下找到 {count} 个用户",
-                        currentCompany.Name_DisplayName, currentCompany.Id, userIds.Length);
                 }
 
-                // 处理条件查询
-                if (conditional != null && conditional.Count > 0)
+                if (conditional != null && conditional.Count > 0) // 处理条件查询
                 {
-                    // 需要特殊处理的条件键名
-                    var specialKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                    var specialKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase) // 需要特殊处理的条件键名
                     {
-                        "OrgId", "IsAdmin", "IsMerchantAdmin",
-                        "Token",    //在查询账号实体时，Token不能参与过滤
+                        "OrgId", "IsAdmin", "IsMerchantAdmin", "Token",
                     };
 
-                    // 提取需要特殊处理的条件
-                    var specialConditions = conditional
+                    var specialConditions = conditional // 提取需要特殊处理的条件
                         .Where(kvp => specialKeys.Contains(kvp.Key))
                         .ToDictionary(kvp => kvp.Key, kvp => kvp.Value, StringComparer.OrdinalIgnoreCase);
 
-                    // 提取可以用标准方式处理的条件
-                    var standardConditions = conditional
+                    var standardConditions = conditional // 提取可以用标准方式处理的条件
                         .Where(kvp => !specialKeys.Contains(kvp.Key))
                         .ToDictionary(kvp => kvp.Key, kvp => kvp.Value, StringComparer.OrdinalIgnoreCase);
 
-                    // 首先应用标准条件
-                    if (standardConditions.Count > 0)
+                    if (standardConditions.Count > 0) // 首先应用标准条件
                     {
                         coll = EfHelper.GenerateWhereAnd(coll, standardConditions);
                     }
 
-                    // 手动应用特殊条件
-                    foreach (var item in specialConditions)
+                    foreach (var item in specialConditions) // 手动应用特殊条件
                     {
                         if (string.Equals(item.Key, "IsAdmin", StringComparison.OrdinalIgnoreCase))
                         {
@@ -211,11 +186,8 @@ namespace PowerLmsWebApi.Controllers
                     }
                 }
 
-                // 应用排序
-                coll = coll.OrderBy(model.OrderFieldName, model.IsDesc);
-
-                // 获取分页结果
-                var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
+                coll = coll.OrderBy(model.OrderFieldName, model.IsDesc); // 应用排序
+                var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count); // 获取分页结果
                 _Mapper.Map(prb, result);
             }
             catch (Exception ex)
@@ -243,21 +215,16 @@ namespace PowerLmsWebApi.Controllers
         {
             var result = new LoginReturnDto();
 
-            // ✅ 开发环境优化: DEBUG模式下跳过验证码验证
 #if !DEBUG
             if (!_CaptchaManager.Verify(model.CaptchaId, model.Answer, _DbContext))
             {
                 return Conflict("验证码错误或已过期");
             }
-#else
-            _Logger.LogDebug("开发环境: 跳过验证码验证");
 #endif
 
             Account user;
 
 #if DEBUG
-            // ✅ 开发环境优化: DEBUG模式下跳过密码验证,只验证用户名
-            _Logger.LogDebug("开发环境: 跳过密码验证,仅验证用户名");
             switch (model.EvidenceType)
             {
                 case 1:
@@ -274,8 +241,7 @@ namespace PowerLmsWebApi.Controllers
             }
             if (user is null) return BadRequest($"用户名不存在: {model.LoginName}");
 #else
-            // ✅ 生产环境: 完整的用户名和密码验证
-            var pwdHash = Account.GetPwdHash(model.Pwd);
+            var pwdHash = Account.GetPwdHash(model.Pwd); // 生产环境: 完整的用户名和密码验证
             switch (model.EvidenceType)
             {
                 case 1:
@@ -294,29 +260,20 @@ namespace PowerLmsWebApi.Controllers
             if (!user.IsPwd(model.Pwd)) return BadRequest("用户名或密码不正确。");
 #endif
 
-            //用Id加载或获取用户对象(只读缓存)
-            user = _AccountManager.GetOrLoadById(user.Id);
+            user = _AccountManager.GetOrLoadById(user.Id); // 用Id加载或获取用户对象(只读缓存)
             if (user is null)
-                return BadRequest("用户数据结构损坏。");
+                return BadRequest("用户数据结构损害。");
 
             result.Token = Guid.NewGuid();
             _AccountManager.UpdateToken(user.Id, result.Token);
 
-            // ❌ 移除: 不能修改缓存中的只读用户对象
-            // user.CurrentLanguageTag = model.LanguageTag;
-
-            //设置直属组织机构信息。
-            var orgIds = _DbContext.AccountPlOrganizations.Where(c => c.UserId == user.Id).Select(c => c.OrgId);
+            var orgIds = _DbContext.AccountPlOrganizations.Where(c => c.UserId == user.Id).Select(c => c.OrgId); // 设置直属组织机构信息
             result.Orgs.AddRange(_DbContext.PlOrganizations.Where(c => orgIds.Contains(c.Id)));
             result.User = user;
 
-            if (_OrgManager.GetMerchantIdByUserId(user.Id) is Guid merchId) //若找到商户Id
+            if (_OrgManager.GetMerchantIdByUserId(user.Id) is Guid merchId) // 若找到商户Id
             {
                 result.MerchantId = merchId;
-
-                // ❌ 移除: 不能修改缓存中的只读用户对象
-                // if (result.User.IsMerchantAdmin)
-                //     result.User.OrgId ??= merchId;
             }
 
             if (_AccountManager.GetOrLoadContextByToken(result.Token, _ServiceProvider) is OwContext context)
@@ -603,7 +560,7 @@ namespace PowerLmsWebApi.Controllers
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">权限不足或不能删除自己。</response>  
         /// <response code="401">无效令牌。</response>  
-        /// <response code="403">权限不足，商管只能删除同商户的商管。</response>  
+        /// <response code="403">权限不足，商管只能删除同商戶的商管。</response>  
         /// <response code="404">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
         [HttpDelete]
         public ActionResult<RemoveAccountReturnDto> RemoveAccount(RemoveAccountParamsDto model)
@@ -913,10 +870,10 @@ namespace PowerLmsWebApi.Controllers
 
             _DbContext.SaveChanges();
 
-            // 取消相关缓存
+            // ✅ 级联失效所有相关缓存
+            // 1. 失效商户的组织缓存
             if (cacheKey != null)
             {
-                // ✅ 使用新API: 获取取消令牌源并取消
                 var cts = _Cache.GetCancellationTokenSource(cacheKey);
                 if (cts != null && !cts.IsCancellationRequested)
                 {
@@ -928,11 +885,10 @@ namespace PowerLmsWebApi.Controllers
                 }
             }
 
-            // 如果有修改过用户与商户的关联，也应该清除用户相关的缓存
+            // 2. 失效用户的当前组织缓存
             if (merchantIds.Length > 0)
             {
                 var currentOrgsCacheKey = OwCacheExtensions.GetCacheKeyFromId(model.UserId, ".CurrentOrgs");
-                // ✅ 使用新API: 获取取消令牌源并取消
                 var currentOrgsCts = _Cache.GetCancellationTokenSource(currentOrgsCacheKey);
                 if (currentOrgsCts != null && !currentOrgsCts.IsCancellationRequested)
                 {
@@ -942,6 +898,21 @@ namespace PowerLmsWebApi.Controllers
                     }
                     catch { /* 忽略可能的异常 */ }
                 }
+            }
+
+            // ✅ 3. 关键修复：失效用户的角色和权限缓存
+            // 用户所属机构变化会影响角色范围和权限范围
+            try
+            {
+                _RoleManager.InvalidateUserRolesCache(model.UserId);             // ✅ 失效角色缓存
+                _PermissionManager.InvalidateUserPermissionsCache(model.UserId); // ✅ 失效权限缓存
+                _AccountManager.InvalidateUserCache(model.UserId);               // 失效用户缓存
+
+                _Logger.LogInformation("用户 {UserId} 的机构关系已更新，已失效角色和权限缓存", model.UserId);
+            }
+            catch (Exception ex)
+            {
+                _Logger.LogWarning(ex, "失效用户 {UserId} 的缓存时发生警告", model.UserId);
             }
 
             return result;
@@ -969,18 +940,16 @@ namespace PowerLmsWebApi.Controllers
 
             if (!context.User.IsAdmin())
             {
-                // 只有超管或商管可以设置用户角色
                 return StatusCode((int)HttpStatusCode.Forbidden, "只有超管或商管可以设置用户角色");
             }
+            
             try
             {
-                // 验证角色ID参数
-                var ids = new HashSet<Guid>(model.RoleIds);
+                var ids = new HashSet<Guid>(model.RoleIds); // 验证角色ID参数
                 if (ids.Count != model.RoleIds.Count)
                     return BadRequest($"{nameof(model.RoleIds)}中有重复键值。");
 
-                // 验证角色是否存在
-                var existingRoleIds = _DbContext.PlRoles
+                var existingRoleIds = _DbContext.PlRoles // 验证角色是否存在
                     .Where(c => ids.Contains(c.Id))
                     .Select(c => c.Id)
                     .ToHashSet();
@@ -988,28 +957,22 @@ namespace PowerLmsWebApi.Controllers
                 if (existingRoleIds.Count != ids.Count)
                     return BadRequest($"{nameof(model.RoleIds)}中至少有一个组织角色不存在。");
 
-                // 验证用户是否存在
-                var account = _AccountManager.GetOrLoadById(model.UserId);
+                var account = _AccountManager.GetOrLoadById(model.UserId); // 验证用户是否存在
                 if (account == null)
                     return BadRequest($"{nameof(model.UserId)}指定用户不存在。");
 
-                // 超管权限验证
-                if (!context.User.IsSuperAdmin)
+                if (!context.User.IsSuperAdmin) // 超管权限验证
                 {
-                    // 获取当前用户所属商户
-                    var operatorMerchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
+                    var operatorMerchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id); // 获取当前用户所属商户
                     if (!operatorMerchantId.HasValue) return Unauthorized("未找到用户所属商户");
 
-                    // 检查目标用户所属商户
-                    var targetUserMerchantId = _OrgManager.GetMerchantIdByUserId(model.UserId);
+                    var targetUserMerchantId = _OrgManager.GetMerchantIdByUserId(model.UserId); // 检查目标用户所属商户
                     if (!targetUserMerchantId.HasValue) return Unauthorized("未找到目标用户所属商户");
 
-                    // 非同一商户用户无权操作
-                    if (operatorMerchantId.Value != targetUserMerchantId.Value)
+                    if (operatorMerchantId.Value != targetUserMerchantId.Value) // 非同一商户用户无权操作
                         return StatusCode((int)HttpStatusCode.Forbidden, "无权修改其他商户用户的角色");
 
-                    // 验证角色的所属商户
-                    var rolesWithOrg = _DbContext.PlRoles
+                    var rolesWithOrg = _DbContext.PlRoles // 验证角色的所属商户
                         .Where(r => ids.Contains(r.Id) && r.OrgId.HasValue)
                         .Select(r => new { r.Id, r.OrgId })
                         .ToList();
@@ -1019,55 +982,40 @@ namespace PowerLmsWebApi.Controllers
                         var merchantId = _OrgManager.GetMerchantIdByOrgId(role.OrgId.Value);
                         if (!merchantId.HasValue || merchantId.Value != operatorMerchantId.Value)
                         {
-                            _Logger.LogWarning("尝试设置其他商户的角色 {RoleId}", role.Id);
                             return StatusCode((int)HttpStatusCode.Forbidden, "无权设置其他商户的角色");
                         }
                     }
                 }
 
-                // 执行操作部分
-                // 获取指定用户的当前所有角色
-                var currentUserRoles = _DbContext.PlAccountRoles
+                var currentUserRoles = _DbContext.PlAccountRoles // 获取指定用户的当前所有角色
                     .Where(c => c.UserId == model.UserId)
                     .ToList();
 
-                // 获取当前角色ID集合
-                var currentRoleIdSet = currentUserRoles
+                var currentRoleIdSet = currentUserRoles // 获取当前角色ID集合
                     .Select(r => r.RoleId)
                     .AsEnumerable().ToHashSet();
 
-                // 输入参数中的角色ID集合
-                var requestedRoleIdSet = new HashSet<Guid>(model.RoleIds);
+                var requestedRoleIdSet = new HashSet<Guid>(model.RoleIds); // 输入参数中的角色ID集合
 
-                // 计算需要添加的角色ID集合（在请求中存在但当前不存在的角色）
-                var roleIdsToAdd = requestedRoleIdSet
+                var roleIdsToAdd = requestedRoleIdSet // 计算需要添加的角色ID集合（在请求中存在但当前不存在的角色）
                     .Where(id => !currentRoleIdSet.Contains(id))
                     .ToArray();
 
-                // 计算需要删除的角色（在当前存在但请求中不存在的角色）
-                var rolesToDelete = currentUserRoles
+                var rolesToDelete = currentUserRoles // 计算需要删除的角色（在当前存在但请求中不存在的角色）
                     .Where(r => !requestedRoleIdSet.Contains(r.RoleId))
                     .ToArray();
 
-                // 记录要执行的操作
-                _Logger.LogInformation("用户 {UserId} 角色变更: 删除 {RemoveCount}, 添加 {AddCount}",
-                    model.UserId, rolesToDelete.Length, roleIdsToAdd.Length);
-
-                // 如果没有需要变更的角色，直接返回
-                if (roleIdsToAdd.Length == 0 && rolesToDelete.Length == 0)
+                if (roleIdsToAdd.Length == 0 && rolesToDelete.Length == 0) // 如果没有需要变更的角色，直接返回
                 {
-                    _Logger.LogInformation("用户 {UserId} 的角色没有变化，不需要更新", model.UserId);
                     return result;
                 }
 
-                // 执行删除操作
-                if (rolesToDelete.Length > 0)
+                if (rolesToDelete.Length > 0) // 执行删除操作
                 {
                     _DbContext.PlAccountRoles.RemoveRange(rolesToDelete);
                 }
 
-                // 执行添加操作
-                if (roleIdsToAdd.Length > 0)
+                if (roleIdsToAdd.Length > 0) // 执行添加操作
                 {
                     var rolesToAdd = roleIdsToAdd.Select(roleId => new AccountRole
                     {
@@ -1080,13 +1028,17 @@ namespace PowerLmsWebApi.Controllers
                     _DbContext.PlAccountRoles.AddRange(rolesToAdd);
                 }
 
-                // 保存所有更改（一次性提交所有操作）
-                _DbContext.SaveChanges();
+                _DbContext.SaveChanges(); // 保存所有更改（一次性提交所有操作）
 
-                // 清除相关缓存，确保数据一致性
-                _RoleManager.InvalidateUserRolesCache(model.UserId);
+                _RoleManager.InvalidateUserRolesCache(model.UserId); // 清除相关缓存，确保数据一致性
                 _PermissionManager.InvalidateUserPermissionsCache(model.UserId);
                 _AccountManager.InvalidateUserCache(model.UserId);
+
+                if (roleIdsToAdd.Length > 0 || rolesToDelete.Length > 0) // 只保留成功总结日志
+                {
+                    _Logger.LogInformation("用户 {UserId} 角色已更新: 添加 {AddCount} 个, 删除 {RemoveCount} 个",
+                        model.UserId, roleIdsToAdd.Length, rolesToDelete.Length);
+                }
             }
             catch (DbUpdateException ex)
             {

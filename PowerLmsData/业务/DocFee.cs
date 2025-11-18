@@ -147,6 +147,151 @@ namespace PowerLms.Data
         [Comment("已经结算的金额。计算属性。")]
         [Precision(18, 2)]
         public decimal TotalSettledAmount { get; set; }
+
+        /// <summary>
+        /// 行版本号。用于开放式并发控制，防止并发更新时的数据覆盖问题。
+        /// EF Core 会在更新时自动检查此字段，如果值不匹配则抛出 DbUpdateConcurrencyException。
+        /// </summary>
+        [Timestamp]
+        [Comment("行版本号，用于开放式并发控制")]
+        public byte[] RowVersion { get; set; }
+
+        #region 金额计算方法
+
+        /// <summary>
+        /// 计算费用的已申请金额。
+        /// </summary>
+        /// <param name="feeId">费用ID</param>
+        /// <param name="dbContext">数据库上下文</param>
+        /// <returns>已申请金额（2位小数精度）</returns>
+        /// <exception cref="ArgumentNullException">dbContext为空时抛出</exception>
+        /// <remarks>
+        /// 计算公式：sum(申请单明细.Amount)
+        /// 注意事项：
+        /// 1. 正确过滤已删除实体，避免重复计算
+        /// 2. 先物化查询，再内存过滤，确保正确处理事务内删除
+        /// 3. 如果没有申请单明细，返回 0
+        /// </remarks>
+        public static decimal CalculateTotalRequestedAmount(Guid feeId, DbContext dbContext)
+        {
+            if (dbContext == null)
+                throw new ArgumentNullException(nameof(dbContext));
+            var allRequisitionItems = dbContext.Set<DocFeeRequisitionItem>()
+                .Where(c => c.FeeId == feeId)
+                .ToArray();
+            if (allRequisitionItems.Length == 0)
+                return 0m;
+            var validItems = allRequisitionItems
+                .Where(item => dbContext.Entry(item).State != EntityState.Deleted)
+                .ToArray();
+            if (validItems.Length == 0)
+                return 0m;
+            return validItems.Sum(c => c.Amount);
+        }
+
+        /// <summary>
+        /// 计算费用的已结算金额。
+        /// </summary>
+        /// <param name="feeId">费用ID</param>
+        /// <param name="dbContext">数据库上下文</param>
+        /// <returns>已结算金额（2位小数精度）</returns>
+        /// <exception cref="ArgumentNullException">dbContext为空时抛出</exception>
+        /// <remarks>
+        /// 计算公式：sum(申请单明细.TotalSettledAmount)
+        /// 注意事项：
+        /// 1. 正确过滤已删除实体，避免重复计算
+        /// 2. 先物化查询，再内存过滤，确保正确处理事务内删除
+        /// 3. 如果没有申请单明细，返回 0
+        /// 4. TotalSettledAmount 已经是通过 DocFeeRequisitionItem.CalculateTotalSettledAmount 计算的2位小数结果
+        /// </remarks>
+        public static decimal CalculateTotalSettledAmount(Guid feeId, DbContext dbContext)
+        {
+            if (dbContext == null)
+                throw new ArgumentNullException(nameof(dbContext));
+            var allRequisitionItems = dbContext.Set<DocFeeRequisitionItem>()
+                .Where(c => c.FeeId == feeId)
+                .ToArray();
+            if (allRequisitionItems.Length == 0)
+                return 0m;
+            var validItems = allRequisitionItems
+                .Where(item => dbContext.Entry(item).State != EntityState.Deleted)
+                .ToArray();
+            if (validItems.Length == 0)
+                return 0m;
+            return validItems.Sum(c => c.TotalSettledAmount);
+        }
+
+        /// <summary>
+        /// 校验申请单明细是否超额。
+        /// </summary>
+        /// <param name="feeId">费用ID</param>
+        /// <param name="newRequisitionItemAmount">新申请单明细金额（正数或负数）</param>
+        /// <param name="excludeRequisitionItemId">要排除的申请单明细ID（修改场景下排除当前明细的原有金额）</param>
+        /// <param name="dbContext">数据库上下文</param>
+        /// <param name="errorMessage">校验失败时的错误消息</param>
+        /// <returns>true=校验通过，false=超额或不合规</returns>
+        /// <remarks>
+        /// 核心规则：
+        /// 1. 已申请金额总和（按绝对值）不应超过原始费用金额（按绝对值）
+        /// 2. 申请后的总金额不能小于0（防止过度冲红）
+        /// 3. 支持负数金额冲账场景
+        /// 
+        /// 校验公式：
+        /// - 规则1：|当前已申请金额 - 排除明细金额 + 新明细金额| ≤ |费用原始金额|
+        /// - 规则2：(当前已申请金额 - 排除明细金额 + 新明细金额) ≥ 0
+        /// 
+        /// 业务场景：
+        /// 1. 新增申请单明细：excludeRequisitionItemId = null
+        /// 2. 修改申请单明细：excludeRequisitionItemId = 当前明细ID
+        /// 3. 负金额冲账：newRequisitionItemAmount 为负数
+        /// 4. 防止过度冲红：申请后总金额不能为负
+        /// 
+        /// 并发安全：
+        /// - 使用事务内的实时查询，确保数据一致性
+        /// - 过滤已删除实体，避免重复计算
+        /// </remarks>
+        public static bool ValidateRequisitionItemAmount(
+            Guid feeId,
+            decimal newRequisitionItemAmount,
+            Guid? excludeRequisitionItemId,
+            DbContext dbContext,
+            out string errorMessage)
+        {
+            if (dbContext == null)
+                throw new ArgumentNullException(nameof(dbContext));
+            var fee = dbContext.Set<DocFee>().Find(feeId);
+            if (fee == null)
+            {
+                errorMessage = $"未找到费用ID:{feeId}";
+                return false;
+            }
+            var allRequisitionItems = dbContext.Set<DocFeeRequisitionItem>()
+                .Where(c => c.FeeId == feeId)
+                .ToArray();
+            var validItems = allRequisitionItems
+                .Where(item => dbContext.Entry(item).State != EntityState.Deleted)
+                .ToArray();
+            var currentTotalRequested = validItems
+                .Where(c => !excludeRequisitionItemId.HasValue || c.Id != excludeRequisitionItemId.Value)
+                .Sum(c => c.Amount);
+            var newTotalRequested = currentTotalRequested + newRequisitionItemAmount;
+            if (Math.Abs(newTotalRequested) > Math.Abs(fee.Amount))
+            {
+                errorMessage = $"申请金额超额：费用原始金额={fee.Amount:F2}，当前已申请={currentTotalRequested:F2}，" +
+                              $"本次申请={newRequisitionItemAmount:F2}，合计={newTotalRequested:F2}（绝对值超过原始金额绝对值）";
+                return false;
+            }
+            if (newTotalRequested < 0)
+            {
+                errorMessage = $"申请后总金额不能为负：费用原始金额={fee.Amount:F2}，当前已申请={currentTotalRequested:F2}，" +
+                              $"本次申请={newRequisitionItemAmount:F2}，合计={newTotalRequested:F2}（过度冲红导致总金额为负）";
+                return false;
+            }
+            errorMessage = null;
+            return true;
+        }
+
+        #endregion 金额计算方法
     }
 
     public static class DocFeeExtensions
