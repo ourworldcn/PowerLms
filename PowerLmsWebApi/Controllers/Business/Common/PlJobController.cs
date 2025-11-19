@@ -869,6 +869,10 @@ namespace PowerLmsWebApi.Controllers
                     fee.CreateDateTime = OwHelper.WorldNow;    // 设置创建时间
                     fee.AuditDateTime = null;    // 清空审核时间
                     fee.AuditOperatorId = null;    // 清空审核人
+                    
+                    // ✅ 复制工作号时，重置费用的已申请金额和已结算金额为0
+                    fee.TotalRequestedAmount = 0;
+                    fee.TotalSettledAmount = 0;
 
                     _DbContext.Add(fee);
                 }

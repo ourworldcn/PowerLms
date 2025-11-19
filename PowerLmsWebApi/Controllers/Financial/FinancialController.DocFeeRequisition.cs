@@ -682,6 +682,16 @@ namespace PowerLmsWebApi.Controllers
             var req = _DbContext.DocFeeRequisitions.Find(model.DocFeeRequisitionItem.ParentId);
             var parent = _DbContext.DocFeeRequisitions.Find(model.DocFeeRequisitionItem.ParentId);
             if (parent is null) return BadRequest("没有找到 指定的 ParentId 实体");
+            
+            // ✅ 显式回写费用的已申请金额和已结算金额（防止触发器失效）
+            if (entity.FeeId.HasValue && _DbContext.DocFees.Find(entity.FeeId.Value) is DocFee fee)
+            {
+                fee.TotalRequestedAmount = DocFee.CalculateTotalRequestedAmount(entity.FeeId.Value, _DbContext);
+                fee.TotalSettledAmount = DocFee.CalculateTotalSettledAmount(entity.FeeId.Value, _DbContext);
+                _Logger.LogInformation("Create明细后更新费用ID:{FeeId}的TotalRequestedAmount={TotalRequested}, TotalSettledAmount={TotalSettled}",
+                    entity.FeeId.Value, fee.TotalRequestedAmount, fee.TotalSettledAmount);
+            }
+            
             _DbContext.SaveChanges();
             result.Id = model.DocFeeRequisitionItem.Id;
             return result;
@@ -748,10 +758,24 @@ namespace PowerLmsWebApi.Controllers
             var dbSet = _DbContext.DocFeeRequisitionItems;
             var item = dbSet.Find(id);
             if (item is null) return BadRequest();
+            
+            // ✅ 保存FeeId用于后续回写
+            var feeId = item.FeeId;
+            
             _EntityManager.Remove(item);
             //计算合计
             var parent = _DbContext.DocFeeRequisitions.Find(item.ParentId);
             if (parent is null) return BadRequest("没有找到 指定的 ParentId 实体");
+            
+            // ✅ 显式回写费用的已申请金额和已结算金额（防止触发器失效）
+            if (feeId.HasValue && _DbContext.DocFees.Find(feeId.Value) is DocFee fee)
+            {
+                fee.TotalRequestedAmount = DocFee.CalculateTotalRequestedAmount(feeId.Value, _DbContext);
+                fee.TotalSettledAmount = DocFee.CalculateTotalSettledAmount(feeId.Value, _DbContext);
+                _Logger.LogInformation("Delete明细后更新费用ID:{FeeId}的TotalRequestedAmount={TotalRequested}, TotalSettledAmount={TotalSettled}",
+                    feeId.Value, fee.TotalRequestedAmount, fee.TotalSettledAmount);
+            }
+            
             _DbContext.SaveChanges();
             return result;
         }
