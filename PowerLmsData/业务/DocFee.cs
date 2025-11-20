@@ -168,25 +168,22 @@ namespace PowerLms.Data
         /// <remarks>
         /// 计算公式：sum(申请单明细.Amount)
         /// 注意事项：
-        /// 1. 正确过滤已删除实体，避免重复计算
-        /// 2. 先物化查询，再内存过滤，确保正确处理事务内删除
-        /// 3. 如果没有申请单明细，返回 0
+        /// 1. 先加载所有相关数据到本地缓存（确保数据一致性）
+        /// 2. 在内存中过滤和计算（反映事务内的最新状态）
+        /// 3. 正确处理Added/Modified/Deleted状态
+        /// 4. 空集合Sum自动返回0
         /// </remarks>
         public static decimal CalculateTotalRequestedAmount(Guid feeId, DbContext dbContext)
         {
             if (dbContext == null)
                 throw new ArgumentNullException(nameof(dbContext));
-            var allRequisitionItems = dbContext.Set<DocFeeRequisitionItem>()
+            dbContext.Set<DocFeeRequisitionItem>()
                 .Where(c => c.FeeId == feeId)
-                .ToArray();
-            if (allRequisitionItems.Length == 0)
-                return 0m;
-            var validItems = allRequisitionItems
-                .Where(item => dbContext.Entry(item).State != EntityState.Deleted)
-                .ToArray();
-            if (validItems.Length == 0)
-                return 0m;
-            return validItems.Sum(c => c.Amount);
+                .Load();
+            return dbContext.Set<DocFeeRequisitionItem>()
+                .Local
+                .Where(c => c.FeeId == feeId && dbContext.Entry(c).State != EntityState.Deleted)
+                .Sum(c => c.Amount);
         }
 
         /// <summary>
@@ -199,26 +196,23 @@ namespace PowerLms.Data
         /// <remarks>
         /// 计算公式：sum(申请单明细.TotalSettledAmount)
         /// 注意事项：
-        /// 1. 正确过滤已删除实体，避免重复计算
-        /// 2. 先物化查询，再内存过滤，确保正确处理事务内删除
-        /// 3. 如果没有申请单明细，返回 0
-        /// 4. TotalSettledAmount 已经是通过 DocFeeRequisitionItem.CalculateTotalSettledAmount 计算的2位小数结果
+        /// 1. 先加载所有相关数据到本地缓存（确保数据一致性）
+        /// 2. 在内存中过滤和计算（反映事务内的最新状态）
+        /// 3. 正确处理Added/Modified/Deleted状态
+        /// 4. 空集合Sum自动返回0
+        /// 5. TotalSettledAmount 已经是通过 DocFeeRequisitionItem.CalculateTotalSettledAmount 计算的2位小数结果
         /// </remarks>
         public static decimal CalculateTotalSettledAmount(Guid feeId, DbContext dbContext)
         {
             if (dbContext == null)
                 throw new ArgumentNullException(nameof(dbContext));
-            var allRequisitionItems = dbContext.Set<DocFeeRequisitionItem>()
+            dbContext.Set<DocFeeRequisitionItem>()
                 .Where(c => c.FeeId == feeId)
-                .ToArray();
-            if (allRequisitionItems.Length == 0)
-                return 0m;
-            var validItems = allRequisitionItems
-                .Where(item => dbContext.Entry(item).State != EntityState.Deleted)
-                .ToArray();
-            if (validItems.Length == 0)
-                return 0m;
-            return validItems.Sum(c => c.TotalSettledAmount);
+                .Load();
+            return dbContext.Set<DocFeeRequisitionItem>()
+                .Local
+                .Where(c => c.FeeId == feeId && dbContext.Entry(c).State != EntityState.Deleted)
+                .Sum(c => c.TotalSettledAmount);
         }
 
         /// <summary>
@@ -247,8 +241,9 @@ namespace PowerLms.Data
         /// 4. 防止过度冲红：申请后总金额不能为负
         /// 
         /// 并发安全：
-        /// - 使用事务内的实时查询，确保数据一致性
-        /// - 过滤已删除实体，避免重复计算
+        /// - 先加载所有相关数据到本地缓存（确保数据一致性）
+        /// - 在内存中过滤和计算（反映事务内的最新状态）
+        /// - 正确处理Added/Modified/Deleted状态
         /// </remarks>
         public static bool ValidateRequisitionItemAmount(
             Guid feeId,
@@ -265,14 +260,14 @@ namespace PowerLms.Data
                 errorMessage = $"未找到费用ID:{feeId}";
                 return false;
             }
-            var allRequisitionItems = dbContext.Set<DocFeeRequisitionItem>()
+            dbContext.Set<DocFeeRequisitionItem>()
                 .Where(c => c.FeeId == feeId)
-                .ToArray();
-            var validItems = allRequisitionItems
-                .Where(item => dbContext.Entry(item).State != EntityState.Deleted)
-                .ToArray();
-            var currentTotalRequested = validItems
-                .Where(c => !excludeRequisitionItemId.HasValue || c.Id != excludeRequisitionItemId.Value)
+                .Load();
+            var currentTotalRequested = dbContext.Set<DocFeeRequisitionItem>()
+                .Local
+                .Where(c => c.FeeId == feeId &&
+                           dbContext.Entry(c).State != EntityState.Deleted &&
+                           (!excludeRequisitionItemId.HasValue || c.Id != excludeRequisitionItemId.Value))
                 .Sum(c => c.Amount);
             var newTotalRequested = currentTotalRequested + newRequisitionItemAmount;
             if (Math.Abs(newTotalRequested) > Math.Abs(fee.Amount))
@@ -341,5 +336,28 @@ namespace PowerLms.Data
         }
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
