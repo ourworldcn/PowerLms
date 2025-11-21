@@ -125,8 +125,6 @@ namespace PowerLmsWebApi.Controllers
             {
                 _DbContext.Entry(item).Property(c => c.OrgId).IsModified = false;
                 // 禁止修改客户有效性字段，需要使用专门的接口
-                // 先恢复IsValid的原始值，再标记为不修改
-                _DbContext.Entry(item).Property(c => c.IsValid).CurrentValue = _DbContext.Entry(item).Property(c => c.IsValid).OriginalValue;
                 _DbContext.Entry(item).Property(c => c.IsValid).IsModified = false;
             }
             _DbContext.SaveChanges();

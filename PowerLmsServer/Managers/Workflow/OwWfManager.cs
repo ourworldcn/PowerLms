@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 
 namespace PowerLmsServer.Managers
 {
@@ -146,6 +147,123 @@ namespace PowerLmsServer.Managers
             return result;
         }
 
+        #region 缓存加载状态管理
+
+        /// <summary>
+        /// 完整加载指定的工作流实例及其所有子节点和节点项到DbContext缓存。
+        /// </summary>
+        /// <param name="workflowId">工作流实例ID</param>
+        /// <returns>完整加载的工作流实例，如果不存在则返回null</returns>
+        /// <remarks>
+        /// 加载策略：
+        /// - 一级：OwWf（工作流实例）
+        /// - 二级：OwWfNode（工作流节点）
+        /// - 三级：OwWfNodeItem（节点项）
+        /// 加载后所有相关实体都会进入DbContext的本地缓存，后续访问不会触发数据库查询。
+        /// </remarks>
+        public OwWf LoadWorkflowWithAllChildren(Guid workflowId)
+        {
+            var workflow = _DbContext.OwWfs
+                .Include(w => w.Children)
+                    .ThenInclude(n => n.Children)
+                .FirstOrDefault(w => w.Id == workflowId);
+            if (workflow != null)
+            {
+                var entry = _DbContext.Entry(workflow);
+                entry.Collection(w => w.Children).IsLoaded = true;
+                foreach (var node in workflow.Children)
+                {
+                    _DbContext.Entry(node).Collection(n => n.Children).IsLoaded = true;
+                }
+                _SqlAppLogger.LogGeneralInfo($"工作流完整加载：ID={workflowId}, 节点数={workflow.Children.Count}, 总节点项数={workflow.Children.Sum(n => n.Children.Count)}");
+            }
+            return workflow;
+        }
+
+        /// <summary>
+        /// 批量完整加载指定文档ID关联的所有工作流实例及其子节点。
+        /// </summary>
+        /// <param name="docId">业务文档ID</param>
+        /// <returns>完整加载的工作流实例列表</returns>
+        public List<OwWf> LoadWorkflowsByDocId(Guid docId)
+        {
+            var workflows = _DbContext.OwWfs
+                .Where(w => w.DocId == docId)
+                .Include(w => w.Children)
+                    .ThenInclude(n => n.Children)
+                .ToList();
+            foreach (var workflow in workflows)
+            {
+                _DbContext.Entry(workflow).Collection(w => w.Children).IsLoaded = true;
+                foreach (var node in workflow.Children)
+                {
+                    _DbContext.Entry(node).Collection(n => n.Children).IsLoaded = true;
+                }
+            }
+            _SqlAppLogger.LogGeneralInfo($"批量工作流加载：文档ID={docId}, 工作流数={workflows.Count}");
+            return workflows;
+        }
+
+        /// <summary>
+        /// 检查指定工作流实例是否已完整加载到DbContext缓存。
+        /// </summary>
+        /// <param name="workflow">要检查的工作流实例</param>
+        /// <returns>返回加载状态信息</returns>
+        public WorkflowLoadStatus GetWorkflowLoadStatus(OwWf workflow)
+        {
+            if (workflow == null)
+                throw new ArgumentNullException(nameof(workflow));
+            var entry = _DbContext.Entry(workflow);
+            var status = new WorkflowLoadStatus
+            {
+                WorkflowId = workflow.Id,
+                IsWorkflowLoaded = entry.State != EntityState.Detached,
+                IsNodesLoaded = entry.Collection(w => w.Children).IsLoaded,
+                LoadedNodesCount = workflow.Children?.Count ?? 0
+            };
+            if (status.IsNodesLoaded && workflow.Children != null)
+            {
+                status.NodeItemsLoadStatus = workflow.Children.Select(node => new NodeItemLoadStatus
+                {
+                    NodeId = node.Id,
+                    IsLoaded = _DbContext.Entry(node).Collection(n => n.Children).IsLoaded,
+                    ItemsCount = node.Children?.Count ?? 0
+                }).ToList();
+                status.AllNodeItemsLoaded = status.NodeItemsLoadStatus.All(n => n.IsLoaded);
+            }
+            return status;
+        }
+
+        /// <summary>
+        /// 强制标记工作流及其子对象已完整加载（适用于已确认完整加载的场景）。
+        /// </summary>
+        /// <param name="workflow">工作流实例</param>
+        public void MarkWorkflowAsFullyLoaded(OwWf workflow)
+        {
+            if (workflow == null)
+                throw new ArgumentNullException(nameof(workflow));
+            var entry = _DbContext.Entry(workflow);
+            entry.Collection(w => w.Children).IsLoaded = true;
+            if (workflow.Children != null)
+            {
+                foreach (var node in workflow.Children)
+                {
+                    _DbContext.Entry(node).Collection(n => n.Children).IsLoaded = true;
+                }
+            }
+        }
+
+        /// <summary>
+        /// 获取DbContext中所有已加载的工作流实例。
+        /// </summary>
+        /// <returns>本地缓存中的工作流列表</returns>
+        public List<OwWf> GetLocalWorkflows()
+        {
+            return _DbContext.OwWfs.Local.ToList();
+        }
+
+        #endregion 缓存加载状态管理
+
         #region 模板相关
 
         /// <summary>
@@ -203,6 +321,69 @@ namespace PowerLmsServer.Managers
         {
             return node.Children.Any(c => c.OperationKind == 0 & c.OpertorId == opertorId);
         }
+        
         #endregion 模板相关
+    }
+
+    /// <summary>
+    /// 工作流加载状态信息。
+    /// </summary>
+    public class WorkflowLoadStatus
+    {
+        /// <summary>
+        /// 工作流ID。
+        /// </summary>
+        public Guid WorkflowId { get; set; }
+
+        /// <summary>
+        /// 工作流实例是否已加载到DbContext。
+        /// </summary>
+        public bool IsWorkflowLoaded { get; set; }
+
+        /// <summary>
+        /// 工作流的子节点集合是否已加载。
+        /// </summary>
+        public bool IsNodesLoaded { get; set; }
+
+        /// <summary>
+        /// 已加载的节点数量。
+        /// </summary>
+        public int LoadedNodesCount { get; set; }
+
+        /// <summary>
+        /// 所有节点项是否都已加载。
+        /// </summary>
+        public bool AllNodeItemsLoaded { get; set; }
+
+        /// <summary>
+        /// 各节点的节点项加载状态详情。
+        /// </summary>
+        public List<NodeItemLoadStatus> NodeItemsLoadStatus { get; set; }
+
+        /// <summary>
+        /// 是否完整加载（工作流、节点、节点项全部加载）。
+        /// </summary>
+        public bool IsFullyLoaded => IsWorkflowLoaded && IsNodesLoaded && AllNodeItemsLoaded;
+    }
+
+    /// <summary>
+    /// 节点项加载状态信息。
+    /// </summary>
+    public class NodeItemLoadStatus
+    {
+        /// <summary>
+        /// 节点ID。
+        /// </summary>
+        public Guid NodeId { get; set; }
+
+        /// <summary>
+        /// 该节点的子项集合是否已加载。
+        /// </summary>
+        public bool IsLoaded { get; set; }
+
+        /// <summary>
+        /// 已加载的节点项数量。
+        /// </summary>
+        public int ItemsCount { get; set; }
     }
 }

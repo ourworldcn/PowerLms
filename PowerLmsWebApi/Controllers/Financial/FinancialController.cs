@@ -298,7 +298,7 @@ namespace PowerLmsWebApi.Controllers
         /// 获取结算单明细增强接口功能。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">条件使用 [实体名.字段名] (带实体名前缀的需要方括号括住)格式,值格式参见通用格式。
+        /// <param name="conditional">条件使用 [实体名.字段名] (带实体前三个别的需要方括号括住)格式,值格式参见通用格式。
         /// 支持的实体名有：PlJob,DocFeeRequisition,DocFeeRequisitionItem，PlInvoices ,PlInvoicesItem</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
@@ -310,29 +310,29 @@ namespace PowerLmsWebApi.Controllers
             //查询 需要返回 申请单 job 费用实体 申请明细的余额（未结算）
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetPlInvoicesItemReturnDto();
-            
+
             // 确保conditional不为null
             conditional = conditional ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            
+
             var dbSet = _DbContext.PlInvoicesItems;
 
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
 
             // 处理PlInvoicesItem的条件（包括没有前缀的直接字段名条件）
             var tmpColl = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            
+
             // 添加带PlInvoicesItem前缀的条件
             foreach (var item in conditional.Where(c => c.Key.StartsWith(nameof(PlInvoicesItem), StringComparison.OrdinalIgnoreCase)))
             {
                 tmpColl[item.Key] = item.Value;
             }
-            
+
             // 添加没有前缀的条件（直接作为PlInvoicesItem的字段）
             foreach (var item in conditional.Where(c => !c.Key.Contains('.')))
             {
                 tmpColl[item.Key] = item.Value;
             }
-            
+
             var collInvoicesItem = EfHelper.GenerateWhereAnd(coll, tmpColl);
 
             tmpColl = new Dictionary<string, string>(conditional.Where(c => c.Key.StartsWith(nameof(PlJob), StringComparison.OrdinalIgnoreCase)),
@@ -494,15 +494,24 @@ namespace PowerLmsWebApi.Controllers
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
-        /// <response code="404">指定Id的业务费用申请单不存在。</response>  
+        /// <response code="404">指定Id的结算单不存在。</response>  
         [HttpPut]
         public ActionResult<SetPlInvoicesItemReturnDto> SetPlInvoicesItem(SetPlInvoicesItemParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new SetPlInvoicesItemReturnDto();
-            if (_DbContext.DocFeeRequisitions.Find(model.FrId) is not DocFeeRequisition fr) return NotFound();
+
+            // ✅ 修复：使用PlInvoices而不是DocFeeRequisition
+            if (_DbContext.PlInvoicess.Find(model.FrId) is not PlInvoices invoice) return NotFound();
+
             var aryIds = model.Items.Select(c => c.Id).ToArray();   //指定的Id
-            var existsIds = _DbContext.PlInvoicesItems.Where(c => c.ParentId == fr.Id).Select(c => c.Id).ToArray();    //已经存在的Id
+
+            // ✅ 修复：查询PlInvoicesItems关联的是结算单，不是申请单
+            var existsIds = _DbContext.PlInvoicesItems
+                .Where(c => c.ParentId == invoice.Id)
+                .Select(c => c.Id)
+                .ToArray();    //已经存在的Id
+
             //更改
             var modifies = model.Items.Where(c => existsIds.Contains(c.Id));
             foreach (var item in modifies)

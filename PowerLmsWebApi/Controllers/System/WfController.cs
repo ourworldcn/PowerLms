@@ -24,6 +24,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NPOI.HSSF.UserModel;
 using PowerLms.Data;
+using PowerLms.Data.OA;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
@@ -241,12 +242,6 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 发送工作流文档的功能。
         /// </summary>
-        /// <param name="model"></param>
-        /// <returns></returns>
-        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
-        /// <response code="400">参数错误。</response>  
-        /// <response code="401">无效令牌。</response>  
-        /// <response code="404">指定模板不存在。</response>  
         [HttpPost]
         public ActionResult<WfSendReturnDto> Send(WfSendParamsDto model)
         {
@@ -269,8 +264,8 @@ namespace PowerLmsWebApi.Controllers
             // 改进模板查询 - 使用FirstOrDefault并添加AsSplitQuery优化
             var template = _DbContext.WfTemplates
                 .Include(c => c.Children).ThenInclude(c => c.Children)
-       .AsSplitQuery() // 避免笛卡尔积
-  .FirstOrDefault(c => c.Id == model.TemplateId);
+                .AsSplitQuery() // 避免笛卡尔积
+                .FirstOrDefault(c => c.Id == model.TemplateId);
             if (template is null)
             {
                 _Logger.LogWarning("工作流模板不存在：TemplateId={TemplateId}", model.TemplateId);
@@ -290,13 +285,11 @@ namespace PowerLmsWebApi.Controllers
             var wf = wfs.FirstOrDefault();
             OwWfNode currentNode = default;   //当前节点
             OwWfTemplateNode ttCurrentNode = default; //当前节点的模板
+            bool isNewWorkflow = false; // 🔥 新增：标记是否为新创建的工作流
+
             if (wf is null)  //若没有流程正在执行
             {
-                // 🔧 增强日志：创建新流程
-                _Logger.LogInformation(
-                 "创建新工作流实例：DocId={DocId}, TemplateId={TemplateId}, User={UserId}",
-                   model.DocId, model.TemplateId, context.User.Id);
-
+                isNewWorkflow = true; // 🔥 标记为新工作流
                 //创建流程及首节点
                 wf = new OwWf()
                 {
@@ -361,6 +354,7 @@ namespace PowerLmsWebApi.Controllers
               wf.Id, wf.State, model.DocId);
                 return BadRequest("文档所处流程已经结束。");
             }
+            
             currentNode ??= wf.Children.OrderBy(c => c.ArrivalDateTime).Last();   //当前节点
             ttCurrentNode = _DbContext.WfTemplateNodes.Find(currentNode.TemplateId);  //当前节点的模板
 
@@ -515,7 +509,32 @@ namespace PowerLmsWebApi.Controllers
                 else
                     return BadRequest($"{nameof(model.Approval)} 参数值非法。");
             }
+            
             _DbContext.SaveChanges();
+
+            // 🔥 新增：根据工作流状态自动同步业务单据状态
+            try
+            {
+                if (isNewWorkflow)
+                {
+                    // 首次创建工作流：Draft → InApproval
+                    SyncDocumentStatusOnWorkflowStart(model.DocId, template.KindCode);
+                }
+                else if (wf.State != 0)
+                {
+                    // 工作流结束：InApproval → ApprovedPendingSettlement 或 Draft
+                    SyncDocumentStatusOnWorkflowComplete(model.DocId, template.KindCode, wf.State);
+                }
+                
+                _DbContext.SaveChanges(); // 保存状态同步更改
+            }
+            catch (Exception ex)
+            {
+                _Logger.LogError(ex, "同步业务单据状态失败，但工作流操作已成功：DocId={DocId}, KindCode={KindCode}",
+                    model.DocId, template.KindCode);
+                // 不抛出异常，避免影响工作流主流程
+            }
+
             result.WfId = wf.Id;
 
             _Logger.LogInformation(
@@ -524,5 +543,151 @@ namespace PowerLmsWebApi.Controllers
 
             return result;
         }
+
+        #region 业务单据状态同步私有方法
+
+        /// <summary>
+        /// 工作流启动时同步业务单据状态（Draft → InApproval）
+        /// </summary>
+        private void SyncDocumentStatusOnWorkflowStart(Guid? docId, string kindCode)
+        {
+            if (!docId.HasValue) return;
+
+            switch (kindCode)
+            {
+                case "OA_expense_reimb": // OA费用报销
+                case "OA_expense_loan":  // OA费用借款
+                case "OA_exchange_income": // OA外汇收入
+                case "OA_exchange_expense": // OA外汇支出
+                    SyncOaExpenseStatusOnStart(docId.Value);
+                    break;
+
+                case "Fee_requisition": // 主营业务费用申请
+                    // 主营业务费用申请单没有独立的Status字段，状态由工作流管理
+                    _Logger.LogDebug("主营业务费用申请单状态由工作流管理，无需同步Status字段");
+                    break;
+
+                default:
+                    _Logger.LogDebug("未知的KindCode: {KindCode}，跳过状态同步", kindCode);
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// 工作流完成时同步业务单据状态（InApproval → ApprovedPendingSettlement 或 Draft）
+        /// </summary>
+        private void SyncDocumentStatusOnWorkflowComplete(Guid? docId, string kindCode, byte wfState)
+        {
+            if (!docId.HasValue) return;
+
+            switch (kindCode)
+            {
+                case "OA_expense_reimb":
+                case "OA_expense_loan":
+                case "OA_exchange_income":
+                case "OA_exchange_expense":
+                    SyncOaExpenseStatusOnComplete(docId.Value, wfState);
+                    break;
+
+                case "Fee_requisition":
+                    _Logger.LogDebug("主营业务费用申请单状态由工作流管理，无需同步Status字段");
+                    break;
+
+                default:
+                    _Logger.LogDebug("未知的KindCode: {KindCode}，跳过状态同步", kindCode);
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// OA申请单工作流启动时的状态同步
+        /// </summary>
+        private void SyncOaExpenseStatusOnStart(Guid requisitionId)
+        {
+            var requisition = _DbContext.OaExpenseRequisitions.Find(requisitionId);
+            if (requisition == null)
+            {
+                _Logger.LogWarning("OA申请单不存在，无法同步状态：RequisitionId={RequisitionId}", requisitionId);
+                return;
+            }
+
+            if (requisition.Status == OaExpenseStatus.Draft)
+            {
+                var oldStatus = requisition.Status;
+                requisition.Status = OaExpenseStatus.InApproval;
+                
+                _Logger.LogInformation(
+                    "✅ 工作流启动，OA申请单状态同步：RequisitionId={RequisitionId}, {OldStatus} → {NewStatus}",
+                    requisitionId, oldStatus, requisition.Status);
+            }
+            else
+            {
+                _Logger.LogWarning(
+                    "⚠️ OA申请单状态异常：预期为Draft(0)，实际为{CurrentStatus}，跳过状态同步",
+                    requisition.Status);
+            }
+        }
+
+        /// <summary>
+        /// OA申请单工作流完成时的状态同步
+        /// </summary>
+        private void SyncOaExpenseStatusOnComplete(Guid requisitionId, byte wfState)
+        {
+            var requisition = _DbContext.OaExpenseRequisitions.Find(requisitionId);
+            if (requisition == null)
+            {
+                _Logger.LogWarning("OA申请单不存在，无法同步状态：RequisitionId={RequisitionId}", requisitionId);
+                return;
+            }
+
+            var oldStatus = requisition.Status;
+
+            switch (wfState)
+            {
+                case 1: // 工作流成功完成
+                    if (requisition.Status == OaExpenseStatus.InApproval)
+                    {
+                        requisition.Status = OaExpenseStatus.ApprovedPendingSettlement;
+                        requisition.AuditDateTime = OwHelper.WorldNow;
+                        // 审批人ID由GetAllOaExpenseRequisitionWithWf自动同步时从工作流中提取
+                        
+                        _Logger.LogInformation(
+                            "✅ 工作流审批通过，OA申请单状态同步：RequisitionId={RequisitionId}, {OldStatus} → {NewStatus}",
+                            requisitionId, oldStatus, requisition.Status);
+                    }
+                    else
+                    {
+                        _Logger.LogWarning(
+                            "⚠️ OA申请单状态异常：工作流已完成但申请单状态为{CurrentStatus}，预期为InApproval(1)",
+                            requisition.Status);
+                    }
+                    break;
+
+                case 2: // 工作流被终止（审批拒绝）
+                    if (requisition.Status == OaExpenseStatus.InApproval)
+                    {
+                        requisition.Status = OaExpenseStatus.Rejected; // 🔥 修改：设置为被拒绝状态而非回退到草稿
+                        requisition.AuditDateTime = null;
+                        requisition.AuditOperatorId = null;
+                        
+                        _Logger.LogInformation(
+                            "✅ 工作流被拒绝，OA申请单状态同步：RequisitionId={RequisitionId}, {OldStatus} → Rejected(32)",
+                            requisitionId, oldStatus);
+                    }
+                    else
+                    {
+                        _Logger.LogWarning(
+                            "⚠️ OA申请单状态异常：工作流被终止但申请单状态为{CurrentStatus}，预期为InApproval(1)",
+                            requisition.Status);
+                    }
+                    break;
+
+                default:
+                    _Logger.LogWarning("未知的工作流状态：WfState={WfState}", wfState);
+                    break;
+            }
+        }
+
+        #endregion 业务单据状态同步私有方法
     }
 }

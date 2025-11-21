@@ -357,28 +357,27 @@ namespace PowerLms.Data
         /// <exception cref="ArgumentNullException">dbContext为空时抛出</exception>
         /// <remarks>
         /// 计算公式：sum(PlInvoicesItem.Amount × PlInvoicesItem.ExchangeRate)，结果四舍五入到2位小数
-        /// 注意事项：
-        /// 1. 正确过滤已删除实体，避免重复计算
-        /// 2. 先物化查询，再内存过滤，确保正确处理事务内删除
-        /// 3. 计算结果四舍五入到2位小数，与 DocFeeRequisitionItem.TotalSettledAmount 字段精度一致
-        /// 4. 如果没有关联的结算单明细，返回 0
-        /// 5. 此方法计算的是多个 PlInvoicesItem 的汇总结果，因此放在 PlInvoicesItem 类中
+        /// 优化说明：
+        /// 1. 先 .Load() 加载所有相关数据到本地缓存
+        /// 2. 从 .Local 中计算，自动包含事务内新增/修改的实体
+        /// 3. 正确过滤已删除实体（EntityState.Deleted）
+        /// 4. 空集合 Sum 自动返回 0
+        /// 5. 计算结果四舍五入到2位小数，与 DocFeeRequisitionItem.TotalSettledAmount 字段精度一致
         /// </remarks>
         public static decimal CalculateTotalSettledAmountForRequisitionItem(Guid requisitionItemId, DbContext dbContext)
         {
-            if (dbContext == null)
-                throw new ArgumentNullException(nameof(dbContext));
-            var allInvoiceItems = dbContext.Set<PlInvoicesItem>()
+            ArgumentNullException.ThrowIfNull(dbContext);
+
+            // 先加载到本地缓存（确保包含数据库和事务内实体）
+            dbContext.Set<PlInvoicesItem>()
                 .Where(c => c.RequisitionItemId == requisitionItemId)
-                .ToArray();
-            if (allInvoiceItems.Length == 0)
-                return 0m;
-            var validInvoiceItems = allInvoiceItems
-                .Where(item => dbContext.Entry(item).State != EntityState.Deleted)
-                .ToArray();
-            if (validInvoiceItems.Length == 0)
-                return 0m;
-            return validInvoiceItems
+                .Load();
+
+            // 从本地缓存中计算，自动过滤已删除实体
+            return dbContext.Set<PlInvoicesItem>()
+                .Local
+                .Where(c => c.RequisitionItemId == requisitionItemId &&
+                           dbContext.Entry(c).State != EntityState.Deleted)
                 .Sum(c => Math.Round(c.Amount * c.ExchangeRate, 2, MidpointRounding.AwayFromZero));
         }
 

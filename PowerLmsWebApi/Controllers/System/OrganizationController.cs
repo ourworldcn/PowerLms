@@ -53,7 +53,7 @@ namespace PowerLmsWebApi.Controllers
         /// 强行指定的Id，可以获取其省略时的子集，但不能获取到更多数据。</param>
         /// <param name="includeChildren">是否包含子机构。废弃，一定要包含子机构。</param>
         /// <returns></returns>
-        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="200">未发生系统级错误。然而可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         /// <response code="403">权限不足。</response>  
         [HttpGet]
@@ -413,8 +413,10 @@ namespace PowerLmsWebApi.Controllers
         /// 删除一个组织机构。该机构必须没有子组织机构。
         /// </summary>
         /// <param name="model"></param>
+        /// <param name="roleManager">角色管理器</param>
+        /// <param name="permissionManager">权限管理器</param>
         /// <returns></returns>
-        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="200">未发生系统级错误。但可能出现应用错误,具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定实体的Id不存在。通常这是Bug.在极端情况下可能是并发问题。</response>  
         /// <response code="401">无效令牌。</response>  
         [HttpDelete]

@@ -579,16 +579,16 @@ namespace PowerLmsWebApi.Controllers.OA
                                     "触发接口=GetAllOaExpenseRequisitionWithWf",
                                     requisition.Id);
                             }
-                            // 工作流被拒绝但申请单还在审批中 → 自动回退到草稿
+                            // 🔥 修改：工作流被拒绝但申请单还在审批中 → 设置为Rejected而非回退到Draft
                             else if (wf.State == 2 && trackedRequisition.Status == OaExpenseStatus.InApproval)
                             {
-                                trackedRequisition.Status = OaExpenseStatus.Draft;
+                                trackedRequisition.Status = OaExpenseStatus.Rejected; // 修改为Rejected(32)
                                 trackedRequisition.AuditDateTime = null;
                                 trackedRequisition.AuditOperatorId = null;
                                 syncedCount++;
                                 _Logger.LogInformation(
                                     "自动同步申请单状态（拒绝）：RequisitionId={RequisitionId}, " +
-                                    "OldStatus=InApproval, NewStatus=Draft, " +
+                                    "OldStatus=InApproval, NewStatus=Rejected(32), " +
                                     "触发接口=GetAllOaExpenseRequisitionWithWf",
                                     requisition.Id);
                             }

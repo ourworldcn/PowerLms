@@ -76,7 +76,12 @@ namespace PowerLms.Data.OA
         /// <summary>
         /// 已导入财务，完全锁定
         /// </summary>
-        ExportedToFinance = 16
+        ExportedToFinance = 16,
+        
+        /// <summary>
+        /// 审批被拒绝。可重新编辑并再次提交审批
+        /// </summary>
+        Rejected = 32
     }
 
     /// <summary>
@@ -494,26 +499,28 @@ namespace PowerLms.Data.OA
 
         /// <summary>
         /// 判断申请单是否可以编辑。基于状态的全面编辑权限控制。
-        /// 只有草稿状态可以完全编辑。
+        /// 草稿状态和被拒绝状态可以完全编辑。
         /// </summary>
         /// <param name="requisition">申请单</param>
         /// <param name="context">数据库上下文（可选）</param>
         /// <returns>可以编辑返回true，否则返回false</returns>
         public static bool CanEdit(this OaExpenseRequisition requisition, DbContext context = null)
         {
-            return requisition.Status == OaExpenseStatus.Draft; // 只有草稿状态可以完全编辑
+            return requisition.Status == OaExpenseStatus.Draft || 
+                   requisition.Status == OaExpenseStatus.Rejected; // 草稿和被拒绝状态可以编辑
         }
 
         /// <summary>
         /// 判断申请单主要字段（金额、汇率、币种）是否可以编辑。
-        /// 进入审批工作流后不能修改总单上的金额与汇率。
+        /// 进入审批工作流后不能修改总单上的金额与汇率，但被拒绝后可以修改。
         /// </summary>
         /// <param name="requisition">申请单</param>
         /// <param name="context">数据库上下文（可选）</param>
         /// <returns>可以编辑主要字段返回true，否则返回false</returns>
         public static bool CanEditMainFields(this OaExpenseRequisition requisition, DbContext context = null)
         {
-            return requisition.Status == OaExpenseStatus.Draft; // 进入审批后不能修改金额汇率等主要字段
+            return requisition.Status == OaExpenseStatus.Draft || 
+                   requisition.Status == OaExpenseStatus.Rejected; // 草稿和被拒绝状态可以修改主要字段
         }
 
         /// <summary>
@@ -568,6 +575,7 @@ namespace PowerLms.Data.OA
                 OaExpenseStatus.SettledPendingConfirm => "待确认",
                 OaExpenseStatus.ConfirmedReadyForExport => "可导入财务",
                 OaExpenseStatus.ExportedToFinance => "已导入财务",
+                OaExpenseStatus.Rejected => "审批被拒绝",
                 _ => "未知状态"
             };
         }
