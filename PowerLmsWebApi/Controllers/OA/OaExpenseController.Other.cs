@@ -195,8 +195,8 @@ namespace PowerLmsWebApi.Controllers.OA
                     return result;
                 }
 
-                // 工作流状态检查：优先使用OwWfManager
-                if (!IsWorkflowCompleted(requisition.Id))
+                // 工作流状态检查：使用OwWfManager
+                if (!_WfManager.IsWorkflowCompleted(requisition.Id))
                 {
                     result.HasError = true;
                     result.ErrorCode = 400;

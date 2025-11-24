@@ -120,12 +120,13 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             if (!_AuthorizationManager.Demand(out string err, "C.1.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ModifyCustomerReturnDto();
-            if (!_EntityManager.Modify(model.Items)) return NotFound();
-            foreach (var item in model.Items)
+            var modifiedEntities = new List<PlCustomer>();
+            if (!_EntityManager.Modify(model.Items, modifiedEntities)) return NotFound();
+            foreach (var item in modifiedEntities)
             {
-                _DbContext.Entry(item).Property(c => c.OrgId).IsModified = false;
-                // 禁止修改客户有效性字段，需要使用专门的接口
-                _DbContext.Entry(item).Property(c => c.IsValid).IsModified = false;
+                var entry = _DbContext.Entry(item);
+                entry.Property(c => c.OrgId).IsModified = false;
+                entry.Property(c => c.IsValid).IsModified = false;
             }
             _DbContext.SaveChanges();
             return result;
@@ -262,7 +263,8 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyCustomerContactReturnDto();
-            if (!_EntityManager.Modify(new[] { model.CustomerContact })) return NotFound();
+            var modifiedEntities = new List<PlCustomerContact>();
+            if (!_EntityManager.Modify(new[] { model.CustomerContact }, modifiedEntities)) return NotFound();
             _DbContext.SaveChanges();
             return result;
         }
@@ -419,7 +421,8 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyPlTaxInfoReturnDto();
-            if (!_EntityManager.Modify(new[] { model.PlTaxInfo })) return NotFound();
+            var modifiedEntities = new List<PlTaxInfo>();
+            if (!_EntityManager.Modify(new[] { model.PlTaxInfo }, modifiedEntities)) return NotFound();
             _DbContext.SaveChanges();
             return result;
         }
@@ -510,7 +513,8 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             //if (!_AuthorizationManager.Demand(out var err, "D0.1.5.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ModifyPlTidanReturnDto();
-            if (!_EntityManager.Modify(new[] { model.PlTidan })) return NotFound();
+            var modifiedEntities = new List<PlTidan>();
+            if (!_EntityManager.Modify(new[] { model.PlTidan }, modifiedEntities)) return NotFound();
             _DbContext.SaveChanges();
             return result;
         }
@@ -694,7 +698,8 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyPlLoadingAddrReturnDto();
-            if (!_EntityManager.Modify(new[] { model.PlLoadingAddr })) return NotFound();
+            var modifiedEntities = new List<PlLoadingAddr>();
+            if (!_EntityManager.Modify(new[] { model.PlLoadingAddr }, modifiedEntities)) return NotFound();
             _DbContext.SaveChanges();
             return result;
         }

@@ -120,12 +120,8 @@ namespace PowerLmsWebApi.Controllers
             #region 权限判定
             if (!_AuthorizationManager.Demand(out string err, "E.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             #endregion 权限判定
-            if (!_EntityManager.Modify(model.Items)) return NotFound();
-            //foreach (var item in model.Items)
-            //{
-            //    item.UpdateBy = context.User.Id;
-            //    item.UpdateDateTime = OwHelper.WorldNow;
-            //}
+            var modifiedEntities = new List<OwWfTemplate>();
+            if (!_EntityManager.Modify(model.Items, modifiedEntities)) return NotFound();
             _DbContext.SaveChanges();
             return result;
         }
@@ -264,12 +260,8 @@ namespace PowerLmsWebApi.Controllers
             var ids = model.Items.Where(c => c.NextId is not null).Select(c => c.NextId);
             var nextNodeCount = _DbContext.WfTemplateNodes.Count(c => ids.Contains(c.Id));
             if (nextNodeCount != ids.Count()) return NotFound();
-            if (!_EntityManager.Modify(model.Items)) return NotFound();
-            //foreach (var item in model.Items)
-            //{
-            //    item.UpdateBy = context.User.Id;
-            //    item.UpdateDateTime = OwHelper.WorldNow;
-            //}
+            var modifiedEntities = new List<OwWfTemplateNode>();
+            if (!_EntityManager.Modify(model.Items, modifiedEntities)) return NotFound();
             _DbContext.SaveChanges();
             return result;
         }
@@ -421,12 +413,8 @@ namespace PowerLmsWebApi.Controllers
             #region 权限判定
             if (!_AuthorizationManager.Demand(out string err, "E.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             #endregion 权限判定
-            if (!_EntityManager.Modify(model.Items)) return NotFound();
-            //foreach (var item in model.Items)
-            //{
-            //    item.UpdateBy = context.User.Id;
-            //    item.UpdateDateTime = OwHelper.WorldNow;
-            //}
+            var modifiedEntities = new List<OwWfTemplateNodeItem>();
+            if (!_EntityManager.Modify(model.Items, modifiedEntities)) return NotFound();
             _DbContext.SaveChanges();
             return result;
         }

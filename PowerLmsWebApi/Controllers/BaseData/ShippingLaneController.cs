@@ -115,8 +115,9 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             if (!_AuthorizationManager.Demand(out string err, "A.1.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ModifyShippingLaneReturnDto();
-            if (!_EntityManager.Modify(model.Items)) return NotFound();
-            foreach (var item in model.Items)
+            var modifiedEntities = new List<ShippingLane>();
+            if (!_EntityManager.Modify(model.Items, modifiedEntities)) return NotFound();
+            foreach (var item in modifiedEntities)
             {
                 item.UpdateBy = context.User.Id;
                 item.UpdateDateTime = OwHelper.WorldNow;

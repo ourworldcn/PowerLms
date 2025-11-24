@@ -11,6 +11,7 @@
  * 作者：zc
  * 创建：2023-12
  * 修改：2025-01-15 展开PlOwnedContact复杂类型为平铺字段
+ * 修改：2025-02-06 添加RowVersion字段支持开放式并发控制
  */
 
 using Microsoft.EntityFrameworkCore;
@@ -445,6 +446,14 @@ namespace PowerLms.Data
         /// <value> true国内，false国外。 </value>
         [Comment("国内外字段")]
         public bool? IsDomestic { get; set; }
+
+        /// <summary>
+        /// 并发控制行版本号。用于检测并发修改冲突。
+        /// SQL Server自动维护此字段，每次更新时自动递增。
+        /// </summary>
+        [Comment("并发控制行版本号")]
+        [Timestamp]
+        public byte[] RowVersion { get; set; }
     }
 
     /// <summary>
@@ -538,6 +547,14 @@ namespace PowerLms.Data
         [Comment("备注。")]
         [MaxLength(256)]
         public string Remark { get; set; }
+
+        /// <summary>
+        /// 并发控制行版本号。用于检测并发修改冲突。
+        /// SQL Server自动维护此字段，每次更新时自动递增。
+        /// </summary>
+        [Comment("并发控制行版本号")]
+        [Timestamp]
+        public byte[] RowVersion { get; set; }
     }
 
     #region 客户子表实体

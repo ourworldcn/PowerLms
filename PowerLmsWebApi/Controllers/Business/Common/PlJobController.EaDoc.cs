@@ -95,8 +95,8 @@ namespace PowerLmsWebApi.Controllers
             var doc = _DbContext.PlEaDocs.Find(model.PlEaDoc.Id);
             if (doc == null) return NotFound("指定Id的空运出口单不存在");
             if (!_AuthorizationManager.Demand(out string err, "D0.1.1.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-
-            if (!_EntityManager.Modify(new[] { model.PlEaDoc })) return NotFound();
+            var modifiedEntities = new List<PlEaDoc>();
+            if (!_EntityManager.Modify(new[] { model.PlEaDoc }, modifiedEntities)) return NotFound();
             _DbContext.SaveChanges();
             return result;
         }
@@ -195,7 +195,8 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyHuochangChuchongReturnDto();
-            if (!_EntityManager.Modify(new[] { model.HuochangChuchong })) return NotFound();
+            var modifiedEntities = new List<HuochangChuchong>();
+            if (!_EntityManager.Modify(new[] { model.HuochangChuchong }, modifiedEntities)) return NotFound();
             _DbContext.SaveChanges();
             return result;
         }

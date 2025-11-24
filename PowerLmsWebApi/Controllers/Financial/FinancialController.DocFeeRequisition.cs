@@ -324,29 +324,19 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
                 return Unauthorized();
-
             var result = new ModifyDocFeeRequisitionReturnDto();
-
-            // 首先获取原始实体并保存需要保留的值
             var originalEntity = _DbContext.DocFeeRequisitions.Find(model.DocFeeRequisition.Id);
             if (originalEntity == null)
                 return NotFound();
-
             var originalMakerId = originalEntity.MakerId;
             var originalMakeDateTime = originalEntity.MakeDateTime;
-
-            // 使用_EntityManager.Modify更新实体
-            if (!_EntityManager.Modify(new[] { model.DocFeeRequisition }))
+            var modifiedEntities = new List<DocFeeRequisition>();
+            if (!_EntityManager.Modify(new[] { model.DocFeeRequisition }, modifiedEntities))
                 return NotFound();
-
-            // 确保旧值的属性不被修改
-            var entry = _DbContext.DocFeeRequisitions.Find(model.DocFeeRequisition.Id);
-
+            var entry = modifiedEntities[0];
             entry.MakerId = originalMakerId;
             entry.MakeDateTime = originalMakeDateTime;
-
             _DbContext.SaveChanges();
-
             return result;
         }
 
@@ -441,7 +431,8 @@ namespace PowerLmsWebApi.Controllers
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
-        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。
+
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">指定Id的业务费用至少有一个不存在。</response>  
         [HttpGet]
@@ -733,8 +724,9 @@ namespace PowerLmsWebApi.Controllers
                     entity.Id, entity.FeeId.Value, entity.Amount, errorMessage);
                 return BadRequest(result);
             }
-            if (!_EntityManager.Modify(new[] { model.DocFeeRequisitionItem })) return NotFound();
-            var entryEntity = _DbContext.Entry(model.DocFeeRequisitionItem);
+            var modifiedEntities = new List<DocFeeRequisitionItem>();
+            if (!_EntityManager.Modify(new[] { model.DocFeeRequisitionItem }, modifiedEntities)) return NotFound();
+            var entryEntity = _DbContext.Entry(modifiedEntities[0]);
             var parent = _DbContext.DocFeeRequisitions.Find(model.DocFeeRequisitionItem.ParentId);
             if (parent is null) return BadRequest("没有找到 指定的 ParentId 实体");
             _DbContext.SaveChanges();

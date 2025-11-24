@@ -237,7 +237,7 @@ namespace PowerLmsWebApi.Controllers.Forum
                     return NotFound();
 
                 // 保护核心属性不被修改
-                foreach (var item in model.Items)
+                foreach (var item in list)  // ✅ 修复：使用已跟踪的实体列表
                 {
                     var entry = _DbContext.Entry(item);
                     entry.Property(p => p.CreatedAt).IsModified = false;

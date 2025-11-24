@@ -616,13 +616,12 @@ namespace PowerLmsWebApi.Controllers
                 }
             }
             #endregion 权限验证
-
             var result = new ModifyDocFeeReturnDto();
-            if (!_EntityManager.Modify(new[] { model.DocFee })) return NotFound();
-            var entity = _DbContext.Entry(model.DocFee);
+            var modifiedEntities = new List<DocFee>();
+            if (!_EntityManager.Modify(new[] { model.DocFee }, modifiedEntities)) return NotFound();
+            var entity = _DbContext.Entry(modifiedEntities[0]);
             entity.Property(c => c.AuditOperatorId).IsModified = false;
             entity.Property(c => c.AuditDateTime).IsModified = false;
-
             _DbContext.SaveChanges();
             return result;
         }

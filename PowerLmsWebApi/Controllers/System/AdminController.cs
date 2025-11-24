@@ -167,12 +167,13 @@ namespace PowerLmsWebApi.Controllers.System
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             if (!_AuthorizationManager.Demand(out string err, "B.6")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ModifyPlPortReturnDto();
-            if (!_EntityManager.ModifyWithMarkDelete(model.Items))
+            var modifiedEntities = new List<PlPort>();
+            if (!_EntityManager.Modify(model.Items, modifiedEntities))
             {
                 var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
                 return errResult;
             }
-            foreach (var item in model.Items)   //避免修改个别属性
+            foreach (var item in modifiedEntities)
             {
                 _DbContext.Entry(item).Property(c => c.IsDelete).IsModified = false;
             }
@@ -313,12 +314,13 @@ namespace PowerLmsWebApi.Controllers.System
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             if (!_AuthorizationManager.Demand(out string err, "B.7")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ModifyPlCargoRouteReturnDto();
-            if (!_EntityManager.ModifyWithMarkDelete(model.Items))
+            var modifiedEntities = new List<PlCargoRoute>();
+            if (!_EntityManager.Modify(model.Items, modifiedEntities))
             {
                 var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
                 return errResult;
             }
-            foreach (var item in model.Items)
+            foreach (var item in modifiedEntities)
             {
                 _DbContext.Entry(item).Property(c => c.IsDelete).IsModified = false;
             }
@@ -648,14 +650,17 @@ namespace PowerLmsWebApi.Controllers.System
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             if (!_AuthorizationManager.Demand(out string err, "B.8")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ModifyFeesTypeReturnDto();
-            if (!_EntityManager.ModifyWithMarkDelete(model.Items))
+            var modifiedEntities = new List<FeesType>();
+            if (!_EntityManager.Modify(model.Items, modifiedEntities))
             {
                 var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
                 return errResult;
             }
-            foreach (var item in model.Items)
+            foreach (var item in modifiedEntities)
             {
-                _DbContext.Entry(item).Property(c => c.OrgId).IsModified = false;
+                var entry = _DbContext.Entry(item);
+                entry.Property(c => c.OrgId).IsModified = false;
+                entry.Property(c => c.IsDelete).IsModified = false;
             }
             _DbContext.SaveChanges();
             return result;
@@ -792,14 +797,17 @@ namespace PowerLmsWebApi.Controllers.System
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             if (!_AuthorizationManager.Demand(out string err, "B.9")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ModifyShippingContainersKindReturnDto();
-            if (!_EntityManager.ModifyWithMarkDelete(model.Items))
+            var modifiedEntities = new List<ShippingContainersKind>();
+            if (!_EntityManager.Modify(model.Items, modifiedEntities))
             {
                 var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
                 return errResult;
             }
-            foreach (var item in model.Items)
+            foreach (var item in modifiedEntities)
             {
-                _DbContext.Entry(item).Property(c => c.OrgId).IsModified = false;
+                var entry = _DbContext.Entry(item);
+                entry.Property(c => c.OrgId).IsModified = false;
+                entry.Property(c => c.IsDelete).IsModified = false;
             }
             _DbContext.SaveChanges();
             return result;

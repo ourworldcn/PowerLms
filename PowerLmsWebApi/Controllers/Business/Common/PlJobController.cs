@@ -425,10 +425,11 @@ namespace PowerLmsWebApi.Controllers
             }
             try
             {
-                if (!_EntityManager.Modify(new[] { model.PlJob })) return NotFound();
+                var modifiedEntities = new List<PlJob>();
+                if (!_EntityManager.Modify(new[] { model.PlJob }, modifiedEntities)) return NotFound();
                 
                 //忽略不可更改字段
-                var entity = _DbContext.Entry(model.PlJob);
+                var entity = _DbContext.Entry(modifiedEntities[0]);
                 entity.Property(c => c.JobState).IsModified = false;
                 entity.Property(c => c.AuditOperatorId).IsModified = false;
                 entity.Property(c => c.AuditDateTime).IsModified = false;

@@ -88,69 +88,6 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// 获取流程当前状态。
-        /// </summary>
-        /// <param name="wf"></param>
-        /// <returns>0=0流转中，1=成功完成，2=已被终止。未来可能有其它状态。</returns>
-        int GetWfState(OwWf wf)
-        {
-            var lastApvNode = GetLastApprovalNode(wf);
-            if (lastApvNode == null) return 0;
-            if (!GetNodeState(lastApvNode, out var state)) return 0;
-            if (!state.HasValue) return 0;
-            return state.Value ? 1 : 2;
-        }
-
-        /// <summary>
-        /// 获取节点的审批状态。
-        /// </summary>
-        /// <param name="node"></param>
-        /// <param name="state">false=否决，true=通过,空=待审批。</param>
-        /// <returns>false=不是审批节点，true=是审批节点。</returns>
-        bool GetNodeState(OwWfNode node, out bool? state)
-        {
-            var tt = _DbContext.WfTemplateNodes.Find(node.TemplateId);
-            var coll = from ttNode in tt.Children.Where(c => c.OperationKind == 0)    //模板节点审批人集合
-                       join instNode in node.Children.Where(c => c.OperationKind == 0)    ////实例结点审批人集合
-                       on ttNode.OpertorId equals instNode.OpertorId
-                       select instNode;
-            var result = false;
-            state = true;
-            foreach (var item in coll)
-            {
-                result = true;
-                if (item.IsSuccess is null)  //若在审批中
-                {
-                    state = null;
-                    break;
-                }
-                else if (item.IsSuccess == false)  //若已否决否决
-                {
-                    state = false;
-                    break;
-                }
-            }
-            return result;
-        }
-
-        /// <summary>
-        /// 获取流程当前状态下的最后一个审批的节点。该节点的 <see cref="OwWfNodeItem.IsSuccess"/> 决定了流程的状态。
-        /// </summary>
-        /// <param name="wf"></param>
-        /// <returns></returns>
-        private OwWfNode GetLastApprovalNode(OwWf wf)
-        {
-            var coll = wf.Children.OrderByDescending(c => c.ArrivalDateTime);
-            foreach (var node in coll)
-            {
-                var b = GetNodeState(node, out var state);
-                if (!b) continue;   //若不是审批节点
-                return node;
-            }
-            return null;
-        }
-
-        /// <summary>
         /// 获取人员相关流转的信息。
         /// </summary>
         /// <param name="model"></param>
@@ -191,20 +128,23 @@ namespace PowerLmsWebApi.Controllers
         {
             var result = new GetNextNodeItemsByDocIdReturnDto();
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            var doc = _DbContext.OwWfs.Find(model.DocId);
-            if (doc is null) return NotFound();
+            
+            // 使用OwWfManager加载完整工作流
+            var workflow = _WfManager.LoadWorkflowById(model.DocId);
+            if (workflow is null) return NotFound();
 
-            var node = GetLastApprovalNode(doc);
-            if (node is null) return result;
+            // 使用OwWfManager获取当前节点
+            var currentNode = _WfManager.GetCurrentNode(model.DocId);
+            if (currentNode is null) return result;
 
-            var ttNode = _DbContext.WfTemplateNodes.Include(c => c.Children).FirstOrDefault(c => c.Id == node.TemplateId);
+            var ttNode = _DbContext.WfTemplateNodes.Include(c => c.Children).FirstOrDefault(c => c.Id == currentNode.TemplateId);
 
             // 🔧 增强诊断：记录模板节点信息
             if (ttNode?.NextId is null)
             {
                 _Logger.LogWarning(
                         "工作流节点无下一节点：DocId={DocId}, 当前节点模板ID={TemplateId}, 当前节点显示名={NodeName}, NextId为null，流程将无法继续流转",
-                  model.DocId, node.TemplateId, ttNode?.DisplayName ?? "未知");
+                  model.DocId, currentNode.TemplateId, ttNode?.DisplayName ?? "未知");
                 return result;
             }
 
@@ -298,7 +238,7 @@ namespace PowerLmsWebApi.Controllers
                     State = 0,
                 };
 
-                var firstNodes = _WfManager.GetFirstNodes(template).ToList();
+                var firstNodes = _WfManager.GetFirstNodes(template.Id).ToList();
                 // 🔧 增强验证：检查首节点配置
                 if (!firstNodes.Any())
                 {
@@ -331,7 +271,6 @@ namespace PowerLmsWebApi.Controllers
                     ParentId = wf.Id,
                     TemplateId = ttCurrentNode.Id,
                 };
-                wf.FirstNodeId = currentNode.Id;
                 wf.Children.Add(currentNode);
 
                 var firstItem = new OwWfNodeItem

@@ -128,21 +128,15 @@ namespace PowerLmsWebApi.Controllers
             var newOrgId = model.PlRole.OrgId;
             var oldRole = _DbContext.PlRoles.Find(model.PlRole.Id);
             var oldOrgId = oldRole?.OrgId;
-
-            // 获取受影响的用户ID列表
             var affectedUserIds = _DbContext.PlAccountRoles
                 .Where(c => c.RoleId == model.PlRole.Id)
                 .Select(c => c.UserId)
                 .ToList();
-
-            if (!_EntityManager.Modify(new[] { model.PlRole })) return NotFound();
-            var newRole = _DbContext.PlRoles.Find(model.PlRole.Id);
+            var modifiedEntities = new List<PlRole>();
+            if (!_EntityManager.Modify(new[] { model.PlRole }, modifiedEntities)) return NotFound();
+            var newRole = modifiedEntities[0];
             newRole.OrgId = newOrgId;
-
             _DbContext.SaveChanges();
-
-            // 级联失效所有相关缓存
-            // 1. 失效组织缓存
             if (oldOrgId.HasValue)
             {
                 var oldMerchId = _OrgManager.GetMerchantIdByOrgId(oldOrgId.Value);
@@ -152,7 +146,6 @@ namespace PowerLmsWebApi.Controllers
                     _RoleManager.InvalidateRoleCache(oldMerchId.Value);
                 }
             }
-
             if (newOrgId.HasValue)
             {
                 var newMerchId = _OrgManager.GetMerchantIdByOrgId(newOrgId.Value);
@@ -162,8 +155,6 @@ namespace PowerLmsWebApi.Controllers
                     _RoleManager.InvalidateRoleCache(newMerchId.Value);
                 }
             }
-
-            // 2. 失效受影响用户的角色和权限缓存
             if (affectedUserIds.Any())
             {
                 foreach (var userId in affectedUserIds)
@@ -171,12 +162,9 @@ namespace PowerLmsWebApi.Controllers
                     _RoleManager.InvalidateUserRolesCache(userId);
                     _PermissionManager.InvalidateUserPermissionsCache(userId);
                 }
-
-                // ✅ 只保留成功总结日志
                 _Logger.LogInformation("修改角色 {RoleId}，已失效 {Count} 个用户的缓存",
                     model.PlRole.Id, affectedUserIds.Count);
             }
-
             return result;
         }
 

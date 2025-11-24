@@ -167,12 +167,9 @@ namespace PowerLmsWebApi.Controllers.OA
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
                 return Unauthorized();
-
             var result = new ModifyOaExpenseRequisitionItemReturnDto();
-
             try
             {
-                // 🔧 权限验证 - 使用 OA.1.2 权限：日常费用拆分结算（子表增删改权限）
                 if (!_AuthorizationManager.Demand(out var err, "OA.1.2"))
                 {
                     _Logger.LogWarning("权限检查失败 - 用户: {UserId}, 权限: OA.1.2, 错误信息: {Error}",
@@ -182,8 +179,6 @@ namespace PowerLmsWebApi.Controllers.OA
                     result.DebugMessage = $"权限不足: {err}";
                     return result;
                 }
-
-                // 检查所有明细项是否存在和权限
                 foreach (var item in model.Items)
                 {
                     var existing = _DbContext.OaExpenseRequisitionItems.Find(item.Id);
@@ -194,8 +189,6 @@ namespace PowerLmsWebApi.Controllers.OA
                         result.DebugMessage = $"指定的OA费用申请单明细 {item.Id} 不存在";
                         return result;
                     }
-
-                    // 检查申请单状态和权限
                     var requisition = _DbContext.OaExpenseRequisitions.Find(existing.ParentId);
                     if (requisition == null)
                     {
@@ -204,8 +197,6 @@ namespace PowerLmsWebApi.Controllers.OA
                         result.DebugMessage = "关联的申请单不存在";
                         return result;
                     }
-
-                    // 多租户数据隔离检查
                     if (!context.User.IsSuperAdmin && requisition.OrgId != context.User.OrgId)
                     {
                         result.HasError = true;
@@ -213,7 +204,6 @@ namespace PowerLmsWebApi.Controllers.OA
                         result.DebugMessage = "权限不足，无法操作此申请单";
                         return result;
                     }
-
                     if (!requisition.CanEditItems(_DbContext))
                     {
                         result.HasError = true;
@@ -222,18 +212,15 @@ namespace PowerLmsWebApi.Controllers.OA
                         return result;
                     }
                 }
-
-                // 使用EntityManager进行批量修改
-                if (!_EntityManager.Modify(model.Items))
+                var modifiedEntities = new List<OaExpenseRequisitionItem>();
+                if (!_EntityManager.Modify(model.Items, modifiedEntities))
                 {
                     result.HasError = true;
                     result.ErrorCode = 404;
                     result.DebugMessage = "修改失败，请检查数据";
                     return result;
                 }
-
                 _DbContext.SaveChanges();
-
                 _Logger.LogInformation("成功修改OA费用申请单明细 - 明细数量: {Count}, 操作人: {UserId}",
                     model.Items.Count(), context.User.Id);
             }
@@ -244,7 +231,6 @@ namespace PowerLmsWebApi.Controllers.OA
                 result.ErrorCode = 500;
                 result.DebugMessage = $"修改OA费用申请单明细时发生错误: {ex.Message}";
             }
-
             return result;
         }
 

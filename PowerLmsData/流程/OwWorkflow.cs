@@ -50,17 +50,20 @@ namespace PowerLms.Data
         [Comment("备注。")]
         public string Remark { get; set; }
 
+        /// <summary>
+        /// 并发控制版本号。用于乐观并发控制，防止流程状态被并发修改覆盖。
+        /// </summary>
+        [Comment("并发控制版本号")]
+        [Timestamp]
+        public byte[] RowVersion { get; set; }
+
         #region 导航属性
 
         /// <summary>
-        /// 所有操作人的详细信息集合。
+        /// 所有节点的集合。
         /// </summary>
         public virtual List<OwWfNode> Children { get; set; } = new List<OwWfNode>();
 
-        /// <summary>
-        /// 第一个节点的Id。
-        /// </summary>
-        public Guid? FirstNodeId { get; set; }
         #endregion 导航属性
 
     }
@@ -85,8 +88,12 @@ namespace PowerLms.Data
         /// 流程Id。
         /// </summary>
         [Comment("流程Id")]
+        [ForeignKey(nameof(Parent))]
         public Guid? ParentId { get; set; }
 
+        /// <summary>
+        /// 所属流程实例。
+        /// </summary>
         [JsonIgnore]
         public virtual OwWf Parent { get; set; }
 
@@ -125,6 +132,9 @@ namespace PowerLms.Data
         [ForeignKey(nameof(Parent))]
         public Guid? ParentId { get; set; }
 
+        /// <summary>
+        /// 所属流程节点。
+        /// </summary>
         [JsonIgnore]
         public virtual OwWfNode Parent { get; set; }
 
@@ -136,9 +146,9 @@ namespace PowerLms.Data
         public Guid? OpertorId { get; set; }
 
         /// <summary>
-        /// 这里冗余额外记录一个操作人的显示名称。可随时更改。
+        /// 操作人的显示名称快照。记录操作时点的显示名，避免操作人后续改名导致审批记录中的名称混乱。
         /// </summary>
-        [Comment("这里冗余额外记录一个操作人的显示名称。可随时更改。")]
+        [Comment("操作人的显示名称快照。")]
         public string OpertorDisplayName { get; set; }
 
         /// <summary>
@@ -160,6 +170,13 @@ namespace PowerLms.Data
         /// </summary>
         [Comment("是否审核通过")]
         public bool? IsSuccess { get; set; }
+
+        /// <summary>
+        /// 并发控制版本号。用于乐观并发控制，防止审批结果被并发修改覆盖。
+        /// </summary>
+        [Comment("并发控制版本号")]
+        [Timestamp]
+        public byte[] RowVersion { get; set; }
 
     }
 }

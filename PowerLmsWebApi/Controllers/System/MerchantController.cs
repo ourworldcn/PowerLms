@@ -90,10 +90,10 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyMerchantReturnDto();
-            if (!_EntityManager.Modify(new[] { model.Merchant })) return NotFound();
+            var modifiedEntities = new List<PlMerchant>();
+            if (!_EntityManager.Modify(new[] { model.Merchant }, modifiedEntities)) return NotFound();
             _DbContext.SaveChanges();
-            // ✅ 驱逐商户相关缓存
-            _OrgManager.InvalidateOrgCaches(model.Merchant.Id);
+            _OrgManager.InvalidateOrgCaches(modifiedEntities[0].Id);
             return result;
         }
 

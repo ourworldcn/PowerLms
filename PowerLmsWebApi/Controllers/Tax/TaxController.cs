@@ -377,12 +377,8 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyTaxInvoiceInfoReturnDto();
-
-            // 检查发票状态
             var existingInvoice = _DbContext.TaxInvoiceInfos.Find(model.TaxInvoiceInfo.Id);
             if (existingInvoice == null) return NotFound("指定ID的发票信息不存在");
-
-            // 只有状态为0(未审核)的发票才能修改
             if (existingInvoice.State != 0)
             {
                 result.HasError = true;
@@ -390,16 +386,12 @@ namespace PowerLmsWebApi.Controllers
                 result.DebugMessage = "只有未审核状态的发票才能修改";
                 return BadRequest(result.DebugMessage);
             }
-
-            if (!_EntityManager.Modify(new[] { model.TaxInvoiceInfo })) return NotFound();
-            //忽略不可更改字段
-            var entity = _DbContext.Entry(model.TaxInvoiceInfo);
+            var modifiedEntities = new List<TaxInvoiceInfo>();
+            if (!_EntityManager.Modify(new[] { model.TaxInvoiceInfo }, modifiedEntities)) return NotFound();
+            var entity = _DbContext.Entry(modifiedEntities[0]);
             entity.Property(c => c.State).IsModified = false;
             _DbContext.SaveChanges();
-
-            // 记录日志
             _SqlAppLogger.LogGeneralInfo($"修改发票信息.{nameof(TaxInvoiceInfo)}.{model.TaxInvoiceInfo.Id}");
-
             return result;
         }
 
@@ -710,16 +702,10 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyTaxInvoiceInfoItemReturnDto();
-
-            // 获取明细记录
             var item = _DbContext.TaxInvoiceInfoItems.Find(model.TaxInvoiceInfoItem.Id);
             if (item == null) return NotFound("指定ID的发票明细信息不存在");
-
-            // 获取关联的发票
             var parentInvoice = _DbContext.TaxInvoiceInfos.Find(item.ParentId);
             if (parentInvoice == null) return NotFound("关联的发票信息不存在");
-
-            // 检查发票状态
             if (parentInvoice.State != 0)
             {
                 result.HasError = true;
@@ -727,13 +713,10 @@ namespace PowerLmsWebApi.Controllers
                 result.DebugMessage = "只有未审核状态的发票才能修改其明细";
                 return BadRequest(result.DebugMessage);
             }
-
-            if (!_EntityManager.Modify(new[] { model.TaxInvoiceInfoItem })) return NotFound();
+            var modifiedEntities = new List<TaxInvoiceInfoItem>();
+            if (!_EntityManager.Modify(new[] { model.TaxInvoiceInfoItem }, modifiedEntities)) return NotFound();
             _DbContext.SaveChanges();
-
-            // 记录日志
             _SqlAppLogger.LogGeneralInfo($"修改发票明细.{nameof(TaxInvoiceInfoItem)}.{model.TaxInvoiceInfoItem.Id}");
-
             return result;
         }
 

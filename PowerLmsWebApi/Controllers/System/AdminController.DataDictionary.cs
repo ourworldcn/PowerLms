@@ -555,16 +555,19 @@ namespace PowerLmsWebApi.Controllers.System
             string err;
             if (!_AuthorizationManager.Demand(out err, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ModifySimpleDataDicReturnDto();
-            if (!_EntityManager.ModifyWithMarkDelete(model.Items))
+            var modifiedEntities = new List<SimpleDataDic>();
+            if (!_EntityManager.Modify(model.Items, modifiedEntities))
             {
                 var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
                 return errResult;
             }
-            foreach (var item in model.Items)
+            foreach (var item in modifiedEntities)
             {
-                _DbContext.Entry(item).Property(c => c.DataDicId).IsModified = false;
-                _DbContext.Entry(item).Property(c => c.CreateAccountId).IsModified = false;
-                _DbContext.Entry(item).Property(c => c.CreateDateTime).IsModified = false;
+                var entry = _DbContext.Entry(item);
+                entry.Property(c => c.DataDicId).IsModified = false;
+                entry.Property(c => c.CreateAccountId).IsModified = false;
+                entry.Property(c => c.CreateDateTime).IsModified = false;
+                entry.Property(c => c.IsDelete).IsModified = false;
             }
             _DbContext.SaveChanges();
             return result;

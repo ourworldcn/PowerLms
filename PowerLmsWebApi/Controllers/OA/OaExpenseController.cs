@@ -183,12 +183,9 @@ namespace PowerLmsWebApi.Controllers.OA
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
                 return Unauthorized();
-
             var result = new ModifyOaExpenseRequisitionReturnDto();
-
             try
             {
-                // 检查所有实体是否存在和权限
                 foreach (var item in model.Items)
                 {
                     var existing = _DbContext.OaExpenseRequisitions.Find(item.Id);
@@ -199,9 +196,6 @@ namespace PowerLmsWebApi.Controllers.OA
                         result.DebugMessage = $"指定的OA费用申请单 {item.Id} 不存在";
                         return result;
                     }
-
-                    // 🔧 修正：OA日常费用申请单主单锁定规则
-                    // 一旦不是草稿状态，整个主单都不能修改
                     if (!existing.CanEdit(_DbContext))
                     {
                         result.HasError = true;
@@ -209,8 +203,6 @@ namespace PowerLmsWebApi.Controllers.OA
                         result.DebugMessage = GetEditRestrictionMessage(existing.Status);
                         return result;
                     }
-
-                    // 检查用户权限：只能修改自己创建/登记的申请单（废弃ApplicantId，统一使用CreateBy）
                     if (existing.CreateBy.HasValue && existing.CreateBy.Value != context.User.Id && !context.User.IsSuperAdmin)
                     {
                         result.HasError = true;
@@ -219,33 +211,25 @@ namespace PowerLmsWebApi.Controllers.OA
                         return result;
                     }
                 }
-
-                // 使用EntityManager进行修改
-                if (!_EntityManager.Modify(model.Items))
+                var modifiedEntities = new List<OaExpenseRequisition>();
+                if (!_EntityManager.Modify(model.Items, modifiedEntities))
                 {
                     result.HasError = true;
                     result.ErrorCode = 404;
                     result.DebugMessage = "修改失败，请检查数据";
                     return result;
                 }
-
-                // 确保核心字段不被修改
-                foreach (var item in model.Items)
+                foreach (var item in modifiedEntities)
                 {
                     var entry = _DbContext.Entry(item);
-                    
-                    // 始终保护的系统字段
-                    entry.Property(e => e.OrgId).IsModified = false; // 机构Id创建时确定，不可修改
+                    entry.Property(e => e.OrgId).IsModified = false;
                     entry.Property(e => e.CreateBy).IsModified = false;
                     entry.Property(e => e.CreateDateTime).IsModified = false;
                     entry.Property(e => e.AuditDateTime).IsModified = false;
                     entry.Property(e => e.AuditOperatorId).IsModified = false;
-
-                    // 状态驱动的字段保护：确认后只允许系统字段更新
-                    var existing = entry.Entity as OaExpenseRequisition;
+                    var existing = item;
                     if (existing.IsCompletelyLocked())
                     {
-                        // 确认后所有业务字段都不可修改，只允许系统字段更新
                         var allowedProperties = new[] { 
                             nameof(OaExpenseRequisition.Status),
                             nameof(OaExpenseRequisition.SettlementOperatorId),
@@ -257,7 +241,6 @@ namespace PowerLmsWebApi.Controllers.OA
                             nameof(OaExpenseRequisition.BankFlowNumber),
                             nameof(OaExpenseRequisition.ConfirmRemark)
                         };
-                        
                         foreach (var property in entry.Properties)
                         {
                             if (!allowedProperties.Contains(property.Metadata.Name))
@@ -267,10 +250,7 @@ namespace PowerLmsWebApi.Controllers.OA
                         }
                     }
                 }
-
-                // 保存更改到数据库
                 _DbContext.SaveChanges();
-
                 _Logger.LogInformation("成功修改OA日常费用申请单主单，用户: {UserId}, 申请单数量: {Count}", 
                     context.User.Id, model.Items.Count());
             }
@@ -281,7 +261,6 @@ namespace PowerLmsWebApi.Controllers.OA
                 result.ErrorCode = 500;
                 result.DebugMessage = $"修改OA日常费用申请单时发生错误: {ex.Message}";
             }
-
             return result;
         }
 
@@ -450,52 +429,6 @@ namespace PowerLmsWebApi.Controllers.OA
         }
 
         #region 私有辅助方法
-
-        /// <summary>
-        /// 检查工作流是否已完成。优先使用OwWfManager，数据库查询作为兜底方案。
-        /// </summary>
-        /// <param name="requisitionId">申请单Id</param>
-        /// <returns>工作流已完成返回true，否则返回false</returns>
-        private bool IsWorkflowCompleted(Guid requisitionId)
-        {
-            try
-            {
-                // 第一优先级：使用OwWfManager检查工作流状态
-                var wfItems = _WfManager.GetWfNodeItemByOpertorId(Guid.Empty, 4); // 4=成功完成的流程
-                var completedWf = wfItems.FirstOrDefault(item => 
-                    item.Parent.Parent.DocId == requisitionId);
-
-                if (completedWf != null)
-                {
-                    return true; // OwWfManager确认工作流已完成
-                }
-
-                // 第二优先级：直接查询数据库（兜底方案）
-                var workflow = _DbContext.OwWfs
-                    .Where(w => w.DocId == requisitionId)
-                    .FirstOrDefault();
-
-                return workflow?.State == 4; // 检查工作流是否成功完成
-            }
-            catch (Exception ex)
-            {
-                _Logger.LogWarning(ex, "检查工作流状态时发生错误，申请单ID: {RequisitionId}，使用数据库查询作为兜底", requisitionId);
-
-                // 异常情况下使用数据库查询
-                try
-                {
-                    var workflow = _DbContext.OwWfs
-                        .Where(w => w.DocId == requisitionId)
-                        .FirstOrDefault();
-                    return workflow?.State == 4;
-                }
-                catch (Exception dbEx)
-                {
-                    _Logger.LogError(dbEx, "数据库查询工作流状态也失败，申请单ID: {RequisitionId}", requisitionId);
-                    return false; // 无法确定状态时保守返回false
-                }
-            }
-        }
 
         /// <summary>
         /// 获取编辑限制的友好提示消息。

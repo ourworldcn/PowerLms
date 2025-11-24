@@ -191,20 +191,13 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<ModifySubjectConfigurationReturnDto> ModifySubjectConfiguration(ModifySubjectConfigurationParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-
-            // 权限检查：需要B.11权限
             if (!context.User.IsAdmin())
                 if (!_AuthorizationManager.Demand(out string err, "B.11")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-
             var result = new ModifySubjectConfigurationReturnDto();
-
             if (model.Items == null || !model.Items.Any())
                 return BadRequest("修改项不能为空");
-
-            // 预先过滤：只包含用户有权限修改的项
             var itemsToUpdate = new List<SubjectConfiguration>();
-            var rejectedItems = new List<string>(); // 记录被拒绝的项目，用于日志
-
+            var rejectedItems = new List<string>();
             foreach (var item in model.Items)
             {
                 var existing = _DbContext.SubjectConfigurations.Find(item.Id);
@@ -214,8 +207,6 @@ namespace PowerLmsWebApi.Controllers
                     rejectedItems.Add($"ID {item.Id} (不存在)");
                     continue;
                 }
-
-                // 权限检查：应用组织权限控制
                 if (!HasPermissionToModify(context.User, existing))
                 {
                     _Logger.LogWarning("用户 {UserId} 尝试修改无权限的财务科目设置：{Id} (OrgId: {OrgId})", 
@@ -223,10 +214,8 @@ namespace PowerLmsWebApi.Controllers
                     rejectedItems.Add($"ID {item.Id} (无权限)");
                     continue;
                 }
-
                 itemsToUpdate.Add(item);
             }
-
             if (!itemsToUpdate.Any())
             {
                 var errorMessage = rejectedItems.Any() 
@@ -234,35 +223,28 @@ namespace PowerLmsWebApi.Controllers
                     : "没有找到可修改的财务科目设置";
                 return NotFound(errorMessage);
             }
-
-            // 使用EntityManager.ModifyWithMarkDelete方法（参考AdminController模式）
-            if (!_EntityManager.ModifyWithMarkDelete(itemsToUpdate))
+            var modifiedEntities = new List<SubjectConfiguration>();
+            if (!_EntityManager.Modify(itemsToUpdate, modifiedEntities))
             {
                 var errorMsg = OwHelper.GetLastErrorMessage();
                 _Logger.LogError("修改财务科目设置失败：{Error}", errorMsg);
                 return BadRequest($"修改财务科目设置失败：{errorMsg}");
             }
-
-            // 手动保护关键字段（参考AdminController模式）
-            foreach (var item in itemsToUpdate)
+            foreach (var item in modifiedEntities)
             {
                 var entry = _DbContext.Entry(item);
-                entry.Property(c => c.OrgId).IsModified = false;        // 保护组织机构ID
-                entry.Property(c => c.CreateBy).IsModified = false;     // 保护创建者ID
-                entry.Property(c => c.CreateDateTime).IsModified = false; // 保护创建时间
-                // IsDelete字段已在ModifyWithMarkDelete中自动保护
+                entry.Property(c => c.OrgId).IsModified = false;
+                entry.Property(c => c.CreateBy).IsModified = false;
+                entry.Property(c => c.CreateDateTime).IsModified = false;
+                entry.Property(c => c.IsDelete).IsModified = false;
             }
-
             try
             {
                 _DbContext.SaveChanges();
-                
                 var logMessage = rejectedItems.Any() 
                     ? $"用户 {context.User.Id} 成功修改了 {itemsToUpdate.Count} 个财务科目设置，拒绝了 {rejectedItems.Count} 个项目"
                     : $"用户 {context.User.Id} 成功修改了 {itemsToUpdate.Count} 个财务科目设置";
-                
                 _Logger.LogInformation(logMessage);
-                
                 if (rejectedItems.Any())
                 {
                     _Logger.LogInformation("被拒绝的项目详情：{RejectedItems}", string.Join(", ", rejectedItems));
@@ -272,7 +254,6 @@ namespace PowerLmsWebApi.Controllers
                                                ex.InnerException?.Message?.Contains("duplicate") == true ||
                                                ex.InnerException?.Message?.Contains("UNIQUE") == true)
             {
-                // 拦截唯一索引违反错误
                 _Logger.LogWarning("尝试修改为重复的科目编码");
                 return BadRequest("修改失败：科目编码在组织机构中已存在");
             }
@@ -281,7 +262,6 @@ namespace PowerLmsWebApi.Controllers
                 _Logger.LogError(ex, "修改财务科目设置时发生异常");
                 return BadRequest($"修改财务科目设置失败：{ex.Message}");
             }
-
             return result;
         }
 

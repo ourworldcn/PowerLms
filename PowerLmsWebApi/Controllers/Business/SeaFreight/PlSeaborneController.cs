@@ -106,7 +106,8 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             if (!_AuthorizationManager.Demand(out string err, "D3.1.1.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ModifyPlIsDocReturnDto();
-            if (!_EntityManager.Modify(new[] { model.PlIsDoc })) return NotFound();
+            var modifiedEntities = new List<PlIsDoc>();
+            if (!_EntityManager.Modify(new[] { model.PlIsDoc }, modifiedEntities)) return NotFound();
             _DbContext.SaveChanges();
             return result;
         }
@@ -203,7 +204,8 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             if (!_AuthorizationManager.Demand(out string err, "D2.1.1.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ModifyPlEsDocReturnDto();
-            if (!_EntityManager.Modify(new[] { model.PlEsDoc })) return NotFound();
+            var modifiedEntities = new List<PlEsDoc>();
+            if (!_EntityManager.Modify(new[] { model.PlEsDoc }, modifiedEntities)) return NotFound();
             _DbContext.SaveChanges();
             return result;
         }
@@ -294,7 +296,8 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyContainerKindCountReturnDto();
-            if (!_EntityManager.Modify(new[] { model.ContainerKindCount })) return NotFound();
+            var modifiedEntities = new List<ContainerKindCount>();
+            if (!_EntityManager.Modify(new[] { model.ContainerKindCount }, modifiedEntities)) return NotFound();
             _DbContext.SaveChanges();
             return result;
         }

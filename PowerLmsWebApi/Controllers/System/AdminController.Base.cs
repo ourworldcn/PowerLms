@@ -108,12 +108,13 @@ namespace PowerLmsWebApi.Controllers.System
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             if (!_AuthorizationManager.Demand(out string err, "B.5")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ModifyPlCountryReturnDto();
-            if (!_EntityManager.ModifyWithMarkDelete(model.Items))
+            var modifiedEntities = new List<PlCountry>();
+            if (!_EntityManager.Modify(model.Items, modifiedEntities))
             {
                 var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
                 return errResult;
             }
-            foreach (var item in model.Items)
+            foreach (var item in modifiedEntities)
             {
                 _DbContext.Entry(item).Property(c => c.IsDelete).IsModified = false;
             }
@@ -256,12 +257,13 @@ namespace PowerLmsWebApi.Controllers.System
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             if (!_AuthorizationManager.Demand(out string err, "B.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ModifyPlCurrencyReturnDto();
-            if (!_EntityManager.ModifyWithMarkDelete(model.Items))
+            var modifiedEntities = new List<PlCurrency>();
+            if (!_EntityManager.Modify(model.Items, modifiedEntities))
             {
                 var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
                 return errResult;
             }
-            foreach (var item in model.Items)
+            foreach (var item in modifiedEntities)
             {
                 _DbContext.Entry(item).Property(c => c.IsDelete).IsModified = false;
             }

@@ -232,6 +232,15 @@ namespace PowerLms.Data
         public string FailReason { get; set; }
 
         #endregion
+
+        /// <summary>
+        /// 行版本号。用于开放式并发控制，防止并发更新时的数据覆盖问题。
+        /// EF Core会在更新时自动检查此字段，如果值不匹配则抛出DbUpdateConcurrencyException。
+        /// SQL Server自动维护此字段，每次更新时自动递增。
+        /// </summary>
+        [Timestamp]
+        [Comment("行版本号，用于开放式并发控制")]
+        public byte[] RowVersion { get; set; }
     }
 
     /// <summary>

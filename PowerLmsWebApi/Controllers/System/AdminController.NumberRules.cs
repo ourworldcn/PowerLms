@@ -100,52 +100,24 @@ namespace PowerLmsWebApi.Controllers.System
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             if (model.Items == null || model.Items.Count == 0) return BadRequest($"{nameof(model.Items)} 为空集合。");
-
             string err;
             if (!_AuthorizationManager.Demand(out err, "B.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-
-            if (model.Items.Any(item => item.BusinessTypeId == ProjectContent.AeId))    //若是空运出口业务
+            if (model.Items.Any(item => item.BusinessTypeId == ProjectContent.AeId))
                 if (!_AuthorizationManager.Demand(out err, "D0.1.1.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-
             var result = new ModifyJobNumberRuleReturnDto();
-
             try
             {
-                // 在修改之前保存OrgId值
-                var originalOrgIds = new Dictionary<Guid, Guid?>();
-                foreach (var item in model.Items)
-                {
-                    if (item.Id != Guid.Empty)
-                    {
-                        var originalEntity = _DbContext.DD_JobNumberRules.AsNoTracking().FirstOrDefault(e => e.Id == item.Id);
-                        if (originalEntity != null)
-                        {
-                            originalOrgIds[item.Id] = originalEntity.OrgId;
-                        }
-                    }
-                }
-
-                // 执行修改操作
-                if (!_EntityManager.ModifyWithMarkDelete(model.Items))
+                var modifiedEntities = new List<JobNumberRule>();
+                if (!_EntityManager.Modify(model.Items, modifiedEntities))
                 {
                     return new StatusCodeResult(OwHelper.GetLastError());
                 }
-
-                // 确保OrgId属性不被修改
-                foreach (var item in model.Items)
+                foreach (var item in modifiedEntities)
                 {
-                    if (originalOrgIds.TryGetValue(item.Id, out var orgId))
-                    {
-                        var entry = _DbContext.Entry(item);
-                        if (entry.State == EntityState.Modified)
-                        {
-                            entry.Property(e => e.OrgId).IsModified = false;
-                            // 确保OrgId值保持不变
-                            item.OrgId = orgId;
-                        }
-                    }
+                    var entry = _DbContext.Entry(item);
+                    entry.Property(e => e.OrgId).IsModified = false;
+                    entry.Property(e => e.IsDelete).IsModified = false;
                 }
-
                 _DbContext.SaveChanges();
                 return result;
             }
@@ -300,17 +272,18 @@ namespace PowerLmsWebApi.Controllers.System
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyOtherNumberRuleReturnDto();
-            if (!_EntityManager.ModifyWithMarkDelete(model.Items))
+            var modifiedEntities = new List<OtherNumberRule>();
+            if (!_EntityManager.Modify(model.Items, modifiedEntities))
             {
                 var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
                 return errResult;
             }
-            model.Items.Select(c => c.Id).ToList().ForEach(c =>
+            foreach (var entity in modifiedEntities)
             {
-                var entity = _DbContext.DD_OtherNumberRules.Find(c);
-                if (entity is null) return;
-                _DbContext.Entry(entity).Property(c => c.OrgId).IsModified = false;
-            });
+                var entry = _DbContext.Entry(entity);
+                entry.Property(c => c.OrgId).IsModified = false;
+                entry.Property(c => c.IsDelete).IsModified = false;
+            }
             _DbContext.SaveChanges();
             return result;
         }

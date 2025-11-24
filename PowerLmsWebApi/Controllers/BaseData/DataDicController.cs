@@ -149,14 +149,17 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             if (!_AuthorizationManager.Demand(out string err, "B.8")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ModifyDailyFeesTypeReturnDto();
-            if (!_EntityManager.ModifyWithMarkDelete(model.Items))
+            var modifiedEntities = new List<DailyFeesType>();
+            if (!_EntityManager.Modify(model.Items, modifiedEntities))
             {
                 var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
                 return errResult;
             }
-            foreach (var item in model.Items)
+            foreach (var item in modifiedEntities)
             {
-                _DbContext.Entry(item).Property(c => c.OrgId).IsModified = false;
+                var entry = _DbContext.Entry(item);
+                entry.Property(c => c.OrgId).IsModified = false;
+                entry.Property(c => c.IsDelete).IsModified = false;
             }
             _DbContext.SaveChanges();
             return result;

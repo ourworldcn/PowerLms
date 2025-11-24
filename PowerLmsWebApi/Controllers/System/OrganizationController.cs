@@ -697,7 +697,8 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             if (!_AuthorizationManager.Demand(out string err, "B.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ModifyBankInfoReturnDto();
-            if (!_EntityManager.Modify(new[] { model.BankInfo })) return NotFound();
+            var modifiedEntities = new List<BankInfo>();
+            if (!_EntityManager.Modify(new[] { model.BankInfo }, modifiedEntities)) return NotFound();
             _DbContext.SaveChanges();
             return result;
         }

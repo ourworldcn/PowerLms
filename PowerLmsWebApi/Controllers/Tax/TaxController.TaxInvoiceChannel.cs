@@ -1,4 +1,4 @@
-using AutoMapper;
+ï»¿using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OW.EntityFrameworkCore;
@@ -12,20 +12,20 @@ using System.Net;
 namespace PowerLmsWebApi.Controllers
 {
     /// <summary>
-    /// Ë°ÎñÏà¹Ø¹¦ÄÜ¿ØÖÆÆ÷ - Ë°Îñ·¢Æ±ÇşµÀÏà¹Ø¹¦ÄÜ¡£
+    /// ç¨åŠ¡ç›¸å…³åŠŸèƒ½æ§åˆ¶å™¨ - ç¨åŠ¡å‘ç¥¨æ¸ é“ç›¸å…³åŠŸèƒ½ã€‚
     /// </summary>
     public partial class TaxController : PlControllerBase
     {
-        #region Ë°Îñ·¢Æ±ÇşµÀÏà¹Ø
+        #region ç¨åŠ¡å‘ç¥¨æ¸ é“ç›¸å…³
 
         /// <summary>
-        /// »ñÈ¡Ö¸¶¨IDµÄË°Îñ·¢Æ±ÇşµÀ¡£
+        /// è·å–æŒ‡å®šIDçš„ç¨åŠ¡å‘ç¥¨æ¸ é“ã€‚
         /// </summary>
-        /// <param name="model">·ÖÒ³²ÎÊı</param>
-        /// <param name="conditional">²éÑ¯Ìõ¼ş¡£Ö§³ÖÍ¨ÓÃ²éÑ¯½Ó¿Ú¡£</param>
+        /// <param name="model">åˆ†é¡µå‚æ•°</param>
+        /// <param name="conditional">æŸ¥è¯¢æ¡ä»¶ã€‚æ”¯æŒé€šç”¨æŸ¥è¯¢æ¥å£ã€‚</param>
         /// <returns></returns>
-        /// <response code="200">Î´·¢ÉúÏµÍ³¼¶´íÎó¡£µ«¿ÉÄÜ³öÏÖÓ¦ÓÃ´íÎó£¬¾ßÌå²Î¼û HasError ºÍ ErrorCode ¡£</response>  
-        /// <response code="401">ÎŞĞ§ÁîÅÆ¡£</response>  
+        /// <response code="200">æœªå‘ç”Ÿç³»ç»Ÿçº§é”™è¯¯ã€‚ä½†å¯èƒ½å‡ºç°åº”ç”¨é”™è¯¯ï¼Œå…·ä½“å‚è§ HasError å’Œ ErrorCode ã€‚</response>  
+        /// <response code="401">æ— æ•ˆä»¤ç‰Œã€‚</response>  
         [HttpGet]
         public ActionResult<GetAllTaxInvoiceChannelReturnDto> GetAllTaxInvoiceChannel([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
@@ -34,39 +34,39 @@ namespace PowerLmsWebApi.Controllers
             var result = new GetAllTaxInvoiceChannelReturnDto();
             var dbSet = _DbContext.TaxInvoiceChannels;
             var coll = dbSet.AsNoTracking();
-            // Ê¹ÓÃÍ¨ÓÃ²éÑ¯Ìõ¼ş´¦Àí·½Ê½
+            // ä½¿ç”¨é€šç”¨æŸ¥è¯¢æ¡ä»¶å¤„ç†æ–¹å¼
             coll = EfHelper.GenerateWhereAnd(coll, conditional);
-            // Ó¦ÓÃÅÅĞò
+            // åº”ç”¨æ’åº
             coll = coll.OrderBy(model.OrderFieldName, model.IsDesc);
-            // »ñÈ¡·ÖÒ³½á¹û
+            // è·å–åˆ†é¡µç»“æœ
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }
 
         /// <summary>
-        /// ĞŞ¸ÄË°Îñ·¢Æ±ÇşµÀ¼ÇÂ¼¡£½öÄÜĞŞ¸ÄÏÔÊ¾Ãû³Æ.
+        /// ä¿®æ”¹ç¨åŠ¡å‘ç¥¨æ¸ é“è®°å½•ã€‚ä»…èƒ½ä¿®æ”¹æ˜¾ç¤ºåç§°.
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
-        /// <response code="200">Î´·¢ÉúÏµÍ³¼¶´íÎó¡£µ«¿ÉÄÜ³öÏÖÓ¦ÓÃ´íÎó£¬¾ßÌå²Î¼û HasError ºÍ ErrorCode ¡£</response>  
-        /// <response code="400">Ö¸¶¨ÊµÌåµÄId²»´æÔÚ¡£Í¨³£ÕâÊÇBug.ÔÚ¼«¶ËÇé¿öÏÂ¿ÉÄÜÊÇ²¢·¢ÎÊÌâ¡£</response>  
-        /// <response code="401">ÎŞĞ§ÁîÅÆ¡£</response>  
-        /// <response code="403">È¨ÏŞ²»×ã¡£</response>  
+        /// <response code="200">æœªå‘ç”Ÿç³»ç»Ÿçº§é”™è¯¯ã€‚ä½†å¯èƒ½å‡ºç°åº”ç”¨é”™è¯¯ï¼Œå…·ä½“å‚è§ HasError å’Œ ErrorCode ã€‚</response>  
+        /// <response code="400">æŒ‡å®šå®ä½“çš„Idä¸å­˜åœ¨ã€‚é€šå¸¸è¿™æ˜¯Bug.åœ¨æç«¯æƒ…å†µä¸‹å¯èƒ½æ˜¯å¹¶å‘é—®é¢˜ã€‚</response>  
+        /// <response code="401">æ— æ•ˆä»¤ç‰Œã€‚</response>  
+        /// <response code="403">æƒé™ä¸è¶³ã€‚</response>  
         [HttpPut]
         public ActionResult<ModifyTaxInvoiceChannelReturnDto> ModifyTaxInvoiceChannel(ModifyTaxInvoiceChannelParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyTaxInvoiceChannelReturnDto();
-            if (!_EntityManager.Modify(model.Items))
+            var modifiedEntities = new List<TaxInvoiceChannel>();
+            if (!_EntityManager.Modify(model.Items, modifiedEntities))
             {
                 var errResult = new StatusCodeResult(OwHelper.GetLastError()) { };
                 return errResult;
             }
-            foreach (var item in model.Items)
+            foreach (var item in modifiedEntities)
             {
-                var tic = _DbContext.TaxInvoiceChannels.Find(item.Id);
-                var entry = _DbContext.Entry(tic);
+                var entry = _DbContext.Entry(item);
                 entry.Property(c => c.InvoiceChannel).IsModified = false;
                 entry.Property(c => c.InvoiceChannelParams).IsModified = false;
             }
@@ -74,6 +74,6 @@ namespace PowerLmsWebApi.Controllers
             return result;
         }
 
-        #endregion Ë°Îñ·¢Æ±ÇşµÀÏà¹Ø
+        #endregion ç¨åŠ¡å‘ç¥¨æ¸ é“ç›¸å…³
     }
 }

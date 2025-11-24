@@ -215,9 +215,9 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             if (!_AuthorizationManager.Demand(out string err, "F.3.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ModifyPlInvoicesReturnDto();
-            if (!_EntityManager.Modify(new[] { model.PlInvoices })) return NotFound();
-            //忽略不可更改字段
-            var entity = _DbContext.Entry(model.PlInvoices);
+            var modifiedEntities = new List<PlInvoices>();
+            if (!_EntityManager.Modify(new[] { model.PlInvoices }, modifiedEntities)) return NotFound();
+            var entity = _DbContext.Entry(modifiedEntities[0]);
             _DbContext.SaveChanges();
             return result;
         }
@@ -457,9 +457,9 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyPlInvoicesItemReturnDto();
             if (!_AuthorizationManager.Demand(out string err, "F.3.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-            if (!_EntityManager.Modify(new[] { model.PlInvoicesItem })) return NotFound();
-            //忽略不可更改字段
-            var entity = _DbContext.Entry(model.PlInvoicesItem);
+            var modifiedEntities = new List<PlInvoicesItem>();
+            if (!_EntityManager.Modify(new[] { model.PlInvoicesItem }, modifiedEntities)) return NotFound();
+            var entity = _DbContext.Entry(modifiedEntities[0]);
             _DbContext.SaveChanges();
             return result;
         }
@@ -647,9 +647,9 @@ namespace PowerLmsWebApi.Controllers
                 if (!_AuthorizationManager.Demand(out string err, "D20.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             }
             #endregion 权限判定
-            if (!_EntityManager.Modify(new[] { model.DocFeeTemplate })) return NotFound();
-            //忽略不可更改字段
-            var entity = _DbContext.Entry(model.DocFeeTemplate);
+            var modifiedEntities = new List<DocFeeTemplate>();
+            if (!_EntityManager.Modify(new[] { model.DocFeeTemplate }, modifiedEntities)) return NotFound();
+            var entity = _DbContext.Entry(modifiedEntities[0]);
             _DbContext.SaveChanges();
             return result;
         }
@@ -821,9 +821,9 @@ namespace PowerLmsWebApi.Controllers
             }
             #endregion 权限判定
 
-            if (!_EntityManager.Modify(new[] { model.DocFeeTemplateItem })) return NotFound();
-            //忽略不可更改字段
-            var entity = _DbContext.Entry(model.DocFeeTemplateItem);
+            var modifiedEntities = new List<DocFeeTemplateItem>();
+            if (!_EntityManager.Modify(new[] { model.DocFeeTemplateItem }, modifiedEntities)) return NotFound();
+            var entity = _DbContext.Entry(modifiedEntities[0]);
             _DbContext.SaveChanges();
             return result;
         }

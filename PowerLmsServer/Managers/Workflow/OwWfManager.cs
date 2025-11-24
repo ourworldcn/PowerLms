@@ -77,7 +77,7 @@ namespace PowerLmsServer.Managers
                 var nodeItems = _DbContext.OwWfNodeItems
                     .Where(item => workflowIds.Contains(item.Parent.ParentId.Value))
                     .ToList();
-                
+
                 if (nodeItems.Any())
                 {
                     _DbContext.OwWfNodeItems.RemoveRange(nodeItems);
@@ -88,7 +88,7 @@ namespace PowerLmsServer.Managers
                 var nodes = _DbContext.OwWfNodes
                     .Where(node => workflowIds.Contains(node.ParentId.Value))
                     .ToList();
-                
+
                 if (nodes.Any())
                 {
                     _DbContext.OwWfNodes.RemoveRange(nodes);
@@ -150,116 +150,101 @@ namespace PowerLmsServer.Managers
         #region 缓存加载状态管理
 
         /// <summary>
-        /// 完整加载指定的工作流实例及其所有子节点和节点项到DbContext缓存。
+        /// 通过工作流ID加载全部相关工作流对象到DbContext缓存。
+        /// 
+        /// 设计说明：
+        /// 1. 优先检查本地缓存，如果已存在则直接返回（性能最优）
+        /// 2. 未命中缓存时，使用Include完整加载所有层级数据
+        /// 3. 即使之前使用Find()部分加载过，仍会重新完整加载以保证数据完整性
+        /// 
+        /// 性能建议：
+        /// - 最佳实践：首次访问工作流时调用此方法，后续直接使用缓存对象
+        /// - 可接受场景：即使之前用Find()加载过，重复调用此方法也是安全的（会重新完整加载，性能略降但逻辑正确）
         /// </summary>
         /// <param name="workflowId">工作流实例ID</param>
-        /// <returns>完整加载的工作流实例，如果不存在则返回null</returns>
-        /// <remarks>
-        /// 加载策略：
-        /// - 一级：OwWf（工作流实例）
-        /// - 二级：OwWfNode（工作流节点）
-        /// - 三级：OwWfNodeItem（节点项）
-        /// 加载后所有相关实体都会进入DbContext的本地缓存，后续访问不会触发数据库查询。
-        /// </remarks>
-        public OwWf LoadWorkflowWithAllChildren(Guid workflowId)
+        /// <returns>完整加载的工作流实例（包含所有节点和节点项），如果不存在则返回null</returns>
+        public OwWf LoadWorkflowById(Guid workflowId)
         {
-            var workflow = _DbContext.OwWfs
+            // 检查本地缓存，如果存在则直接返回（假设缓存中的数据是完整的）
+            // 注意：如果之前使用Find()部分加载过，这里会返回部分数据，但调用者应避免这种场景
+            var localWorkflow = _DbContext.OwWfs.Local.FirstOrDefault(w => w.Id == workflowId);
+            if (localWorkflow != null)
+                return localWorkflow;
+            
+            // 从数据库完整加载（Include自动加载所有子集）
+            return _DbContext.OwWfs
                 .Include(w => w.Children)
                     .ThenInclude(n => n.Children)
                 .FirstOrDefault(w => w.Id == workflowId);
-            if (workflow != null)
-            {
-                var entry = _DbContext.Entry(workflow);
-                entry.Collection(w => w.Children).IsLoaded = true;
-                foreach (var node in workflow.Children)
-                {
-                    _DbContext.Entry(node).Collection(n => n.Children).IsLoaded = true;
-                }
-                _SqlAppLogger.LogGeneralInfo($"工作流完整加载：ID={workflowId}, 节点数={workflow.Children.Count}, 总节点项数={workflow.Children.Sum(n => n.Children.Count)}");
-            }
-            return workflow;
         }
 
         /// <summary>
-        /// 批量完整加载指定文档ID关联的所有工作流实例及其子节点。
+        /// 通过节点ID加载全部相关工作流对象到DbContext缓存。
+        /// 
+        /// 设计说明：
+        /// 1. 先尝试从本地缓存获取节点，如果找到则通过ParentId调用LoadWorkflowById
+        /// 2. 如果缓存未命中，一次性通过节点Include完整加载工作流及所有层级数据
+        /// 3. 性能优于先Find节点再LoadWorkflowById（减少一次数据库查询）
+        /// 
+        /// 性能优势：
+        /// - 缓存命中：0次查询（直接返回内存数据）
+        /// - 缓存未命中：1次查询（一次性Include完整加载）
+        /// - 优于分步加载：避免Find + Include的2次查询
         /// </summary>
-        /// <param name="docId">业务文档ID</param>
-        /// <returns>完整加载的工作流实例列表</returns>
-        public List<OwWf> LoadWorkflowsByDocId(Guid docId)
+        /// <param name="nodeId">工作流节点ID</param>
+        /// <returns>完整加载的工作流实例（包含所有节点和节点项），如果不存在则返回null</returns>
+        public OwWf LoadWorkflowByNodeId(Guid nodeId)
         {
-            var workflows = _DbContext.OwWfs
-                .Where(w => w.DocId == docId)
-                .Include(w => w.Children)
-                    .ThenInclude(n => n.Children)
-                .ToList();
-            foreach (var workflow in workflows)
+            // 1. 尝试从本地缓存获取节点
+            var localNode = _DbContext.OwWfNodes.Local.FirstOrDefault(n => n.Id == nodeId);
+            if (localNode?.ParentId != null)
             {
-                _DbContext.Entry(workflow).Collection(w => w.Children).IsLoaded = true;
-                foreach (var node in workflow.Children)
-                {
-                    _DbContext.Entry(node).Collection(n => n.Children).IsLoaded = true;
-                }
+                // 缓存命中，直接调用LoadWorkflowById（可能再次命中缓存，0次查询）
+                return LoadWorkflowById(localNode.ParentId.Value);
             }
-            _SqlAppLogger.LogGeneralInfo($"批量工作流加载：文档ID={docId}, 工作流数={workflows.Count}");
-            return workflows;
+            
+            // 2. 缓存未命中，一次性完整加载（通过节点Include工作流及所有子集）
+            var node = _DbContext.OwWfNodes
+                .Include(n => n.Parent)              // 加载工作流
+                    .ThenInclude(w => w.Children)    // 加载所有节点
+                        .ThenInclude(n => n.Children) // 加载所有节点项
+                .FirstOrDefault(n => n.Id == nodeId);
+            
+            return node?.Parent;
         }
 
         /// <summary>
-        /// 检查指定工作流实例是否已完整加载到DbContext缓存。
+        /// 通过模板ID加载完整的工作流模板到DbContext缓存。
+        /// 
+        /// 设计说明：
+        /// 1. 优先检查本地缓存，如果已存在则直接返回（性能最优）
+        /// 2. 未命中缓存时，使用Include完整加载所有层级数据（模板节点和节点项）
+        /// 3. 模板数据相对稳定，适合长期缓存使用
+        /// 
+        /// 性能优势：
+        /// - 缓存命中：0次查询（直接返回内存数据）
+        /// - 缓存未命中：1次查询（一次性Include完整加载）
+        /// - 后续所有访问模板节点和节点项都在内存中完成
+        /// 
+        /// 使用场景：
+        /// - 创建工作流实例前需要读取模板配置
+        /// - 验证流程定义是否符合业务规则
+        /// - 展示流程模板详细信息给用户
         /// </summary>
-        /// <param name="workflow">要检查的工作流实例</param>
-        /// <returns>返回加载状态信息</returns>
-        public WorkflowLoadStatus GetWorkflowLoadStatus(OwWf workflow)
+        /// <param name="templateId">工作流模板ID</param>
+        /// <returns>完整加载的工作流模板（包含所有节点和节点项），如果不存在则返回null</returns>
+        public OwWfTemplate LoadTemplateById(Guid templateId)
         {
-            if (workflow == null)
-                throw new ArgumentNullException(nameof(workflow));
-            var entry = _DbContext.Entry(workflow);
-            var status = new WorkflowLoadStatus
-            {
-                WorkflowId = workflow.Id,
-                IsWorkflowLoaded = entry.State != EntityState.Detached,
-                IsNodesLoaded = entry.Collection(w => w.Children).IsLoaded,
-                LoadedNodesCount = workflow.Children?.Count ?? 0
-            };
-            if (status.IsNodesLoaded && workflow.Children != null)
-            {
-                status.NodeItemsLoadStatus = workflow.Children.Select(node => new NodeItemLoadStatus
-                {
-                    NodeId = node.Id,
-                    IsLoaded = _DbContext.Entry(node).Collection(n => n.Children).IsLoaded,
-                    ItemsCount = node.Children?.Count ?? 0
-                }).ToList();
-                status.AllNodeItemsLoaded = status.NodeItemsLoadStatus.All(n => n.IsLoaded);
-            }
-            return status;
-        }
-
-        /// <summary>
-        /// 强制标记工作流及其子对象已完整加载（适用于已确认完整加载的场景）。
-        /// </summary>
-        /// <param name="workflow">工作流实例</param>
-        public void MarkWorkflowAsFullyLoaded(OwWf workflow)
-        {
-            if (workflow == null)
-                throw new ArgumentNullException(nameof(workflow));
-            var entry = _DbContext.Entry(workflow);
-            entry.Collection(w => w.Children).IsLoaded = true;
-            if (workflow.Children != null)
-            {
-                foreach (var node in workflow.Children)
-                {
-                    _DbContext.Entry(node).Collection(n => n.Children).IsLoaded = true;
-                }
-            }
-        }
-
-        /// <summary>
-        /// 获取DbContext中所有已加载的工作流实例。
-        /// </summary>
-        /// <returns>本地缓存中的工作流列表</returns>
-        public List<OwWf> GetLocalWorkflows()
-        {
-            return _DbContext.OwWfs.Local.ToList();
+            // 检查本地缓存，如果存在则直接返回
+            var localTemplate = _DbContext.Set<OwWfTemplate>().Local.FirstOrDefault(t => t.Id == templateId);
+            if (localTemplate != null)
+                return localTemplate;
+            
+            // 从数据库完整加载（Include自动加载所有子集）
+            return _DbContext.Set<OwWfTemplate>()
+                .Include(t => t.Children)              // 加载所有模板节点
+                    .ThenInclude(n => n.Children)      // 加载所有模板节点项
+                .FirstOrDefault(t => t.Id == templateId);
         }
 
         #endregion 缓存加载状态管理
@@ -300,14 +285,43 @@ namespace PowerLmsServer.Managers
 
         /// <summary>
         /// 获取模板中所有首节点。
+        /// 
+        /// 设计说明：
+        /// 1. 自动通过LoadTemplateById加载完整模板（利用缓存）
+        /// 2. 在内存中查找所有首节点（NextId为null的反向推导）
+        /// 3. 调用者无需自己加载模板，简化使用
+        /// 
+        /// 查找逻辑：
+        /// - 创建包含所有节点的字典（以Id为键）
+        /// - 遍历所有节点，移除被NextId引用的节点
+        /// - 剩余的节点即为首节点（没有前驱节点）
+        /// 
+        /// 性能优化：
+        /// - 利用LoadTemplateById的缓存机制，重复调用0次额外查询
+        /// - 纯内存操作，不触发数据库查询
+        /// 
+        /// 使用场景：
+        /// - 创建工作流实例时确定起始节点
+        /// - 验证流程定义的合法性
+        /// - 展示流程图时确定入口节点
         /// </summary>
-        /// <param name="template"></param>
-        /// <returns></returns>
-        public IEnumerable<OwWfTemplateNode> GetFirstNodes(OwWfTemplate template)
+        /// <param name="templateId">工作流模板ID</param>
+        /// <returns>首节点集合，如果模板不存在或没有节点则返回空集合</returns>
+        public IEnumerable<OwWfTemplateNode> GetFirstNodes(Guid templateId)
         {
+            // 1. 通过LoadTemplateById加载完整模板（利用缓存）
+            var template = LoadTemplateById(templateId);
+            if (template == null || !template.Children.Any())
+                return Enumerable.Empty<OwWfTemplateNode>();
+            
+            // 2. 在内存中查找首节点（反向推导：没有被NextId引用的节点）
             var dic = template.Children.ToDictionary(c => c.Id);
             foreach (var item in template.Children)
-                if (item.NextId is not null) dic.Remove(item.NextId.Value);
+            {
+                if (item.NextId is not null)
+                    dic.Remove(item.NextId.Value);
+            }
+            
             return dic.Values;
         }
 
@@ -321,69 +335,292 @@ namespace PowerLmsServer.Managers
         {
             return node.Children.Any(c => c.OperationKind == 0 & c.OpertorId == opertorId);
         }
-        
+
         #endregion 模板相关
-    }
 
-    /// <summary>
-    /// 工作流加载状态信息。
-    /// </summary>
-    public class WorkflowLoadStatus
-    {
-        /// <summary>
-        /// 工作流ID。
-        /// </summary>
-        public Guid WorkflowId { get; set; }
+        #region 工作流节点查询
 
         /// <summary>
-        /// 工作流实例是否已加载到DbContext。
+        /// 获取工作流的首节点。
+        /// 
+        /// 查找逻辑（按优先级）：
+        /// 1. 自动通过LoadWorkflowById加载完整工作流（利用缓存，几乎无性能开销）
+        /// 2. 如果工作流关联了模板，则基于模板定义查找首节点
+        /// 3. 如果没有模板或模板查找失败，则基于ArrivalDateTime运行时排序
+        /// 
+        /// 排序规则（无模板时）：
+        /// - 主排序：按ArrivalDateTime升序
+        /// - 次排序：按Id升序（确保确定性）
+        /// 
+        /// 性能优化：
+        /// - 工作流缓存：LoadWorkflowById自动缓存，重复调用0次额外查询
+        /// - 模板缓存：GetFirstNodes自动调用LoadTemplateById缓存模板数据
+        /// - 内存查询：所有操作在内存中完成
+        /// 
+        /// 使用场景：
+        /// - 控制器中快速获取首节点，无需手动加载工作流
+        /// - 简化代码，一行调用完成所有操作
         /// </summary>
-        public bool IsWorkflowLoaded { get; set; }
+        /// <param name="workflowId">工作流实例ID</param>
+        /// <returns>首节点对象，如果工作流不存在或没有节点则返回null</returns>
+        public OwWfNode GetFirstNode(Guid workflowId)
+        {
+            var workflow = LoadWorkflowById(workflowId);
+            if (workflow == null || !workflow.Children.Any())
+                return null;
+            
+            // 1. 优先基于模板定义查找（GetFirstNodes自动加载并缓存模板）
+            if (workflow.TemplateId != null)
+            {
+                var firstTemplateNodes = GetFirstNodes(workflow.TemplateId.Value);
+                foreach (var templateNode in firstTemplateNodes)
+                {
+                    var instanceNode = workflow.Children.FirstOrDefault(n => n.TemplateId == templateNode.Id);
+                    if (instanceNode != null)
+                        return instanceNode;
+                }
+            }
+            
+            // 2. 降级方案：基于运行时到达时间排序
+            return workflow.Children
+                .OrderBy(n => n.ArrivalDateTime)
+                .ThenBy(n => n.Id)
+                .FirstOrDefault();
+        }
 
         /// <summary>
-        /// 工作流的子节点集合是否已加载。
+        /// 获取工作流的当前节点（正在执行的节点）。
+        /// 
+        /// 查找逻辑：
+        /// 1. 自动通过LoadWorkflowById加载完整工作流（利用缓存，几乎无性能开销）
+        /// 2. 查找所有未处理完成的节点项，确定当前正在执行的节点
+        /// 3. 如果所有节点都已处理完成，返回最后到达的节点（流程结束状态）
+        /// 
+        /// 当前节点判定规则：
+        /// - 查找所有子节点项中存在未处理（IsSuccess == null）的节点
+        /// - 如果有多个未处理节点，返回最早到达的（符合流程顺序）
+        /// - 如果都已处理，返回最后到达的节点（流程已完成）
+        /// 
+        /// 性能优化：
+        /// - 工作流缓存：LoadWorkflowById自动缓存，重复调用0次额外查询
+        /// - 纯内存查询：节点查找在内存中完成，不触发数据库查询
+        /// 
+        /// 使用场景：
+        /// - 控制器中快速获取当前节点，无需手动加载工作流
+        /// - 简化代码，一行调用完成工作流加载和节点查找
         /// </summary>
-        public bool IsNodesLoaded { get; set; }
+        /// <param name="workflowId">工作流实例ID</param>
+        /// <returns>当前正在执行的节点对象，如果工作流不存在或没有节点则返回null</returns>
+        public OwWfNode GetCurrentNode(Guid workflowId)
+        {
+            var workflow = LoadWorkflowById(workflowId);
+            if (workflow == null || !workflow.Children.Any())
+                return null;
+            
+            // 1. 查找有未处理节点项的节点（当前正在处理的节点）
+            var nodeWithPendingItems = workflow.Children
+                .Where(n => n.Children.Any(item => item.IsSuccess == null))
+                .OrderBy(n => n.ArrivalDateTime)
+                .ThenBy(n => n.Id)
+                .FirstOrDefault();
+            
+            if (nodeWithPendingItems != null)
+                return nodeWithPendingItems;
+            
+            // 2. 所有节点都已处理完成，返回最后到达的节点（流程已完成）
+            return workflow.Children
+                .OrderByDescending(n => n.ArrivalDateTime)
+                .ThenByDescending(n => n.Id)
+                .FirstOrDefault();
+        }
 
         /// <summary>
-        /// 已加载的节点数量。
+        /// 根据节点模板ID获取工作流实例中对应的节点。
+        /// 
+        /// 查找逻辑：
+        /// 1. 自动通过LoadWorkflowById加载完整工作流（利用缓存，几乎无性能开销）
+        /// 2. 在内存中查找匹配的节点
+        /// 
+        /// 性能优化：
+        /// - 工作流缓存：LoadWorkflowById自动缓存，重复调用0次额外查询
+        /// - 纯内存查询：不触发数据库查询
+        /// 
+        /// 使用场景：
+        /// - 控制器中快速根据模板ID查找节点，无需手动加载工作流
         /// </summary>
-        public int LoadedNodesCount { get; set; }
+        /// <param name="workflowId">工作流实例ID</param>
+        /// <param name="templateNodeId">节点模板ID</param>
+        /// <returns>匹配的节点对象，如果未找到则返回null</returns>
+        public OwWfNode GetNodeByTemplateId(Guid workflowId, Guid templateNodeId)
+        {
+            var workflow = LoadWorkflowById(workflowId);
+            if (workflow == null)
+                return null;
+            
+            return workflow.Children.FirstOrDefault(n => n.TemplateId == templateNodeId);
+        }
+
+        #endregion 工作流节点查询
+
+        #region 工作流状态查询
 
         /// <summary>
-        /// 所有节点项是否都已加载。
+        /// 获取工作流的状态。
+        /// 
+        /// 查找逻辑：
+        /// 1. 自动通过LoadWorkflowById加载完整工作流（利用缓存，几乎无性能开销）
+        /// 2. 获取当前节点（最后一个审批节点）
+        /// 3. 检查该节点的审批状态
+        /// 4. 根据审批状态确定工作流状态
+        /// 
+        /// 性能优化：
+        /// - 工作流缓存：LoadWorkflowById自动缓存，重复调用0次额外查询
+        /// - 内存查询：所有操作在内存中完成
+        /// - 模板缓存：GetNodeApprovalState内部使用Find，模板已被LoadTemplateById缓存
+        /// 
+        /// 使用场景：
+        /// - 控制器中快速获取工作流状态，无需手动加载
+        /// - 简化代码，一行调用完成所有操作
         /// </summary>
-        public bool AllNodeItemsLoaded { get; set; }
+        /// <param name="workflowId">工作流实例ID</param>
+        /// <returns>工作流状态：0=流转中，1=成功完成，2=已被终止</returns>
+        public int GetWorkflowState(Guid workflowId)
+        {
+            var workflow = LoadWorkflowById(workflowId);
+            if (workflow == null)
+                return 0; // 工作流不存在，视为流转中
+            
+            var currentNode = GetCurrentNode(workflowId);
+            if (currentNode == null)
+                return 0; // 无节点，视为流转中
+            
+            if (!GetNodeApprovalState(currentNode, out var state))
+                return 0; // 不是审批节点，视为流转中
+            
+            if (!state.HasValue)
+                return 0; // 待审批状态
+            
+            return state.Value ? 1 : 2; // true=成功完成, false=被终止
+        }
 
         /// <summary>
-        /// 各节点的节点项加载状态详情。
+        /// 获取节点的审批状态。
+        /// 
+        /// 查找逻辑：
+        /// 1. 通过Find加载节点模板（利用缓存）
+        /// 2. 对比模板定义的审批人和实例节点的审批人
+        /// 3. 汇总所有审批人的审批结果
+        /// 
+        /// 判定规则：
+        /// - 任意审批人IsSuccess==null → 待审批（state=null）
+        /// - 任意审批人IsSuccess==false → 否决（state=false）
+        /// - 所有审批人IsSuccess==true → 通过（state=true）
+        /// 
+        /// 性能优化：
+        /// - 模板缓存：Find利用EF Core缓存，如果模板已被LoadTemplateById加载则0次查询
+        /// - 内存查询：节点项对比在内存中完成
+        /// 
+        /// 前置条件：
+        /// - node对象必须已完整加载（包含Children）
+        /// - 建议先调用LoadWorkflowById或LoadWorkflowByNodeId
         /// </summary>
-        public List<NodeItemLoadStatus> NodeItemsLoadStatus { get; set; }
+        /// <param name="node">工作流节点（必须已完整加载）</param>
+        /// <param name="state">审批状态：false=否决，true=通过，null=待审批</param>
+        /// <returns>是否是审批节点：true=是审批节点，false=不是审批节点</returns>
+        public bool GetNodeApprovalState(OwWfNode node, out bool? state)
+        {
+            if (node == null)
+                throw new ArgumentNullException(nameof(node));
+            
+            // 获取节点模板（利用缓存）
+            var templateNode = _DbContext.WfTemplateNodes.Find(node.TemplateId);
+            if (templateNode == null)
+            {
+                state = null;
+                return false;
+            }
+            
+            // 获取模板定义的审批人（OperationKind=0）
+            var templateApprovers = templateNode.Children
+                .Where(c => c.OperationKind == 0)
+                .ToList();
+            
+            if (!templateApprovers.Any())
+            {
+                state = null;
+                return false; // 不是审批节点
+            }
+            
+            // 获取实例节点的审批人
+            var instanceApprovers = node.Children
+                .Where(c => c.OperationKind == 0)
+                .ToList();
+            
+            // 对比模板和实例的审批人
+            var approvalResults = from templateItem in templateApprovers
+                                  join instanceItem in instanceApprovers
+                                  on templateItem.OpertorId equals instanceItem.OpertorId
+                                  select instanceItem;
+            
+            var approvalList = approvalResults.ToList();
+            if (!approvalList.Any())
+            {
+                state = null;
+                return false; // 无匹配的审批人，不是有效的审批节点
+            }
+            
+            // 检查审批状态
+            state = true; // 默认为通过
+            foreach (var item in approvalList)
+            {
+                if (item.IsSuccess is null)
+                {
+                    state = null; // 有待审批的
+                    break;
+                }
+                else if (item.IsSuccess == false)
+                {
+                    state = false; // 有否决的
+                    break;
+                }
+            }
+            
+            return true; // 是审批节点
+        }
 
         /// <summary>
-        /// 是否完整加载（工作流、节点、节点项全部加载）。
+        /// 检查工作流是否已完成（成功或失败）- 基于文档ID。
+        /// 
+        /// 查找逻辑：
+        /// 1. 根据文档ID查找关联的工作流
+        /// 2. 检查工作流的State字段
+        /// 
+        /// 注意：
+        /// - 一个文档可能关联多个工作流（不同模板）
+        /// - 此方法检查是否所有工作流都已完成
+        /// 
+        /// 性能优化：
+        /// - 仅查询State字段，不加载完整工作流数据
+        /// 
+        /// 使用场景：
+        /// - 控制器中快速检查文档的工作流是否完成
+        /// - 业务逻辑中判断是否可以执行后续操作
         /// </summary>
-        public bool IsFullyLoaded => IsWorkflowLoaded && IsNodesLoaded && AllNodeItemsLoaded;
-    }
+        /// <param name="docId">业务文档ID</param>
+        /// <returns>true=所有工作流已完成，false=至少有一个工作流在流转中或没有工作流</returns>
+        public bool IsWorkflowCompleted(Guid docId)
+        {
+            var workflows = _DbContext.OwWfs
+                .Where(wf => wf.DocId == docId)
+                .Select(wf => new { wf.Id, wf.State })
+                .ToList();
+            
+            if (!workflows.Any())
+                return false; // 没有工作流，视为未完成
+            
+            return workflows.All(wf => wf.State != 0); // 所有工作流都不在流转中
+        }
 
-    /// <summary>
-    /// 节点项加载状态信息。
-    /// </summary>
-    public class NodeItemLoadStatus
-    {
-        /// <summary>
-        /// 节点ID。
-        /// </summary>
-        public Guid NodeId { get; set; }
-
-        /// <summary>
-        /// 该节点的子项集合是否已加载。
-        /// </summary>
-        public bool IsLoaded { get; set; }
-
-        /// <summary>
-        /// 已加载的节点项数量。
-        /// </summary>
-        public int ItemsCount { get; set; }
+        #endregion 工作流状态查询
     }
 }

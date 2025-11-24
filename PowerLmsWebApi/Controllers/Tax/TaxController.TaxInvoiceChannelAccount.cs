@@ -1,4 +1,4 @@
-using AutoMapper;
+ï»¿using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OW.EntityFrameworkCore;
@@ -12,22 +12,22 @@ using System.Net;
 namespace PowerLmsWebApi.Controllers
 {
     /// <summary>
-    /// Ë°ÎñÏà¹Ø¹¦ÄÜ¿ØÖÆÆ÷ - Ë°Îñ·¢Æ±ÇşµÀÕËºÅÏà¹Ø¹¦ÄÜ¡£
+    /// ç¨åŠ¡ç›¸å…³åŠŸèƒ½æ§åˆ¶å™¨ - ç¨åŠ¡å‘ç¥¨æ¸ é“è´¦å·ç›¸å…³åŠŸèƒ½ã€‚
     /// </summary>
     public partial class TaxController : PlControllerBase
     {
-        #region Ë°Îñ·¢Æ±ÇşµÀÕËºÅÏà¹Ø²Ù×÷
+        #region ç¨åŠ¡å‘ç¥¨æ¸ é“è´¦å·ç›¸å…³æ“ä½œ
 
         /// <summary>
-        /// »ñÈ¡Ë°Îñ·¢Æ±ÇşµÀÕËºÅÁĞ±í¡£
+        /// è·å–ç¨åŠ¡å‘ç¥¨æ¸ é“è´¦å·åˆ—è¡¨ã€‚
         /// </summary>
-        /// <param name="model">·ÖÒ³²ÎÊı</param>
-        /// <param name="conditional">²éÑ¯Ìõ¼ş</param>
-        /// <returns>Ë°Îñ·¢Æ±ÇşµÀÕËºÅÁĞ±í</returns>
-        /// <response code="200">Î´·¢ÉúÏµÍ³¼¶´íÎó¡£µ«¿ÉÄÜ³öÏÖÓ¦ÓÃ´íÎó£¬¾ßÌå²Î¼û HasError ºÍ ErrorCode ¡£</response>  
-        /// <response code="401">ÎŞĞ§ÁîÅÆ¡£</response>  
+        /// <param name="model">åˆ†é¡µå‚æ•°</param>
+        /// <param name="conditional">æŸ¥è¯¢æ¡ä»¶</param>
+        /// <returns>ç¨åŠ¡å‘ç¥¨æ¸ é“è´¦å·åˆ—è¡¨</returns>
+        /// <response code="200">æœªå‘ç”Ÿç³»ç»Ÿçº§é”™è¯¯ã€‚ä½†å¯èƒ½å‡ºç°åº”ç”¨é”™è¯¯ï¼Œå…·ä½“å‚è§ HasError å’Œ ErrorCode ã€‚</response>  
+        /// <response code="401">æ— æ•ˆä»¤ç‰Œã€‚</response>  
         [HttpGet]
-        [Description("»ñÈ¡Ë°Îñ·¢Æ±ÇşµÀÕËºÅÁĞ±í")]
+        [Description("è·å–ç¨åŠ¡å‘ç¥¨æ¸ é“è´¦å·åˆ—è¡¨")]
         public ActionResult<GetAllTaxInvoiceChannelAccountReturnDto> GetAllTaxInvoiceChannelAccount(
             [FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
@@ -37,23 +37,23 @@ namespace PowerLmsWebApi.Controllers
             var result = new GetAllTaxInvoiceChannelAccountReturnDto();
             var dbSet = _DbContext.Set<TaxInvoiceChannelAccount>();
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-            // Ê¹ÓÃÍ¨ÓÃ²éÑ¯Ìõ¼ş´¦Àí
+            // ä½¿ç”¨é€šç”¨æŸ¥è¯¢æ¡ä»¶å¤„ç†
             coll = EfHelper.GenerateWhereAnd(coll, conditional);
-            // »ñÈ¡·ÖÒ³½á¹û
+            // è·å–åˆ†é¡µç»“æœ
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }
 
         /// <summary>
-        /// Ìí¼ÓË°Îñ·¢Æ±ÇşµÀÕËºÅ¡£
+        /// æ·»åŠ ç¨åŠ¡å‘ç¥¨æ¸ é“è´¦å·ã€‚
         /// </summary>
-        /// <param name="model">Ìí¼Ó²ÎÊı</param>
-        /// <returns>²Ù×÷½á¹û</returns>
-        /// <response code="200">Î´·¢ÉúÏµÍ³¼¶´íÎó¡£µ«¿ÉÄÜ³öÏÖÓ¦ÓÃ´íÎó£¬¾ßÌå²Î¼û HasError ºÍ ErrorCode ¡£</response>  
-        /// <response code="401">ÎŞĞ§ÁîÅÆ¡£</response>  
+        /// <param name="model">æ·»åŠ å‚æ•°</param>
+        /// <returns>æ“ä½œç»“æœ</returns>
+        /// <response code="200">æœªå‘ç”Ÿç³»ç»Ÿçº§é”™è¯¯ã€‚ä½†å¯èƒ½å‡ºç°åº”ç”¨é”™è¯¯ï¼Œå…·ä½“å‚è§ HasError å’Œ ErrorCode ã€‚</response>  
+        /// <response code="401">æ— æ•ˆä»¤ç‰Œã€‚</response>  
         [HttpPost]
-        [Description("Ìí¼ÓË°Îñ·¢Æ±ÇşµÀÕËºÅ")]
+        [Description("æ·»åŠ ç¨åŠ¡å‘ç¥¨æ¸ é“è´¦å·")]
         public ActionResult<AddTaxInvoiceChannelAccountReturnDto> AddTaxInvoiceChannelAccount(AddTaxInvoiceChannelAccountParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
@@ -61,40 +61,40 @@ namespace PowerLmsWebApi.Controllers
             var result = new AddTaxInvoiceChannelAccountReturnDto();
             try
             {
-                // È·±£ÒªÌí¼ÓµÄÏî²»Îª¿Õ
+                // ç¡®ä¿è¦æ·»åŠ çš„é¡¹ä¸ä¸ºç©º
                 if (model.Item == null)
                 {
                     result.ErrorCode = 400;
-                    result.DebugMessage = "ÒªÌí¼ÓµÄË°Îñ·¢Æ±ÇşµÀÕËºÅ²»ÄÜÎª¿Õ";
+                    result.DebugMessage = "è¦æ·»åŠ çš„ç¨åŠ¡å‘ç¥¨æ¸ é“è´¦å·ä¸èƒ½ä¸ºç©º";
                     return result;
                 }
-                // Éú³ÉĞÂµÄID
+                // ç”Ÿæˆæ–°çš„ID
                 model.Item.GenerateNewId();
-                // Ìí¼Óµ½Êı¾İ¿â
+                // æ·»åŠ åˆ°æ•°æ®åº“
                 _DbContext.Set<TaxInvoiceChannelAccount>().Add(model.Item);
                 _DbContext.SaveChanges();
-                // ·µ»ØÌí¼ÓµÄID
+                // è¿”å›æ·»åŠ çš„ID
                 result.Id = model.Item.Id;
                 return result;
             }
             catch (Exception ex)
             {
                 result.ErrorCode = 500;
-                result.DebugMessage = $"Ìí¼ÓË°Îñ·¢Æ±ÇşµÀÕËºÅÊ§°Ü£º{ex.Message}";
+                result.DebugMessage = $"æ·»åŠ ç¨åŠ¡å‘ç¥¨æ¸ é“è´¦å·å¤±è´¥ï¼š{ex.Message}";
                 return result;
             }
         }
 
         /// <summary>
-        /// ĞŞ¸ÄË°Îñ·¢Æ±ÇşµÀÕËºÅ¡£
+        /// ä¿®æ”¹ç¨åŠ¡å‘ç¥¨æ¸ é“è´¦å·ã€‚
         /// </summary>
-        /// <param name="model">ĞŞ¸Ä²ÎÊı</param>
-        /// <returns>²Ù×÷½á¹û</returns>
-        /// <response code="200">Î´·¢ÉúÏµÍ³¼¶´íÎó¡£µ«¿ÉÄÜ³öÏÖÓ¦ÓÃ´íÎó£¬¾ßÌå²Î¼û HasError ºÍ ErrorCode ¡£</response>  
-        /// <response code="400">Ö¸¶¨ÊµÌåµÄId²»´æÔÚ¡£Í¨³£ÕâÊÇBug.ÔÚ¼«¶ËÇé¿öÏÂ¿ÉÄÜÊÇ²¢·¢ÎÊÌâ¡£</response>  
-        /// <response code="401">ÎŞĞ§ÁîÅÆ¡£</response>  
+        /// <param name="model">ä¿®æ”¹å‚æ•°</param>
+        /// <returns>æ“ä½œç»“æœ</returns>
+        /// <response code="200">æœªå‘ç”Ÿç³»ç»Ÿçº§é”™è¯¯ã€‚ä½†å¯èƒ½å‡ºç°åº”ç”¨é”™è¯¯ï¼Œå…·ä½“å‚è§ HasError å’Œ ErrorCode ã€‚</response>  
+        /// <response code="400">æŒ‡å®šå®ä½“çš„Idä¸å­˜åœ¨ã€‚é€šå¸¸è¿™æ˜¯Bug.åœ¨æç«¯æƒ…å†µä¸‹å¯èƒ½æ˜¯å¹¶å‘é—®é¢˜ã€‚</response>  
+        /// <response code="401">æ— æ•ˆä»¤ç‰Œã€‚</response>  
         [HttpPut]
-        [Description("ĞŞ¸ÄË°Îñ·¢Æ±ÇşµÀÕËºÅ")]
+        [Description("ä¿®æ”¹ç¨åŠ¡å‘ç¥¨æ¸ é“è´¦å·")]
         public ActionResult<ModifyTaxInvoiceChannelAccountReturnDto> ModifyTaxInvoiceChannelAccount(ModifyTaxInvoiceChannelAccountParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
@@ -102,15 +102,14 @@ namespace PowerLmsWebApi.Controllers
             var result = new ModifyTaxInvoiceChannelAccountReturnDto();
             try
             {
-                // È·±£ÒªĞŞ¸ÄµÄÏî²»Îª¿Õ
                 if (model.Items == null || model.Items.Count == 0)
                 {
                     result.ErrorCode = 400;
-                    result.DebugMessage = "ÒªĞŞ¸ÄµÄË°Îñ·¢Æ±ÇşµÀÕËºÅ²»ÄÜÎª¿Õ";
+                    result.DebugMessage = "è¦ä¿®æ”¹çš„ç¨åŠ¡å‘ç¥¨æ¸ é“è´¦å·ä¸èƒ½ä¸ºç©º";
                     return result;
                 }
-                // Ê¹ÓÃEntityManager½øĞĞĞŞ¸Ä
-                if (!_EntityManager.Modify(model.Items))
+                var modifiedEntities = new List<TaxInvoiceChannelAccount>();
+                if (!_EntityManager.Modify(model.Items, modifiedEntities))
                 {
                     return new StatusCodeResult(OwHelper.GetLastError());
                 }
@@ -120,21 +119,21 @@ namespace PowerLmsWebApi.Controllers
             catch (Exception ex)
             {
                 result.ErrorCode = 500;
-                result.DebugMessage = $"ĞŞ¸ÄË°Îñ·¢Æ±ÇşµÀÕËºÅÊ§°Ü£º{ex.Message}";
+                result.DebugMessage = $"ä¿®æ”¹ç¨åŠ¡å‘ç¥¨æ¸ é“è´¦å·å¤±è´¥ï¼š{ex.Message}";
                 return result;
             }
         }
 
         /// <summary>
-        /// É¾³ıË°Îñ·¢Æ±ÇşµÀÕËºÅ¡£
+        /// åˆ é™¤ç¨åŠ¡å‘ç¥¨æ¸ é“è´¦å·ã€‚
         /// </summary>
-        /// <param name="model">É¾³ı²ÎÊı</param>
-        /// <returns>²Ù×÷½á¹û</returns>
-        /// <response code="200">Î´·¢ÉúÏµÍ³¼¶´íÎó¡£µ«¿ÉÄÜ³öÏÖÓ¦ÓÃ´íÎó£¬¾ßÌå²Î¼û HasError ºÍ ErrorCode ¡£</response>  
-        /// <response code="400">Ö¸¶¨ÊµÌåµÄId²»´æÔÚ¡£Í¨³£ÕâÊÇBug.ÔÚ¼«¶ËÇé¿öÏÂ¿ÉÄÜÊÇ²¢·¢ÎÊÌâ¡£</response>  
-        /// <response code="401">ÎŞĞ§ÁîÅÆ¡£</response>  
+        /// <param name="model">åˆ é™¤å‚æ•°</param>
+        /// <returns>æ“ä½œç»“æœ</returns>
+        /// <response code="200">æœªå‘ç”Ÿç³»ç»Ÿçº§é”™è¯¯ã€‚ä½†å¯èƒ½å‡ºç°åº”ç”¨é”™è¯¯ï¼Œå…·ä½“å‚è§ HasError å’Œ ErrorCode ã€‚</response>  
+        /// <response code="400">æŒ‡å®šå®ä½“çš„Idä¸å­˜åœ¨ã€‚é€šå¸¸è¿™æ˜¯Bug.åœ¨æç«¯æƒ…å†µä¸‹å¯èƒ½æ˜¯å¹¶å‘é—®é¢˜ã€‚</response>  
+        /// <response code="401">æ— æ•ˆä»¤ç‰Œã€‚</response>  
         [HttpDelete]
-        [Description("É¾³ıË°Îñ·¢Æ±ÇşµÀÕËºÅ")]
+        [Description("åˆ é™¤ç¨åŠ¡å‘ç¥¨æ¸ é“è´¦å·")]
         public ActionResult<RemoveTaxInvoiceChannelAccountReturnDto> RemoveTaxInvoiceChannelAccount(RemoveTaxInvoiceChannelAccountParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
@@ -147,10 +146,10 @@ namespace PowerLmsWebApi.Controllers
                 if (item == null)
                 {
                     result.ErrorCode = 404;
-                    result.DebugMessage = "Î´ÕÒµ½Ö¸¶¨µÄË°Îñ·¢Æ±ÇşµÀÕËºÅ";
+                    result.DebugMessage = "æœªæ‰¾åˆ°æŒ‡å®šçš„ç¨åŠ¡å‘ç¥¨æ¸ é“è´¦å·";
                     return result;
                 }
-                // Ö±½ÓÎïÀíÉ¾³ı
+                // ç›´æ¥ç‰©ç†åˆ é™¤
                 _EntityManager.Remove(item);
                 _DbContext.SaveChanges();
                 return result;
@@ -158,7 +157,7 @@ namespace PowerLmsWebApi.Controllers
             catch (Exception ex)
             {
                 result.ErrorCode = 500;
-                result.DebugMessage = $"É¾³ıË°Îñ·¢Æ±ÇşµÀÕËºÅÊ§°Ü£º{ex.Message}";
+                result.DebugMessage = $"åˆ é™¤ç¨åŠ¡å‘ç¥¨æ¸ é“è´¦å·å¤±è´¥ï¼š{ex.Message}";
                 return result;
             }
         }

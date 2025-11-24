@@ -167,7 +167,7 @@ namespace PowerLmsWebApi.Controllers.Forum
                 _DbContext.SaveChanges();
                 result.Id = model.Item.Id;
 
-                _Logger.LogInformation("用户 {UserId} 成功创建论坛板块 {CategoryId}，商户 {MerchantId}", 
+                _Logger.LogInformation("用户 {UserId} 成功创建论坛板块 {CategoryId}，商户 {MerchantId}",
                     context.User.Id, model.Item.Id, model.Item.ParentId);
             }
             catch (Exception err)
@@ -208,7 +208,7 @@ namespace PowerLmsWebApi.Controllers.Forum
                         var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
                         if (!merchantId.HasValue || existing.ParentId != merchantId.Value.ToString())
                         {
-                            _Logger.LogWarning("用户 {UserId} 试图修改不属于自己商户的论坛板块 {CategoryId}", 
+                            _Logger.LogWarning("用户 {UserId} 试图修改不属于自己商户的论坛板块 {CategoryId}",
                                 context.User.Id, item.Id);
                             return StatusCode(403, "权限不足，无法修改其他商户的板块");
                         }
@@ -222,7 +222,7 @@ namespace PowerLmsWebApi.Controllers.Forum
                     return NotFound();
 
                 // 保护核心属性不被修改
-                foreach (var item in model.Items)
+                foreach (var item in list)  // ✅ 修复：使用已跟踪的实体列表
                 {
                     var entry = _DbContext.Entry(item);
                     entry.Property(c => c.CreatedAt).IsModified = false;
@@ -231,7 +231,7 @@ namespace PowerLmsWebApi.Controllers.Forum
 
                 _DbContext.SaveChanges();
 
-                _Logger.LogInformation("用户 {UserId} 成功修改了 {Count} 个论坛板块", 
+                _Logger.LogInformation("用户 {UserId} 成功修改了 {Count} 个论坛板块",
                     context.User.Id, model.Items.Count);
             }
             catch (Exception excp)
@@ -280,7 +280,7 @@ namespace PowerLmsWebApi.Controllers.Forum
                     var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
                     if (!merchantId.HasValue || item.ParentId != merchantId.Value.ToString())
                     {
-                        _Logger.LogWarning("用户 {UserId} 试图删除不属于自己商户的论坛板块 {CategoryId}", 
+                        _Logger.LogWarning("用户 {UserId} 试图删除不属于自己商户的论坛板块 {CategoryId}",
                             context.User.Id, id);
                         return StatusCode(403, "权限不足，无法删除其他商户的板块");
                     }
@@ -332,7 +332,7 @@ namespace PowerLmsWebApi.Controllers.Forum
                 var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
                 if (!merchantId.HasValue || category.ParentId != merchantId.Value.ToString())
                 {
-                    _Logger.LogWarning("用户 {UserId} 试图访问不属于自己商户的论坛板块 {CategoryId}", 
+                    _Logger.LogWarning("用户 {UserId} 试图访问不属于自己商户的论坛板块 {CategoryId}",
                         context.User.Id, categoryId);
                     return StatusCode(403, "权限不足，无法访问其他商户的板块");
                 }
