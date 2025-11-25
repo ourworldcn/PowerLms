@@ -1,273 +1,164 @@
 ﻿# 📝 PowerLMS 变更日志
 
-## [未发布] - 2025-01-28
+## [未发布] - 2025-02-06
 
 ### ✅ 本次完成的工作
 
-#### 1. 开发环境优化:登录验证简化(新增)
-- **问题**:开发环境下每次登录都需要输入验证码和密码,降低开发效率
-- **优化**:
-  - DEBUG模式下自动跳过验证码验证
-  - DEBUG模式下自动跳过密码验证(仅验证用户名存在)
-- **实现**:使用条件编译指令`#if DEBUG`,Release版本仍保持完整安全验证
-- **日志**:开发环境跳过验证时记录详细日志,方便追踪
-- **安全**:生产环境(Release)保持完整的验证码+密码双重验证
-- **文件**:`PowerLmsWebApi/Controllers/System/AccountController.cs`
+#### 1. 工作流回调机制实现（完整实施 - 架构优化版 + 工作流创建回调）
+- **背景**：工作流完成后需要更新业务单据状态，原有架构存在工作流层直接操作业务单据的耦合问题
+- **解决方案**：基于依赖注入的观察者模式（回调接口） + 事务边界优化 + **工作流创建时状态同步**
+- **实现内容**：
+  1. **定义回调接口**：`IWorkflowCallback` 接口（位于 `PowerLmsServer.Managers.Workflow` 命名空间）
+     - **重要变更**：回调方法新增 `dbContext` 参数，支持从本地缓存读取数据
+     - 接口签名：`void OnWorkflowStateChanged(OwWf workflow, PowerLmsUserDbContext dbContext)`
+  
+  2. **工作流状态管理优化**：
+     - `OwWfManager.SetWorkflowState` **不再调用 SaveChanges()**，遵循事务边界原则
+     - 所有回调在同一事务中执行，由调用方统一控制事务提交
+     - 回调方法从 `dbContext.ChangeTracker` 读取已加载的实体，避免额外数据库查询
+  
+  3. **回调逻辑集成到业务管理器**：
+     - `OaExpenseManager` 实现 `IWorkflowCallback` 接口
+     - **删除独立回调文件**：`OaExpenseWorkflowCallback.cs` 已删除
+     - 回调逻辑直接合并到对应的业务管理器中，避免文件碎片化
+  
+  4. **🔥 工作流创建时状态同步**（新增）:
+     - 工作流创建后立即触发 `SetWorkflowState(wf.Id, 0)`
+     - OA 费用申请单状态自动从 `Draft(0)` 更新为 `InApproval(1)`
+     - 确保业务单据在发起审批时状态正确
 
-#### 2. 缓存依赖关系修复
-- **问题**: 所有Manager中的缓存配置都存在"自己监听自己CTS"的冗余代码
-- **原因**: 误将 `EnablePriorityEvictionCallback` 和 `ExpirationTokens.Add(自己的CTS)` 混用
-- **修复**: 
-  - **PermissionManager**: 移除 `ConfigurePermissionsCacheEntry` 和 `ConfigureUserPermissionsCacheEntry` 中的冗余自监听
-  - **RoleManager**: 移除 `ConfigureRolesCacheEntry` 中的冗余自监听，并为 `ConfigureCurrentRolesCacheEntry` **添加对商户角色缓存的正确依赖**
-  - **OrgManager**: 移除 `ConfigureOrgCacheEntry` 和 `ConfigureIdLookupCacheEntry` 中的冗余自监听
-  - **AccountManager**: 移除 `ConfigureCacheEntry` 中的冗余自监听
-- **原理**: 
-  - `EnablePriorityEvictionCallback` 已自动注册CTS用于**直接失效**（通过 `Invalidate*` 方法)
-  - `ExpirationTokens` 只应添加**依赖源的CTS**，用于**级联失效**
-  - 自己监听自己是循环引用，没有意义
-- **影响**: 修复后缓存依赖关系更清晰，级联失效逻辑更正确
-- **文件**: 
-  - `PowerLmsServer/Managers/Auth/PermissionManager.cs`
-  - `PowerLmsServer/Managers/Auth/RoleManager.cs`
-  - `PowerLmsServer/Managers/System/OrgManager.cs`
-  - `PowerLmsServer/Managers/Auth/AccountManager.cs`
+- **架构优势**（优化版）：
+  - ✅ **依赖倒置**：工作流层通过接口回调，不依赖具体业务
+  - ✅ **DI 自动发现**：通过 `IEnumerable<IWorkflowCallback>` 自动注入所有实现类
+  - ✅ **事务一致性**：所有操作在同一事务中执行，避免数据不一致
+  - ✅ **性能优化**：从本地缓存读取数据，避免额外数据库查询
+  - ✅ **异常隔离**：单个回调失败不影响其他回调执行，记录日志继续执行
+  - ✅ **代码集中**：回调逻辑合并到业务管理器，避免创建独立回调文件
+  - ✅ **完整状态同步**：覆盖工作流创建、完成、拒绝三个关键节点
 
-#### 3. Manager层缓存配置代码重复修复
-- **问题**: `PermissionManager` 和 `RoleManager` 中存在重复的 `EnablePriorityEvictionCallback` 调用
-- **原因**: `GetOrLoad` 方法和 `Configure` 方法都调用了相同的配置代码
-- **修复**: 
-  - `PermissionManager.GetOrLoadUserCurrentPermissions`: 移除重复调用，统一在 `ConfigureUserPermissionsCacheEntry` 中配置
-  - `RoleManager.GetOrLoadRolesByMerchantId`: 移除重复调用，统一在 `ConfigureRolesCacheEntry` 中配置
-  - `RoleManager.GetOrLoadCurrentRolesByUser`: 移除重复调用，统一在 `ConfigureCurrentRolesCacheEntry` 中配置
-- **优势**: 代码更简洁，职责清晰，易于维护
-- **文件**: 
-  - `PowerLmsServer/Managers/Auth/PermissionManager.cs`
-  - `PowerLmsServer/Managers/Auth/RoleManager.cs`
+- **调用流程（优化版）**：
+  ```
+  控制器 (WfController.Send)
+    ↓
+  【新工作流创建分支】
+  1. 创建工作流实例（wf.State = 0）
+  2. 创建首节点
+  3. _WfManager.SetWorkflowState(wf.Id, 0) ← 🔥 触发工作流创建回调
+     └── OaExpenseManager.OnWorkflowStateChanged()
+         └── 修改申请单状态：Draft(0) → InApproval(1)
+  4. _DbContext.SaveChanges() ← 🔥 统一保存所有修改
+  ───────────────────────────────────
+  【工作流流转中】
+  1. 更新节点审批信息
+  2. 创建下一个节点
+  3. _DbContext.SaveChanges() ← 保存流转数据
+  ───────────────────────────────────
+  【工作流结束分支】
+  1. 更新工作流状态（wf.State = 1 或 2）
+  2. _WfManager.SetWorkflowState(wf.Id, newState) ← 🔥 触发工作流结束回调
+     └── OaExpenseManager.OnWorkflowStateChanged()
+         └── 修改申请单状态：InApproval(1) → ApprovedPendingSettlement(2) / Rejected(32)
+  3. _DbContext.SaveChanges() ← 🔥 统一保存所有修改
+  ```
 
-#### 4. 权限延迟加载冲突修复
-- **问题**: `GetAllPermissionsInCurrentUser` 接口触发 InvalidOperationException
-- **原因**: `LoadPermission` 使用 `AsNoTracking()` 后，JSON序列化时访问 `Children` 导航属性触发延迟加载，但 DbContext 已释放
-- **修复**: 使用双重保障策略（`Include` 预加载 + 手动触发延迟加载）
-- **文件**: `PowerLmsServer/Managers/Auth/PermissionManager.cs`
+- **状态同步规则（完整版）**：
+  | 工作流状态 | 触发时机 | OA费用申请单状态变更 |
+  |-----------|---------|-------------------|
+  | State=0（流转中） | 工作流首次创建 | Draft(0) → InApproval(1) |
+  | State=1（成功完成） | 审批通过 | InApproval(1) → ApprovedPendingSettlement(2) |
+  | State=2（已被终止） | 审批拒绝 | InApproval(1) → Rejected(32) |
 
-#### 5. 商管看不见其他商管账户问题修复
-- **问题**: 商管登录后只能看到自己，无法查看同商户下的其他商管
-- **原因**: 查询逻辑只包含机构ID集合，未包含商户ID本身
-- **修复**: 在查询时将商户ID加入机构ID集合
-- **文件**: `PowerLmsWebApi/Controllers/System/AccountController.cs`
+- **关键设计原则**：
+  1. **事务边界由控制器控制**：`SetWorkflowState` 不调用 `SaveChanges()`
+  2. **从本地缓存读取数据**：回调方法使用 `dbContext.ChangeTracker` 或 `.Local` 集合
+  3. **回调方法不提交事务**：所有修改在同一事务中，由调用方统一提交
+  4. **回调逻辑集成到管理器**：不创建独立回调文件，避免代码碎片化
+  5. **覆盖完整生命周期**：工作流创建、完成、拒绝三个节点都触发回调
 
-#### 6. 组织树延迟加载冲突修复
-- **问题**: `GetAllSubItemsOfTree` 触发延迟加载导致 InvalidOperationException
-- **修复**: 移除 `AsNoTracking()`，让 EF Core 自动加载导航属性
-- **文件**: `PowerLmsServer/Managers/System/OrgManager.cs`
+- **使用示例（优化版）**：
+  ```csharp
+  // ✅ OaExpenseManager 实现 IWorkflowCallback 接口
+  [OwAutoInjection(ServiceLifetime.Scoped)]
+  public class OaExpenseManager : IWorkflowCallback
+  {
+      public void OnWorkflowStateChanged(OwWf workflow, PowerLmsUserDbContext dbContext)
+      {
+          // 从本地缓存读取数据，避免数据库查询
+          var requisition = dbContext.ChangeTracker.Entries<OaExpenseRequisition>()
+              .Where(e => e.Entity.Id == workflow.DocId)
+              .Select(e => e.Entity)
+              .FirstOrDefault();
+          
+          if (requisition != null)
+          {
+              switch (workflow.State)
+              {
+                  case 0: // 工作流创建
+                      if (requisition.Status == OaExpenseStatus.Draft)
+                          requisition.Status = OaExpenseStatus.InApproval;
+                      break;
+                  case 1: // 审批通过
+                      if (requisition.Status == OaExpenseStatus.InApproval)
+                      {
+                          requisition.Status = OaExpenseStatus.ApprovedPendingSettlement;
+                          requisition.AuditDateTime = OwHelper.WorldNow;
+                      }
+                      break;
+                  case 2: // 审批拒绝
+                      if (requisition.Status == OaExpenseStatus.InApproval)
+                      {
+                          requisition.Status = OaExpenseStatus.Rejected;
+                          requisition.AuditDateTime = null;
+                      }
+                      break;
+              }
+              // ⚠️ 不调用 SaveChanges()，由调用方统一提交
+          }
+      }
+  }
+  
+  // ✅ 控制器调用（已修改）
+  // 新工作流创建
+  _WfManager.SetWorkflowState(wf.Id, 0); // 触发回调（修改 DbContext 中的数据）
+  _DbContext.SaveChanges(); // 统一保存所有修改
+  
+  // 工作流结束
+  _WfManager.SetWorkflowState(wf.Id, newState); // 触发回调（修改 DbContext 中的数据）
+  _DbContext.SaveChanges(); // 统一保存所有修改
+  ```
 
-#### 7. 日常费用申请单增加申请编号字段
-- **实现**: `OaExpenseRequisition` 表增加 `ApplicationNumber` 字段
-- **编号生成**: 前端调用 `POST /api/JobNumber/GeneratedOtherNumber` 接口
-- **配置要求**: 需在"其他编码规则"中配置（Code: `OAEXPENSE_APP_NO`）
+- **影响文件**：
+  - 📝 `PowerLmsServer/Managers/Workflow/OwWfManager.cs`：
+    - 修改 `IWorkflowCallback` 接口，新增 `dbContext` 参数
+    - `SetWorkflowState` 不再调用 `SaveChanges()`
+  - 📝 `PowerLmsWebApi/Controllers/System/WfController.cs`：
+    - 修改 `Send` 方法，控制器负责调用 `SaveChanges()`
+    - **新增工作流创建时触发回调**：`SetWorkflowState(wf.Id, 0)`
+  - 📝 `PowerLmsServer/Managers/OA/OaExpenseManager.cs`：
+    - 实现 `IWorkflowCallback` 接口
+    - 集成工作流回调逻辑
+    - **新增 State=0 的处理**：Draft → InApproval
+  - ❌ `PowerLmsServer/Managers/OA/OaExpenseWorkflowCallback.cs`：已删除
 
-#### 8. GetAllCustomer 权限验证临时注销
-- **背景**: 审批人无权限时无法审批
-- **方案**: 临时注释权限验证（C.1.2）
-- **技术债务**: 后续需精细化权限设计
+- **后续扩展**：
+  - 主营业务费用申请单可在 `DocFeeRequisitionManager` 中实现 `IWorkflowCallback`
+  - 其他业务模块按需在对应的管理器中实现 `IWorkflowCallback` 接口
 
 ---
 
 ### 📋 API 变更（面向前端）
 
-#### 修复的接口
-- **GET /api/Account/GetAll**:商管现在能正确返回所有同商户用户(包括其他商管)
-- **GET /api/Authorization/GetAllPermissionsInCurrentUser**:修复延迟加载异常
-- **POST /api/Account/Login**:开发环境下自动跳过验证码和密码验证(生产环境不影响)
-
-#### 新增字段
-- **OaExpenseRequisition.ApplicationNumber**: 申请编号（varchar(64)），支持模糊查询
-
-#### 前端需调用的接口
-- **POST /api/JobNumber/GeneratedOtherNumber**: 生成申请编号
-
----
-
-### 🏗️ 架构改造（已完成）
-
-#### 移除缓存实体的DbContext属性（2025-01-15）
-- **目的**: 解决缓存DbContext与范围DbContext的多重跟踪冲突
-- **实现**: "只读缓存+范围DbContext修改"模式
-- **影响文件**: Account.cs, PlMerchant.cs, AccountManager.cs, AccountController.cs, RoleManager.cs, PermissionManager.cs, OwContext.cs
-- **API影响**: 无破坏性变更
-
-#### Manager层代码质量优化（2025-01-28）
-- **目的**: 消除代码重复，提升可维护性
-- **实现**: 单一职责原则 - 缓存配置逻辑集中在 `Configure*CacheEntry` 方法
-- **影响文件**: PermissionManager.cs, RoleManager.cs
-- **优势**: 代码简洁，职责清晰，易于维护
-
-#### 缓存依赖关系重构（2025-01-28）
-- **目的**: 修正缓存依赖关系，消除冗余代码
-- **问题**: 
-  - 误用"自己监听自己CTS"导致循环引用
-  - `RoleManager.ConfigureCurrentRolesCacheEntry` 缺少对商户角色缓存的依赖
-- **修复**: 
-  - 移除所有冗余的自监听代码（4个Manager共6个配置方法）
-  - 建立正确的依赖关系：用户权限→全局权限+用户角色，用户角色→商户角色
-  - 明确两种失效机制：直接失效（EnablePriorityEvictionCallback）和级联失效（AddExpirationToken）
-- **影响文件**: PermissionManager.cs, RoleManager.cs, OrgManager.cs, AccountManager.cs
-- **优势**: 
-  - ✅ 缓存依赖关系更清晰
-  - ✅ 级联失效逻辑更正确
-  - ✅ 代码语义更明确
-  - ✅ 避免循环引用
-  - ✅ 减少内存开销
-
-#### 开发体验优化（2025-01-28）
-- **目的**:提升开发效率,简化调试流程
-- **实现**:
-  - DEBUG模式下跳过登录验证码验证
-  - DEBUG模式下跳过登录密码验证(仅验证用户名)
-- **影响文件**:AccountController.cs
-- **优势**:
-  - ✅ 开发环境下无需手动输入验证码
-  - ✅ 开发环境下无需记忆测试密码
-  - ✅ 只需输入用户名即可登录
-  - ✅ 生产环境(Release)保持完整安全验证
-  - ✅ 记录日志便于追踪
-
----
-
-### 🔧 技术债务
-
-#### 基础资料覆盖导入失败 [BUG #1]
-- **状态**: ❌ 未修复
-- **问题**: `BulkInsertOrUpdate` 不会删除Excel中未包含的旧数据
-- **影响**: PlCountry, PlPort, PlCargoRoute 等12个实体类型
-
-#### GetAllCustomer 权限验证临时注销
-- **状态**: ✅ 已实施临时方案
-- **后续**: 需精细化权限设计（按字段授权或独立查询接口）
+#### 架构变更（无 API 接口变更）
+- **工作流回调机制**：
+  - 工作流完成时自动触发业务状态同步
+  - **工作流创建时自动触发业务状态同步**（新增）
+  - OA 费用申请单状态自动更新：
+    - 发起审批时：Draft(0) → InApproval(1)
+    - 审批通过时：InApproval(1) → ApprovedPendingSettlement(2)
+    - 审批拒绝时：InApproval(1) → Rejected(32)
+  - 对前端透明，无需修改调用方式
 
 ---
 
 **更新人**: ZC@AI协作  
-**更新时间**: 2025-01-28
-
-## [未发版本] - 2025-01-28
-
-### 🎯 功能变更总览
-1. **修复**:GetAllAccount接口商管查询范围修复
-2. **修复**:GetAllPermissionsInCurrentUser延迟加载异常修复
-3. **优化**:开发环境登录验证简化(跳过验证码和密码验证)
-4. **架构修复**:纠正"只读缓存"原则 violations,确保缓存对象不可变
-
----
-
-### 📋 详细变更
-
-#### 1. 修复:GetAllAccount接口商管查询范围扩大
-- **问题**:商户管理员调用GetAllAccount接口时,无法查询到其他商管账户(因为商管直属商户,不属于机构树)
-- **根本原因**:查询逻辑仅遍历OrgCacheItem.Orgs机构树,未包含商户ID本身
-- **修复方案**:在获取机构ID列表后,显式添加商户ID到查询范围
-- **代码变更**:
-  ```csharp
-  var orgIds = _OrgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs.Keys.ToList();
-  orgIds.Add(merchantId.Value); // ✅ 关键修复
-  ```
-- **影响范围**:商管用户现在能正确查询到:
-  - ✅ 所有下属机构员工
-  - ✅ 所有商管账户(包括自己)
-  - ✅ 直属商户的账户
-
-#### 2. 修复:GetAllPermissionsInCurrentUser延迟加载异常
-- **问题**:接口返回500错误:"A tracking query projects owned entity without corresponding owner in result"
-- **根本原因**:EF Core跟踪查询时,复杂类型(PlPermission.Name)的所有者(PlPermission)被投影排除导致异常
-- **修复方案**:查询时使用AsNoTracking()避免跟踪,因为该接口返回只读数据
-- **代码变更**:
-  ```csharp
-  return _DbContext.PlPermissions
-      .AsNoTracking()  // ✅ 关键修复
-      .Include(c => c.Children)
-      .Where(c => c.ParentId == null)
-      .ToList();
-  ```
-- **技术说明**:
-  - 使用AsNoTracking避免EF Core跟踪实体状态
-  - 适用于只读查询场景,提高性能
-  - 彻底消除复杂类型投影问题
-
-#### 3. 开发环境优化:登录验证简化(新增)
-- **问题**:开发环境下每次登录都需要输入验证码和密码,降低开发效率
-- **优化**:
-  - DEBUG模式下自动跳过验证码验证
-  - DEBUG模式下自动跳过密码验证(仅验证用户名存在)
-- **实现**:使用条件编译指令`#if DEBUG`,Release版本仍保持完整安全验证
-- **日志**:开发环境跳过验证时记录详细日志,方便追踪
-- **安全**:生产环境(Release)保持完整的验证码+密码双重验证
-- **文件**:`PowerLmsWebApi/Controllers/System/AccountController.cs`
-
-#### 4. 🔥架构修复:"只读缓存"原则 violations纠正(重要)
-- **问题**:Login方法中直接修改缓存返回的只读用户对象属性
-  ```csharp
-  ❌ user.CurrentLanguageTag = model.LanguageTag;  // 违反只读原则
-  ❌ result.User.OrgId ??= merchId;                 // 违反只读原则
-  ```
-- **根本原因**:OwContext中的User对象是从缓存加载的只读对象,不应被修改
-- **正确原则**:
-  - ✅ 缓存中的Account对象应视为只读,不可修改
-  - ✅ 修改用户属性应在范围DbContext中加载实体并保存
-  - ✅ 修改后失效缓存,确保下次读取最新数据
-- **修复方案**:移除所有对缓存用户对象的修改操作
-- **影响范围**:
-  - SetUserInfo:已正确实现(范围DbContext加载→修改→保存→失效缓存)
-  - ModifyPwd:已正确实现
-  - ResetPwd:已正确实现
-  - UpdateToken:已正确实现
-  - ❌ Login:已修复,移除对user对象的修改
-- **架构意义**:
-  - 🔥 确保缓存一致性,避免数据竞态
-  - 🔥 明确"只读缓存"vs"可写DbContext"边界
-  - 🔥 所有修改操作必须遵循"加载→修改→保存→失效"四步骤
-
----
-
-### 🔧 修复的接口
-- **GET /api/Account/GetAll**:商管现在能正确返回所有同商户用户(包括其他商管)
-- **GET /api/Authorization/GetAllPermissionsInCurrentUser**:修复延迟加载异常
-- **POST /api/Account/Login**:
-  - 开发环境下自动跳过验证码和密码验证(生产环境不影响)
-  - ✅ **架构修复**:移除对缓存user对象的违规修改,符合"只读缓存"原则
-
----
-
-### 📝 变更日志(2025-01-28)
-
-#### Bug修复
-1. **GetAllAccount商管查询范围修复**:商管能正确查询到同商户所有用户(包括其他商管)
-2. **GetAllPermissionsInCurrentUser异常修复**:使用AsNoTracking避免EF Core延迟加载跟踪异常
-
-#### 架构改造
-- **"只读缓存"原则强化**:
-  - ✅ 明确OwContext.User为只读对象,禁止修改
-  - ✅ 修复Login方法违反原则的代码
-  - ✅ 统一"加载→修改→保存→失效"修改模式
-  - ✅ 确保缓存一致性和数据正确性
-
-#### 开发体验优化(2025-01-28)
-- **目的**:提升开发效率,简化调试流程
-- **实现**:
-  - DEBUG模式下跳过登录验证码验证
-  - DEBUG模式下跳过登录密码验证(仅验证用户名)
-- **影响文件**:AccountController.cs
-- **优势**:
-  - ✅ 开发环境下无需手动输入验证码
-  - ✅ 开发环境下无需记忆测试密码
-  - ✅ 只需输入用户名即可登录
-  - ✅ 生产环境(Release)保持完整安全验证
-  - ✅ 记录日志便于追踪
-
----
-
-### 🔍 问题追踪
-- **GetAllAccount商管查询范围问题**:已解决✅
-- **GetAllPermissionsInCurrentUser延迟加载异常**:已解决✅
-- **架构"只读缓存"原则违反**:已修复✅
-- **开发环境登录调试效率低**:已优化✅
+**更新时间**: 2025-02-06

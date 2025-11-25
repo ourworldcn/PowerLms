@@ -45,41 +45,49 @@ namespace PowerLms.Data.OA
 
     /// <summary>
     /// OA费用申请单状态枚举。采用二进制位值设计，支持位运算操作。
+    /// 可选值说明：
+    /// 0=草稿（可完全编辑）, 
+    /// 1=审批中（不能修改金额汇率等主要字段）, 
+    /// 2=审批完成待结算, 
+    /// 4=已结算待确认（明细项不可修改）, 
+    /// 8=已确认可导入财务（总单和明细完全锁定）, 
+    /// 16=已导入财务（完全锁定）, 
+    /// 32=审批被拒绝（可重新编辑并再次提交审批）
     /// </summary>
     public enum OaExpenseStatus : byte
     {
         /// <summary>
-        /// 草稿状态，可完全编辑
+        /// 0 - 草稿状态，可完全编辑
         /// </summary>
         Draft = 0,
         
         /// <summary>
-        /// 审批中，不能修改金额汇率等主要字段
+        /// 1 - 审批中，不能修改金额汇率等主要字段
         /// </summary>
         InApproval = 1,
         
         /// <summary>
-        /// 审批完成，待结算
+        /// 2 - 审批完成，待结算
         /// </summary>
         ApprovedPendingSettlement = 2,
         
         /// <summary>
-        /// 已结算，待确认。明细项不可修改
+        /// 4 - 已结算，待确认。明细项不可修改
         /// </summary>
         SettledPendingConfirm = 4,
         
         /// <summary>
-        /// 已确认，可导入财务。总单和明细完全锁定
+        /// 8 - 已确认，可导入财务。总单和明细完全锁定
         /// </summary>
         ConfirmedReadyForExport = 8,
         
         /// <summary>
-        /// 已导入财务，完全锁定
+        /// 16 - 已导入财务，完全锁定
         /// </summary>
         ExportedToFinance = 16,
         
         /// <summary>
-        /// 审批被拒绝。可重新编辑并再次提交审批
+        /// 32 - 审批被拒绝。可重新编辑并再次提交审批
         /// </summary>
         Rejected = 32
     }

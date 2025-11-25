@@ -8,10 +8,60 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 
-namespace PowerLmsServer.Managers
+namespace PowerLmsServer.Managers.Workflow
 {
     /// <summary>
+    /// 工作流状态变更回调接口。
+    /// 业务层实现此接口以响应工作流状态变更事件。
+    /// 
+    /// 设计说明：
+    /// - OwWfManager 在工作流状态变更时自动调用所有已注册的实现类
+    /// - 通过 DI 容器自动发现和注入所有实现类
+    /// - 回调方法接收工作流实体和 DbContext，可直接操作本地缓存
+    /// 
+    /// 生命周期：
+    /// - 注册为 Scoped 服务，与 HTTP 请求生命周期一致
+    /// - 每次请求自动创建和释放，无需手动管理
+    /// 
+    /// 事务约定：
+    /// - 回调方法在同一事务中执行，不应调用 SaveChanges()
+    /// - 所有数据修改在回调完成后统一提交
+    /// - 回调方法应从 DbContext 本地缓存读取数据，避免数据库查询
+    /// </summary>
+    public interface IWorkflowCallback
+    {
+        /// <summary>
+        /// 工作流状态变更回调。
+        /// 当工作流状态即将变更时触发（在 SaveChanges 之前）。
+        /// 
+        /// 实现建议：
+        /// 1. 通过 workflow.DocId 和 dbContext.ChangeTracker 查找已加载的业务实体
+        /// 2. 判断是否属于本模块管理的业务（快速检查，避免数据库查询）
+        /// 3. 根据 workflow.State 更新业务单据状态
+        /// 4. **不要调用 SaveChanges()**，由调用方统一提交事务
+        /// 5. 异常处理：内部捕获异常并记录日志，避免影响其他回调
+        /// </summary>
+        /// <param name="workflow">状态即将变更的工作流实例（已在 DbContext 中）</param>
+        /// <param name="dbContext">当前数据库上下文，用于访问本地缓存</param>
+        /// <remarks>
+        /// 工作流状态说明：
+        /// - State=0: 流转中
+        /// - State=1: 成功完成（审批通过）
+        /// - State=2: 已被终止（审批拒绝或手动撤销）
+        /// 
+        /// 重要：回调在同一事务中执行，可安全修改关联实体，但不要调用 SaveChanges()
+        /// </remarks>
+        void OnWorkflowStateChanged(OwWf workflow, PowerLmsUserDbContext dbContext);
+    }
+}
+
+namespace PowerLmsServer.Managers
+{
+    using PowerLmsServer.Managers.Workflow;
+
+    /// <summary>
     /// 工作流相关功能管理器。
+    /// 支持通过依赖注入的回调服务响应工作流状态变更。
     /// </summary>
     [OwAutoInjection(ServiceLifetime.Scoped)]
     public class OwWfManager
@@ -19,14 +69,21 @@ namespace PowerLmsServer.Managers
         /// <summary>
         /// 构造函数。
         /// </summary>
-        public OwWfManager(PowerLmsUserDbContext dbContext, OwSqlAppLogger sqlAppLogger)
+        public OwWfManager(
+            PowerLmsUserDbContext dbContext, 
+            OwSqlAppLogger sqlAppLogger,
+            IEnumerable<IWorkflowCallback> callbacks)
         {
             _DbContext = dbContext;
             _SqlAppLogger = sqlAppLogger;
+            _Callbacks = callbacks;
         }
 
         private readonly PowerLmsUserDbContext _DbContext;
         private readonly OwSqlAppLogger _SqlAppLogger;
+        
+        // 🔥 通过 DI 容器注入所有实现了 IWorkflowCallback 接口的服务
+        private readonly IEnumerable<IWorkflowCallback> _Callbacks;
 
         /// <summary>
         /// 根据业务文档ID清空相关的所有工作流数据。
@@ -622,5 +679,109 @@ namespace PowerLmsServer.Managers
         }
 
         #endregion 工作流状态查询
+
+        #region 工作流状态变更通知
+
+        /// <summary>
+        /// 通知所有回调服务：工作流状态已变更。
+        /// 
+        /// 调用时机：
+        /// - 工作流完成时（State=1）
+        /// - 工作流被拒绝时（State=2）
+        /// - 工作流被终止时（State=2）
+        /// 
+        /// 执行策略：
+        /// - 遍历所有注册的回调服务
+        /// - 单个回调异常不影响其他回调执行
+        /// - 记录详细日志便于问题排查
+        /// 
+        /// 使用示例：
+        /// <code>
+        /// workflow.State = 1; // 设置为成功完成
+        /// _DbContext.SaveChanges();
+        /// NotifyWorkflowStateChanged(workflow); // 触发回调
+        /// </code>
+        /// </summary>
+        /// <param name="workflow">状态已变更的工作流实例</param>
+        private void NotifyWorkflowStateChanged(OwWf workflow)
+        {
+            if (_Callbacks == null || !_Callbacks.Any())
+            {
+                _SqlAppLogger.LogGeneralInfo($"工作流状态变更通知：没有注册的回调服务。WorkflowId={workflow.Id}");
+                return;
+            }
+            _SqlAppLogger.LogGeneralInfo($"工作流状态变更通知开始：WorkflowId={workflow.Id}, State={workflow.State}, 回调数量={_Callbacks.Count()}");
+            foreach (var callback in _Callbacks)
+            {
+                try
+                {
+                    var callbackType = callback.GetType().Name;
+                    _SqlAppLogger.LogGeneralInfo($"执行回调：{callbackType}");
+                    callback.OnWorkflowStateChanged(workflow, _DbContext);
+                    _SqlAppLogger.LogGeneralInfo($"✅ 回调执行成功：{callbackType}");
+                }
+                catch (Exception ex)
+                {
+                    var callbackType = callback.GetType().Name;
+                    _SqlAppLogger.LogGeneralInfo($"❌ 回调执行异常：{callbackType}, 错误={ex.Message}");
+                }
+            }
+            _SqlAppLogger.LogGeneralInfo($"工作流状态变更通知完成：WorkflowId={workflow.Id}");
+        }
+
+        #endregion 工作流状态变更通知
+
+        #region 工作流状态管理
+
+        /// <summary>
+        /// 设置工作流状态并触发状态变更通知。
+        /// 
+        /// 重要约定：
+        /// - 此方法不调用 SaveChanges()，由调用方控制事务
+        /// - 所有回调在同一事务中执行，修改会被一起提交
+        /// - 回调方法应从 DbContext 本地缓存读取数据
+        /// 
+        /// 调用时机：
+        /// - 工作流审批完成（通过或拒绝）
+        /// - 工作流被手动终止
+        /// 
+        /// 执行流程：
+        /// 1. 验证参数有效性
+        /// 2. 加载完整工作流对象（如果未加载）
+        /// 3. 验证状态变更是否合法
+        /// 4. 更新状态（不提交）
+        /// 5. 触发回调通知（在同一事务中）
+        /// 6. 由调用方统一调用 SaveChanges()
+        /// </summary>
+        /// <param name="workflowId">工作流实例ID</param>
+        /// <param name="newState">新状态：0=流转中，1=成功完成，2=已被终止</param>
+        /// <returns>是否成功更新状态</returns>
+        /// <exception cref="ArgumentException">工作流ID为空或新状态值非法</exception>
+        /// <exception cref="InvalidOperationException">工作流不存在或状态变更非法</exception>
+        public bool SetWorkflowState(Guid workflowId, byte newState)
+        {
+            if (workflowId == Guid.Empty)
+                throw new ArgumentException("工作流ID不能为空", nameof(workflowId));
+            if (newState > 2)
+                throw new ArgumentException("工作流状态值非法，必须是0、1或2", nameof(newState));
+            var workflow = LoadWorkflowById(workflowId);
+            if (workflow == null)
+                throw new InvalidOperationException($"工作流不存在：WorkflowId={workflowId}");
+            if (workflow.State != 0 && newState != 0)
+            {
+                _SqlAppLogger.LogGeneralInfo($"工作流状态变更失败：工作流已处于终态，无法再次变更。WorkflowId={workflowId}, CurrentState={workflow.State}, NewState={newState}");
+                return false;
+            }
+            var oldState = workflow.State;
+            workflow.State = newState;
+            _SqlAppLogger.LogGeneralInfo($"工作流状态变更：WorkflowId={workflowId}, {oldState} → {newState}");
+            if (newState != 0)
+            {
+                NotifyWorkflowStateChanged(workflow);
+            }
+            return true;
+        }
+
+        #endregion 工作流状态管理
     }
 }
