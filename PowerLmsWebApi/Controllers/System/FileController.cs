@@ -114,10 +114,10 @@ namespace PowerLmsWebApi.Controllers.System
         [Obsolete("已废弃接口，请使用 GetFile 替代。该接口将在未来版本中移除。")]
         public ActionResult DownloadCustomerFile(Guid token, Guid fileId)
         {
-            _Logger.LogWarning("尝试使用已废弃的客户文件下载接口，令牌: {Token}, 文件ID: {FileId}", 
+            _Logger.LogWarning("尝试使用已废弃的客户文件下载接口，令牌: {Token}, 文件ID: {FileId}",
                 token, fileId);
-            
-            return StatusCode(StatusCodes.Status410Gone, 
+
+            return StatusCode(StatusCodes.Status410Gone,
                 "此接口已废弃，请使用新的通用文件下载接口 GetFile。新接口提供更好的安全性和权限控制。");
         }
 
@@ -136,14 +136,14 @@ namespace PowerLmsWebApi.Controllers.System
         public ActionResult<UploadCustomerFileReturnDto> UploadCustomerFile(IFormFile file, [FromForm] UploadCustomerFileParamsDto model)
         {
             // 🔧 紧急修复：禁用旧版接口，强制使用新版通用接口
-            _Logger.LogWarning("尝试使用已废弃的客户文件上传接口，用户: {UserId}, 文件: {FileName}", 
+            _Logger.LogWarning("尝试使用已废弃的客户文件上传接口，用户: {UserId}, 文件: {FileName}",
                 model.Token, file?.FileName);
-            
+
             var result = new UploadCustomerFileReturnDto();
             result.HasError = true;
             result.ErrorCode = 410; // Gone
             result.DebugMessage = "此接口已废弃，请使用新的通用文件上传接口 AddFile。新接口提供更好的安全性和文件类型验证。";
-            
+
             return StatusCode(StatusCodes.Status410Gone, result);
         }
 
@@ -163,11 +163,11 @@ namespace PowerLmsWebApi.Controllers.System
         [HttpDelete]
         public ActionResult<RemoveFileReturnDto> RemoveFile(RemoveFileParamsDto model)
         {
-            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) 
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
                 return Unauthorized();
 
             var result = new RemoveFileReturnDto();
-            
+
             try
             {
                 var item = _DbContext.PlFileInfos.Find(model.Id);
@@ -239,7 +239,7 @@ namespace PowerLmsWebApi.Controllers.System
             var result = new AddFileReturnDto();
 
             // 身份验证
-            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) 
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
                 return Unauthorized(result);
 
             try
@@ -257,7 +257,9 @@ namespace PowerLmsWebApi.Controllers.System
                         displayName: model.DisplayName,
                         parentId: model.ParentId,
                         creatorId: context.User?.Id,
-                        remark: model.Remark
+                        fileTypeId: model.FileTypeId,
+                        remark: model.Remark,
+                        clientString: model.ClientString
                     );
                 }
 
@@ -325,7 +327,7 @@ namespace PowerLmsWebApi.Controllers.System
         [HttpGet]
         public ActionResult GetFile([FromQuery] GetFileParamsDto model)
         {
-            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) 
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
                 return Unauthorized();
 
             try
@@ -348,7 +350,7 @@ namespace PowerLmsWebApi.Controllers.System
 
                 var fullPath = _FileService.GetFullPath(info.FilePath);
                 var stream = new FileStream(fullPath, FileMode.Open, FileAccess.Read);
-                
+
                 _Logger.LogDebug("文件下载：{fileName}，ID：{fileId}", info.FileName, info.Id);
                 return File(stream, "application/octet-stream", info.FileName);
             }
@@ -373,24 +375,14 @@ namespace PowerLmsWebApi.Controllers.System
         /// <response code="401">无效令牌。</response>  
         [HttpGet]
         public ActionResult<GetAllFileInfoReturnDto> GetAllFileInfo([FromQuery] PagingParamsDtoBase model,
-            [FromQuery] Dictionary<string, string> conditional = null)
+            [FromQuery][ModelBinder(typeof(DotKeyDictionaryModelBinder))] Dictionary<string, string> conditional = null)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllFileInfoReturnDto();
 
             var dbSet = _DbContext.PlFileInfos;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-            foreach (var item in conditional)
-                if (string.Equals(item.Key, "Id", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (Guid.TryParse(item.Value, out var id))
-                        coll = coll.Where(c => c.Id == id);
-                }
-                else if (string.Equals(item.Key, "ParentId", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (Guid.TryParse(item.Value, out var id))
-                        coll = coll.Where(c => c.ParentId == id);
-                }
+            coll = EfHelper.GenerateWhereAnd(coll, conditional);
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;

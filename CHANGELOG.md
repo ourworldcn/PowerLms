@@ -1,6 +1,56 @@
 ﻿# 📝 PowerLMS 变更日志
 
-## [未发布] - 2025-02-06
+## [未发布] - 2025-11-27
+
+### ✅ 本次完成的工作
+
+#### 1. 文件信息表增强（PlFileInfo）
+- **背景**：文件管理需要支持并发控制和客户端自定义数据
+- **实现内容**：
+  1. **添加开放式并发控制字段**：
+     - 新增 `RowVersion` 字段（byte[]）
+     - 使用 `[Timestamp]` 特性自动维护版本号
+     - SQL Server 自动递增，防止并发更新覆盖
+  
+  2. **添加客户端字符串字段**：
+     - 新增 `ClientString` 字段（string）
+     - 客户端可写入任意字符串信息
+     - 服务端不解析或使用，仅存储
+  
+  3. **更新文件上传接口参数**：
+     - `AddFileParamsDto` 新增 `ClientString` 属性
+     - `AddFileParamsDto` 新增 `FileTypeId` 属性
+     - 支持上传时设置文件类型和客户端数据
+
+- **影响文件**：
+  - 📝 `..\bak\OwDbBase\OwFileService.cs`：PlFileInfo 实体添加字段
+  - 📝 `PowerLmsWebApi\Controllers\System\FileController.Dto.cs`：DTO 添加字段
+  - 📝 `PowerLmsWebApi\Controllers\System\FileController.cs`：控制器支持新字段
+  - 📝 `PowerLmsData\Migrations\20251126210111_AddPlFileInfoRowVersionAndClientString.cs`：数据库迁移
+
+---
+
+### 📋 API 变更（面向前端）
+
+#### 新增 API 字段
+- **文件上传接口** (`POST /api/File/AddFile`)：
+  - 新增请求参数：
+    - `ClientString` (string, 可选)：客户端可写入的自定义数据
+    - `FileTypeId` (Guid?, 可选)：文件类型字典 ID
+  - 响应数据：PlFileInfo 包含新字段 `ClientString` 和 `RowVersion`
+
+#### 并发控制
+- 文件更新操作现在支持乐观并发控制
+- 如果文件被其他用户修改，更新操作会抛出 `DbUpdateConcurrencyException`
+
+---
+
+**更新人**: ZC@AI协作  
+**更新时间**: 2025-11-27
+
+---
+
+## [已发布] - 2025-02-06
 
 ### ✅ 本次完成的工作
 

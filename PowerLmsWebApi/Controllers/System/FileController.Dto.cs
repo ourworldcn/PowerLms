@@ -48,6 +48,16 @@ namespace PowerLmsWebApi.Controllers
         /// 备注。
         /// </summary>
         public string Remark { get; set; }
+
+        /// <summary>
+        /// 客户端字符串。客户端可以写入任意字符串信息。
+        /// </summary>
+        public string ClientString { get; set; }
+
+        /// <summary>
+        /// 文件类型Id。关联字典FileType。可能是null，表示这是一个通用文件。
+        /// </summary>
+        public Guid? FileTypeId { get; set; }
     }
 
     /// <summary>
