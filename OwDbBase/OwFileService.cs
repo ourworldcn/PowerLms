@@ -67,8 +67,23 @@ namespace OW.Data
         /// <summary>
         /// 上传时间,系统默认。
         /// </summary>
-        [Comment("新建时间,系统默认，不能更改。")]
+        [Comment("新建时间,系统默认,不能更改。")]
         public DateTime CreateDateTime { get; set; }
+
+        /// <summary>
+        /// 行版本号。用于开放式并发控制，防止并发更新时的数据覆盖问题。
+        /// EF Core会在更新时自动检查此字段，如果值不匹配则抛出DbUpdateConcurrencyException。
+        /// SQL Server自动维护此字段，每次更新时自动递增。
+        /// </summary>
+        [Timestamp]
+        [Comment("行版本号，用于开放式并发控制")]
+        public byte[] RowVersion { get; set; }
+
+        /// <summary>
+        /// 客户端字符串。客户端可以写入任意字符串信息，服务端不使用。
+        /// </summary>
+        [Comment("客户端字符串，客户端可写入，服务端不使用")]
+        public string ClientString { get; set; }
     }
 
     /// <summary>
@@ -202,6 +217,7 @@ namespace OW.Data
         /// <param name="creatorId">创建者ID</param>
         /// <param name="fileTypeId">文件类型ID（可选）</param>
         /// <param name="remark">备注（可选）</param>
+        /// <param name="clientString">客户端字符串（可选）</param>
         /// <param name="subDirectory">子目录名称（可选，默认为"General"）</param>
         /// <param name="skipValidation">是否跳过验证（可选，默认为false）</param>
         /// <returns>创建的文件信息实体</returns>
@@ -209,7 +225,8 @@ namespace OW.Data
         /// <exception cref="ArgumentException">当文件流为空或文件名无效时抛出</exception>
         /// <exception cref="InvalidOperationException">当文件验证失败时抛出</exception>
         public PlFileInfo CreateFile(Stream fileStream, string fileName, string displayName, Guid? parentId,
-            Guid? creatorId, Guid? fileTypeId = null, string remark = null, string subDirectory = "General", bool skipValidation = false)
+            Guid? creatorId, Guid? fileTypeId = null, string remark = null, string clientString = null, 
+            string subDirectory = "General", bool skipValidation = false)
         {
             if (fileStream == null) throw new ArgumentNullException(nameof(fileStream));
             if (string.IsNullOrWhiteSpace(fileName)) throw new ArgumentException("文件名不能为空", nameof(fileName));
@@ -235,6 +252,7 @@ namespace OW.Data
                 ParentId = parentId,
                 FileTypeId = fileTypeId,
                 Remark = remark,
+                ClientString = clientString,
                 CreateBy = creatorId,
                 CreateDateTime = DateTime.Now,
                 FilePath = GenerateFilePath(subDirectory)
@@ -266,15 +284,18 @@ namespace OW.Data
         /// <param name="creatorId">创建者ID</param>
         /// <param name="fileTypeId">文件类型ID（可选）</param>
         /// <param name="remark">备注（可选）</param>
+        /// <param name="clientString">客户端字符串（可选）</param>
         /// <param name="subDirectory">子目录名称（可选）</param>
         /// <returns>创建的文件信息实体</returns>
         public PlFileInfo CreateFileFromBytes(byte[] fileContent, string fileName, string displayName, Guid? parentId,
-            Guid? creatorId, Guid? fileTypeId = null, string remark = null, string subDirectory = "Generated")
+            Guid? creatorId, Guid? fileTypeId = null, string remark = null, string clientString = null, 
+            string subDirectory = "Generated")
         {
             if (fileContent == null || fileContent.Length == 0) throw new ArgumentException("文件内容不能为空", nameof(fileContent));
 
             using var memoryStream = new MemoryStream(fileContent);
-            return CreateFile(memoryStream, fileName, displayName, parentId, creatorId, fileTypeId, remark, subDirectory);
+            return CreateFile(memoryStream, fileName, displayName, parentId, creatorId, fileTypeId, remark, 
+                clientString, subDirectory);
         }
 
         /// <summary>
