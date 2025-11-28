@@ -20,7 +20,7 @@ namespace PowerLmsWebApi.Controllers
         /// <summary>
         /// 构造函数。
         /// </summary>
-        public WfTemplateController(AccountManager accountManager, IServiceProvider serviceProvider, PowerLmsUserDbContext dbContext, EntityManager entityManager, IMapper mapper, AuthorizationManager authorizationManager)
+        public WfTemplateController(AccountManager accountManager, IServiceProvider serviceProvider, PowerLmsUserDbContext dbContext, EntityManager entityManager, IMapper mapper, AuthorizationManager authorizationManager, OwWfManager wfManager)
         {
             _AccountManager = accountManager;
             _ServiceProvider = serviceProvider;
@@ -28,6 +28,7 @@ namespace PowerLmsWebApi.Controllers
             _EntityManager = entityManager;
             _Mapper = mapper;
             _AuthorizationManager = authorizationManager;
+            _WfManager = wfManager;
         }
 
         private readonly AccountManager _AccountManager;
@@ -36,6 +37,7 @@ namespace PowerLmsWebApi.Controllers
         private readonly EntityManager _EntityManager;
         private readonly IMapper _Mapper;
         private readonly AuthorizationManager _AuthorizationManager;
+        private readonly OwWfManager _WfManager;
 
         #region 模板表相关
 
@@ -317,19 +319,10 @@ namespace PowerLmsWebApi.Controllers
         {
             var result = new GetNextNodeItemsByKindCodeReturnDto { };
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-
-            var tt = _DbContext.WfTemplates.Include(c => c.Children).ThenInclude(c => c.Children).
-                FirstOrDefault(c => c.KindCode == model.KindCode && c.OrgId == context.User.OrgId);
-            if (tt is null) return NotFound();
-            var nextNodeIds = tt.Children.Where(c => c.NextId != null).Select(c => c.NextId).ToArray(); //后续节点的Id集合
-            var firstNodes = tt.Children.Where(c => !nextNodeIds.Contains(c.Id));   //最前面的节点
-            firstNodes = firstNodes.Where(c => c.Children.Any(d => d.OpertorId == context.User.Id)).ToArray();    //含自身的节点
-            var nodeIds = firstNodes.Select(c => c.NextId);    //含自身的下一个节点的Id集合
-            var nextNodes = tt.Children.Where(c => nodeIds.Contains(c.Id));
-
-            var r = nextNodes.SelectMany(c => c.Children).Where(c => c.OperationKind == 0);
-            result.Template = tt;    //模板数据
-            result.Result.AddRange(r.Select(c => _Mapper.Map<OwWfTemplateNodeItemDto>(c)));
+            var nodeItems = _WfManager.GetFirstNodeItemsByKindCode(model.KindCode, context.User.OrgId, context.User.Id, out var template);
+            if (template is null) return NotFound();
+            result.Template = template;
+            result.Result.AddRange(nodeItems.Select(c => _Mapper.Map<OwWfTemplateNodeItemDto>(c)));
             return result;
         }
 

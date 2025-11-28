@@ -20,7 +20,6 @@ namespace PowerLmsServer.Managers.OA
     /// 负责OA日常费用申请单的业务逻辑处理，包括状态管理、回退、工作流回调等功能。
     /// 
     /// 支持的业务类型（KindCode）：
-
     /// - OA_expense_reimb：OA费用报销
     /// - OA_expense_loan：OA费用借款
     /// - OA_exchange_income：OA外汇收入

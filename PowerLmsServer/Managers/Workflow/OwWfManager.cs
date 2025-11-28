@@ -395,6 +395,64 @@ namespace PowerLmsServer.Managers
 
         #endregion 模板相关
 
+        #region 模板首节点查询
+
+        /// <summary>
+        /// 根据KindCode和当前用户获取首次发送时的下一步操作人信息。
+        /// 
+        /// 查找逻辑：
+        /// 1. 根据KindCode和OrgId查找工作流模板
+        /// 2. 自动通过LoadTemplateById加载完整模板（利用缓存）
+        /// 3. 找出所有首节点（没有被NextId引用的节点）
+        /// 4. 筛选包含当前用户的首节点
+        /// 5. 获取这些首节点的下一个节点
+        /// 6. 返回下一个节点中的所有审批人（OperationKind=0）
+        /// 
+        /// 性能优化：
+        /// - 模板缓存：LoadTemplateById自动缓存，重复调用0次额外查询
+        /// - 内存查询：所有操作在内存中完成
+        /// 
+        /// 使用场景：
+        /// - 控制器中快速获取首次发送的可选操作人
+        /// - 简化代码，一行调用完成所有操作
+        /// </summary>
+        /// <param name="kindCode">工作流类型编码</param>
+        /// <param name="orgId">组织ID（可以为null）</param>
+        /// <param name="currentUserId">当前用户ID</param>
+        /// <param name="template">输出参数：找到的模板对象</param>
+        /// <returns>下一步可选操作人的节点项集合，如果模板不存在或无符合条件的节点则返回空集合</returns>
+        public IEnumerable<OwWfTemplateNodeItem> GetFirstNodeItemsByKindCode(string kindCode, Guid? orgId, Guid currentUserId, out OwWfTemplate template)
+        {
+            // 1. 根据KindCode和OrgId查找并完整加载模板
+            template = _DbContext.WfTemplates
+                .FirstOrDefault(c => c.KindCode == kindCode && c.OrgId == orgId);
+            if (template == null)
+                return Enumerable.Empty<OwWfTemplateNodeItem>();
+            template = LoadTemplateById(template.Id);
+            if (template?.Children == null || !template.Children.Any())
+                return Enumerable.Empty<OwWfTemplateNodeItem>();
+            // 2. 使用GetFirstNodes获取首节点（复用已有逻辑）
+            var firstNodes = GetFirstNodes(template.Id)
+                .Where(node => Contains(currentUserId, node))
+                .ToArray();
+            if (!firstNodes.Any())
+                return Enumerable.Empty<OwWfTemplateNodeItem>();
+            // 3. 获取首节点的下一个节点集合（使用OfType简化代码）
+            var nextNodeIds = firstNodes
+                .Select(c => c.NextId)
+                .OfType<Guid>()
+                .ToHashSet();
+            if (!nextNodeIds.Any())
+                return Enumerable.Empty<OwWfTemplateNodeItem>();
+            // 4. 返回下一个节点中的所有审批人
+            return template.Children
+                .Where(c => nextNodeIds.Contains(c.Id))
+                .SelectMany(c => c.Children)
+                .Where(c => c.OperationKind == 0);
+        }
+
+        #endregion 模板首节点查询
+
         #region 工作流节点查询
 
         /// <summary>
@@ -739,7 +797,7 @@ namespace PowerLmsServer.Managers
         /// 重要约定：
         /// - 此方法不调用 SaveChanges()，由调用方控制事务
         /// - 所有回调在同一事务中执行，修改会被一起提交
-        /// - 回调方法应从 DbContext 本地缓存读取数据
+        /// - 回调方法应从 Db Context 本地缓存读取数据
         /// 
         /// 调用时机：
         /// - 工作流审批完成（通过或拒绝）
