@@ -241,88 +241,13 @@ namespace PowerLmsServer.Triggers
         #endregion AfterSaving 事件处理
     }
 
-    /// <summary>
-    /// 费用申请单已结算金额统计触发器处理器
-    /// 
-    /// 核心职责：
-    /// - 当结算单明细（PlInvoicesItem）关联申请单明细时，自动更新申请单明细的已结算金额
-    /// - 级联更新申请单主表的已结算金额合计
-    /// - 维护申请单结算状态的准确性
-    /// 
-    /// 业务场景：
-    /// - 创建结算单时指定申请单明细的核销金额
-    /// - 修改结算单明细的核销金额
-    /// - 删除结算单明细时减少相应的已结算金额
-    /// 
-    /// 计算逻辑：
-    /// - 申请单明细.已结算金额 = Σ(关联的结算单明细.金额)
-    /// - 申请单主表.已结算金额 = Σ(所有明细项.已结算金额)
-    /// - 支持部分结算和多次结算的场景
-    /// 
-    /// 数据一致性：
-    /// - 实时更新，保证申请单与结算单数据的一致性
-    /// - 级联计算，确保主从表数据同步
-    /// - 异常处理，计算失败不影响主要业务流程
-    /// 
-    /// 重构说明：
-    /// - 使用 PlInvoicesItem.CalculateTotalSettledAmountForRequisitionItem 统一计算方法
-    /// - 消除重复代码，提高可维护性
-    /// </summary>
-    [OwAutoInjection(ServiceLifetime.Scoped, ServiceType = typeof(IDbContextSaving<PlInvoicesItem>))]
-    public class DocFeeRequisitionTotalSettledAmountTriggerHandler : IDbContextSaving<PlInvoicesItem>
-    {
-        /// <summary>
-        /// 处理结算单明细变化时的申请单已结算金额更新
-        /// 
-        /// 处理流程：
-        /// 1. 从变化的结算单明细中提取关联的申请单明细ID
-        /// 2. 使用统一计算方法重新计算这些申请单明细的已结算金额总和
-        /// 3. 级联更新对应申请单主表的已结算金额合计
-        /// 4. 排除已删除的记录，确保计算准确性
-        /// 
-        /// 业务规则：
-        /// - 已结算金额 = 所有关联结算单明细的核销金额之和
-        /// - 支持一个申请单明细被多个结算单明细核销的情况
-        /// - 自动处理结算单明细的增加、修改、删除操作
-        /// 
-        /// 性能考虑：
-        /// - 使用HashSet收集需要更新的ID，避免重复计算
-        /// - 批量处理多个变更，减少数据库往返
-        /// - 只更新实际发生变化的申请单
-        /// </summary>
-        /// <param name="entity">发生变化的结算单明细实体集合</param>
-        /// <param name="serviceProvider">服务提供者</param>
-        /// <param name="states">状态字典</param>
-        public void Saving(IEnumerable<EntityEntry> entity, IServiceProvider serviceProvider, Dictionary<object, object> states)
-        {
-            var db = entity.First().Context;
-            var requisitionItemIds = new HashSet<Guid>(
-                entity.Select(c => c.Entity).OfType<PlInvoicesItem>().Where(c => c.RequisitionItemId.HasValue).Select(c => c.RequisitionItemId.Value));
-            var requisitionIds = new HashSet<Guid>();
-            foreach (var id in requisitionItemIds)
-            {
-                if (db.Set<DocFeeRequisitionItem>().Find(id) is DocFeeRequisitionItem reqItem)
-                {
-                    if(db.Entry(reqItem).State == EntityState.Deleted)
-                    {
-                        continue;
-                    }
-                    reqItem.TotalSettledAmount = PlInvoicesItem.CalculateTotalSettledAmountForRequisitionItem(id, db);
-                    if (reqItem.ParentId is Guid parentId)
-                        requisitionIds.Add(parentId);
-                }
-            }
-            foreach (var id in requisitionIds)
-            {
-                if (db.Set<DocFeeRequisition>().Find(id) is DocFeeRequisition req)
-                {
-                    if (db.Entry(req).State == EntityState.Deleted)
-                    {
-                        continue;
-                    }
-                    req.TotalSettledAmount = req.GetChildren(db).AsEnumerable().Sum(c => c.TotalSettledAmount);
-                }
-            }
-        }
-    }
+    // ✅ 已删除 DocFeeRequisitionTotalSettledAmountTriggerHandler 触发器
+    // 理由：
+    // 1. 功能重复：与 PlInvoicesItemTriggerHandler 触发器重复（DocBill.Triggers.cs）
+    // 2. 性能浪费：导致 DocFeeRequisitionItem.TotalSettledAmount 被重复计算两次
+    // 3. 设计不合理：DocFeeRequisition.TotalSettledAmount 应该由 FeeTotalTriggerHandler 级联计算
+    // 
+    // 正确的触发器链路：
+    // PlInvoicesItem 变化 → PlInvoicesItemTriggerHandler → 更新 DocFeeRequisitionItem.TotalSettledAmount
+    // DocFeeRequisitionItem 变化 → FeeTotalTriggerHandler → 更新 DocFee.TotalSettledAmount
 }

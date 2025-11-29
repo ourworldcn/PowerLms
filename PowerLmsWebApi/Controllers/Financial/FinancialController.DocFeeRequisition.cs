@@ -431,8 +431,7 @@ namespace PowerLmsWebApi.Controllers
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
-        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。
-
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">指定Id的业务费用至少有一个不存在。</response>  
         [HttpGet]
@@ -674,14 +673,7 @@ namespace PowerLmsWebApi.Controllers
             var parent = _DbContext.DocFeeRequisitions.Find(model.DocFeeRequisitionItem.ParentId);
             if (parent is null) return BadRequest("没有找到 指定的 ParentId 实体");
             
-            // ✅ 显式回写费用的已申请金额和已结算金额（防止触发器失效）
-            if (entity.FeeId.HasValue && _DbContext.DocFees.Find(entity.FeeId.Value) is DocFee fee)
-            {
-                fee.TotalRequestedAmount = DocFee.CalculateTotalRequestedAmount(entity.FeeId.Value, _DbContext);
-                fee.TotalSettledAmount = DocFee.CalculateTotalSettledAmount(entity.FeeId.Value, _DbContext);
-                _Logger.LogInformation("Create明细后更新费用ID:{FeeId}的TotalRequestedAmount={TotalRequested}, TotalSettledAmount={TotalSettled}",
-                    entity.FeeId.Value, fee.TotalRequestedAmount, fee.TotalSettledAmount);
-            }
+            // 已删除显式回写代码 - 由FeeTotalTriggerHandler触发器自动处理
             
             _DbContext.SaveChanges();
             result.Id = model.DocFeeRequisitionItem.Id;
@@ -729,6 +721,9 @@ namespace PowerLmsWebApi.Controllers
             var entryEntity = _DbContext.Entry(modifiedEntities[0]);
             var parent = _DbContext.DocFeeRequisitions.Find(model.DocFeeRequisitionItem.ParentId);
             if (parent is null) return BadRequest("没有找到 指定的 ParentId 实体");
+            
+            // 不需要显式回写 - 由FeeTotalTriggerHandler触发器自动处理
+            
             _DbContext.SaveChanges();
             return result;
         }
@@ -751,22 +746,14 @@ namespace PowerLmsWebApi.Controllers
             var item = dbSet.Find(id);
             if (item is null) return BadRequest();
             
-            // ✅ 保存FeeId用于后续回写
-            var feeId = item.FeeId;
+            // 不需要保存FeeId和显式回写 - 由FeeTotalTriggerHandler触发器自动处理
             
             _EntityManager.Remove(item);
             //计算合计
             var parent = _DbContext.DocFeeRequisitions.Find(item.ParentId);
             if (parent is null) return BadRequest("没有找到 指定的 ParentId 实体");
             
-            // ✅ 显式回写费用的已申请金额和已结算金额（防止触发器失效）
-            if (feeId.HasValue && _DbContext.DocFees.Find(feeId.Value) is DocFee fee)
-            {
-                fee.TotalRequestedAmount = DocFee.CalculateTotalRequestedAmount(feeId.Value, _DbContext);
-                fee.TotalSettledAmount = DocFee.CalculateTotalSettledAmount(feeId.Value, _DbContext);
-                _Logger.LogInformation("Delete明细后更新费用ID:{FeeId}的TotalRequestedAmount={TotalRequested}, TotalSettledAmount={TotalSettled}",
-                    feeId.Value, fee.TotalRequestedAmount, fee.TotalSettledAmount);
-            }
+            // 已删除显式回写代码 - 由FeeTotalTriggerHandler触发器自动处理
             
             _DbContext.SaveChanges();
             return result;
@@ -829,6 +816,9 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.AddRange(adds);
             var removeIds = existsIds.Except(aryIds).ToArray();
             _DbContext.RemoveRange(_DbContext.DocFeeRequisitionItems.Where(c => removeIds.Contains(c.Id)));
+            
+            // 不需要显式回写 - 由FeeTotalTriggerHandler触发器自动处理
+            
             _DbContext.SaveChanges();
             result.Result.AddRange(model.Items);
             return result;
