@@ -28,8 +28,8 @@ namespace PowerLmsWebApi.Controllers
         /// 获取一组语言资源。
         /// </summary>
         /// <param name="token">登录令牌，未登录则为空。</param>
-        /// <param name="languageTag">语言的标准缩写名。未登录则必须填写。</param>
-        /// <param name="prefix">前缀。理论上可以通过空来获取所有资源键值，但这样存在性能隐患。</param>
+        /// <param name="languageTag">语言的标准缩写名（IETF BCP 47标准），如：zh-CN、en-US、ja-JP。未登录则必须填写。</param>
+        /// <param name="prefix">键值前缀。理论上可以通过空来获取所有资源键值，但这样存在性能隐患。</param>
         /// <returns></returns>
         [HttpGet]
         public ActionResult<MultilingualGetReturnDto> Get(Guid? token, string languageTag, string prefix)
@@ -61,8 +61,36 @@ namespace PowerLmsWebApi.Controllers
             var result = new MultilingualSetReturnDto();
             //检验Token
 
-            _Db.Delete(model.DeleteIds, nameof(_Db.Multilinguals));
-            _Db.AddOrUpdate(model.AddOrUpdateDatas as IEnumerable<Multilingual>);
+            // 基于联合主键(Key, LanguageTag)处理删除
+            foreach (var deleteItem in model.DeleteDatas)
+            {
+                var entity = _Db.Multilinguals
+                    .FirstOrDefault(m => m.Key == deleteItem.Key 
+                        && m.LanguageTag == deleteItem.LanguageTag);
+                if (entity != null)
+                {
+                    _Db.Multilinguals.Remove(entity);
+                }
+            }
+
+            // 更新或添加
+            foreach (var item in model.AddOrUpdateDatas)
+            {
+                var entity = _Db.Multilinguals
+                    .FirstOrDefault(m => m.Key == item.Key 
+                        && m.LanguageTag == item.LanguageTag);
+                if (entity != null)
+                {
+                    // 更新
+                    entity.Text = item.Text;
+                }
+                else
+                {
+                    // 添加
+                    _Db.Multilinguals.Add(item);
+                }
+            }
+
             _Db.SaveChanges();
             return result;
         }

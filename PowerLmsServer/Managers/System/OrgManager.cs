@@ -443,7 +443,16 @@ namespace PowerLmsServer.Managers
                     // 添加对主缓存的依赖，当主缓存失效时这些映射也失效
                     if (mainTokenSource != null)
                     {
-                        orgEntry.AddExpirationToken(new CancellationChangeToken(mainTokenSource.Token));
+                        try
+                        {
+                            // 真正可能抛异常的地方：访问已释放的 CTS 的 Token 属性
+                            orgEntry.AddExpirationToken(new CancellationChangeToken(mainTokenSource.Token));
+                        }
+                        catch (ObjectDisposedException)
+                        {
+                            // 取消令牌源在添加依赖时已被释放，跳过依赖关系建立
+                            // 缓存项仍会正常工作，只是失去级联过期功能
+                        }
                     }
 
                     orgEntry.Value = (Guid?)merchantId;

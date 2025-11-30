@@ -12,6 +12,7 @@
  * 创建：2023-12
  * 修改：2025-01-15 展开PlOwnedContact复杂类型为平铺字段
  * 修改：2025-02-06 添加RowVersion字段支持开放式并发控制
+ * 修改：2025-02-07 添加英文名称和英文地址字段
  */
 
 using Microsoft.EntityFrameworkCore;
@@ -84,6 +85,13 @@ namespace PowerLms.Data
         /// </summary>
         [Comment("显示名，有时它是昵称或简称(系统内)的意思")]
         public string Name_DisplayName { get; set; }
+
+        /// <summary>
+        /// 英文名称。
+        /// </summary>
+        [Comment("英文名称")]
+        [MaxLength(128)]
+        public string EnglishName { get; set; }
 
         #endregion 客户名称信息
 
@@ -159,6 +167,13 @@ namespace PowerLms.Data
         [Comment("邮政编码")]
         [MaxLength(8)]
         public string Address_ZipCode { get; set; }
+
+        /// <summary>
+        /// 英文地址。
+        /// </summary>
+        [Comment("英文地址")]
+        [MaxLength(256)]
+        public string EnglishAddress { get; set; }
 
         #endregion 地址信息
 

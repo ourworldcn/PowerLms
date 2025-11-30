@@ -98,6 +98,13 @@ namespace PowerLmsServer.EfData
             
             #endregion OA系统相关
 
+            #region 多语言相关
+            // 配置多语言资源表的联合主键
+            modelBuilder.Entity<Multilingual>().HasKey(
+                nameof(Multilingual.Key),
+                nameof(Multilingual.LanguageTag));
+            #endregion 多语言相关
+
             base.OnModelCreating(modelBuilder);
 
             #region 应用日志相关

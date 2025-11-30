@@ -1,16 +1,16 @@
-using PowerLms.Data;
+ï»¿using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsWebApi.Dto;
 
 namespace PowerLmsWebApi.Controllers
 {
     /// <summary>
-    /// »ñÈ¡¶àÓïÑÔ×ÊÔ´µÄ·µ»ØÖµ·â×°Àà¡£
+    /// è·å–å¤šè¯­è¨€èµ„æºçš„è¿”å›å€¼å°è£…ç±»ã€‚
     /// </summary>
     public class MultilingualGetReturnDto
     {
         /// <summary>
-        /// ¹¹Ôìº¯Êı¡£
+        /// æ„é€ å‡½æ•°ã€‚
         /// </summary>
         public MultilingualGetReturnDto()
         {
@@ -18,42 +18,42 @@ namespace PowerLmsWebApi.Controllers
         }
 
         /// <summary>
-        /// ¶àÓïÑÔ×ÊÔ´µÄ¼¯ºÏ¡£
+        /// å¤šè¯­è¨€èµ„æºçš„é›†åˆã€‚
         /// </summary>
         public List<Multilingual> Multilinguals { get; set; } = new List<Multilingual>();
     }
 
     /// <summary>
-    /// ĞŞ¸Ä»ò×·¼Ó¶àÓïÑÔ×ÊÔ´¹¦ÄÜµÄ²ÎÊı·â×°Àà¡£
+    /// ä¿®æ”¹æˆ–è¿½åŠ å¤šè¯­è¨€èµ„æºåŠŸèƒ½çš„å‚æ•°å°è£…ç±»ã€‚
     /// </summary>
     public class MultilingualSetParamsDto : TokenDtoBase
     {
         /// <summary>
-        /// ×·¼Ó»òĞŞ¸ÄµÄÄÚÈİ¡£
-        /// ÈôId²»´æÔÚÔò×·¼Ó£¬ÈôÒÑ¾­´æÔÚÔòĞŞ¸Ä¡£
+        /// è¿½åŠ æˆ–ä¿®æ”¹çš„æ•°æ®ã€‚
+        /// è‹¥è”åˆä¸»é”®(Key, LanguageTag)ä¸å­˜åœ¨åˆ™è¿½åŠ ï¼Œè‹¥å·²ç»å­˜åœ¨åˆ™ä¿®æ”¹ã€‚
         /// </summary>
         public List<Multilingual> AddOrUpdateDatas { get; set; } = new List<Multilingual>();
 
         /// <summary>
-        /// ÒªÉ¾³ıµÄ¶àÓïÑÔ×ÊÔ´µÄId¼¯ºÏ¡£ÈôÒªÉ¾³ı±ØĞëµÇÂ¼¡£
+        /// è¦åˆ é™¤çš„å¤šè¯­è¨€èµ„æºé›†åˆã€‚é€šè¿‡è”åˆä¸»é”®(Key, LanguageTag)è¿›è¡ŒåŒ¹é…åˆ é™¤ã€‚
         /// </summary>
-        public List<Guid> DeleteIds { get; set; } = new List<Guid> { };
+        public List<Multilingual> DeleteDatas { get; set; } = new List<Multilingual>();
     }
 
     /// <summary>
-    /// ĞŞ¸Ä»ò×·¼Ó¶àÓïÑÔ×ÊÔ´¹¦ÄÜµÄ·µ»ØÖµ·â×°Àà¡£
+    /// ä¿®æ”¹æˆ–è¿½åŠ å¤šè¯­è¨€èµ„æºåŠŸèƒ½çš„è¿”å›å€¼å°è£…ç±»ã€‚
     /// </summary>
     public class MultilingualSetReturnDto : ReturnDtoBase
     {
     }
 
     /// <summary>
-    /// »ñÈ¡ÓïÑÔ×Öµä±í¹¦ÄÜ·µ»ØÖµ·â×°Àà¡£
+    /// è·å–è¯­è¨€å­—å…¸è¡¨åŠŸèƒ½è¿”å›å€¼å°è£…ç±»ã€‚
     /// </summary>
     public class GetLanguageDataDicReturnDto : ReturnDtoBase
     {
         /// <summary>
-        /// ÓïÑÔÊı¾İ×Öµä¡£
+        /// è¯­è¨€æ•°æ®å­—å…¸ã€‚
         /// </summary>
         public List<LanguageDataDic> Results { get; set; } = new List<LanguageDataDic>();
     }
