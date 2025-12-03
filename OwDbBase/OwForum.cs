@@ -82,6 +82,11 @@ namespace OW.Forum
         /// <summary>是否置顶。置顶帖子按创建时间降序排列在前面。</summary>
         /// <value>默认值：false=不置顶。此属性需要额外方法设置，不在CRUD内设置。</value>
         public bool IsTop { get; set; }
+
+        /// <summary>
+        /// 帖子是否是草稿。为考虑多个标志的可查询性，使用独立的bool型。
+        /// </summary>
+        public bool IsDraft { get; set; }
     }
 
     /// <summary>回复实体。</summary>
