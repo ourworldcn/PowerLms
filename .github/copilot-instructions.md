@@ -70,6 +70,60 @@
 
 ## 7. 📁 文档管理规范
 
+### 7.0 📚 索引文档优先规则（强制执行）⭐
+
+**核心原则**：优先读取项目索引，避免全项目扫描，节省上下文
+
+#### 7.0.1 索引文档位置
+```
+.github/indexes/
+├── OwBaseCore.md          # 核心基础设施（DDD、缓存、并发）
+├── OwDbBase.md            # 数据库基础设施（OwFileService、EF增强）
+├── OwExtensions.md        # Excel处理（NPOI扩展）
+├── PowerLmsServer.md      # 业务层（Manager）
+├── PowerLmsData.md        # 数据层（实体）
+└── PowerLmsWebApi.md      # API层（控制器）
+```
+
+#### 7.0.2 AI行为约束（强制）
+```markdown
+❌ 禁止行为：
+- 未读取索引就使用 code_search 搜索代码
+- 未读取索引就使用 file_search 查找文件
+- 未读取索引就直接猜测文件路径
+
+✅ 必须遵循的流程：
+1. 用户提到某个模块/组件 → 先读取对应索引
+2. 索引中找不到详细信息 → 再使用 code_search
+3. 需要修改代码 → 基于索引定位文件
+```
+
+#### 7.0.3 索引快速查找表
+| 用户提到的关键词 | 优先读取的索引 | 次要索引 |
+|----------------|---------------|---------|
+| OwFileService, 文件上传/下载 | OwDbBase.md | - |
+| Excel导入/导出, NPOI | OwExtensions.md | - |
+| OwEventBus, DDD, 缓存 | OwBaseCore.md | - |
+| Manager, 业务逻辑 | PowerLmsServer.md | - |
+| 实体, 数据模型 | PowerLmsData.md | - |
+| Controller, API | PowerLmsWebApi.md | - |
+| PooledList, SingletonLocker | OwBaseCore.md | - |
+| OwBatchDbWriter, EfHelper | OwDbBase.md | - |
+
+#### 7.0.4 索引使用示例
+```markdown
+✅ 用户问："如何使用 OwFileService 上传文件？"
+AI 正确流程：
+1. 读取 .github/indexes/OwDbBase.md
+2. 从索引中找到 OwFileService.CreateFile 方法
+3. 提供代码示例（基于索引中的信息）
+
+❌ 错误流程：
+1. 直接 code_search "OwFileService"
+2. 扫描多个文件查找用法
+3. 浪费大量上下文
+```
+
 ### 7.1 📋 TODO.md
 - 专注当前待办任务、优先级和执行计划，包含详细的技术方案和剩余工作
 - 任务完成后立即删除，只保留活跃任务
@@ -118,6 +172,7 @@
 **信息唯一性原则**：相同信息只在一个地方记录，避免重复和冗余，这是协作框架的核心要求
 **WBS编号法使用**：所有文档类文件使用WBS编号法组织结构，确保编号唯一且连续，提高文档层次性
 **Emoji图标增强辨识度**：文档类文件（非代码文件）可使用语义相关的emoji图标提高辨识度
+**索引优先原则**：遵循第7.0节的索引文档优先规则，减少不必要的代码扫描 ⭐
 
 **新项目初始化行为**：当AI识别到新项目环境时，自动执行必需文档创建
 - TODO.md：基于项目需求创建任务结构

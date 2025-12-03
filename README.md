@@ -13,6 +13,25 @@ deprecated: [NpoiManager]
 workspace_structure: 分层架构(API-业务-数据)，基础设施完备，基于Bak目录的核心组件依赖
 -->
 
+<!-- 
+🤖 AI快速索引导航 - 优先读取以下文件，避免全项目扫描
+================================================================================
+📋 核心文档（按优先级）：
+  1. .github/project-context.md      - 架构索引、Manager定位表、FAQ
+  2. .github/project-specific.md     - 项目配置、权限体系、技术约束
+  3. .github/copilot-instructions.md - 开发规范、编程约束
+  4. TODO.md                         - 当前任务和执行计划
+  5. CHANGELOG.md                    - 历史变更记录
+  6. 部署指南.txt                     - 部署运维说明
+
+⚡ AI协作原则：
+  - 90%场景通过索引定位，无需code_search
+  - 优先查询 project-context.md 的Manager表格
+  - 遵循 copilot-instructions.md 的强制约束
+  - 人工维护索引，AI负责补充细节
+================================================================================
+-->
+
 # PowerLms
 货运物流业务管理系统 | 基于 .NET 6 构建的企业级平台 | 约9.2万行代码 | 3人精英团队
 
