@@ -15,9 +15,16 @@ namespace PowerLmsWebApi.Controllers
 
     /// <summary>
     /// 下载文件通用功能参数封装类。
+    /// 已废弃：GetFile 接口现在直接使用参数绑定特性，不再需要此 DTO 类。
     /// </summary>
-    public class GetFileParamsDto : TokenDtoBase
+    [Obsolete("GetFile 接口已改用参数绑定特性，此类不再使用")]
+    public class GetFileParamsDto
     {
+        /// <summary>
+        /// 登录令牌。可选，优先从查询参数获取，其次从Header(Authorization: Bearer token)，最后从Cookie(token)。
+        /// </summary>
+        public Guid? Token { get; set; }
+
         /// <summary>
         /// 文件Id。
         /// </summary>

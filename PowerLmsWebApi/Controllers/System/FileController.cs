@@ -318,39 +318,67 @@ namespace PowerLmsWebApi.Controllers.System
 
         /// <summary>
         /// 下载文件。一般应先调用GetAllFileInfo接口以获得文件Id。
+        /// Token可以从以下位置获取（优先级从高到低）：
+        /// 1. 查询参数 token
+        /// 2. HTTP Header: Authorization: Bearer {token}
+        /// 3. Cookie: token（不区分大小写）
         /// </summary>
+        /// <param name="fileId">文件Id</param>
+        /// <param name="token">查询参数中的Token（可选）</param>
+        /// <param name="authToken">Header中的Token（可选）</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">指定Id的文件不存在。</response>  
         /// <response code="403">权限不足。</response>  
         [HttpGet]
-        public ActionResult GetFile([FromQuery] GetFileParamsDto model)
+        public ActionResult GetFile(
+            [FromQuery] Guid fileId,
+            [FromQuery] Guid? token = null,
+            [FromHeader(Name = "Authorization")] string authToken = null)
         {
-            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
+            Guid? finalToken = null;
+            if (token.HasValue)
+            {
+                finalToken = token.Value;
+            }
+            else if (!string.IsNullOrEmpty(authToken) && authToken.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+            {
+                var tokenString = authToken[7..];
+                if (Guid.TryParse(tokenString, out var headerToken))
+                    finalToken = headerToken;
+            }
+            else
+            {
+                var tokenCookie = Request.Cookies.FirstOrDefault(c => c.Key.Equals("token", StringComparison.OrdinalIgnoreCase));
+                if (!string.IsNullOrEmpty(tokenCookie.Value) && Guid.TryParse(tokenCookie.Value, out var parsedCookieToken))
+                    finalToken = parsedCookieToken;
+            }
+            if (!finalToken.HasValue)
+            {
+                _Logger.LogWarning("文件下载失败：未提供有效的Token，文件ID: {FileId}", fileId);
+                return Unauthorized("未提供有效的Token，请通过查询参数、Header(Authorization: Bearer)或Cookie提供");
+            }
+            if (_AccountManager.GetOrLoadContextByToken(finalToken.Value, _ServiceProvider) is not OwContext context)
+            {
+                _Logger.LogWarning("文件下载失败：无效的Token，文件ID: {FileId}", fileId);
                 return Unauthorized();
-
+            }
             try
             {
-                var info = _DbContext.PlFileInfos.Find(model.FileId);
+                var info = _DbContext.PlFileInfos.Find(fileId);
                 if (info == null) return NotFound();
-
-                // 检查权限
                 if (info.ParentId.HasValue)
                 {
                     CheckJobPermissions(info.ParentId.Value, "8.2");
                 }
-
-                // 检查文件是否存在
                 if (!_FileService.FileExists(info.FilePath))
                 {
                     _Logger.LogWarning("请求的文件不存在：{FilePath}", info.FilePath);
                     return NotFound("文件不存在");
                 }
-
                 var fullPath = _FileService.GetFullPath(info.FilePath);
                 var stream = new FileStream(fullPath, FileMode.Open, FileAccess.Read);
-
                 _Logger.LogDebug("文件下载：{fileName}，ID：{fileId}", info.FileName, info.Id);
                 return File(stream, "application/octet-stream", info.FileName);
             }
@@ -360,7 +388,7 @@ namespace PowerLmsWebApi.Controllers.System
             }
             catch (Exception ex)
             {
-                _Logger.LogError(ex, "下载文件时发生错误，文件ID: {FileId}", model.FileId);
+                _Logger.LogError(ex, "下载文件时发生错误，文件ID: {FileId}", fileId);
                 return StatusCode((int)HttpStatusCode.InternalServerError, "下载文件时发生错误");
             }
         }
