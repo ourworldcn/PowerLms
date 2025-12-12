@@ -1014,9 +1014,9 @@ namespace PowerLmsWebApi.Controllers
                 // endDate: 下月第一天 00:00:00，使用 < 比较，包含当月所有时间
                 var jobsInPeriod = _DbContext.PlJobs
                     .Where(j => j.OrgId == orgId && 
-                               j.AuditDateTime.HasValue &&
-                               j.AuditDateTime.Value >= startDate &&
-                               j.AuditDateTime.Value < endDate)
+                               j.AccountDate.HasValue &&
+                               j.AccountDate.Value >= startDate &&
+                               j.AccountDate.Value < endDate)
                     .AsNoTracking()
                     .ToList();
 
@@ -1119,9 +1119,9 @@ namespace PowerLmsWebApi.Controllers
                 // endDate: 下月第一天 00:00:00，使用 < 比较，包含当月所有时间
                 var jobsToProcess = _DbContext.PlJobs
                     .Where(j => j.OrgId == orgId && 
-                               j.AuditDateTime.HasValue &&
-                               j.AuditDateTime.Value >= startDate &&
-                               j.AuditDateTime.Value < endDate)
+                               j.AccountDate.HasValue &&
+                               j.AccountDate.Value >= startDate &&
+                               j.AccountDate.Value < endDate)
                     .ToList();
 
                 // 分类处理
