@@ -1012,8 +1012,10 @@ namespace PowerLmsWebApi.Controllers
                 // 使用日期范围查询，避免ToString()翻译问题
                 // startDate: 当月第一天 00:00:00
                 // endDate: 下月第一天 00:00:00，使用 < 比较，包含当月所有时间
+                // 前置条件：必须已审核(AuditDateTime.HasValue)
                 var jobsInPeriod = _DbContext.PlJobs
                     .Where(j => j.OrgId == orgId && 
+                               j.AuditDateTime.HasValue &&
                                j.AccountDate.HasValue &&
                                j.AccountDate.Value >= startDate &&
                                j.AccountDate.Value < endDate)
@@ -1117,8 +1119,10 @@ namespace PowerLmsWebApi.Controllers
                 // 使用日期范围查询，避免ToString()翻译问题
                 // startDate: 当月第一天 00:00:00
                 // endDate: 下月第一天 00:00:00，使用 < 比较，包含当月所有时间
+                // 前置条件：必须已审核(AuditDateTime.HasValue)
                 var jobsToProcess = _DbContext.PlJobs
                     .Where(j => j.OrgId == orgId && 
+                               j.AuditDateTime.HasValue &&
                                j.AccountDate.HasValue &&
                                j.AccountDate.Value >= startDate &&
                                j.AccountDate.Value < endDate)
