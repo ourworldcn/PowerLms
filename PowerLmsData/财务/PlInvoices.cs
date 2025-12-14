@@ -22,6 +22,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Identity.Client;
 using OW.Data;
 using OW.DDD;
+using PowerLms.Data.Finance;
 using PowerLmsServer.EfData;
 using System;
 using System.Collections.Generic;
@@ -37,7 +38,7 @@ namespace PowerLms.Data
     /// 主营业务结算单实体，支持海运、空运、陆运等全流程财务结算业务。
     /// 2025年1月功能改造：新增16个字段，支持更复杂的财务计算和多币种处理。
     /// </summary>
-    public class PlInvoices : GuidKeyObjectBase, ICreatorInfo
+    public class PlInvoices : GuidKeyObjectBase, ICreatorInfo, IFinancialExportable
     {
         /// <summary>
         /// 构造函数。
@@ -305,6 +306,30 @@ namespace PowerLms.Data
         public DateTime CreateDateTime { get; set; }
 
         #endregion ICreatorInfo
+
+        #region IFinancialExportable
+
+        /// <summary>
+        /// 导出时间。null表示未导出，非null表示已导出。
+        /// 
+        /// <para>**重要：是否已导出以此字段为准！**</para>
+        /// <para>判断导出状态的唯一依据是 ExportedDateTime 字段，ExportedUserId 仅用于审计追踪。</para>
+        /// <para>即使 ExportedUserId 为空，只要 ExportedDateTime 有值，就视为已导出。</para>
+        /// </summary>
+        [Comment("导出时间，null表示未导出")]
+        [Precision(3)]
+        public DateTime? ExportedDateTime { get; set; }
+
+        /// <summary>
+        /// 导出用户ID。记录执行导出操作的用户，用于审计和权限验证。
+        /// 
+        /// <para>**注意：此字段仅用于审计追踪，不作为导出状态的判断依据。**</para>
+        /// <para>是否已导出以 ExportedDateTime 字段为准。</para>
+        /// </summary>
+        [Comment("导出用户ID，用于审计和权限验证")]
+        public Guid? ExportedUserId { get; set; }
+
+        #endregion
 
         /// <summary>
         /// 行版本号。用于开放式并发控制，防止并发更新时的数据覆盖问题。

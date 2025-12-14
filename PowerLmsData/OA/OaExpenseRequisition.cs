@@ -20,6 +20,7 @@
  */
 using Microsoft.EntityFrameworkCore;
 using OW.Data;
+using PowerLms.Data.Finance;
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -98,7 +99,7 @@ namespace PowerLms.Data.OA
     /// </summary>
     [Comment("OA日常费用申请单主表")]
     [Index(nameof(OrgId), IsUnique = false)]
-    public class OaExpenseRequisition : GuidKeyObjectBase, ISpecificOrg, ICreatorInfo
+    public class OaExpenseRequisition : GuidKeyObjectBase, ISpecificOrg, ICreatorInfo, IFinancialExportable
     {
         /// <summary>
         /// 构造函数。
@@ -326,6 +327,39 @@ namespace PowerLms.Data.OA
         public DateTime CreateDateTime { get; set; }
 
         #endregion
+
+        #region IFinancialExportable
+
+        /// <summary>
+        /// 导出时间。null表示未导出，非null表示已导出。
+        /// 
+        /// <para>**重要：是否已导出以此字段为准！**</para>
+        /// <para>判断导出状态的唯一依据是 ExportedDateTime 字段，ExportedUserId 仅用于审计追踪。</para>
+        /// <para>即使 ExportedUserId 为空，只要 ExportedDateTime 有值，就视为已导出。</para>
+        /// </summary>
+        [Comment("导出时间，null表示未导出")]
+        [Precision(3)]
+        public DateTime? ExportedDateTime { get; set; }
+
+        /// <summary>
+        /// 导出用户ID。记录执行导出操作的用户，用于审计和权限验证。
+        /// 
+        /// <para>**注意：此字段仅用于审计追踪，不作为导出状态的判断依据。**</para>
+        /// <para>是否已导出以 ExportedDateTime 字段为准。</para>
+        /// </summary>
+        [Comment("导出用户ID，用于审计和权限验证")]
+        public Guid? ExportedUserId { get; set; }
+
+        #endregion
+
+        /// <summary>
+        /// 行版本号。用于开放式并发控制，防止并发更新时的数据覆盖问题。
+        /// EF Core会在更新时自动检查此字段，如果值不匹配则抛出DbUpdateConcurrencyException。
+        /// SQL Server自动维护此字段，每次更新时自动递增。
+        /// </summary>
+        [Timestamp]
+        [Comment("行版本号，用于开放式并发控制")]
+        public byte[] RowVersion { get; set; }
     }
 
     /// <summary>
@@ -334,7 +368,7 @@ namespace PowerLms.Data.OA
     /// </summary>
     [Comment("OA费用申请单明细表")]
     [Index(nameof(ParentId), IsUnique = false)]
-    public class OaExpenseRequisitionItem : GuidKeyObjectBase
+    public class OaExpenseRequisitionItem : GuidKeyObjectBase, IFinancialExportable
     {
         /// <summary>
         /// 构造函数。
@@ -424,6 +458,39 @@ namespace PowerLms.Data.OA
         [Comment("备注")]
         [MaxLength(512)]
         public string Remark { get; set; }
+
+        #region IFinancialExportable
+
+        /// <summary>
+        /// 导出时间。null表示未导出，非null表示已导出。
+        /// 
+        /// <para>**重要：是否已导出以此字段为准！**</para>
+        /// <para>判断导出状态的唯一依据是 ExportedDateTime 字段，ExportedUserId 仅用于审计追踪。</para>
+        /// <para>即使 ExportedUserId 为空，只要 ExportedDateTime 有值，就视为已导出。</para>
+        /// </summary>
+        [Comment("导出时间，null表示未导出")]
+        [Precision(3)]
+        public DateTime? ExportedDateTime { get; set; }
+
+        /// <summary>
+        /// 导出用户ID。记录执行导出操作的用户，用于审计和权限验证。
+        /// 
+        /// <para>**注意：此字段仅用于审计追踪，不作为导出状态的判断依据。**</para>
+        /// <para>是否已导出以 ExportedDateTime 字段为准。</para>
+        /// </summary>
+        [Comment("导出用户ID，用于审计和权限验证")]
+        public Guid? ExportedUserId { get; set; }
+
+        #endregion
+
+        /// <summary>
+        /// 行版本号。用于开放式并发控制，防止并发更新时的数据覆盖问题。
+        /// EF Core会在更新时自动检查此字段，如果值不匹配则抛出DbUpdateConcurrencyException。
+        /// SQL Server自动维护此字段，每次更新时自动递增。
+        /// </summary>
+        [Timestamp]
+        [Comment("行版本号，用于开放式并发控制")]
+        public byte[] RowVersion { get; set; }
     }
 
     /// <summary>

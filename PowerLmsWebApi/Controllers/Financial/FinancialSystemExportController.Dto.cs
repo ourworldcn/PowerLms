@@ -63,14 +63,12 @@ namespace PowerLmsWebApi.Controllers.Financial
         /// 支持的过滤条件包括：
         /// - StartDate: 统计开始日期(yyyy-MM-dd格式)，默认为当月月初
         /// - EndDate: 统计结束日期(yyyy-MM-dd格式)，默认为操作当日
-        /// - IsLoan: 是否借款申请(true/false)，用于区分收款/付款凭证
+        /// - IsLoan: 系统会自动处理借款申请(IsLoan=true)生成收款凭证，报销申请(IsLoan=false)生成付款凭证
         /// - Status: 申请单状态过滤，只导出已确认状态的申请单
         /// - EmployeeId: 员工ID过滤
         /// - DepartmentId: 部门ID过滤
         /// - AmountRange: 金额范围过滤(如"100,1000")
         /// 以及其他OaExpenseRequisition、OaExpenseRequisitionItem相关字段的过滤条件
-        /// 
-        /// 注意：系统会自动处理借款申请(IsLoan=true)生成收款凭证，报销申请(IsLoan=false)生成付款凭证
         /// </summary>
         public Dictionary<string, string> ExportConditions { get; set; } = new();
 

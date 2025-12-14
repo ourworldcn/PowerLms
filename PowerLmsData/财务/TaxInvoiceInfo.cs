@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OW.Data;
 using OW.EntityFrameworkCore;
+using PowerLms.Data.Finance;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -17,7 +18,7 @@ namespace PowerLms.Data
     /// <summary>
     /// 开票信息。记录开的发票实质填写的信息。
     /// </summary>
-    public class TaxInvoiceInfo : GuidKeyObjectBase
+    public class TaxInvoiceInfo : GuidKeyObjectBase, IFinancialExportable
     {
         #region 基本信息
         /// <summary>开票渠道账号Id。关联到<see cref="TaxInvoiceChannelAccount"/>。</summary>
@@ -87,10 +88,25 @@ namespace PowerLms.Data
         [Precision(3)]
         public DateTime? ReturnInvoiceTime { get; set; }
 
-        /// <summary>已导出时间,未导出则为null。</summary>
+        /// <summary>
+        /// 已导出时间,未导出则为null。
+        /// 
+        /// <para>**重要：是否已导出以此字段为准！**</para>
+        /// <para>判断导出状态的唯一依据是 ExportedDateTime 字段，ExportedUserId 仅用于审计追踪。</para>
+        /// <para>即使 ExportedUserId 为空，只要 ExportedDateTime 有值，就视为已导出。</para>
+        /// </summary>
         [Comment("已导出时间,未导出则为null.")]
         [Precision(3)]
         public DateTime? ExportedDateTime { get; set; }
+
+        /// <summary>
+        /// 导出用户ID。记录执行导出操作的用户，用于审计和权限验证。
+        /// 
+        /// <para>**注意：此字段仅用于审计追踪，不作为导出状态的判断依据。**</para>
+        /// <para>是否已导出以 ExportedDateTime 字段为准。</para>
+        /// </summary>
+        [Comment("导出用户ID，用于审计和权限验证")]
+        public Guid? ExportedUserId { get; set; }
         #endregion
 
         #region 人员信息
