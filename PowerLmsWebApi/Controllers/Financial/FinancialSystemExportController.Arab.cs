@@ -42,14 +42,16 @@ namespace PowerLmsWebApi.Controllers.Financial
                 var accountingDate = conditions.TryGetValue("AccountingDate", out var accountingDateStr) && DateTime.TryParse(accountingDateStr, out var parsedAccountingDate) 
                     ? parsedAccountingDate : DateTime.Now.Date;
 
-                // 预检查数据数量 - 修复：使用工作号的财务日期和状态过滤
-                var feesQuery = from fee in _DbContext.DocFees
-                               join job in _DbContext.PlJobs on fee.JobId equals job.Id
-                               where fee.IO == true && // 只统计收入
-                                     job.AccountDate >= startDate && 
-                                     job.AccountDate <= endDate &&
-                                     job.JobState == 16 // 工作号已关闭状态
-                               select fee;
+                // 预检查数据数量 - 使用Manager方法过滤未导出数据
+                var exportManager = _ServiceProvider.GetRequiredService<FinancialSystemExportManager>();
+                var baseFeesQuery = from fee in _DbContext.DocFees
+                                   join job in _DbContext.PlJobs on fee.JobId equals job.Id
+                                   where fee.IO == true && // 只统计收入
+                                         job.AccountDate >= startDate && 
+                                         job.AccountDate <= endDate &&
+                                         job.JobState == 16 // 工作号已关闭状态
+                                   select fee;
+                var feesQuery = exportManager.FilterUnexported(baseFeesQuery);
 
                 var feeCount = feesQuery.Count();
                 if (feeCount == 0)
@@ -203,14 +205,17 @@ namespace PowerLmsWebApi.Controllers.Financial
                     throw new InvalidOperationException($"ARAB科目配置未找到，无法生成凭证，组织ID: {orgId}");
 
                 currentStep = "查询费用数据";
-                // 修复：使用工作号的财务日期和状态过滤
-                var feesQuery = from fee in dbContext.DocFees
-                               join job in dbContext.PlJobs on fee.JobId equals job.Id
-                               where fee.IO == true && // 只统计收入
-                                     job.AccountDate >= startDate && 
-                                     job.AccountDate <= endDate &&
-                                     job.JobState == 16 // 工作号已关闭状态
-                               select fee;
+                var exportManager = serviceProvider.GetRequiredService<FinancialSystemExportManager>();
+                // 构建基础查询
+                var baseFeesQuery = from fee in dbContext.DocFees
+                                   join job in dbContext.PlJobs on fee.JobId equals job.Id
+                                   where fee.IO == true && // 只统计收入
+                                         job.AccountDate >= startDate && 
+                                         job.AccountDate <= endDate &&
+                                         job.JobState == 16 // 工作号已关闭状态
+                                   select fee;
+                // 过滤未导出数据
+                var feesQuery = exportManager.FilterUnexported(baseFeesQuery);
 
                 // 应用额外的查询条件
                 if (conditions != null && conditions.Any())
@@ -226,8 +231,11 @@ namespace PowerLmsWebApi.Controllers.Financial
                 }
 
                 currentStep = "业务数据聚合统计";
+                // 保存最终查询用于后续标记
+                var finalFeesQuery = feesQuery;
+                
                 // ARAB业务逻辑：IO=收入，sum(Amount*ExchangeRate) as Totalamount，按 费用.结算单位、结算单位.国别、费用种类.代垫 分组
-                var arabGroupData = (from fee in feesQuery
+                var arabGroupData = (from fee in finalFeesQuery
                                    join customer in dbContext.PlCustomers on fee.BalanceId equals customer.Id into customerGroup
                                    from cust in customerGroup.DefaultIfEmpty()
                                    join feeType in dbContext.DD_SimpleDataDics on fee.FeeTypeId equals feeType.Id into feeTypeGroup
@@ -312,6 +320,11 @@ namespace PowerLmsWebApi.Controllers.Financial
                 if (fileInfoRecord == null)
                     throw new InvalidOperationException("fileService.CreateFile 返回 null");
 
+                currentStep = "标记费用为已导出ARAB";
+                var fees = finalFeesQuery.ToList(); // 获取所有匹配的费用对象
+                var markedCount = exportManager.MarkAsExported(fees, userId);
+                dbContext.SaveChanges(); // 保存导出标记
+                
                 currentStep = "验证输出文件并返回结果";
                 long actualFileSize = 0;
                 bool fileExists = false;
@@ -336,7 +349,8 @@ namespace PowerLmsWebApi.Controllers.Financial
                     ExportDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
                     FileSize = actualFileSize,
                     FileExists = fileExists,
-                    OriginalFileSize = fileSize
+                    OriginalFileSize = fileSize,
+                    MarkedFeeCount = markedCount
                 };
             }
             catch (Exception ex)

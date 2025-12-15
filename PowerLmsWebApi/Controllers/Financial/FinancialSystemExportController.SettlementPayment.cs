@@ -1,9 +1,9 @@
 ﻿/*
- * 项目：PowerLms财务系统 | 模块：付款结算单导出金蝶功能
- * 功能：将付款结算单转换为符合金蝶财务软件要求的会计凭证分录
- * 技术要点：六种凭证分录规则、多币种处理、混合业务识别、多笔付款优先处理、手续费双分录
- * 作者：zc | 创建：2025-01 | 修改：2025-01-31 付款结算单导出功能实施
- */
+* 项目：PowerLms财务系统 | 模块：付款结算单导出金蝶功能
+* 功能：将付款结算单转换为符合金蝶财务软件要求的会计凭证分录
+* 技术要点：六种凭证分录规则、多币种处理、混合业务识别、多笔付款优先处理、手续费双分录、导出防重机制
+* 作者：zc | 创建：2025-01 | 修改：2025-12-14 集成导出防重机制
+*/
 
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -28,6 +28,7 @@ namespace PowerLmsWebApi.Controllers.Financial
     /// - 混合业务识别（既有收入又有支出的结算单）
     /// - 多笔付款优先处理逻辑
     /// - 手续费双分录自平衡机制
+    /// - 导出防重机制（基于IFinancialExportable接口）
     /// - 权限控制和数据隔离
     /// - 异步任务处理机制
     /// </summary>
@@ -38,6 +39,7 @@ namespace PowerLmsWebApi.Controllers.Financial
         /// <summary>
         /// 导出付款结算单为金蝶DBF格式文件
         /// 支持六种凭证分录规则的完整实现，处理复杂的多币种和混合业务场景
+        /// 注意：自动过滤已导出的数据（ExportedDateTime不为null），导出后自动标记导出时间和用户
         /// </summary>
         /// <param name="model">导出参数，包含查询条件和用户令牌</param>
         /// <returns>导出任务信息，包含任务ID用于跟踪进度</returns>
@@ -79,15 +81,13 @@ namespace PowerLmsWebApi.Controllers.Financial
                 // 3. 构建查询条件 - 只查询付款结算单（IO=false）且未导出的
                 var conditions = model.ExportConditions ?? new Dictionary<string, string>();
                 
-                // 强制限制为付款结算单且未导出
+                // 强制限制为付款结算单
                 conditions["IO"] = "false";
-                if (!conditions.ContainsKey("ConfirmDateTime"))
-                {
-                    conditions["ConfirmDateTime"] = "null"; // 只导出未确认（未导出）的结算单
-                }
 
-                // 4. 预检查付款结算单数量
-                var settlementPaymentsQuery = _DbContext.PlInvoicess.AsQueryable();
+                // 4. 预检查付款结算单数量 - 使用Manager方法过滤未导出数据
+                var exportManager = _ServiceProvider.GetRequiredService<FinancialSystemExportManager>();
+                var baseQuery = _DbContext.PlInvoicess.AsQueryable();
+                var settlementPaymentsQuery = exportManager.FilterUnexported(baseQuery);
                 
                 // 应用查询条件
                 if (conditions.Any())
@@ -227,7 +227,9 @@ namespace PowerLmsWebApi.Controllers.Financial
                     throw new InvalidOperationException($"未找到用户 {userId}");
 
                 currentStep = "构建付款结算单查询";
-                var settlementPaymentsQuery = dbContext.PlInvoicess.AsQueryable();
+                var exportManager = serviceProvider.GetRequiredService<FinancialSystemExportManager>();
+                var baseQuery = dbContext.PlInvoicess.AsQueryable();
+                var settlementPaymentsQuery = exportManager.FilterUnexported(baseQuery);
                 
                 if (conditions.Any())
                 {
@@ -316,14 +318,9 @@ namespace PowerLmsWebApi.Controllers.Financial
                 if (fileInfoRecord == null)
                     throw new InvalidOperationException("文件保存失败");
 
-                currentStep = "更新导出状态";
-                // 标记付款结算单为已导出
-                var now = DateTime.UtcNow;
-                foreach (var payment in settlementPayments)
-                {
-                    payment.ConfirmDateTime = now;
-                }
-                dbContext.SaveChanges();
+                currentStep = "标记付款结算单为已导出";
+                var markedCount = exportManager.MarkAsExported(settlementPayments, userId);
+                dbContext.SaveChanges(); // 保存导出标记
 
                 currentStep = "验证最终文件并返回结果";
                 long actualFileSize = 0;
@@ -349,7 +346,8 @@ namespace PowerLmsWebApi.Controllers.Financial
                     ExportDateTime = exportDateTime.ToString("yyyy-MM-dd HH:mm:ss"),
                     FileSize = actualFileSize,
                     FileExists = fileExists,
-                    OriginalFileSize = fileSize
+                    OriginalFileSize = fileSize,
+                    MarkedCount = markedCount
                 };
             }
             catch (Exception ex)

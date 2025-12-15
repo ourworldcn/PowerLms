@@ -415,5 +415,115 @@ namespace PowerLmsServer.Managers
         }
 
         #endregion
+
+        #region 导出防重机制
+
+        /// <summary>
+        /// 标记财务数据为已导出
+        /// 此方法仅修改实体属性,不调用SaveChanges,调用者需自行保存
+        /// </summary>
+        /// <typeparam name="T">实现IFinancialExportable的实体类型</typeparam>
+        /// <param name="entities">要标记的实体集合</param>
+        /// <param name="userId">执行导出的用户ID</param>
+        /// <returns>成功标记的数量</returns>
+        public int MarkAsExported<T>(IEnumerable<T> entities, Guid userId) 
+            where T : class, IFinancialExportable
+        {
+            var exportDateTime = DateTime.UtcNow;
+            var count = 0;
+            foreach (var entity in entities)
+            {
+                entity.ExportedDateTime = exportDateTime;
+                entity.ExportedUserId = userId;
+                count++;
+            }
+            _logger.LogInformation("已标记 {Count} 条 {EntityType} 数据为已导出,用户: {UserId}", 
+                count, typeof(T).Name, userId);
+            return count;
+        }
+
+        /// <summary>
+        /// 取消财务数据的导出标记
+        /// 此方法仅修改实体属性,不调用SaveChanges,调用者需自行保存
+        /// </summary>
+        /// <typeparam name="T">实现IFinancialExportable的实体类型</typeparam>
+        /// <param name="entities">要取消标记的实体集合</param>
+        /// <param name="currentUserId">当前用户ID(用于日志记录)</param>
+        /// <param name="requireSameUser">是否要求必须是导出人才能取消(默认false,由调用者在Controller层验证权限)</param>
+        /// <returns>成功取消标记的数量</returns>
+        /// <exception cref="UnauthorizedAccessException">当requireSameUser为true且非导出人尝试取消时</exception>
+        public int UnmarkExported<T>(IEnumerable<T> entities, Guid currentUserId, bool requireSameUser = false) 
+            where T : class, IFinancialExportable
+        {
+            var count = 0;
+            foreach (var entity in entities)
+            {
+                if (requireSameUser && entity.ExportedUserId.HasValue && entity.ExportedUserId.Value != currentUserId)
+                {
+                    throw new UnauthorizedAccessException($"只有导出人才能取消导出,导出人ID:{entity.ExportedUserId}");
+                }
+                entity.ExportedDateTime = null;
+                entity.ExportedUserId = null;
+                count++;
+            }
+            _logger.LogInformation("已取消 {Count} 条 {EntityType} 数据的导出标记,用户: {UserId}", 
+                count, typeof(T).Name, currentUserId);
+            return count;
+        }
+
+        /// <summary>
+        /// 为查询添加"未导出"过滤条件
+        /// </summary>
+        /// <typeparam name="T">实现IFinancialExportable的实体类型</typeparam>
+        /// <param name="query">原始查询</param>
+        /// <returns>添加过滤后的查询</returns>
+        public IQueryable<T> FilterUnexported<T>(IQueryable<T> query) 
+            where T : class, IFinancialExportable
+        {
+            return query.Where(e => e.ExportedDateTime == null);
+        }
+
+        /// <summary>
+        /// 为查询添加"已导出"过滤条件
+        /// </summary>
+        /// <typeparam name="T">实现IFinancialExportable的实体类型</typeparam>
+        /// <param name="query">原始查询</param>
+        /// <returns>添加过滤后的查询</returns>
+        public IQueryable<T> FilterExported<T>(IQueryable<T> query) 
+            where T : class, IFinancialExportable
+        {
+            return query.Where(e => e.ExportedDateTime != null);
+        }
+
+        /// <summary>
+        /// 验证是否可以取消导出
+        /// </summary>
+        /// <typeparam name="T">实现IFinancialExportable的实体类型</typeparam>
+        /// <param name="entity">要验证的实体</param>
+        /// <param name="currentUserId">当前用户ID</param>
+        /// <param name="isAdmin">当前用户是否是管理员</param>
+        /// <returns>(是否可以取消, 错误信息)</returns>
+        public (bool CanCancel, string ErrorMessage) CanCancelExport<T>(
+            T entity, 
+            Guid currentUserId,
+            bool isAdmin) 
+            where T : class, IFinancialExportable
+        {
+            if (!entity.ExportedDateTime.HasValue)
+            {
+                return (false, "数据尚未导出,无需取消");
+            }
+            if (isAdmin)
+            {
+                return (true, string.Empty);
+            }
+            if (entity.ExportedUserId.HasValue && entity.ExportedUserId.Value == currentUserId)
+            {
+                return (true, string.Empty);
+            }
+            return (false, $"只有导出人或管理员可以取消导出");
+        }
+
+        #endregion
     }
 }

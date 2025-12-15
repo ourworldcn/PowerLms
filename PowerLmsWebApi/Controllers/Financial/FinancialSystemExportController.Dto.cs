@@ -296,6 +296,94 @@ namespace PowerLmsWebApi.Controllers.Financial
 
     #endregion
 
+    #region 取消财务导出DTO
+
+    /// <summary>
+    /// 取消财务导出标记请求参数
+    /// 基于导出时间范围进行批量取消，避免传递大量实体ID
+    /// </summary>
+    public class CancelFinancialExportParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 导出业务类型代码（必填）
+        /// 支持的类型：
+        /// - INVOICE: 发票导出
+        /// - OA_EXPENSE: OA日常费用申请单导出
+        /// - ARAB: A账应收本位币挂账导出（计提）
+        /// - APAB: A账应付本位币挂账导出（计提）
+        /// - SETTLEMENT_RECEIPT: 收款结算单导出
+        /// - SETTLEMENT_PAYMENT: 付款结算单导出
+        /// </summary>
+        [Required(ErrorMessage = "导出业务类型代码不能为空")]
+        public string ExportTypeCode { get; set; }
+
+        /// <summary>
+        /// 导出时间范围-开始时间（必填）
+        /// 格式：ISO 8601 (如 "2025-01-01T00:00:00Z")
+        /// 说明：将取消在此时间之后导出的数据
+        /// 典型用法：
+        /// - 取消本月导出：设为本月1号0点
+        /// - 取消今天导出：设为今天0点
+        /// </summary>
+        [Required(ErrorMessage = "导出时间范围开始时间不能为空")]
+        public DateTime ExportedDateTimeStart { get; set; }
+
+        /// <summary>
+        /// 导出时间范围-结束时间（必填）
+        /// 格式：ISO 8601 (如 "2025-01-31T23:59:59Z")
+        /// 说明：将取消在此时间之前导出的数据
+        /// 典型用法：
+        /// - 取消本月导出：设为本月最后一天23:59:59
+        /// - 取消今天导出：设为今天23:59:59
+        /// </summary>
+        [Required(ErrorMessage = "导出时间范围结束时间不能为空")]
+        public DateTime ExportedDateTimeEnd { get; set; }
+
+        /// <summary>
+        /// 额外的过滤条件（可选）
+        /// 用于进一步缩小取消范围，支持EfHelper.GenerateWhereAnd的查询语法
+        /// 常见用法：
+        /// - 限定导出用户: { "ExportedUserId": "guid" }
+        /// - 限定机构: { "OrgId": "guid" }
+        /// 注意：此条件会与导出时间范围进行AND组合
+        /// </summary>
+        public Dictionary<string, string> AdditionalConditions { get; set; }
+
+        /// <summary>
+        /// 取消原因（可选）
+        /// 用于审计追踪和日志记录
+        /// </summary>
+        public string Reason { get; set; }
+    }
+
+    /// <summary>
+    /// 取消财务导出标记返回结果
+    /// </summary>
+    public class CancelFinancialExportReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 成功取消的记录数量
+        /// </summary>
+        public int SuccessCount { get; set; }
+
+        /// <summary>
+        /// 取消失败的记录数量
+        /// </summary>
+        public int FailedCount { get; set; }
+
+        /// <summary>
+        /// 取消失败的实体ID列表
+        /// </summary>
+        public List<Guid> FailedIds { get; set; } = new List<Guid>();
+
+        /// <summary>
+        /// 操作结果消息
+        /// </summary>
+        public string Message { get; set; }
+    }
+
+    #endregion
+
     // 注意：付款结算单导出的DTO已移至FinancialSystemExportController.SettlementPayment.Dto.cs文件
     // 旧的SettlementPaymentCalculationDto和SettlementPaymentItemDto已废弃
 }

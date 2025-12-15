@@ -92,8 +92,8 @@ namespace PowerLmsWebApi.Controllers.Financial
                     conditions["Status"] = "2"; // 假设2为已确认状态
                 }
 
-                // 4. 预检查申请单数量
-                var requisitionsQuery = _DbContext.OaExpenseRequisitions.AsQueryable();
+                // 4. 预检查申请单数量 - 使用Manager方法过滤未导出数据
+                var requisitionsQuery = exportManager.FilterUnexported(_DbContext.OaExpenseRequisitions.AsQueryable());
                 
                 // 应用查询条件
                 if (conditions.Any())
@@ -253,15 +253,15 @@ namespace PowerLmsWebApi.Controllers.Financial
                     throw new InvalidOperationException($"未找到用户 {userId}");
 
                 currentStep = "构建申请单查询";
-                var requisitionsQuery = dbContext.OaExpenseRequisitions.AsQueryable();
+                var requisitionsQuery = exportManager.FilterUnexported(dbContext.OaExpenseRequisitions.AsQueryable());
                 
                 if (conditions.Any())
                 {
                     requisitionsQuery = EfHelper.GenerateWhereAnd(requisitionsQuery, conditions);
                 }
                 
-                // 应用组织权限过滤
-                requisitionsQuery = exportManager.ApplyOrganizationFilter(requisitionsQuery, taskUser);
+                // 应用组织权限过滤（静态版本）
+                requisitionsQuery = ApplyOrganizationFilterForOaExpenseStatic(requisitionsQuery, taskUser, dbContext, serviceProvider);
 
                 currentStep = "查询申请单数据";
                 var requisitions = requisitionsQuery.ToList();
@@ -348,6 +348,10 @@ namespace PowerLmsWebApi.Controllers.Financial
                 if (fileInfoRecord == null)
                     throw new InvalidOperationException("文件保存失败");
 
+                currentStep = "标记申请单为已导出";
+                var markedCount = exportManager.MarkAsExported(requisitions, userId);
+                dbContext.SaveChanges(); // 保存导出标记
+                
                 currentStep = "验证最终文件并返回结果";
                 long actualFileSize = 0;
                 bool fileExists = false;
@@ -374,7 +378,8 @@ namespace PowerLmsWebApi.Controllers.Financial
                     ExportDateTime = exportDateTime.ToString("yyyy-MM-dd HH:mm:ss"),
                     FileSize = actualFileSize,
                     FileExists = fileExists,
-                    OriginalFileSize = dbfStream.Length
+                    OriginalFileSize = dbfStream.Length,
+                    MarkedCount = markedCount
                 };
             }
             catch (Exception ex)
@@ -430,6 +435,42 @@ namespace PowerLmsWebApi.Controllers.Financial
             };
             
             return exportManager.ValidateConfigurations(requiredConfigs, orgId);
+        }
+
+        /// <summary>
+        /// 根据用户权限过滤OA费用申请单查询（静态版本）
+        /// </summary>
+        private static IQueryable<OaExpenseRequisition> ApplyOrganizationFilterForOaExpenseStatic(
+            IQueryable<OaExpenseRequisition> query, 
+            Account user,
+            PowerLmsUserDbContext dbContext, 
+            IServiceProvider serviceProvider)
+        {
+            if (user == null) return query.Where(r => false);
+            if (user.IsSuperAdmin) return query;
+            
+            var orgManager = serviceProvider.GetRequiredService<OrgManager<PowerLmsUserDbContext>>();
+            var merchantId = orgManager.GetMerchantIdByUserId(user.Id);
+            if (!merchantId.HasValue) return query.Where(r => false);
+            
+            HashSet<Guid> allowedOrgIds;
+            if (user.IsMerchantAdmin)
+            {
+                // 商户管理员：整个商户下的所有组织机构
+                allowedOrgIds = orgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs.Keys.ToHashSet();
+                allowedOrgIds.Add(merchantId.Value);
+            }
+            else
+            {
+                // 普通用户：当前登录的公司及下属所有非公司机构
+                var companyId = user.OrgId.HasValue ? orgManager.GetCompanyIdByOrgId(user.OrgId.Value) : null;
+                if (!companyId.HasValue) return query.Where(r => false);
+                
+                allowedOrgIds = orgManager.GetOrgIdsByCompanyId(companyId.Value).ToHashSet();
+                allowedOrgIds.Add(merchantId.Value);
+            }
+            
+            return query.Where(r => r.OrgId.HasValue && allowedOrgIds.Contains(r.OrgId.Value));
         }
 
         /// <summary>

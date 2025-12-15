@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using PowerLms.Data;
 using PowerLms.Data.Finance;
+using PowerLms.Data.OA;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
@@ -54,6 +55,237 @@ namespace PowerLmsWebApi.Controllers.Financial
         #region HTTP接口
 
         /// <summary>
+        /// 统一的取消财务导出标记接口（基于导出时间范围）
+        /// 支持取消已标记为导出状态的财务单据，使其可以重新导出
+        /// 
+        /// 支持的导出业务类型代码（exportTypeCode参数）：
+        /// - INVOICE: 发票导出（TaxInvoiceInfo）
+        /// - OA_EXPENSE: OA日常费用申请单导出（OaExpenseRequisition、OaExpenseRequisitionItem）
+        /// - ARAB: A账应收本位币挂账导出（DocFee，收入类）
+        /// - APAB: A账应付本位币挂账导出（DocFee，支出类）
+        /// - SETTLEMENT_RECEIPT: 收款结算单导出（PlInvoices，IO=true）
+        /// - SETTLEMENT_PAYMENT: 付款结算单导出（PlInvoices，IO=false）
+        /// 
+        /// 权限要求：F.6（财务接口权限）
+        /// 业务规则：
+        /// 1. 基于导出时间范围批量取消，避免传递大量实体ID
+        /// 2. 取消后，ExportedDateTime和ExportedUserId字段将被清空
+        /// 3. 支持额外的过滤条件（如限定导出用户、机构等）
+        /// 4. 自动应用组织权限过滤，确保数据隔离
+        /// 5. 设置安全上限（默认10000条），防止误操作
+        /// 6. 可选的取消原因记录（reason参数）
+        /// 
+        /// 典型使用场景：
+        /// - 取消本月所有导出：设置导出时间为本月1号到最后一天
+        /// - 取消今天的导出：设置导出时间为今天0点到23:59:59
+        /// - 取消上月导出：设置导出时间为上月1号到最后一天
+        /// </summary>
+        /// <param name="model">取消导出参数（必须包含导出时间范围）</param>
+        /// <returns>取消结果，包含成功数量和详细信息</returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">参数错误（如无效的exportTypeCode或导出时间范围无效）。</response>  
+        /// <response code="401">无效令牌。</response>  
+        /// <response code="403">权限不足。</response>  
+        [HttpPost]
+        public ActionResult<CancelFinancialExportReturnDto> CancelFinancialExport(CancelFinancialExportParamsDto model)
+        {
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
+                return Unauthorized();
+
+            var result = new CancelFinancialExportReturnDto();
+            try
+            {
+                // 1. 权限验证：使用财务接口权限
+                var authorizationManager = _ServiceProvider.GetRequiredService<AuthorizationManager>();
+                if (!authorizationManager.Demand(out var err, "F.6"))
+                {
+                    result.HasError = true;
+                    result.ErrorCode = 403;
+                    result.DebugMessage = $"权限不足：{err}";
+                    return result;
+                }
+
+                // 2. 参数验证
+                if (string.IsNullOrWhiteSpace(model.ExportTypeCode))
+                {
+                    result.HasError = true;
+                    result.ErrorCode = 400;
+                    result.DebugMessage = "导出业务类型代码（ExportTypeCode）不能为空";
+                    return result;
+                }
+
+                if (model.ExportedDateTimeStart == default || model.ExportedDateTimeEnd == default)
+                {
+                    result.HasError = true;
+                    result.ErrorCode = 400;
+                    result.DebugMessage = "导出时间范围（ExportedDateTimeStart和ExportedDateTimeEnd）不能为空";
+                    return result;
+                }
+
+                if (model.ExportedDateTimeStart > model.ExportedDateTimeEnd)
+                {
+                    result.HasError = true;
+                    result.ErrorCode = 400;
+                    result.DebugMessage = "导出时间范围开始时间不能大于结束时间";
+                    return result;
+                }
+
+                // 3. 根据导出业务类型代码调用对应的取消逻辑
+                var exportManager = _ServiceProvider.GetRequiredService<FinancialSystemExportManager>();
+                int successCount = 0;
+                const int MAX_CANCEL_COUNT = 10000; // 安全上限
+
+                switch (model.ExportTypeCode.ToUpperInvariant())
+                {
+                    case "INVOICE":
+                        {
+                            var query = _DbContext.TaxInvoiceInfos.AsQueryable();
+                            // 应用组织权限过滤
+                            query = ApplyOrganizationFilter(query, context.User);
+                            successCount = CancelExportByDateRange(query, model, context.User, exportManager, MAX_CANCEL_COUNT, out var errorMsg);
+                            if (!string.IsNullOrEmpty(errorMsg))
+                            {
+                                result.HasError = true;
+                                result.ErrorCode = 400;
+                                result.DebugMessage = errorMsg;
+                                return result;
+                            }
+                            break;
+                        }
+                    case "OA_EXPENSE":
+                        {
+                            var query = _DbContext.OaExpenseRequisitions.AsQueryable();
+                            // 应用OA申请单的组织权限过滤
+                            query = ApplyOrganizationFilterForOaExpense(query, context.User);
+                            successCount = CancelExportByDateRange(query, model, context.User, exportManager, MAX_CANCEL_COUNT, out var errorMsg);
+                            if (!string.IsNullOrEmpty(errorMsg))
+                            {
+                                result.HasError = true;
+                                result.ErrorCode = 400;
+                                result.DebugMessage = errorMsg;
+                                return result;
+                            }
+                            
+                            // 同时取消关联的子表记录（导出标记在主表，但子表也有ExportedDateTime字段）
+                            // 注意：只处理成功取消的主表记录关联的子表
+                            if (successCount > 0)
+                            {
+                                var canceledParentIds = exportManager.FilterExported(_DbContext.OaExpenseRequisitions.AsQueryable())
+                                    .Where(e => e.ExportedDateTime >= model.ExportedDateTimeStart 
+                                           && e.ExportedDateTime <= model.ExportedDateTimeEnd)
+                                    .Select(e => e.Id)
+                                    .ToList();
+                                
+                                if (canceledParentIds.Any())
+                                {
+                                    var items = _DbContext.OaExpenseRequisitionItems
+                                        .Where(item => canceledParentIds.Contains(item.ParentId.Value) 
+                                               && item.ExportedDateTime.HasValue)
+                                        .ToList();
+                                    if (items.Any())
+                                    {
+                                        exportManager.UnmarkExported(items, context.User.Id);
+                                    }
+                                }
+                            }
+                            break;
+                        }
+                    case "ARAB":
+                        {
+                            var query = _DbContext.DocFees.Where(e => e.IO == true);
+                            // 应用DocFee的组织权限过滤（通过Job关联）
+                            query = ApplyOrganizationFilterForFees(query, context.User);
+                            successCount = CancelExportByDateRange(query, model, context.User, exportManager, MAX_CANCEL_COUNT, out var errorMsg);
+                            if (!string.IsNullOrEmpty(errorMsg))
+                            {
+                                result.HasError = true;
+                                result.ErrorCode = 400;
+                                result.DebugMessage = errorMsg;
+                                return result;
+                            }
+                            break;
+                        }
+                    case "APAB":
+                        {
+                            var query = _DbContext.DocFees.Where(e => e.IO == false);
+                            // 应用DocFee的组织权限过滤（通过Job关联）
+                            query = ApplyOrganizationFilterForFees(query, context.User);
+                            successCount = CancelExportByDateRange(query, model, context.User, exportManager, MAX_CANCEL_COUNT, out var errorMsg);
+                            if (!string.IsNullOrEmpty(errorMsg))
+                            {
+                                result.HasError = true;
+                                result.ErrorCode = 400;
+                                result.DebugMessage = errorMsg;
+                                return result;
+                            }
+                            break;
+                        }
+                    case "SETTLEMENT_RECEIPT":
+                        {
+                            var query = _DbContext.PlInvoicess.Where(e => e.IO == true);
+                            // 应用收款结算单的组织权限过滤
+                            query = ApplyOrganizationFilterForSettlementReceipts(query, context.User);
+                            successCount = CancelExportByDateRange(query, model, context.User, exportManager, MAX_CANCEL_COUNT, out var errorMsg);
+                            if (!string.IsNullOrEmpty(errorMsg))
+                            {
+                                result.HasError = true;
+                                result.ErrorCode = 400;
+                                result.DebugMessage = errorMsg;
+                                return result;
+                            }
+                            break;
+                        }
+                    case "SETTLEMENT_PAYMENT":
+                        {
+                            var query = _DbContext.PlInvoicess.Where(e => e.IO == false);
+                            // 应用付款结算单的组织权限过滤
+                            query = ApplyOrganizationFilterForSettlementPayments(query, context.User);
+                            successCount = CancelExportByDateRange(query, model, context.User, exportManager, MAX_CANCEL_COUNT, out var errorMsg);
+                            if (!string.IsNullOrEmpty(errorMsg))
+                            {
+                                result.HasError = true;
+                                result.ErrorCode = 400;
+                                result.DebugMessage = errorMsg;
+                                return result;
+                            }
+                            break;
+                        }
+                    default:
+                        result.HasError = true;
+                        result.ErrorCode = 400;
+                        result.DebugMessage = $"不支持的导出业务类型代码：{model.ExportTypeCode}。" +
+                            $"支持的类型：INVOICE, OA_EXPENSE, ARAB, APAB, SETTLEMENT_RECEIPT, SETTLEMENT_PAYMENT";
+                        return result;
+                }
+
+                // 4. 保存更改
+                _DbContext.SaveChanges();
+
+                // 5. 返回结果
+                result.SuccessCount = successCount;
+                result.FailedCount = 0;
+                result.Message = $"成功取消{successCount}条记录的导出标记";
+                result.DebugMessage = !string.IsNullOrWhiteSpace(model.Reason)
+                    ? $"取消原因：{model.Reason}，导出时间范围：{model.ExportedDateTimeStart:yyyy-MM-dd HH:mm:ss} ~ {model.ExportedDateTimeEnd:yyyy-MM-dd HH:mm:ss}"
+                    : $"导出时间范围：{model.ExportedDateTimeStart:yyyy-MM-dd HH:mm:ss} ~ {model.ExportedDateTimeEnd:yyyy-MM-dd HH:mm:ss}";
+
+                _Logger.LogInformation("取消财务导出标记完成，类型={ExportType}, 数量={Count}, 时间范围={Start}~{End}, 用户={UserId}",
+                    model.ExportTypeCode, successCount, model.ExportedDateTimeStart, model.ExportedDateTimeEnd, context.User.Id);
+            }
+            catch (Exception ex)
+            {
+                _Logger.LogError(ex, "取消财务导出标记时发生错误，类型={ExportType}, 用户={UserId}",
+                    model.ExportTypeCode, context.User.Id);
+
+                result.HasError = true;
+                result.ErrorCode = 500;
+                result.DebugMessage = $"取消导出标记失败: {ex.Message}";
+            }
+
+            return result;
+        }
+
+        /// <summary>
         /// 导出发票数据为金蝶DBF格式文件。
         /// 使用改进后的OwTaskService统一任务调度机制。
         /// </summary>
@@ -78,8 +310,9 @@ namespace PowerLmsWebApi.Controllers.Financial
                     return result;
                 }
 
-                // 预检查发票数量
-                var invoicesQuery = _DbContext.TaxInvoiceInfos.Where(c => c.ExportedDateTime == null).AsQueryable();
+                // 预检查发票数量 - 使用Manager方法过滤未导出数据
+                var exportManager = _ServiceProvider.GetRequiredService<FinancialSystemExportManager>();
+                var invoicesQuery = exportManager.FilterUnexported(_DbContext.TaxInvoiceInfos.AsQueryable());
                 if (model.ExportConditions != null && model.ExportConditions.Any())
                 {
                     invoicesQuery = EfHelper.GenerateWhereAnd(invoicesQuery, model.ExportConditions);
@@ -201,8 +434,11 @@ namespace PowerLmsWebApi.Controllers.Financial
                     throw new InvalidOperationException($"科目配置未找到，无法生成凭证。组织ID: {orgId}，任务ID: {taskId}");
 
                 currentStep = "构建发票查询";
-                var invoicesQuery = dbContext.TaxInvoiceInfos?.Where(i => i.ExportedDateTime == null) ??
-                    throw new InvalidOperationException("无法访问TaxInvoiceInfos数据集 - 请检查数据库连接");
+                IQueryable<TaxInvoiceInfo> invoicesQuery = dbContext.TaxInvoiceInfos ?? throw new InvalidOperationException("无法访问TaxInvoiceInfos数据集 - 请检查数据库连接");
+                
+                currentStep = "获取导出管理器并过滤未导出数据";
+                var exportManager = serviceProvider.GetRequiredService<FinancialSystemExportManager>();
+                invoicesQuery = exportManager.FilterUnexported(invoicesQuery);
                 if (conditions != null && conditions.Any())
                     invoicesQuery = EfHelper.GenerateWhereAnd(invoicesQuery, conditions) ??
                         throw new InvalidOperationException("EfHelper.GenerateWhereAnd 返回 null");
@@ -286,6 +522,10 @@ namespace PowerLmsWebApi.Controllers.Financial
                 }
                 _ = fileInfoRecord ?? throw new InvalidOperationException("fileService.CreateFile 返回 null");
 
+                currentStep = "标记发票为已导出";
+                var markedCount = exportManager.MarkAsExported(invoices, userId);
+                dbContext.SaveChanges(); // 保存导出标记
+                
                 currentStep = "验证最终文件并返回结果";
                 long actualFileSize = 0;
                 bool fileExists = false;
@@ -309,7 +549,8 @@ namespace PowerLmsWebApi.Controllers.Financial
                     ExportDateTime = exportDateTime.ToString("yyyy-MM-dd HH:mm:ss"),
                     FileSize = actualFileSize,
                     FileExists = fileExists,
-                    OriginalFileSize = fileSize
+                    OriginalFileSize = fileSize,
+                    MarkedCount = markedCount
                 };
             }
             catch (Exception ex)
@@ -705,6 +946,90 @@ namespace PowerLmsWebApi.Controllers.Financial
         }
 
         /// <summary>
+        /// 获取用户有权访问的组织机构ID集合（通用辅助方法）
+        /// </summary>
+        /// <param name="user">当前用户</param>
+        /// <returns>组织机构ID集合</returns>
+        private HashSet<Guid> GetOrgIdsForCurrentUser(Account user)
+        {
+            if (user.IsSuperAdmin)
+            {
+                return null; // null表示不需要过滤（超管可访问所有数据）
+            }
+            var merchantId = _OrgManager.GetMerchantIdByUserId(user.Id);
+            if (!merchantId.HasValue)
+            {
+                return new HashSet<Guid>(); // 空集合表示无权访问任何数据
+            }
+            if (user.IsMerchantAdmin)
+            {
+                // 商户管理员：整个商户下的所有组织机构
+                var allOrgIds = _OrgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs.Keys.ToHashSet();
+                allOrgIds.Add(merchantId.Value); // 添加商户ID本身
+                return allOrgIds;
+            }
+            else
+            {
+                // 普通用户：当前登录的公司及下属所有非公司机构
+                var companyId = user.OrgId.HasValue ? _OrgManager.GetCompanyIdByOrgId(user.OrgId.Value) : null;
+                if (!companyId.HasValue)
+                {
+                    return new HashSet<Guid>(); // 空集合表示无权访问任何数据
+                }
+                var companyOrgIds = _OrgManager.GetOrgIdsByCompanyId(companyId.Value).ToHashSet();
+                companyOrgIds.Add(merchantId.Value); // 添加商户ID本身
+                return companyOrgIds;
+            }
+        }
+
+        /// <summary>
+        /// 根据用户权限过滤OA费用申请单查询。
+        /// OA费用申请单有直接的OrgId字段，过滤逻辑相对简单。
+        /// </summary>
+        /// <param name="query">OA费用申请单查询对象</param>
+        /// <param name="user">当前用户</param>
+        /// <returns>过滤后的查询对象</returns>
+        private IQueryable<OaExpenseRequisition> ApplyOrganizationFilterForOaExpense(IQueryable<OaExpenseRequisition> query, Account user)
+        {
+            if (user.IsSuperAdmin)
+            {
+                return query; // 超管可访问所有数据
+            }
+            var allowedOrgIds = GetOrgIdsForCurrentUser(user);
+            if (allowedOrgIds == null || allowedOrgIds.Count == 0)
+            {
+                return query.Where(r => false); // 无权访问任何数据
+            }
+            return query.Where(r => r.OrgId.HasValue && allowedOrgIds.Contains(r.OrgId.Value));
+        }
+
+        /// <summary>
+        /// 根据用户权限过滤DocFee查询（实例方法版本）。
+        /// DocFee没有直接的OrgId字段，需要通过PlJob.OrgId关联过滤。
+        /// </summary>
+        /// <param name="query">DocFee查询对象</param>
+        /// <param name="user">当前用户</param>
+        /// <returns>过滤后的查询对象</returns>
+        private IQueryable<DocFee> ApplyOrganizationFilterForFees(IQueryable<DocFee> query, Account user)
+        {
+            if (user.IsSuperAdmin)
+            {
+                return query; // 超管可访问所有数据
+            }
+            var allowedOrgIds = GetOrgIdsForCurrentUser(user);
+            if (allowedOrgIds == null || allowedOrgIds.Count == 0)
+            {
+                return query.Where(f => false); // 无权访问任何数据
+            }
+            // DocFee通过Job.OrgId关联组织机构
+            var allowedJobIds = _DbContext.PlJobs
+                .Where(j => j.OrgId.HasValue && allowedOrgIds.Contains(j.OrgId.Value))
+                .Select(j => j.Id)
+                .ToList();
+            return query.Where(f => f.JobId.HasValue && allowedJobIds.Contains(f.JobId.Value));
+        }
+
+        /// <summary>
         /// 根据用户权限过滤发票查询，确保用户只能导出有权限访问的发票。
         /// 超级管理员可以导出所有发票，商户管理员可以导出本商户的所有发票，
         /// 普通用户只能导出与其登录机构相关的发票。
@@ -837,6 +1162,71 @@ namespace PowerLmsWebApi.Controllers.Financial
         }
         
         #endregion 共享辅助方法
+        
+        #region 取消导出辅助方法
+        
+        /// <summary>
+        /// 基于导出时间范围取消导出标记（通用方法）
+        /// 注意：组织权限过滤必须由调用方在传入baseQuery之前完成
+        /// 因为不同实体的组织归属是通过不同的关联查询确定的，无法在泛型方法中统一处理
+        /// </summary>
+        /// <typeparam name="T">实体类型（只需实现IFinancialExportable）</typeparam>
+        /// <param name="baseQuery">基础查询（调用方必须已应用组织权限过滤）</param>
+        /// <param name="model">取消参数</param>
+        /// <param name="user">当前用户（用于日志记录）</param>
+        /// <param name="exportManager">导出管理器</param>
+        /// <param name="maxCount">最大允许取消数量</param>
+        /// <param name="errorMessage">错误信息（如果有）</param>
+        /// <returns>成功取消的数量</returns>
+        private int CancelExportByDateRange<T>(
+            IQueryable<T> baseQuery,
+            CancelFinancialExportParamsDto model,
+            Account user,
+            FinancialSystemExportManager exportManager,
+            int maxCount,
+            out string errorMessage) where T : class, IFinancialExportable
+        {
+            errorMessage = null;
+            
+            // 1. 过滤已导出的数据
+            var query = exportManager.FilterExported(baseQuery);
+            
+            // 2. 应用导出时间范围过滤
+            query = query.Where(e => e.ExportedDateTime >= model.ExportedDateTimeStart 
+                                  && e.ExportedDateTime <= model.ExportedDateTimeEnd);
+            
+            // 3. 应用额外的过滤条件（如果有）
+            if (model.AdditionalConditions != null && model.AdditionalConditions.Any())
+            {
+                query = EfHelper.GenerateWhereAnd(query, model.AdditionalConditions);
+                if (query == null)
+                {
+                    errorMessage = "额外过滤条件格式错误";
+                    return 0;
+                }
+            }
+            
+            // 4. 检查数量上限
+            var count = query.Count();
+            if (count > maxCount)
+            {
+                errorMessage = $"匹配到{count}条记录，超过安全上限({maxCount})，请缩小时间范围或添加过滤条件";
+                return 0;
+            }
+            
+            if (count == 0)
+            {
+                return 0;
+            }
+            
+            // 5. 执行取消操作
+            var entities = query.ToList();
+            var unmarkedCount = exportManager.UnmarkExported(entities, user.Id);
+            
+            return unmarkedCount;
+        }
+        
+        #endregion 取消导出辅助方法
     }
 
 }

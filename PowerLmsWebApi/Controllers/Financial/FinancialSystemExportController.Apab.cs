@@ -42,11 +42,13 @@ namespace PowerLmsWebApi.Controllers.Financial
                 var accountingDate = conditions.TryGetValue("AccountingDate", out var accountingDateStr) && DateTime.TryParse(accountingDateStr, out var parsedAccountingDate) 
                     ? parsedAccountingDate : DateTime.Now.Date;
 
-                // 预检查费用数据
-                var feesQuery = _DbContext.DocFees
+                // 预检查费用数据 - 使用Manager方法过滤未导出数据
+                var exportManager = _ServiceProvider.GetRequiredService<FinancialSystemExportManager>();
+                var baseFeesQuery = _DbContext.DocFees
                     .Where(f => f.IO == false && // 只统计支出
                                f.CreateDateTime >= startDate && 
                                f.CreateDateTime <= endDate);
+                var feesQuery = exportManager.FilterUnexported(baseFeesQuery);
 
                 var feeCount = feesQuery.Count();
                 if (feeCount == 0)
@@ -200,10 +202,13 @@ namespace PowerLmsWebApi.Controllers.Financial
                     throw new InvalidOperationException($"APAB科目配置未找到，无法生成凭证。组织ID: {orgId}");
 
                 currentStep = "查询费用数据";
-                var feesQuery = dbContext.DocFees
+                var exportManager = serviceProvider.GetRequiredService<FinancialSystemExportManager>();
+                var baseFeesQuery = dbContext.DocFees
                     .Where(f => f.IO == false && // 只统计支出
                                f.CreateDateTime >= startDate && 
                                f.CreateDateTime <= endDate);
+                // 过滤未导出数据
+                var feesQuery = exportManager.FilterUnexported(baseFeesQuery);
 
                 // 应用额外的查询条件
                 if (conditions != null && conditions.Any())
@@ -219,8 +224,11 @@ namespace PowerLmsWebApi.Controllers.Financial
                 }
 
                 currentStep = "按业务规则分组统计";
+                // 保存最终查询用于后续标记
+                var finalFeesQuery = feesQuery;
+                
                 // APAB业务逻辑：IO=支出，sum(Amount*ExchangeRate) as Totalamount，按 费用.结算单位、结算单位.国别、费用种类.代垫 分组
-                var apabGroupData = (from fee in feesQuery
+                var apabGroupData = (from fee in finalFeesQuery
                                    join supplier in dbContext.PlCustomers on fee.BalanceId equals supplier.Id into supplierGroup
                                    from supp in supplierGroup.DefaultIfEmpty()
                                    join feeType in dbContext.DD_SimpleDataDics on fee.FeeTypeId equals feeType.Id into feeTypeGroup
@@ -305,6 +313,11 @@ namespace PowerLmsWebApi.Controllers.Financial
                 if (fileInfoRecord == null)
                     throw new InvalidOperationException("fileService.CreateFile 返回 null");
 
+                currentStep = "标记费用为已导出APAB";
+                var fees = finalFeesQuery.ToList(); // 获取所有匹配的费用对象
+                var markedCount = exportManager.MarkAsExported(fees, userId);
+                dbContext.SaveChanges(); // 保存导出标记
+                
                 currentStep = "验证最终文件并返回结果";
                 long actualFileSize = 0;
                 bool fileExists = false;
@@ -329,7 +342,8 @@ namespace PowerLmsWebApi.Controllers.Financial
                     ExportDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
                     FileSize = actualFileSize,
                     FileExists = fileExists,
-                    OriginalFileSize = fileSize
+                    OriginalFileSize = fileSize,
+                    MarkedFeeCount = markedCount
                 };
             }
             catch (Exception ex)
