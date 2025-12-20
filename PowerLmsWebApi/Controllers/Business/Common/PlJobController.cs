@@ -1252,6 +1252,71 @@ namespace PowerLmsWebApi.Controllers
         }
 
         #endregion 账期管理辅助方法
+
+        #region 账期反关闭
+
+        /// <summary>
+        /// 账期反关闭功能。将当前账期设置为前端指定的目标账期,可选择性解关该账期的已关闭工作号。
+        /// </summary>
+        /// <param name="model">反关闭参数</param>
+        /// <returns>反关闭结果</returns>
+        /// <response code="200">反关闭成功。</response>
+        /// <response code="400">反关闭失败,可能原因:目标账期格式错误。</response>
+        /// <response code="401">无效令牌。</response>
+        /// <response code="403">权限不足。</response>
+        /// <response code="404">未找到用户所属公司或公司参数未配置。</response>
+        [HttpPost]
+        public ActionResult<ReopenAccountingPeriodReturnDto> ReopenAccountingPeriod(
+            ReopenAccountingPeriodParamsDto model)
+        {
+            if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
+                return Unauthorized();
+            if (!_AuthorizationManager.Demand(out string err, "F.2.9"))
+                return StatusCode((int)HttpStatusCode.Forbidden, err);
+            var result = new ReopenAccountingPeriodReturnDto();
+            var currentCompany = _OrgManager.GetCurrentCompanyByUser(context.User);
+            if (currentCompany == null)
+            {
+                return NotFound("未找到用户所属公司");
+            }
+            try
+            {
+                var managerResult = _JobManager.ReopenAccountingPeriod(
+                    currentCompany.Id,
+                    model.TargetAccountingPeriod,
+                    model.IsUncloseJobs,
+                    context.User.Id,
+                    _DbContext,
+                    _OrgManager);
+                if (!managerResult.Success)
+                {
+                    result.HasError = true;
+                    result.ErrorCode = 400;
+                    result.DebugMessage = managerResult.ErrorMessage;
+                    return BadRequest(result);
+                }
+                _DbContext.SaveChanges();
+                result.OldAccountingPeriod = managerResult.OldPeriod;
+                result.NewAccountingPeriod = managerResult.NewPeriod;
+                result.UnclosedJobCount = managerResult.UnclosedJobCount;
+                result.Message = model.IsUncloseJobs
+                    ? $"成功将账期从{managerResult.OldPeriod}设置为{managerResult.NewPeriod},解关{managerResult.UnclosedJobCount}个工作号"
+                    : $"成功将账期从{managerResult.OldPeriod}设置为{managerResult.NewPeriod}";
+                _Logger.LogInformation("账期反关闭成功:公司{CompanyId},旧账期{OldPeriod},新账期{NewPeriod},解关工作号{UnclosedJobCount}个,操作人{UserId}",
+                    currentCompany.Id, managerResult.OldPeriod, managerResult.NewPeriod, managerResult.UnclosedJobCount, context.User.Id);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _Logger.LogError(ex, "账期反关闭时发生错误:公司{CompanyId}", currentCompany.Id);
+                result.HasError = true;
+                result.ErrorCode = 500;
+                result.DebugMessage = $"账期反关闭时发生错误: {ex.Message}";
+                return StatusCode(StatusCodes.Status500InternalServerError, result);
+            }
+        }
+
+        #endregion 账期反关闭
     }
 
 }

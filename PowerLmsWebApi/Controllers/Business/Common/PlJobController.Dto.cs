@@ -608,4 +608,49 @@ namespace PowerLmsWebApi.Controllers
 
     #endregion 账期管理
 
+    #region 账期反关闭
+
+    /// <summary>
+    /// 账期反关闭功能的参数封装类。
+    /// </summary>
+    public class ReopenAccountingPeriodParamsDto : TokenDtoBase
+    {
+        /// <summary>
+        /// 要反关闭到的目标账期,格式YYYYMM(如"202507")。
+        /// </summary>
+        [Required]
+        public string TargetAccountingPeriod { get; set; }
+        /// <summary>
+        /// 是否同时解关该账期的工作号。
+        /// </summary>
+        public bool IsUncloseJobs { get; set; }
+    }
+
+    /// <summary>
+    /// 账期反关闭功能的返回值封装类。
+    /// </summary>
+    public class ReopenAccountingPeriodReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 反关闭前的账期(YYYYMM格式)。
+        /// </summary>
+        public string OldAccountingPeriod { get; set; }
+        /// <summary>
+        /// 反关闭后的账期(YYYYMM格式)。
+        /// </summary>
+        public string NewAccountingPeriod { get; set; }
+        /// <summary>
+        /// 解关的工作号数量。
+        /// </summary>
+        public int UnclosedJobCount { get; set; }
+        /// <summary>
+        /// 操作详细信息。
+        /// </summary>
+        public string Message { get; set; }
+    }
+
+    #endregion 账期反关闭
+
 }
+
+

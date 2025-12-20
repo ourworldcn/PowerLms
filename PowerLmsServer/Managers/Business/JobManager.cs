@@ -490,5 +490,134 @@ namespace PowerLmsServer.Managers
         }
 
         #endregion 支撑类型定义
+
+        #region 账期反关闭
+
+        /// <summary>
+        /// 账期反关闭操作的结果类型。
+        /// </summary>
+        public class ReopenAccountingPeriodResult
+        {
+            /// <summary>
+            /// 操作是否成功。
+            /// </summary>
+            public bool Success { get; set; }
+            /// <summary>
+            /// 反关闭前的账期(YYYYMM格式)。
+            /// </summary>
+            public string OldPeriod { get; set; }
+            /// <summary>
+            /// 反关闭后的账期(YYYYMM格式)。
+            /// </summary>
+            public string NewPeriod { get; set; }
+            /// <summary>
+            /// 解关的工作号数量。
+            /// </summary>
+            public int UnclosedJobCount { get; set; }
+            /// <summary>
+            /// 错误信息(操作失败时)。
+            /// </summary>
+            public string ErrorMessage { get; set; }
+        }
+
+        /// <summary>
+        /// 账期反关闭功能。
+        /// 将指定公司的账期设置为目标账期,可选择性解关该账期的已关闭工作号。
+        /// </summary>
+        /// <param name="companyId">公司ID(PlOrganization.Otc=2)</param>
+        /// <param name="targetPeriod">目标账期(YYYYMM格式),前端指定</param>
+        /// <param name="isUncloseJobs">是否同时解关工作号</param>
+        /// <param name="operatorId">操作人ID</param>
+        /// <param name="dbContext">数据库上下文</param>
+        /// <param name="orgManager">组织管理器(用于获取下属机构)</param>
+        /// <returns>反关闭操作结果</returns>
+        public ReopenAccountingPeriodResult ReopenAccountingPeriod(
+            Guid companyId,
+            string targetPeriod,
+            bool isUncloseJobs,
+            Guid operatorId,
+            PowerLmsUserDbContext dbContext,
+            OrgManager<PowerLmsUserDbContext> orgManager)
+        {
+            var parameter = dbContext.PlOrganizationParameters
+                .FirstOrDefault(p => p.OrgId == companyId);
+            if (parameter == null)
+            {
+                return new ReopenAccountingPeriodResult
+                {
+                    Success = false,
+                    ErrorMessage = "公司参数未配置"
+                };
+            }
+            var currentPeriod = parameter.CurrentAccountingPeriod;
+            if (!IsValidPeriodFormat(targetPeriod))
+            {
+                return new ReopenAccountingPeriodResult
+                {
+                    Success = false,
+                    ErrorMessage = "目标账期格式错误,应为YYYYMM格式"
+                };
+            }
+            parameter.CurrentAccountingPeriod = targetPeriod;
+            var unclosedJobCount = 0;
+            if (isUncloseJobs)
+            {
+                var orgIdsList = orgManager.GetOrgIdsByCompanyId(companyId).ToList();
+                var (startDate, endDate) = GetPeriodDateRange(targetPeriod);
+                var jobsToUnclose = dbContext.PlJobs
+                    .Where(j => j.OrgId.HasValue && orgIdsList.Contains(j.OrgId.Value) &&
+                               j.JobState == 16 &&
+                               j.AccountDate.HasValue &&
+                               j.AccountDate.Value >= startDate &&
+                               j.AccountDate.Value < endDate)
+                    .ToList();
+                foreach (var job in jobsToUnclose)
+                {
+                    job.JobState = 8;
+                    job.CloseDate = null;
+                    job.ClosedBy = null;
+                }
+                unclosedJobCount = jobsToUnclose.Count;
+            }
+            return new ReopenAccountingPeriodResult
+            {
+                Success = true,
+                OldPeriod = currentPeriod,
+                NewPeriod = targetPeriod,
+                UnclosedJobCount = unclosedJobCount
+            };
+        }
+
+        /// <summary>
+        /// 验证账期格式是否正确(YYYYMM)。
+        /// </summary>
+        /// <param name="period">账期字符串</param>
+        /// <returns>格式是否正确</returns>
+        private bool IsValidPeriodFormat(string period)
+        {
+            if (string.IsNullOrEmpty(period) || period.Length != 6)
+                return false;
+            if (!int.TryParse(period[..4], out var year) || !int.TryParse(period[4..6], out var month))
+                return false;
+            return year >= 1900 && year <= 9999 && month >= 1 && month <= 12;
+        }
+
+        /// <summary>
+        /// 根据账期字符串生成起始和结束日期。
+        /// </summary>
+        /// <param name="accountingPeriod">账期,格式YYYYMM,如"202507"</param>
+        /// <returns>该账期的起始日期和结束日期</returns>
+        private (DateTime StartDate, DateTime EndDate) GetPeriodDateRange(string accountingPeriod)
+        {
+            if (!IsValidPeriodFormat(accountingPeriod))
+                throw new ArgumentException("账期格式错误,应为YYYYMM格式", nameof(accountingPeriod));
+            var year = int.Parse(accountingPeriod[..4]);
+            var month = int.Parse(accountingPeriod[4..6]);
+            var startDate = new DateTime(year, month, 1);
+            var endDate = startDate.AddMonths(1);
+            return (startDate, endDate);
+        }
+
+        #endregion 账期反关闭
     }
 }
