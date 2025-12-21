@@ -399,37 +399,35 @@ namespace OW.Data
         /// <param name="context">使用的数据库上下位，不会自动保存，调用者需要自己保存数据。</param>
         public static bool SetChildren<T>(IEnumerable<T> src, Guid parentId, DbContext context, ICollection<T> result = null) where T : GuidKeyObjectBase, IOwSubtables
         {
-            var ids = new HashSet<Guid>(src.Select(c => c.Id)); //如果 collection 包含重复项，则集将包含每个唯一元素之一。 不会引发异常。 因此，生成的集的大小与 的大小 collection不同。
-            if (!src.TryGetNonEnumeratedCount(out var idCount)) idCount = src.Count();
-            if (idCount != ids.Count)
+            var ids = new HashSet<Guid>(src.Select(c => c.Id)); //提取所有源实体的Id到HashSet，自动去重
+            if (!src.TryGetNonEnumeratedCount(out var idCount)) idCount = src.Count(); //尝试获取集合元素数量，若无法直接获取则执行完整枚举
+            if (idCount != ids.Count) //检查是否存在重复Id
             {
                 OwHelper.SetLastErrorAndMessage(400, $"{nameof(src)}中有重复键值。");
                 return false;
             }
-            if (src.Any(c => c.ParentId != parentId))   //若父实体对象Id非法
+            if (src.Any(c => c.ParentId != parentId)) //验证所有源实体的ParentId是否匹配
             {
                 OwHelper.SetLastErrorAndMessage(400, $"{nameof(src)}中父实体对象Id非法——应为{parentId}。");
                 return false;
             }
-            var exists = context.Set<T>().Where(c => c.ParentId == parentId).ToArray();   //所有已存在的实体
-            var removes = exists.Where(c => !ids.Contains(c.Id));   //需要移除的实体
-            context.RemoveRange(removes);
-
-            var existsIds = exists.Select(c => c.Id); //已存在的实体Id集合
-            var adds = src.Where(c => !existsIds.Contains(c.Id)); //需要添加的实体
-            context.AddRange(adds);
-            if (result is not null)
-                adds.ForEach(c => result.Add(c));
-
-            var modifies = src.Where(c => existsIds.Contains(c.Id));    //要更改的实体
-            var set = context.Set<T>();
+            var exists = context.Set<T>().Where(c => c.ParentId == parentId).ToArray(); //从数据库加载该父实体下的所有现存子实体
+            var removes = exists.Where(c => !ids.Contains(c.Id)); //筛选出需要删除的实体（数据库有但源集合没有）
+            context.RemoveRange(removes); //标记删除
+            var existsIds = exists.Select(c => c.Id); //提取已存在实体的Id集合
+            var adds = src.Where(c => !existsIds.Contains(c.Id)); //筛选出需要新增的实体（源集合有但数据库没有）
+            context.AddRange(adds); //标记新增
+            if (result is not null) //如果提供了结果集合
+                adds.ForEach(c => result.Add(c)); //将新增的实体添加到结果集合
+            var modifies = src.Where(c => existsIds.Contains(c.Id)); //筛选出需要更新的实体（源集合和数据库都有）
+            var set = context.Set<T>(); //获取实体集
             foreach (var item in modifies)
             {
-                var entity = set.Find(item.Id);
-                context.Entry(entity).CurrentValues.SetValues(item);
-                result?.Add(item);
+                var entity = set.Find(item.Id); //从上下文中查找现存实体（注意：这里会重复查询，因exists已包含该实体）
+                context.Entry(entity).CurrentValues.SetValues(item); //用源实体的值更新数据库实体的所有属性
+                result?.Add(item); //将更新的源实体添加到结果集合（注意：添加的是item而非entity）
             }
-            return true;
+            return true; //操作成功
         }
 
     }
