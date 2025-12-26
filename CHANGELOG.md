@@ -2,6 +2,402 @@
 
 ## [未发布] - 2025-01-31
 
+### 🔧 文档修正-XML注释规范化
+
+**修正目标**: 统一规范化项目中所有查询接口的`conditional`参数注释
+
+**修正原则**:
+- 明确说明参数类型为"查询条件字典"而非"查询的条件"或"支持通用查询"
+- 统一使用"键格式: 实体名.字段名"的描述方式
+- 示例中使用"字典中添加 键='XXX' 值='YYY'"的清晰表达
+- 避免使用容易误导的`=`符号(如"PlJob.JobNo=XXX")
+
+**已完成的文件** (共9个文件,修正30处注释):
+
+#### 1. FinancialController.cs (6处修正)
+- ✅ `GetAllDocFeeRequisition`: "查询的条件" → "查询条件字典"
+- ✅ `GetAllDocFeeRequisitionWithWf`: "查询的条件" → "查询条件字典"
+- ✅ `GetAllDocFeeRequisitionItem`: "条件使用..." → "查询条件字典,键格式: 实体名.字段名"
+- ✅ `GetDocFeeRequisitionItem`: "条件使用..." → "查询条件字典,键格式: 实体名.字段名"
+- ✅ `GetAllDocFeeTemplate`: "查询的条件" → "查询条件字典"
+- ✅ `GetAllDocFeeTemplateItem`: "查询的条件" → "查询条件字典"
+
+#### 2. PlInvoicesController.cs (已确认)
+- ✅ 所有注释格式已正确,无需修改
+- ✅ `GetAllPlInvoices`: 已使用"查询条件字典"格式
+- ✅ `GetAllPlInvoicesItem`: 已使用"查询条件字典,键格式"规范
+- ✅ `GetDocInvoicesItem`: 已使用规范格式(已废弃接口)
+
+#### 3. PlJobController.DocFee.cs (3处修正)
+- ✅ `GetAllDocFee`: 补充"查询条件字典"说明
+- ✅ `GetAllDocFeeV2`: 规范化为"查询条件字典,键格式: 实体名.字段名"
+- ✅ `GetDocFee`: 规范化键格式说明,去除多余空格
+
+#### 4. PlJobController.DocBill.cs (1处修正)
+- ✅ `GetAllDocBill`: "查询的条件" → "查询条件字典"
+
+#### 5. CustomerController.cs (7处修正)
+- ✅ `GetAllCustomer`: "查询的条件" → "查询条件字典"
+- ✅ `GetAllCustomerContact`: "查询的条件" → "查询条件字典"
+- ✅ `GetAllPlBusinessHeader`: "查询的条件" → "查询条件字典"
+- ✅ `GetAllPlTaxInfo`: "查询的条件" → "查询条件字典"
+- ✅ `GetAllPlTidan`: "查询的条件" → "查询条件字典"
+- ✅ `GetAllCustomerBlacklist`: "查询的条件" → "查询条件字典"
+- ✅ `GetAllPlLoadingAddr`: "查询的条件" → "查询条件字典"
+
+#### 6. AdminController.cs (6处修正)
+- ✅ `GetAllPlPort`: "支持通用查询条件" → "查询条件字典。支持通用查询条件"
+- ✅ `GetAllPlCargoRoute`: "支持通用查询条件" → "查询条件字典。支持通用查询条件"
+- ✅ `GetAllUnitConversion`: "支持通用查询条件" → "查询条件字典。支持通用查询条件"
+- ✅ `GetAllFeesType`: "支持通用查询的条件" → "查询条件字典。支持通用查询条件"
+- ✅ `GetAllShippingContainersKind`: "支持通用查询条件" → "查询条件字典。支持通用查询条件"
+- ✅ `GetAllSystemLog`: "已支持通用查询..." → "查询条件字典。已支持通用查询..."
+
+#### 7. AdminController.Base.cs (3处修正)
+- ✅ `GetAllPlCountry`: "查询的条件。支持通用查询条件" → "查询条件字典。支持通用查询条件"
+- ✅ `GetAllPlCurrency`: "支持通用查询条件" → "查询条件字典。支持通用查询条件"
+- ✅ `GetAllPlExchangeRate`: "支持通用查询条件" → "查询条件字典。支持通用查询条件"
+
+#### 8. SubjectConfigurationController.cs (1处修正)
+- ✅ `GetAllSubjectConfiguration`: "查询条件" → "查询条件字典"
+
+#### 9. PlJobController.EaDoc.cs (1处修正)
+- ✅ `GetAllHuochangChuchong`: "查询的条件" → "查询条件字典"
+
+**修正前后对比示例**:
+
+```xml
+<!-- 修正前 -->
+/// <param name="conditional">查询的条件。实体属性名不区分大小写。</param>
+/// <param name="conditional">支持通用查询条件。</param>
+/// <param name="conditional">条件使用 实体名.字段名 格式，值格式参见通用格式。</param>
+
+<!-- 修正后 -->
+/// <param name="conditional">查询条件字典。实体属性名不区分大小写。</param>
+/// <param name="conditional">查询条件字典。支持通用查询条件。</param>
+/// <param name="conditional">查询条件字典,键格式: 实体名.字段名。</param>
+```
+
+**使用示例说明**:
+
+修正后的注释清晰地指出这是Dictionary<string, string>参数:
+
+```csharp
+// C# 代码使用方式
+var conditional = new Dictionary<string, string>
+{
+    { "PlJob.JobNo", "ABC123" },              // 按工作号过滤
+    { "DocFee.FeeTypeId", "guid-value" },     // 按费用类型过滤
+};
+var result = await GetAllDocFee(model, conditional);
+
+// HTTP请求方式
+GET /api/DocFee?token=xxx&PlJob.JobNo=ABC123&DocFee.FeeTypeId=guid-value
+```
+
+**影响范围**:
+- 修改: 9个Controller文件
+- 仅修正XML注释,不影响功能
+- ✅ 编译成功验证
+
+---
+
+### 🔄 API功能迁移-结算单明细查询增强
+
+**变更目标**: 统一API接口,简化前端调用
+
+**变更内容**:
+- ✅ `GetAllPlInvoicesItem`新增跨表查询功能(与`GetDocInvoicesItem`相同)
+- ✅ `GetDocInvoicesItem`标记为废弃(`[Obsolete]`),但保留向后兼容
+- ✅ 推荐使用`GetAllPlInvoicesItem`进行结算单明细查询
+
+**GetAllPlInvoicesItem增强功能**:
+1. **支持跨表查询条件**:
+   - `PlInvoicesItem.字段名` - 本体条件
+   - `PlInvoices.字段名` - 结算单总单条件
+   - `DocFeeRequisitionItem.字段名` - 申请明细条件
+   - `DocFeeRequisition.字段名` - 申请单条件
+   - `DocFee.字段名` - 费用条件
+   - `PlJob.字段名` - 工作号条件
+
+2. **智能关联查询**:
+   - 按关联距离自动优化JOIN顺序
+   - 避免重复连接,提高查询性能
+   - 自动去重,确保结果唯一性
+
+3. **使用示例**:
+   ```
+   GET /api/PlInvoices/GetAllPlInvoicesItem?PlJob.JobNo=XXX&DocFee.FeeTypeId=YYY
+   ```
+
+**接口对比**:
+
+| 特性 | GetDocInvoicesItem | GetAllPlInvoicesItem |
+|------|-------------------|---------------------|
+| 跨表查询 | ✅ 支持 | ✅ 支持(新增) |
+| 返回关联实体 | ✅ 返回(Invoice/Job/Fee等) | ❌ 仅返回明细本体 |
+| 状态 | ⚠️ 已废弃 | ✅ 推荐使用 |
+| 性能 | 较慢(批量加载关联数据) | 较快(仅返回必要数据) |
+
+**迁移指南**:
+1. **如果只需要结算单明细数据**:
+   - 使用`GetAllPlInvoicesItem`(推荐)
+   - 性能更好,返回数据更简洁
+
+2. **如果需要关联实体详细信息**:
+   - 继续使用`GetDocInvoicesItem`
+   - 或使用`GetAllPlInvoicesItem`后按ID批量查询关联实体
+
+**示例代码**:
+```javascript
+// 推荐: 使用GetAllPlInvoicesItem
+GET /api/PlInvoices/GetAllPlInvoicesItem?token=xxx&PlJob.JobNo=ABC123&DocFee.FeeTypeId=guid
+
+// 废弃: GetDocInvoicesItem (仍可用但不推荐)
+GET /api/PlInvoices/GetDocInvoicesItem?token=xxx&PlJob.JobNo=ABC123&DocFee.FeeTypeId=guid
+```
+
+**影响范围**:
+- 修改: `PowerLmsWebApi/Controllers/Financial/PlInvoicesController.cs`
+- 接口: `GET /api/PlInvoices/GetAllPlInvoicesItem` (功能增强)
+- 接口: `GET /api/PlInvoices/GetDocInvoicesItem` (标记废弃)
+
+---
+
+### 🔧 代码优化-结算单明细查询重构
+
+**优化目标**: 提升代码可读性和可维护性
+
+**变更内容**:
+- ✅ 重构`GetDocInvoicesItem`方法,按关联距离组织查询逻辑
+- ✅ 使用连接状态标记避免重复JOIN
+- ✅ 分块组织代码:本体过滤 → 直接关联 → 间接关联
+- ✅ 优化批量加载逻辑,只加载未连接的关联数据
+- ✅ 添加详细的行尾注释,提高代码可读性
+
+**代码结构改进**:
+1. **按关联距离分层**:
+   - 第1层: PlInvoicesItem(本体) - 直接查询
+   - 第2层: PlInvoices(结算单总单) - ParentId直接关联
+   - 第3层: DocFeeRequisitionItem(申请明细) - RequisitionItemId直接关联
+   - 第4层: DocFeeRequisition(申请单), DocFee(费用) - 间接关联
+   - 第5层: PlJob(工作号) - 最远间接关联
+
+2. **避免重复连接**:
+   ```csharp
+   // 使用标记变量记录连接状态
+   var invoiceJoined = false;          // 结算单总单连接标记
+   var requisitionItemJoined = false;  // 申请明细连接标记
+   var feeJoined = false;              // 费用连接标记
+   // ... 按需连接,避免重复
+   ```
+
+3. **行尾注释**:
+   - 每个关键步骤都添加简洁的行尾注释
+   - 标记变量说明其用途
+   - 条件判断说明逻辑
+   - 批量加载说明优化策略
+
+**影响范围**:
+- 修改: `PowerLmsWebApi/Controllers/Financial/PlInvoicesController.cs`
+- 接口:`GET /api/PlInvoices/GetDocInvoicesItem`
+- 功能和返回值完全不变,仅优化内部实现和代码注释
+
+---
+
+### 🔧 控制器重构-结算单功能独立
+
+**重构目标**: 简化控制器结构,提高代码可维护性
+
+**变更内容**:
+- ✅ 新建`PlInvoicesController`结算单专用控制器
+- ✅ 将结算单和结算单明细的11个API接口从`FinancialController`迁移到新控制器
+- ✅ 新建`PlInvoicesController.Dto.cs`存放结算单专用DTO类(22个类)
+- ✅ `FinancialController`现在只负责费用方案相关功能
+
+**API路由变更** (前端适配请查阅):
+
+| 接口名称 | 原路由 | 新路由 |
+|---------|--------|--------|
+| 获取结算单列表 | `/api/Financial/GetAllPlInvoices` | `/api/PlInvoices/GetAllPlInvoices` |
+| 新增结算单 | `/api/Financial/AddPlInvoice` | `/api/PlInvoices/AddPlInvoice` |
+| 修改结算单 | `/api/Financial/ModifyPlInvoices` | `/api/PlInvoices/ModifyPlInvoices` |
+| 删除结算单 | `/api/Financial/RemovePlInvoices` | `/api/PlInvoices/RemovePlInvoices` |
+| 确认结算单 | `/api/Financial/ConfirmPlInvoices` | `/api/PlInvoices/ConfirmPlInvoices` |
+| 结算单明细增强查询 | `/api/Financial/GetDocInvoicesItem` | `/api/PlInvoices/GetDocInvoicesItem` |
+| 获取结算单明细列表 | `/api/Financial/GetAllPlInvoicesItem` | `/api/PlInvoices/GetAllPlInvoicesItem` |
+| 新增结算单明细 | `/api/Financial/AddPlInvoicesItem` | `/api/PlInvoices/AddPlInvoicesItem` |
+| 修改结算单明细 | `/api/Financial/ModifyPlInvoicesItem` | `/api/PlInvoices/ModifyPlInvoicesItem` |
+| 删除结算单明细 | `/api/Financial/RemovePlInvoicesItem` | `/api/PlInvoices/RemovePlInvoicesItem` |
+| 批量设置结算单明细 | `/api/Financial/SetPlInvoicesItem` | `/api/PlInvoices/SetPlInvoicesItem` |
+
+**影响文件**:
+- 新增: `PowerLmsWebApi/Controllers/Financial/PlInvoicesController.cs` (结算单控制器,11个接口)
+- 新增: `PowerLmsWebApi/Controllers/Financial/PlInvoicesController.Dto.cs` (结算单DTO类,22个类)
+- 修改: `PowerLmsWebApi/Controllers/Financial/FinancialController.cs` (移除结算单相关代码)
+- 修改: `PowerLmsWebApi/Controllers/Financial/FinancialController.Dto.cs` (移除结算单DTO类,保留费用方案DTO)
+
+**DTO类迁移详情**:
+从`FinancialController.Dto.cs`迁移到`PlInvoicesController.Dto.cs`的22个DTO类:
+- 结算单相关(8个): `GetAllPlInvoicesReturnDto`, `AddPlInvoiceParamsDto`, `AddPlInvoiceReturnDto`, `ModifyPlInvoicesParamsDto`, `ModifyPlInvoicesReturnDto`, `RemovePlInvoicesParamsDto`, `RemovePlInvoicesReturnDto`, `ConfirmPlInvoicesParamsDto`, `ConfirmPlInvoicesReturnDto`
+- 结算单明细相关(14个): `GetAllPlInvoicesItemReturnDto`, `AddPlInvoicesItemParamsDto`, `AddPlInvoicesItemReturnDto`, `ModifyPlInvoicesItemParamsDto`, `ModifyPlInvoicesItemReturnDto`, `RemovePlInvoicesItemParamsDto`, `RemovePlInvoicesItemReturnDto`, `SetPlInvoicesItemParamsDto`, `SetPlInvoicesItemReturnDto`, `GetPlInvoicesItemParamsDto`, `GetPlInvoicesItemReturnDto`, `GetPlInvoicesItemItem`
+
+**前端适配指南**:
+1. 将所有调用`/api/Financial/`的结算单相关接口路径替换为`/api/PlInvoices/`
+2. 接口参数、返回值、业务逻辑完全不变,只是控制器路由改变
+3. 使用全局搜索替换:`/api/Financial/GetAllPlInvoices` → `/api/PlInvoices/GetAllPlInvoices` (依此类推)
+
+**示例**:
+```javascript
+// 修改前
+GET /api/Financial/GetAllPlInvoices?token=xxx&ParentId=xxx
+
+// 修改后
+GET /api/PlInvoices/GetAllPlInvoices?token=xxx&ParentId=xxx
+```
+
+---
+
+### 🚀 结算单明细查询增强-支持按费用过滤
+
+**需求背景**: 为"已结算金额"追溯功能提供完整数据支持,用户需要能够按费用(DocFee)和申请单明细(DocFeeRequisitionItem)属性查询相关结算明细
+
+**实现方案**:
+
+1. **智能查询策略**(`GetDocInvoicesItem`接口):
+   - 检测conditional参数中是否包含`DocFee.`或`PlJob.`前缀的条件
+   - **有DocFee/PlJob条件**: 使用JOIN方式直接关联费用表和工作号表进行过滤
+   - **无DocFee/PlJob条件**: 使用轻量级查询,后批量加载关联信息(避免N+1查询)
+
+2. **支持的查询条件格式**:
+   ```
+   DocFee.Id=XXX                     // 按费用ID查询
+   DocFee.FeeTypeId=XXX              // 按费用种类查询
+   DocFee.IO=true                    // 按收入/支出过滤
+   PlJob.JobNo=XXX                   // 按工作号查询(保留原有支持)
+   DocFeeRequisitionItem.Amount=100  // 按申请单明细金额查询
+   DocFeeRequisition.FrNo=XX         // 按申请单号查询
+   PlInvoices.IoDateTime=...         // 按结算日期查询
+   ```
+
+3. **性能优化**:
+   - 使用条件判断,仅在必要时才执行跨表JOIN
+   - 无费用/工作号条件时,批量加载关联数据(避免N+1问题)
+   - 保持向后兼容,不影响现有查询性能
+
+**数据关系链**:
+```
+PlInvoicesItem (结算单明细)
+  ↓ N:1
+DocFeeRequisitionItem (申请单明细)
+  ↓ N:1 (通过FeeId)
+DocFee (费用) ← 🆕新增支持
+  ↓ N:1
+PlJob (工作号) ← 保留原有支持
+```
+
+**影响文件**:
+- `PowerLmsWebApi/Controllers/Financial/FinancialController.cs`
+  - `GetDocInvoicesItem`: 新增DocFee条件支持,保留PlJob条件支持,智能判断是否需要JOIN
+
+**API接口**: `GET /api/Financial/GetDocInvoicesItem`
+
+**使用示例**:
+```
+# 查询特定费用的所有结算明细
+GET /api/Financial/GetDocInvoicesItem?DocFee.Id=xxx
+
+# 查询特定费用种类的结算明细
+GET /api/Financial/GetDocInvoicesItem?DocFee.FeeTypeId=xxx&DocFee.IO=true
+
+# 查询特定工作号的所有结算明细(保留支持)
+GET /api/Financial/GetDocInvoicesItem?PlJob.JobNo=JOB202501001
+
+# 组合查询: 费用+工作号
+GET /api/Financial/GetDocInvoicesItem?DocFee.IO=true&PlJob.CustomerId=xxx
+```
+
+---
+
+### 🚀 结算单查询增强-支持费用和申请单明细条件过滤
+
+**需求背景**: 为"已结算金额"追溯功能提供完整的数据查询能力,用户需要能够按费用(DocFee)和申请单明细(DocFeeRequisitionItem)条件查询结算单
+
+**实现方案**:
+
+1. **GetAllPlInvoices接口增强**:
+   - 原有支持: `DocFeeRequisition.属性名`、`PlJob.属性名`
+   - 🆕 新增支持: `DocFeeRequisitionItem.属性名`、`DocFee.属性名`
+
+2. **支持的查询条件格式**:
+   ```
+   # 按费用查询
+   DocFee.Id=XXX                      // 按费用ID查询
+   DocFee.FeeTypeId=XXX               // 按费用种类查询
+   DocFee.IO=true                     // 按收入/支出过滤
+   
+   # 按申请单明细查询
+   DocFeeRequisitionItem.Id=XXX       // 按申请单明细ID查询
+   DocFeeRequisitionItem.Amount=100   // 按申请金额查询
+   
+   # 按申请单查询
+   DocFeeRequisition.FrNo=XXX         // 按申请单号查询
+   
+   # 按工作号查询
+   PlJob.JobNo=XXX                    // 按工作号查询
+   
+   # 组合查询
+   DocFee.IO=true&PlJob.CustomerId=XXX  // 收入费用+指定客户
+   ```
+
+3. **智能查询优化**:
+   - 检测是否有子表条件(`needJoin`标志)
+   - 有子表条件时:完整JOIN链条过滤
+   - 无子表条件时:简单查询,性能最优
+
+**数据关系链**:
+```
+PlInvoices (结算单)
+  ↓ 1:N
+PlInvoicesItem (结算单明细)
+  ↓ N:1
+DocFeeRequisitionItem (申请单明细) ← 🆕新增支持
+  ↓ N:1
+DocFeeRequisition (申请单)
+  ↓ N:1 (通过FeeId)
+DocFee (费用) ← 🆕新增支持
+  ↓ N:1
+PlJob (工作号)
+```
+
+**性能优化**:
+- 使用`needJoin`标志避免不必要的跨表操作
+- 只在存在子表条件时才执行JOIN
+- `Distinct()`确保结算单不重复
+
+**影响文件**:
+- `PowerLmsWebApi/Controllers/Financial/FinancialController.cs`
+  - `GetAllPlInvoices`: 新增DocFee和DocFeeRequisitionItem条件支持
+
+**API接口**: `GET /api/Financial/GetAllPlInvoices`
+
+**使用示例**:
+```
+# 查询特定费用关联的所有结算单
+GET /api/Financial/GetAllPlInvoices?DocFee.Id=xxx
+
+# 查询特定申请单明细的结算单
+GET /api/Financial/GetAllPlInvoices?DocFeeRequisitionItem.Id=xxx
+
+# 组合查询:某个工作号下的收入结算单
+GET /api/Financial/GetAllPlInvoices?PlJob.JobNo=JOB202501001&DocFee.IO=true
+
+# 查询某费用种类的所有结算单
+GET /api/Financial/GetAllPlInvoices?DocFee.FeeTypeId=xxx
+```
+
+---
+
 ### 🆕 财务日期账期校验功能
 
 **背景**: 在新建或修改工作号时,需要确保财务日期不早于当前已开放账期的起始日期

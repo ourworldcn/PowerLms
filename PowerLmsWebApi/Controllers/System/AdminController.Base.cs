@@ -34,7 +34,7 @@ namespace PowerLmsWebApi.Controllers.System
         /// 获取国家。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">查询的条件。支持通用查询条件。</param>
+        /// <param name="conditional">查询条件字典。支持通用查询条件。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定类别Id无效。</response>  
@@ -183,7 +183,7 @@ namespace PowerLmsWebApi.Controllers.System
         /// 获取币种。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">支持通用查询条件。</param>
+        /// <param name="conditional">查询条件字典。支持通用查询条件。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定类别Id无效。</response>  
@@ -490,7 +490,7 @@ namespace PowerLmsWebApi.Controllers.System
         /// 获取汇率。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">支持通用查询条件。</param>
+        /// <param name="conditional">查询条件字典。支持通用查询条件。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定类别Id无效。</response>  

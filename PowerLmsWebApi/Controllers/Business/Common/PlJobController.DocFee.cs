@@ -75,7 +75,7 @@ namespace PowerLmsWebApi.Controllers
         /// 获取全部业务单的费用单。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">支持通用查询——除个别涉及敏感信息字段外，所有实体字段都可作为条件。</param>
+        /// <param name="conditional">查询条件字典。支持通用查询——除个别涉及敏感信息字段外，所有实体字段都可作为条件。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
@@ -162,7 +162,7 @@ namespace PowerLmsWebApi.Controllers
         /// 批量查询费用接口V2，支持多实体复合条件查询。注意设置权限。
         /// </summary>
         /// <param name="model">分页和排序参数</param>
-        /// <param name="conditional">通用查询条件字典。键是实体名.实体字段名，值是条件值。省略实体名则认为是 DocFee的实体属性。
+        /// <param name="conditional">查询条件字典,键格式: 实体名.字段名。省略实体名则认为是DocFee的实体属性。
         /// </param>
         /// <returns>符合条件的费用实体列表</returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode。</response>  
@@ -415,7 +415,7 @@ namespace PowerLmsWebApi.Controllers
         /// 按复杂的多表条件返回费用。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">支持的查询条件字典，键的写法须在前加实体名用.分隔，如 PlJob.JobNo 表示工作对象的工作号；目前支持的实体有DocFee,DocBill,PlJob。
+        /// <param name="conditional">查询条件字典,键格式: 实体名.字段名,如PlJob.JobNo表示工作对象的工作号。目前支持的实体有DocFee,DocBill,PlJob。
         /// 值的写法和一般条件一致。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  

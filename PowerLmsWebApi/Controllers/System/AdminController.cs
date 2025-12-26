@@ -89,7 +89,7 @@ namespace PowerLmsWebApi.Controllers.System
         /// 获取港口。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">支持通用查询条件。</param>
+        /// <param name="conditional">查询条件字典。支持通用查询条件。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定类别Id无效。</response>  
@@ -236,7 +236,7 @@ namespace PowerLmsWebApi.Controllers.System
         /// 获取航线。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">支持通用查询条件。</param>
+        /// <param name="conditional">查询条件字典。支持通用查询条件。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定类别Id无效。</response>  
@@ -382,7 +382,7 @@ namespace PowerLmsWebApi.Controllers.System
         /// 获取单位换算。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">支持通用查询条件。</param>
+        /// <param name="conditional">查询条件字典。支持通用查询条件。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定类别Id无效。</response>  
@@ -537,7 +537,7 @@ namespace PowerLmsWebApi.Controllers.System
         /// 不包含同公司下其他机构独立配置的费用种类。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">支持通用查询的条件。</param>
+        /// <param name="conditional">查询条件字典。支持通用查询条件。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="400">指定类别Id无效。</response>  
@@ -721,7 +721,7 @@ namespace PowerLmsWebApi.Controllers.System
         /// 获取箱型。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">支持通用查询条件。</param>
+        /// <param name="conditional">查询条件字典。支持通用查询条件。</param>
         /// 
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
@@ -874,7 +874,7 @@ namespace PowerLmsWebApi.Controllers.System
         /// 获取系统日志。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">已支持通用查询——除个别涉及敏感信息字段外，所有实体字段都可作为条件。</param>
+        /// <param name="conditional">查询条件字典。已支持通用查询——除个别涉及敏感信息字段外，所有实体字段都可作为条件。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  

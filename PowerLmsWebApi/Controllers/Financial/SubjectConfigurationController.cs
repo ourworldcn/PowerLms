@@ -61,7 +61,7 @@ namespace PowerLmsWebApi.Controllers
         /// 获取全部财务科目设置
         /// </summary>
         /// <param name="model">分页参数</param>
-        /// <param name="conditional">查询条件。支持实体属性和"实体名.属性名"语法，如 SubjectConfiguration.Code、OrgId、Code、SubjectNumber、DisplayName、IsDelete。键不区分大小写。</param>
+        /// <param name="conditional">查询条件字典。支持实体属性和"实体名.属性名"语法，如 SubjectConfiguration.Code、OrgId、Code、SubjectNumber、DisplayName、IsDelete。键不区分大小写。</param>
         /// <returns>财务科目设置列表</returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  

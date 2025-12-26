@@ -19,7 +19,7 @@ namespace PowerLmsWebApi.Controllers
         /// 获取全部业务单的账单。
         /// </summary>
         /// <param name="model"></param>
-        /// <param name="conditional">查询的条件。支持 Id，DocNo(业务单Id),JobId(间接属于指定的业务Id)。不区分大小写。</param>
+        /// <param name="conditional">查询条件字典。支持 Id，DocNo(业务单Id),JobId(间接属于指定的业务Id)。不区分大小写。</param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
         /// <response code="401">无效令牌。</response>  
