@@ -323,6 +323,25 @@ namespace PowerLmsWebApi.Controllers
                 }
             }
 
+            // 🆕 财务日期账期校验
+            var currentCompany = _OrgManager.GetCurrentCompanyByUser(context.User);
+            if (currentCompany != null && entity.AccountDate.HasValue)
+            {
+                var (isValid, errorMessage) = _JobManager.ValidateAccountDateAgainstPeriod(
+                    entity.AccountDate,
+                    currentCompany.Id,
+                    _DbContext);
+                if (!isValid)
+                {
+                    _Logger.LogWarning("财务日期校验失败：{ErrorMessage}, 工作号={JobNo}, 财务日期={AccountDate}",
+                        errorMessage, entity.JobNo, entity.AccountDate);
+                    result.HasError = true;
+                    result.ErrorCode = 400;
+                    result.DebugMessage = errorMessage;
+                    return BadRequest(result);
+                }
+            }
+
             try
             {
                 _DbContext.PlJobs.Add(entity);
@@ -423,6 +442,29 @@ namespace PowerLmsWebApi.Controllers
             {
 
             }
+
+            // 🆕 财务日期账期校验(仅当财务日期发生变更时)
+            if (model.PlJob.AccountDate.HasValue && model.PlJob.AccountDate != ov.AccountDate)
+            {
+                var currentCompany = _OrgManager.GetCurrentCompanyByUser(context.User);
+                if (currentCompany != null)
+                {
+                    var (isValid, errorMessage) = _JobManager.ValidateAccountDateAgainstPeriod(
+                        model.PlJob.AccountDate,
+                        currentCompany.Id,
+                        _DbContext);
+                    if (!isValid)
+                    {
+                        _Logger.LogWarning("修改工作号时财务日期校验失败：{ErrorMessage}, 工作ID={JobId}, 原财务日期={OldDate}, 新财务日期={NewDate}",
+                            errorMessage, model.PlJob.Id, ov.AccountDate, model.PlJob.AccountDate);
+                        result.HasError = true;
+                        result.ErrorCode = 400;
+                        result.DebugMessage = errorMessage;
+                        return BadRequest(result);
+                    }
+                }
+            }
+
             try
             {
                 var modifiedEntities = new List<PlJob>();
@@ -1271,7 +1313,8 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
                 return Unauthorized();
-            if (!_AuthorizationManager.Demand(out string err, "F.2.9"))
+            // 权限验证 - 反关闭账期需要专门权限 (F.2.10)
+            if (!_AuthorizationManager.Demand(out string err, "F.2.10"))
                 return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ReopenAccountingPeriodReturnDto();
             var currentCompany = _OrgManager.GetCurrentCompanyByUser(context.User);

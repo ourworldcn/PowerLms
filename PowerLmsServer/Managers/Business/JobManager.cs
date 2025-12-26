@@ -619,5 +619,45 @@ namespace PowerLmsServer.Managers
         }
 
         #endregion 账期反关闭
+
+        #region 财务日期账期校验
+
+        /// <summary>
+        /// 验证财务日期是否符合账期要求。
+        /// 财务日期不能早于当前已开放账期的起始日期。
+        /// 注意:进口业务以到港日期(ETA)为准,出口业务以开航日期(Etd)为准来生成财务日期。
+        /// </summary>
+        /// <param name="accountDate">财务日期</param>
+        /// <param name="companyId">公司ID</param>
+        /// <param name="dbContext">数据库上下文</param>
+        /// <returns>(是否有效, 错误信息)</returns>
+        public (bool IsValid, string ErrorMessage) ValidateAccountDateAgainstPeriod(
+            DateTime? accountDate,
+            Guid companyId,
+            PowerLmsUserDbContext dbContext)
+        {
+            if (!accountDate.HasValue)
+            {
+                return (false, "财务日期不能为空");
+            }
+            var parameter = dbContext.PlOrganizationParameters
+                .FirstOrDefault(p => p.OrgId == companyId);
+            if (parameter == null || string.IsNullOrEmpty(parameter.CurrentAccountingPeriod))
+            {
+                return (true, string.Empty);
+            }
+            if (!IsValidPeriodFormat(parameter.CurrentAccountingPeriod))
+            {
+                return (true, string.Empty);
+            }
+            var (periodStartDate, _) = GetPeriodDateRange(parameter.CurrentAccountingPeriod);
+            if (accountDate.Value < periodStartDate)
+            {
+                return (false, $"财务日期({accountDate.Value:yyyy-MM-dd})不能早于当前账期起始日期({periodStartDate:yyyy-MM-dd}),当前账期为{parameter.CurrentAccountingPeriod}");
+            }
+            return (true, string.Empty);
+        }
+
+        #endregion 财务日期账期校验
     }
 }

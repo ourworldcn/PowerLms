@@ -1,5 +1,68 @@
 ﻿# 📝 PowerLMS 变更日志
 
+## [未发布] - 2025-01-31
+
+### 🆕 财务日期账期校验功能
+
+**背景**: 在新建或修改工作号时,需要确保财务日期不早于当前已开放账期的起始日期
+
+**业务规则**:
+- **进口业务**: 财务日期以"到港日期"(ETA)为准
+- **出口业务**: 财务日期以"开航日期"(Etd)为准
+- **校验规则**: 财务日期不能早于当前账期起始日期(例如当前账期为2025年9月,财务日期不能选择9月1日之前)
+
+**实现方案**:
+
+1. **Manager层新增方法** (`PowerLmsServer/Managers/Business/JobManager.cs`):
+   - `ValidateAccountDateAgainstPeriod`: 验证财务日期是否符合账期要求
+   - 参数: 财务日期、公司ID、数据库上下文
+   - 返回: (是否有效, 错误信息)
+
+2. **Controller层集成校验** (`PowerLmsWebApi/Controllers/Business/Common/PlJobController.cs`):
+   - `AddPlJob`: 新建工作号时校验财务日期
+   - `ModifyPlJob`: 修改工作号时校验财务日期(仅当财务日期发生变更时)
+
+3. **应用场景**:
+   - 新建工作号时自动校验
+   - 修改工作号财务日期时自动校验
+   - 由前端计算财务日期,后端负责验证
+
+**注意事项**:
+- 财务日期由前端根据业务类型自动计算(进口用ETA,出口用Etd)
+- 后端只负责校验财务日期是否在有效账期范围内
+- 如果公司未配置账期参数或账期为空,则不进行校验(允许通过)
+- 校验失败返回HTTP 400错误,附带详细错误信息
+
+**影响文件**:
+- `PowerLmsServer/Managers/Business/JobManager.cs` (新增验证方法)
+- `PowerLmsWebApi/Controllers/Business/Common/PlJobController.cs` (集成校验逻辑)
+
+---
+
+### 🔧 账期反关闭权限修正
+
+**问题**: 反关闭账期功能使用了错误的权限节点
+
+**修正内容**:
+- **修正前**: 使用 `F.2.9` (关闭账期权限)
+- **修正后**: 使用 `F.2.10` (反关闭账期权限)
+
+**权限说明**:
+- `F.2.9` - 关闭账期: 批量关闭工作号并递增账期
+- `F.2.10` - 反关闭账期: 设置目标账期并可选解关工作号
+
+**修正原因**:
+1. 符合权限文档设计规范
+2. 提供更精细的权限控制
+3. 允许单独授权反关闭功能
+
+**影响文件**:
+- `PowerLmsWebApi/Controllers/Business/Common/PlJobController.cs`
+
+**API接口**: `POST /api/PlJob/ReopenAccountingPeriod`
+
+---
+
 ## [未发布] - 2025-12-14
 
 ### ✅ 财务导出防重机制（完整实施）
