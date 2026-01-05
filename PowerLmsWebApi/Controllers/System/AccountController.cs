@@ -537,9 +537,23 @@ namespace PowerLmsWebApi.Controllers
                 _RoleManager.InvalidateUserRolesCache(account.Id); //失效用户角色缓存
                 _PermissionManager.InvalidateUserPermissionsCache(account.Id); //失效用户权限缓存
 
-                if (_OrgManager.GetMerchantIdByOrgId(account.OrgId.Value) is Guid merchantId) //若找到商户Id
+                // ✅ 修复：检查 OrgId 是否为 null
+                if (account.OrgId.HasValue)
                 {
-                    _OrgManager.InvalidateOrgCaches(merchantId); //失效商户缓存
+                    if (_OrgManager.GetMerchantIdByOrgId(account.OrgId.Value) is Guid merchantId) //若找到商户Id
+                    {
+                        _OrgManager.InvalidateOrgCaches(merchantId); //失效商户缓存
+                    }
+                }
+                else
+                {
+                    // ⚠️ 记录警告：非超管账户的 OrgId 不应该为 null
+                    bool isAdmin = (account.State & 4) != 0; //是否为超管
+                    if (!isAdmin)
+                    {
+                        _Logger.LogWarning("用户 {UserId} ({LoginName}) 的 OrgId 为 null，这可能导致权限和缓存失效问题",
+                            account.Id, account.LoginName);
+                    }
                 }
             }
             catch (Exception ex)
@@ -949,13 +963,17 @@ namespace PowerLmsWebApi.Controllers
                 if (ids.Count != model.RoleIds.Count)
                     return BadRequest($"{nameof(model.RoleIds)}中有重复键值。");
 
-                var existingRoleIds = _DbContext.PlRoles // 验证角色是否存在
-                    .Where(c => ids.Contains(c.Id))
-                    .Select(c => c.Id)
-                    .ToHashSet();
+                // ✅ 修复：允许传入空角色列表（用于清空用户的所有角色）
+                if (ids.Count > 0)
+                {
+                    var existingRoleIds = _DbContext.PlRoles // 验证角色是否存在
+                        .Where(c => ids.Contains(c.Id))
+                        .Select(c => c.Id)
+                        .ToHashSet();
 
-                if (existingRoleIds.Count != ids.Count)
-                    return BadRequest($"{nameof(model.RoleIds)}中至少有一个组织角色不存在。");
+                    if (existingRoleIds.Count != ids.Count)
+                        return BadRequest($"{nameof(model.RoleIds)}中至少有一个组织角色不存在。");
+                }
 
                 var account = _AccountManager.GetOrLoadById(model.UserId); // 验证用户是否存在
                 if (account == null)
@@ -972,17 +990,21 @@ namespace PowerLmsWebApi.Controllers
                     if (operatorMerchantId.Value != targetUserMerchantId.Value) // 非同一商户用户无权操作
                         return StatusCode((int)HttpStatusCode.Forbidden, "无权修改其他商户用户的角色");
 
-                    var rolesWithOrg = _DbContext.PlRoles // 验证角色的所属商户
-                        .Where(r => ids.Contains(r.Id) && r.OrgId.HasValue)
-                        .Select(r => new { r.Id, r.OrgId })
-                        .ToList();
-
-                    foreach (var role in rolesWithOrg)
+                    // ✅ 修复：只有当角色列表不为空时才验证角色所属商户
+                    if (ids.Count > 0)
                     {
-                        var merchantId = _OrgManager.GetMerchantIdByOrgId(role.OrgId.Value);
-                        if (!merchantId.HasValue || merchantId.Value != operatorMerchantId.Value)
+                        var rolesWithOrg = _DbContext.PlRoles // 验证角色的所属商户
+                            .Where(r => ids.Contains(r.Id) && r.OrgId.HasValue)
+                            .Select(r => new { r.Id, r.OrgId })
+                            .ToList();
+
+                        foreach (var role in rolesWithOrg)
                         {
-                            return StatusCode((int)HttpStatusCode.Forbidden, "无权设置其他商户的角色");
+                            var merchantId = _OrgManager.GetMerchantIdByOrgId(role.OrgId.Value);
+                            if (!merchantId.HasValue || merchantId.Value != operatorMerchantId.Value)
+                            {
+                                return StatusCode((int)HttpStatusCode.Forbidden, "无权设置其他商户的角色");
+                            }
                         }
                     }
                 }
@@ -993,7 +1015,7 @@ namespace PowerLmsWebApi.Controllers
 
                 var currentRoleIdSet = currentUserRoles // 获取当前角色ID集合
                     .Select(r => r.RoleId)
-                    .AsEnumerable().ToHashSet();
+                    .ToHashSet();
 
                 var requestedRoleIdSet = new HashSet<Guid>(model.RoleIds); // 输入参数中的角色ID集合
 
@@ -1007,12 +1029,14 @@ namespace PowerLmsWebApi.Controllers
 
                 if (roleIdsToAdd.Length == 0 && rolesToDelete.Length == 0) // 如果没有需要变更的角色，直接返回
                 {
+                    _Logger.LogInformation("用户 {UserId} 角色无需变更", model.UserId);
                     return result;
                 }
 
                 if (rolesToDelete.Length > 0) // 执行删除操作
                 {
                     _DbContext.PlAccountRoles.RemoveRange(rolesToDelete);
+                    _Logger.LogInformation("准备删除用户 {UserId} 的 {Count} 个角色关系", model.UserId, rolesToDelete.Length);
                 }
 
                 if (roleIdsToAdd.Length > 0) // 执行添加操作
@@ -1023,22 +1047,22 @@ namespace PowerLmsWebApi.Controllers
                         RoleId = roleId,
                         CreateBy = context.User.Id,
                         CreateDateTime = OwHelper.WorldNow
-                    });
+                    }).ToList(); // ✅ 修复：添加ToList()确保立即执行
 
                     _DbContext.PlAccountRoles.AddRange(rolesToAdd);
+                    _Logger.LogInformation("准备添加用户 {UserId} 的 {Count} 个角色关系: {RoleIds}",
+                        model.UserId, rolesToAdd.Count, string.Join(", ", roleIdsToAdd));
                 }
 
                 _DbContext.SaveChanges(); // 保存所有更改（一次性提交所有操作）
+                _Logger.LogInformation("成功保存用户 {UserId} 的角色变更到数据库", model.UserId);
 
                 _RoleManager.InvalidateUserRolesCache(model.UserId); // 清除相关缓存，确保数据一致性
                 _PermissionManager.InvalidateUserPermissionsCache(model.UserId);
                 _AccountManager.InvalidateUserCache(model.UserId);
 
-                if (roleIdsToAdd.Length > 0 || rolesToDelete.Length > 0) // 只保留成功总结日志
-                {
-                    _Logger.LogInformation("用户 {UserId} 角色已更新: 添加 {AddCount} 个, 删除 {RemoveCount} 个",
-                        model.UserId, roleIdsToAdd.Length, rolesToDelete.Length);
-                }
+                _Logger.LogInformation("用户 {UserId} 角色已更新: 添加 {AddCount} 个, 删除 {RemoveCount} 个",
+                    model.UserId, roleIdsToAdd.Length, rolesToDelete.Length);
             }
             catch (DbUpdateException ex)
             {

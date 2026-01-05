@@ -25,7 +25,7 @@ namespace PowerLmsWebApi.Controllers
         /// 构造函数。
         /// </summary>
         public CustomerController(IServiceProvider serviceProvider, AccountManager accountManager, PowerLmsUserDbContext dbContext, EntityManager entityManager,
-            IMapper mapper, OrgManager<PowerLmsUserDbContext> orgManager, AuthorizationManager authorizationManager)
+            IMapper mapper, OrgManager<PowerLmsUserDbContext> orgManager, AuthorizationManager authorizationManager, CustomerManager customerManager)
         {
             _ServiceProvider = serviceProvider;
             _AccountManager = accountManager;
@@ -34,6 +34,7 @@ namespace PowerLmsWebApi.Controllers
             _Mapper = mapper;
             _OrgManager = orgManager;
             _AuthorizationManager = authorizationManager;
+            _CustomerManager = customerManager;
         }
 
         readonly IServiceProvider _ServiceProvider;
@@ -45,6 +46,7 @@ namespace PowerLmsWebApi.Controllers
         readonly EntityManager _EntityManager;
         readonly IMapper _Mapper;
         readonly AuthorizationManager _AuthorizationManager;
+        readonly CustomerManager _CustomerManager;
 
         #region 客户资料本体的
 
@@ -138,18 +140,17 @@ namespace PowerLmsWebApi.Controllers
         /// <param name="model"></param>
         /// <returns></returns>
         /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="400">客户已被业务单据引用，无法删除。</response>  
         /// <response code="401">无效令牌。</response>  
         /// <response code="404">指定Id的客户不存在。</response>  
         /// <response code="403">权限不足。</response>  
         [HttpDelete]
         public ActionResult<RemoveCustomerReturnDto> RemoveCustomer(RemoveCustomerParamsDto model)
         {
-            // 客户表子表的名字。
             string[] CustomerChildTableNames = new string[] { $"{nameof(PowerLmsUserDbContext.PlCustomerContacts)}",
             $"{nameof( PowerLmsUserDbContext.PlCustomerBusinessHeaders)}", $"{nameof(PowerLmsUserDbContext.PlCustomerTaxInfos)}",
             $"{nameof(PowerLmsUserDbContext.PlCustomerTidans)}", $"{nameof(PowerLmsUserDbContext.CustomerBlacklists)}",
             $"{nameof(PowerLmsUserDbContext.PlCustomerLoadingAddrs)}" };
-
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             if (!_AuthorizationManager.Demand(out string err, "C.1.4")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new RemoveCustomerReturnDto();
@@ -157,8 +158,10 @@ namespace PowerLmsWebApi.Controllers
             var dbSet = _DbContext.PlCustomers.Where(c => c.OrgId == context.User.OrgId);
             var item = dbSet.FirstOrDefault(c => c.Id == id);
             if (item is null) return BadRequest();
-
-            //删除子表
+            if (!_CustomerManager.CanDeleteCustomer(id, out string errorMessage))
+            {
+                return BadRequest(errorMessage);
+            }
             var sb = AutoClearPool<StringBuilder>.Shared.Get(); Trace.Assert(sb is not null);
             using var dwSb = DisposeHelper.Create(c => AutoClearPool<StringBuilder>.Shared.Return(c), sb);
             var idString = id.ToString();
@@ -167,7 +170,6 @@ namespace PowerLmsWebApi.Controllers
                 sb.AppendLine($"delete from [{name}] where [CustomerId]='{idString}';");
             }
             _DbContext.Database.ExecuteSqlRaw(sb.ToString());
-            //删除主表
             _EntityManager.Remove(item);
             _DbContext.SaveChanges();
             return result;

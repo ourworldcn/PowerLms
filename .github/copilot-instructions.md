@@ -74,55 +74,15 @@
 
 **核心原则**：优先读取项目索引，避免全项目扫描，节省上下文
 
-#### 7.0.1 索引文档位置
-```
-.github/indexes/
-├── OwBaseCore.md          # 核心基础设施（DDD、缓存、并发）
-├── OwDbBase.md            # 数据库基础设施（OwFileService、EF增强）
-├── OwExtensions.md        # Excel处理（NPOI扩展）
-├── PowerLmsServer.md      # 业务层（Manager）
-├── PowerLmsData.md        # 数据层（实体）
-└── PowerLmsWebApi.md      # API层（控制器）
-```
+**索引文档位置**：参见项目特定配置文件 `.github/project-specific.md`
 
-#### 7.0.2 AI行为约束（强制）
-```markdown
-❌ 禁止行为：
-- 未读取索引就使用 code_search 搜索代码
-- 未读取索引就使用 file_search 查找文件
-- 未读取索引就直接猜测文件路径
-
-✅ 必须遵循的流程：
-1. 用户提到某个模块/组件 → 先读取对应索引
-2. 索引中找不到详细信息 → 再使用 code_search
-3. 需要修改代码 → 基于索引定位文件
-```
-
-#### 7.0.3 索引快速查找表
-| 用户提到的关键词 | 优先读取的索引 | 次要索引 |
-|----------------|---------------|---------|
-| OwFileService, 文件上传/下载 | OwDbBase.md | - |
-| Excel导入/导出, NPOI | OwExtensions.md | - |
-| OwEventBus, DDD, 缓存 | OwBaseCore.md | - |
-| Manager, 业务逻辑 | PowerLmsServer.md | - |
-| 实体, 数据模型 | PowerLmsData.md | - |
-| Controller, API | PowerLmsWebApi.md | - |
-| PooledList, SingletonLocker | OwBaseCore.md | - |
-| OwBatchDbWriter, EfHelper | OwDbBase.md | - |
-
-#### 7.0.4 索引使用示例
-```markdown
-✅ 用户问："如何使用 OwFileService 上传文件？"
-AI 正确流程：
-1. 读取 .github/indexes/OwDbBase.md
-2. 从索引中找到 OwFileService.CreateFile 方法
-3. 提供代码示例（基于索引中的信息）
-
-❌ 错误流程：
-1. 直接 code_search "OwFileService"
-2. 扫描多个文件查找用法
-3. 浪费大量上下文
-```
+**AI行为约束**：
+- ❌ 未读取索引就使用 code_search 搜索代码
+- ❌ 未读取索引就使用 file_search 查找文件
+- ❌ 未读取索引就直接猜测文件路径
+- ✅ 用户提到模块/组件时，先读取项目特定配置查找对应索引
+- ✅ 索引中找不到详细信息，再使用 code_search
+- ✅ 需要修改代码时，基于索引定位文件
 
 ### 7.1 📋 TODO.md
 - 专注当前待办任务、优先级和执行计划，包含详细的技术方案和剩余工作
@@ -191,11 +151,19 @@ AI 正确流程：
 
 ## 9. 💻 PowerShell终端规范
 
-PowerShell与Bash语法完全不同，禁止混用，严格使用PowerShell 5.1版本支持的命令与语法
-强制设置输出编码为UTF-8，避免乱码
-curl重定向处理：curl命令调用GET方法时默认加-L参数自动跟随重定向
-开始时用Import-Module ImportExcel加载模块，优先用它处理Excel文件，禁止使用内置工具
-避免输出时出现分页器悬挂问题，不确定时查Get-Help或官方文档
+### 9.1 基本规则
+- PowerShell与Bash语法完全不同，禁止混用，严格使用PowerShell 5.1版本支持的命令与语法
+- 强制设置输出编码为UTF-8，避免乱码
+- curl重定向处理：curl命令调用GET方法时默认加-L参数自动跟随重定向
+- 开始时用Import-Module ImportExcel加载模块，优先用它处理Excel文件，禁止使用内置工具
+- 避免输出时出现分页器悬挂问题，不确定时查Get-Help或官方文档
+
+### 9.2 文件编辑禁止事项
+**禁止使用终端命令编辑文档类文件**：
+- 文档内容（.md/.txt等）禁止通过终端写入，必须使用replace_string_in_file工具
+- 原因：PowerShell会将多行文本内容当作代码解析，导致中文字符、emoji、列表符号被误认为语法元素
+- 错误示例：`Set-Content`或`Out-File`包含中文列表、编号、emoji的多行文本会触发解析错误
+- 正确做法：先用简单内容创建文件，再用replace_string_in_file替换为完整内容
 
 ## 10. 📊 JSON文件处理规范
 

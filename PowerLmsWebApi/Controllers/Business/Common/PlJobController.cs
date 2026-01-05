@@ -1185,14 +1185,28 @@ namespace PowerLmsWebApi.Controllers
                     return BadRequest(result);
                 }
 
+                // 🆕 允许空账期关闭：即使没有可关闭的工作号，也允许推进账期
                 if (!closableJobs.Any())
                 {
-                    result.HasError = true;
-                    result.ErrorCode = 400;
-                    result.DebugMessage = "该账期内没有可关闭的工作号";
+                    _Logger.LogInformation("账期 {Period} 没有可关闭的工作号，但仍允许关闭并推进账期", targetPeriod);
                     
-                    transaction.Rollback();
-                    return BadRequest(result);
+                    result.AffectedJobCount = 0;
+                    
+                    // 更新机构账期
+                    var nextPeriod = CalculateNextPeriod(targetPeriod);
+                    parameter.CurrentAccountingPeriod = nextPeriod;
+                    result.NewAccountingPeriod = nextPeriod;
+                    result.ClosedPeriod = targetPeriod;
+                    result.Message = $"账期 {targetPeriod} 没有工作号，已自动推进至 {nextPeriod}";
+                    
+                    // 保存更改
+                    _DbContext.SaveChanges();
+                    transaction.Commit();
+                    
+                    _Logger.LogInformation("空账期关闭成功：机构{OrgId}，关闭账期{ClosedPeriod}，无工作号影响，新账期{NewPeriod}，操作人{UserId}",
+                        orgId, targetPeriod, nextPeriod, context.User.Id);
+                    
+                    return result;
                 }
 
                 // 批量关闭工作号
@@ -1208,19 +1222,18 @@ namespace PowerLmsWebApi.Controllers
 
                 result.AffectedJobCount = closableJobs.Count;
 
-                // 更新机构账期
-                var nextPeriod = CalculateNextPeriod(targetPeriod);
-                parameter.CurrentAccountingPeriod = nextPeriod;
-                result.NewAccountingPeriod = nextPeriod;
+                // 更新机构账期 - 计算并设置下一个账期
+                parameter.CurrentAccountingPeriod = CalculateNextPeriod(targetPeriod);
+                result.NewAccountingPeriod = parameter.CurrentAccountingPeriod;
 
                 // 保存更改
                 _DbContext.SaveChanges();
                 transaction.Commit();
 
-                result.Message = $"成功关闭账期 {targetPeriod}，影响 {result.AffectedJobCount} 个工作号，新账期为 {nextPeriod}";
+                result.Message = $"成功关闭账期 {targetPeriod}，影响 {result.AffectedJobCount} 个工作号，新账期为 {result.NewAccountingPeriod}";
 
                 _Logger.LogInformation("账期关闭成功：机构{OrgId}，关闭账期{ClosedPeriod}，影响{AffectedCount}个工作号，新账期{NewPeriod}，操作人{UserId}",
-                    orgId, targetPeriod, result.AffectedJobCount, nextPeriod, context.User.Id);
+                    orgId, targetPeriod, result.AffectedJobCount, result.NewAccountingPeriod, context.User.Id);
 
                 return result;
             }
