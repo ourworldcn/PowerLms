@@ -1,31 +1,31 @@
-ÔËĞĞÊ±ÕËºÅ LmsServer//{25AF736F-AB8C-45A9-B552-8968E16B65E6}
-#pragma warning disable CS1591 // È±ÉÙ¶Ô¹«¹²¿É¼ûÀàĞÍ»ò³ÉÔ±µÄ XML ×¢ÊÍ
+ï»¿è¿è¡Œæ—¶è´¦å· LmsServer//{25AF736F-AB8C-45A9-B552-8968E16B65E6}
+#pragma warning disable CS1591 // ç¼ºå°‘å¯¹å…¬å…±å¯è§ç±»å‹æˆ–æˆå‘˜çš„ XML æ³¨é‡Š
 
-°²×°IIS
-°²×°NetCore°ó¶¨
+å®‰è£…IIS
+å®‰è£…NetCoreç»‘å®š
 
-Enable-Migrations ¨CEnableAutomaticMigrations -Context PowerLmsUserDbContext
-Add-Migration 25010601 -Context PowerLmsUserDbContext
+Enable-Migrations â€“EnableAutomaticMigrations -Context PowerLmsUserDbContext
+Add-Migration 26010701 -Context PowerLmsUserDbContext
 
-³¬¹ÜÕËºÅ 868d61ae-3a86-42a8-8a8c-1ed6cfa90817//1D381427-86BB-4D88-8CB0-5D92F8E1BADF
+è¶…ç®¡è´¦å· 868d61ae-3a86-42a8-8a8c-1ed6cfa90817//1D381427-86BB-4D88-8CB0-5D92F8E1BADF
 
 baiduAdmin//lms789$
 testMultionOrg@11.cn//lms789$
 
-²âÊÔ·şÎñÆ÷ 101.200.75.226 Administrator//ZAQ!xsw2
-²âÊÔ·şÎñÆ÷ 101.200.75.226 Administrator//Www.)(*&1234
+æµ‹è¯•æœåŠ¡å™¨ 101.200.75.226 Administrator//ZAQ!xsw2
+æµ‹è¯•æœåŠ¡å™¨ 101.200.75.226 Administrator//Www.)(*&1234
 
 https://101.200.75.226/
-ÉÌ¹ÜBaiduAdmin£¬lms789$
-ÆÕÍ¨ÓÃ»§sandy.shi£¬lms789$	°Ù¶È×Ó¹«Ë¾3
+å•†ç®¡BaiduAdminï¼Œlms789$
+æ™®é€šç”¨æˆ·sandy.shiï¼Œlms789$	ç™¾åº¦å­å…¬å¸3
 
-ÀÏ¹ù·şÎñÆ÷/²âÊÔ
+è€éƒ­æœåŠ¡å™¨/æµ‹è¯•
 administrator//Www.)(*&1234
 sa//ZAQ!xsw2
 8.152.102.241
 https://8.152.102.241:20443
 https://www.power-lms.com:20443
 
-²ÎÓëÕß
+å‚ä¸è€…
 chenyunxiao1986@hotmail.com
 13910032477@139.com

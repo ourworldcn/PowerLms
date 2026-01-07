@@ -94,14 +94,13 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             if (!_AuthorizationManager.Demand(out string err, "C.1.1")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-
+            if (!string.IsNullOrEmpty(model.Customer.EnglishAddress) && model.Customer.EnglishAddress.Any(c => c < 32 || c > 126))
+                return BadRequest("英文地址只能包含ASCII可打印字符（字母、数字、标点符号等），不能包含中文或控制字符。");
             var result = new AddCustomerReturnDto();
             model.Customer.GenerateNewId();
-
             var entity = _DbContext.PlCustomers.Add(model.Customer);
             entity.Entity.OrgId = context.User.OrgId;   //根据登录用户首选组织机构确定客户资料绑定的机构id。20240109。
             entity.Entity.CreateBy = context.User.Id;
-
             _DbContext.SaveChanges();
             result.Id = model.Customer.Id;
             return result;
@@ -121,6 +120,11 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             if (!_AuthorizationManager.Demand(out string err, "C.1.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            foreach (var item in model.Items)
+            {
+                if (!string.IsNullOrEmpty(item.EnglishAddress) && item.EnglishAddress.Any(c => c < 32 || c > 126))
+                    return BadRequest("英文地址只能包含ASCII可打印字符（字母、数字、标点符号等），不能包含中文或控制字符。");
+            }
             var result = new ModifyCustomerReturnDto();
             var modifiedEntities = new List<PlCustomer>();
             if (!_EntityManager.Modify(model.Items, modifiedEntities)) return NotFound();

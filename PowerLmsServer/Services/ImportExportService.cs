@@ -155,11 +155,17 @@ namespace PowerLmsServer.Services
         /// 判断是否为独立表字典实体
         /// 包含：PlCountry、PlPort、PlCargoRoute、PlCurrency、FeesType、PlExchangeRate、UnitConversion、ShippingContainersKind、
         ///       JobNumberRule（工作号编码规则）、OtherNumberRule（其他编码规则）、SubjectConfiguration（财务科目配置）、DailyFeesType（日常费用种类）
+        /// 明确排除：PlCustomer及其子表（属于客户资料表）
         /// </summary>
         /// <param name="typeName">实体类型名称</param>
         /// <returns>是否为独立表字典实体</returns>
         private bool IsIndependentDictionaryEntity(string typeName)
         {
+            // ✅ 明确排除PlCustomer及其子表（属于客户资料表，不是独立字典表）
+            if (typeName.StartsWith("PlCustomer", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
             // 新增的基础数据表类型：编码规则、科目配置、费用种类
             if (typeName.Equals("JobNumberRule", StringComparison.OrdinalIgnoreCase) ||
                 typeName.Equals("OtherNumberRule", StringComparison.OrdinalIgnoreCase) ||
@@ -168,7 +174,6 @@ namespace PowerLmsServer.Services
             {
                 return true;
             }
-
             // 原有的独立表字典实体
             return typeName.StartsWith("Pl") &&
                    (typeName.Contains("Country") ||
@@ -177,8 +182,7 @@ namespace PowerLmsServer.Services
                     typeName.Contains("Currency") ||
                     typeName.Contains("Exchange") ||
                     typeName.Contains("Unit") ||
-                    typeName.Contains("Shipping") ||
-                    typeName.Equals("PlCustomer", StringComparison.OrdinalIgnoreCase)) ||
+                    typeName.Contains("Shipping")) ||
                    typeName.Equals("FeesType", StringComparison.OrdinalIgnoreCase);
         }
 
@@ -271,7 +275,7 @@ namespace PowerLmsServer.Services
                             "OtherNumberRule" => ExportEntityData<OtherNumberRule>(sheet, orgId),
                             "SubjectConfiguration" => ExportEntityData<SubjectConfiguration>(sheet, orgId),
                             "DailyFeesType" => ExportEntityData<DailyFeesType>(sheet, orgId),
-                            _ => 0
+                            _ => throw new InvalidOperationException($"不支持的独立字典类型: {dictionaryType}，这可能是配置错误")
                         };
                         totalExported += exportedCount;
 
@@ -338,7 +342,7 @@ namespace PowerLmsServer.Services
                                 "OtherNumberRule" => ImportEntityData<OtherNumberRule>(sheet, orgId, updateExisting),
                                 "SubjectConfiguration" => ImportEntityData<SubjectConfiguration>(sheet, orgId, updateExisting),
                                 "DailyFeesType" => ImportEntityData<DailyFeesType>(sheet, orgId, updateExisting),
-                                _ => 0
+                                _ => throw new InvalidOperationException($"不支持的独立字典类型: {tableType}，这可能是配置错误")
                             };
                             result.SheetResults.Add(new TableImportResult
                             {
@@ -351,14 +355,18 @@ namespace PowerLmsServer.Services
                         }
                         else
                         {
+                            // ✅ 特殊提示：PlCustomer及其子表应使用客户资料导入方法
+                            var errorMessage = sheetName.StartsWith("PlCustomer", StringComparison.OrdinalIgnoreCase)
+                                ? $"表 {sheetName} 属于客户资料表，请使用客户资料导入功能，不应出现在独立字典导入中"
+                                : $"不支持的表类型: {sheetName}";
                             result.SheetResults.Add(new TableImportResult
                             {
                                 TableName = sheetName,
                                 ImportedCount = 0,
                                 Success = false,
-                                ErrorMessage = $"不支持的表类型: {sheetName}"
+                                ErrorMessage = errorMessage
                             });
-                            _Logger.LogWarning("导入独立表字典Sheet {TableName} 失败：不支持的表类型", sheetName);
+                            _Logger.LogWarning("导入独立表字典Sheet {TableName} 失败：{ErrorMessage}", sheetName, errorMessage);
                         }
                     }
                     catch (Exception ex)
@@ -425,7 +433,7 @@ namespace PowerLmsServer.Services
                             "PlTidan" => ExportEntityData<PlTidan>(sheet, orgId),
                             "CustomerBlacklist" => ExportEntityData<CustomerBlacklist>(sheet, orgId),
                             "PlLoadingAddr" => ExportEntityData<PlLoadingAddr>(sheet, orgId),
-                            _ => 0
+                            _ => throw new InvalidOperationException($"不支持的客户资料表类型: {tableType}，这可能是配置错误")
                         };
                         totalExported += exportedCount;
 
@@ -486,7 +494,7 @@ namespace PowerLmsServer.Services
                                 "PlTidan" => ImportEntityData<PlTidan>(sheet, orgId, updateExisting),
                                 "CustomerBlacklist" => ImportEntityData<CustomerBlacklist>(sheet, orgId, updateExisting),
                                 "PlLoadingAddr" => ImportEntityData<PlLoadingAddr>(sheet, orgId, updateExisting),
-                                _ => 0
+                                _ => throw new InvalidOperationException($"不支持的客户资料表类型: {tableType}，这可能是配置错误")
                             };
 
                             result.SheetResults.Add(new TableImportResult

@@ -704,6 +704,7 @@ namespace PowerLmsWebApi.Controllers
                 if (user == null)
                     return NotFound("用户不存在");
 
+                var oldOrgId = user.OrgId;
                 user.OrgId = model.CurrentOrgId;
                 user.CurrentLanguageTag = model.LanguageTag;
                 user.LastModifyDateTimeUtc = OwHelper.WorldNow;
@@ -713,6 +714,27 @@ namespace PowerLmsWebApi.Controllers
                 // ✅ 步骤3: 失效缓存
                 _AccountManager.InvalidateUserCache(context.User.Id);
                 _Cache.Remove(OwCacheExtensions.GetCacheKeyFromId(context.User.Id, ".CurrentOrgs"));
+                
+                // 🔥 关键修复: 切换OrgId时,失效新旧两个商户的组织机构缓存
+                // 确保下次获取机构详情时能加载到最新数据
+                if (oldOrgId.HasValue)
+                {
+                    var oldMerchantId = _OrgManager.GetMerchantIdByOrgId(oldOrgId.Value);
+                    if (oldMerchantId.HasValue)
+                    {
+                        _OrgManager.InvalidateOrgCaches(oldMerchantId.Value);
+                        _Logger.LogInformation("用户 {UserId} 从机构 {OldOrgId} 切换,已失效旧商户 {MerchantId} 的缓存",
+                            context.User.Id, oldOrgId.Value, oldMerchantId.Value);
+                    }
+                }
+                
+                var newMerchantId = _OrgManager.GetMerchantIdByOrgId(model.CurrentOrgId);
+                if (newMerchantId.HasValue)
+                {
+                    _OrgManager.InvalidateOrgCaches(newMerchantId.Value);
+                    _Logger.LogInformation("用户 {UserId} 切换到机构 {NewOrgId},已失效新商户 {MerchantId} 的缓存",
+                        context.User.Id, model.CurrentOrgId, newMerchantId.Value);
+                }
             }
 
             // 获取用户权限并添加到结果中

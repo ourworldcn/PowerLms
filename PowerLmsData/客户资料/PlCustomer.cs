@@ -158,7 +158,7 @@ namespace PowerLms.Data
         /// 详细地址。
         /// </summary>
         [Comment("详细地址")]
-        [MaxLength(64)]
+        [MaxLength(256)]
         public string Address_Address { get; set; }
 
         /// <summary>
@@ -169,10 +169,11 @@ namespace PowerLms.Data
         public string Address_ZipCode { get; set; }
 
         /// <summary>
-        /// 英文地址。
+        /// 英文地址。使用ASCII字符以节省空间。
         /// </summary>
         [Comment("英文地址")]
         [MaxLength(256)]
+        [Unicode(false)]
         public string EnglishAddress { get; set; }
 
         #endregion 地址信息
