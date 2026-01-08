@@ -169,11 +169,10 @@ namespace PowerLms.Data
         public string Address_ZipCode { get; set; }
 
         /// <summary>
-        /// 英文地址。使用ASCII字符以节省空间。
+        /// 英文地址。支持任意字符(包括中文、emoji等)。
         /// </summary>
         [Comment("英文地址")]
         [MaxLength(256)]
-        [Unicode(false)]
         public string EnglishAddress { get; set; }
 
         #endregion 地址信息
