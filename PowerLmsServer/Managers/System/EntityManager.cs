@@ -205,18 +205,12 @@ namespace PowerLmsServer.Managers
         /// <returns></returns>
         public bool Copy<T>(T src, T dest, IDictionary<string, string> newVals, IEnumerable<string> ignorePropertyNames)
         {
-            // 获取类型的所有属性，只需获取一次
-            var properties = typeof(T).GetProperties();
-
-            // 映射时直接使用原始的 ignorePropertyNames 进行映射
-            _Mapper.Map(src, dest, c =>
+            var properties = typeof(T).GetProperties(); // 获取类型的所有属性，只需获取一次
+            _Mapper.Map(src, dest, c => // 映射时直接使用原始的 ignorePropertyNames 进行映射
             {
                 if (ignorePropertyNames is not null)
                 {
-                    // 对于每个属性，检查是否在忽略列表中
-                    // 这里使用属性的实际名称(区分大小写)，但通过 ignorePropertyNames.Contains 来判断
-                    // ignorePropertyNames.Contains 会使用其自身的比较逻辑
-                    foreach (var prop in properties)
+                    foreach (var prop in properties) // 对于每个属性，检查是否在忽略列表中，这里使用属性的实际名称(区分大小写)，但通过 ignorePropertyNames.Contains 来判断，ignorePropertyNames.Contains 会使用其自身的比较逻辑
                     {
                         if (ignorePropertyNames.Contains(prop.Name))
                         {
@@ -225,22 +219,23 @@ namespace PowerLmsServer.Managers
                     }
                 }
             });
-
-            // 处理 newVals 中的特殊值
-            if (newVals != null && newVals.Count > 0)
+            if (newVals != null && newVals.Count > 0) // 处理 newVals 中的特殊值
             {
-                // 遍历所有可写属性
-                foreach (var prop in properties.Where(p => p.CanWrite))
+                foreach (var prop in properties.Where(p => p.CanWrite)) // 遍历所有可写属性
                 {
-                    // 尝试从 newVals 中获取值 - 这里会使用 newVals 的键比较逻辑
-                    if (newVals.TryGetValue(prop.Name, out var strValue) &&
-                        OwConvert.TryChangeType(strValue, prop.PropertyType, out var typedValue))
+                    if (newVals.TryGetValue(prop.Name, out var strValue)) // 尝试从 newVals 中获取值 - 这里会使用 newVals 的键比较逻辑
                     {
-                        prop.SetValue(dest, typedValue);
+                        if (string.Equals(strValue, "null", StringComparison.OrdinalIgnoreCase)) // 项目特定需求：字符串 "null" 表示清空属性值
+                        {
+                            prop.SetValue(dest, null);
+                        }
+                        else if (OwConvert.TryChangeType(strValue, prop.PropertyType, out var typedValue))
+                        {
+                            prop.SetValue(dest, typedValue);
+                        }
                     }
                 }
             }
-
             return true;
         }
 
