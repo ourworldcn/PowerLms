@@ -201,27 +201,29 @@ namespace OwExtensions.NPOI
         /// <returns>转换后的值，转换失败返回null</returns>
         /// <remarks>
         /// 转换策略：
-        /// 1. 优先尝试字符串转换（覆盖90%+场景）
-        /// 2. 数字类型使用 OwConvert.TryConvertNumeric（高性能，溢出返回null）
-        /// 3. 布尔类型直接处理（极少场景）
-        /// 4. 使用 OwConvert.TryChangeType 统一转换逻辑
+        /// 1. Nullable类型递归处理基础类型
+        /// 2. 字符串类型使用 OwConvert.TryChangeType 高性能转换
+        /// 3. 数字类型使用 OwConvert.TryConvertNumeric（高性能，溢出返回null）
+        /// 4. 枚举类型支持数值和字符串双模式
+        /// 5. 布尔类型直接处理
         /// </remarks>
         public static object? GetValue(this ICell cell, Type targetType)
         {
             if (cell == null) return null;
-            var cellType = cell.CellType == CellType.Formula ? cell.CachedFormulaResultType : cell.CellType;
-            // 获取实际类型（处理 Nullable）
-            var actualType = Nullable.GetUnderlyingType(targetType) ?? targetType;
+            var underlyingType = Nullable.GetUnderlyingType(targetType); // 统一处理 Nullable 类型：递归调用自身处理基础类型
+            if (underlyingType != null)
+            {
+                if (cell.CellType == CellType.Blank) return null; // 空单元格直接返回null
+                return GetValue(cell, underlyingType); // 递归处理基础类型
+            }
+            var cellType = cell.CellType == CellType.Formula ? cell.CachedFormulaResultType : cell.CellType; // 以下逻辑仅处理非可空类型
             switch (cellType)
             {
                 case CellType.String:
-                    // 字符串类型：使用 OwConvert.TryChangeType 高性能转换
                     return ConvertFromString(cell.StringCellValue, targetType);
                 case CellType.Numeric:
-                    // 数字类型：使用 OwConvert.TryConvertNumeric 高性能转换
                     var numericValue = cell.NumericCellValue;
-                    // 日期类型特殊处理
-                    if (actualType == typeof(DateTime))
+                    if (targetType == typeof(DateTime)) // 日期类型特殊处理
                     {
                         try
                         {
@@ -229,24 +231,34 @@ namespace OwExtensions.NPOI
                         }
                         catch
                         {
-                            // 如果不是有效日期，回退到字符串转换
                             return ConvertFromString(numericValue.ToString(), targetType);
                         }
                     }
-                    // ✅ 使用 OwConvert.TryConvertNumeric（高性能，溢出安全）
-                    if (OwConvert.TryConvertNumeric(numericValue, targetType, out var convertedValue))
+                    if (targetType.IsEnum) // 枚举类型特殊处理：优先数值转换
+                    {
+                        try
+                        {
+                            var intValue = Convert.ToInt32(numericValue);
+                            if (Enum.IsDefined(targetType, intValue))
+                            {
+                                return Enum.ToObject(targetType, intValue);
+                            }
+                        }
+                        catch
+                        {
+                        }
+                        return ConvertFromString(numericValue.ToString(), targetType);
+                    }
+                    if (OwConvert.TryConvertNumeric(numericValue, targetType, out var convertedValue)) // 数值类型使用 OwConvert.TryConvertNumeric
                     {
                         return convertedValue;
                     }
-                    // 转换失败（溢出或类型不匹配），尝试字符串中转
                     return ConvertFromString(numericValue.ToString(), targetType);
                 case CellType.Boolean:
-                    // 布尔类型：直接处理
                     var boolValue = cell.BooleanCellValue;
-                    if (actualType == typeof(bool)) return boolValue;
-                    if (actualType == typeof(string)) return boolValue.ToString();
-                    if (actualType == typeof(int)) return boolValue ? 1 : 0;
-                    // 其他情况：通过字符串中转
+                    if (targetType == typeof(bool)) return boolValue;
+                    if (targetType == typeof(string)) return boolValue.ToString();
+                    if (targetType == typeof(int)) return boolValue ? 1 : 0;
                     return ConvertFromString(boolValue.ToString(), targetType);
                 case CellType.Blank:
                     return null;
@@ -262,18 +274,16 @@ namespace OwExtensions.NPOI
         {
             if (string.IsNullOrWhiteSpace(value)) return null;
             value = value.Trim();
-            // 特殊处理：布尔类型支持中文（TryChangeType 不支持）
-            var actualType = Nullable.GetUnderlyingType(targetType) ?? targetType;
+            if (string.Equals(value, "null", StringComparison.OrdinalIgnoreCase)) return null; // 项目特定需求：识别字符串 "null" 为 null 值
+            var actualType = Nullable.GetUnderlyingType(targetType) ?? targetType; // 特殊处理：布尔类型支持中文（TryChangeType 不支持）
             if (actualType == typeof(bool))
             {
                 var lowerValue = value.ToLowerInvariant();
                 if (lowerValue is "是" or "true" or "1" or "yes" or "y") return true;
                 if (lowerValue is "否" or "false" or "0" or "no" or "n") return false;
-                // 回退到标准解析
-                return OwConvert.TryChangeType(value, targetType, out var boolResult) ? boolResult : null;
+                return OwConvert.TryChangeType(value, targetType, out var boolResult) ? boolResult : null; // 回退到标准解析
             }
-            // 使用 OwConvert.TryChangeType 处理所有其他类型
-            return OwConvert.TryChangeType(value, targetType, out var result) ? result : null;
+            return OwConvert.TryChangeType(value, targetType, out var result) ? result : null; // 使用 OwConvert.TryChangeType 处理所有其他类型
         }
     }
 }
