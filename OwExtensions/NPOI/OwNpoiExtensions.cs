@@ -234,25 +234,12 @@ namespace OwExtensions.NPOI
                             return ConvertFromString(numericValue.ToString(), targetType);
                         }
                     }
-                    if (targetType.IsEnum) // 枚举类型特殊处理：优先数值转换
-                    {
-                        try
-                        {
-                            var intValue = Convert.ToInt32(numericValue);
-                            if (Enum.IsDefined(targetType, intValue))
-                            {
-                                return Enum.ToObject(targetType, intValue);
-                            }
-                        }
-                        catch
-                        {
-                        }
-                        return ConvertFromString(numericValue.ToString(), targetType);
-                    }
-                    if (OwConvert.TryConvertNumeric(numericValue, targetType, out var convertedValue)) // 数值类型使用 OwConvert.TryConvertNumeric
+                    // 尝试数值类型转换（包括所有整型和浮点型）
+                    if (OwConvert.TryConvertNumeric(numericValue, targetType, out var convertedValue))
                     {
                         return convertedValue;
                     }
+                    // 回退：转为字符串处理（支持枚举、自定义类型等）
                     return ConvertFromString(numericValue.ToString(), targetType);
                 case CellType.Boolean:
                     var boolValue = cell.BooleanCellValue;

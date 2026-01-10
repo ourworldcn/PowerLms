@@ -327,15 +327,16 @@ namespace System
                                     }
                                     return false;
                                 case Type t when t.IsEnum:
-                                    if (int.TryParse(val, out var intValue) && Enum.IsDefined(type, intValue))
+                                    // 官方文档明确：Enum.TryParse 支持名称字符串和数值字符串
+                                    // 参考：https://learn.microsoft.com/en-us/dotnet/api/system.enum.tryparse
+                                    if (Enum.TryParse(type, val, ignoreCase: true, out var enumResult))
                                     {
-                                        result = Enum.ToObject(type, intValue);
-                                        return true;
-                                    }
-                                    if (Enum.TryParse(type, val, true, out var enumResult) && Enum.IsDefined(type, enumResult))
-                                    {
-                                        result = enumResult;
-                                        return true;
+                                        // ✅ IsDefined 验证：排除未定义的数值（如枚举外的整数）
+                                        if (Enum.IsDefined(type, enumResult))
+                                        {
+                                            result = enumResult;
+                                            return true;
+                                        }
                                     }
                                     return false;
                                 case Type t when ReferenceEquals(t, typeof(DateTimeOffset)):
