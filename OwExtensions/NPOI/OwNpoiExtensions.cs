@@ -263,17 +263,6 @@ namespace OwExtensions.NPOI
             value = value.Trim();
             if (string.Equals(value, "null", StringComparison.OrdinalIgnoreCase)) return null; // 项目特定需求：识别字符串 "null" 为 null 值
             var actualType = Nullable.GetUnderlyingType(targetType) ?? targetType; // 特殊处理：布尔类型支持中文（TryChangeType 不支持）
-            
-            // 特殊处理：枚举类型支持字符串转换
-            if (actualType.IsEnum)
-            {
-                if (Enum.TryParse(actualType, value, true, out var enumValue))
-                {
-                    return enumValue;
-                }
-                return null; // 转换失败返回null
-            }
-
             if (actualType == typeof(bool))
             {
                 var lowerValue = value.ToLowerInvariant();
@@ -281,7 +270,7 @@ namespace OwExtensions.NPOI
                 if (lowerValue is "否" or "false" or "0" or "no" or "n") return false;
                 return OwConvert.TryChangeType(value, targetType, out var boolResult) ? boolResult : null; // 回退到标准解析
             }
-            return OwConvert.TryChangeType(value, targetType, out var result) ? result : null; // 使用 OwConvert.TryChangeType 处理所有其他类型
+            return OwConvert.TryChangeType(value, targetType, out var result) ? result : null; // 使用 OwConvert.TryChangeType 处理所有其他类型（包括枚举）
         }
     }
 }
