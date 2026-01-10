@@ -147,6 +147,8 @@ namespace PowerLmsWebApi.Controllers
 
             try
             {
+                var orgManager = _ServiceProvider.GetRequiredService<OrgManager<PowerLmsUserDbContext>>();
+                bool hasE3Permission = _AuthorizationManager.Demand("E.3");
                 // 从条件中分离出不同前缀的条件
                 Dictionary<string, string> wfConditions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 Dictionary<string, string> otherConditions = conditional != null
@@ -249,6 +251,17 @@ namespace PowerLmsWebApi.Controllers
                     dbSet = _DbContext.DocFeeRequisitions.Where(req => parentIds.Contains(req.Id) && docIds.Contains(req.Id));
                 }
 
+                if (!hasE3Permission && !context.User.IsSuperAdmin)
+                {
+                    dbSet = dbSet.Where(r => r.MakerId == context.User.Id);
+                    _Logger.LogDebug("用户 {UserId} 无E.3权限，仅显示本人申请单", context.User.Id);
+                }
+                else if (hasE3Permission && !context.User.IsSuperAdmin)
+                {
+                    var allowedOrgIds = orgManager.GetOrgIdsByCompanyId(context.User.OrgId.Value);
+                    dbSet = dbSet.Where(r => allowedOrgIds.Contains(r.OrgId.Value));
+                    _Logger.LogDebug("用户 {UserId} 拥有E.3权限，显示公司所有申请单", context.User.Id);
+                }
                 // 应用分页和排序
                 var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
                 var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
