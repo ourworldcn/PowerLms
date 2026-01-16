@@ -1,12 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
-    <RootNamespace></RootNamespace>
-    <Authors>OW</Authors>
-    <AssemblyName>OwBaseCore</AssemblyName>
-    <GenerateDocumentationFile>True</GenerateDocumentationFile>
-    <DocumentationFile>OwBaseCoreApiDoc.xml</DocumentationFile>
-  </PropertyGroup>
+<PropertyGroup>
+  <TargetFramework>net6.0</TargetFramework>
+  <RootNamespace></RootNamespace>
+  <Authors>OW</Authors>
+  <AssemblyName>OwBaseCore</AssemblyName>
+  <GenerateDocumentationFile>True</GenerateDocumentationFile>
+  <DocumentationFile>OwBaseCoreApiDoc.xml</DocumentationFile>
+</PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <NoWarn>1701;1702;CS1591;IDE0130</NoWarn>
   </PropertyGroup>
@@ -19,7 +19,7 @@
     <None Remove="Microsoft.Extensions\**" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Remove="System.Net.Sockets\SocketAsynServerDemo.cs" />
+    <Compile Remove="System\Net\Sockets\SocketAsynServerDemo.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -29,7 +29,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="System.Net.Sockets\SocketAsynServerDemo.cs" />
+    <None Include="System\Net\Sockets\SocketAsynServerDemo.cs" />
   </ItemGroup>
 
   <ItemGroup>

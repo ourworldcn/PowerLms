@@ -257,7 +257,7 @@ namespace OwExtensions.NPOI
         /// <summary>
         /// 从字符串转换为目标类型，使用 OwConvert.TryChangeType 高性能转换
         /// </summary>
-        private static object? ConvertFromString(string value, Type targetType)
+        public static object? ConvertFromString(string value, Type targetType)
         {
             if (string.IsNullOrWhiteSpace(value)) return null;
             value = value.Trim();

@@ -266,6 +266,20 @@ namespace System
                     return false;
                 case (var t, _) when Nullable.GetUnderlyingType(t) is Type underlyingType:
                     return TryChangeType(val, underlyingType, out result);
+                // ✅ 关键修复：在 Type.GetTypeCode 之前拦截枚举类型
+                case (var t, _) when t.IsEnum:
+                    // 官方文档明确：Enum.TryParse 支持名称字符串和数值字符串
+                    // 参考：https://learn.microsoft.com/en-us/dotnet/api/system.enum.tryparse
+                    if (Enum.TryParse(type, val, ignoreCase: true, out var enumResult))
+                    {
+                        // ✅ IsDefined 验证：排除未定义的数值（如枚举外的整数）
+                        if (Enum.IsDefined(type, enumResult))
+                        {
+                            result = enumResult;
+                            return true;
+                        }
+                    }
+                    return false;
                 default:
                     switch (Type.GetTypeCode(type))
                     {
@@ -324,19 +338,6 @@ namespace System
                                     {
                                         result = guidResult;
                                         return true;
-                                    }
-                                    return false;
-                                case Type t when t.IsEnum:
-                                    // 官方文档明确：Enum.TryParse 支持名称字符串和数值字符串
-                                    // 参考：https://learn.microsoft.com/en-us/dotnet/api/system.enum.tryparse
-                                    if (Enum.TryParse(type, val, ignoreCase: true, out var enumResult))
-                                    {
-                                        // ✅ IsDefined 验证：排除未定义的数值（如枚举外的整数）
-                                        if (Enum.IsDefined(type, enumResult))
-                                        {
-                                            result = enumResult;
-                                            return true;
-                                        }
                                     }
                                     return false;
                                 case Type t when ReferenceEquals(t, typeof(DateTimeOffset)):
@@ -471,13 +472,22 @@ namespace System
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         public static bool TryConvertNumeric(object value, Type targetType, out object? result)
         {
+            // 处理 Nullable 类型
+            var actualTargetType = Nullable.GetUnderlyingType(targetType) ?? targetType;
+            
+            // ✅ 关键修复：显式拒绝枚举类型
+            // 枚举的 TypeCode 会返回其基础类型，需要在类型检查之前拦截
+            if (actualTargetType.IsEnum)
+            {
+                result = null;
+                return false;
+            }
+            
             if (value == null)
             {
                 result = null;
                 return false;
             }
-            // 处理 Nullable 类型
-            var actualTargetType = Nullable.GetUnderlyingType(targetType) ?? targetType;
             // 获取 TypeCode
             var sourceTypeCode = Type.GetTypeCode(value.GetType());
             var targetTypeCode = Type.GetTypeCode(actualTargetType);
