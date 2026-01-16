@@ -39,6 +39,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using OwExtensions.NPOI;
+using System.Diagnostics;
 
 namespace PowerLmsServer.Managers
 {
@@ -141,6 +142,7 @@ namespace PowerLmsServer.Managers
                         CleanupInvalidRelationships(services);
 
                         _logger.LogInformation("PowerLms系统初始化完成，服务已上线");
+                        Test();
                     }
                     catch (OperationCanceledException)
                     {
@@ -162,6 +164,15 @@ namespace PowerLmsServer.Managers
                 _logger.LogCritical(ex, "系统初始化服务启动失败");
                 throw;
             }
+        }
+
+        [Conditional("DEBUG")]
+        private void Test()
+        {
+           var ss= OwNpoiExtensions.ConvertFromString("1", typeof(PortType));
+            var tt=ss.GetType();
+
+            PortType dd = (PortType)ss;
         }
 
         #endregion
