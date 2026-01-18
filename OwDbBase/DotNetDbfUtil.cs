@@ -1,11 +1,10 @@
-/*
- * ÎÄ¼şÃû£ºDotNetDbfUtil.cs
- * ×÷Õß£ºOW
- * ´´½¨ÈÕÆÚ£º2025Äê5ÔÂ8ÈÕ
- * ĞŞ¸ÄÈÕÆÚ£º2025Äê5ÔÂ8ÈÕ
- * ÃèÊö£º¸ÃÎÄ¼ş°üº¬ DotNetDBF ¹¤¾ßÀàµÄÊµÏÖ£¬ÓÃÓÚ²Ù×÷ DBF ÎÄ¼ş¡£
+ï»¿/*
+ * æ–‡ä»¶åï¼šDotNetDbfUtil.cs
+ * ä½œè€…ï¼šOW
+ * åˆ›å»ºæ—¥æœŸï¼š2025å¹´5æœˆ8æ—¥
+ * ä¿®æ”¹æ—¥æœŸï¼š2025å¹´5æœˆ8æ—¥
+ * æè¿°ï¼šè¯¥æ–‡ä»¶åŒ…å« DotNetDBF å·¥å…·ç±»çš„å®ç°ï¼Œç”¨äºæ“ä½œ DBF æ–‡ä»¶ã€‚
  */
-
 using DotNetDBF;
 using System;
 using System.Collections.Generic;
@@ -13,187 +12,164 @@ using System.Data;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-
 namespace OW.Data
 {
     /// <summary>
-    /// DotNetDBF ¹¤¾ßÀà£¬Ìá¹© DBF ÎÄ¼ş²Ù×÷µÄ¸¨Öú·½·¨¡£
+    /// DotNetDBF å·¥å…·ç±»ï¼Œæä¾› DBF æ–‡ä»¶æ“ä½œçš„è¾…åŠ©æ–¹æ³•ã€‚
     /// </summary>
     public static class DotNetDbfUtil
     {
-        #region ÀàĞÍ×ª»»
+        #region ç±»å‹è½¬æ¢
         /// <summary>
-        /// »ñÈ¡ DBF ×Ö¶ÎÀàĞÍ¡£
+        /// è·å– DBF å­—æ®µç±»å‹ã€‚
         /// </summary>
-        /// <param name="type">×Ö¶ÎÀàĞÍ¡£</param>
-        /// <returns>DBF ×Ö¶ÎÀàĞÍ¡£</returns>
+        /// <param name="type">å­—æ®µç±»å‹ã€‚</param>
+        /// <returns>DBF å­—æ®µç±»å‹ã€‚</returns>
         public static NativeDbType GetDBFFieldType(Type type)
         {
-            // ´¦Àí¿É¿ÕÀàĞÍ
+            // å¤„ç†å¯ç©ºç±»å‹
             if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
             {
                 type = Nullable.GetUnderlyingType(type);
             }
-
             return type switch
             {
-                // ×Ö·û´®ÀàĞÍ
+                // å­—ç¬¦ä¸²ç±»å‹
                 Type t when t == typeof(string) => NativeDbType.Char,
-
-                // ÕûÊıÀàĞÍ
+                // æ•´æ•°ç±»å‹
                 Type t when t == typeof(int) || t == typeof(uint) => NativeDbType.Long,
                 Type t when t == typeof(long) || t == typeof(ulong) => NativeDbType.Numeric,
                 Type t when t == typeof(short) || t == typeof(ushort) => NativeDbType.Numeric,
                 Type t when t == typeof(byte) || t == typeof(sbyte) => NativeDbType.Numeric,
-
-                // ¸¡µãÀàĞÍ
+                // æµ®ç‚¹ç±»å‹
                 Type t when t == typeof(float) => NativeDbType.Float,
                 Type t when t == typeof(double) => NativeDbType.Double,
                 Type t when t == typeof(decimal) => NativeDbType.Numeric,
-
-                // ÈÕÆÚÊ±¼äÀàĞÍ
+                // æ—¥æœŸæ—¶é—´ç±»å‹
                 Type t when t == typeof(DateTime) => NativeDbType.Date,
                 Type t when t == typeof(DateTimeOffset) => NativeDbType.Date,
-
-                // ²¼¶ûÀàĞÍ
+                // å¸ƒå°”ç±»å‹
                 Type t when t == typeof(bool) => NativeDbType.Logical,
-
-                // ¶ş½øÖÆÊı¾İÀàĞÍ
+                // äºŒè¿›åˆ¶æ•°æ®ç±»å‹
                 Type t when t == typeof(byte[]) => NativeDbType.Binary,
 #if NET472_OR_GREATER || NETFRAMEWORK
                 Type t when t == typeof(System.Data.Linq.Binary) => NativeDbType.Binary,
 #endif
-                // ÆäËûÀàĞÍÄ¬ÈÏÎª×Ö·ûÀàĞÍ
+                // å…¶ä»–ç±»å‹é»˜è®¤ä¸ºå­—ç¬¦ç±»å‹
                 _ => NativeDbType.Char
             };
         }
-
         /// <summary>
-        /// ¸ù¾İ DBF ×Ö¶ÎÀàĞÍ»ñÈ¡ DataTable ÁĞµÄÀàĞÍ¡£
+        /// æ ¹æ® DBF å­—æ®µç±»å‹è·å– DataTable åˆ—çš„ç±»å‹ã€‚
         /// </summary>
-        /// <param name="dbfType">DBF ×Ö¶ÎÀàĞÍ¡£</param>
-        /// <returns>DataTable ÁĞµÄÀàĞÍ¡£</returns>
+        /// <param name="dbfType">DBF å­—æ®µç±»å‹ã€‚</param>
+        /// <returns>DataTable åˆ—çš„ç±»å‹ã€‚</returns>
         public static Type GetFieldTypeFromDBF(NativeDbType dbfType)
         {
             return dbfType switch
             {
-                NativeDbType.Char => typeof(string),        // 'C' ×Ö·ûĞÍ
-                NativeDbType.Numeric => typeof(decimal),    // 'N' ÊıÖµĞÍ
-                NativeDbType.Float => typeof(float),        // 'F' ¸¡µãĞÍ
-                NativeDbType.Date => typeof(DateTime),      // 'D' ÈÕÆÚĞÍ
-                NativeDbType.Logical => typeof(bool),       // 'L' Âß¼­ĞÍ
-                NativeDbType.Memo => typeof(string),        // 'M' ±¸×¢ĞÍ
-                NativeDbType.Binary => typeof(byte[]),      // 'B' ¶ş½øÖÆ
-                NativeDbType.Long => typeof(int),           // 'I' ³¤ÕûĞÍ
-                NativeDbType.Double => typeof(double),      // 'O' Ë«¾«¶È¸¡µãĞÍ
-                NativeDbType.Autoincrement => typeof(int),  // '+' ×ÔÔöĞÍ
-                NativeDbType.Timestamp => typeof(DateTime), // '@' Ê±¼ä´Á
-                NativeDbType.Ole => typeof(byte[]),         // 'G' OLE¶ÔÏó
-                _ => typeof(string)                         // Ä¬ÈÏÎª×Ö·û´®
+                NativeDbType.Char => typeof(string),        // 'C' å­—ç¬¦å‹
+                NativeDbType.Numeric => typeof(decimal),    // 'N' æ•°å€¼å‹
+                NativeDbType.Float => typeof(float),        // 'F' æµ®ç‚¹å‹
+                NativeDbType.Date => typeof(DateTime),      // 'D' æ—¥æœŸå‹
+                NativeDbType.Logical => typeof(bool),       // 'L' é€»è¾‘å‹
+                NativeDbType.Memo => typeof(string),        // 'M' å¤‡æ³¨å‹
+                NativeDbType.Binary => typeof(byte[]),      // 'B' äºŒè¿›åˆ¶
+                NativeDbType.Long => typeof(int),           // 'I' é•¿æ•´å‹
+                NativeDbType.Double => typeof(double),      // 'O' åŒç²¾åº¦æµ®ç‚¹å‹
+                NativeDbType.Autoincrement => typeof(int),  // '+' è‡ªå¢å‹
+                NativeDbType.Timestamp => typeof(DateTime), // '@' æ—¶é—´æˆ³
+                NativeDbType.Ole => typeof(byte[]),         // 'G' OLEå¯¹è±¡
+                _ => typeof(string)                         // é»˜è®¤ä¸ºå­—ç¬¦ä¸²
             };
         }
         #endregion
-
-        #region ×Ö¶ÎÓ³Éä
+        #region å­—æ®µæ˜ å°„
         /// <summary>
-        /// Îª¸ø¶¨µÄÊµÌåÀàĞÍ´´½¨×Ô¶¯×Ö¶ÎÓ³Éä
+        /// ä¸ºç»™å®šçš„å®ä½“ç±»å‹åˆ›å»ºè‡ªåŠ¨å­—æ®µæ˜ å°„
         /// </summary>
-        /// <typeparam name="T">ÊµÌåÀàĞÍ</typeparam>
-        /// <param name="fieldMappings">ÏÖÓĞµÄ×Ö¶ÎÓ³Éä£¬Ã»ÓĞÖ¸¶¨µÄÊôĞÔ½«×Ô¶¯Ôö¼ÓÓ³Éä£»ÎªnullÊ±´´½¨ĞÂµÄÓ³Éä</param>
-        /// <returns>×Ö¶ÎÓ³Éä×Öµä£¬¼üÎªDBF×Ö¶ÎÃû(×î¶à10×Ö·û)£¬ÖµÎªÊµÌåÊôĞÔÃû</returns>
+        /// <typeparam name="T">å®ä½“ç±»å‹</typeparam>
+        /// <param name="fieldMappings">ç°æœ‰çš„å­—æ®µæ˜ å°„ï¼Œæ²¡æœ‰æŒ‡å®šçš„å±æ€§å°†è‡ªåŠ¨å¢åŠ æ˜ å°„ï¼›ä¸ºnullæ—¶åˆ›å»ºæ–°çš„æ˜ å°„</param>
+        /// <returns>å­—æ®µæ˜ å°„å­—å…¸ï¼Œé”®ä¸ºDBFå­—æ®µå(æœ€å¤š10å­—ç¬¦)ï¼Œå€¼ä¸ºå®ä½“å±æ€§å</returns>
         public static Dictionary<string, string> CreateAutoFieldMappings<T>(Dictionary<string, string> fieldMappings = null) where T : class
         {
             var entityType = typeof(T);
-            
             try
             {
-                // »ñÈ¡ËùÓĞ¿É¶ÁµÄ¹«¹²ÊôĞÔ
+                // è·å–æ‰€æœ‰å¯è¯»çš„å…¬å…±å±æ€§
                 var properties = entityType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                    .Where(p => p.CanRead && p.GetIndexParameters().Length == 0) // ÅÅ³ıË÷ÒıÆ÷ÊôĞÔ
+                    .Where(p => p.CanRead && p.GetIndexParameters().Length == 0) // æ’é™¤ç´¢å¼•å™¨å±æ€§
                     .ToArray();
-
                 if (properties.Length == 0)
                 {
-                    OwHelper.SetLastErrorAndMessage(400, $"ÀàĞÍ {entityType.Name} Ã»ÓĞ¿ÉÓÃµÄÊôĞÔÓÃÓÚDBFÓ³Éä");
+                    OwHelper.SetLastErrorAndMessage(400, $"ç±»å‹ {entityType.Name} æ²¡æœ‰å¯ç”¨çš„å±æ€§ç”¨äºDBFæ˜ å°„");
                     return fieldMappings ?? new Dictionary<string, string>();
                 }
-
-                // ³õÊ¼»¯Ó³Éä×Öµä
+                // åˆå§‹åŒ–æ˜ å°„å­—å…¸
                 fieldMappings ??= new Dictionary<string, string>();
-
-                // ´´½¨·´ÏòÓ³Éä£¬ÓÃÓÚ¼ì²éÄÄĞ©ÊôĞÔÒÑÓĞÓ³Éä
+                // åˆ›å»ºåå‘æ˜ å°„ï¼Œç”¨äºæ£€æŸ¥å“ªäº›å±æ€§å·²æœ‰æ˜ å°„
                 var reverseMappings = fieldMappings.ToDictionary(kv => kv.Value, kv => kv.Key);
-
-                // ÎªÎ´Ó³ÉäµÄÊôĞÔ´´½¨Ó³Éä
+                // ä¸ºæœªæ˜ å°„çš„å±æ€§åˆ›å»ºæ˜ å°„
                 foreach (var prop in properties)
                 {
-                    // Ìø¹ıÒÑÓĞÓ³ÉäµÄÊôĞÔ
+                    // è·³è¿‡å·²æœ‰æ˜ å°„çš„å±æ€§
                     if (reverseMappings.ContainsKey(prop.Name))
                         continue;
-
-                    // Éú³ÉDBF×Ö¶ÎÃû£¨×î¶à10¸ö×Ö·û£©
+                    // ç”ŸæˆDBFå­—æ®µåï¼ˆæœ€å¤š10ä¸ªå­—ç¬¦ï¼‰
                     var dbfFieldName = GenerateUniqueDbfFieldName(prop.Name, fieldMappings);
                     if (!string.IsNullOrEmpty(dbfFieldName))
                     {
                         fieldMappings[dbfFieldName] = prop.Name;
                     }
                 }
-
                 return fieldMappings;
             }
             catch (Exception ex)
             {
-                OwHelper.SetLastErrorAndMessage(500, $"´´½¨×Ö¶ÎÓ³ÉäÊ±·¢Éú´íÎó: {ex.Message}");
+                OwHelper.SetLastErrorAndMessage(500, $"åˆ›å»ºå­—æ®µæ˜ å°„æ—¶å‘ç”Ÿé”™è¯¯: {ex.Message}");
                 return fieldMappings ?? new Dictionary<string, string>();
             }
         }
-
         /// <summary>
-        /// Éú³ÉÎ¨Ò»µÄDBF×Ö¶ÎÃû
+        /// ç”Ÿæˆå”¯ä¸€çš„DBFå­—æ®µå
         /// </summary>
-        /// <param name="propertyName">ÊôĞÔÃû</param>
-        /// <param name="existingMappings">ÏÖÓĞÓ³Éä</param>
-        /// <returns>Î¨Ò»µÄDBF×Ö¶ÎÃû£¬Èç¹ûÎŞ·¨Éú³ÉÔò·µ»Ønull</returns>
+        /// <param name="propertyName">å±æ€§å</param>
+        /// <param name="existingMappings">ç°æœ‰æ˜ å°„</param>
+        /// <returns>å”¯ä¸€çš„DBFå­—æ®µåï¼Œå¦‚æœæ— æ³•ç”Ÿæˆåˆ™è¿”å›null</returns>
         private static string GenerateUniqueDbfFieldName(string propertyName, Dictionary<string, string> existingMappings)
         {
-            // ½Ø¶Ïµ½10¸ö×Ö·û
+            // æˆªæ–­åˆ°10ä¸ªå­—ç¬¦
             var baseName = propertyName.Length > 10 ? propertyName[..10] : propertyName;
-            
-            // Èç¹ûÃ»ÓĞ³åÍ»£¬Ö±½Ó·µ»Ø
+            // å¦‚æœæ²¡æœ‰å†²çªï¼Œç›´æ¥è¿”å›
             if (!existingMappings.ContainsKey(baseName))
                 return baseName;
-
-            // ´¦Àí³åÍ»£¬Ìí¼ÓÊı×Öºó×º
+            // å¤„ç†å†²çªï¼Œæ·»åŠ æ•°å­—åç¼€
             for (int suffix = 1; suffix < 100; suffix++)
             {
                 var suffixStr = suffix.ToString();
-                var maxBaseLength = 10 - suffixStr.Length - 1; // ¼õÈ¥ºó×º³¤¶ÈºÍÏÂ»®Ïß
+                var maxBaseLength = 10 - suffixStr.Length - 1; // å‡å»åç¼€é•¿åº¦å’Œä¸‹åˆ’çº¿
                 if (maxBaseLength <= 0) break;
-
                 var truncatedBase = baseName.Length > maxBaseLength ? baseName[..maxBaseLength] : baseName;
                 var newFieldName = $"{truncatedBase}_{suffixStr}";
-                
                 if (!existingMappings.ContainsKey(newFieldName))
                     return newFieldName;
             }
-
-            // ÎŞ·¨Éú³ÉÎ¨Ò»Ãû³Æ
-            OwHelper.SetLastErrorAndMessage(400, $"ÎŞ·¨ÎªÊôĞÔ {propertyName} Éú³ÉÎ¨Ò»µÄDBF×Ö¶ÎÃû");
+            // æ— æ³•ç”Ÿæˆå”¯ä¸€åç§°
+            OwHelper.SetLastErrorAndMessage(400, $"æ— æ³•ä¸ºå±æ€§ {propertyName} ç”Ÿæˆå”¯ä¸€çš„DBFå­—æ®µå");
             return null;
         }
         #endregion
-
-        #region Êı¾İĞ´Èë
+        #region æ•°æ®å†™å…¥
         /// <summary>
-        /// ½«ÊµÌå¼¯ºÏĞ´Èëµ½Á÷ÖĞ£¬ÊôĞÔ½«±»×Ô¶¯×ª»»Îª .dbf ÎÄ¼ş¡£
-        /// Ê¹ÓÃ¸ü°²È«µÄDBFĞ´ÈëÆ÷´¦Àí£¬±ÜÃâNullReferenceException
+        /// å°†å®ä½“é›†åˆå†™å…¥åˆ°æµä¸­ï¼Œå±æ€§å°†è¢«è‡ªåŠ¨è½¬æ¢ä¸º .dbf æ–‡ä»¶ã€‚
+        /// ä½¿ç”¨æ›´å®‰å…¨çš„DBFå†™å…¥å™¨å¤„ç†ï¼Œé¿å…NullReferenceException
         /// </summary>
-        /// <typeparam name="T">ÊµÌåÀàĞÍ</typeparam>
-        /// <param name="entities">ÊµÌå¼¯ºÏ</param>
-        /// <param name="stream">ÒªĞ´ÈëµÄÁ÷¡£º¯Êı·µ»Øºó£¬Á÷µÄÎ»ÖÃ²»¿ÉÔ¤Öª£¬Á÷»á±£³Ö´ò¿ª×´Ì¬¡£</param>
-        /// <param name="fieldMappings">×Ö¶ÎÓ³Éä×Öµä£¬¼üÎªDBF×Ö¶ÎÃû£¬ÖµÎªÊµÌåÊôĞÔÃû¡£ÎªnullÔò×Ô¶¯Éú³É</param>
-        /// <param name="customFieldTypes">¿ÉÑ¡£¬×Ô¶¨Òå×Ö¶ÎÀàĞÍ×Öµä£¬¼üÎªDBF×Ö¶ÎÃû£¬ÖµÎªDBF×Ö¶ÎÀàĞÍ</param>
-        /// <param name="encoding">×Ö·û±àÂë£¬Ä¬ÈÏÎªGB2312</param>
+        /// <typeparam name="T">å®ä½“ç±»å‹</typeparam>
+        /// <param name="entities">å®ä½“é›†åˆ</param>
+        /// <param name="stream">è¦å†™å…¥çš„æµã€‚å‡½æ•°è¿”å›åï¼Œæµçš„ä½ç½®ä¸å¯é¢„çŸ¥ï¼Œæµä¼šä¿æŒæ‰“å¼€çŠ¶æ€ã€‚</param>
+        /// <param name="fieldMappings">å­—æ®µæ˜ å°„å­—å…¸ï¼Œé”®ä¸ºDBFå­—æ®µåï¼Œå€¼ä¸ºå®ä½“å±æ€§åã€‚ä¸ºnullåˆ™è‡ªåŠ¨ç”Ÿæˆ</param>
+        /// <param name="customFieldTypes">å¯é€‰ï¼Œè‡ªå®šä¹‰å­—æ®µç±»å‹å­—å…¸ï¼Œé”®ä¸ºDBFå­—æ®µåï¼Œå€¼ä¸ºDBFå­—æ®µç±»å‹</param>
+        /// <param name="encoding">å­—ç¬¦ç¼–ç ï¼Œé»˜è®¤ä¸ºGB2312</param>
         public static void WriteToStream<T>(IEnumerable<T> entities, Stream stream,
             Dictionary<string, string> fieldMappings = null,
             Dictionary<string, NativeDbType> customFieldTypes = null,
@@ -201,134 +177,113 @@ namespace OW.Data
         {
             ArgumentNullException.ThrowIfNull(stream);
             ArgumentNullException.ThrowIfNull(entities);
-
-            // ×ª»»ÎªÁĞ±íÒÔ±ã¶à´ÎÃ¶¾ÙºÍ¼ÆÊı
+            // è½¬æ¢ä¸ºåˆ—è¡¨ä»¥ä¾¿å¤šæ¬¡æšä¸¾å’Œè®¡æ•°
             var entityList = entities as List<T> ?? entities.ToList();
             if (!entityList.Any())
             {
-                OwHelper.SetLastErrorAndMessage(400, "ÊµÌå¼¯ºÏÎª¿Õ£¬ÎŞ·¨Éú³ÉDBFÎÄ¼ş");
-                throw new InvalidOperationException("ÊµÌå¼¯ºÏÎª¿Õ£¬ÎŞ·¨Éú³ÉDBFÎÄ¼ş");
+                OwHelper.SetLastErrorAndMessage(400, "å®ä½“é›†åˆä¸ºç©ºï¼Œæ— æ³•ç”ŸæˆDBFæ–‡ä»¶");
+                throw new InvalidOperationException("å®ä½“é›†åˆä¸ºç©ºï¼Œæ— æ³•ç”ŸæˆDBFæ–‡ä»¶");
             }
-
-            // Èç¹ûÎ´Ìá¹©Ó³Éä£¬Ôò´´½¨×Ô¶¯Ó³Éä
+            // å¦‚æœæœªæä¾›æ˜ å°„ï¼Œåˆ™åˆ›å»ºè‡ªåŠ¨æ˜ å°„
             fieldMappings ??= CreateAutoFieldMappings<T>();
-            
             if (fieldMappings == null || !fieldMappings.Any())
             {
-                throw new InvalidOperationException("ÎŞ·¨´´½¨ÓĞĞ§µÄ×Ö¶ÎÓ³Éä");
+                throw new InvalidOperationException("æ— æ³•åˆ›å»ºæœ‰æ•ˆçš„å­—æ®µæ˜ å°„");
             }
-
             var recordsWritten = 0;
-            
             try
             {
-                using var wapper = new WrapperStream(stream, true); // Ê¹ÓÃ°ü×°Æ÷Á÷ÒÔÈ·±£ÕıÈ·ÊÍ·Å×ÊÔ´
-                using var writer = new DBFWriter(wapper);   // Ê¹ÓÃ using Óï¾äÈ·±£ DBFWriter ÕıÈ·ÊÍ·Å
-                writer.CharEncoding = encoding ?? System.Text.Encoding.GetEncoding("GB2312"); // Ä¬ÈÏ±àÂë
-
+                using var wapper = new WrapperStream(stream, true); // ä½¿ç”¨åŒ…è£…å™¨æµä»¥ç¡®ä¿æ­£ç¡®é‡Šæ”¾èµ„æº
+                using var writer = new DBFWriter(wapper);   // ä½¿ç”¨ using è¯­å¥ç¡®ä¿ DBFWriter æ­£ç¡®é‡Šæ”¾
+                writer.CharEncoding = encoding ?? System.Text.Encoding.GetEncoding("GB2312"); // é»˜è®¤ç¼–ç 
                 var entityType = typeof(T);
                 var properties = entityType.GetProperties();
-                var propertyMap = properties.ToDictionary(p => p.Name, p => p); // ÊôĞÔÃû²éÕÒ×Öµä
-
-                // ¶¨Òå×Ö¶Î¶¨Òå
+                var propertyMap = properties.ToDictionary(p => p.Name, p => p); // å±æ€§åæŸ¥æ‰¾å­—å…¸
+                // å®šä¹‰å­—æ®µå®šä¹‰
                 var fields = new List<DBFField>();
-                var validMappings = new List<KeyValuePair<string, string>>(); // ´æ´¢ÓĞĞ§µÄÓ³Éä
-                
+                var validMappings = new List<KeyValuePair<string, string>>(); // å­˜å‚¨æœ‰æ•ˆçš„æ˜ å°„
                 foreach (var mapping in fieldMappings)
                 {
                     string dbfFieldName = mapping.Key;
                     string propertyName = mapping.Value;
-
-                    // È·±£×Ö¶ÎÃû·ûºÏDBF¹æ·¶
+                    // ç¡®ä¿å­—æ®µåç¬¦åˆDBFè§„èŒƒ
                     if (dbfFieldName.Length > 10)
                     {
-                        OwHelper.SetLastErrorAndMessage(400, $"×Ö¶ÎÃû {dbfFieldName} ³¬¹ı10¸ö×Ö·ûÏŞÖÆ£¬ÒÑ½Ø¶Ï");
-                        dbfFieldName = dbfFieldName[..10]; // Ê¹ÓÃ·¶Î§ÔËËã·û¼ò»¯½Ø¶Ï²Ù×÷
+                        OwHelper.SetLastErrorAndMessage(400, $"å­—æ®µå {dbfFieldName} è¶…è¿‡10ä¸ªå­—ç¬¦é™åˆ¶ï¼Œå·²æˆªæ–­");
+                        dbfFieldName = dbfFieldName[..10]; // ä½¿ç”¨èŒƒå›´è¿ç®—ç¬¦ç®€åŒ–æˆªæ–­æ“ä½œ
                     }
-
                     if (!propertyMap.TryGetValue(propertyName, out var property))
                     {
-                        OwHelper.SetLastErrorAndMessage(400, $"ÊôĞÔ {propertyName} ÔÚÀàĞÍ {entityType.Name} ÖĞ²»´æÔÚ£¬Ìø¹ı´¦Àí");
+                        OwHelper.SetLastErrorAndMessage(400, $"å±æ€§ {propertyName} åœ¨ç±»å‹ {entityType.Name} ä¸­ä¸å­˜åœ¨ï¼Œè·³è¿‡å¤„ç†");
                         continue;
                     }
-
                     NativeDbType fieldType;
                     if (customFieldTypes != null && customFieldTypes.TryGetValue(dbfFieldName, out var customType))
                     {
-                        fieldType = customType; // Ê¹ÓÃ×Ô¶¨ÒåÀàĞÍ
+                        fieldType = customType; // ä½¿ç”¨è‡ªå®šä¹‰ç±»å‹
                     }
                     else
                     {
                         try
                         {
-                            fieldType = GetDBFFieldType(property.PropertyType); // ¸ù¾İÊôĞÔÀàĞÍÈ·¶¨DBFÀàĞÍ
+                            fieldType = GetDBFFieldType(property.PropertyType); // æ ¹æ®å±æ€§ç±»å‹ç¡®å®šDBFç±»å‹
                         }
                         catch (ArgumentException)
                         {
-                            OwHelper.SetLastErrorAndMessage(400, $"ÊôĞÔ {propertyName} µÄÀàĞÍ {property.PropertyType.Name} ²»Ö§³Ö£¬Ìø¹ı´¦Àí");
+                            OwHelper.SetLastErrorAndMessage(400, $"å±æ€§ {propertyName} çš„ç±»å‹ {property.PropertyType.Name} ä¸æ”¯æŒï¼Œè·³è¿‡å¤„ç†");
                             continue;
                         }
                     }
-
-                    // ¸ù¾İ×Ö¶ÎÀàĞÍ´´½¨DBFField - ĞŞ¸´£º¼ì²éÊÇ·ñÖ§³Ö³¤¶ÈÉèÖÃ
+                    // æ ¹æ®å­—æ®µç±»å‹åˆ›å»ºDBFField - ä¿®å¤ï¼šæ£€æŸ¥æ˜¯å¦æ”¯æŒé•¿åº¦è®¾ç½®
                     try
                     {
                         DBFField field = fieldType switch
                         {
-                            NativeDbType.Date => new DBFField(dbfFieldName, fieldType), // ÈÕÆÚÀàĞÍ²»ĞèÒªÉèÖÃ³¤¶È
-                            NativeDbType.Logical => new DBFField(dbfFieldName, fieldType), // Âß¼­ÀàĞÍ²»ĞèÒªÉèÖÃ³¤¶È
-                            NativeDbType.Char => new DBFField(dbfFieldName, fieldType, 254, 0), // ×Ö·ûÀàĞÍÉèÖÃ³¤¶È
-                            NativeDbType.Numeric => new DBFField(dbfFieldName, fieldType, 18, 4), // Êı×ÖÀàĞÍÉèÖÃ³¤¶ÈºÍĞ¡ÊıÎ»
-                            NativeDbType.Float => new DBFField(dbfFieldName, fieldType, 18, 6), // ¸¡µãÀàĞÍÉèÖÃ³¤¶ÈºÍĞ¡ÊıÎ»
-                            NativeDbType.Long => new DBFField(dbfFieldName, fieldType, 10, 0), // ³¤ÕûĞÍÉèÖÃ³¤¶È
-                            NativeDbType.Double => new DBFField(dbfFieldName, fieldType, 18, 8), // Ë«¾«¶È¸¡µãĞÍÉèÖÃ³¤¶ÈºÍĞ¡ÊıÎ»
-                            _ => new DBFField(dbfFieldName, fieldType) // ÆäËûÀàĞÍ³¢ÊÔÄ¬ÈÏ¹¹Ôì
+                            NativeDbType.Date => new DBFField(dbfFieldName, fieldType), // æ—¥æœŸç±»å‹ä¸éœ€è¦è®¾ç½®é•¿åº¦
+                            NativeDbType.Logical => new DBFField(dbfFieldName, fieldType), // é€»è¾‘ç±»å‹ä¸éœ€è¦è®¾ç½®é•¿åº¦
+                            NativeDbType.Char => new DBFField(dbfFieldName, fieldType, 254, 0), // å­—ç¬¦ç±»å‹è®¾ç½®é•¿åº¦
+                            NativeDbType.Numeric => new DBFField(dbfFieldName, fieldType, 18, 4), // æ•°å­—ç±»å‹è®¾ç½®é•¿åº¦å’Œå°æ•°ä½
+                            NativeDbType.Float => new DBFField(dbfFieldName, fieldType, 18, 6), // æµ®ç‚¹ç±»å‹è®¾ç½®é•¿åº¦å’Œå°æ•°ä½
+                            NativeDbType.Long => new DBFField(dbfFieldName, fieldType, 10, 0), // é•¿æ•´å‹è®¾ç½®é•¿åº¦
+                            NativeDbType.Double => new DBFField(dbfFieldName, fieldType, 18, 8), // åŒç²¾åº¦æµ®ç‚¹å‹è®¾ç½®é•¿åº¦å’Œå°æ•°ä½
+                            _ => new DBFField(dbfFieldName, fieldType) // å…¶ä»–ç±»å‹å°è¯•é»˜è®¤æ„é€ 
                         };
-
                         fields.Add(field);
                         validMappings.Add(new KeyValuePair<string, string>(dbfFieldName, propertyName));
                     }
                     catch (Exception ex)
                     {
-                        OwHelper.SetLastErrorAndMessage(400, $"´´½¨DBF×Ö¶Î {dbfFieldName} (ÀàĞÍ: {fieldType}) Ê±·¢Éú´íÎó: {ex.Message}£¬Ìø¹ı´¦Àí");
+                        OwHelper.SetLastErrorAndMessage(400, $"åˆ›å»ºDBFå­—æ®µ {dbfFieldName} (ç±»å‹: {fieldType}) æ—¶å‘ç”Ÿé”™è¯¯: {ex.Message}ï¼Œè·³è¿‡å¤„ç†");
                         continue;
                     }
                 }
-
-                // È·±£ÖÁÉÙÓĞÒ»¸ö×Ö¶Î
+                // ç¡®ä¿è‡³å°‘æœ‰ä¸€ä¸ªå­—æ®µ
                 if (fields.Count == 0)
                 {
-                    throw new InvalidOperationException("Ã»ÓĞÓĞĞ§µÄ×Ö¶Î¶¨Òå£¬ÎŞ·¨´´½¨DBFÎÄ¼ş");
+                    throw new InvalidOperationException("æ²¡æœ‰æœ‰æ•ˆçš„å­—æ®µå®šä¹‰ï¼Œæ— æ³•åˆ›å»ºDBFæ–‡ä»¶");
                 }
-
-                // ÉèÖÃ×Ö¶Î½á¹¹ - ÕâÊÇ¹Ø¼ü²½Öè£¬±ØĞëÔÚĞ´Èë¼ÇÂ¼Ö®Ç°Íê³É
+                // è®¾ç½®å­—æ®µç»“æ„ - è¿™æ˜¯å…³é”®æ­¥éª¤ï¼Œå¿…é¡»åœ¨å†™å…¥è®°å½•ä¹‹å‰å®Œæˆ
                 writer.Fields = fields.ToArray();
-
-                // Ğ´Èë¼ÇÂ¼
+                // å†™å…¥è®°å½•
                 foreach (var entity in entityList)
                 {
                     if (entity is null)
                     {
-                        OwHelper.SetLastErrorAndMessage(400, "ÊµÌå¼¯ºÏÖĞ°üº¬nullÖµ£¬Ìø¹ı´¦Àí");
+                        OwHelper.SetLastErrorAndMessage(400, "å®ä½“é›†åˆä¸­åŒ…å«nullå€¼ï¼Œè·³è¿‡å¤„ç†");
                         continue;
                     }
-
                     var record = new object?[fields.Count];
-                    
                     for (int fieldIndex = 0; fieldIndex < validMappings.Count; fieldIndex++)
                     {
                         var mapping = validMappings[fieldIndex];
                         string propertyName = mapping.Value;
-                        
                         if (!propertyMap.TryGetValue(propertyName, out var property))
                         {
-                            record[fieldIndex] = null; // ÊôĞÔ²»´æÔÚÊ±Ê¹ÓÃnull
+                            record[fieldIndex] = null; // å±æ€§ä¸å­˜åœ¨æ—¶ä½¿ç”¨null
                             continue;
                         }
-
-                        var value = property.GetValue(entity); // »ñÈ¡ÊôĞÔÖµ
-
-                        // ´¦Àí¿É¿ÕÀàĞÍ
+                        var value = property.GetValue(entity); // è·å–å±æ€§å€¼
+                        // å¤„ç†å¯ç©ºç±»å‹
                         if (value is not null && property.PropertyType.IsGenericType &&
                             property.PropertyType.GetGenericTypeDefinition() == typeof(Nullable<>))
                         {
@@ -338,141 +293,123 @@ namespace OW.Data
                             }
                             catch
                             {
-                                OwHelper.SetLastErrorAndMessage(400, $"×ª»»ÊôĞÔ {propertyName} µÄÖµÊ±·¢Éú´íÎó");
+                                OwHelper.SetLastErrorAndMessage(400, $"è½¬æ¢å±æ€§ {propertyName} çš„å€¼æ—¶å‘ç”Ÿé”™è¯¯");
                                 value = null;
                             }
                         }
-
-                        // ´¦ÀíÌØÊâÖµµÄÇåÀí
+                        // å¤„ç†ç‰¹æ®Šå€¼çš„æ¸…ç†
                         value = value switch
                         {
-                            string strValue when strValue.Length > 254 => strValue[..254], // ½Ø¶Ï¹ı³¤×Ö·û´®
-                            DateTime dateValue when dateValue == DateTime.MinValue || dateValue.Year < 1900 => null, // DBF²»Ö§³Ö¹ıÔçµÄÈÕÆÚ
+                            string strValue when strValue.Length > 254 => strValue[..254], // æˆªæ–­è¿‡é•¿å­—ç¬¦ä¸²
+                            DateTime dateValue when dateValue == DateTime.MinValue || dateValue.Year < 1900 => null, // DBFä¸æ”¯æŒè¿‡æ—©çš„æ—¥æœŸ
                             _ => value
                         };
-
-                        record[fieldIndex] = value; // ´æ´¢Öµµ½¼ÇÂ¼
+                        record[fieldIndex] = value; // å­˜å‚¨å€¼åˆ°è®°å½•
                     }
-
-                    writer.WriteRecord(record); // Ğ´Èë¼ÇÂ¼µ½DBF
-                    recordsWritten++; // ¼ÇÂ¼ÒÑĞ´ÈëµÄ¼ÇÂ¼Êı
+                    writer.WriteRecord(record); // å†™å…¥è®°å½•åˆ°DBF
+                    recordsWritten++; // è®°å½•å·²å†™å…¥çš„è®°å½•æ•°
                 }
-
-                // È·±£ÖÁÉÙĞ´ÈëÁËÒ»Ìõ¼ÇÂ¼
+                // ç¡®ä¿è‡³å°‘å†™å…¥äº†ä¸€æ¡è®°å½•
                 if (recordsWritten == 0)
                 {
-                    OwHelper.SetLastErrorAndMessage(400, "Ã»ÓĞÓĞĞ§µÄ¼ÇÂ¼±»Ğ´ÈëDBFÎÄ¼ş");
-                    throw new InvalidOperationException("Ã»ÓĞÓĞĞ§µÄ¼ÇÂ¼±»Ğ´ÈëDBFÎÄ¼ş");
+                    OwHelper.SetLastErrorAndMessage(400, "æ²¡æœ‰æœ‰æ•ˆçš„è®°å½•è¢«å†™å…¥DBFæ–‡ä»¶");
+                    throw new InvalidOperationException("æ²¡æœ‰æœ‰æ•ˆçš„è®°å½•è¢«å†™å…¥DBFæ–‡ä»¶");
                 }
-
-                // DBFWriter »áÔÚ using Óï¾ä½áÊøÊ±×Ô¶¯µ÷ÓÃ Dispose ·½·¨Íê³ÉĞ´Èë
+                // DBFWriter ä¼šåœ¨ using è¯­å¥ç»“æŸæ—¶è‡ªåŠ¨è°ƒç”¨ Dispose æ–¹æ³•å®Œæˆå†™å…¥
             }
             catch (Exception ex)
             {
-                OwHelper.SetLastErrorAndMessage(500, $"Ğ´Èë DBF Á÷Ê±·¢Éú´íÎó: {ex.Message}");
+                OwHelper.SetLastErrorAndMessage(500, $"å†™å…¥ DBF æµæ—¶å‘ç”Ÿé”™è¯¯: {ex.Message}");
                 throw;
             }
         }
-
         /// <summary>
-        /// ½«ÊµÌå¼¯ºÏĞ´ÈëDBFÎÄ¼ş
+        /// å°†å®ä½“é›†åˆå†™å…¥DBFæ–‡ä»¶
         /// </summary>
-        /// <typeparam name="T">ÊµÌåÀàĞÍ</typeparam>
-        /// <param name="entities">ÊµÌå¼¯ºÏ</param>
-        /// <param name="filePath">ÎÄ¼şÂ·¾¶</param>
-        /// <param name="fieldMappings">×Ö¶ÎÓ³Éä×Öµä£¬¼üÎªDBF×Ö¶ÎÃû£¬ÖµÎªÊµÌåÊôĞÔÃû£»ÎªnullÔò×Ô¶¯´´½¨</param>
-        /// <param name="customFieldTypes">¿ÉÑ¡µÄ×Ô¶¨Òå×Ö¶ÎÀàĞÍ×Öµä£¬¼üÎªDBF×Ö¶ÎÃû£¬ÖµÎªDBF×Ö¶ÎÀàĞÍ</param>
-        /// <param name="encoding">×Ö·û±àÂë£¬Ä¬ÈÏÎªGB2312</param>
+        /// <typeparam name="T">å®ä½“ç±»å‹</typeparam>
+        /// <param name="entities">å®ä½“é›†åˆ</param>
+        /// <param name="filePath">æ–‡ä»¶è·¯å¾„</param>
+        /// <param name="fieldMappings">å­—æ®µæ˜ å°„å­—å…¸ï¼Œé”®ä¸ºDBFå­—æ®µåï¼Œå€¼ä¸ºå®ä½“å±æ€§åï¼›ä¸ºnullåˆ™è‡ªåŠ¨åˆ›å»º</param>
+        /// <param name="customFieldTypes">å¯é€‰çš„è‡ªå®šä¹‰å­—æ®µç±»å‹å­—å…¸ï¼Œé”®ä¸ºDBFå­—æ®µåï¼Œå€¼ä¸ºDBFå­—æ®µç±»å‹</param>
+        /// <param name="encoding">å­—ç¬¦ç¼–ç ï¼Œé»˜è®¤ä¸ºGB2312</param>
         public static void WriteToFile<T>(IEnumerable<T> entities, string filePath,
             Dictionary<string, string> fieldMappings = null,
             Dictionary<string, NativeDbType> customFieldTypes = null,
             System.Text.Encoding encoding = null) where T : class
         {
-            if (string.IsNullOrWhiteSpace(filePath)) throw new ArgumentNullException(nameof(filePath)); // ¼ì²éÎÄ¼şÂ·¾¶
-
+            if (string.IsNullOrWhiteSpace(filePath)) throw new ArgumentNullException(nameof(filePath)); // æ£€æŸ¥æ–‡ä»¶è·¯å¾„
             try
             {
                 using var stream = File.Open(filePath, FileMode.Create, FileAccess.Write);
-                WriteToStream(entities, stream, fieldMappings, customFieldTypes, encoding); // µ÷ÓÃÁ÷Ğ´Èë·½·¨
+                WriteToStream(entities, stream, fieldMappings, customFieldTypes, encoding); // è°ƒç”¨æµå†™å…¥æ–¹æ³•
             }
             catch (Exception ex)
             {
-                OwHelper.SetLastErrorAndMessage(500, $"Ğ´Èë DBF ÎÄ¼ş {filePath} Ê±·¢Éú´íÎó: {ex.Message}");
+                OwHelper.SetLastErrorAndMessage(500, $"å†™å…¥ DBF æ–‡ä»¶ {filePath} æ—¶å‘ç”Ÿé”™è¯¯: {ex.Message}");
                 throw;
             }
         }
         #endregion
-
-        #region Êı¾İ¶ÁÈ¡
+        #region æ•°æ®è¯»å–
         /// <summary>
-        /// ½«DataTable×ª»»ÎªÊµÌå¼¯ºÏ
+        /// å°†DataTableè½¬æ¢ä¸ºå®ä½“é›†åˆ
         /// </summary>
-        /// <typeparam name="T">Ä¿±êÊµÌåÀàĞÍ</typeparam>
-        /// <param name="dataTable">Ô´Êı¾İ±í</param>
-        /// <param name="fieldMappings">×Ö¶ÎÓ³Éä£¬¼üÎªDBF×Ö¶ÎÃû£¬ÖµÎªÊµÌåÊôĞÔÃû</param>
-        /// <returns>ÊµÌå¼¯ºÏ</returns>
+        /// <typeparam name="T">ç›®æ ‡å®ä½“ç±»å‹</typeparam>
+        /// <param name="dataTable">æºæ•°æ®è¡¨</param>
+        /// <param name="fieldMappings">å­—æ®µæ˜ å°„ï¼Œé”®ä¸ºDBFå­—æ®µåï¼Œå€¼ä¸ºå®ä½“å±æ€§å</param>
+        /// <returns>å®ä½“é›†åˆ</returns>
         public static IEnumerable<T> ConvertDataTableToEntities<T>(DataTable dataTable,
             Dictionary<string, string> fieldMappings) where T : class, new()
         {
             ArgumentNullException.ThrowIfNull(dataTable);
-            
             if (fieldMappings == null || fieldMappings.Count == 0)
             {
-                OwHelper.SetLastErrorAndMessage(400, "×Ö¶ÎÓ³Éä²»ÄÜÎª¿Õ");
-                throw new ArgumentException("×Ö¶ÎÓ³Éä²»ÄÜÎª¿Õ", nameof(fieldMappings));
+                OwHelper.SetLastErrorAndMessage(400, "å­—æ®µæ˜ å°„ä¸èƒ½ä¸ºç©º");
+                throw new ArgumentException("å­—æ®µæ˜ å°„ä¸èƒ½ä¸ºç©º", nameof(fieldMappings));
             }
-
             var result = new List<T>();
             var entityType = typeof(T);
             var propertyMap = entityType.GetProperties().ToDictionary(p => p.Name, p => p);
-
-            // ·´ÏòÓ³Éä£¬´ÓDBF×Ö¶ÎÃûÓ³Éäµ½ÊôĞÔÃû£¨²»Çø·Ö´óĞ¡Ğ´£©
+            // åå‘æ˜ å°„ï¼Œä»DBFå­—æ®µåæ˜ å°„åˆ°å±æ€§åï¼ˆä¸åŒºåˆ†å¤§å°å†™ï¼‰
             var reverseMapping = fieldMappings.ToDictionary(
                 kv => kv.Key.ToUpperInvariant(), 
                 kv => kv.Value, 
                 StringComparer.OrdinalIgnoreCase);
-
-            // ´´½¨ÁĞÃûµ½Ë÷ÒıµÄÓ³Éä£¨²»Çø·Ö´óĞ¡Ğ´£©
+            // åˆ›å»ºåˆ—ååˆ°ç´¢å¼•çš„æ˜ å°„ï¼ˆä¸åŒºåˆ†å¤§å°å†™ï¼‰
             var columnIndexMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             for (int i = 0; i < dataTable.Columns.Count; i++)
             {
                 columnIndexMap[dataTable.Columns[i].ColumnName] = i;
             }
-
-            // ´¦ÀíÃ¿Ò»ĞĞÊı¾İ
+            // å¤„ç†æ¯ä¸€è¡Œæ•°æ®
             foreach (DataRow row in dataTable.Rows)
             {
                 try
                 {
                     var entity = new T();
                     bool hasValidData = false;
-
                     foreach (var kvp in reverseMapping)
                     {
                         var fieldName = kvp.Key;
                         var propertyName = kvp.Value;
-
-                        // ¼ì²éÊôĞÔÊÇ·ñ´æÔÚ
+                        // æ£€æŸ¥å±æ€§æ˜¯å¦å­˜åœ¨
                         if (!propertyMap.TryGetValue(propertyName, out var property))
                         {
-                            OwHelper.SetLastErrorAndMessage(400, $"ÊôĞÔ {propertyName} ÔÚÀàĞÍ {entityType.Name} ÖĞ²»´æÔÚ");
+                            OwHelper.SetLastErrorAndMessage(400, $"å±æ€§ {propertyName} åœ¨ç±»å‹ {entityType.Name} ä¸­ä¸å­˜åœ¨");
                             continue;
                         }
-
-                        // ¼ì²éÁĞÊÇ·ñ´æÔÚ
+                        // æ£€æŸ¥åˆ—æ˜¯å¦å­˜åœ¨
                         if (!columnIndexMap.TryGetValue(fieldName, out int columnIndex))
                         {
-                            OwHelper.SetLastErrorAndMessage(400, $"×Ö¶Î {fieldName} ÔÚÊı¾İ±íÖĞ²»´æÔÚ");
+                            OwHelper.SetLastErrorAndMessage(400, $"å­—æ®µ {fieldName} åœ¨æ•°æ®è¡¨ä¸­ä¸å­˜åœ¨");
                             continue;
                         }
-
                         try
                         {
                             var cellValue = row[columnIndex];
                             if (cellValue == null || cellValue == DBNull.Value)
                                 continue;
-
-                            // ×ª»»²¢ÉèÖÃÊôĞÔÖµ
+                            // è½¬æ¢å¹¶è®¾ç½®å±æ€§å€¼
                             var convertedValue = ConvertValue(cellValue, property.PropertyType);
                             if (convertedValue != null)
                             {
@@ -482,58 +419,53 @@ namespace OW.Data
                         }
                         catch (Exception ex)
                         {
-                            OwHelper.SetLastErrorAndMessage(400, $"×ª»»×Ö¶Î {fieldName} µ½ÊôĞÔ {propertyName} Ê±·¢Éú´íÎó: {ex.Message}");
+                            OwHelper.SetLastErrorAndMessage(400, $"è½¬æ¢å­—æ®µ {fieldName} åˆ°å±æ€§ {propertyName} æ—¶å‘ç”Ÿé”™è¯¯: {ex.Message}");
                         }
                     }
-
-                    // Ö»Ìí¼ÓÓĞÓĞĞ§Êı¾İµÄÊµÌå
+                    // åªæ·»åŠ æœ‰æœ‰æ•ˆæ•°æ®çš„å®ä½“
                     if (hasValidData)
                         result.Add(entity);
                 }
                 catch (Exception ex)
                 {
-                    OwHelper.SetLastErrorAndMessage(500, $"´¦ÀíÊı¾İĞĞÊ±·¢Éú´íÎó: {ex.Message}");
+                    OwHelper.SetLastErrorAndMessage(500, $"å¤„ç†æ•°æ®è¡Œæ—¶å‘ç”Ÿé”™è¯¯: {ex.Message}");
                 }
             }
-
             return result;
         }
-
         /// <summary>
-        /// ×ª»»Öµµ½Ä¿±êÀàĞÍ
+        /// è½¬æ¢å€¼åˆ°ç›®æ ‡ç±»å‹
         /// </summary>
-        /// <param name="value">Ô­Ê¼Öµ</param>
-        /// <param name="targetType">Ä¿±êÀàĞÍ</param>
-        /// <returns>×ª»»ºóµÄÖµ£¬Ê§°Ü·µ»Ønull</returns>
+        /// <param name="value">åŸå§‹å€¼</param>
+        /// <param name="targetType">ç›®æ ‡ç±»å‹</param>
+        /// <returns>è½¬æ¢åçš„å€¼ï¼Œå¤±è´¥è¿”å›null</returns>
         private static object ConvertValue(object value, Type targetType)
         {
             try
             {
-                // ´¦Àí¿É¿ÕÀàĞÍ
+                // å¤„ç†å¯ç©ºç±»å‹
                 var isNullable = targetType.IsGenericType && targetType.GetGenericTypeDefinition() == typeof(Nullable<>);
                 var actualType = isNullable ? Nullable.GetUnderlyingType(targetType) : targetType;
-
-                // ¸ù¾İÄ¿±êÀàĞÍ½øĞĞÌØÊâ´¦Àí
+                // æ ¹æ®ç›®æ ‡ç±»å‹è¿›è¡Œç‰¹æ®Šå¤„ç†
                 return actualType.Name switch
                 {
                     nameof(String) => value.ToString().Trim(),
                     nameof(DateTime) => DateTime.TryParse(value.ToString(), out var dt) ? dt : null,
                     nameof(Boolean) => ConvertToBoolean(value.ToString()),
                     nameof(Guid) => Guid.TryParse(value.ToString(), out var guid) ? guid : null,
-                    _ => Convert.ChangeType(value, actualType) // ³£¹æÀàĞÍ×ª»»
+                    _ => Convert.ChangeType(value, actualType) // å¸¸è§„ç±»å‹è½¬æ¢
                 };
             }
             catch
             {
-                return null; // ×ª»»Ê§°Ü·µ»Ønull
+                return null; // è½¬æ¢å¤±è´¥è¿”å›null
             }
         }
-
         /// <summary>
-        /// ×ª»»×Ö·û´®µ½²¼¶ûÖµ
+        /// è½¬æ¢å­—ç¬¦ä¸²åˆ°å¸ƒå°”å€¼
         /// </summary>
-        /// <param name="value">×Ö·û´®Öµ</param>
-        /// <returns>²¼¶ûÖµ</returns>
+        /// <param name="value">å­—ç¬¦ä¸²å€¼</param>
+        /// <returns>å¸ƒå°”å€¼</returns>
         private static bool ConvertToBoolean(string value)
         {
             var upperValue = value.ToUpperInvariant().Trim();

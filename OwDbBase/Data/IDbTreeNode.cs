@@ -2,7 +2,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
-
 namespace OW.Data
 {
     /// <summary>
@@ -17,17 +16,14 @@ namespace OW.Data
         [JsonIgnore]
         [MaybeNull]
         public abstract TNode Parent { get; set; }
-
         /// <summary>
         /// 所属槽Id。
         /// </summary>
         [ForeignKey(nameof(Parent))]
         public abstract Guid? ParentId { get; set; }
-
         /// <summary>
         /// 拥有的子物品或槽。
         /// </summary>
         public abstract List<TNode> Children { get; set; }
     }
-
 }

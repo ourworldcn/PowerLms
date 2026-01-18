@@ -15,7 +15,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-
 namespace System
 {
     public class GameMath
@@ -35,7 +34,6 @@ namespace System
             var tmp = src.Sum(c => getProb(c));
             return src.Select(c => getResult(c, getProb(c) / tmp));
         }
-
         /// <summary>
         /// 给概率增加一个偏移量，如果超出概率允许的范围，则规范在[0,1]范围内，返回实际增减的偏移量。
         /// </summary>
@@ -64,12 +62,10 @@ namespace System
             }
         }
     }
-
     public class OwSystemClock : ISystemClock
     {
         public DateTimeOffset UtcNow => OwHelper.WorldNow;
     }
-
     /// <summary>
     /// 封装一些未详细分类的函数。
     /// </summary>
@@ -86,18 +82,15 @@ namespace System
         /// </summary>
         [ThreadStatic]
         static Random _Random;
-
         /// <summary>
         /// 公用的每线程独立的随机数生成器。每个线程独立实例。
         /// </summary>
         public static Random Random => _Random ??= new Random();
 #endif // NET6_0_OR_GREATER
-
         /// <summary>
         /// 游戏内使用的时间与Utc时间的偏移量。
         /// </summary>
         static public TimeSpan _Offset;
-
         /// <summary>
         /// 游戏内使用的时间与Utc时间的偏移量。
         /// </summary>
@@ -114,12 +107,10 @@ namespace System
                 }
             }
         }
-
         /// <summary>
         /// 当属性发生变化后引发的事件。
         /// </summary>
         public static event PropertyChangedEventHandler Changed;
-
         static void OnChanged(PropertyChangedEventArgs e)
         {
             Changed?.Invoke(null, e);
@@ -132,40 +123,32 @@ namespace System
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get => DateTime.UtcNow + _Offset;
         }
-
         /// <summary>
         /// 中英文逗号数组。分割字符串常用此数组，避免生成新对象。
         /// </summary>
         public static readonly char[] CommaArrayWithCN = new char[] { ',', '，' };
-
         /// <summary>
         /// 中英文分号数组。分割字符串常用此数组，避免生成新对象。
         /// </summary>
         public static readonly char[] SemicolonArrayWithCN = new char[] { ';', '；' };
-
         /// <summary>
         /// 中英文冒号数组。分割字符串常用此数组，避免生成新对象。
         /// </summary>
         public static readonly char[] ColonArrayWithCN = new char[] { ':', '：' };
-
         /// <summary>
         /// 中英文双引号。
         /// </summary>
         public static readonly char[] DoubleQuotesWithCN = new char[] { '"', '“', '”' };
-
         /// <summary>
         /// 路径分隔符。
         /// </summary>
         public static readonly char[] PathSeparatorChar = new char[] { '\\', '/' };
-
         #region 错误处理
-
         /// <summary>
         /// 存储当前线程最后的错误信息。
         /// </summary>
         [ThreadStatic]
         private static string _LastErrorMessage;
-
         /// <summary>
         /// 获取最后的错误信息。
         /// </summary>
@@ -185,24 +168,20 @@ namespace System
             }
             return _LastErrorMessage;
         }
-
         /// <summary>
         /// 设置最后错误信息。
         /// </summary>
         /// <param name="msg"></param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetLastErrorMessage(string msg) => _LastErrorMessage = msg;
-
         [ThreadStatic]
         private static int _LastError;
-
         /// <summary>
         /// 获取最后发生错误的错误码。
         /// </summary>
         /// <returns></returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int GetLastError() => _LastError;
-
         /// <summary>
         /// 设置最后一次错误的错误码。
         /// </summary>
@@ -213,7 +192,6 @@ namespace System
             _LastError = errorCode;
             _LastErrorMessage = null;
         }
-
         /// <summary>
         /// 设置最后一次错误的错误码和错误信息。
         /// </summary>
@@ -225,15 +203,12 @@ namespace System
             _LastError = errorCode;
             _LastErrorMessage = msg;
         }
-
         public static int GetLastError(out string msg)
         {
             msg = GetLastErrorMessage();
             return GetLastError();
         }
-
         #endregion 错误处理
-
         static OwHelper()
         {
             /*
@@ -242,11 +217,8 @@ namespace System
              * 等待操作超时。
             */
         }
-
         #region 属性
-
         #endregion 属性
-
         /// <summary>
         /// 复制字典。
         /// </summary>
@@ -270,7 +242,6 @@ namespace System
                     dest[item.Key] = item.Value;
                 }
         }
-
         /// <summary>
         /// 复制集合对象。
         /// </summary>
@@ -289,9 +260,7 @@ namespace System
                     dest.Add(item);
                 }
         }
-
         //public static void Copy<TSource,TDest>(IEnumerable<T>src,Func<>)
-
         /// <summary>
         /// 复制集合。任何参数为null，则立即返回。
         /// </summary>
@@ -306,7 +275,6 @@ namespace System
                 return;
             Copy(src, dest);
         }
-
         /// <summary>
         /// 使用池<see cref="AutoClearPool{T}"/>创建对象复制指定内容病返回。
         /// </summary>
@@ -321,14 +289,12 @@ namespace System
                 result[item.Item1] = item.Item2;
             return result;
         }
-
         /// <summary>
         /// 四舍五入取整。
         /// </summary>
         /// <param name="result"></param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int RoundWithAwayFromZero(decimal result) => (int)Math.Round(result, MidpointRounding.AwayFromZero);
-
         /// <summary>
         /// 遍历一个树结构的所有子项。深度优先算法遍历子树。
         /// </summary>
@@ -345,7 +311,6 @@ namespace System
                 yield return result;
             }
         }
-
         /// <summary>
         /// 遍历一个树结构的所有子项。深度优先算法遍历子树。
         /// </summary>
@@ -363,7 +328,6 @@ namespace System
                 yield return result;
             }
         }
-
         /// <summary>
         /// 遍历一个树结构的所有子项。广度优先算法遍历子树。
         /// </summary>
@@ -383,7 +347,6 @@ namespace System
                 }
             }
         }
-
         /// <summary>
         /// 分拣左右两个序列中的元素到三个集合中，三个集合的条件如下：仅左侧序列拥有的元素，两个序列都有的元素，仅右侧序列拥有的元素。
         /// 如果序列中有重复元素则分别计数。结果集合中元素顺序不稳定。
@@ -426,7 +389,6 @@ namespace System
                 foreach (var item in leftDic.SelectMany(c => c.Value))
                     leftOnly.Add(item);
         }
-
         /// <summary>
         /// 在一组相对概率中选择一个元素。
         /// </summary>
@@ -456,11 +418,9 @@ namespace System
             if (!hasNoneZero)
                 throw new ArgumentException("序列所有相对概率数都是0。", nameof(source));
             var seed = (decimal)rnd * innerSeq[^1].Prob;
-
             var (Prob, Data) = innerSeq.First(c => c.Prob >= seed);
             return Data;
         }
-
         /// <summary>
         /// 按权重抽取一个随机项。
         /// </summary>
@@ -491,7 +451,6 @@ namespace System
             }
             return default;
         }
-
         /// <summary>
         /// 用<see cref="OwHelper.WorldNow"/>计算超时剩余时间。
         /// </summary>
@@ -502,7 +461,6 @@ namespace System
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static TimeSpan ComputeTimeout(DateTime start, TimeSpan timeout) =>
             Timeout.InfiniteTimeSpan == timeout ? Timeout.InfiniteTimeSpan : ComputeTimeout(OwHelper.WorldNow, start + timeout);
-
         /// <summary>
         /// 计算剩余时间间隔，若<paramref name="end"/>在<paramref name="start"/>之前则返回<see cref="TimeSpan.Zero"/>。
         /// </summary>
@@ -512,7 +470,6 @@ namespace System
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static TimeSpan ComputeTimeout(DateTime start, DateTime end) =>
             start >= end ? TimeSpan.Zero : end - start;
-
         /// <summary>
         /// 按顺序锁定一组对象。
         /// </summary>
@@ -556,7 +513,6 @@ namespace System
                 return null;
             }
         }
-
         /// <summary>
         /// 按顺序锁定一组对象。
         /// </summary>
@@ -598,16 +554,12 @@ namespace System
                 using var tmp = DisposerWrapper.Create(stack);  //解锁已经锁定对象。
                 return null;
             }
-
         }
-
         #region 字符串暂存池及相关
-
         /// <summary>
         /// 字符串暂存池。
         /// </summary>
         public static readonly ConcurrentDictionary<string, string> StringInterning = new ConcurrentDictionary<string, string>();
-
         /// <summary>
         /// 获取原有引用或新引用。
         /// </summary>
@@ -619,7 +571,6 @@ namespace System
         {
             return StringInterning.GetOrAdd(str, str);
         }
-
         /// <summary>
         /// 
         /// </summary>
@@ -629,9 +580,7 @@ namespace System
         {
             return StringInterning.TryGetValue(str, out var result) ? result : null;
         }
-
         #endregion 字符串暂存池及相关
-
         /// <summary>
         /// 按顺序锁定一组对象。
         /// </summary>
@@ -665,9 +614,7 @@ namespace System
                 exitCallback(tmp);
             return false;
         }
-
         private static volatile Task _currentGcTask = Task.CompletedTask; // 当前运行的GC任务
-
         /// <summary>
         /// 立即释放对象并将其引用设置为null。并在后台线程强制清理内存。用于释放大型对象或资源。
         /// </summary>
@@ -691,7 +638,6 @@ namespace System
             }
         }
     }
-
     public static class ConcurrentHelper
     {
         public static bool Lock<T>(T obj, TimeSpan timeout) where T : IDisposable

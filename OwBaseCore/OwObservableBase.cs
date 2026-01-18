@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
 #if  !NETCOREAPP && !NET40 && !NETSTANDARD
 namespace System
 {
@@ -29,7 +28,6 @@ namespace System
         //     before the provider has finished sending them.
         IDisposable Subscribe(IObserver<T> observer);
     }
-
     //
     // 摘要:
     //     Provides a mechanism for receiving push-based notifications.
@@ -60,56 +58,44 @@ namespace System
         //     The current notification information.
         void OnNext(T value);
     }
-
 }
 #endif
-
 namespace OW
 {
-
     /// <summary>
     /// 定义该接口的初衷是打算配合NetCore的服务依赖注入功能一起使用，但如果直接使用<see cref="IObservable{T}"/>担心与其它库相冲突，所以定义了此接口。
     /// </summary>
     /// <typeparam name="T"><inheritdoc/></typeparam>
     public interface IOwObservable<out T> : IObservable<T>
     {
-
     }
-
     /// <summary>
     /// 定义该接口的初衷是打算配合NetCore的服务依赖注入功能一起使用，但如果直接使用<see cref="IObserver{T}"/>担心与其它库相冲突，所以定义了此接口。
     /// </summary>
     /// <typeparam name="T"><inheritdoc/></typeparam>
     public interface IOwObserver<in T> : IObserver<T>
     {
-
     }
-
     public class OwObservableBase<T> : IOwObservable<T>
     {
         public OwObservableBase()
         {
-
         }
-
         public IDisposable Subscribe(IObserver<T> observer)
         {
             return default;
         }
     }
-
     public class IOwObserverBase<T> : IOwObserver<T>
     {
         public void OnCompleted()
         {
             throw new NotImplementedException();
         }
-
         public void OnError(Exception error)
         {
             throw new NotImplementedException();
         }
-
         public void OnNext(T value)
         {
             throw new NotImplementedException();

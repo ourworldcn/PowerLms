@@ -1,7 +1,5 @@
-﻿
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
-
 namespace OW.Data
 {
     /// <summary>
@@ -15,12 +13,10 @@ namespace OW.Data
         /// </summary>
         /// <param name="db">该实体类将被保存到的数据库上下文。</param>
         void PrepareSaving(DbContext db);
-
         /// <summary>
         /// 是否取消<see cref="PrepareSaving"/>的调用。
         /// </summary>
         /// <value>true不会调用保存方法，false(默认值)在保存前调用保存方法。</value>
         bool SuppressSave => false;
     }
-
 }

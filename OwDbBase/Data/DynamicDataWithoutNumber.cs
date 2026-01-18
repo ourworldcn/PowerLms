@@ -7,7 +7,6 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-
 namespace OW.Data
 {
     /// <summary>
@@ -24,7 +23,6 @@ namespace OW.Data
         public DynamicDataWithoutNumber()
         {
         }
-
         /// <summary>
         /// 构造函数。
         /// </summary>
@@ -33,36 +31,29 @@ namespace OW.Data
         {
             ParentId = parentId;
         }
-
         /// <summary>
         /// 父条目的ID。
         /// </summary>
         public Guid? ParentId { get; set; }
-
         /// <summary>
         /// Json字符串，存储动态数据。
         /// </summary>
         [Unicode(false)]
         public string DataJson { get; set; }
-
         /// <summary>
         /// 额外的Guid数据。
         /// </summary>
         public Guid? ExtraGuid { get; set; }
-
         /// <summary>
         /// 额外的字符串数据。
         /// </summary>
         [MaxLength(128)]
         public string ExtraString { get; set; }
-
         /// <summary>
         /// 额外的日期时间数据。
         /// </summary>
         public DateTime? ExtraDateTime { get; set; }
-
         private Dictionary<string, object> _DataDic;
-
         /// <summary>
         /// 反序列化后的数据字典。
         /// </summary>
@@ -78,7 +69,6 @@ namespace OW.Data
                 return _DataDic ??= new Dictionary<string, object>();
             }
         }
-
         /// <summary>
         /// 将当前数据字典序列化为JSON。
         /// </summary>

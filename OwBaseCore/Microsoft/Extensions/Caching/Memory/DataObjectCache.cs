@@ -14,7 +14,6 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-
 namespace Microsoft.Extensions.Caching.Memory
 {
     /// <summary>
@@ -25,10 +24,8 @@ namespace Microsoft.Extensions.Caching.Memory
         public DataObjectCacheOptions() : base()
         {
         }
-
         public new DataObjectCacheOptions Value => this;
     }
-
     /// <summary>
     /// 数据对象的缓存类。
     /// 数据对象的加载需要经过IO,且需要保存，并且其有唯一的键值。
@@ -41,7 +38,6 @@ namespace Microsoft.Extensions.Caching.Memory
         public class DataObjectCacheEntry : OwMemoryCacheEntry, IDisposable
         {
             #region 构造函数
-
             /// <summary>
             /// 构造函数。
             /// </summary>
@@ -51,11 +47,8 @@ namespace Microsoft.Extensions.Caching.Memory
             {
                 SlidingExpiration = TimeSpan.FromMinutes(1);
             }
-
             #endregion 构造函数
-
             #region IDataObjectCacheEntry接口相关
-
             /// <summary>
             /// 加载时调用。
             /// 在对键加锁的范围内调用。
@@ -64,13 +57,11 @@ namespace Microsoft.Extensions.Caching.Memory
             /// </summary>
             [AllowNull]
             public Func<object, object, object> LoadCallback { get; set; }
-
             /// <summary>
             /// <see cref="LoadCallback"/>的用户参数。
             /// </summary>
             [AllowNull]
             public object LoadCallbackState { get; set; }
-
             /// <summary>
             /// 创建对象时调用。
             /// 在对键加锁的范围内调用。
@@ -78,13 +69,11 @@ namespace Microsoft.Extensions.Caching.Memory
             /// </summary>
             [AllowNull]
             public Func<object, object, object> CreateCallback { get; set; }
-
             /// <summary>
             /// <see cref="CreateCallback"/>的用户参数
             /// </summary>
             [AllowNull]
             public object CreateCallbackState { get; set; }
-
             /// <summary>
             /// 需要保存时调用。
             /// 在对键加锁的范围内调用。
@@ -93,13 +82,11 @@ namespace Microsoft.Extensions.Caching.Memory
             /// </summary>
             [AllowNull]
             public Func<object, object, bool> SaveCallback { get; set; }
-
             /// <summary>
             /// <see cref="SaveCallback"/>的用户参数。
             /// </summary>
             [AllowNull]
             public object SaveCallbackState { get; set; }
-
             /// <summary>
             /// 是否已经初始化了<see cref="OwMemoryCache.OwMemoryCacheEntry.Value"/>的值。
             /// </summary>
@@ -108,22 +95,13 @@ namespace Microsoft.Extensions.Caching.Memory
             /// 是否已经初始化了<see cref="OwMemoryCache.OwMemoryCacheEntry.Value"/>的值。
             /// </summary>
             public bool IsInitialized => _IsInitialized;
-
             #region ICacheEntry接口相关
-
             #region IDisposable接口相关
-
             #endregion IDisposable接口相关
-
-
             #endregion ICacheEntry接口相关
-
             #endregion IDataObjectCacheEntry接口相关
-
         }
-
         #region 构造函数
-
         /// <summary>
         /// 构造函数。
         /// </summary>
@@ -131,7 +109,6 @@ namespace Microsoft.Extensions.Caching.Memory
         {
             Initialize();
         }
-
         /// <summary>
         /// 内部初始化函数。
         /// </summary>
@@ -140,16 +117,12 @@ namespace Microsoft.Extensions.Caching.Memory
             _Timer = new Timer(TimerCallback, null, ((DataObjectCacheOptions)Options).ExpirationScanFrequency, ((DataObjectCacheOptions)Options).ExpirationScanFrequency);
             Task.Factory.StartNew(SaveFunc, TaskCreationOptions.LongRunning);   //创建后台保存任务
         }
-
         #endregion 构造函数
-
         #region 定时任务相关
-
         /// <summary>
         /// 
         /// </summary>
         Timer _Timer;
-
         /// <summary>
         /// 
         /// </summary>
@@ -161,7 +134,6 @@ namespace Microsoft.Extensions.Caching.Memory
                 return;
             Compact();
         }
-
         /// <summary>
         /// 此函数需要运行在独立线程中。
         /// </summary>
@@ -181,7 +153,6 @@ namespace Microsoft.Extensions.Caching.Memory
                     }
                     catch (Exception) { }
                 }
-
             }
             catch (Exception) { }
             finally
@@ -190,7 +161,6 @@ namespace Microsoft.Extensions.Caching.Memory
                     Monitor.Exit(_Dirty);
             }
         }
-
         /// <summary>
         /// 对标记为脏的数据进行保存。
         /// 未能锁定或保存的数据都会再次放到队列中，等待下次保存。
@@ -217,16 +187,12 @@ namespace Microsoft.Extensions.Caching.Memory
                     OwHelper.Copy(keys, _Dirty);
             AutoClearPool<List<object>>.Shared.Return(keys);
         }
-
         #endregion 定时任务相关
-
         #region IDataObjectCache接口相关
-
         /// <summary>
         /// 脏队列。操作此对象需要锁定此对象。对此对象发脉冲，有概率立即唤醒保存线程开始保存数据。
         /// </summary>
         HashSet<object> _Dirty = new HashSet<object>();
-
         /// <summary>
         /// 设置一个键关联的数据对象需要保存。
         /// 该函数仅在一个集合中标记需要保存的对象的键，所以无需考虑锁定问题。
@@ -249,7 +215,6 @@ namespace Microsoft.Extensions.Caching.Memory
             }
             return result;
         }
-
         /// <summary>
         /// 无论缓存是否需要都强制同步的确保指定键的关联对象被保存。
         /// 此函数会首先试图对键加锁，成功后才会进行实质工作，并解锁。
@@ -281,7 +246,6 @@ namespace Microsoft.Extensions.Caching.Memory
             }
             return result;
         }
-
         /// <summary>
         /// 实际确保缓存项保存的函数。
         /// 派生类可以重载此函数。非公有函数不会自动对键加锁，若需要调用者需要负责加/解锁。
@@ -301,7 +265,6 @@ namespace Microsoft.Extensions.Caching.Memory
             }
             return result;
         }
-
         /// <summary>
         /// 确保初始化了缓存项的加载。
         /// 此函数会首先试图对键加锁，成功后才会进行实质工作，并解锁。
@@ -334,7 +297,6 @@ namespace Microsoft.Extensions.Caching.Memory
             OwHelper.SetLastError(0);
             return true;
         }
-
         /// <summary>
         /// 确保初始化了缓存项的加载。
         /// 派生类可以重载此函数。非公有函数不会自动对键加锁，若需要调用者需要负责加/解锁。
@@ -381,7 +343,6 @@ namespace Microsoft.Extensions.Caching.Memory
                 result = false;
             return result;
         }
-
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
@@ -391,7 +352,6 @@ namespace Microsoft.Extensions.Caching.Memory
             Task.Run(() => EnsureInitialized(entry.Key, out _)); //异步初始化
             return base.AddOrUpdateEntryCore(entry);
         }
-
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
@@ -401,7 +361,6 @@ namespace Microsoft.Extensions.Caching.Memory
         {
             return new DataObjectCacheEntry(key, this);
         }
-
         /// <summary>
         /// 派生类可以重载此函数。非公有函数不会自动对键加锁，若需要则调用者需负责加/解锁。
         /// </summary>
@@ -416,11 +375,8 @@ namespace Microsoft.Extensions.Caching.Memory
                 EnsureInitializedCore((DataObjectCacheEntry)entry, Options.DefaultLockTimeout);
             return b;
         }
-
         #region IMemoryCache接口相关
-
         #region IDisposable相关
-
         protected override void Dispose(bool disposing)
         {
             if (!IsDisposed)
@@ -430,28 +386,22 @@ namespace Microsoft.Extensions.Caching.Memory
                     //释放托管状态(托管对象)
                     _Timer?.Dispose();
                 }
-
                 // 释放未托管的资源(未托管的对象)并重写终结器
                 // 将大型字段设置为 null
                 _Dirty = null;
                 base.Dispose(disposing);
             }
         }
-
         // 仅当“Dispose(bool disposing)”拥有用于释放未托管资源的代码时才替代终结器
         // ~DataObjectCache()
         // {
         //     // 不要更改此代码。请将清理代码放入“Dispose(bool disposing)”方法中
         //     Dispose(disposing: false);
         // }
-
         #endregion IDisposable相关
-
         #endregion IMemoryCache接口相关
-
         #endregion IDataObjectCache接口相关
     }
-
     public static class DataObjectCacheExtensions
     {
     }

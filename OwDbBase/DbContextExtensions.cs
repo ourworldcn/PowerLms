@@ -9,7 +9,6 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-
 namespace OW.Data
 {
     public static class DbContextExtensions
@@ -55,7 +54,6 @@ namespace OW.Data
 }
             return keyValues;
         }
-
 #if !NET7_0_OR_GREATER  //EF Core 7.0将支持AddOrUpdate方法
       /// <summary>
         /// 插入或更新一个实体。
@@ -108,7 +106,6 @@ Debug.WriteLine($"AddOrUpdate 操作异常: {ex.Message}");
  throw;
       }
    }
-
         /// <summary>
    /// 插入或更新一组实体。
         /// </summary>
@@ -124,7 +121,6 @@ Debug.WriteLine($"AddOrUpdate 操作异常: {ex.Message}");
     }
         }
 #endif //!NET7_0_OR_GREATER
-
         /// <summary>
     /// 扩展方法，用于清空指定的数据库表。
       /// </summary>
@@ -147,7 +143,6 @@ public static void TruncateTable(this DbContext context, string tableName)
         // 执行 TRUNCATE TABLE SQL 命令
         context.Database.ExecuteSqlRaw($"TRUNCATE TABLE {tableName}");
         }
-
         /// <summary>
       /// 批量导入数据的添加或更新操作。预加载数据到内存判断重复，仅操作DbContext不调用SaveChanges。
         /// </summary>
@@ -176,7 +171,6 @@ public static void TruncateTable(this DbContext context, string tableName)
        }
      }
         }
-
         /// <summary>
         /// 批量导入数据的添加或更新操作。使用键提取器和字典加速重复判断，仅操作DbContext不调用SaveChanges。
         /// </summary>

@@ -1,17 +1,14 @@
 ﻿/*
  * Json相关的成员
  */
-
 using System;
 using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-
 namespace System.Text.Json.Serialization
 {
-
     /// <summary>
     /// 用于将Guid类型Base64编码的Json转换器。读取时可以识别Base64编码 ，也可以识别默认格式。
     /// </summary>
@@ -20,7 +17,6 @@ namespace System.Text.Json.Serialization
         public OwGuidJsonConverter()
         {
         }
-
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
@@ -35,7 +31,6 @@ namespace System.Text.Json.Serialization
             if (reader.TryGetGuid(out var id)) return id;
             throw new InvalidCastException($"字符串 {reader.GetString()} 无法转换为Guid类型。");
         }
-
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
@@ -50,7 +45,6 @@ namespace System.Text.Json.Serialization
             writer.WriteBase64StringValue(span);
         }
     }
-
     /// <summary>
     /// 读取时可以识别任意有效日期模式，写入则使用标准s写入(格式类似2009-06-15T13:45:30，精确到秒)。
     /// </summary>
@@ -61,13 +55,11 @@ namespace System.Text.Json.Serialization
             var str = reader.GetString();
             return DateTime.Parse(str);
         }
-
         public override void Write(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)
         {
             writer.WriteStringValue(value.ToString("s"));
         }
     }
-
     /// <summary>
     /// 读取时可以识别任意有效日期模式，写入则使用压缩可比较的自定义格式写入(格式类似20090615T134530，精确到秒)。
     /// </summary>
@@ -79,21 +71,17 @@ namespace System.Text.Json.Serialization
             if (DateTime.TryParseExact(str, "yyyyMMddTHHmmss", default, DateTimeStyles.None, out var dt)) return dt;
             return DateTime.Parse(str);
         }
-
         public override void Write(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)
         {
             writer.WriteStringValue(value.ToString("yyyyMMddTHHmmss"));
         }
-
     }
-
     public class TimeSpanJsonConverter : JsonConverter<TimeSpan>
     {
         public override TimeSpan Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             return TimeSpan.Parse(reader.GetString());
         }
-
         public override void Write(Utf8JsonWriter writer, TimeSpan value, JsonSerializerOptions options)
         {
             writer.WriteStringValue(value.ToString("G"));

@@ -4,12 +4,10 @@
  * 技术要点：AES-GCM认证加密、ArrayPool、ArraySegment零拷贝返回
  * 作者：zc | 创建：2025-01 | 修改：2025-01-21 [ArraySegment+属性常量]
  */
-
 using System;
 using System.Buffers;
 using System.Security.Cryptography;
 using System.Text;
-
 namespace OW.Security
 {
     /// <summary>
@@ -25,11 +23,9 @@ namespace OW.Security
     public static class OwCryptoHelper
     {
         #region AES-GCM 二进制数据加解密
-
         private static readonly int NonceSize = AesGcm.NonceByteSizes.MinSize;  // 12字节(96位)
         private static readonly int TagSize = AesGcm.TagByteSizes.MaxSize;      // 16字节(128位)
         private static readonly int Overhead = NonceSize + TagSize;             // 28字节
-
         /// <summary>
         /// 使用AES-GCM加密二进制数据
         /// </summary>
@@ -57,7 +53,6 @@ namespace OW.Security
             aesGcm.Encrypt(nonceSpan, plainData, cipherSpan, tagSpan);
             return new ArraySegment<byte>(result, 0, requiredLength);
         }
-
         /// <summary>
         /// 使用AES-GCM解密二进制数据
         /// </summary>
@@ -97,11 +92,8 @@ namespace OW.Security
                 throw new InvalidOperationException("数据已损坏或被篡改,验证失败", ex);
             }
         }
-
         #endregion AES-GCM 二进制数据加解密
-
         #region 密钥管理工具
-
         /// <summary>
         /// 生成指定长度的AES-GCM密钥
         /// </summary>
@@ -122,9 +114,6 @@ namespace OW.Security
             RandomNumberGenerator.Fill(key);
             return key;
         }
-
         #endregion 密钥管理工具
     }
 }
-
-

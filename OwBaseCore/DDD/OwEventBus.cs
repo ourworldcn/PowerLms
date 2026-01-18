@@ -7,38 +7,28 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-
 namespace OW.Game
 {
-
     public abstract class NotificationBase : INotification
     {
         #region 构造函数
-
         public NotificationBase()
         {
-
         }
-
         #endregion 构造函数
-
     }
-
     public abstract class NotificationHandlerBase<T> : INotificationHandler<T> where T : INotification
     {
         public void Handle(object data)
         {
             Handle((T)data);
         }
-
         public abstract void Handle(T data);
     }
-
     public class EventBusManagerOptions : IOptions<EventBusManagerOptions>
     {
         public EventBusManagerOptions Value => this;
     }
-
     /// <summary>
     /// 事件总线服务的实现。
     /// 该实现不专注于跨服务器边界的实施，仅考虑单机单进程单应用程序域(AppDomain)内的实现，并以此为前提假设提供更多的功能。
@@ -46,7 +36,6 @@ namespace OW.Game
     public class OwEventBus : IDisposable
     {
         #region 构造函数相关
-
         /// <summary>
         /// 构造函数。
         /// </summary>
@@ -56,18 +45,12 @@ namespace OW.Game
             _Service = service;
             Initializer();
         }
-
         void Initializer()
         {
-
         }
-
         #endregion 构造函数相关
-
         IServiceProvider _Service;
-
         ConcurrentQueue<INotification> _Datas = new ConcurrentQueue<INotification>();
-
         /// <summary>
         /// 增加一个事件数据。
         /// </summary>
@@ -77,7 +60,6 @@ namespace OW.Game
         {
             _Datas.Enqueue(eventData);
         }
-
         /// <summary>
         /// 引发队列中所有事件。
         /// </summary>
@@ -96,9 +78,7 @@ namespace OW.Game
                 }
             }
         }
-
         #region IDisposable接口及相关
-
         private bool _IsDisposed;
         protected virtual void Dispose(bool disposing)
         {
@@ -108,31 +88,26 @@ namespace OW.Game
                 {
                     // 释放托管状态(托管对象)
                 }
-
                 // 释放未托管的资源(未托管的对象)并重写终结器
                 // 将大型字段设置为 null
                 _Datas = null;
                 _IsDisposed = true;
             }
         }
-
         // 仅当“Dispose(bool disposing)”拥有用于释放未托管资源的代码时才替代终结器
         // ~OwEventBus()
         // {
         //     // 不要更改此代码。请将清理代码放入“Dispose(bool disposing)”方法中
         //     Dispose(disposing: false);
         // }
-
         public void Dispose()
         {
             // 不要更改此代码。请将清理代码放入“Dispose(bool disposing)”方法中
             Dispose(disposing: true);
             GC.SuppressFinalize(this);
         }
-
         #endregion IDisposable接口及相关
     }
-
     public static class EventBusManagerExtensions
     {
         /// <summary>
@@ -144,7 +119,6 @@ namespace OW.Game
         {
             return services.AddScoped<OwEventBus>();
         }
-
         public static IServiceCollection RegisterNotificationHandler(this IServiceCollection services, IEnumerable<Assembly> assemblies)
         {
             var types = assemblies.SelectMany(c => c.GetTypes()).Where(c => c.IsClass && !c.IsAbstract && typeof(INotificationHandler).IsAssignableFrom(c));
@@ -157,5 +131,4 @@ namespace OW.Game
             return services;
         }
     }
-
 }

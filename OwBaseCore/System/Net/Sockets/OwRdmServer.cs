@@ -19,27 +19,23 @@ using System.Numerics;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-
 namespace System.Net.Sockets
 {
     public class OwRdmServerOptions : IOptions<OwRdmServerOptions>
     {
         public virtual OwRdmServerOptions Value => this;
-
         /// <summary>
         /// 侦听地址。
         /// 指定使用的本地终结点Ip,通常不用设置。
         /// </summary>
         /// <value>默认侦听虚四段表示法中的 0.0.0.0。</value>
         public string ListernAddress { get; set; } = "0.0.0.0";
-
         /// <summary>
         /// 使用的本机侦听端口。应通过配置指定端口，避免防火墙拒绝侦听请求。
         /// </summary>
         /// <value>默认值：0,自动选择。</value>
         public int ListernPort { get; set; }
     }
-
     /// <summary>
     /// 远程客户端信息类
     /// </summary>
@@ -51,42 +47,34 @@ namespace System.Net.Sockets
         public OwRdmRemoteEntry()
         {
         }
-
         /// <summary>
         /// 远端的唯一标识。客户端是可能因为路由不同而在服务器端看来端点地址不同的。目前该版本仅低24位有效。大约支持400万客户端总数，未来可能考虑回收使用。
         /// </summary>
         public int Id { get; set; }
-
         #region 发送相关
-
         /// <summary>
         /// 已发送的数据。按收到的包号升序排序。
         /// 暂存这里等待确认到达后删除。
         /// </summary>
         public OrderedQueue<OwRdmDgram> SendedData { get; set; } = new OrderedQueue<OwRdmDgram>();
-
         /// <summary>
         /// 远程终结点。
         /// </summary>
         public volatile EndPoint RemoteEndPoint;
-
         /// <summary>
         /// 最后一次接到客户端发来数据的时间。
         /// </summary>
         public DateTime LastReceivedUtc { get; set; }
-
         /// <summary>
         /// 包序号，记录了已用的最大序号，可能需要回绕。
         /// </summary>
         public uint MaxSeq;
-
         /// <summary>
         /// 客户端确认收到的最大连续包的序号。
         /// </summary>
         public uint RemoteMaxReceivedSeq;
         #endregion 发送相关
     }
-
     /// <summary>
     /// 支持无连接、面向消息、以可靠方式发送的消息，并保留数据中的消息边界。 
     /// RDM（以可靠方式发送的消息）消息会依次到达，不会重复。 此外，如果消息丢失，将会通知发送方。底层使用Udp来实现。
@@ -110,7 +98,6 @@ namespace System.Net.Sockets
             //初始化
             Initialize();
         }
-
         /// <summary>
         /// 
         /// </summary>
@@ -140,7 +127,6 @@ namespace System.Net.Sockets
                     for (var node = entry.SendedData.First; node is not null; node = node.Next)
                     {
                         var dgram = node.Value.Item1;
-
                         if (now2 - dgram.LastSendDateTime > timeout)  //若超时未得到回应
                         {
                             dgram.LastSendDateTime = DateTime.UtcNow;
@@ -163,63 +149,48 @@ namespace System.Net.Sockets
                 Stopping.Cancel();
             });
         }
-
         #region 属性及相关
-
         private Timer _Timer;
-
         /// <summary>
         /// 存储配置信息的字段。
         /// </summary>
         IOptions<OwRdmServerOptions> _Options;
-
         /// <summary>
         /// 存储日志接口字段。
         /// </summary>
         ILogger<OwRdmServer> _Logger;
-
         /// <summary>
         /// 日志接口。
         /// </summary>
         public ILogger<OwRdmServer> Logger { get => _Logger; }
-
         /// <summary>
         /// 允许通知使用者应用程序生存期事件。
         /// </summary>
         IHostApplicationLifetime _HostApplicationLifetime;
-
         /// <summary>
         /// 每个客户端的信息。
         /// </summary>
         ConcurrentDictionary<int, OwRdmRemoteEntry> _Id2ClientEntry = new ConcurrentDictionary<int, OwRdmRemoteEntry>();
-
         /// <summary>
         /// 已经使用的最大Id值。
         /// </summary>
         int _MaxId;
-
         /// <summary>
         /// 本地侦听使用的终结点。
         /// </summary>
         /// <value>默认值：new IPEndPoint(IPAddress.Any, 0),可通过配置指定。</value>
         public EndPoint ListernEndPoint { get => Socket?.LocalEndPoint; }
-
         /// <summary>
         /// 记录客户端名称与Id的映射关系。有隐患。
         /// </summary>
         ConcurrentDictionary<Guid, int> _Token2Id = new ConcurrentDictionary<Guid, int>();
-
         /// <summary>
         /// 侦听远程的终结点。
         /// </summary>
         public IPEndPoint RemoteEndPoint { get; } = new IPEndPoint(IPAddress.Any, 0);
-
         #endregion 属性及相关
-
         #region 方法
-
         #region 发送及相关
-
         /// <summary>
         /// 
         /// </summary>
@@ -257,7 +228,6 @@ namespace System.Net.Sockets
                 }
             }
         }
-
         /// <summary>
         /// 
         /// </summary>
@@ -297,9 +267,7 @@ namespace System.Net.Sockets
                 }
             });
         }
-
         #endregion 发送及相关
-
         /// <summary>
         /// 获取指定Id的远程端点信息，锁定并返回。
         /// </summary>
@@ -323,7 +291,6 @@ namespace System.Net.Sockets
             }
             return result;
         }
-
         /// <summary>
         /// 
         /// </summary>
@@ -340,7 +307,6 @@ namespace System.Net.Sockets
                 if (dw.IsEmpty) goto goon;   //若无法锁定则忽略此连接包
                 if (entry.RemoteEndPoint != null) goto goon; //若已被并发初始化或是重复连接包
                 entry.RemoteEndPoint = e.RemoteEndPoint;
-
                 var recvDgram = new OwRdmDgram
                 {
                     Count = e.BytesTransferred,
@@ -356,7 +322,6 @@ namespace System.Net.Sockets
                     _Logger.LogInformation(excp, "收到连接请求包时,{mname}抛出异常", nameof(OnRequestConnect));
                 }
                 _Logger.LogDebug("收到连接请求,分配Id = {id}", id);
-
                 var sendDgram = OwRdmDgram.Rent();
                 sendDgram.Kind = OwRdmDgramKind.CommandDgram | OwRdmDgramKind.StartDgram | OwRdmDgramKind.EndDgram;
                 sendDgram.Id = id;
@@ -375,7 +340,6 @@ namespace System.Net.Sockets
                 }
                 if ((uint)dgram.Seq <= entry.MaxSeq)    //若客户端确认的包号合法
                 {
-
                     var recvDgram = new OwRdmDgram
                     {
                         Count = e.BytesTransferred,
@@ -400,7 +364,6 @@ namespace System.Net.Sockets
         goon:
             base.ProcessReceiveFrom(e);
         }
-
         /// <summary>
         /// 当请求连接的包到达时。空操作。
         /// </summary>
@@ -408,9 +371,7 @@ namespace System.Net.Sockets
         /// <param name="remote">远端端点。</param>
         protected virtual void OnRequestConnect(OwRdmDgram datas, EndPoint remote)
         {
-
         }
-
         /// <summary>
         /// 当心跳包到达时。
         /// </summary>
@@ -419,7 +380,6 @@ namespace System.Net.Sockets
         protected virtual void OnHeartbeat(OwRdmDgram datas, EndPoint remote)
         {
         }
-
         /// <summary>
         /// 终止指定的id的收发。
         /// </summary>
@@ -430,9 +390,7 @@ namespace System.Net.Sockets
         {
             return _Id2ClientEntry.TryRemove(id, out result);
         }
-
         #endregion 方法
-
         protected override void Dispose(bool disposing)
         {
             if (!Disposed)
@@ -446,7 +404,6 @@ namespace System.Net.Sockets
             }
         }
     }
-
     public class TestRdm
     {
         public TestRdm(IServiceProvider serviceProvider)
@@ -454,13 +411,9 @@ namespace System.Net.Sockets
             _ServiceProvider = serviceProvider;
             Initialize();
         }
-
         IServiceProvider _ServiceProvider;
-
         OwRdmClient _Client;
-
         OwRdmServer _Server;
-
         public void Initialize()
         {
             _Server = _ServiceProvider.GetService<OwRdmServer>();
@@ -468,7 +421,6 @@ namespace System.Net.Sockets
             var serverOptions = _ServiceProvider.GetService<IOptions<OwRdmServerOptions>>().Value;
             _Client.Start(new IPEndPoint(IPAddress.Parse("192.168.0.104"), serverOptions.ListernPort));
         }
-
         public void Test()
         {
             var buffer = new byte[2048];
@@ -476,11 +428,9 @@ namespace System.Net.Sockets
             _Client.OwUdpDataReceived += _Client_OwUdpDataReceived;
             _Server.SendTo(buffer, 0, buffer.Length, 1);
         }
-
         private void _Client_OwUdpDataReceived(object sender, OwRdmDataReceivedEventArgs e)
         {
             Debug.WriteLine($"{GetType().Name} 对象得到数据到达事件，有效长度 {e.Datas.Length} 字节");
         }
     }
 }
-

@@ -5,7 +5,6 @@
 修改日期: 2025年2月8日
 描述: 这个文件包含 EF Core 触发器类 OwEfTriggers 以及相关的接口和扩展方法。
 */
-
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,7 +14,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-
 namespace OW.EntityFrameworkCore
 {
     #region 接口 IDbContextSaving
@@ -31,15 +29,12 @@ namespace OW.EntityFrameworkCore
         /// <param name="serviceProvider">服务提供者。</param>
         /// <param name="states">状态字典。</param>
         void Saving(IEnumerable<EntityEntry> entity, IServiceProvider serviceProvider, Dictionary<object, object> states);
-
         /// <summary>
         /// 优先级。值越小，优先级越高。
         /// </summary>
         public int Priority => 10000;
     }
-
     #endregion 接口 IDbContextSaving
-
     #region 接口 IAfterDbContextSaving
     /// <summary>
     /// 在保存之前且所有分类型的事件引发后，引发该事件。
@@ -54,6 +49,5 @@ namespace OW.EntityFrameworkCore
         /// <param name="states">状态字典。</param>
         void AfterSaving(DbContext dbContext, IServiceProvider serviceProvider, Dictionary<object, object> states);
     }
-
     #endregion 接口 IAfterDbContextSaving
 }

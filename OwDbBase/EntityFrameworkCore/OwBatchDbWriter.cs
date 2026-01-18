@@ -10,7 +10,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-
 namespace OW.EntityFrameworkCore
 {
     #region 枚举和类定义
@@ -26,40 +25,30 @@ namespace OW.EntityFrameworkCore
         /// <summary>执行SQL语句。</summary>
         ExecuteSql
     }
-
     /// <summary>数据库操作项类。</summary>
     public class DbOperation
     {
         /// <summary>获取或设置数据库操作类型。</summary>
         public DbOperationType OperationType { get; set; }
-
         /// <summary>获取或设置操作的实体对象。</summary>
         public object Entity { get; set; }
-
         /// <summary>获取或设置SQL语句（当OperationType为ExecuteSql时使用）。</summary>
         public string SqlCommand { get; set; }
-
         /// <summary>获取或设置SQL参数（当OperationType为ExecuteSql时使用）。</summary>
         public object[] SqlParameters { get; set; }
     }
-
     /// <summary>配置类，封装配置项。</summary>
     public class OwBatchDbWriterOptions : IOptions<OwBatchDbWriterOptions>
     {
         /// <summary>处理间隔，单位为毫秒，默认值为 1000 毫秒（1 秒）。</summary>
         public int ProcessingInterval { get; set; } = 1000;
-
         /// <summary>触发立即写入的队列长度阈值，默认为500条。</summary>
         public int QueueThresholdForImmediateProcessing { get; set; } = 500;
-
         /// <summary>单批次处理的最大操作数量，默认为500。</summary>
         public int MaxBatchSize { get; set; } = 500;
-
         public OwBatchDbWriterOptions Value => this;
     }
-
     #endregion
-
     /// <summary>
     /// 通用批量数据库写入器，用于高效处理大量数据库操作，特别适用于日志记录等高频写入场景。
     /// 该类通过队列缓冲和定时批处理机制，将频繁的数据库操作整合后批量执行，从而减少数据库连接开销，提高系统性能。
@@ -82,7 +71,6 @@ namespace OW.EntityFrameworkCore
         private bool _Disposed = false;
         private readonly object _ProcessLock = new object();
         #endregion
-
         #region 构造函数
         /// <summary>
         /// 构造函数，使用依赖注入传入所有服务。
@@ -101,18 +89,14 @@ namespace OW.EntityFrameworkCore
             _ApplicationLifetime = applicationLifetime ?? throw new ArgumentNullException(nameof(applicationLifetime));
             _Logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _Options = options?.Value ?? new OwBatchDbWriterOptions();
-
             _Queue = new BlockingCollection<DbOperation>();
-
             // 注册应用程序停止事件
             _ApplicationLifetime.ApplicationStopping.Register(OnApplicationStopping);
             _ApplicationLifetime.ApplicationStopped.Register(OnApplicationStopped);
-
             // 初始化定时器
             _Timer = new Timer(ProcessQueue, null, _Options.ProcessingInterval, _Options.ProcessingInterval);
         }
         #endregion
-
         #region 公共方法
         /// <summary>
         /// 向内部队列添加数据库操作项。
@@ -125,25 +109,21 @@ namespace OW.EntityFrameworkCore
         {
             if (operation == null)
                 throw new ArgumentNullException(nameof(operation));
-
             if (!_Queue.IsAddingCompleted)
             {
                 _Queue.Add(operation);
                 int queueCount = _Queue.Count;
                 _Logger.LogDebug("已将操作添加到队列。当前队列长度：{QueueCount}。", queueCount);
-
                 // 根据队列长度或显式要求决定是否立即刷新
                 if (immediateFlush || queueCount >= _Options.QueueThresholdForImmediateProcessing)
                 {
                     _Logger.LogDebug("触发立即写入，队列长度：{QueueCount}。", queueCount);
                     ThreadPool.QueueUserWorkItem(_ => FlushNow());
                 }
-
                 return true;
             }
             return false;
         }
-
         /// <summary>
         /// 向内部队列添加SQL执行操作。
         /// </summary>
@@ -156,17 +136,14 @@ namespace OW.EntityFrameworkCore
         {
             if (string.IsNullOrEmpty(sqlCommand))
                 throw new ArgumentException("SQL命令不能为空。", nameof(sqlCommand));
-
             var operation = new DbOperation
             {
                 OperationType = DbOperationType.ExecuteSql,
                 SqlCommand = sqlCommand,
                 SqlParameters = parameters
             };
-
             return AddItem(operation, immediateFlush);
         }
-
         /// <summary>
         /// 强制立即处理队列中的所有项。
         /// </summary>
@@ -177,7 +154,6 @@ namespace OW.EntityFrameworkCore
             return ProcessQueueInternal();
         }
         #endregion
-
         #region 私有方法
         /// <summary>
         /// 处理队列中的所有项。
@@ -188,7 +164,6 @@ namespace OW.EntityFrameworkCore
             if (_Disposed) return;
             ProcessQueueInternal();
         }
-
         /// <summary>
         /// 内部处理队列方法，供定时器回调和手动刷新调用。
         /// 优化了处理逻辑，确保SQL语句执行前先保存实体操作，保持操作顺序。
@@ -197,22 +172,18 @@ namespace OW.EntityFrameworkCore
         private int ProcessQueueInternal()
         {
             if (_Disposed) return 0;
-
             // 防止并发处理
             if (!Monitor.TryEnter(_ProcessLock))
             {
                 _Logger.LogDebug("另一个处理操作正在进行中，跳过本次处理。");
                 return 0;
             }
-
             try
             {
                 int totalProcessed = 0;
                 int currentBatchSize = 0; // 当前批次中的实体数量
-
                 using var dbContext = _DbContextFactory.CreateDbContext();
                 bool hasChanges = false;
-
                 // 保存当前上下文中的所有更改
                 Action saveCurrentChanges = () =>
                 {
@@ -232,7 +203,6 @@ namespace OW.EntityFrameworkCore
                         }
                     }
                 };
-
                 try
                 {
                     while (!_Queue.IsCompleted && _Queue.TryTake(out var operation))
@@ -244,7 +214,6 @@ namespace OW.EntityFrameworkCore
                             {
                                 // 先保存之前累积的实体操作
                                 saveCurrentChanges();
-
                                 // 执行SQL语句
                                 try
                                 {
@@ -276,11 +245,9 @@ namespace OW.EntityFrameworkCore
                                         default:
                                             throw new InvalidOperationException("未知的数据库操作类型。");
                                     }
-
                                     hasChanges = true;
                                     currentBatchSize++;
                                     totalProcessed++;
-
                                     // 达到批处理阈值时保存
                                     if (currentBatchSize >= _Options.MaxBatchSize)
                                     {
@@ -299,7 +266,6 @@ namespace OW.EntityFrameworkCore
                             _Logger.LogError(ex, "处理队列项时发生未预期的错误。");
                         }
                     }
-
                     // 处理完队列后保存剩余的更改
                     if (hasChanges)
                     {
@@ -310,12 +276,10 @@ namespace OW.EntityFrameworkCore
                 {
                     _Logger.LogError(ex, "队列处理过程中发生严重错误。");
                 }
-
                 if (totalProcessed > 0)
                 {
                     _Logger.LogInformation("队列处理完成，共处理 {Count} 个操作。", totalProcessed);
                 }
-
                 return totalProcessed;
             }
             finally
@@ -323,7 +287,6 @@ namespace OW.EntityFrameworkCore
                 Monitor.Exit(_ProcessLock);
             }
         }
-
         /// <summary>
         /// 应用程序停止时的处理。
         /// </summary>
@@ -331,7 +294,6 @@ namespace OW.EntityFrameworkCore
         {
             _Logger.LogInformation("应用程序正在停止，准备处理剩余队列项。");
         }
-
         /// <summary>
         /// 应用程序停止后的处理。
         /// </summary>
@@ -342,7 +304,6 @@ namespace OW.EntityFrameworkCore
             _Logger.LogInformation("应用程序已停止，已处理所有剩余队列项。");
         }
         #endregion
-
         #region IDisposable 实现
         /// <summary>
         /// 实现 IDisposable 接口，释放资源。
@@ -352,7 +313,6 @@ namespace OW.EntityFrameworkCore
             Dispose(true);
             GC.SuppressFinalize(this);
         }
-
         /// <summary>
         /// 标准的 IDisposable 模式实现。
         /// </summary>
@@ -360,12 +320,10 @@ namespace OW.EntityFrameworkCore
         protected virtual void Dispose(bool disposing)
         {
             if (_Disposed) return;
-
             if (disposing)
             {
                 // 释放托管资源
                 _Timer?.Dispose();
-
                 if (_Queue != null)
                 {
                     _Queue.CompleteAdding();
@@ -373,12 +331,10 @@ namespace OW.EntityFrameworkCore
                     _Queue.Dispose();
                 }
             }
-
             _Disposed = true;
         }
         #endregion
     }
-
     /// <summary>批量写入器扩展方法。</summary>
     public static class BatchDbWriterExtensions
     {
@@ -394,6 +350,4 @@ namespace OW.EntityFrameworkCore
             return services.AddSingleton<OwBatchDbWriter<TContext>>();
         }
     }
-
 }
-

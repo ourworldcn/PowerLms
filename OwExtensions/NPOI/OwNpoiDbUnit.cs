@@ -16,7 +16,6 @@
  * 创建时间：2025-02-05
  * 最后修改：2025-02-05 - 从OwDataUnit拆分NPOI相关功能
  */
-
 using Microsoft.EntityFrameworkCore;
 using NPOI.SS.UserModel;
 using System;
@@ -24,7 +23,6 @@ using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-
 namespace OwExtensions.NPOI
 {
     /// <summary>
@@ -33,7 +31,6 @@ namespace OwExtensions.NPOI
     public static class OwNpoiDbUnit
     {
         #region Excel批量插入方法
-
         /// <summary>
         /// 从Excel工作表批量插入数据到数据库
         /// </summary>
@@ -55,7 +52,6 @@ namespace OwExtensions.NPOI
             if (entities.Count == 0) return 0;
             return BulkInsertEntities(entities, dbContext, ignoreExisting);
         }
-
         /// <summary>
         /// 非泛型版本 - 从Excel工作表批量插入数据
         /// </summary>
@@ -75,11 +71,8 @@ namespace OwExtensions.NPOI
             var genericMethod = targetMethod.MakeGenericMethod(entityType);
             return (int)genericMethod.Invoke(null, new object[] { sheet, dbContext, ignoreExisting });
         }
-
         #endregion
-
         #region 私有辅助方法
-
         /// <summary>
         /// 批量插入实体集合（内部使用）
         /// </summary>
@@ -106,7 +99,6 @@ namespace OwExtensions.NPOI
                 return entities.Count;
             }
         }
-
         /// <summary>
         /// 获取实体的主键值
         /// </summary>
@@ -119,7 +111,6 @@ namespace OwExtensions.NPOI
             var property = key.Properties[0];
             return property.PropertyInfo.GetValue(entity);
         }
-
         /// <summary>
         /// 获取已存在的主键集合
         /// </summary>
@@ -136,23 +127,20 @@ namespace OwExtensions.NPOI
             var existingEntities = dbSet.Where(e => keys.Contains(property.PropertyInfo.GetValue(e))).ToList();
             return existingEntities.Select(e => property.PropertyInfo.GetValue(e)).ToHashSet();
         }
-
         /// <summary>
         /// 获取泛型BulkInsertFromExcel方法的反射信息
         /// </summary>
         private static MethodInfo GetGenericBulkInsertMethod()
         {
             var methods = typeof(OwNpoiDbUnit).GetMethods(BindingFlags.Public | BindingFlags.Static);
-            var targetMethod = methods.FirstOrDefault(m =>
-     m.Name == nameof(BulkInsertFromExcel) &&
-     m.IsGenericMethodDefinition &&
-          m.GetParameters().Length == 3 &&
-     m.GetParameters()[0].ParameterType == typeof(ISheet) &&
-       m.GetParameters()[1].ParameterType == typeof(DbContext) &&
-      m.GetParameters()[2].ParameterType == typeof(bool));
+            var targetMethod = methods.FirstOrDefault(m => m.Name == nameof(BulkInsertFromExcel) &&
+                m.IsGenericMethodDefinition &&
+                m.GetParameters().Length == 3 &&
+                m.GetParameters()[0].ParameterType == typeof(ISheet) &&
+                m.GetParameters()[1].ParameterType == typeof(DbContext) &&
+                m.GetParameters()[2].ParameterType == typeof(bool));
             return targetMethod ?? throw new InvalidOperationException($"未找到匹配的泛型BulkInsertFromExcel方法");
         }
-
         /// <summary>
         /// 将字符串数组转换为实体列表
         /// </summary>
@@ -171,15 +159,14 @@ namespace OwExtensions.NPOI
             }
             return entities;
         }
-
         /// <summary>
         /// 从列头创建属性映射字典
         /// </summary>
         private static Dictionary<int, PropertyInfo> CreatePropertyMapping<TEntity>(PooledList<string> columnHeaders)
         {
             var properties = typeof(TEntity).GetProperties(BindingFlags.Public | BindingFlags.Instance)
-     .Where(p => p.CanWrite)
-             .ToDictionary(p => p.Name, p => p, StringComparer.OrdinalIgnoreCase);
+                .Where(p => p.CanWrite)
+                .ToDictionary(p => p.Name, p => p, StringComparer.OrdinalIgnoreCase);
             var mapping = new Dictionary<int, PropertyInfo>();
             for (int i = 0; i < columnHeaders.Count; i++)
             {
@@ -191,7 +178,6 @@ namespace OwExtensions.NPOI
             }
             return mapping;
         }
-
         /// <summary>
         /// 从字符串行数据创建实体对象
         /// </summary>
@@ -214,7 +200,6 @@ namespace OwExtensions.NPOI
             }
             return hasValidData ? entity : null;
         }
-
         /// <summary>
         /// 字符串值类型转换
         /// </summary>
@@ -232,7 +217,6 @@ namespace OwExtensions.NPOI
                 _ => Convert.ChangeType(value, actualType)
             };
         }
-
         /// <summary>
         /// 解析布尔值，支持中文和多种格式
         /// </summary>
@@ -242,7 +226,6 @@ namespace OwExtensions.NPOI
             var lowerValue = value.ToLower().Trim();
             return lowerValue is "是" or "true" or "1" or "yes";
         }
-
         #endregion
     }
 }

@@ -2,7 +2,6 @@
  * Seedwork（适用于域模型的可重用基类和接口）
  * 这是许多开发者在项目之间共享的复制和粘贴重用类型，不是正式框架。 seedwork 可存在于任何层或库中。 但是，如果类和接口的集足够大，可能需要创建单个类库。
  */
-
 namespace OW.DDD
 {
     public abstract class EntityBase
@@ -23,7 +22,6 @@ namespace OW.DDD
                 _Id = value;
             }
         }
-
         public List<INotification> DomainEvents => _domainEvents;
         public void AddDomainEvent(INotification eventItem)
         {
@@ -35,12 +33,10 @@ namespace OW.DDD
             if (_domainEvents is null) return;
             _domainEvents.Remove(eventItem);
         }
-
         public bool IsTransient()
         {
             return this.Id == default(Int32);
         }
-
         public override bool Equals(object obj)
         {
             if (obj == null || !(obj is Entity))
@@ -55,7 +51,6 @@ namespace OW.DDD
             else
                 return item.Id == this.Id;
         }
-
         public override int GetHashCode()
         {
             if (!IsTransient())

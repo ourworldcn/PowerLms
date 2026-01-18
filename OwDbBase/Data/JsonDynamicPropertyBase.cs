@@ -6,10 +6,8 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-
 namespace OW.Data
 {
-
     /// <summary>
     /// 使用Json字符串存储动态对象的接口。
     /// </summary>
@@ -19,19 +17,16 @@ namespace OW.Data
         /// Json字符串。
         /// </summary>
         string JsonObjectString { get; set; }
-
         /// <summary>
         /// 存储最后一次获取对象的类型。
         /// </summary>
         [NotMapped]
         Type JsonObjectType { get; }
-
         /// <summary>
         /// Json字符串代表的对象。请调用<see cref="GetJsonObject{T}"/>生成该属性值。
         /// </summary>
         [NotMapped]
         abstract object JsonObject { get; set; }
-
         /// <summary>
         /// 将<see cref="JsonObjectString"/>解释为指定类型的对象。
         /// </summary>
@@ -39,7 +34,6 @@ namespace OW.Data
         /// <returns></returns>
         abstract T GetJsonObject<T>() where T : new();
     }
-
     /// <summary>
     /// 使用Json字符串存储一些动态属性的数据库类。
     /// </summary>
@@ -51,7 +45,6 @@ namespace OW.Data
             //增加转换器，主要为压缩数据量，会降低一些可读性
             _SerializerOptions.Converters.Add(new OwGuidJsonConverter());
         }
-
         /// <summary>
         /// Json序列化和反序列化的配置对象。
         /// </summary>
@@ -61,18 +54,14 @@ namespace OW.Data
             AllowTrailingCommas = true,
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
         };
-
         #endregion 静态成员
-
         #region 构造函数
-
         /// <summary>
         /// 构造函数。
         /// </summary>
         public JsonDynamicPropertyBase()
         {
         }
-
         /// <summary>
         /// 构造函数。
         /// </summary>
@@ -80,11 +69,8 @@ namespace OW.Data
         public JsonDynamicPropertyBase(Guid id) : base(id)
         {
         }
-
         #endregion 构造函数
-
         #region 数据库属性
-
         private string _JsonObjectString;
         /// <summary>
         /// 属性字符串。格式数Json字符串。
@@ -103,11 +89,8 @@ namespace OW.Data
                 }
             }
         }
-
         #endregion 数据库属性
-
         #region JsonObject相关
-
         /// <summary>
         /// 获取或初始化<see cref="JsonObject"/>属性并返回。
         /// </summary>
@@ -118,7 +101,6 @@ namespace OW.Data
             var result = GetJsonObject(typeof(T));
             return (T)result;
         }
-
         /// <summary>
         /// 获取或初始化<see cref="JsonObject"/>属性并返回。
         /// </summary>
@@ -142,9 +124,7 @@ namespace OW.Data
             }
             return JsonObject;
         }
-
         volatile int _Seq;
-
         /// <summary>
         /// 递增属性版本号。
         /// </summary>
@@ -152,7 +132,6 @@ namespace OW.Data
         /// <param name="e"></param>
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         private void Changed_PropertyChanged(object sender, PropertyChangedEventArgs e) => Interlocked.Increment(ref _Seq);
-
         private object _JsonObject;
         /// <summary>
         /// 用<see cref="GetJsonObject{T}"/>获取。
@@ -176,17 +155,12 @@ namespace OW.Data
                     changed.PropertyChanged += Changed_PropertyChanged;
             }
         }
-
         private Type _JsonObjectType;
         [JsonIgnore, NotMapped]
         public Type JsonObjectType { get => _JsonObjectType; }
-
         #endregion JsonObject相关
-
         #region IDisposable接口及相关
-
         private volatile bool _IsDisposed;
-
         /// <summary>
         /// 对象是否已经被处置。
         /// </summary>
@@ -197,7 +171,6 @@ namespace OW.Data
             get => _IsDisposed;
             protected set => _IsDisposed = value;
         }
-
         /// <summary>
         /// 实际处置当前对象的方法。
         /// </summary>
@@ -212,7 +185,6 @@ namespace OW.Data
                     if (_JsonObject is INotifyPropertyChanged changedEvent)    //若需要去除事件处理委托
                         changedEvent.PropertyChanged -= Changed_PropertyChanged;
                 }
-
                 // 释放未托管的资源(未托管的对象)并重写终结器
                 // 将大型字段设置为 null
                 _JsonObjectType = null;
@@ -221,14 +193,12 @@ namespace OW.Data
                 _IsDisposed = true;
             }
         }
-
         // 仅当“Dispose(bool disposing)”拥有用于释放未托管资源的代码时才替代终结器
         // ~SimpleDynamicPropertyBase()
         // {
         //     // 不要更改此代码。请将清理代码放入“Dispose(bool disposing)”方法中
         //     Dispose(disposing: false);
         // }
-
         /// <summary>
         /// 处置对象。
         /// </summary>
@@ -238,13 +208,9 @@ namespace OW.Data
             Dispose(disposing: true);
             GC.SuppressFinalize(this);
         }
-
         #endregion IDisposable接口及相关
-
         #region IBeforeSave接口及相关
-
         volatile int _WritedSeq;
-
         public virtual void PrepareSaving(DbContext db)
         {
             //if (_JsonObject is null)    //若是空对象 则说明未初始化，故无须序列化
@@ -258,10 +224,8 @@ namespace OW.Data
                     _WritedSeq = _Seq;
             }
         }
-
         #endregion IBeforeSave接口及相关
     }
-
     /// <summary>
     /// 通用的实体对象接口。
     /// </summary>
@@ -272,17 +236,14 @@ namespace OW.Data
         /// </summary>
         [MaxLength(64)]
         public string ExtraString { get; set; }
-
         /// <summary>
         /// 记录一些额外的数值信息，用于排序搜索使用的字段。
         /// </summary>
         public decimal? ExtraDecimal { get; set; }
-
         /// <summary>
         /// 记录扩展的日期时间属性
         /// </summary>
         public DateTime? ExtraDateTime { get; set; }
-
         /// <summary>
         ///记录一些额外的信息，通常这些信息用于排序，加速查找符合特定要求的对象。
         ///常用于记录模板Id或与其它节点的特殊绑定关系，如果没有则是<see cref="Guid.Empty"/>。
@@ -291,13 +252,11 @@ namespace OW.Data
         /// 也创建如下顺序创建索引<see cref="ExtraGuid"/><see cref="ExtraDecimal"/><see cref="ExtraString"/></remarks>
         public Guid? ExtraGuid { get; set; }
     }
-
     /// <summary>
     /// 通用的实体对象接口。
     /// </summary>
     public interface IGeneralEntityBinary
     {
         public byte[] ExtraBinary { get; set; }
-
     }
 }

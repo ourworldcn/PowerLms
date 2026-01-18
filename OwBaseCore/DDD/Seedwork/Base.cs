@@ -5,10 +5,8 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-
 namespace OW.DDD
 {
-
     public interface IEntity
     {
         /// <summary>
@@ -16,16 +14,12 @@ namespace OW.DDD
         /// </summary>
         Guid Id { get; }
     }
-
     //public interface IOrderRepository : IRepository<Order>
     //{
     //    Order Add(Order order);
-
     //    void Update(Order order);
-
     //    Task<Order> GetAsync(int orderId);
     //}
-
     /// <summary>
     /// 实现此接口的类就被认为是发布的事件类。确切的说是事件数据。
     /// </summary>
@@ -39,7 +33,6 @@ namespace OW.DDD
         //public string CardHolderName { get; }
         //public DateTime CardExpiration { get; }
         //public Order Order { get; }
-
         //public OrderStartedDomainEvent(Order order, string userId, string userName,
         //                               int cardTypeId, string cardNumber,
         //                               string cardSecurityNumber, string cardHolderName,
@@ -55,20 +48,15 @@ namespace OW.DDD
         //    CardExpiration = cardExpiration;
         //}
     }
-
     public interface INotificationHandler
     {
         public abstract void Handle(object data);
-
     }
-
     /// <summary>
     /// 实现此接口的类就被认为是订阅 <typeparamref name="T"/> 事件的类。
     /// </summary>
     /// <typeparam name="T"></typeparam>
     public interface INotificationHandler<T> : INotificationHandler where T : INotification
     {
-
     }
-
 }

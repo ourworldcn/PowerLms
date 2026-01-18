@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Buffers;
 using System.Runtime.CompilerServices;
-
-namespace System.Buffers
+namespace OW.Buffers
 {
     /// <summary>
     /// 基于 ArrayPool 的 MemoryPool 实现，提供高性能的内存租借和归还机制
@@ -12,14 +11,12 @@ namespace System.Buffers
     {
         private readonly ArrayPool<T> _arrayPool;
         private bool _disposed;
-
         /// <summary>
         /// 初始化 ArrayMemoryPool 类的新实例，使用共享的 ArrayPool
         /// </summary>
         public ArrayMemoryPool() : this(ArrayPool<T>.Shared)
         {
         }
-
         /// <summary>
         /// 初始化 ArrayMemoryPool 类的新实例，使用指定的 ArrayPool
         /// </summary>
@@ -29,12 +26,10 @@ namespace System.Buffers
         {
             _arrayPool = arrayPool ?? throw new ArgumentNullException(nameof(arrayPool));
         }
-
         /// <summary>
         /// 获取此池可返回的缓冲区的最大长度
         /// </summary>
         public override int MaxBufferSize => int.MaxValue;
-
         /// <summary>
         /// 从池中租借至少指定大小的内存块
         /// </summary>
@@ -44,14 +39,11 @@ namespace System.Buffers
         /// <exception cref="ArgumentOutOfRangeException">minBufferSize 小于 -1</exception>
         public override IMemoryOwner<T> Rent(int minBufferSize = -1)
         {
-            if (_disposed)
-                throw new ObjectDisposedException(nameof(ArrayMemoryPool<T>));
-            if (minBufferSize < -1)
-                throw new ArgumentOutOfRangeException(nameof(minBufferSize));
+            if (_disposed) throw new ObjectDisposedException(nameof(ArrayMemoryPool<T>));
+            if (minBufferSize < -1) throw new ArgumentOutOfRangeException(nameof(minBufferSize));
             int actualSize = minBufferSize == -1 ? 4096 : minBufferSize;
             return new ArrayMemoryOwner(_arrayPool, actualSize);
         }
-
         /// <summary>
         /// 释放池使用的所有资源
         /// </summary>
@@ -60,7 +52,6 @@ namespace System.Buffers
         {
             _disposed = true;
         }
-
         /// <summary>
         /// 基于 ArrayPool 的 IMemoryOwner 实现
         /// </summary>
@@ -68,7 +59,6 @@ namespace System.Buffers
         {
             private T[] _array;
             private readonly ArrayPool<T> _pool;
-
             public ArrayMemoryOwner(ArrayPool<T> pool, int minBufferSize)
             {
                 _pool = pool;
@@ -81,25 +71,21 @@ namespace System.Buffers
                     _array = pool.Rent(minBufferSize);
                 }
             }
-
             public Memory<T> Memory
             {
                 get
                 {
                     var array = _array;
-                    if (array == null)
-                        throw new ObjectDisposedException(nameof(ArrayMemoryOwner));
+                    if (array == null) throw new ObjectDisposedException(nameof(ArrayMemoryOwner));
                     return array.AsMemory();
                 }
             }
-
             public void Dispose()
             {
                 var array = _array;
                 if (array != null)
                 {
-                    _array = null;
-                    if (array.Length > 0)
+                    _array = null; if (array.Length > 0)
                     {
                         _pool.Return(array, RuntimeHelpers.IsReferenceOrContainsReferences<T>());
                     }

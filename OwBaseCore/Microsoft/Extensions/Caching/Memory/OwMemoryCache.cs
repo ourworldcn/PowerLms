@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Threading;
-
 namespace Microsoft.Extensions.Caching.Memory
 {
     /// <summary>
@@ -20,30 +19,25 @@ namespace Microsoft.Extensions.Caching.Memory
         /// 默认值是<see cref="SingletonLocker.TryEnter(object, TimeSpan)"/>。
         /// </summary>
         public Func<object, TimeSpan, bool> LockCallback { get; set; } = SingletonLocker.TryEnter;
-
         /// <summary>
         /// 设置或获取释放键的回调。应支持递归与<see cref="LockCallback"/>配对使用。
         /// 默认值是<see cref="SingletonLocker.Exit(object)"/>。
         /// </summary>
         public Action<object> UnlockCallback { get; set; } = SingletonLocker.Exit;
-
         /// <summary>
         /// 确定当前线程是否保留指定键上的锁。
         /// 默认值是<see cref="SingletonLocker.IsEntered(object)"/>
         /// </summary>
         public Func<object, bool> IsEnteredCallback { get; set; } = SingletonLocker.IsEntered;
-
         /// <summary>
         /// 默认的锁定超时时间。
         /// </summary>
         /// <value>默认值:3秒。</value>
         public TimeSpan DefaultLockTimeout { get; set; } = TimeSpan.FromSeconds(3);
-
         /// <summary>
         /// Gets or sets the minimum length of time between successive scans for expired items.
         /// </summary>
         public TimeSpan ExpirationScanFrequency { get; set; } = TimeSpan.FromMinutes(1);
-
         double _compactionPercentage = 0.05;
         /// <summary>
         /// Gets or sets the amount to compact the cache by when the maximum size is exceeded.
@@ -57,15 +51,11 @@ namespace Microsoft.Extensions.Caching.Memory
                 {
                     throw new ArgumentOutOfRangeException(nameof(value), value, $"{nameof(value)} must be between 0 and 1 inclusive.");
                 }
-
                 _compactionPercentage = value;
             }
         }
-
         public OwMemoryCacheOptions Value => this;
-
     }
-
     /// <summary>
     /// 内存缓存的类。
     /// 针对每个项操作都会对其键值加锁，对高并发而言，不应有多个线程试图访问同一个键下的项。这样可以避免锁的碰撞。对基本单线程操作而言，此类性能较低。
@@ -74,7 +64,6 @@ namespace Microsoft.Extensions.Caching.Memory
     [OwAutoInjection(ServiceLifetime.Singleton)]
     public class OwMemoryCache : IMemoryCache
     {
-
         /// <summary>
         /// 缓存项的配置信息类。
         /// </summary>
@@ -90,34 +79,24 @@ namespace Microsoft.Extensions.Caching.Memory
                 Key = key;
                 Cache = cache;
             }
-
             /// <summary>
             /// 所属的缓存对象。
             /// </summary>
             public OwMemoryCache Cache { get; set; }
-
             #region ICacheEntry接口相关
-
             object _Key;
-
             public object Key { get => _Key; set => _Key = value; }
-
             public virtual object Value { get; set; }
-
             /// <summary>
             /// 未实装，不起作用。
             /// </summary>
             public DateTimeOffset? AbsoluteExpiration { get; set; }
-
             public TimeSpan? AbsoluteExpirationRelativeToNow { get; set; }
-
             public TimeSpan? SlidingExpiration { get; set; }
-
             /// <summary>
             /// 未实装不起作用。
             /// </summary>
             public IList<IChangeToken> ExpirationTokens { get; } = new List<IChangeToken>();
-
             internal List<PostEvictionCallbackRegistration> _PostEvictionCallbacksLazyer;
             /// <summary>
             /// 所有的函数调用完毕才会解锁键对象。
@@ -127,25 +106,20 @@ namespace Microsoft.Extensions.Caching.Memory
             {
                 get => LazyInitializer.EnsureInitialized(ref _PostEvictionCallbacksLazyer);
             }
-
             /// <summary>
             /// 未实装，不起作用。
             /// </summary>
             public CacheItemPriority Priority { get; set; }
-
             /// <summary>
             /// 未实装，不起作用。
             /// </summary>
             public long? Size { get; set; }
-
             #region IDisposable接口相关
-
             bool _IsDisposed;
             /// <summary>
             /// 对象是否已经被处置，此类型特殊，被处置意味着已经加入到缓存配置表中，而非真的被处置。
             /// </summary>
             protected bool IsDisposed => _IsDisposed;
-
             /// <summary>
             /// 使此配置项加入或替换缓存对象。内部会试图锁定键。
             /// </summary>
@@ -164,14 +138,11 @@ namespace Microsoft.Extensions.Caching.Memory
                 //Cache.AddItemCore(this);
             }
             #endregion IDisposable接口相关
-
             #endregion ICacheEntry接口相关
-
             /// <summary>
             /// 最后一次使用的Utc时间。
             /// </summary>
             public DateTime LastUseUtc { get; internal set; } = OwHelper.WorldNow;
-
             /// <summary>
             /// 获取此配置项是否超期。
             /// </summary>
@@ -185,27 +156,22 @@ namespace Microsoft.Extensions.Caching.Memory
                     return true;
                 return false;
             }
-
         }
-
         /// <summary>
         /// 记录所有缓存项。
         /// 键是缓存项的键，值缓存配置项数据。
         /// </summary>
         ConcurrentDictionary<object, OwMemoryCacheEntry> _Items = new();
-
         /// <summary>
         /// 获取缓存内的所有内容。更改其中内容的结果未知。
         /// </summary>
         public IReadOnlyDictionary<object, OwMemoryCacheEntry> Items => _Items;
-
         OwMemoryCacheOptions _Options;
         /// <summary>
         /// 配置信息。
         /// </summary>
         /// <value>默认值是<see cref="OwMemoryCacheOptions"/>的默认对象。</value>
         public OwMemoryCacheOptions Options { get => _Options ??= new OwMemoryCacheOptions(); init => _Options = value; }
-
         /// <summary>
         /// 构造函数。
         /// </summary>
@@ -214,9 +180,7 @@ namespace Microsoft.Extensions.Caching.Memory
         {
             _Options = options.Value;
         }
-
         #region IMemoryCache接口及相关
-
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
@@ -229,7 +193,6 @@ namespace Microsoft.Extensions.Caching.Memory
                 return null;
             return CreateEntryCore(key);
         }
-
         /// <summary>
         /// 
         /// </summary>
@@ -245,7 +208,6 @@ namespace Microsoft.Extensions.Caching.Memory
                 throw new KeyNotFoundException();
             RemoveCore(entry, EvictionReason.Removed);
         }
-
         /// <summary>
         /// 
         /// </summary>
@@ -276,7 +238,6 @@ namespace Microsoft.Extensions.Caching.Memory
                 return false;
             }
         }
-
         /// <summary>
         /// 派生类可以重载此函数。非公有函数不会自动对键加锁，若需要则调用者需负责加/解锁。不会自动重置最后使用时间。
         /// </summary>
@@ -288,7 +249,6 @@ namespace Microsoft.Extensions.Caching.Memory
             entry = GetEntry(key);
             return entry is not null;
         }
-
         /// <summary>
         /// 调用此函数创建内部使用的配置项对象。
         /// 默认实现劲通过<see cref="OwMemoryCacheEntry(object, OwMemoryCache)"/>创建一个对象并返回。
@@ -297,7 +257,6 @@ namespace Microsoft.Extensions.Caching.Memory
         /// <param name="key"></param>
         /// <returns></returns>
         protected virtual ICacheEntry CreateEntryCore(object key) => new OwMemoryCacheEntry(key, this);
-
         /// <summary>
         /// 以指定原因移除缓存项。
         /// 此函数会移除配置项后调用所有<see cref="OwMemoryCacheEntry.PostEvictionCallbacks"/>回调。但回在回调完成后才对键值解锁键。
@@ -321,9 +280,7 @@ namespace Microsoft.Extensions.Caching.Memory
             }
             return result;
         }
-
         #region IDisposable接口相关
-
         /// <summary>
         /// 如果对象已经被处置则抛出<see cref="ObjectDisposedException"/>异常。
         /// </summary>
@@ -333,7 +290,6 @@ namespace Microsoft.Extensions.Caching.Memory
             if (_IsDisposed)
                 throw new ObjectDisposedException(GetType().FullName);
         }
-
         /// <summary>
         /// 通过检测<see cref="OwHelper.GetLastError()"/>返回值是否为258(WAIT_TIMEOUT)决定是否抛出异常<seealso cref="TimeoutException"/>。
         /// </summary>
@@ -344,7 +300,6 @@ namespace Microsoft.Extensions.Caching.Memory
             if (OwHelper.GetLastError() == 258)
                 throw new TimeoutException(msg);
         }
-
         /// <summary>
         /// 根据<see cref="OwHelper.GetLastError()"/>返回值判断是否抛出锁定键超时的异常。
         /// </summary>
@@ -355,16 +310,11 @@ namespace Microsoft.Extensions.Caching.Memory
             if (OwHelper.GetLastError() == 258)
                 throw new TimeoutException($"锁定键时超时，键:{key}");
         }
-
-
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         //[DoesNotReturn]
         //static void Throw() => throw new ObjectDisposedException(typeof(LeafMemoryCache).FullName);
-
         private bool _IsDisposed;
-
         protected bool IsDisposed { get => _IsDisposed; }
-
         protected virtual void Dispose(bool disposing)
         {
             if (!_IsDisposed)
@@ -373,7 +323,6 @@ namespace Microsoft.Extensions.Caching.Memory
                 {
                     //释放托管状态(托管对象)
                 }
-
                 // 释放未托管的资源(未托管的对象)并重写终结器
                 // 将大型字段设置为 null
                 _Options = null;
@@ -381,25 +330,20 @@ namespace Microsoft.Extensions.Caching.Memory
                 _IsDisposed = true;
             }
         }
-
         // 仅当“Dispose(bool disposing)”拥有用于释放未托管资源的代码时才替代终结器
         // ~LeafMemoryCache()
         // {
         //     // 不要更改此代码。请将清理代码放入“Dispose(bool disposing)”方法中
         //     Dispose(disposing: false);
         // }
-
         public void Dispose()
         {
             // 不要更改此代码。请将清理代码放入“Dispose(bool disposing)”方法中
             Dispose(disposing: true);
             GC.SuppressFinalize(this);
         }
-
         #endregion IDisposable接口相关
-
         #endregion IMemoryCache接口及相关
-
         /// <summary>
         /// 某一项加入缓存时被调用。
         /// 派生类可以重载此函数。非公有函数不会自动对键加锁，若需要调用者需要负责加/解锁。
@@ -410,7 +354,6 @@ namespace Microsoft.Extensions.Caching.Memory
         {
             return _Items.AddOrUpdate(entry.Key, entry, (c1, c2) => entry);
         }
-
         /// <summary>
         /// 获取设置项数据，需要首先锁定键，解锁键将导致配置生效。
         /// </summary>
@@ -425,9 +368,7 @@ namespace Microsoft.Extensions.Caching.Memory
 #endif
             return _Items.GetValueOrDefault(key);
         }
-
         #region 压缩及相关
-
         /// <summary>
         /// 压缩缓存数据。
         /// </summary>
@@ -442,12 +383,10 @@ namespace Microsoft.Extensions.Caching.Memory
                 return;
             Compact(Math.Max((long)(_Items.Count * _Options.CompactionPercentage), 1));
         }
-
         /// <summary>
         /// 最后一次压缩的时间的刻度。
         /// </summary>
         long _CompactTick = OwHelper.WorldNow.Ticks;
-
         /// <summary>
         /// 压缩缓存。
         /// </summary>
@@ -460,7 +399,6 @@ namespace Microsoft.Extensions.Caching.Memory
                 return;
             long count = 0;
             var now = OwHelper.WorldNow;
-
             foreach (var key in _Items.Keys)
             {
                 using var dw = DisposeHelper.Create(_Options.LockCallback, _Options.UnlockCallback, key, TimeSpan.Zero);
@@ -482,7 +420,6 @@ namespace Microsoft.Extensions.Caching.Memory
                     break;
             }
         }
-
         /// <summary>
         /// 是否超期。
         /// </summary>
@@ -499,11 +436,8 @@ namespace Microsoft.Extensions.Caching.Memory
             else
                 return false;
         }
-
         #endregion 压缩及相关
-
         #region 锁定及相关
-
         /// <summary>
         /// 锁定指定键对象，以备进行操作。
         /// </summary>
@@ -512,15 +446,12 @@ namespace Microsoft.Extensions.Caching.Memory
         /// <returns></returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public bool TryEnter(object key, TimeSpan timeout) => Options.LockCallback(key, timeout);
-
         /// <summary>
         /// 释放锁定的键。
         /// </summary>
         /// <param name="key">要释放的键。</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public void Exit(object key) => Options.UnlockCallback(key);
-
         #endregion 锁定及相关
     }
-
 }

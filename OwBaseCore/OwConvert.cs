@@ -16,7 +16,6 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
-
 namespace System
 {
     /// <summary>
@@ -25,7 +24,6 @@ namespace System
     public static class OwConvert
     {
         #region 试图转换类型
-
         /// <summary>
         /// 试图把对象转换为数值。
         /// </summary>
@@ -86,7 +84,6 @@ namespace System
             }
             return succ;
         }
-
         /// <summary>
         /// 试图把对象转换为浮点数。
         /// </summary>
@@ -134,7 +131,6 @@ namespace System
             }
             return succ;
         }
-
         /// <summary>
         /// 由字符串试图转换为Guid类型。
         /// </summary>
@@ -162,7 +158,6 @@ namespace System
             }
             return Guid.TryParse(str, out result);
         }
-
         /// <summary>
         /// 尽可能转换为Guid类型。
         /// </summary>
@@ -206,7 +201,6 @@ namespace System
             result = default;
             return false;
         }
-
         /// <summary>
         /// 尽可能转换为bool类型。
         /// </summary>
@@ -233,7 +227,6 @@ namespace System
             result = default;
             return false;
         }
-
         /// <summary>
         /// 使用指定类型的静态函数 TryParse 转换为指定类型。
         /// 遵循 .NET BCL 标准的简单 Try 模式。
@@ -254,7 +247,6 @@ namespace System
         public static bool TryChangeType(string val, Type type, out object result)
         {
             result = null;  // 统一在开头初始化，简化后续代码
-            
             switch (type, val)
             {
                 case (var t, _) when ReferenceEquals(t, typeof(string)):
@@ -367,12 +359,10 @@ namespace System
                     return TryParseDynamic(val, type, out result);
             }
         }
-
         /// <summary>
         /// 缓存的 TryParse 方法信息，避免重复反射查找
         /// </summary>
         private static readonly ConcurrentDictionary<Type, MethodInfo> _tryParseMethodCache = new();
-
         /// <summary>
         /// 动态调用指定类型的 TryParse 方法。
         /// 使用缓存的 MethodInfo + 简单反射 Invoke 实现，简洁可靠。
@@ -412,7 +402,6 @@ namespace System
             result = null;
             return false;
         }
-
         /// <summary>
         /// 高性能的将字符串转换为指定类型，失败时抛出异常
         /// </summary>
@@ -435,7 +424,6 @@ namespace System
             }
             throw new InvalidCastException($"无法将字符串 '{val}' 转换为类型 {targetType.Name}");
         }
-
         /// <summary>
         /// 高性能的将字符串转换为指定类型，失败时返回默认值
         /// </summary>
@@ -452,11 +440,8 @@ namespace System
             }
             return defaultValue;
         }
-
         #endregion 试图转换类型
-
         #region 数值类型转换
-
         /// <summary>
         /// 高性能数值类型转换（支持所有数值类型互转）
         /// </summary>
@@ -474,7 +459,6 @@ namespace System
         {
             // 处理 Nullable 类型
             var actualTargetType = Nullable.GetUnderlyingType(targetType) ?? targetType;
-            
             // ✅ 关键修复：显式拒绝枚举类型
             // 枚举的 TypeCode 会返回其基础类型，需要在类型检查之前拦截
             if (actualTargetType.IsEnum)
@@ -482,7 +466,6 @@ namespace System
                 result = null;
                 return false;
             }
-            
             if (value == null)
             {
                 result = null;
@@ -516,7 +499,6 @@ namespace System
                     (TypeCode.SByte, TypeCode.Single) => (float)(sbyte)value,
                     (TypeCode.SByte, TypeCode.Double) => (double)(sbyte)value,
                     (TypeCode.SByte, TypeCode.Decimal) => (decimal)(sbyte)value,
-
                     // Byte → 所有类型
                     (TypeCode.Byte, TypeCode.SByte) => (sbyte)(byte)value,
                     (TypeCode.Byte, TypeCode.Byte) => (byte)value,
@@ -529,7 +511,6 @@ namespace System
                     (TypeCode.Byte, TypeCode.Single) => (float)(byte)value,
                     (TypeCode.Byte, TypeCode.Double) => (double)(byte)value,
                     (TypeCode.Byte, TypeCode.Decimal) => (decimal)(byte)value,
-
                     // Int16 → 所有类型
                     (TypeCode.Int16, TypeCode.SByte) => (sbyte)(short)value,
                     (TypeCode.Int16, TypeCode.Byte) => (byte)(short)value,
@@ -542,7 +523,6 @@ namespace System
                     (TypeCode.Int16, TypeCode.Single) => (float)(short)value,
                     (TypeCode.Int16, TypeCode.Double) => (double)(short)value,
                     (TypeCode.Int16, TypeCode.Decimal) => (decimal)(short)value,
-
                     // UInt16 → 所有类型
                     (TypeCode.UInt16, TypeCode.SByte) => (sbyte)(ushort)value,
                     (TypeCode.UInt16, TypeCode.Byte) => (byte)(ushort)value,
@@ -555,7 +535,6 @@ namespace System
                     (TypeCode.UInt16, TypeCode.Single) => (float)(ushort)value,
                     (TypeCode.UInt16, TypeCode.Double) => (double)(ushort)value,
                     (TypeCode.UInt16, TypeCode.Decimal) => (decimal)(ushort)value,
-
                     // Int32 → 所有类型
                     (TypeCode.Int32, TypeCode.SByte) => (sbyte)(int)value,
                     (TypeCode.Int32, TypeCode.Byte) => (byte)(int)value,
@@ -568,7 +547,6 @@ namespace System
                     (TypeCode.Int32, TypeCode.Single) => (float)(int)value,
                     (TypeCode.Int32, TypeCode.Double) => (double)(int)value,
                     (TypeCode.Int32, TypeCode.Decimal) => (decimal)(int)value,
-
                     // UInt32 → 所有类型
                     (TypeCode.UInt32, TypeCode.SByte) => (sbyte)(uint)value,
                     (TypeCode.UInt32, TypeCode.Byte) => (byte)(uint)value,
@@ -581,7 +559,6 @@ namespace System
                     (TypeCode.UInt32, TypeCode.Single) => (float)(uint)value,
                     (TypeCode.UInt32, TypeCode.Double) => (double)(uint)value,
                     (TypeCode.UInt32, TypeCode.Decimal) => (decimal)(uint)value,
-
                     // Int64 → 所有类型
                     (TypeCode.Int64, TypeCode.SByte) => (sbyte)(long)value,
                     (TypeCode.Int64, TypeCode.Byte) => (byte)(long)value,
@@ -594,7 +571,6 @@ namespace System
                     (TypeCode.Int64, TypeCode.Single) => (float)(long)value,
                     (TypeCode.Int64, TypeCode.Double) => (double)(long)value,
                     (TypeCode.Int64, TypeCode.Decimal) => (decimal)(long)value,
-
                     // UInt64 → 所有类型
                     (TypeCode.UInt64, TypeCode.SByte) => (sbyte)(ulong)value,
                     (TypeCode.UInt64, TypeCode.Byte) => (byte)(ulong)value,
@@ -607,7 +583,6 @@ namespace System
                     (TypeCode.UInt64, TypeCode.Single) => (float)(ulong)value,
                     (TypeCode.UInt64, TypeCode.Double) => (double)(ulong)value,
                     (TypeCode.UInt64, TypeCode.Decimal) => (decimal)(ulong)value,
-
                     // Single → 所有类型
                     (TypeCode.Single, TypeCode.SByte) => (sbyte)(float)value,
                     (TypeCode.Single, TypeCode.Byte) => (byte)(float)value,
@@ -620,7 +595,6 @@ namespace System
                     (TypeCode.Single, TypeCode.Single) => (float)value,
                     (TypeCode.Single, TypeCode.Double) => (double)(float)value,
                     (TypeCode.Single, TypeCode.Decimal) => (decimal)(float)value,
-
                     // Double → 所有类型
                     (TypeCode.Double, TypeCode.SByte) => (sbyte)(double)value,
                     (TypeCode.Double, TypeCode.Byte) => (byte)(double)value,
@@ -633,7 +607,6 @@ namespace System
                     (TypeCode.Double, TypeCode.Single) => (float)(double)value,
                     (TypeCode.Double, TypeCode.Double) => (double)value,
                     (TypeCode.Double, TypeCode.Decimal) => (decimal)(double)value,
-
                     // Decimal → 所有类型
                     (TypeCode.Decimal, TypeCode.SByte) => (sbyte)(decimal)value,
                     (TypeCode.Decimal, TypeCode.Byte) => (byte)(decimal)value,
@@ -646,17 +619,13 @@ namespace System
                     (TypeCode.Decimal, TypeCode.Single) => (float)(decimal)value,
                     (TypeCode.Decimal, TypeCode.Double) => (double)(decimal)value,
                     (TypeCode.Decimal, TypeCode.Decimal) => (decimal)value,
-
                     _ => throw new InvalidOperationException($"不支持的转换: {sourceTypeCode} → {targetTypeCode}")
                 };
             }
             return true;
         }
-
         #endregion 数值类型转换
-
         #region 字典相关转换
-
         /// <summary>
         /// 从属性字典获取字符串表现形式,填充到<see cref="StringBuilder"/>对象。
         /// </summary>
@@ -686,7 +655,6 @@ namespace System
                 stringBuilder.Remove(stringBuilder.Length - 1, 1);
             }
         }
-
         /// <summary>
         /// 用字串形式属性，填充属性字典。
         /// </summary>
@@ -735,7 +703,6 @@ namespace System
                 }
             }
         }
-
         /// <summary>
         /// 从属性字典获取字符串表现形式。
         /// </summary>
@@ -748,9 +715,7 @@ namespace System
             Copy(dic, sb);
             return sb.ToString();
         }
-
         #endregion 字典相关转换
-
         /// <summary>
         /// 将字符串转换为Guid类型。
         /// </summary>
@@ -772,7 +737,6 @@ namespace System
             }
             return result;
         }
-
         /// <summary>
         /// 用Base64编码Guid类型。
         /// </summary>
@@ -786,7 +750,6 @@ namespace System
             Debug.Assert(b);
             return Convert.ToBase64String(span);
         }
-
         /// <summary>
         /// 试图转换为日期类型。
         /// </summary>
@@ -817,7 +780,6 @@ namespace System
             result = default;
             return false;
         }
-
         /// <summary>
         /// 将对象序列化为URI安全的字符串
         /// </summary>
@@ -832,7 +794,6 @@ namespace System
             }
             return Uri.EscapeDataString(JsonSerializer.Serialize(obj, typeof(T)));
         }
-
         /// <summary>
         /// 从URI字符串反序列化对象
         /// </summary>

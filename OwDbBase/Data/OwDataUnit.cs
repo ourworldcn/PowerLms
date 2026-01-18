@@ -16,14 +16,12 @@
  * 创建时间：2024年
  * 最后修改：2025-02-05 - 移除NPOI相关功能到OwExtensions
  */
-
 using Microsoft.EntityFrameworkCore;
 using EFCore.BulkExtensions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-
 namespace OW.Data
 {
     /// <summary>
@@ -41,7 +39,6 @@ namespace OW.Data
     public static class OwDataUnit
     {
         #region 核心批量插入方法
-
         /// <summary>
         /// 批量插入实体集合到数据库
         /// </summary>
@@ -76,7 +73,6 @@ namespace OW.Data
                 dbContext.BulkInsertOrUpdate(entityList, bulkConfig);
             return entityList.Count;
         }
-
         /// <summary>
         /// 批量插入实体集合到数据库（自定义去重字段）
         /// </summary>
@@ -118,7 +114,6 @@ namespace OW.Data
                 dbContext.BulkInsertOrUpdate(entityList, bulkConfig);
             return entityList.Count;
         }
-
         /// <summary>
         /// 非泛型版本 - 批量插入实体集合
         /// </summary>
@@ -138,11 +133,8 @@ namespace OW.Data
             var genericMethod = targetMethod.MakeGenericMethod(entityType);
             return (int)genericMethod.Invoke(null, new object[] { entities, dbContext, ignoreExisting });
         }
-
         #endregion
-
         #region 私有辅助方法
-
         /// <summary>
         /// 过滤已存在的实体，只保留新数据
         /// </summary>
@@ -159,7 +151,6 @@ namespace OW.Data
                return !existingKeysInDb.Contains(compositeKey);
            }).ToList();
         }
-
         /// <summary>
         /// 按自定义字段过滤已存在的实体
         /// </summary>
@@ -173,7 +164,6 @@ namespace OW.Data
             var existingKeys = new HashSet<TKey>(allDbEntities.Select(uniqueKeySelector).Where(k => candidateKeys.Contains(k)));
             return entityList.Where(e => !existingKeys.Contains(uniqueKeySelector(e))).ToList();
         }
-
         /// <summary>
         /// 收集实体集合的主键值
         /// </summary>
@@ -187,7 +177,6 @@ namespace OW.Data
             }
             return keys;
         }
-
         /// <summary>
         /// 构造复合主键字符串
         /// </summary>
@@ -196,7 +185,6 @@ namespace OW.Data
             var keyValues = primaryKeyProperties.Select(p => p.GetValue(entity)).ToArray();
             return keyValues.Length == 1 ? keyValues[0] : string.Join("|", keyValues);
         }
-
         /// <summary>
         /// 查询数据库中已存在的主键值
         /// </summary>
@@ -230,7 +218,6 @@ namespace OW.Data
             }
             return existingKeys;
         }
-
         /// <summary>
         /// 创建批量操作配置
         /// </summary>
@@ -245,7 +232,6 @@ namespace OW.Data
                 UseTempDB = false,
             };
         }
-
         /// <summary>
         /// 获取实体类型的主键属性
         /// </summary>
@@ -262,7 +248,6 @@ namespace OW.Data
                 throw new InvalidOperationException($"实体类型 {entityType.Name} 未配置主键");
             return primaryKey.Properties.Select(p => entityType.GetProperty(p.Name)).Where(p => p != null).ToArray();
         }
-
         /// <summary>
         /// 获取泛型BulkInsert方法的反射信息
         /// </summary>
@@ -281,7 +266,6 @@ namespace OW.Data
             m.GetParameters()[2].ParameterType == typeof(bool));
             return targetMethod ?? throw new InvalidOperationException($"未找到匹配的泛型BulkInsert方法");
         }
-
         #endregion
     }
 }

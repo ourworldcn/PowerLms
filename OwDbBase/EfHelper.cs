@@ -2,7 +2,6 @@
 using Microsoft.EntityFrameworkCore.Migrations.Operations;
 using System.Linq.Expressions;
 using System.Reflection;
-
 namespace OW.Data
 {
     /// <summary>
@@ -22,7 +21,6 @@ namespace OW.Data
             var method = Expression.Call(property, typeof(string).GetMethod("Contains", new Type[] { typeof(string) }), value);
             return method;
         }
-
         /// <summary>
         /// 获取介于范围之间的表达式。如果min或max为null，则只应用另一个限制。
         /// </summary>
@@ -37,25 +35,21 @@ namespace OW.Data
             {
                 return Expression.Constant(true);
             }
-
             // 如果只有最小值限制
             if (max == null)
             {
                 return Expression.GreaterThanOrEqual(property, min);
             }
-
             // 如果只有最大值限制
             if (min == null)
             {
                 return Expression.LessThanOrEqual(property, max);
             }
-
             // 同时有最小值和最大值限制
             var greaterThanOrEqual = Expression.GreaterThanOrEqual(property, min);
             var lessThanOrEqual = Expression.LessThanOrEqual(property, max);
             return Expression.AndAlso(greaterThanOrEqual, lessThanOrEqual);
         }
-
         /// <summary>
         /// 获取多个条件或关系的表达式。
         /// </summary>
@@ -67,26 +61,21 @@ namespace OW.Data
         {
             if (conditional == null || !conditional.Any())
                 return queryable;
-
             // 添加 null 检查以确保 queryable 不为 null
             if (queryable == null)
                 return null;
-
             var type = typeof(T);
             var para = Expression.Parameter(type);
             Expression body = null;
-
             foreach (var item in conditional)
             {
                 // 检查条件项是否为 null 或空
                 if (item.Key == null || item.Value == null)
                     continue;
-
                 if (type.GetProperty(item.Key, BindingFlags.IgnoreCase | BindingFlags.GetProperty | BindingFlags.Public | BindingFlags.Instance | BindingFlags.FlattenHierarchy) is null) continue;
                 var left = Expression.Property(para, item.Key);
                 var values = item.Value.Split(',');
                 Expression condition;
-
                 if (values.Length == 1)
                 {
                     var right = Constant(values[0], left.Type);
@@ -108,18 +97,14 @@ namespace OW.Data
                     OwHelper.SetLastErrorAndMessage(404, $"不正确的参数格式——{item.Value}。");
                     return null;
                 }
-
                 body = body == null ? condition : Expression.OrElse(body, condition);
             }
-
             // 如果没有有效的条件，返回原始查询
             if (body == null)
                 return queryable;
-
             var func = Expression.Lambda<Func<T, bool>>(body, para);
             return queryable.Where(func);
         }
-
         /// <summary>
         /// 依据条件字典中的条件生成查询表达式，并使用"与"逻辑组合所有条件。
         /// </summary>
@@ -170,36 +155,29 @@ namespace OW.Data
             // 如果条件集合为空或null，直接返回原始查询
             if (conditional == null || !conditional.Any())
                 return queryable;
-
             // 添加 null 检查以确保 queryable 不为 null
             if (queryable == null)
                 return null;
-
             IQueryable<T> result = queryable;
             var type = typeof(T);
             var para = Expression.Parameter(type); // 创建参数表达式，表示查询对象中的实体
-
             foreach (var item in conditional)
             {
                 // 检查条件项是否为 null 或空
                 if (item.Key == null || item.Value == null)
                     continue;
-
                 // 忽略实体类中不存在的属性
                 if (type.GetProperty(item.Key, BindingFlags.IgnoreCase | BindingFlags.GetProperty | BindingFlags.Public | BindingFlags.Instance | BindingFlags.FlattenHierarchy) is null)
                     continue;
-
                 // 获取属性表达式
                 var left = Expression.Property(para, item.Key);
                 // 分割属性值，处理可能的范围条件
                 var values = item.Value.Split(',');
                 Expression body;
-
                 if (values.Length == 1)
                 {
                     // 单值查询处理
                     Expression right;
-
                     // 检查属性是否为枚举类型，枚举类型需要特殊处理
                     if (IsEnumType(left.Type))
                     {
@@ -210,11 +188,9 @@ namespace OW.Data
                         // 非枚举类型通过Constant方法转换
                         right = Constant(values[0], left.Type);
                     }
-
                     // 转换失败时返回null
                     if (right == null)
                         return null;
-
                     // 字符串类型使用Contains方法进行模糊查询
                     if (typeof(string) == left.Type)
                     {
@@ -227,7 +203,6 @@ namespace OW.Data
                 else if (values.Length == 2)
                 {
                     // 处理范围查询
-
                     // 处理最小值，可能为空字符串表示无下限
                     Expression minExpr = null;
                     if (!string.IsNullOrEmpty(values[0]))
@@ -241,12 +216,10 @@ namespace OW.Data
                         {
                             minExpr = Constant(values[0], left.Type);
                         }
-
                         // 转换失败时返回null
                         if (minExpr == null)
                             return null;
                     }
-
                     // 处理最大值，可能为空字符串表示无上限
                     Expression maxExpr = null;
                     if (!string.IsNullOrEmpty(values[1]))
@@ -260,12 +233,10 @@ namespace OW.Data
                         {
                             maxExpr = Constant(values[1], left.Type);
                         }
-
                         // 转换失败时返回null
                         if (maxExpr == null)
                             return null;
                     }
-
                     // 使用Between方法创建范围表达式
                     body = Between(left, minExpr, maxExpr);
                 }
@@ -275,14 +246,12 @@ namespace OW.Data
                     OwHelper.SetLastErrorAndMessage(404, $"不正确的参数格式——{item.Value}。");
                     return null;
                 }
-
                 // 将表达式转换为Lambda表达式，并应用到查询中
                 var func = Expression.Lambda<Func<T, bool>>(body, para);
                 result = result.Where(func);
             }
             return result;
         }
-
         /// <summary>
         /// 检查类型是否为枚举或可空枚举类型
         /// </summary>
@@ -293,16 +262,13 @@ namespace OW.Data
             // 检查是否为直接枚举类型
             if (type.IsEnum)
                 return true;
-
             // 检查是否为可空枚举类型
             if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
             {
                 return type.GetGenericArguments()[0].IsEnum;
             }
-
             return false;
         }
-
         /// <summary>
         /// 解析字符串为枚举常量表达式
         /// </summary>
@@ -314,13 +280,11 @@ namespace OW.Data
             // 处理可空类型
             Type underlyingType = enumType;
             bool isNullable = false;
-
             if (enumType.IsGenericType && enumType.GetGenericTypeDefinition() == typeof(Nullable<>))
             {
                 underlyingType = enumType.GetGenericArguments()[0];
                 isNullable = true;
             }
-
             // 处理null值
             if (string.Equals(value, "null", StringComparison.OrdinalIgnoreCase))
             {
@@ -332,7 +296,6 @@ namespace OW.Data
                     return null;
                 }
             }
-
             try
             {
                 // 先尝试按名称解析
@@ -340,7 +303,6 @@ namespace OW.Data
                 {
                     return Expression.Constant(enumValue, isNullable ? enumType : underlyingType);
                 }
-
                 // 如果按名称解析失败，尝试按数值解析
                 if (int.TryParse(value, out int intValue))
                 {
@@ -350,7 +312,6 @@ namespace OW.Data
                         return Expression.Constant(enumValue, isNullable ? enumType : underlyingType);
                     }
                 }
-
                 // 解析失败
                 OwHelper.SetLastErrorAndMessage(404, $"无法将值'{value}'解析为枚举类型{underlyingType}");
                 return null;
@@ -361,7 +322,6 @@ namespace OW.Data
                 return null;
             }
         }
-
         /// <summary>
         /// 分析字符串获得一个指定类型的常量表达式。
         /// </summary>
@@ -375,22 +335,17 @@ namespace OW.Data
             {
                 return Expression.Constant(null, type);
             }
-
             // 使用统一的类型转换逻辑
             if (OwConvert.TryChangeType(value, type, out var convertedValue))
             {
                 return Expression.Constant(convertedValue, type);
             }
-
             // 转换失败，设置简洁错误信息（基础库不提供详细错误诊断）
             var detailedError = $"动态查询条件转换失败：无法将值 '{value}' 转换为类型 '{type.Name}'";
-
             OwHelper.SetLastErrorAndMessage(404, detailedError);
             return null;
         }
-
         #endregion 动态编译及相关
-
         /// <summary>
         /// 设置一个子表的完全集合，不在参数内的都删除，对已有Id的实体更新，对新Id执行添加操作。
         /// </summary>
@@ -429,6 +384,5 @@ namespace OW.Data
             }
             return true; //操作成功
         }
-
     }
 }

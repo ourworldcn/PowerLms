@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-
 namespace System.Collections
 {
     public class DictionaryUtil
@@ -22,7 +21,6 @@ namespace System.Collections
             result = default;
             return false;
         }
-
         /// <summary>
         /// 在多个字典中存在的第一个值。
         /// </summary>
@@ -39,7 +37,6 @@ namespace System.Collections
             result = default;
             return false;
         }
-
         /// <summary>
         /// 在多个字典中存在的第一个值。
         /// </summary>
@@ -58,4 +55,3 @@ namespace System.Collections
         }
     }
 }
-

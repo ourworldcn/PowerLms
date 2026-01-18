@@ -10,7 +10,6 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
-
 namespace Microsoft.Extensions.ObjectPool
 {
     /// <summary>
@@ -27,7 +26,6 @@ namespace Microsoft.Extensions.ObjectPool
         private class AutoClearPooledObjectPolicy : DefaultPooledObjectPolicy<T>
         {
             MethodInfo _Clear;
-
             /// <summary>
             /// 构造函数。
             /// </summary>
@@ -36,7 +34,6 @@ namespace Microsoft.Extensions.ObjectPool
             {
                 _Clear = clear;
             }
-
             /// <summary>
             /// 构造函数。
             /// </summary>
@@ -44,8 +41,6 @@ namespace Microsoft.Extensions.ObjectPool
             {
                 _Clear = typeof(T).GetMethod("Clear", Type.EmptyTypes);
             }
-
-
             public override bool Return(T obj)
             {
                 if (_Clear is null)
@@ -59,20 +54,16 @@ namespace Microsoft.Extensions.ObjectPool
                 }
             }
         }
-
         /// <summary>
         /// 可重复使用 <see cref="ObjectPool{T}"/> 类型实例的资源池的公有实例。
         /// </summary>
         public static readonly ObjectPool<T> Shared;
-
         /// <summary>
         /// 构造函数。
         /// </summary>
         public AutoClearPool() : base(new AutoClearPooledObjectPolicy())
         {
-
         }
-
         /// <summary>
         /// 构造函数。
         /// netcore v3.1实测最大容量是是CPU内核数的2倍。12cpu23元素数组。
@@ -81,7 +72,6 @@ namespace Microsoft.Extensions.ObjectPool
         public AutoClearPool(IPooledObjectPolicy<T> policy) : base(policy)
         {
         }
-
         /// <summary>
         /// 构造函数。
         /// </summary>
@@ -90,7 +80,6 @@ namespace Microsoft.Extensions.ObjectPool
         public AutoClearPool(IPooledObjectPolicy<T> policy, int maximumRetained) : base(policy, maximumRetained)
         {
         }
-
         /// <summary>
         /// 静态构造函数。
         /// </summary>
@@ -99,8 +88,5 @@ namespace Microsoft.Extensions.ObjectPool
             var pool = new AutoClearPool<T>(new AutoClearPooledObjectPolicy());
             Interlocked.CompareExchange(ref Shared, pool, null);
         }
-
-
     }
 }
-

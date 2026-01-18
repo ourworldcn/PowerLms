@@ -9,7 +9,6 @@ using System.Reflection.Metadata;
 using System.Text;
 using System.Threading.Tasks;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
-
 namespace OW.Data
 {
     /// <summary>
@@ -22,7 +21,6 @@ namespace OW.Data
         /// </summary>
         public Guid? ParentId { get; set; }
     }
-
     public static class OwQueryExtensions
     {
         /// <summary>
@@ -37,7 +35,6 @@ namespace OW.Data
         {
             if (string.IsNullOrWhiteSpace(fieldName)) throw new ArgumentNullException(nameof(fieldName));
             var names = fieldName.Split('.');
-
             ParameterExpression p = Expression.Parameter(typeof(T));
             //Expression key = Expression.Property(p, fieldName);
             var exprBody = OwExpression.PropertyOrField(p, fieldName, true);
@@ -56,7 +53,6 @@ namespace OW.Data
                 return (IOrderedQueryable<T>)genericMethod.Invoke(null, new object[] { query, Expression.Lambda(exprBody, p) });
             }
         }
-
         /// <summary>
         /// 获取属性反射对象。
         /// </summary>
@@ -71,7 +67,6 @@ namespace OW.Data
             var matchedProperty = properties.FirstOrDefault(p => p.Name.Equals(name, comparison)) ?? throw new ArgumentException("对象不包含指定属性名");
             return matchedProperty;
         }
-
         /// <summary>
         /// 获取生成表达式
         /// </summary>

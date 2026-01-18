@@ -6,7 +6,6 @@ using System.Reflection;
 using System.Runtime.Serialization;
 using System.Text;
 using System.Text.Json.Serialization;
-
 namespace OW
 {
     /// <summary>
@@ -15,16 +14,13 @@ namespace OW
     public static class OwStringUtils
     {
         #region 密码生成功能
-
         // 定义字符集常量
         private static readonly char[] LowercaseChars = "abcdefghjkmnpqrstuvwxyz".ToCharArray(); // 无l、o
         private static readonly char[] UppercaseChars = "ABCDEFGHJKMNPQRSTUVWXYZ".ToCharArray(); // 无I、O
         private static readonly char[] NumberChars = "23456789".ToCharArray(); // 无0、1
         private static readonly char[] SpecialChars = "!@#$%^&*()_+-=[]{}|;:,./?".ToCharArray();
-
         private static readonly char[] _defaultChars;
         private static readonly char[] _charsWithSpecial;
-
         /// <summary>
         /// 静态构造函数，初始化字符集。
         /// </summary>
@@ -35,13 +31,11 @@ namespace OW
                 .Concat(UppercaseChars)
                 .Concat(NumberChars)
                 .ToArray();
-
             // 带特殊字符的字符集
             _charsWithSpecial = _defaultChars
                 .Concat(SpecialChars)
                 .ToArray();
         }
-
         /// <summary>
         /// 生成指定长度的随机密码。
         /// </summary>
@@ -53,11 +47,9 @@ namespace OW
         {
             if (length <= 0)
                 throw new ArgumentOutOfRangeException(nameof(length), "密码长度必须大于0");
-
             // 选择字符集
             char[] chars = includeSpecialChars ? _charsWithSpecial : _defaultChars;
             int charSetLength = chars.Length;
-
             // 使用 string.Create 避免内存复制，直接在 string 的内部缓冲区中构建
             return string.Create(length, (chars, charSetLength), (span, state) =>
             {
@@ -69,11 +61,8 @@ namespace OW
                 }
             });
         }
-
         #endregion 密码生成功能
-
         #region 字符串处理工具
-
         /// <summary>
         /// 检查字符串是否为null或空白字符串。
         /// </summary>
@@ -83,7 +72,6 @@ namespace OW
         {
             return string.IsNullOrWhiteSpace(value);
         }
-
         /// <summary>
         /// 安全截取字符串，如果长度超出则截取指定长度。
         /// </summary>
@@ -95,16 +83,12 @@ namespace OW
         {
             if (string.IsNullOrEmpty(value) || maxLength <= 0)
                 return string.Empty;
-
             if (value.Length <= maxLength)
                 return value;
-
             if (maxLength <= suffix.Length)
                 return suffix[..maxLength];
-
             return value[..(maxLength - suffix.Length)] + suffix;
         }
-
         /// <summary>
         /// 移除字符串中的所有空白字符。
         /// </summary>
@@ -114,10 +98,8 @@ namespace OW
         {
             if (string.IsNullOrEmpty(value))
                 return value;
-
             return new string(value.Where(c => !char.IsWhiteSpace(c)).ToArray());
         }
-
         /// <summary>
         /// 首字母大写。
         /// </summary>
@@ -127,13 +109,10 @@ namespace OW
         {
             if (string.IsNullOrEmpty(value))
                 return value;
-
             if (value.Length == 1)
                 return value.ToUpper();
-
             return char.ToUpper(value[0]) + value[1..];
         }
-
         /// <summary>
         /// 驼峰命名转换为下划线命名。
         /// </summary>
@@ -143,7 +122,6 @@ namespace OW
         {
             if (string.IsNullOrEmpty(value))
                 return value;
-
             var result = new StringBuilder();
             for (int i = 0; i < value.Length; i++)
             {
@@ -153,7 +131,6 @@ namespace OW
             }
             return result.ToString();
         }
-
         /// <summary>
         /// 下划线命名转换为驼峰命名。
         /// </summary>
@@ -163,11 +140,9 @@ namespace OW
         {
             if (string.IsNullOrEmpty(value))
                 return value;
-
             var parts = value.Split('_', StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length == 0)
                 return value;
-
             var result = new StringBuilder(parts[0].ToLower());
             for (int i = 1; i < parts.Length; i++)
             {
@@ -176,7 +151,6 @@ namespace OW
             }
             return result.ToString();
         }
-
         /// <summary>
         /// 字符串格式化，类似于 string.Format 但提供更好的性能。
         /// </summary>
@@ -187,10 +161,8 @@ namespace OW
         {
             if (args == null || args.Length == 0)
                 return format;
-
             return string.Format(format, args);
         }
-
         /// <summary>
         /// 将字符串转换为指定长度的固定字符串，不足部分用指定字符填充。
         /// </summary>
@@ -203,21 +175,15 @@ namespace OW
         {
             if (string.IsNullOrEmpty(value))
                 value = string.Empty;
-
             if (value.Length >= totalWidth)
                 return value;
-
             int padCount = totalWidth - value.Length;
             string padding = new string(paddingChar, padCount);
-
             return leftAlign ? value + padding : padding + value;
         }
-
         #endregion 字符串处理工具
     }
-
     #region 辅助工具类
-
     /// <summary>
     /// 反射工具类，提供对象属性提取功能。
     /// PURPOSE: 为调试和序列化提供对象属性值的快速提取
@@ -261,8 +227,6 @@ namespace OW
             }
             return result;
         }
-
     }
-
     #endregion 辅助工具类
 }

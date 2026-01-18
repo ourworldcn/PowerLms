@@ -18,7 +18,6 @@
  * 创建时间：2024年
  * 最后修改：2025-02-05 - 从PowerLms特定代码重构为通用基础库
  */
-
 using NPOI.SS.UserModel;
 using System;
 using System.Buffers;
@@ -29,7 +28,6 @@ using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-
 namespace OwExtensions.NPOI
 {
     /// <summary>
@@ -38,7 +36,6 @@ namespace OwExtensions.NPOI
     public static class OwNpoiUnit
     {
         #region Excel数据读取方法
-
         /// <summary>
         /// 返回指定Excel表中的字符串列表。
         /// </summary>
@@ -85,7 +82,6 @@ namespace OwExtensions.NPOI
             }
             return result;
         }
-
         /// <summary>
         /// 提取并返回指定工作表中的数据。
         /// </summary>
@@ -159,7 +155,6 @@ namespace OwExtensions.NPOI
             }
             return result;
         }
-
         /// <summary>
         /// 获取指定Excel工作表的列名列表
         /// </summary>
@@ -214,11 +209,8 @@ namespace OwExtensions.NPOI
             }
             return result;
         }
-
         #endregion
-
         #region Excel数据写入方法
-
         /// <summary>
         /// 将数据集合写入Excel工作表
         /// </summary>
@@ -270,11 +262,8 @@ namespace OwExtensions.NPOI
                 rowIndex++;
             }
         }
-
         #endregion
-
         #region JSON转换方法
-
         /// <summary>
         /// 将Excel工作表转换为Json并写入流
         /// </summary>
@@ -321,9 +310,7 @@ namespace OwExtensions.NPOI
             }
             writer.WriteEndArray();
             writer.Flush();
-
             #region 本地辅助函数
-
             void WriteCellToJson(Utf8JsonWriter writer, string propertyName, ICell cell, int rowIndex, int colIndex)
             {
                 if (cell == null || cell.CellType == CellType.Blank) return;
@@ -372,19 +359,14 @@ namespace OwExtensions.NPOI
                         throw new InvalidOperationException($"遇到不支持的单元格类型：工作表'{sheet.SheetName}'第{rowIndex + 1}行第{colIndex + 1}列，类型：{cellType}");
                 }
             }
-
             #endregion
         }
-
         #endregion
-
         #region 私有辅助方法
-
         private static bool IsNullableType(Type type)
         {
             return type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>);
         }
-
         private static string GetCellStringValue(ICell cell)
         {
             return cell?.CellType switch
@@ -402,7 +384,6 @@ namespace OwExtensions.NPOI
                 _ => throw new InvalidOperationException($"遇到不支持的单元格类型：第{cell.RowIndex + 1}行第{cell.ColumnIndex + 1}列，类型：{cell.CellType}")
             };
         }
-
         private static string GetFormulaCellStringValue(ICell cell)
         {
             try
@@ -425,7 +406,6 @@ namespace OwExtensions.NPOI
                 throw new InvalidOperationException($"公式单元格计算异常：第{cell.RowIndex + 1}行第{cell.ColumnIndex + 1}列，错误：{ex.Message}", ex);
             }
         }
-
         private static object ConvertCellValue(ICell cell, Type targetType)
         {
             if (cell == null || cell.CellType == CellType.Blank) return null;
@@ -483,14 +463,12 @@ namespace OwExtensions.NPOI
                 throw new InvalidCastException(detailedError, ex);
             }
         }
-
         private static bool IsNumericType(Type type)
         {
             return type == typeof(int) || type == typeof(long) || type == typeof(double) ||
              type == typeof(decimal) || type == typeof(float) || type == typeof(byte) ||
               type == typeof(short) || type == typeof(DateTime);
         }
-
         private static void SetCellValue(ICell cell, object value)
         {
             if (value == null)
@@ -513,7 +491,6 @@ namespace OwExtensions.NPOI
                 default: cell.SetCellValue(value.ToString()); break;
             }
         }
-
         #endregion
     }
 }

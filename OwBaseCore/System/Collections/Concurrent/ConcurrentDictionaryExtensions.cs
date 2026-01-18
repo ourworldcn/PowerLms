@@ -1,6 +1,5 @@
 ﻿using System.Runtime.CompilerServices;
 using System.Threading;
-
 namespace System.Collections.Concurrent
 {
     /// <summary>
@@ -20,7 +19,6 @@ namespace System.Collections.Concurrent
         {
             public static readonly Action<TValue> Instance = static v => Monitor.Exit(v);
         }
-
         /// <summary>
         /// 获取并发字典中的值并加锁，使用双重检查锁模式验证有效性。
         /// </summary>
@@ -53,7 +51,6 @@ namespace System.Collections.Concurrent
             Monitor.Exit(value);
             return default;
         }
-
         /// <summary>
         /// 获取并发字典中的值并加锁，使用双重检查锁模式验证有效性，支持超时机制。
         /// </summary>
@@ -79,30 +76,22 @@ namespace System.Collections.Concurrent
         {
             if (timeout == Timeout.InfiniteTimeSpan)
                 return GetAndLock(dictionary, key);
-
             if (!dictionary.TryGetValue(key, out var value)) return default;
-
             var deadline = Environment.TickCount64 + (long)timeout.TotalMilliseconds;
-
             while (true)
             {
                 bool lockTaken = false;
                 try
                 {
                     var remainingTimeout = TimeSpan.FromMilliseconds(Math.Max(0, deadline - Environment.TickCount64));
-
                     Monitor.TryEnter(value, remainingTimeout, ref lockTaken);
                     if (!lockTaken) return default;
-
                     if (ReferenceEquals(value, dictionary.TryGetValue(key, out var current) ? current : null))
                         return new DisposeHelper<TValue>(ExitActionCache<TValue>.Instance, value);
-
                     Monitor.Exit(value);
                     lockTaken = false;
-
                     if (Environment.TickCount64 >= deadline)
                         return default;
-
                     if (!dictionary.TryGetValue(key, out value))
                         return default;
                 }

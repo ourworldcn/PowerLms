@@ -13,7 +13,6 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
-
 namespace Microsoft.Extensions.Caching.Memory
 {
     /// <summary>
@@ -23,9 +22,7 @@ namespace Microsoft.Extensions.Caching.Memory
     public static class OwCacheExtensions
     {
         public const string GuidString = "A3B7C1D5-8E2F-4A9B-B6C3-7D4E9F1A2B5C";
-
         #region StateMap 缓存管理（基于 FirstKeyOptimizedWeakTable）
-
         /// <summary>StateMap 缓存实例（自动处理第一个键切换和多实例场景）</summary>
         /// <remarks>
         /// 使用 FirstKeyOptimizedWeakTable 自动实现：
@@ -35,10 +32,8 @@ namespace Microsoft.Extensions.Caching.Memory
         /// - 零内存泄漏：弱引用确保 IMemoryCache 可被正常回收
         /// </remarks>
         private static readonly FirstKeyOptimizedWeakTable<IMemoryCache, ConcurrentDictionary<object, CacheEntryState>> s_stateMapCache = new();
-
         /// <summary>StateMap 值工厂函数（静态复用，避免热路径重复分配）</summary>
         private static readonly Func<IMemoryCache, ConcurrentDictionary<object, CacheEntryState>> s_stateMapFactory = static _ => new ConcurrentDictionary<object, CacheEntryState>();
-
         /// <summary>
         /// 获取指定缓存实例的状态映射字典（热路径优化，支持自适应切换）。
         /// </summary>
@@ -47,32 +42,24 @@ namespace Microsoft.Extensions.Caching.Memory
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static ConcurrentDictionary<object, CacheEntryState> GetCacheEntryStateMap(this IMemoryCache cache) =>
             s_stateMapCache.GetOrAdd(cache, s_stateMapFactory);
-
         #endregion StateMap 缓存管理
-
         private sealed class CacheEntryState
         {
             public bool IsCallbackRegistered;
             private PriorityQueue<PostEvictionCallbackRegistration, int> _callbackQueue;
             private static readonly Func<PriorityQueue<PostEvictionCallbackRegistration, int>> s_queueFactory =
                 static () => new PriorityQueue<PostEvictionCallbackRegistration, int>();
-
             public PriorityQueue<PostEvictionCallbackRegistration, int> Queue =>
                 LazyInitializer.EnsureInitialized(ref _callbackQueue, s_queueFactory);
             public bool HasQueue => Volatile.Read(ref _callbackQueue) != null;
-
             private static readonly Func<CancellationTokenSource> s_ctsFactory =
                 static () => new CancellationTokenSource();
-
             private CancellationTokenSource _cancellationTokenSource;
-
             /// <summary>检查是否已创建取消令牌源</summary>
             public bool HasCancellationTokenSource => Volatile.Read(ref _cancellationTokenSource) != null;
-
             /// <summary>获取或创建取消令牌源</summary>
             public CancellationTokenSource CancellationTokenSource =>
                 LazyInitializer.EnsureInitialized(ref _cancellationTokenSource, s_ctsFactory);
-
             /// <summary>清理所有资源</summary>
             public void Cleanup()
             {
@@ -82,7 +69,6 @@ namespace Microsoft.Extensions.Caching.Memory
                     _callbackQueue.Clear();
                     _callbackQueue = null;
                 }
-
                 // ✅ 处置取消令牌源
                 if (HasCancellationTokenSource)
                 {
@@ -95,9 +81,7 @@ namespace Microsoft.Extensions.Caching.Memory
                 }
             }
         }
-
         private static readonly Func<object, CacheEntryState> s_stateFactory = static _ => new CacheEntryState();
-
         /// <summary>获取或创建状态并加锁，保证返回有效状态</summary>
         private static DisposeHelper<CacheEntryState> GetOrCreateAndLockState(IMemoryCache cache, object key)
         {
@@ -110,7 +94,6 @@ namespace Microsoft.Extensions.Caching.Memory
                     return lockedState;
             }
         }
-
         /// <summary>
         /// 尝试原子性添加缓存条目并加锁。
         /// </summary>
@@ -137,9 +120,7 @@ namespace Microsoft.Extensions.Caching.Memory
             }
             return DisposeHelper.Create(Monitor.Exit, (object)state);
         }
-
         #region 优先级驱逐回调
-
         /// <summary>
         /// 为缓存条目启用优先级驱逐回调（自动持有引用计数）。
         /// </summary>
@@ -170,7 +151,6 @@ namespace Microsoft.Extensions.Caching.Memory
             }
             return entry;
         }
-
         /// <summary>为指定键注册优先级驱逐回调。</summary>
         /// <param name="cache">缓存实例</param>
         /// <param name="key">缓存键</param>
@@ -189,14 +169,12 @@ namespace Microsoft.Extensions.Caching.Memory
                 lockedState.State.Queue.Enqueue(registration, priority);
             }
         }
-
         private static void ExecuteCallbacks(object key, object value, EvictionReason reason, object state)
         {
             if (state is not IMemoryCache cache) return;
             using var lockedState = cache.GetCacheEntryStateMap().GetAndLock(key);
             if (lockedState.State == null) return;
             var entryState = lockedState.State;
-
             // ✅ 执行优先级回调
             List<Exception> exceptions = null;
             if (entryState.HasQueue)
@@ -215,17 +193,14 @@ namespace Microsoft.Extensions.Caching.Memory
                     }
                 }
             }
-
             // ✅ 清理所有资源（无论是否有异常）
             CleanupState(cache, key, entryState);
-
             // ✅ 如果有异常，抛出（在清理之后）
             if (exceptions is not null)
             {
                 throw new AggregateException("优先级驱逐回调执行时发生异常", exceptions);
             }
         }
-
         /// <summary>清理 CacheEntryState 的所有资源</summary>
         /// <param name="cache">缓存实例</param>
         /// <param name="key">缓存键</param>
@@ -234,15 +209,11 @@ namespace Microsoft.Extensions.Caching.Memory
         {
             // ✅ 清理状态内部资源
             entryState.Cleanup();
-
             // ✅ 从状态映射中移除条目
             cache.GetCacheEntryStateMap().TryRemove(key, out _);
         }
-
         #endregion
-
         #region 取消令牌管理
-
         /// <summary>
         /// 获取或创建指定缓存键的取消令牌源。
         /// </summary>
@@ -263,13 +234,11 @@ namespace Microsoft.Extensions.Caching.Memory
             ArgumentNullException.ThrowIfNull(key);
             using var lockedState = GetOrCreateAndLockState(cache, key);
             var state = lockedState.State;
-
             // ✅ 如果已启用优先级回调且尚未注册取消令牌回调，则注册
             if (state.IsCallbackRegistered && !state.HasCancellationTokenSource)
             {
                 // ✅ 先创建令牌源，再注册回调（确保回调中有有效的令牌源）
                 var cts = state.CancellationTokenSource;
-
                 // ✅ 使用标准 API 注册取消令牌回调
                 // 优先级 1024：让大多数用户回调（优先级 0-1023）先执行
                 // 这样用户回调可以依赖令牌尚未取消的状态进行清理
@@ -298,21 +267,16 @@ namespace Microsoft.Extensions.Caching.Memory
                     // 但如果发生了，静默处理，不影响令牌的返回
                 }
             }
-
             // ✅ 总是返回令牌源，无论是否启用了优先级回调
             // 如果未启用，令牌仍然可用，只是不会自动取消
             return state.CancellationTokenSource;
         }
-
         #endregion
-
         #region ID-Key 转换工具
-
         /// <summary>
         /// Id在缓存键值中的长度，标准GUID字符串表示为36个字符。
         /// </summary>
         public const int IdKeyLength = 36;
-
         /// <summary>
         /// 从缓存键中提取GUID标识符。
         /// </summary>
@@ -345,7 +309,6 @@ namespace Microsoft.Extensions.Caching.Memory
             }
             return id;
         }
-
         /// <summary>
         /// 根据类型和缓存键提取GUID标识符。
         /// </summary>
@@ -359,7 +322,6 @@ namespace Microsoft.Extensions.Caching.Memory
             prefix ??= $"{typeof(T).Name}.";
             return GetIdFromCacheKey(key, prefix);
         }
-
         /// <summary>
         /// 根据前缀和GUID构建缓存键。
         /// </summary>
@@ -371,7 +333,6 @@ namespace Microsoft.Extensions.Caching.Memory
         {
             return $"{prefix ?? string.Empty}{id:D}";
         }
-
         /// <summary>
         /// 根据类型、前缀和GUID构建缓存键。
         /// </summary>
@@ -385,7 +346,6 @@ namespace Microsoft.Extensions.Caching.Memory
             prefix ??= $"{typeof(T).Name}.";
             return GetCacheKeyFromId(id, prefix);
         }
-
         #endregion
     }
 }

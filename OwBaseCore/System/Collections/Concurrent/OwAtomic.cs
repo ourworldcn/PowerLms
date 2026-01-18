@@ -7,7 +7,6 @@
 using System;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
-
 namespace System.Collections.Concurrent
 {
     /// <summary>
@@ -60,13 +59,11 @@ namespace System.Collections.Concurrent
         /// </remarks>
         public static OwAtomic<T> Shared { get; } = new OwAtomic<T>();
         #endregion 静态共享实例
-
         #region 核心存储和构造
         /// <summary>
         /// 存储键值映射的并发字典。
         /// </summary>
         private readonly ConcurrentDictionary<object, T> _map = new();
-
         /// <summary>
         /// 初始化 OwAtomic 的新实例。
         /// </summary>
@@ -74,7 +71,6 @@ namespace System.Collections.Concurrent
         {
         }
         #endregion 核心存储和构造
-
         #region 核心操作方法
         /// <summary>
         /// 获取或按需创建与 key 关联的对象（原子操作）。
@@ -93,7 +89,6 @@ namespace System.Collections.Concurrent
             ArgumentNullException.ThrowIfNull(factory);
             return _map.GetOrAdd(key, factory);
         }
-
         /// <summary>
         /// 尝试获取与 key 关联的已创建对象。
         /// </summary>
@@ -109,7 +104,6 @@ namespace System.Collections.Concurrent
             ArgumentNullException.ThrowIfNull(key);
             return _map.TryGetValue(key, out value);
         }
-
         /// <summary>
         /// 尝试从注册表中移除 key 并释放对象（若实现了释放接口）。
         /// </summary>
@@ -128,7 +122,6 @@ namespace System.Collections.Concurrent
             TryDispose(value);
             return true;
         }
-
         /// <summary>
         /// 尝试从注册表中移除 key，但不释放对象。
         /// </summary>
@@ -143,7 +136,6 @@ namespace System.Collections.Concurrent
             ArgumentNullException.ThrowIfNull(key);
             return _map.TryRemove(key, out _);
         }
-
         /// <summary>
         /// 清空注册表并释放所有已创建对象。
         /// </summary>
@@ -163,7 +155,6 @@ namespace System.Collections.Concurrent
             }
             _map.Clear();
         }
-
         /// <summary>
         /// 获取当前注册表中的对象数量。
         /// </summary>
@@ -173,7 +164,6 @@ namespace System.Collections.Concurrent
         /// </remarks>
         public int Count => _map.Count;
         #endregion 核心操作方法
-
         #region 私有辅助方法
         /// <summary>
         /// 尝试释放对象资源。
@@ -182,14 +172,12 @@ namespace System.Collections.Concurrent
         private static void TryDispose(object obj)
         {
             if (obj is null) return;
-            
             // 同步释放优先
             if (obj is IDisposable d)
             {
                 try { d.Dispose(); } catch { } // 忽略释放异常
                 return;
             }
-            
             // 异步释放在后台处理
             if (obj is IAsyncDisposable ad)
             {

@@ -9,7 +9,6 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
-
 namespace System.Collections.Concurrent
 {
     /// <summary>
@@ -74,19 +73,15 @@ namespace System.Collections.Concurrent
      where TKey : class where TValue : class
     {
         public const string GuidString = "E4F8D6C2-9A3B-4E7F-B1C5-8D2A6F9E3B7C";
-
         /// <summary>第一个 Key 的弱引用（支持自动切换）</summary>
         /// <remarks>使用弱引用避免内存泄漏，支持 Key 被 GC 回收后自动切换到新实例</remarks>
         private volatile WeakReference<TKey> _hotKeyRef;
-
         /// <summary>第一个 Key 对应的 Value</summary>
         /// <remarks>使用 volatile 确保跨线程可见性，配合 _hotKeyRef 实现快速路径</remarks>
         private volatile TValue _hotValue;
-
         /// <summary>多实例场景的弱引用表</summary>
         /// <remarks>使用 ConditionalWeakTable 自动管理生命周期，随 Key 实例回收</remarks>
         private readonly ConditionalWeakTable<TKey, TValue> _coldCache = new();
-
         /// <summary>
         /// 获取或添加值（热路径优化）
         /// </summary>
@@ -110,10 +105,8 @@ namespace System.Collections.Concurrent
             var hotKeyRef = _hotKeyRef;
             if (hotKeyRef is not null && hotKeyRef.TryGetTarget(out var hotKey) && ReferenceEquals(key, hotKey))
                 return _hotValue;
-
             return GetOrAddSlow(key, valueFactory);
         }
-
         /// <summary>
         /// 尝试获取值
         /// </summary>
@@ -136,10 +129,8 @@ namespace System.Collections.Concurrent
                 value = _hotValue;
                 return true;
             }
-
             return _coldCache.TryGetValue(key, out value);
         }
-
         /// <summary>
         /// 清除所有缓存
         /// </summary>
@@ -152,7 +143,6 @@ namespace System.Collections.Concurrent
             _hotKeyRef = null;
             _hotValue = null;
         }
-
         /// <summary>
         /// 枚举所有键值对（仅用于调试，性能较差）
         /// </summary>
@@ -187,12 +177,10 @@ namespace System.Collections.Concurrent
                     yield return kvp;
             }
         }
-
         /// <summary>
         /// 获取枚举器（非泛型版本）
         /// </summary>
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-
         /// <summary>
         /// 获取或添加的冷路径实现（支持第一键自动切换）
         /// </summary>
@@ -234,7 +222,6 @@ namespace System.Collections.Concurrent
             // 冷路径开头：检查参数（不影响热路径性能）
             ArgumentNullException.ThrowIfNull(key);
             ArgumentNullException.ThrowIfNull(valueFactory);
-
             var hotKeyRef = _hotKeyRef;
             if (hotKeyRef is null || !hotKeyRef.TryGetTarget(out var hotKey))
             {

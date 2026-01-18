@@ -1,58 +1,161 @@
 ﻿/*
- * 项目：OwBaseCore | 模块：System.Collections.Generic
- * 功能：基于内存池的列表类，提供完整 List<T> 兼容功能
- * 技术要点：继承自 OwListBase<T>，扩展排序、查找、转换等便利方法
- * 作者：zc | 创建：2025-01 | 修改：2025-01-20 重构为派生类
- */
+* 项目：OwBaseCore | 模块：System.Collections.Generic
+* 功能：基于内存池的列表类，提供完整 List<T> 兼容功能
+* 技术要点：组合 OwCollection<T> 提供内存管理，实现 IList<T> 接口，版本检查防止枚举期间修改
+* 作者：zc | 创建：2025-01 | 修改：2025-01-21 添加版本检查和结构体枚举器
+*/
 using System;
 using System.Buffers;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-
-namespace System.Collections.Generic
+namespace OW.Collections.Generic
 {
     /// <summary>
     /// 基于内存池的列表类，提供完整的 List&lt;T&gt; 兼容功能。
-    /// 继承自 OwListBase&lt;T&gt;，提供高性能核心操作 + List&lt;T&gt; 扩展方法。
+    /// 使用 OwCollection&lt;T&gt; 提供内存管理，实现 IList&lt;T&gt; 接口及扩展方法。
     /// 默认情况下使用 ArrayMemoryPool&lt;T&gt; 包装 ArrayPool&lt;T&gt;.Shared，提供最佳性能。
     /// </summary>
+    /// <remarks>
+    /// <para><b>高性能通道与使用契约：</b></para>
+    /// <para>本类型刻意暴露"底层直达"的高性能通道，提供零拷贝/低分配/缓存友好的性能：</para>
+    /// <list type="bullet">
+    /// <item><description><see cref="AsSpan()"/> / <see cref="AsSpan(int,int)"/> - 直接访问底层连续内存</description></item>
+    /// <item><description><see cref="GetByRef(int)"/> - 返回元素引用，避免值拷贝</description></item>
+    /// <item><description><see cref="InsertRange(int,int,bool)"/> - 预留空间并返回 Span，调用者直接写入</description></item>
+    /// <item><description><see cref="RemoveRange(int,int)"/> - 批量移除，避免逐个删除的开销</description></item>
+    /// </list>
+    /// <para><b>⚠️ 使用这些高性能方法时必须遵守以下契约：</b></para>
+    /// <list type="number">
+    /// <item><description><b>Span 视图生命周期：</b>在任何 Span 视图存活期间，不得进行结构性修改（Add/Insert/Remove/Clear/Sort/Reverse 等）。
+    /// 结构性修改可能导致内存重新分配，使 Span 引用失效，继续使用将产生未定义行为。</description></item>
+    /// <item><description><b>引用短期使用：</b><c>GetByRef(int)</c> 返回的引用只可短期使用；
+    /// 一旦发生结构性修改（包括扩容），该引用即失效。不得长期持有或跨方法调用保存。</description></item>
+    /// <item><description><b>枚举期间修改检测：</b>与 <c>List&lt;T&gt;</c> 一致，枚举期间的结构性修改会抛出 <see cref="InvalidOperationException"/>。
+    /// 这是通过版本号机制实现的快速失败保护。</description></item>
+    /// </list>
+    /// </remarks>
     /// <typeparam name="T">列表元素类型</typeparam>
-    public class OwList<T> : OwListBase<T>, IList<T>, ICollection<T>, IEnumerable<T>, IEnumerable, IDisposable
+    public class OwList<T> : IList<T>, ICollection<T>, IEnumerable<T>, IEnumerable, IDisposable
     {
+        private readonly OwCollection<T> _collection;
+        private int _version;
         #region [构造函数]
         /// <summary>
         /// 初始化 OwList 类的新实例，使用默认的 ArrayMemoryPool 进行内存管理
         /// </summary>
-        public OwList() : base()
+        public OwList()
         {
+            _collection = new OwCollection<T>();
         }
-
         /// <summary>
         /// 初始化 OwList 类的新实例，使用指定的 MemoryPool。
         /// 如果 pool 为 null，则创建新的 ArrayMemoryPool&lt;T&gt; 实例并在 Dispose 时释放。
         /// </summary>
         /// <param name="capacity">新列表最初可以存储的元素数</param>
         /// <param name="pool">用于内存管理的 MemoryPool，如果为 null 则创建默认的 ArrayMemoryPool</param>
-        public OwList(int capacity, MemoryPool<T> pool = null) : base(capacity, pool)
+        public OwList(int capacity, MemoryPool<T> pool = null)
         {
+            _collection = new OwCollection<T>(capacity, pool);
         }
-
         /// <summary>
         /// 初始化 OwList 类的新实例，使用指定集合的元素和可选的内存池
         /// </summary>
         /// <param name="collection">要复制到新列表中的集合</param>
         /// <param name="pool">用于内存管理的 MemoryPool，如果为 null 则创建默认的 ArrayMemoryPool</param>
         /// <exception cref="ArgumentNullException">collection 为 null</exception>
-        public OwList(IEnumerable<T> collection, MemoryPool<T> pool = null) : base(0, pool)
+        public OwList(IEnumerable<T> collection, MemoryPool<T> pool = null)
         {
             if (collection == null)
                 throw new ArgumentNullException(nameof(collection));
+            _collection = new OwCollection<T>(0, pool);
             AddRange(collection);
         }
         #endregion [构造函数]
-
+        #region [属性]
+        /// <summary>
+        /// 获取列表当前的容量（可存储的最大元素数）
+        /// </summary>
+        public int Capacity => _collection.Capacity;
+        /// <summary>
+        /// 获取列表中当前包含的元素数
+        /// </summary>
+        public int Count => _collection.Count;
+        #endregion [属性]
+        #region [高性能核心方法]
+        /// <summary>
+        /// 返回包含列表中所有元素的 Span，提供高性能的直接内存访问
+        /// </summary>
+        /// <returns>包含列表元素的 Span，如果列表为空则返回空 Span</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Span<T> AsSpan() => _collection.AsSpan();
+        /// <summary>
+        /// 返回包含列表中指定范围元素的 Span
+        /// </summary>
+        /// <param name="start">范围的起始索引</param>
+        /// <param name="length">范围中的元素数</param>
+        /// <returns>包含指定范围元素的 Span</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Span<T> AsSpan(int start, int length) => _collection.AsSpan(start, length);
+        /// <summary>
+        /// 获取指定索引处元素的引用，实现零拷贝访问
+        /// </summary>
+        /// <param name="index">要获取引用的元素的从零开始的索引</param>
+        /// <returns>指定索引处元素的引用</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref T GetByRef(int index) => ref _collection.GetByRef(index);
+        /// <summary>
+        /// 在指定索引处插入元素（通过引用传递，避免大结构体复制）
+        /// </summary>
+        /// <param name="index">从零开始的索引，应在该位置插入 item</param>
+        /// <param name="item">要插入的元素的引用</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void InsertByRef(int index, in T item)
+        {
+            _collection.InsertByRef(index, in item);
+            _version++;
+        }
+        /// <summary>
+        /// 在指定索引处插入指定数量的空间，并返回预留区域的 Span
+        /// </summary>
+        /// <param name="index">插入位置的从零开始的索引</param>
+        /// <param name="count">要插入的元素数量</param>
+        /// <param name="clear">是否清零预留区域</param>
+        /// <returns>预留区域的 Span</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Span<T> InsertRange(int index, int count, bool clear = false)
+        {
+            var result = _collection.InsertRange(index, count, clear);
+            if (count > 0) _version++;
+            return result;
+        }
+        /// <summary>
+        /// 从列表中移除指定范围的元素
+        /// </summary>
+        /// <param name="index">要移除的元素范围的起始索引</param>
+        /// <param name="count">要移除的元素数量</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void RemoveRange(int index, int count)
+        {
+            _collection.RemoveRange(index, count);
+            if (count > 0) _version++;
+        }
+        #endregion [高性能核心方法]
+        #region [内存管理]
+        /// <summary>
+        /// 将容量设置为列表中的实际元素数（如果该数小于当前容量的 90%）
+        /// </summary>
+        /// <returns>如果执行了收缩则返回 true，否则返回 false</returns>
+        public bool TrimExcess() => _collection.TrimExcess();
+        /// <summary>
+        /// 固定列表的内存，防止 GC 移动，返回可用于非托管代码的句柄
+        /// </summary>
+        /// <returns>内存句柄</returns>
+        public MemoryHandle Pin() => _collection.Pin();
+        #endregion [内存管理]
         #region [批量操作]
         /// <summary>
         /// 将集合的元素添加到列表的末尾
@@ -63,8 +166,46 @@ namespace System.Collections.Generic
         {
             InsertRange(Count, collection);
         }
+        /// <summary>
+        /// 在指定索引处插入集合中的元素
+        /// </summary>
+        /// <param name="index">插入位置</param>
+        /// <param name="collection">要插入的元素集合</param>
+        public void InsertRange(int index, IEnumerable<T> collection)
+        {
+            ArgumentNullException.ThrowIfNull(collection);
+            if (ReferenceEquals(collection, this))
+                throw new NotSupportedException("InsertRange 不支持对自身执行插入操作。");
+            if (OwCollection<T>.TryGetSpanFromCollection(collection, out var sourceSpan))
+            {
+                if (sourceSpan.Length == 0) return;
+                sourceSpan.CopyTo(InsertRange(index, sourceSpan.Length, false));
+                return;
+            }
+            if (collection.TryGetNonEnumeratedCount(out int count))
+            {
+                if (count == 0) return;
+                var span = InsertRange(index, count, false);
+                int write = 0;
+                foreach (var item in collection) span[write++] = item;
+                return;
+            }
+            var ary = collection.ToArray();
+            if (ary.Length > 0)
+                ary.CopyTo(InsertRange(index, ary.Length, false));
+        }
+        /// <summary>
+        /// 在指定位置插入多个相同的元素
+        /// </summary>
+        /// <param name="index">插入位置</param>
+        /// <param name="count">要插入的元素数量</param>
+        /// <param name="item">要插入的元素</param>
+        public void InsertRange(int index, int count, in T item)
+        {
+            if (count <= 0) return;
+            InsertRange(index, count, false).Fill(item);
+        }
         #endregion [批量操作]
-
         #region [查找方法 - LastIndexOf系列]
         /// <summary>
         /// 搜索指定的对象，并返回整个列表中最后一个匹配项的从零开始的索引
@@ -116,7 +257,6 @@ namespace System.Collections.Generic
             return -1;
         }
         #endregion [查找方法 - LastIndexOf系列]
-
         #region [批量移除]
         /// <summary>
         /// 移除与指定的谓词所定义的条件相匹配的所有元素
@@ -147,7 +287,6 @@ namespace System.Collections.Generic
             return result;
         }
         #endregion [批量移除]
-
         #region [转换方法]
         /// <summary>
         /// 将列表的元素复制到新数组中
@@ -162,7 +301,6 @@ namespace System.Collections.Generic
             return array;
         }
         #endregion [转换方法]
-
         #region [查找方法 - Find系列]
         /// <summary>
         /// 搜索与指定谓词所定义的条件相匹配的元素，并返回整个列表中的第一个匹配元素
@@ -347,7 +485,6 @@ namespace System.Collections.Generic
             return true;
         }
         #endregion [查找方法 - Find系列]
-
         #region [反转方法]
         /// <summary>
         /// 将整个列表中元素的顺序反转
@@ -375,10 +512,10 @@ namespace System.Collections.Generic
             {
                 var span = AsSpan(index, count);
                 span.Reverse();
+                _version++;
             }
         }
         #endregion [反转方法]
-
         #region [其他便利方法]
         /// <summary>
         /// 对列表中的每个元素执行指定操作
@@ -458,7 +595,6 @@ namespace System.Collections.Generic
             AsSpan(index, count).CopyTo(array.AsSpan(arrayIndex));
         }
         #endregion [其他便利方法]
-
         #region [排序方法]
         /// <summary>
         /// 使用默认比较器对整个列表中的元素进行排序
@@ -489,6 +625,7 @@ namespace System.Collections.Generic
                 var span = AsSpan();
                 var comparer = Comparer<T>.Create(comparison);
                 span.Sort(comparer);
+                _version++;
             }
         }
         /// <summary>
@@ -511,10 +648,10 @@ namespace System.Collections.Generic
             {
                 var span = AsSpan(index, count);
                 span.Sort(comparer);
+                _version++;
             }
         }
         #endregion [排序方法]
-
         #region [二分查找]
         /// <summary>
         /// 使用默认比较器在整个已排序的列表中搜索元素，并返回该元素从零开始的索引
@@ -558,7 +695,7 @@ namespace System.Collections.Generic
             int hi = index + count - 1;
             while (lo <= hi)
             {
-                int mid = lo + ((hi - lo) >> 1);
+                int mid = lo + (hi - lo >> 1);
                 int c = comparer.Compare(this[mid], item);
                 if (c == 0)
                     return mid;
@@ -570,7 +707,6 @@ namespace System.Collections.Generic
             return ~lo;
         }
         #endregion [二分查找]
-
         #region [转换方法 - ConvertAll]
         /// <summary>
         /// 将当前列表中的元素转换为另一种类型，并返回包含转换后的元素的列表
@@ -592,7 +728,6 @@ namespace System.Collections.Generic
             return result;
         }
         #endregion [转换方法 - ConvertAll]
-
         #region [只读包装]
         /// <summary>
         /// 返回当前集合的只读 ReadOnlyCollection&lt;T&gt; 包装
@@ -603,6 +738,138 @@ namespace System.Collections.Generic
             return new ReadOnlyCollection<T>(this);
         }
         #endregion [只读包装]
+        #region [接口成员实现]
+        #region [IList<T> Members]
+        public T this[int index]
+        {
+            get => GetByRef(index);
+            set => GetByRef(index) = value;
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int IndexOf(T item)
+        {
+            var comparer = EqualityComparer<T>.Default;
+            var span = AsSpan();
+            for (int i = 0; i < span.Length; i++)
+            {
+                if (comparer.Equals(span[i], item))
+                    return i;
+            }
+            return -1;
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Insert(int index, T item)
+        {
+            InsertByRef(index, in item);
+        }
+        public void RemoveAt(int index)
+        {
+            RemoveRange(index, 1);
+        }
+        #endregion [IList<T> Members]
+        #region [ICollection<T> Members]
+        public bool IsReadOnly => false;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Add(T item)
+        {
+            InsertByRef(Count, in item);
+        }
+        public void Clear()
+        {
+            if (Count > 0)
+            {
+                RemoveRange(0, Count);
+            }
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Contains(T item) => IndexOf(item) >= 0;
+        public void CopyTo(T[] array, int arrayIndex)
+        {
+            ArgumentNullException.ThrowIfNull(array);
+            if (arrayIndex < 0 || arrayIndex > array.Length)
+                throw new ArgumentOutOfRangeException(nameof(arrayIndex));
+            if (array.Length - arrayIndex < Count)
+                throw new ArgumentException("目标数组空间不足");
+            AsSpan().CopyTo(array.AsSpan(arrayIndex));
+        }
+        public bool Remove(T item)
+        {
+            int index = IndexOf(item);
+            if (index >= 0)
+            {
+                RemoveAt(index);
+                return true;
+            }
+            return false;
+        }
+        #endregion [ICollection<T> Members]
+        #region [IEnumerable<T> Members]
+        public Enumerator GetEnumerator() => new Enumerator(this);
+        IEnumerator<T> IEnumerable<T>.GetEnumerator() => GetEnumerator();
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+        #endregion [IEnumerable<T> Members]
+        #region [IDisposable Members]
+        /// <summary>
+        /// 释放由列表使用的所有资源
+        /// </summary>
+        public void Dispose()
+        {
+            _collection?.Dispose();
+        }
+        #endregion [IDisposable Members]
+        #endregion [接口成员实现]
+        #region [枚举器]
+        /// <summary>
+        /// OwList&lt;T&gt; 的枚举器（结构体，零分配，带版本检查）
+        /// </summary>
+        public struct Enumerator : IEnumerator<T>, IEnumerator
+        {
+            private readonly OwList<T> _list;
+            private readonly int _version;
+            private int _index;
+            private T _current;
+            internal Enumerator(OwList<T> list)
+            {
+                _list = list;
+                _version = list._version;
+                _index = 0;
+                _current = default;
+            }
+            public T Current => _current;
+            object IEnumerator.Current
+            {
+                get
+                {
+                    if (_index == 0 || _index == _list.Count + 1)
+                        throw new InvalidOperationException("枚举器位置无效");
+                    return Current;
+                }
+            }
+            public bool MoveNext()
+            {
+                if (_version != _list._version)
+                    throw new InvalidOperationException("集合在枚举期间被修改");
+                if (_index < _list.Count)
+                {
+                    _current = _list.GetByRef(_index);
+                    _index++;
+                    return true;
+                }
+                _index = _list.Count + 1;
+                _current = default;
+                return false;
+            }
+            public void Reset()
+            {
+                if (_version != _list._version)
+                    throw new InvalidOperationException("集合在枚举期间被修改");
+                _index = 0;
+                _current = default;
+            }
+            public void Dispose()
+            {
+            }
+        }
+        #endregion [枚举器]
     }
 }
-
