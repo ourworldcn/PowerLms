@@ -20,7 +20,6 @@
  * 创建时间：2024年
  * 最后修改：2024年 - Excel处理架构重构，使用OwDataUnit替代旧架构
  */
-
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NPOI.HSSF.UserModel;
@@ -30,7 +29,6 @@ using PowerLms.Data;
 using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
 using System.Net;
-
 namespace PowerLmsWebApi.Controllers.System
 {
     /// <summary>
@@ -40,7 +38,6 @@ namespace PowerLmsWebApi.Controllers.System
     {
         #region 数据字典管理
         #region 字典目录
-
         /// <summary>
         /// 获取所有的数据字典目录列表
         /// </summary>
@@ -54,7 +51,6 @@ namespace PowerLmsWebApi.Controllers.System
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllDataDicCatalogReturnDto();
-
             var dbSet = _DbContext.DD_DataDicCatalogs;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             if (_AccountManager.IsAdmin(context.User))  //如果是超管
@@ -72,15 +68,12 @@ namespace PowerLmsWebApi.Controllers.System
                     coll = coll.Where(c => c.OrgId == context.User.OrgId);
                 }
             }
-
             // 使用EfHelper.GenerateWhereAnd处理通用查询条件分析
             coll = EfHelper.GenerateWhereAnd(coll, conditional);
-
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }
-
         /// <summary>
         /// 修改数据字典目录。
         /// </summary>
@@ -104,7 +97,6 @@ namespace PowerLmsWebApi.Controllers.System
             _DbContext.SaveChanges();
             return result;
         }
-
         /// <summary>
         /// 删除一个数据字典目录，并删除其数据。
         /// </summary>
@@ -128,11 +120,8 @@ namespace PowerLmsWebApi.Controllers.System
             _DbContext.SaveChanges();
             return result;
         }
-
         #endregion 字典目录
-
         #region 数据字典导入导出
-
         /// <summary>
         /// 复制简单数据字典。
         /// </summary>
@@ -147,7 +136,6 @@ namespace PowerLmsWebApi.Controllers.System
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             string err;
             if (!_AuthorizationManager.Demand(out err, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-
             var result = new CopySimpleDataDicReturnDto();
             //var merch = _DbContext.Merchants.Find(model.SrcOrgId);
             //if (merch == null) return NotFound();
@@ -160,11 +148,9 @@ namespace PowerLmsWebApi.Controllers.System
             }
             //_DataManager.CopyAllSpecialDataDicBase(model.Id);
             #endregion 复制简单字典
-
             _DbContext.SaveChanges();
             return result;
         }
-
         /// <summary>
         /// 获取系统资源列表
         /// </summary>
@@ -176,7 +162,6 @@ namespace PowerLmsWebApi.Controllers.System
             result.Resources.AddRange(_DbContext.DD_SystemResources.AsNoTracking());
             return result;
         }
-
         /// <summary>
         /// 通用的导入数据字典。等同于批量导入。
         /// </summary>
@@ -216,7 +201,6 @@ namespace PowerLmsWebApi.Controllers.System
             }
             return result;
         }
-
         /// <summary>
         /// 通用获取数据字典功能。
         /// </summary>
@@ -253,7 +237,6 @@ namespace PowerLmsWebApi.Controllers.System
             //stream = new FileStream(path, FileMode.Open);
             //return new PhysicalFileResult(path, "application/octet-stream") { FileDownloadName = Path.GetFileName(path) };
         }
-
         /// <summary>
         /// 导出模板。
         /// </summary>
@@ -287,11 +270,8 @@ namespace PowerLmsWebApi.Controllers.System
             stream.Seek(0, SeekOrigin.Begin);
             return File(stream, "application/octet-stream", fileName);
         }
-
         #endregion 数据字典导入导出
-
         #region 简单字典CRUD
-
         /// <summary>
         /// 获取指定类别的简单字典全部数据。
         /// </summary>
@@ -309,15 +289,12 @@ namespace PowerLmsWebApi.Controllers.System
             var result = new GetAllDataDicReturnDto();
             var dbSet = _DbContext.DD_SimpleDataDics;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-
             // 使用EfHelper.GenerateWhereAnd处理通用查询条件分析
             coll = EfHelper.GenerateWhereAnd(coll, conditional);
-
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }
-
         /// <summary>
         /// 按数据字典目录获取简单字典——如果没有机构用户无法使用，如果有机构用户仍然可使用。
         /// 返回简约字典。
@@ -350,7 +327,6 @@ namespace PowerLmsWebApi.Controllers.System
                     coll = coll.Where(c => c.OrgId == context.User.OrgId);
                 }
             }
-
             var catalog = coll.FirstOrDefault(c => c.Code == model.SimpleDicCatalogCode);
             if (catalog is null)
             {
@@ -358,10 +334,8 @@ namespace PowerLmsWebApi.Controllers.System
             }
             var dataDics = _DbContext.DD_SimpleDataDics.Where(c => c.DataDicId == catalog.Id).AsNoTracking();
             result.Result.AddRange(dataDics);
-
             return result;
         }
-
         /// <summary>
         /// 增加一个数据字典(目录)，若有CopyToChildren值，可以在创建完后增加一个全局字典目录(OrgId为空)，商管创建一个商户级字典目录(OrgId为商户Id)。
         /// 只有当勾选了复制选项(CopyToChildren=true)时，才会将字典目录复制到公司客户下，超管可复制到所有公司客户，商管可复制到商戶下的所有公司客户，。
@@ -377,13 +351,11 @@ namespace PowerLmsWebApi.Controllers.System
         public ActionResult<AddDataDicCatalogReturnDto> AddDataDicCatalog(AddDataDicCatalogParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-
             if (!context.User.IsSuperAdmin) //不是超管
             {
                 if (!_AuthorizationManager.Demand(out string err, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
                 if (!context.User.IsAdmin()) return StatusCode((int)HttpStatusCode.Forbidden, "需要管理员权限。");
             }
-
             // 根据用户身份确定正确的OrgId
             Guid? targetOrgId = null;
             if (context.User.IsSuperAdmin)
@@ -401,18 +373,14 @@ namespace PowerLmsWebApi.Controllers.System
             {
                 targetOrgId = context.User.OrgId;
             }
-
             // 检查同一机构是否已存在相同Code的目录
             if (_DbContext.DD_DataDicCatalogs.Any(c => c.OrgId == targetOrgId && c.Code == model.Item.Code))
                 return BadRequest($"已存在相同Code的目录: {model.Item.Code}");
-
             // 创建数据字典目录，使用AutoMapper进行映射
             var mainCatalog = _Mapper.Map<DataDicCatalog>(model.Item);
             mainCatalog.OrgId = targetOrgId;
             mainCatalog.GenerateNewId();
-
             _DbContext.DD_DataDicCatalogs.Add(mainCatalog);
-
             // 只有勾选了复制选项时才复制到公司客户
             if (model.CopyToChildren)
             {
@@ -420,7 +388,6 @@ namespace PowerLmsWebApi.Controllers.System
                 {
                     // 获取目标机构集合 - 使用 ToList() 确保查询执行
                     var targetOrgs = new List<PlOrganization>();
-
                     if (context.User.IsSuperAdmin)
                     {
                         // 超管：获取所有公司客户
@@ -434,7 +401,6 @@ namespace PowerLmsWebApi.Controllers.System
                         // 商管：获取该商户下的所有公司客户
                         var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
                         if (!merchantId.HasValue) return BadRequest("无法获取商户ID");
-
                         var dictOrgs = _OrgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs;
                         var allowOrgObjs = dictOrgs.Values.ToArray();
                         if (allowOrgObjs != null)
@@ -444,23 +410,19 @@ namespace PowerLmsWebApi.Controllers.System
                                 .ToList();
                         }
                     }
-
                     // 获取已存在相同Code的目录的机构Id
                     var existingCatalogOrgIds = _DbContext.DD_DataDicCatalogs
                         .Where(c => c.Code == model.Item.Code)
                         .AsNoTracking()
                         .Select(c => c.OrgId)
                         .ToList();
-
                     var existingIdSet = new HashSet<Guid?>(existingCatalogOrgIds);
-
                     // 遍历每个目标机构
                     foreach (var org in targetOrgs)
                     {
                         // 跳过已存在相同Code的机构
                         if (existingIdSet.Contains(org.Id))
                             continue;
-
                         // 创建新目录 - 只使用DataDicCatalog实体拥有的属性
                         var newCatalog = new DataDicCatalog
                         {
@@ -468,7 +430,6 @@ namespace PowerLmsWebApi.Controllers.System
                             DisplayName = mainCatalog.DisplayName,
                             OrgId = org.Id
                         };
-
                         _DbContext.DD_DataDicCatalogs.Add(newCatalog);
                         existingIdSet.Add(org.Id);
                     }
@@ -483,21 +444,17 @@ namespace PowerLmsWebApi.Controllers.System
                         WorldDateTime = DateTime.Now,
                         OrgId = context.User.OrgId,
                     };
-
                     // 如果需要存储错误的堆栈跟踪，可以使用JsonObjectString字段
                     if (!string.IsNullOrEmpty(ex.StackTrace))
                     {
                         log.JsonObjectString = ex.StackTrace;
                     }
-
                     _DbContext.OwSystemLogs.Add(log);
                 }
             }
-
             _DbContext.SaveChanges();
             return new AddDataDicCatalogReturnDto { Id = mainCatalog.Id };
         }
-
         /// <summary>
         /// 在指定的数据字典里增加一项
         /// </summary>
@@ -538,7 +495,6 @@ namespace PowerLmsWebApi.Controllers.System
             result.Id = id;
             return result;
         }
-
         /// <summary>
         /// 修改简单字典项
         /// </summary>
@@ -572,7 +528,6 @@ namespace PowerLmsWebApi.Controllers.System
             _DbContext.SaveChanges();
             return result;
         }
-
         /// <summary>
         /// 删除简单数据字典中的一项
         /// </summary>
@@ -597,7 +552,6 @@ namespace PowerLmsWebApi.Controllers.System
             _DbContext.SaveChanges();
             return result;
         }
-
         /// <summary>
         /// 恢复指定的简单数据字典。
         /// </summary>
@@ -613,7 +567,6 @@ namespace PowerLmsWebApi.Controllers.System
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             string err;
             if (!_AuthorizationManager.Demand(out err, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-
             var result = new RestoreSimpleDataDicReturnDto();
             if (!_EntityManager.Restore<SimpleDataDic>(model.Id))
             {
@@ -623,10 +576,7 @@ namespace PowerLmsWebApi.Controllers.System
             _DbContext.SaveChanges();
             return result;
         }
-
         #endregion 简单字典CRUD
-
-
         #endregion 数据字典管理
     }
 }

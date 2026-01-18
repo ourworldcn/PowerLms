@@ -25,7 +25,6 @@
  * - 重复数据覆盖策略，依赖关系验证
  * 作者：zc | 创建：2025-01 | 修改：2025-01-27 简化为批量多表处理架构
  */
-
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using OW.Data;
@@ -34,7 +33,6 @@ using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
 using PowerLmsServer.Services;
 using PowerLmsWebApi.Dto;
-
 namespace PowerLmsWebApi.Controllers
 {
     /// <summary>
@@ -52,7 +50,6 @@ namespace PowerLmsWebApi.Controllers
         readonly AuthorizationManager _AuthorizationManager;
         readonly ILogger<ImportExportController> _Logger;
         readonly ImportExportService _ImportExportService;
-
         /// <summary>
         /// 构造函数
         /// </summary>
@@ -75,9 +72,7 @@ namespace PowerLmsWebApi.Controllers
             _Logger = logger;
             _ImportExportService = importExportService;
         }
-
         #region 类型查询接口
-
         /// <summary>
         /// 获取支持的表列表
         /// 包含：
@@ -97,7 +92,6 @@ namespace PowerLmsWebApi.Controllers
             {
                 var orgId = GetUserOrgId(context);
                 var allTables = new List<TableInfo>();
-
                 // 获取所有独立表字典
                 var dictionaryTypes = _ImportExportService.GetSupportedDictionaryTypes();
                 allTables.AddRange(dictionaryTypes.Select(x => new TableInfo 
@@ -105,7 +99,6 @@ namespace PowerLmsWebApi.Controllers
                     TableName = x.TypeName, 
                     DisplayName = x.DisplayName 
                 }));
-
                 // 获取所有客户子表
                 var customerSubTypes = _ImportExportService.GetSupportedCustomerSubTableTypes();
                 allTables.AddRange(customerSubTypes.Select(x => new TableInfo 
@@ -113,16 +106,13 @@ namespace PowerLmsWebApi.Controllers
                     TableName = x.TypeName, 
                     DisplayName = x.DisplayName 
                 }));
-
                 // 添加客户主表
                 allTables.Add(new TableInfo 
                 { 
                     TableName = "PlCustomer", 
                     DisplayName = "客户资料" 
                 });
-
                 result.Tables = allTables.OrderBy(x => x.TableName).ToList();
-                
                 return result;
             }
             catch (Exception ex)
@@ -134,11 +124,8 @@ namespace PowerLmsWebApi.Controllers
                 return StatusCode(500, result);
             }
         }
-
         #endregion
-
         #region 批量导入导出接口
-
         /// <summary>
         /// 批量导出功能（多表多Sheet模式）
         /// 支持同时导出多个独立表字典和客户资料表到一个Excel文件
@@ -161,7 +148,6 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult ExportMultipleTables([FromQuery] ExportMultipleTablesParamsDto paramsDto)
         {
             if (_AccountManager.GetOrLoadContextByToken(paramsDto.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            
             try
             {
                 if (paramsDto.TableNames == null || !paramsDto.TableNames.Any())
@@ -169,33 +155,25 @@ namespace PowerLmsWebApi.Controllers
                     _Logger.LogWarning("批量导出失败：未指定要导出的表名称");
                     return BadRequest("请至少指定一个实体类型名称进行导出");
                 }
-
                 var orgId = GetUserOrgId(context);
-                
                 // 分离独立表字典和客户资料表
                 var dictionaryTypes = _ImportExportService.GetSupportedDictionaryTypes().Select(x => x.TypeName).ToHashSet(StringComparer.OrdinalIgnoreCase);
                 var customerSubTypes = _ImportExportService.GetSupportedCustomerSubTableTypes().Select(x => x.TypeName).ToHashSet(StringComparer.OrdinalIgnoreCase);
                 customerSubTypes.Add("PlCustomer"); // 添加客户主表
-
                 var dictionaryTables = paramsDto.TableNames.Where(x => dictionaryTypes.Contains(x)).ToList();
                 var customerTables = paramsDto.TableNames.Where(x => customerSubTypes.Contains(x)).ToList();
                 var unsupportedTables = paramsDto.TableNames.Except(dictionaryTables).Except(customerTables).ToList();
-
                 if (unsupportedTables.Any())
                 {
                     _Logger.LogWarning("批量导出失败：包含不支持的表名称 {UnsupportedTables}", string.Join(", ", unsupportedTables));
-                    
                     // 特别处理SimpleDataDic的错误信息
                     if (unsupportedTables.Contains("SimpleDataDic", StringComparer.OrdinalIgnoreCase))
                     {
                         return BadRequest($"不支持的表名称: {string.Join(", ", unsupportedTables)}。简单字典(SimpleDataDic)请使用专门的简单字典导入导出API：/api/ImportExport/ExportSimpleDictionary");
                     }
-                    
                     return BadRequest($"不支持的表名称: {string.Join(", ", unsupportedTables)}。支持的独立字典表有：{string.Join(", ", dictionaryTypes)}。支持的客户资料表有：{string.Join(", ", customerSubTypes)}");
                 }
-
                 byte[] fileBytes;
-                
                 // 如果只有独立表字典
                 if (dictionaryTables.Any() && !customerTables.Any())
                 {
@@ -212,9 +190,7 @@ namespace PowerLmsWebApi.Controllers
                     _Logger.LogWarning("批量导出失败：暂不支持混合类型导出");
                     return BadRequest("暂不支持同时导出独立表字典和客户资料表，请分别调用对应的导出功能");
                 }
-                
                 var fileName = $"MultiTables_{string.Join("_", paramsDto.TableNames.Take(3))}{(paramsDto.TableNames.Count > 3 ? "_etc" : "")}_{DateTime.Now:yyyyMMdd_HHmmss}.xls";
-
                 // 二进制模式下载，确保跨浏览器兼容性
                 Response.Headers.Add("Content-Disposition", $"attachment; filename=\"{fileName}\"");
                 return File(fileBytes, "application/octet-stream", fileName);
@@ -230,7 +206,6 @@ namespace PowerLmsWebApi.Controllers
                 return StatusCode(500, $"导出失败: {ex.Message}");
             }
         }
-
         /// <summary>
         /// 批量导入功能（多表多Sheet模式）
         /// 自动识别Excel中的所有Sheet，根据Sheet名称匹配表类型进行导入
@@ -337,11 +312,8 @@ namespace PowerLmsWebApi.Controllers
                 return StatusCode(500, result);
             }
         }
-
         #endregion
-
         #region 私有辅助方法
-
         /// <summary>
         /// 获取用户的组织ID
         /// </summary>
@@ -352,7 +324,6 @@ namespace PowerLmsWebApi.Controllers
             var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
             return context.User.OrgId ?? merchantId;
         }
-
         #endregion
     }
 }

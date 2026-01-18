@@ -5,7 +5,6 @@
 修改日期: 2025年2月9日
 描述: 这个文件包含一个 JobTrigger 类，它实现了 IDbContextSaving 接口，并在工作任务被修改或删除时触发相应的处理逻辑。
 */
-
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,7 +14,6 @@ using OW.EntityFrameworkCore;
 using PowerLms.Data;
 using System;
 using System.Collections.Generic;
-
 namespace PowerLmsServer.Managers
 {
     /// <summary>
@@ -28,7 +26,6 @@ namespace PowerLmsServer.Managers
         /// </summary>
         public const string ChangedJobIdsKey = "ChangedJobIds";
     }
-
     /// <summary>
     /// 用于存储 EntityId、操作类型和实体类型名的类。
     /// </summary>
@@ -38,18 +35,15 @@ namespace PowerLmsServer.Managers
         /// 实体的 ID。
         /// </summary>
         public Guid EntityId { get; set; }
-
         /// <summary>
         /// 操作类型（新增、修改、删除）。
         /// </summary>
         public string Action { get; set; }
-
         /// <summary>
         /// 实体类型名。
         /// </summary>
         public string EntityType { get; set; }
     }
-
     /// <summary>
     /// 工作任务修改或删除时的触发器。
     /// </summary>
@@ -71,26 +65,20 @@ namespace PowerLmsServer.Managers
         IDisposable
     {
         #region 私有字段
-
         /// <summary>
         /// 日志记录器。
         /// </summary>
         private readonly ILogger<JobTrigger> _Logger;
-
         /// <summary>
         /// 应用程序生命周期监测器。
         /// </summary>
         private readonly IHostApplicationLifetime _HostApplicationLifetime;
-
         /// <summary>
         /// 指示对象是否已释放。
         /// </summary>
         private bool _Disposed = false;
-
         #endregion 私有字段
-
         #region 构造函数
-
         /// <summary>
         /// 构造函数，初始化日志记录器和应用程序生命周期监测器。
         /// </summary>
@@ -102,11 +90,8 @@ namespace PowerLmsServer.Managers
             _HostApplicationLifetime = hostApplicationLifetime;
             _HostApplicationLifetime.ApplicationStopping.Register(OnApplicationStopping);
         }
-
         #endregion 构造函数
-
         #region Saving方法
-
         /// <summary>
         /// 处理实体的增删改操作，并将相应的 JobId 添加到状态字典中。
         /// </summary>
@@ -117,11 +102,8 @@ namespace PowerLmsServer.Managers
         {
             AddJobIdsToStates(entities, states);
         }
-
         #endregion Saving方法
-
         #region 私有方法
-
         /// <summary>
         /// 将 EntityId 添加到状态字典中。
         /// </summary>
@@ -130,9 +112,7 @@ namespace PowerLmsServer.Managers
         private void AddJobIdsToStates(IEnumerable<EntityEntry> entities, Dictionary<object, object> states)
         {
             EnsureHashSetInStates(states);
-
             var changedJobIds = (HashSet<JobChange>)states[JobTriggerConstants.ChangedJobIdsKey];
-
             foreach (var entry in entities)
             {
                 var action = entry.State switch
@@ -142,7 +122,6 @@ namespace PowerLmsServer.Managers
                     EntityState.Deleted => "删除",
                     _ => string.Empty
                 };
-
                 if (!string.IsNullOrEmpty(action))
                 {
                     Guid? jobId = entry.Entity switch
@@ -155,7 +134,6 @@ namespace PowerLmsServer.Managers
                         PlJob plJob => plJob.Id,
                         _ => null
                     };
-
                     if (jobId.HasValue)
                     {
                         changedJobIds.Add(new JobChange
@@ -169,7 +147,6 @@ namespace PowerLmsServer.Managers
                 }
             }
         }
-
         /// <summary>
         /// 获取实体的 JobId 属性值。
         /// </summary>
@@ -184,7 +161,6 @@ namespace PowerLmsServer.Managers
             }
             return null;
         }
-
         /// <summary>
         /// 确保状态字典包含一个 HashSet&lt;JobChange&gt;，以存储已更改的 EntityId。
         /// </summary>
@@ -197,7 +173,6 @@ namespace PowerLmsServer.Managers
                 _Logger.LogDebug("HashSet<JobChange> 已被添加到 states 中，键为 {ChangedJobIdsKey}。", JobTriggerConstants.ChangedJobIdsKey);
             }
         }
-
         /// <summary>
         /// 应用程序停止时的处理逻辑。
         /// </summary>
@@ -205,11 +180,8 @@ namespace PowerLmsServer.Managers
         {
             _Logger.LogDebug("Application is stopping.");
         }
-
         #endregion 私有方法
-
         #region Dispose方法
-
         /// <summary>
         /// 释放资源。
         /// </summary>
@@ -226,7 +198,6 @@ namespace PowerLmsServer.Managers
                 _Disposed = true;
             }
         }
-
         /// <summary>
         /// 实现 IDisposable 接口的方法。
         /// </summary>
@@ -235,7 +206,6 @@ namespace PowerLmsServer.Managers
             Dispose(true);
             GC.SuppressFinalize(this);
         }
-
         #endregion Dispose方法
     }
 }

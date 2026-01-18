@@ -9,7 +9,6 @@ using PowerLmsServer.Managers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-
 namespace PowerLmsServer.Triggers
 {
     /// <summary>
@@ -22,7 +21,6 @@ namespace PowerLmsServer.Triggers
         /// </summary>
         public const string ChangedDocFeeIdsKey = "ChangedDocFeeIds";
     }
-
     /// <summary>
     /// 在 DocFee 和 DocBill 添加/更改时触发相应处理的类，并在保存 DocFee 和 DocBill 后，更新父级结算单金额的类。
     /// </summary>
@@ -32,7 +30,6 @@ namespace PowerLmsServer.Triggers
     {
         private readonly ILogger<DocFeeAndBillTriggerHandler> _Logger;
         private readonly BusinessLogicManager _BusinessLogic;
-
         /// <summary>
         /// 构造函数，初始化日志记录器和业务逻辑管理器。
         /// </summary>
@@ -43,7 +40,6 @@ namespace PowerLmsServer.Triggers
             _Logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _BusinessLogic = businessLogic;
         }
-
         /// <summary>
         /// 在 DocFee 和 DocBill 添加/更改时，将其 BillId（如果不为空）放在 HashSet 中，并计算父结算单的金额。
         /// </summary>
@@ -54,7 +50,6 @@ namespace PowerLmsServer.Triggers
         {
             var dbContext = entities.First().Context;
             var billIds = new HashSet<Guid>();
-
             foreach (var entry in entities)
             {
                 if (entry.Entity is DocFee df && df.BillId.HasValue)
@@ -66,11 +61,9 @@ namespace PowerLmsServer.Triggers
                     billIds.Add(docBill.Id);
                 }
             }
-
             // 计算并更新父结算单的金额
             var bills = dbContext.Set<DocBill>().WhereWithLocalSafe(c => billIds.Contains(c.Id));  //获取数据库和缓存中的合集
             var lkupFee = dbContext.Set<DocFee>().WhereWithLocal(c => c.BillId.HasValue && billIds.Contains(c.BillId.Value)).ToLookup(c => c.BillId.Value); // 加载所有用到的 DocFee 对象
-
             foreach (var bill in bills)
             {
                 if (dbContext.Entry(bill).State == EntityState.Deleted)  // 如果账单已被删除，则忽略
@@ -88,7 +81,6 @@ namespace PowerLmsServer.Triggers
                 {
                     var jobId = _BusinessLogic.GetJobIdByBillId(bill.Id);
                     _Logger.LogInformation("找到工作任务(Id = {BillId})。", jobId);
-
                     if (jobId is not null)  //若账单关联了工作，则使用工作的组织机构Id，否则忽略
                     {
                         var job = dbContext.Set<PlJob>().Find(jobId);
@@ -105,7 +97,6 @@ namespace PowerLmsServer.Triggers
             }
         }
     }
-
     /// <summary>
     /// 在 DocFeeRequisitionItem 添加/更改时触发相应处理的类，并在保存 DocFeeRequisitionItem 后，更新相关费用的合计金额的类。
     /// </summary>
@@ -113,7 +104,6 @@ namespace PowerLmsServer.Triggers
     public class FeeTotalTriggerHandler : IDbContextSaving<DocFeeRequisitionItem>
     {
         private readonly ILogger<FeeTotalTriggerHandler> _Logger;
-
         /// <summary>
         /// 构造函数，初始化日志记录器。
         /// </summary>
@@ -123,7 +113,6 @@ namespace PowerLmsServer.Triggers
         {
             _Logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
-
         /// <summary>
         /// 在 DocFeeRequisitionItem 添加/更改/删除时，更新相关费用的合计金额。
         /// 重构说明：使用 DocFee 类中的静态计算方法，避免重复计算逻辑，提高代码可维护性。
@@ -155,7 +144,6 @@ namespace PowerLmsServer.Triggers
             }
         }
     }
-
     /// <summary>
     /// 在 PlInvoicesItem（结算单明细）添加/更改/删除时触发相应处理的类，并在保存后，更新相关申请单明细的已结算金额。
     /// 重构说明：补全结算单明细回写链路，使用 PlInvoicesItem 类中的静态计算方法，避免重复计算逻辑。
@@ -164,7 +152,6 @@ namespace PowerLmsServer.Triggers
     public class PlInvoicesItemTriggerHandler : IDbContextSaving<PlInvoicesItem>
     {
         private readonly ILogger<PlInvoicesItemTriggerHandler> _Logger;
-
         /// <summary>
         /// 构造函数，初始化日志记录器。
         /// </summary>
@@ -174,7 +161,6 @@ namespace PowerLmsServer.Triggers
         {
             _Logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
-
         /// <summary>
         /// 在 PlInvoicesItem 添加/更改/删除时，更新相关申请单明细的已结算金额。
         /// 重构说明：使用 PlInvoicesItem 类中的静态计算方法，避免重复计算逻辑，提高代码可维护性。
@@ -185,31 +171,26 @@ namespace PowerLmsServer.Triggers
         public void Saving(IEnumerable<EntityEntry> entities, IServiceProvider service, Dictionary<object, object> states)
         {
             var dbContext = entities.First().Context;
-
             // 收集所有受影响的申请单明细ID
             var requisitionItemIds = new HashSet<Guid>(entities
                 .Select(c => c.Entity)
                 .OfType<PlInvoicesItem>()
                 .Where(c => c.RequisitionItemId.HasValue)
                 .Select(c => c.RequisitionItemId.Value));
-
             // 更新所有受影响的申请单明细的已结算金额
             foreach (var requisitionItemId in requisitionItemIds)
             {
                 // ✅ 直接使用Find，内部已优化（先查Local，再查数据库）
                 var requisitionItem = dbContext.Set<DocFeeRequisitionItem>().Find(requisitionItemId);
-
                 if (requisitionItem != null)
                 {
                     if (dbContext.Entry(requisitionItem).State == EntityState.Deleted)
                     {
                         continue;
                     }
-
                     // 使用统一计算方法
                     requisitionItem.TotalSettledAmount = 
                         PlInvoicesItem.CalculateTotalSettledAmountForRequisitionItem(requisitionItemId, dbContext);
-                    
                     _Logger.LogDebug("更新申请单明细ID:{RequisitionItemId}的TotalSettledAmount={TotalSettled}", 
                         requisitionItemId, requisitionItem.TotalSettledAmount);
                 }

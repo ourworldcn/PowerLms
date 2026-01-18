@@ -5,7 +5,6 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 #pragma warning disable CA1416 // 验证平台兼容性
-
 namespace PowerLmsServer.Managers
 {
     /// <summary>
@@ -17,7 +16,6 @@ namespace PowerLmsServer.Managers
     public class CaptchaManager
     {
         #region 构造函数
-
         /// <summary>
         /// 静态构造函数。验证当前平台是否支持System.Drawing.Common库。
         /// </summary>
@@ -30,19 +28,14 @@ namespace PowerLmsServer.Managers
                 throw new PlatformNotSupportedException("CaptchaManager requires System.Drawing.Common which is not supported on this platform.");
             }
         }
-
         /// <summary>
         /// 构造函数。初始化验证码管理器实例。
         /// </summary>
         public CaptchaManager()
         {
-
         }
-
         #endregion 构造函数
-
         #region 公共方法
-
         /// <summary>
         /// 校验验证码。验证用户输入的答案是否正确，并管理验证码的生命周期。
         /// </summary>
@@ -78,7 +71,6 @@ namespace PowerLmsServer.Managers
             }
             return true; // 验证成功
         }
-
         /// <summary>
         /// 生成新的验证码图片并返回答案。创建数学运算题目的验证码图片。
         /// </summary>
@@ -91,11 +83,8 @@ namespace PowerLmsServer.Managers
             image.Save(fullFileName, ImageFormat.Jpeg); // 保存为JPEG格式图片
             return ans; // 返回答案用于后续验证
         }
-
         #endregion 公共方法
-
         #region 私有方法
-
         /// <summary>
         /// 获取一个数学运算问答字符串。生成两个数字的加法运算题目。
         /// </summary>
@@ -109,7 +98,6 @@ namespace PowerLmsServer.Managers
             gut = $"{left} + {right} = ?"; // 组装题目字符串
             return (left + right).ToString(); // 返回计算结果作为答案
         }
-
         /// <summary>
         /// 生成验证码图片。创建包含干扰元素的验证码图像，提高安全性。
         /// </summary>
@@ -156,7 +144,6 @@ namespace PowerLmsServer.Managers
                 return null; // 生成失败返回null
             }
         }
-
         #endregion 私有方法
     }
 #pragma warning restore CA1416 // 验证平台兼容性

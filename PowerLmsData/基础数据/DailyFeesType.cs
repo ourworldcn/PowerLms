@@ -2,7 +2,6 @@
 using PowerLms.Data;
 using System;
 using System.ComponentModel.DataAnnotations;
-
 namespace PowerLms.Data
 {
     /// <summary>
@@ -20,7 +19,6 @@ namespace PowerLms.Data
         [Unicode(false), MaxLength(32)]
         public string SubjectCode { get; set; }
     }
-
     /// <summary>
     /// 日常费用种类字典扩展方法。
     /// </summary>
@@ -35,7 +33,6 @@ namespace PowerLms.Data
         {
             if (string.IsNullOrEmpty(dailyFeesType.Code) || string.IsNullOrEmpty(dailyFeesType.DisplayName))
                 return dailyFeesType.DisplayName ?? dailyFeesType.Code ?? string.Empty;
-
             return $"{dailyFeesType.Code}-{dailyFeesType.DisplayName}";
         }
     }

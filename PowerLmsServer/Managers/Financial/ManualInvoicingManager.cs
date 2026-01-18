@@ -5,7 +5,6 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
-
 namespace PowerLmsServer.Managers
 {
     /// <summary>
@@ -15,7 +14,6 @@ namespace PowerLmsServer.Managers
     public class ManualInvoicingManager // 这个GUID是诺诺发票渠道的唯一标识符 [TaxInvoiceChannels].[Id]与之对应
     {
     }
-
     /// <summary>扩展方法封装类。</summary>
     public static class ManualInvoicingManagerExtensions
     {

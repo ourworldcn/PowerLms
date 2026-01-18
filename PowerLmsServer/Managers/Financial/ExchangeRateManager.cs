@@ -1,12 +1,11 @@
-/*
- * ÎÄ¼şÃû£ºExchangeRateManager.cs
- * ×÷Õß£ºOW
- * ´´½¨ÈÕÆÚ£º2023Äê10ÔÂ25ÈÕ
- * ÃèÊö£º¸ÃÎÄ¼ş°üº¬ ExchangeRateManager ·şÎñµÄÊµÏÖ£¬ÓÃÓÚ»º´æ PlExchangeRate ±í£¬²¢ÔÚ±ä»¯Ê±Ê¹»º´æÊ§Ğ§¡£
- * µ±Ç°ÎÄ¼şÄÚÈİ¸ÅÊö£º
- * - ExchangeRateManager£ºÓÃÓÚ¹ÜÀí PlExchangeRate ±íµÄ»º´æ£¬²¢ÔÚ±í±ä»¯Ê±Ê¹»º´æÊ§Ğ§¡£
+ï»¿/*
+ * æ–‡ä»¶åï¼šExchangeRateManager.cs
+ * ä½œè€…ï¼šOW
+ * åˆ›å»ºæ—¥æœŸï¼š2023å¹´10æœˆ25æ—¥
+ * æè¿°ï¼šè¯¥æ–‡ä»¶åŒ…å« ExchangeRateManager æœåŠ¡çš„å®ç°ï¼Œç”¨äºç¼“å­˜ PlExchangeRate è¡¨ï¼Œå¹¶åœ¨å˜åŒ–æ—¶ä½¿ç¼“å­˜å¤±æ•ˆã€‚
+ * å½“å‰æ–‡ä»¶å†…å®¹æ¦‚è¿°ï¼š
+ * - ExchangeRateManagerï¼šç”¨äºç®¡ç† PlExchangeRate è¡¨çš„ç¼“å­˜ï¼Œå¹¶åœ¨è¡¨å˜åŒ–æ—¶ä½¿ç¼“å­˜å¤±æ•ˆã€‚
  */
-
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
@@ -23,92 +22,85 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
-
 namespace PowerLmsServer.Managers
 {
     /// <summary>
-    /// »ãÂÊ¹ÜÀíÆ÷£¬ÓÃÓÚ»º´æ PlExchangeRate ±í¡£
+    /// æ±‡ç‡ç®¡ç†å™¨ï¼Œç”¨äºç¼“å­˜ PlExchangeRate è¡¨ã€‚
     /// </summary>
     //[OwAutoInjection(ServiceLifetime.Scoped,ServiceType =typeof(IAfterDbContextSaving<PlExchangeRate>))]
     //[OwAutoInjection(ServiceLifetime.Scoped)]
     public class ExchangeRateManager : IDisposable, IAfterDbContextSaving<PlExchangeRate>
     {
-        #region Ë½ÓĞ×Ö¶Î
+        #region ç§æœ‰å­—æ®µ
         private readonly IDbContextFactory<PowerLmsUserDbContext> _DbContextFactory;
         private readonly IMemoryCache _Cache;
         private readonly ILogger<ExchangeRateManager> _Logger;
         private const string CacheKey = "ExchangeRateCache";
-        #endregion Ë½ÓĞ×Ö¶Î
-
-        #region ¹¹Ôìº¯Êı
+        #endregion ç§æœ‰å­—æ®µ
+        #region æ„é€ å‡½æ•°
         /// <summary>
-        /// ¹¹Ôìº¯Êı£¬³õÊ¼»¯Êı¾İ¿âÉÏÏÂÎÄ¹¤³§¡¢»º´æºÍÈÕÖ¾¼ÇÂ¼Æ÷¡£
+        /// æ„é€ å‡½æ•°ï¼Œåˆå§‹åŒ–æ•°æ®åº“ä¸Šä¸‹æ–‡å·¥å‚ã€ç¼“å­˜å’Œæ—¥å¿—è®°å½•å™¨ã€‚
         /// </summary>
-        /// <param name="dbContextFactory">Êı¾İ¿âÉÏÏÂÎÄ¹¤³§¡£</param>
-        /// <param name="cache">ÄÚ´æ»º´æ¡£</param>
-        /// <param name="logger">ÈÕÖ¾¼ÇÂ¼Æ÷¡£</param>
+        /// <param name="dbContextFactory">æ•°æ®åº“ä¸Šä¸‹æ–‡å·¥å‚ã€‚</param>
+        /// <param name="cache">å†…å­˜ç¼“å­˜ã€‚</param>
+        /// <param name="logger">æ—¥å¿—è®°å½•å™¨ã€‚</param>
         public ExchangeRateManager(IDbContextFactory<PowerLmsUserDbContext> dbContextFactory, IMemoryCache cache, ILogger<ExchangeRateManager> logger)
         {
             _DbContextFactory = dbContextFactory ?? throw new ArgumentNullException(nameof(dbContextFactory));
             _Cache = cache ?? throw new ArgumentNullException(nameof(cache));
             _Logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
-        #endregion ¹¹Ôìº¯Êı
-
-        #region ¹«¹²·½·¨
+        #endregion æ„é€ å‡½æ•°
+        #region å…¬å…±æ–¹æ³•
         /// <summary>
-        /// »ñÈ¡»ãÂÊµÄ ILookup¡£
+        /// è·å–æ±‡ç‡çš„ ILookupã€‚
         /// </summary>
-        /// <returns>»ãÂÊµÄ ILookup¡£ÏîÒÑ¾­°´½áÊøÊÂ¼şµã½µĞòÅÅĞò¡£</returns>
+        /// <returns>æ±‡ç‡çš„ ILookupã€‚é¡¹å·²ç»æŒ‰ç»“æŸäº‹ä»¶ç‚¹é™åºæ’åºã€‚</returns>
         public ILookup<(string, string), PlExchangeRate> GetExchangeRates()
         {
             return _Cache.GetOrCreate(CacheKey, entry =>
             {
                 using var dbContext = _DbContextFactory.CreateDbContext();
                 var exchangeRates = dbContext.Set<PlExchangeRate>().AsNoTracking()
-                    .OrderByDescending(rate => rate.EndData) // È·±£ÅÅĞòÎÈ¶¨
+                    .OrderByDescending(rate => rate.EndData) // ç¡®ä¿æ’åºç¨³å®š
                     .ToList();
-                _Logger.LogDebug("»º´æ PlExchangeRate ±í£¬¹² {Count} Ìõ¼ÇÂ¼¡£", exchangeRates.Count);
+                _Logger.LogDebug("ç¼“å­˜ PlExchangeRate è¡¨ï¼Œå…± {Count} æ¡è®°å½•ã€‚", exchangeRates.Count);
                 return exchangeRates.ToLookup(rate => (rate.SCurrency, rate.DCurrency));
             });
         }
-
         /// <summary>
-        /// Ê¹»º´æÊ§Ğ§¡£
+        /// ä½¿ç¼“å­˜å¤±æ•ˆã€‚
         /// </summary>
         public void InvalidateCache()
         {
             _Cache.Remove(CacheKey);
-            _Logger.LogDebug("ÒÑÊ¹ PlExchangeRate »º´æÊ§Ğ§¡£");
+            _Logger.LogDebug("å·²ä½¿ PlExchangeRate ç¼“å­˜å¤±æ•ˆã€‚");
         }
-        #endregion ¹«¹²·½·¨
-
-        #region IAfterDbContextSaving ÊµÏÖ
+        #endregion å…¬å…±æ–¹æ³•
+        #region IAfterDbContextSaving å®ç°
         /// <summary>
-        /// ÔÚ±£´æ PlExchangeRate ºó£¬¼ì²â±ä»¯²¢Ê¹»º´æÊ§Ğ§¡£
+        /// åœ¨ä¿å­˜ PlExchangeRate åï¼Œæ£€æµ‹å˜åŒ–å¹¶ä½¿ç¼“å­˜å¤±æ•ˆã€‚
         /// </summary>
-        /// <param name="dbContext">µ±Ç° DbContext ÊµÀı¡£</param>
-        /// <param name="serviceProvider">·şÎñÌá¹©Õß¡£</param>
-        /// <param name="states">×´Ì¬×Öµä¡£</param>
+        /// <param name="dbContext">å½“å‰ DbContext å®ä¾‹ã€‚</param>
+        /// <param name="serviceProvider">æœåŠ¡æä¾›è€…ã€‚</param>
+        /// <param name="states">çŠ¶æ€å­—å…¸ã€‚</param>
         public void AfterSaving(DbContext dbContext, IServiceProvider serviceProvider, Dictionary<object, object> states)
         {
             if (dbContext.ChangeTracker.Entries<PlExchangeRate>().Any(e => e.State == EntityState.Added || e.State == EntityState.Modified || e.State == EntityState.Deleted))
             {
                 InvalidateCache();
-                _Logger.LogDebug("PlExchangeRate ±í·¢Éú±ä»¯£¬ÒÑÊ¹»º´æÊ§Ğ§¡£");
+                _Logger.LogDebug("PlExchangeRate è¡¨å‘ç”Ÿå˜åŒ–ï¼Œå·²ä½¿ç¼“å­˜å¤±æ•ˆã€‚");
             }
         }
-        #endregion IAfterDbContextSaving ÊµÏÖ
-
-        #region ÊÍ·Å×ÊÔ´
+        #endregion IAfterDbContextSaving å®ç°
+        #region é‡Šæ”¾èµ„æº
         /// <summary>
-        /// ÊÍ·Å×ÊÔ´¡£
+        /// é‡Šæ”¾èµ„æºã€‚
         /// </summary>
         public void Dispose()
         {
-            // ÊÍ·Å×ÊÔ´
+            // é‡Šæ”¾èµ„æº
         }
-        #endregion ÊÍ·Å×ÊÔ´
+        #endregion é‡Šæ”¾èµ„æº
     }
 }
-

@@ -26,7 +26,6 @@
  * - Sheet级别错误隔离处理
  * 作者：zc | 创建：2025-01-27
  */
-
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -36,7 +35,6 @@ using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
 using System.Reflection;
 using NPOI.SS.UserModel;
-
 namespace PowerLmsWebApi.Controllers
 {
     /// <summary>
@@ -47,7 +45,6 @@ namespace PowerLmsWebApi.Controllers
     public partial class ImportExportController
     {
         #region 简单字典专用API
-
         /// <summary>
         /// 获取简单字典Catalog Code列表
         /// 查询ow_DataDicCatalogs表中的可用分类代码，用于确定可导入导出的简单字典类型
@@ -67,22 +64,17 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(paramsDto.Token, _ServiceProvider) is not OwContext context)
                 return Unauthorized();
-
             var result = new GetSimpleDictionaryCatalogCodesReturnDto();
-
             try
             {
                 var orgId = GetUserOrgId(context);
-
                 var catalogCodes = _ImportExportService.GetAvailableCatalogCodes(orgId);
                 result.CatalogCodes = catalogCodes.Select(x => new CatalogCodeInfo
                 {
                     Code = x.Code,
                     DisplayName = x.DisplayName
                 }).ToList();
-
                 _Logger.LogInformation("获取简单字典Catalog Code列表成功，共返回 {Count} 个分类代码", result.CatalogCodes.Count);
-
                 return result;
             }
             catch (Exception ex)
@@ -94,7 +86,6 @@ namespace PowerLmsWebApi.Controllers
                 return StatusCode(500, result);
             }
         }
-
         /// <summary>
         /// 导出简单字典到Excel（多Sheet结构）
         /// 根据指定的Catalog Code列表，从ow_SimpleDataDics表导出数据
@@ -123,20 +114,15 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(paramsDto.Token, _ServiceProvider) is not OwContext context)
                 return Unauthorized();
-
             try
             {
                 if (paramsDto.CatalogCodes == null || !paramsDto.CatalogCodes.Any())
                 {
                     return BadRequest("请至少指定一个Catalog Code进行导出");
                 }
-
                 var orgId = GetUserOrgId(context);
-
                 var fileBytes = _ImportExportService.ExportSimpleDictionaries(paramsDto.CatalogCodes, orgId);
-
                 var fileName = $"SimpleDataDic_{string.Join("_", paramsDto.CatalogCodes.Take(3))}{(paramsDto.CatalogCodes.Count > 3 ? "_etc" : "")}_{DateTime.Now:yyyyMMdd_HHmmss}.xls";
-
                 // 二进制模式下载，确保跨浏览器兼容性
                 Response.Headers.Add("Content-Disposition", $"attachment; filename=\"{fileName}\"");
                 return File(fileBytes, "application/octet-stream", fileName);
@@ -152,7 +138,6 @@ namespace PowerLmsWebApi.Controllers
                 return StatusCode(500, $"导出失败: {ex.Message}");
             }
         }
-
         /// <summary>
         /// 从Excel导入简单字典（多Sheet结构）
         /// 自动识别Excel中的所有Sheet，根据Sheet名称匹配ow_DataDicCatalogs.Code进行导入
@@ -188,9 +173,7 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(paramsDto.Token, _ServiceProvider) is not OwContext context)
                 return Unauthorized();
-
             var result = new ImportSimpleDictionaryReturnDto();
-
             try
             {
                 if (formFile == null || formFile.Length == 0)
@@ -200,23 +183,18 @@ namespace PowerLmsWebApi.Controllers
                     result.DebugMessage = "请选择要导入的Excel文件";
                     return BadRequest(result);
                 }
-
                 var orgId = GetUserOrgId(context);
                 var createAccountId = context.User?.Id;
                 // 先创建 IWorkbook 对象
                 using var workbook = WorkbookFactory.Create(formFile.OpenReadStream());
-
                 // 调用修改后的方法（添加createAccountId参数）
                 var importResult = _ImportExportService.ImportSimpleDictionaries(workbook, orgId, createAccountId, paramsDto.DeleteExisting);
-
                 result.ImportedCount = importResult.TotalImportedCount;
                 result.ProcessedSheets = importResult.ProcessedSheets;
-
                 // 组装详细信息
                 result.Details = importResult.SheetResults.Select(
                     x => x.Success ? $"Sheet '{x.SheetName}': 成功导入 {x.ImportedCount} 条记录" : $"Sheet '{x.SheetName}': 导入失败 - {x.ErrorMessage}")
                     .ToList();
-
                 if (importResult.TotalImportedCount > 0)
                 {
                     result.DebugMessage = $"导入简单字典完成，共处理 {importResult.ProcessedSheets} 个Sheet，导入 {importResult.TotalImportedCount} 条记录";
@@ -227,7 +205,6 @@ namespace PowerLmsWebApi.Controllers
                     result.ErrorCode = 400;
                     result.DebugMessage = "没有成功导入任何数据，请检查Excel文件格式和Sheet名称";
                 }
-
                 return result;
             }
             catch (Exception ex)
@@ -239,7 +216,6 @@ namespace PowerLmsWebApi.Controllers
                 return StatusCode(500, result);
             }
         }
-
         #endregion
     }
 }

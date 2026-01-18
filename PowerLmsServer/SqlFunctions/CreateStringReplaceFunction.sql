@@ -1,17 +1,15 @@
--- ´´½¨Ò»¸ö×Ô¶¨Òåº¯ÊıÀ´Ä£ÄâC#ÖĞµÄFormatWith·½·¨
+ï»¿-- åˆ›å»ºä¸€ä¸ªè‡ªå®šä¹‰å‡½æ•°æ¥æ¨¡æ‹ŸC#ä¸­çš„FormatWithæ–¹æ³•
 IF EXISTS (SELECT * FROM sys.objects WHERE type = 'FN' AND name = 'FormatWithJson')
 BEGIN
     DROP FUNCTION dbo.FormatWithJson;
 END
 GO
-
 CREATE FUNCTION dbo.FormatWithJson(@template NVARCHAR(MAX), @jsonParams NVARCHAR(MAX))
 RETURNS NVARCHAR(MAX)
 AS
 BEGIN
     DECLARE @result NVARCHAR(MAX) = @template;
-    
-    -- Ìæ»»³£¼û²ÎÊıÕ¼Î»·û
+    -- æ›¿æ¢å¸¸è§å‚æ•°å ä½ç¬¦
     SET @result = REPLACE(@result, '{LoginName}', ISNULL(JSON_VALUE(@jsonParams, '$.LoginName'), ''));
     SET @result = REPLACE(@result, '{CompanyName}', ISNULL(JSON_VALUE(@jsonParams, '$.CompanyName'), ''));
     SET @result = REPLACE(@result, '{DisplayName}', ISNULL(JSON_VALUE(@jsonParams, '$.DisplayName'), ''));
@@ -19,9 +17,7 @@ BEGIN
     SET @result = REPLACE(@result, '{OperationType}', ISNULL(JSON_VALUE(@jsonParams, '$.OperationType'), ''));
     SET @result = REPLACE(@result, '{ClientType}', ISNULL(JSON_VALUE(@jsonParams, '$.ClientType'), ''));
     SET @result = REPLACE(@result, '{CreateUtc}', CONVERT(VARCHAR(23), GETUTCDATE(), 126));
-    
-    -- Ìí¼ÓÆäËû¿ÉÄÜµÄ²ÎÊıÌæ»»...
-    
+    -- æ·»åŠ å…¶ä»–å¯èƒ½çš„å‚æ•°æ›¿æ¢...
     RETURN @result;
 END
 GO

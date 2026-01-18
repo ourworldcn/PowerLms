@@ -1,23 +1,19 @@
 ﻿using PowerLms.Data;
 using PowerLmsWebApi.Dto;
-
 namespace PowerLmsWebApi.Controllers
 {
-
     /// <summary>
     /// 标记删除商户功能的参数封装类。
     /// </summary>
     public class RemoveMerchantParamsDto : RemoveParamsDtoBase
     {
     }
-
     /// <summary>
     /// 标记删除商户功能的返回值封装类。
     /// </summary>
     public class RemoveMerchantReturnDto : RemoveReturnDtoBase
     {
     }
-
     /// <summary>
     /// 初始化商户的功能参数封装类。
     /// </summary>
@@ -28,21 +24,18 @@ namespace PowerLmsWebApi.Controllers
         /// </summary>
         public Guid Id { get; set; }
     }
-
     /// <summary>
     /// 初始化商户的功能返回值封装类。
     /// </summary>
     public class InitializeMerchantReturnDto : ReturnDtoBase
     {
     }
-
     /// <summary>
     /// 获取所有商户功能的返回值封装类。
     /// </summary>
     public class GetAllMerchantReturnDto : PagingReturnDtoBase<PlMerchant>
     {
     }
-
     /// <summary>
     /// 增加新商户功能参数封装类。
     /// </summary>
@@ -53,7 +46,6 @@ namespace PowerLmsWebApi.Controllers
         /// </summary>
         public PlMerchant Merchant { get; set; }
     }
-
     /// <summary>
     /// 增加新商户功能返回值封装类。
     /// </summary>
@@ -64,7 +56,6 @@ namespace PowerLmsWebApi.Controllers
         /// </summary>
         public Guid Id { get; set; }
     }
-
     /// <summary>
     /// 修改商户信息功能参数封装类。
     /// </summary>
@@ -75,14 +66,12 @@ namespace PowerLmsWebApi.Controllers
         /// </summary>
         public PlMerchant Merchant { get; set; }
     }
-
     /// <summary>
     /// 修改商户信息功能返回值封装类。
     /// </summary>
     public class ModifyMerchantReturnDto : ReturnDtoBase
     {
     }
-
     /// <summary>
     /// 获取指定机构下（含自身和子机构）的所有用户对象功能的参数封装类。
     /// </summary>
@@ -93,7 +82,6 @@ namespace PowerLmsWebApi.Controllers
         /// </summary>
         public List<Guid> OrgOrMerchantIds { get; set; } = new List<Guid>();
     }
-
     /// <summary>
     /// 获取指定机构下（含自身和子机构）的所有用户对象功能的返回值封装类。
     /// </summary>

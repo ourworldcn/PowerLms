@@ -13,7 +13,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-
 namespace PowerLmsServer.Managers
 {
     /// <summary>
@@ -37,22 +36,18 @@ namespace PowerLmsServer.Managers
             _ApplicationLifetime = applicationLifetime;
             TaskDispatcher = new TaskDispatcher(new TaskDispatcherOptions { CancellationToken = _ApplicationLifetime.ApplicationStopped });
         }
-
         readonly IMapper _Mapper;
         readonly IMemoryCache _MemoryCache;
         readonly IDbContextFactory<PowerLmsUserDbContext> _DbContextFactory;
         readonly IHostApplicationLifetime _ApplicationLifetime;
-
         /// <summary>
         /// 将令牌转换为用户Key的字典的缓存项的key。
         /// </summary>
         const string Token2KeyCacheKey = $"097E641E-03D5-45CE-A911-B4A1C7D2392B.Token2Key";
-
         /// <summary>
         /// TaskDispatcher 实例。延迟初始化。
         /// </summary>
         private readonly TaskDispatcher TaskDispatcher;
-
         /// <summary>
         /// 令牌到缓存键的映射字典。
         /// 键是令牌，值对象Id的字符串。
@@ -67,7 +62,6 @@ namespace PowerLmsServer.Managers
                 });
             }
         }
-
         /// <summary>
         /// 按指定令牌获取Id。
         /// </summary>
@@ -88,7 +82,6 @@ namespace PowerLmsServer.Managers
                 return id;
             return null;
         }
-
         /// <summary>
         /// 锁定，避免出现临界争用错误。
         /// </summary>
@@ -99,7 +92,6 @@ namespace PowerLmsServer.Managers
         {
             return DisposeHelper.Create(SingletonLocker.TryEnter, SingletonLocker.Exit, key, timeout);
         }
-
         /// <summary>
         /// 创建一个新账号。
         /// </summary>
@@ -118,7 +110,6 @@ namespace PowerLmsServer.Managers
                 id = Guid.Empty;
                 return false;
             }
-
             // 参数验证：检查loginName是否为空
             if (string.IsNullOrEmpty(loginName))
             {
@@ -126,7 +117,6 @@ namespace PowerLmsServer.Managers
                 id = Guid.Empty;
                 return false;
             }
-
             // 参数验证：检查template是否为空
             if (template == null)
             {
@@ -134,12 +124,10 @@ namespace PowerLmsServer.Managers
                 id = Guid.Empty;
                 return false;
             }
-
             try
             {
                 // 获取数据库上下文
                 var db = service.GetRequiredService<PowerLmsUserDbContext>();
-
                 // 检查登录名是否重复 - 修改为409错误并指出字段名
                 if (db.Accounts.Any(c => c.LoginName == loginName))
                 {
@@ -147,9 +135,7 @@ namespace PowerLmsServer.Managers
                     id = Guid.Empty;
                     return false;
                 }
-
                 if (string.IsNullOrEmpty(pwd)) pwd = OwStringUtils.GeneratePassword(6); // 若需要生成密码，使用OwStringUtils
-
                 var user = _Mapper.Map<Account>(template);
                 user.GenerateNewId();
                 user.SetPwd(pwd);
@@ -175,7 +161,6 @@ namespace PowerLmsServer.Managers
                 return false;
             }
         }
-
         /// <summary>
         /// 获取缓存上下文。当前版本未实现缓存，未来将使用缓存加速。
         /// </summary>
@@ -186,7 +171,6 @@ namespace PowerLmsServer.Managers
         {
             var account = GetOrLoadByToken(token);
             if (account is null) goto lbErr;
-
             var context = scope.GetRequiredService<OwContext>();
             context.Token = token;
             context.User = account;
@@ -195,9 +179,7 @@ namespace PowerLmsServer.Managers
             OwHelper.SetLastError(315);
             return null;
         }
-
         #region 加载用户对象及相关
-
         /// <summary>
         /// 在缓存中按指定令牌获取账号。不会试图读取数据库。
         /// </summary>
@@ -212,7 +194,6 @@ namespace PowerLmsServer.Managers
             if (!Guid.TryParse(key, out var id)) return null;
             return GetAccountById(id);
         }
-
         /// <summary>
         /// 加载用户对象。
         /// </summary>
@@ -226,7 +207,6 @@ namespace PowerLmsServer.Managers
             Loaded(user, db);
             return user;
         }
-
         /// <summary>
         /// 按指定令牌获取用户
         /// </summary>
@@ -240,7 +220,6 @@ namespace PowerLmsServer.Managers
             if (id is null) return null;
             return GetOrLoadById(id.Value);
         }
-
         /// <summary>
         /// 按证据获取用户或加载。
         /// </summary>
@@ -260,7 +239,6 @@ namespace PowerLmsServer.Managers
         lbErr:
             return null;
         }
-
         /// <summary>
         /// 按证据加载用户。
         /// </summary>
@@ -284,9 +262,7 @@ namespace PowerLmsServer.Managers
         lbErr:
             return null;
         }
-
         #region 用Id获取账号及相关
-
         /// <summary>
         /// 加载用户对象。
         /// </summary>
@@ -296,14 +272,11 @@ namespace PowerLmsServer.Managers
         {
             // ✅ 使用 using 确保 DbContext 立即释放
             using var db = _DbContextFactory.CreateDbContext();
-            
             // ✅ 使用 AsNoTracking 避免跟踪
             var user = db.Accounts.AsNoTracking().FirstOrDefault(c => c.Id == id);
-            
             // ✅ 返回纯数据对象，无 DbContext
             return user;
         }
-
         /// <summary>
         /// 从缓存中获取用户对象。
         /// </summary>
@@ -314,7 +287,6 @@ namespace PowerLmsServer.Managers
             string cacheKey = OwCacheExtensions.GetCacheKeyFromId<Account>(id);
             return _MemoryCache.Get<Account>(cacheKey);
         }
-
         /// <summary>
         /// 获取缓存中的用户对象或加载。
         /// </summary>
@@ -323,24 +295,18 @@ namespace PowerLmsServer.Managers
         public virtual Account GetOrLoadById(Guid id)
         {
             using var dw = Lock(id.ToString(), Timeout.InfiniteTimeSpan);
-
             string cacheKey = OwCacheExtensions.GetCacheKeyFromId<Account>(id);
-
             return _MemoryCache.GetOrCreate(cacheKey, entry =>
             {
                 // ? 启用优先级驱逐回调
                 entry.EnablePriorityEvictionCallback(_MemoryCache);
-
                 var user = LoadById(OwCacheExtensions.GetIdFromCacheKey(entry.Key as string) ?? id);
                 if (user == null) return null;
-
                 // 配置缓存项
                 ConfigureCacheEntry(entry, user);
-
                 return user;
             });
         }
-
         /// <summary>
         /// 配置用户缓存的缓存项。
         /// </summary>
@@ -350,12 +316,9 @@ namespace PowerLmsServer.Managers
         {
             // 设置用户缓存过期时间
             entry.SetSlidingExpiration(TimeSpan.FromMinutes(15));
-            
             // ✅ 启用优先级驱逐回调（会自动注册CTS用于直接失效）
             entry.EnablePriorityEvictionCallback(_MemoryCache);
-            
             // ❌ 移除：用户缓存不依赖其他缓存，不需要添加依赖令牌
-            
             // ✅ 修改驱逐回调: 只清理Token映射,不处理DbContext
             entry.RegisterPostEvictionCallback((key, value, reason, state) =>
             {
@@ -365,7 +328,6 @@ namespace PowerLmsServer.Managers
                     Token2KeyDic.TryRemove(acc.Token.Value, out _);
                 }
             });
-            
             // 建立Token到Id的映射
             if (account?.Token.HasValue == true)
             {
@@ -373,7 +335,6 @@ namespace PowerLmsServer.Managers
             }
         }
         #endregion 用Id获取账号及相关
-
         /// <summary>
         /// 加载用户对象后调用。
         /// </summary>
@@ -383,12 +344,9 @@ namespace PowerLmsServer.Managers
         {
             // ❌ 不再附加 DbContext
             // user.DbContext = db;
-            
             // ✅ 如果需要在加载后做其他操作,可以在这里添加
         }
-
         #endregion 加载用户对象及相关
-
         /// <summary>
         /// 是否是超管。
         /// </summary>
@@ -398,7 +356,6 @@ namespace PowerLmsServer.Managers
         {
             return (user.State & 4) != 0;
         }
-
         /// <summary>
         /// 是否是商管。
         /// </summary>
@@ -435,7 +392,6 @@ namespace PowerLmsServer.Managers
             }
             return false;
         }
-
         /// <summary>
         /// 根据令牌使用户缓存失效。
         /// </summary>
@@ -449,7 +405,6 @@ namespace PowerLmsServer.Managers
             }
             return false;
         }
-
         /// <summary>
         /// 获取用户缓存的取消令牌源。
         /// </summary>
@@ -461,7 +416,6 @@ namespace PowerLmsServer.Managers
             // ? 修正：调用 GetCancellationTokenSourceV2
             return _MemoryCache.GetCancellationTokenSource(cacheKey);
         }
-
         /// <summary>
         /// 更新用户令牌并确保相关缓存和映射正确更新。
         /// 在用户登录或令牌刷新时调用此方法。
@@ -473,36 +427,27 @@ namespace PowerLmsServer.Managers
         {
             // 使用锁以确保原子性操作
             using var dw = Lock(userId.ToString(), Timeout.InfiniteTimeSpan);
-
             // ✅ 步骤1: 创建独立的 DbContext
             using var dbContext = _DbContextFactory.CreateDbContext();
-
             // ✅ 步骤2: 加载实体
             var account = dbContext.Accounts.Find(userId);
             if (account == null) return null;
-
             // ✅ 步骤3: 修改数据
             var oldToken = account.Token;
             account.Token = newToken ?? Guid.NewGuid();
             account.LastModifyDateTimeUtc = OwHelper.WorldNow;
-
             // ✅ 步骤4: 保存到数据库
             dbContext.SaveChanges();
-
             // ✅ 步骤5: 更新 Token 映射
             if (oldToken.HasValue)
             {
                 Token2KeyDic.TryRemove(oldToken.Value, out _);
             }
-
             Token2KeyDic[account.Token.Value] = account.IdString;
-
             // ✅ 步骤6: 失效缓存
             InvalidateUserCache(userId);
-
             return account.Token;
         }
-
         /// <summary>
         /// 将账号的更改保存到数据库。
         /// 该方法使用TaskDispatcher排队保存任务，确保对同一账号的操作按序执行。
@@ -516,4 +461,3 @@ namespace PowerLmsServer.Managers
         }
     }
 }
-

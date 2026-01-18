@@ -4,7 +4,6 @@
 * 技术要点：七种凭证分录规则、多币种处理、混合业务识别、汇率计算、导出防重机制
 * 作者：zc | 创建：2025-01 | 修改：2025-12-14 集成导出防重机制
 */
-
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PowerLms.Data;
@@ -17,7 +16,6 @@ using System.Runtime.ExceptionServices;
 using OW.Data;
 using DotNetDBF;
 using SysIO = System.IO;
-
 namespace PowerLmsWebApi.Controllers.Financial
 {
     /// <summary>
@@ -34,7 +32,6 @@ namespace PowerLmsWebApi.Controllers.Financial
     public partial class FinancialSystemExportController
     {
         #region HTTP接口 - 收款结算单导出
-
         /// <summary>
         /// 导出收款结算单为金蝶DBF格式文件
         /// 支持七种凭证分录规则的完整实现，处理复杂的多币种和混合业务场景
@@ -50,13 +47,11 @@ namespace PowerLmsWebApi.Controllers.Financial
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
                 return Unauthorized();
-
             var result = new ExportSettlementReceiptReturnDto();
             try
             {
                 _Logger.LogInformation("开始处理收款结算单导出请求，用户: {UserId}, 组织: {OrgId}",
                     context.User.Id, context.User.OrgId);
-
                 // 1. 权限验证：使用财务接口权限 - 修复：通过ServiceProvider获取AuthorizationManager
                 var authorizationManager = _ServiceProvider.GetRequiredService<AuthorizationManager>();
                 if (!authorizationManager.Demand(out var err, "F.6"))
@@ -66,7 +61,6 @@ namespace PowerLmsWebApi.Controllers.Financial
                     result.DebugMessage = $"权限不足：{err}";
                     return result;
                 }
-
                 // 2. 预检查科目配置完整性
                 var missingConfigs = ValidateSettlementReceiptSubjectConfiguration(context.User.OrgId);
                 if (missingConfigs.Any())
@@ -76,27 +70,21 @@ namespace PowerLmsWebApi.Controllers.Financial
                     result.DebugMessage = $"科目配置不完整，缺少以下配置：{string.Join(", ", missingConfigs)}";
                     return result;
                 }
-
                 // 3. 构建查询条件 - 只查询收款结算单（IO=true）且未导出的
                 var exportManager = _ServiceProvider.GetRequiredService<FinancialSystemExportManager>();
                 var conditions = model.ExportConditions ?? new Dictionary<string, string>();
-
                 // 强制限制为收款结算单
                 conditions["IO"] = "true";
-
                 // 4. 预检查收款结算单数量 - 使用Manager方法过滤未导出数据
                 var baseQuery = _DbContext.PlInvoicess.AsQueryable();
                 var settlementReceiptsQuery = exportManager.FilterUnexported(baseQuery);
-
                 // 应用查询条件
                 if (conditions.Any())
                 {
                     settlementReceiptsQuery = EfHelper.GenerateWhereAnd(settlementReceiptsQuery, conditions);
                 }
-
                 // 应用组织权限过滤
                 settlementReceiptsQuery = ApplyOrganizationFilterForSettlementReceipts(settlementReceiptsQuery, context.User);
-
                 var settlementReceiptCount = settlementReceiptsQuery.Count();
                 if (settlementReceiptCount == 0)
                 {
@@ -105,14 +93,11 @@ namespace PowerLmsWebApi.Controllers.Financial
                     result.DebugMessage = "没有找到符合条件的收款结算单数据，请调整查询条件";
                     return result;
                 }
-
                 // 5. 预估凭证分录数量（基于七种分录规则，至少2个必须分录，最多7个）
                 var estimatedVoucherEntryCount = settlementReceiptCount * 3; // 平均每个结算单3个分录
-
                 // 6. 创建异步导出任务
                 var taskService = _ServiceProvider.GetRequiredService<OwTaskService<PowerLmsUserDbContext>>();
                 var exportDateTime = DateTime.UtcNow;
-
                 var taskParameters = new Dictionary<string, string>
                 {
                     ["ExportConditions"] = JsonSerializer.Serialize(conditions),
@@ -124,39 +109,31 @@ namespace PowerLmsWebApi.Controllers.Financial
                     ["DisplayName"] = model.DisplayName ?? "",
                     ["Remark"] = model.Remark ?? ""
                 };
-
                 var taskId = taskService.CreateTask(typeof(FinancialSystemExportController),
                     nameof(ProcessSettlementReceiptDbfExportTask),
                     taskParameters,
                     context.User.Id,
                     context.User.OrgId);
-
                 // 7. 返回成功结果
                 result.TaskId = taskId;
                 result.Message = $"收款结算单导出任务已创建成功";
                 result.DebugMessage = $"导出任务已创建，预计处理 {settlementReceiptCount} 个收款结算单，生成 {estimatedVoucherEntryCount} 条凭证分录。可通过系统任务状态查询接口跟踪进度。";
                 result.ExpectedSettlementReceiptCount = settlementReceiptCount;
                 result.ExpectedVoucherEntryCount = estimatedVoucherEntryCount;
-
                 _Logger.LogInformation("收款结算单导出任务创建成功，任务ID: {TaskId}, 结算单数量: {ReceiptCount}",
                     taskId, settlementReceiptCount);
             }
             catch (Exception ex)
             {
                 _Logger.LogError(ex, "处理收款结算单导出请求时发生错误，用户: {UserId}", context.User.Id);
-
                 result.HasError = true;
                 result.ErrorCode = 500;
                 result.DebugMessage = $"导出请求处理失败: {ex.Message}";
             }
-
             return result;
         }
-
         #endregion
-
         #region 静态任务处理方法 - 收款结算单导出
-
         /// <summary>
         /// 处理收款结算单DBF导出任务（静态方法，由OwTaskService调用）
         /// 实现七种凭证分录规则的完整业务逻辑
@@ -174,7 +151,6 @@ namespace PowerLmsWebApi.Controllers.Financial
                     throw new ArgumentNullException(nameof(serviceProvider), "服务提供者不能为空");
                 if (parameters == null)
                     throw new ArgumentNullException(nameof(parameters), "任务参数不能为空");
-
                 currentStep = "解析服务依赖";
                 var dbContextFactory = serviceProvider.GetService<IDbContextFactory<PowerLmsUserDbContext>>() ??
                     throw new InvalidOperationException("无法获取数据库上下文工厂 - 请检查服务注册");
@@ -182,7 +158,6 @@ namespace PowerLmsWebApi.Controllers.Financial
                     throw new InvalidOperationException("无法获取文件服务 - 请检查服务注册");
                 var businessLogicManager = serviceProvider.GetService<BusinessLogicManager>() ??
                     throw new InvalidOperationException("无法获取业务逻辑管理器 - 请检查服务注册");
-
                 currentStep = "解析任务参数";
                 if (!parameters.TryGetValue("ExportConditions", out var exportConditionsJson))
                     throw new InvalidOperationException($"任务参数缺少 'ExportConditions'。任务ID: {taskId}");
@@ -190,96 +165,74 @@ namespace PowerLmsWebApi.Controllers.Financial
                     throw new InvalidOperationException($"任务参数缺少 'UserId'。任务ID: {taskId}");
                 if (!parameters.TryGetValue("ExportDateTime", out var exportDateTimeStr))
                     throw new InvalidOperationException($"任务参数缺少 'ExportDateTime'。任务ID: {taskId}");
-
                 var conditions = !string.IsNullOrEmpty(exportConditionsJson) ?
                     JsonSerializer.Deserialize<Dictionary<string, string>>(exportConditionsJson) :
                     new Dictionary<string, string>();
-
                 if (!Guid.TryParse(userIdStr, out var userId))
                     throw new InvalidOperationException($"无效的用户ID格式: {userIdStr}");
-
                 Guid? orgId = null;
                 if (parameters.TryGetValue("OrgId", out var orgIdStr) && !string.IsNullOrEmpty(orgIdStr))
                 {
                     if (Guid.TryParse(orgIdStr, out var parsedOrgId))
                         orgId = parsedOrgId;
                 }
-
                 if (!DateTime.TryParse(exportDateTimeStr, out var exportDateTime))
                     throw new InvalidOperationException($"无效的导出时间格式: {exportDateTimeStr}");
-
                 var displayName = parameters.GetValueOrDefault("DisplayName", "");
                 var remark = parameters.GetValueOrDefault("Remark", "");
-
                 currentStep = "创建数据库上下文";
                 using var dbContext = dbContextFactory.CreateDbContext();
-
                 currentStep = "验证科目配置";
                 var subjectConfigs = LoadSettlementReceiptSubjectConfigurations(dbContext, orgId);
                 if (!subjectConfigs.Any())
                 {
                     throw new InvalidOperationException("收款结算单科目配置不完整，无法生成凭证");
                 }
-
                 currentStep = "查询用户信息";
                 var taskUser = dbContext.Accounts.Find(userId) ??
                     throw new InvalidOperationException($"未找到用户 {userId}");
-
                 currentStep = "构建收款结算单查询";
                 var exportManager = serviceProvider.GetRequiredService<FinancialSystemExportManager>();
                 var baseQuery = dbContext.PlInvoicess.AsQueryable();
                 var settlementReceiptsQuery = exportManager.FilterUnexported(baseQuery);
-
                 if (conditions.Any())
                 {
                     settlementReceiptsQuery = EfHelper.GenerateWhereAnd(settlementReceiptsQuery, conditions);
                 }
-
                 // 应用组织权限过滤
                 settlementReceiptsQuery = ApplyOrganizationFilterForSettlementReceiptsStatic(settlementReceiptsQuery, taskUser, dbContext, serviceProvider);
-
                 currentStep = "查询收款结算单数据";
                 var settlementReceipts = settlementReceiptsQuery.ToList();
                 if (!settlementReceipts.Any())
                 {
                     throw new InvalidOperationException("没有找到符合条件的收款结算单数据");
                 }
-
                 currentStep = "查询收款结算单明细";
                 var settlementReceiptIds = settlementReceipts.Select(r => r.Id).ToList();
                 var items = dbContext.PlInvoicesItems
                     .Where(item => settlementReceiptIds.Contains(item.ParentId.Value))
                     .ToList();
-
                 if (!items.Any())
                 {
                     throw new InvalidOperationException("没有找到收款结算单明细项");
                 }
-
                 // 按收款结算单ID分组明细项
                 var itemsDict = items.GroupBy(item => item.ParentId.Value)
                     .ToDictionary(g => g.Key, g => g.ToList());
-
                 currentStep = "计算收款结算单业务数据";
                 var calculationResults = CalculateSettlementReceiptData(settlementReceipts, itemsDict, dbContext, businessLogicManager);
-
                 currentStep = "生成金蝶凭证分录";
                 var allVouchers = GenerateSettlementReceiptVouchersStatic(calculationResults, subjectConfigs, dbContext);
-
                 if (!allVouchers.Any())
                 {
                     throw new InvalidOperationException("没有生成任何凭证记录");
                 }
-
                 currentStep = "验证凭证数据完整性";
                 ValidateVoucherDataIntegrity(allVouchers);
-
                 currentStep = "生成DBF文件";
                 var fileName = $"SettlementReceipt_Export_{DateTime.Now:yyyyMMdd_HHmmss}.dbf";
-
                 var kingdeeFieldMappings = GetSettlementReceiptKingdeeFieldMappings();
                 var customFieldTypes = GetSettlementReceiptKingdeeFieldTypes();
-
                 PlFileInfo fileInfoRecord;
                 long fileSize;
                 var memoryStream = new MemoryStream(1024 * 1024 * 1024); // 预分配1GB内存流
@@ -290,13 +243,11 @@ namespace PowerLmsWebApi.Controllers.Financial
                     if (fileSize == 0)
                         throw new InvalidOperationException($"DBF文件生成失败，文件为空");
                     memoryStream.Position = 0;
-
                     // 构建最终的显示名称和备注
                     var finalDisplayName = !string.IsNullOrWhiteSpace(displayName) ?
                         displayName : $"收款结算单导出-{DateTime.Now:yyyy年MM月dd日}";
                     var finalRemark = !string.IsNullOrWhiteSpace(remark) ?
                         remark : $"收款结算单DBF导出文件，共{settlementReceipts.Count}个收款结算单，{allVouchers.Count}条会计分录，导出时间：{exportDateTime:yyyy-MM-dd HH:mm:ss}";
-
                     fileInfoRecord = fileService.CreateFile(
                         fileStream: memoryStream,
                         fileName: fileName,
@@ -312,15 +263,12 @@ namespace PowerLmsWebApi.Controllers.Financial
                 {
                     OwHelper.DisposeAndRelease(ref memoryStream);
                 }
-
                 if (fileInfoRecord == null)
                     throw new InvalidOperationException("文件保存失败");
-
                 currentStep = "标记收款结算单为已导出";
                 // 使用FinancialSystemExportManager的标准方法标记已导出
                 var markedCount = exportManager.MarkAsExported(settlementReceipts, userId);
                 dbContext.SaveChanges();
-
                 currentStep = "验证最终文件并返回结果";
                 long actualFileSize = 0;
                 bool fileExists = false;
@@ -333,7 +281,6 @@ namespace PowerLmsWebApi.Controllers.Financial
                     }
                 }
                 catch { } // 忽略验证异常
-
                 return new
                 {
                     FileId = fileInfoRecord.Id,
@@ -354,7 +301,6 @@ namespace PowerLmsWebApi.Controllers.Financial
                 var contextualError = $"收款结算单DBF导出任务失败，当前步骤: {currentStep}, 任务ID: {taskId}";
                 if (parameters != null)
                     contextualError += $"\n任务参数: {string.Join(", ", parameters.Select(kv => $"{kv.Key}={kv.Value}"))}";
-
                 if (ex is InvalidOperationException || ex is ArgumentException || ex is JsonException)
                     throw new InvalidOperationException(contextualError, ex);
                 else
@@ -364,11 +310,8 @@ namespace PowerLmsWebApi.Controllers.Financial
                 }
             }
         }
-
         #endregion
-
         #region 收款结算单核心业务逻辑
-
         /// <summary>
         /// 计算收款结算单业务数据（12分录模型）
         /// 支持国内外客户分类、代垫费用区分、多笔收款处理
@@ -380,36 +323,27 @@ namespace PowerLmsWebApi.Controllers.Financial
             BusinessLogicManager businessLogicManager)
         {
             var results = new List<SettlementReceiptCalculationDto>();
-
             // 批量加载所有关联数据
             var settlementReceiptIds = settlementReceipts.Select(r => r.Id).ToList();
-
             // 修复：先ToList()再ToDictionary()
             var customerIds = settlementReceipts.Select(r => r.JiesuanDanweiId).Where(id => id.HasValue).Select(id => id.Value).Distinct().ToList();
             var allCustomers = dbContext.PlCustomers.Where(c => customerIds.Contains(c.Id)).ToList().ToDictionary(c => c.Id);
-
             var allRequisitionItemIds = itemsDict.Values.SelectMany(items => items.Select(i => i.RequisitionItemId)).Where(id => id.HasValue).Select(id => id.Value).Distinct().ToList();
             var allRequisitionItems = dbContext.DocFeeRequisitionItems.Where(ri => allRequisitionItemIds.Contains(ri.Id)).ToList().ToDictionary(ri => ri.Id);
-
             var allFeeIds = allRequisitionItems.Values.Select(ri => ri.FeeId).Where(id => id.HasValue).Select(id => id.Value).Distinct().ToList();
             var allFees = dbContext.DocFees.Where(f => allFeeIds.Contains(f.Id)).ToList().ToDictionary(f => f.Id);
-
             var allFeeTypeIds = allFees.Values.Select(f => f.FeeTypeId).Where(id => id.HasValue).Select(id => id.Value).Distinct().ToList();
             var allFeeTypes = dbContext.DD_FeesTypes.Where(ft => allFeeTypeIds.Contains(ft.Id)).ToList().ToDictionary(ft => ft.Id);
-
             // 修复：先ToList()再分组、转字典
             var allTransactions = dbContext.ActualFinancialTransactions
                 .Where(t => settlementReceiptIds.Contains(t.ParentId.Value) && !t.IsDelete)
                 .OrderBy(t => t.TransactionDate)
                 .ToList();
             var transactionsGrouped = allTransactions.GroupBy(t => t.ParentId.Value).ToDictionary(g => g.Key, g => g.ToList());
-
             var allBankAccountIds = allTransactions.Select(t => t.BankAccountId).Where(id => id.HasValue).Select(id => id.Value).Distinct().ToList();
             var allBankAccounts = dbContext.BankInfos.Where(b => allBankAccountIds.Contains(b.Id)).ToList().ToDictionary(b => b.Id);
-
             var allBankIds = settlementReceipts.Select(r => r.BankId).Where(id => id.HasValue).Select(id => id.Value).Distinct().ToList();
             var allBanks = dbContext.BankInfos.Where(b => allBankIds.Contains(b.Id)).ToList().ToDictionary(b => b.Id);
-
             foreach (var receipt in settlementReceipts)
             {
                 var items = itemsDict.GetValueOrDefault(receipt.Id, new List<PlInvoicesItem>());
@@ -463,7 +397,6 @@ namespace PowerLmsWebApi.Controllers.Financial
             }
             return results;
         }
-
         /// <summary>
         /// 计算应收应付金额并按国内外客户、代垊属性分类
         /// </summary>
@@ -522,7 +455,6 @@ namespace PowerLmsWebApi.Controllers.Financial
             var isMixed = incomeCount > 0 && expenseCount > 0;
             return (receivableForeign, receivableDomesticCustomer, receivableDomesticTariff, payableForeign, payableDomesticCustomer, payableDomesticTariff, isMixed, itemCalculations);
         }
-
         /// <summary>
         /// 生成收款结算单金蝶凭证分录（12分录模型静态方法）
         /// 实现11个独立函数的完整业务逻辑
@@ -550,9 +482,7 @@ namespace PowerLmsWebApi.Controllers.Financial
             }
             return vouchers;
         }
-
         #region 收款单12分录生成函数
-
         /// <summary>
         /// 规则1：生成银行收款借方分录（1~N条必生成）
         /// 优先使用ActualFinancialTransaction表，无记录则用PlInvoicesItem
@@ -594,7 +524,6 @@ namespace PowerLmsWebApi.Controllers.Financial
             }
             return vouchers;
         }
-
         /// <summary>
         /// 规则2：生成应收账款冲抵贷方分录（1~3条必生成）
         /// </summary>
@@ -621,7 +550,6 @@ namespace PowerLmsWebApi.Controllers.Financial
             }
             return vouchers;
         }
-
         /// <summary>
         /// 规则2A：应收账款-国外客户
         /// </summary>
@@ -642,7 +570,6 @@ namespace PowerLmsWebApi.Controllers.Financial
             voucher.FEXCHRATE = 1.0000000m;
             return voucher;
         }
-
         /// <summary>
         /// 规则2B：应收账款-国内客户（非代垫）
         /// </summary>
@@ -663,7 +590,6 @@ namespace PowerLmsWebApi.Controllers.Financial
             voucher.FEXCHRATE = 1.0000000m;
             return voucher;
         }
-
         /// <summary>
         /// 规则2C：应收账款-国内关税（代垫）
         /// </summary>
@@ -684,7 +610,6 @@ namespace PowerLmsWebApi.Controllers.Financial
             voucher.FEXCHRATE = 1.0000000m;
             return voucher;
         }
-
         /// <summary>
         /// 规则3：生成应付账款冲抵借方分录（0~3条混合业务生成）
         /// </summary>
@@ -711,7 +636,6 @@ namespace PowerLmsWebApi.Controllers.Financial
             }
             return vouchers;
         }
-
         /// <summary>
         /// 规则3A：应付账款-国外客户（混合业务）
         /// </summary>
@@ -732,7 +656,6 @@ namespace PowerLmsWebApi.Controllers.Financial
             voucher.FEXCHRATE = 1.0000000m;
             return voucher;
         }
-
         /// <summary>
         /// 规则3B：应付账款-国内客户（非代垫，混合业务）
         /// </summary>
@@ -753,7 +676,6 @@ namespace PowerLmsWebApi.Controllers.Financial
             voucher.FEXCHRATE = 1.0000000m;
             return voucher;
         }
-
         /// <summary>
         /// 规则3C：应付账款-国内关税（代垫，混合业务）
         /// </summary>
@@ -774,7 +696,6 @@ namespace PowerLmsWebApi.Controllers.Financial
             voucher.FEXCHRATE = 1.0000000m;
             return voucher;
         }
-
         /// <summary>
         /// 规则4-7：生成其他科目分录（条件生成）
         /// </summary>
@@ -799,7 +720,6 @@ namespace PowerLmsWebApi.Controllers.Financial
             }
             return vouchers;
         }
-
         /// <summary>
         /// 规则4：预收款贷方分录
         /// </summary>
@@ -820,7 +740,6 @@ namespace PowerLmsWebApi.Controllers.Financial
             voucher.FEXCHRATE = calculation.SettlementExchangeRate;
             return voucher;
         }
-
         /// <summary>
         /// 规则5：汇兑损益分录
         /// </summary>
@@ -837,7 +756,6 @@ namespace PowerLmsWebApi.Controllers.Financial
             voucher.FEXCHRATE = 1.0000000m;
             return voucher;
         }
-
         /// <summary>
         /// 规则6：手续费借方分录
         /// </summary>
@@ -863,7 +781,6 @@ namespace PowerLmsWebApi.Controllers.Financial
             voucher.FCREDIT = 0;
             return voucher;
         }
-
         /// <summary>
         /// 规则7：预收冲应收借方分录
         /// </summary>
@@ -884,11 +801,8 @@ namespace PowerLmsWebApi.Controllers.Financial
             voucher.FEXCHRATE = calculation.SettlementExchangeRate;
             return voucher;
         }
-
         #endregion 收款单12分录生成函数
-
         #region 收款单辅助方法
-
         /// <summary>
         /// 创建收款单基础凭证对象
         /// </summary>
@@ -912,11 +826,8 @@ namespace PowerLmsWebApi.Controllers.Financial
                 FDELETED = false
             };
         }
-
         #endregion 收款单辅助方法
-
         #region 配置验证和组织权限辅助方法
-
         /// <summary>
         /// 验证收款结算单科目配置完整性
         /// </summary>
@@ -935,7 +846,6 @@ namespace PowerLmsWebApi.Controllers.Financial
                 .ToList();
             return requiredCodes.Except(existingCodes).ToList();
         }
-
         /// <summary>
         /// 收款结算单组织权限过滤
         /// </summary>
@@ -974,7 +884,6 @@ namespace PowerLmsWebApi.Controllers.Financial
                                 select invoice;
             return filteredQuery.Distinct();
         }
-
         /// <summary>
         /// 加载收款结算单科目配置（静态版本）
         /// </summary>
@@ -992,7 +901,6 @@ namespace PowerLmsWebApi.Controllers.Financial
                 .ToList();
             return configs.ToDictionary(c => c.Code, c => c);
         }
-
         /// <summary>
         /// 收款结算单组织权限过滤（静态版本）
         /// </summary>
@@ -1033,7 +941,6 @@ namespace PowerLmsWebApi.Controllers.Financial
                                 select invoice;
             return filteredQuery.Distinct();
         }
-
         /// <summary>
         /// 获取收款结算单专用的金蝶字段映射
         /// </summary>
@@ -1048,7 +955,6 @@ namespace PowerLmsWebApi.Controllers.Financial
                 {"FDEBIT", "FDEBIT"}, {"FCREDIT", "FCREDIT"}, {"FPREPARE", "FPREPARE"}, {"FMODULE", "FMODULE"}, {"FDELETED", "FDELETED"}
             };
         }
-
         /// <summary>
         /// 获取收款结算单专用的金蝶字段类型定义
         /// </summary>
@@ -1065,9 +971,7 @@ namespace PowerLmsWebApi.Controllers.Financial
                 {"FPREPARE", NativeDbType.Char}, {"FMODULE", NativeDbType.Char}, {"FDELETED", NativeDbType.Logical}
             };
         }
-
         #endregion 配置验证和组织权限辅助方法
-
         #endregion 收款结算单核心业务逻辑
     }
 }

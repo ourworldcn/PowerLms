@@ -4,7 +4,6 @@ using OW.EntityFrameworkCore;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using System;
-
 namespace PowerLmsServer.Managers
 {
     /// <summary>提供业务逻辑服务的类。</summary>
@@ -17,22 +16,18 @@ namespace PowerLmsServer.Managers
         private DbContext _DbContext;
         /// <summary>数据库上下文。</summary>
         private DbContext DbContext => _DbContext ??= _ServiceProvider.GetRequiredService<PowerLmsUserDbContext>();
-
         AuthorizationManager _AuthorizationManager;
         /// <summary>权限管理器。</summary>
         AuthorizationManager AuthorizationManager => _AuthorizationManager ??= _ServiceProvider.GetRequiredService<AuthorizationManager>();
-
         OwSqlAppLogger _SqlAppLogger;
         /// <summary>SQL 应用日志服务。</summary>
         OwSqlAppLogger SqlAppLogger => _SqlAppLogger ??= _ServiceProvider.GetRequiredService<OwSqlAppLogger>();
-
         /// <summary>构造函数，注入所需的服务。</summary>
         /// <param name="serviceProvider">服务提供者。</param>
         public BusinessLogicManager(IServiceProvider serviceProvider)
         {
             _ServiceProvider = serviceProvider;
         }
-
         /// <summary>获取关系。</summary>
         /// <typeparam name="TSrc">源类型</typeparam>
         /// <typeparam name="TDest">目标类型</typeparam>
@@ -50,7 +45,6 @@ namespace PowerLmsServer.Managers
             };
             return (TDest)result;
         }
-
         /// <summary>获取实体对象相关的组织机构Id。</summary>
         /// <param name="obj">实体对象</param>
         /// <param name="db">数据库上下文</param>
@@ -61,9 +55,7 @@ namespace PowerLmsServer.Managers
             if (_ServiceProvider.GetService<OwContext>()?.User?.OrgId is not Guid orgId) return null;
             return orgId;
         }
-
         #region 本币相关代码
-
         /// <summary>获取实体对象的本币码。</summary>
         /// <param name="entityId">实体Id</param>
         /// <param name="entityType">实体类型</param>
@@ -81,7 +73,6 @@ namespace PowerLmsServer.Managers
                 _ => throw new ArgumentException("不支持的实体类型", nameof(entityType)),
             };
         }
-
         /// <summary>获取组织机构的本币码。</summary>
         /// <param name="organizationId">组织机构Id</param>
         /// <returns>本币码</returns>
@@ -91,7 +82,6 @@ namespace PowerLmsServer.Managers
                 throw new InvalidOperationException($"未找到 Id 为 {organizationId} 的组织机构。");
             return GetCurrencyCode(organization.Id);
         }
-
         /// <summary>获取一个实体对象的本币码。</summary>
         /// <param name="obj">实体对象</param>
         /// <param name="db">数据库上下文</param>
@@ -103,7 +93,6 @@ namespace PowerLmsServer.Managers
             if (db.Set<PlOrganization>().Find(orgId) is not PlOrganization org) return null;
             return org.BaseCurrencyCode;
         }
-
         /// <summary>获取工作的本币码。</summary>
         /// <param name="jobId">工作Id</param>
         /// <returns>本币码</returns>
@@ -112,7 +101,6 @@ namespace PowerLmsServer.Managers
             if (DbContext.Set<PlJob>().Find(jobId) is not PlJob job) throw new InvalidOperationException($"未找到 Id 为 {jobId} 的工作。");
             return GetCurrencyCode(job.OrgId.Value);
         }
-
         /// <summary>获取费用的本币码。</summary>
         /// <param name="feeId">费用Id</param>
         /// <returns>本币码</returns>
@@ -121,7 +109,6 @@ namespace PowerLmsServer.Managers
             if (DbContext.Set<DocFee>().Find(feeId) is not DocFee fee) throw new InvalidOperationException($"未找到 Id 为 {feeId} 的费用。");
             return GetJobBaseCurrencyCode(fee.JobId.Value);
         }
-
         /// <summary>获取账单的本币码。</summary>
         /// <param name="billId">账单Id</param>
         /// <returns>本币码</returns>
@@ -131,7 +118,6 @@ namespace PowerLmsServer.Managers
             if (DbContext.Set<DocFee>().FirstOrDefaultWithLocal(f => f.BillId == bill.Id) is not DocFee fee) throw new InvalidOperationException($"未找到与账单 Id 为 {bill.Id} 关联的费用。");
             return GetJobBaseCurrencyCode(fee.JobId.Value);
         }
-
         /// <summary>递归查找本币编码。</summary>
         /// <param name="orgId">组织机构Id</param>
         /// <returns>本币编码</returns>
@@ -140,21 +126,15 @@ namespace PowerLmsServer.Managers
             var merchantId = _OrgManager.GetMerchantIdByOrgId(orgId);
             if (!merchantId.HasValue)
                 throw new InvalidOperationException($"未找到 Id 为 {orgId} 的组织机构所属商户。");
-                
             var cacheItem = _OrgManager.GetOrLoadOrgCacheItem(merchantId.Value);
-            
             if (!cacheItem.Orgs.TryGetValue(orgId, out var org))
                 throw new InvalidOperationException($"未找到 Id 为 {orgId} 的组织机构。");
-
             if (!string.IsNullOrEmpty(org.BaseCurrencyCode))
                 return org.BaseCurrencyCode;
-
             if (org.ParentId.HasValue)
                 return GetCurrencyCode(org.ParentId.Value);
-
             throw new InvalidOperationException($"未找到 Id 为 {orgId} 的组织机构的本币码。");
         }
-
         /// <summary>获取所有汇率。</summary>
         /// <param name="orgId">组织机构Id</param>
         /// <param name="dbContext">数据库上下文</param>
@@ -167,11 +147,8 @@ namespace PowerLmsServer.Managers
             var result = coll.ToDictionary(c => (c.SCurrency, c.DCurrency), c => c.Exchange);
             return result;
         }
-
         #endregion
-
         #region 汇率相关代码
-
         /// <summary>返回汇率查询。</summary>
         /// <param name="orgId">组织机构Id</param>
         /// <param name="dbContext">数据库上下文</param>
@@ -184,7 +161,6 @@ namespace PowerLmsServer.Managers
             var baseColl = dbContext.Set<PlExchangeRate>().Where(c => c.OrgId == orgId && c.BeginDate <= dateTime && c.EndData >= dateTime);
             return baseColl;
         }
-
         /// <summary>获取指定源币种到目标币种的汇率。</summary>
         /// <param name="orgId">组织机构Id</param>
         /// <param name="sCurrency">源币种</param>
@@ -198,7 +174,6 @@ namespace PowerLmsServer.Managers
             var rate = baseColl.AsNoTracking().AsEnumerable().OrderByDescending(c => c.EndData).FirstOrDefault();
             return rate?.Exchange ?? 1;
         }
-
         /// <summary>获取指定申请单的汇率。</summary>
         /// <param name="requisitionItem">申请单明细项</param>
         /// <param name="db">数据库上下文</param>
@@ -220,7 +195,6 @@ namespace PowerLmsServer.Managers
         lbErr:
             return 0;
         }
-
         /// <summary>获取指定账单的汇率。</summary>
         /// <param name="fee">费用</param>
         /// <param name="db">数据库上下文</param>
@@ -243,11 +217,8 @@ namespace PowerLmsServer.Managers
         lbErr:
             return 0;
         }
-
         #endregion
-
         #region 账单相关代码
-
         /// <summary>获取账单的合计金额和借贷方向。</summary>
         /// <param name="items">账单明细项</param>
         /// <param name="amount">金额</param>
@@ -271,13 +242,9 @@ namespace PowerLmsServer.Managers
             isOut = false;
             return false;
         }
-
         #endregion
-
         #region 工作任务相关代码
-
         #region 工作号删除功能
-
         /// <summary>检查工作号是否可以删除。</summary>
         /// <param name="jobId">工作号Id</param>
         /// <param name="dbContext">数据库上下文</param>
@@ -309,7 +276,6 @@ namespace PowerLmsServer.Managers
             }
             return true;
         }
-
         /// <summary>删除工作号及其所有关联数据。</summary>
         /// <remarks>如果工作号下存在已审核或已开票费用，则无法删除。</remarks>
         /// <param name="jobId">工作号Id</param>
@@ -341,9 +307,7 @@ namespace PowerLmsServer.Managers
                 return false;
             }
         }
-
         #endregion
-
         /// <summary>变更业务状态和操作状态。</summary>
         /// <param name="jobId">工作号ID</param>
         /// <param name="jobState">要变更的业务状态(可为null)</param>
@@ -454,7 +418,6 @@ namespace PowerLmsServer.Managers
                 return null;
             }
         }
-
         /// <summary>查找指定工作号的业务单据并验证权限。</summary>
         /// <param name="jobId">工作号ID</param>
         /// <param name="job">工作号对象</param>
@@ -523,7 +486,6 @@ namespace PowerLmsServer.Managers
             }
             return businessDoc;
         }
-
         /// <summary>根据账单Id获取工作任务Id。</summary>
         /// <param name="billId">账单Id</param>
         /// <returns>工作任务Id</returns>
@@ -532,7 +494,6 @@ namespace PowerLmsServer.Managers
             var fee = DbContext.Set<DocFee>().FirstOrDefault(c => c.BillId == billId && c.JobId != null);
             return (fee?.JobId.HasValue ?? false) ? DbContext.Set<PlJob>().Find(fee.JobId.Value).Id : null;
         }
-
         /// <summary>根据结算单Id获取工作任务Id。</summary>
         /// <param name="invoiceItemId">结算单明细项Id</param>
         /// <returns>工作任务Id</returns>

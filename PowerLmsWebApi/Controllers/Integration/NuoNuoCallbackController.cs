@@ -8,7 +8,6 @@ using PowerLmsServer.Managers;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
-
 namespace PowerLmsWebApi.Controllers
 {
     /// <summary>
@@ -22,7 +21,6 @@ namespace PowerLmsWebApi.Controllers
         private readonly PowerLmsUserDbContext _dbContext;
         private readonly ILogger<NuoNuoCallbackController> _logger;
         private readonly OwMessageManager _messageManager; // 注入消息管理器
-
         /// <summary>
         /// 初始化诺诺回调控制器
         /// </summary>
@@ -38,7 +36,6 @@ namespace PowerLmsWebApi.Controllers
             _logger = logger;
             _messageManager = messageManager; // 初始化消息管理器
         }
-
         /// <summary>
         /// 处理诺诺发票系统的回调请求
         /// </summary>
@@ -59,38 +56,29 @@ namespace PowerLmsWebApi.Controllers
             try
             {
                 _logger.LogInformation("收到诺诺发票回调请求");
-
                 // 读取请求参数
                 var form = Request.Form;
                 string operater = form["operater"];
-
                 // 验证操作类型参数
                 if (string.IsNullOrEmpty(operater))
                 {
                     _logger.LogWarning("诺诺发票回调缺少操作类型参数");
                     return BadRequest(new { status = "9999", message = "缺少操作类型参数" });
                 }
-
                 _logger.LogInformation("处理诺诺发票回调, 操作类型: {Operater}", operater);
-
                 // 根据操作类型处理不同的回调
                 switch (operater)
                 {
                     case "callback": // 开票结果回调
                         return HandleInvoiceCallback(form);
-
                     case "invoiceInvalid": // 发票作废结果回调
                         return HandleInvoiceInvalidCallback(form);
-
                     case "invoiceApply": // 开票申请结果回调
                         return HandleInvoiceApplyCallback(form);
-
                     case "invoiceRedCallback": // 红字信息表申请结果回调
                         return HandleRedInfoCallback(form);
-
                     case "redConfirmCallback": // 红字确认单申请结果回调
                         return HandleRedConfirmCallback(form);
-
                     default:
                         _logger.LogWarning($"未知的操作类型: {operater}");
                         return BadRequest(new { status = "9999", message = "未知的操作类型" });
@@ -103,7 +91,6 @@ namespace PowerLmsWebApi.Controllers
                 return Ok(new { status = "0000", message = "同步成功" });
             }
         }
-
         /// <summary>
         /// 处理开票结果回调
         /// </summary>
@@ -115,16 +102,13 @@ namespace PowerLmsWebApi.Controllers
             {
                 string orderno = form["orderno"];
                 string content = form["content"];
-
                 // 验证必填参数
                 if (string.IsNullOrEmpty(orderno) || string.IsNullOrEmpty(content))
                 {
                     _logger.LogWarning("开票结果回调缺少必要参数");
                     return BadRequest(new { status = "9999", message = "缺少必要参数" });
                 }
-
                 _logger.LogInformation("处理开票结果回调, 订单号: {OrderNo}", orderno);
-
                 // 解析JSON内容
                 var invoiceData = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(content);
                 if (invoiceData == null)
@@ -132,18 +116,15 @@ namespace PowerLmsWebApi.Controllers
                     _logger.LogWarning("无法解析开票结果数据");
                     return BadRequest(new { status = "9999", message = "无法解析开票结果数据" });
                 }
-
                 // 验证发票流水号
                 if (!invoiceData.TryGetValue("c_fpqqlsh", out var fpqqlsh) || fpqqlsh.ValueKind == JsonValueKind.Undefined)
                 {
                     _logger.LogWarning("开票结果数据中缺少发票流水号");
                     return BadRequest(new { status = "9999", message = "开票结果数据中缺少发票流水号" });
                 }
-
                 // 查找对应的发票记录
                 var invoiceInfo = _dbContext.TaxInvoiceInfos
                     .FirstOrDefault(i => i.InvoiceSerialNum == fpqqlsh.GetString());
-
                 if (invoiceInfo == null)
                 {
                     _logger.LogWarning("未找到匹配的发票记录, 发票流水号: {InvoiceSerialNum}", fpqqlsh.GetString());
@@ -158,19 +139,16 @@ namespace PowerLmsWebApi.Controllers
                     _dbContext.SaveChanges();
                     return Ok(new { status = "0000", message = "同步成功" });
                 }
-
                 // 获取发票状态
                 string status = null;
                 if (invoiceData.TryGetValue("c_status", out var statusElement) && statusElement.ValueKind != JsonValueKind.Undefined)
                 {
                     status = statusElement.GetString();
                 }
-
                 // 更新发票信息
                 UpdateInvoiceInfo(invoiceInfo, invoiceData, status, content);
                 _dbContext.SaveChanges();
                 _logger.LogInformation("成功更新发票信息, 发票ID: {InvoiceId}", invoiceInfo.Id);
-
                 // 记录回调日志
                 _dbContext.OwSystemLogs.Add(new OwSystemLog
                 {
@@ -180,7 +158,6 @@ namespace PowerLmsWebApi.Controllers
                     WorldDateTime = DateTime.Now
                 });
                 _dbContext.SaveChanges();
-
                 return Ok(new { status = "0000", message = "同步成功" });
             }
             catch (Exception ex)
@@ -190,7 +167,6 @@ namespace PowerLmsWebApi.Controllers
                 return Ok(new { status = "0000", message = "同步成功" });
             }
         }
-
         /// <summary>
         /// 更新发票信息
         /// </summary>
@@ -203,20 +179,17 @@ namespace PowerLmsWebApi.Controllers
             try
             {
                 _logger.LogInformation("开始更新发票信息, 发票ID: {InvoiceId}, 状态: {Status}", invoiceInfo.Id, status);
-
                 // 根据状态更新发票
                 if (status == null || status == "1") // 开票完成
                 {
                     // 已成功开票 - 状态2表示已开票
                     invoiceInfo.State = 2; // 保持状态值为2，表示已开票
-
                     // 更新发票号
                     if (invoiceData.TryGetValue("c_fphm", out var fphm) && fphm.ValueKind != JsonValueKind.Undefined)
                     {
                         string fphmValue = fphm.GetString();
                         invoiceInfo.InvoiceNumber = fphmValue;
                     }
-
                     // 更新发票代码 - 注释掉，因为TaxInvoiceInfo没有InvoiceCode属性
                     // if (invoiceData.TryGetValue("c_fpdm", out var fpdm) && fpdm.ValueKind != JsonValueKind.Undefined)
                     // {
@@ -224,7 +197,6 @@ namespace PowerLmsWebApi.Controllers
                     //     invoiceInfo.InvoiceCode = fpdmValue;
                     //     _logger.LogInformation($"发票ID: {invoiceInfo.Id} 更新发票代码: {fpdmValue}");
                     // }
-
                     // 将发票代码等信息记录在日志中或SellerInvoiceData中
                     if (invoiceData.TryGetValue("c_fpdm", out var fpdm) && fpdm.ValueKind != JsonValueKind.Undefined)
                     {
@@ -232,7 +204,6 @@ namespace PowerLmsWebApi.Controllers
                         _logger.LogInformation("发票ID: {InvoiceId} 收到发票代码: {InvoiceCode}", invoiceInfo.Id, fpdmValue);
                         // 发票代码将存储在SellerInvoiceData的完整回调数据中
                     }
-
                     // 更新开票金额，若回调中包含金额信息
                     if (invoiceData.TryGetValue("c_jshj", out var jshj) && jshj.ValueKind != JsonValueKind.Undefined)
                     {
@@ -241,7 +212,6 @@ namespace PowerLmsWebApi.Controllers
                             invoiceInfo.TaxInclusiveAmount = amount;
                         }
                     }
-
                     // 更新开票日期 - 正确的修复版本
                     if (invoiceData.TryGetValue("c_kprq", out var kprq) && kprq.ValueKind != JsonValueKind.Undefined)
                     {
@@ -279,83 +249,68 @@ namespace PowerLmsWebApi.Controllers
                         _logger.LogWarning("发票ID: {InvoiceId} 未找到开票日期字段 c_kprq，使用当前时间", invoiceInfo.Id);
                         invoiceInfo.InvoiceDate = DateTime.Now;
                     }
-
                     // 更新发票类型信息
                     if (invoiceData.TryGetValue("c_fpzl_dm", out var fpzlDm) && fpzlDm.ValueKind != JsonValueKind.Undefined)
                     {
                         // 更新发票类型代码，根据实际情况可能需要转换
                         invoiceInfo.InvoiceTypeCode = fpzlDm.GetString();
                     }
-
                     // 更新销方信息（如果回调中包含）
                     if (invoiceData.TryGetValue("c_xfmc", out var xfmc) && xfmc.ValueKind != JsonValueKind.Undefined)
                     {
                         invoiceInfo.SellerTitle = xfmc.GetString();
                     }
-
                     if (invoiceData.TryGetValue("c_xfsbh", out var xfsbh) && xfsbh.ValueKind != JsonValueKind.Undefined)
                     {
                         invoiceInfo.SellerTaxNum = xfsbh.GetString();
                     }
-
                     if (invoiceData.TryGetValue("c_xfdh", out var xfdh) && xfdh.ValueKind != JsonValueKind.Undefined)
                     {
                         invoiceInfo.SellerTel = xfdh.GetString();
                     }
-
                     if (invoiceData.TryGetValue("c_xfdz", out var xfdz) && xfdz.ValueKind != JsonValueKind.Undefined)
                     {
                         invoiceInfo.SellerAddress = xfdz.GetString();
                     }
-
                     if (invoiceData.TryGetValue("c_xfyhzh", out var xfyhzh) && xfyhzh.ValueKind != JsonValueKind.Undefined)
                     {
                         invoiceInfo.SellerAccount = xfyhzh.GetString();
                     }
-
                     // 更新购方信息（如果回调中包含）
                     if (invoiceData.TryGetValue("c_gfmc", out var gfmc) && gfmc.ValueKind != JsonValueKind.Undefined)
                     {
                         invoiceInfo.BuyerTitle = gfmc.GetString();
                     }
-
                     if (invoiceData.TryGetValue("c_gfsbh", out var gfsbh) && gfsbh.ValueKind != JsonValueKind.Undefined)
                     {
                         invoiceInfo.BuyerTaxNum = gfsbh.GetString();
                     }
-
                     // 更新备注信息
                     if (invoiceData.TryGetValue("c_bz", out var bz) && bz.ValueKind != JsonValueKind.Undefined)
                     {
                         invoiceInfo.Remark = bz.GetString();
                     }
-
                     // 记录校验码信息到日志中
                     if (invoiceData.TryGetValue("c_jym", out var jym) && jym.ValueKind != JsonValueKind.Undefined)
                     {
                         string jymValue = jym.GetString();
                         _logger.LogInformation("发票ID: {InvoiceId} 收到校验码: {VerificationCode}", invoiceInfo.Id, jymValue);
                     }
-
                     // 记录数电票号码信息到日志中
                     if (invoiceData.TryGetValue("c_ddh", out var ddh) && ddh.ValueKind != JsonValueKind.Undefined)
                     {
                         string ddhValue = ddh.GetString();
                         _logger.LogInformation("发票ID: {InvoiceId} 收到数电票号码: {DigitalInvoiceNumber}", invoiceInfo.Id, ddhValue);
                     }
-
                     // 更新PDF下载地址
                     if (invoiceData.TryGetValue("c_pdf_url", out var pdfUrl) && pdfUrl.ValueKind != JsonValueKind.Undefined)
                     {
                         invoiceInfo.PdfUrl = pdfUrl.GetString();
                     }
-
                     // 将完整的回调数据存储在SellerInvoiceData字段中
                     invoiceInfo.SellerInvoiceData = rawContent;
-
                     // 设置返回发票时间
                     invoiceInfo.ReturnInvoiceTime = DateTime.Now;
-
                     _logger.LogInformation("发票开具成功，已更新发票信息，发票ID: {InvoiceId}, 发票号: {InvoiceNumber}", 
                         invoiceInfo.Id, invoiceInfo.InvoiceNumber);
                 }
@@ -363,10 +318,8 @@ namespace PowerLmsWebApi.Controllers
                 {
                     // 保存原审核人ID以便发送通知
                     var auditorId = invoiceInfo.AuditorId;
-
                     // 将状态重置为待审核状态 - 状态0表示创建后待审核
                     invoiceInfo.State = 0; // 确保状态值为0，表示创建后待审核
-
                     // 获取错误信息
                     string errorMessage = "开票失败: 未知原因";
                     if (invoiceData.TryGetValue("c_errorMessage", out var errorMsg) &&
@@ -374,15 +327,12 @@ namespace PowerLmsWebApi.Controllers
                     {
                         errorMessage = errorMsg.GetString();
                     }
-
                     // 将错误信息存储在SellerInvoiceData字段和FailReason字段中
                     invoiceInfo.SellerInvoiceData = $"{{\"errorMessage\": \"{errorMessage}\"}}";
                     invoiceInfo.FailReason = errorMessage; // 明确记录失败原因
                     invoiceInfo.ReturnInvoiceTime = DateTime.Now;
-
                     _logger.LogWarning("发票开具失败，已重置状态，发票ID: {InvoiceId}, 失败原因: {ErrorMessage}", 
                         invoiceInfo.Id, errorMessage);
-
                     // 如果有原审核人ID，向审核人发送消息通知
                     if (auditorId.HasValue)
                     {
@@ -397,7 +347,6 @@ namespace PowerLmsWebApi.Controllers
                                 $"销方名称: {invoiceInfo.SellerTitle}\n" +
                                 $"销方税号: {invoiceInfo.SellerTaxNum}\n" +
                                 $"失败原因: {errorMessage}\n\n";
-
                             // 发送系统消息给原审核人
                             _messageManager.SendMessage(
                                 null,                   // 发送者ID，系统消息为null
@@ -406,7 +355,6 @@ namespace PowerLmsWebApi.Controllers
                                 content,                // 消息内容，纯文本格式
                                 true                    // 是系统消息
                             );
-
                             _logger.LogInformation("已向原审核人 {AuditorId} 发送开票失败通知，发票已重置为待审核状态", auditorId.Value);
                         }
                         catch (Exception ex)
@@ -423,7 +371,6 @@ namespace PowerLmsWebApi.Controllers
                 {
                     // 状态值6为签章失败状态
                     invoiceInfo.State = 6; // 这是一个特殊状态，表示签章失败
-
                     // 获取错误信息
                     string errorMessage = "签章失败: 未知原因";
                     if (invoiceData.TryGetValue("c_errorMessage", out var errorMsg) &&
@@ -431,15 +378,12 @@ namespace PowerLmsWebApi.Controllers
                     {
                         errorMessage = $"签章失败: {errorMsg.GetString()}";
                     }
-
                     // 将错误信息存储在SellerInvoiceData字段和FailReason字段中
                     invoiceInfo.SellerInvoiceData = $"{{\"errorMessage\": \"{errorMessage}\"}}";
                     invoiceInfo.FailReason = errorMessage; // 明确记录失败原因
                     invoiceInfo.ReturnInvoiceTime = DateTime.Now;
-
                     _logger.LogWarning("发票签章失败，已更新状态，发票ID: {InvoiceId}, 失败原因: {ErrorMessage}", 
                         invoiceInfo.Id, errorMessage);
-
                     // 如果有审核人ID，向审核人发送消息通知
                     if (invoiceInfo.AuditorId.HasValue)
                     {
@@ -455,7 +399,6 @@ namespace PowerLmsWebApi.Controllers
                                 $"销方税号: {invoiceInfo.SellerTaxNum}\n" +
                                 $"失败原因: {errorMessage}\n\n" +
                                 $"发票已开具成功，但签章操作失败，请联系系统管理员。";
-
                             // 发送系统消息给审核人
                             _messageManager.SendMessage(
                                 null,                       // 发送者ID，系统消息为null
@@ -464,7 +407,6 @@ namespace PowerLmsWebApi.Controllers
                                 content,                    // 消息内容，纯文本格式
                                 true                        // 是系统消息
                             );
-
                             _logger.LogInformation("已向审核人 {AuditorId} 发送签章失败通知", invoiceInfo.AuditorId.Value);
                         }
                         catch (Exception ex)
@@ -473,7 +415,6 @@ namespace PowerLmsWebApi.Controllers
                         }
                     }
                 }
-
                 // 检查是否有关联的申请单，如果有则更新关联信息
                 if (invoiceInfo.DocFeeRequisitionId.HasValue)
                 {
@@ -503,7 +444,6 @@ namespace PowerLmsWebApi.Controllers
                 invoiceInfo.SellerInvoiceData = rawContent;
             }
         }
-
         /// <summary>
         /// 处理发票作废结果回调
         /// </summary>
@@ -515,16 +455,13 @@ namespace PowerLmsWebApi.Controllers
             {
                 string fpqqlsh = form["fpqqlsh"];
                 string content = form["content"];
-
                 // 验证必填参数
                 if (string.IsNullOrEmpty(fpqqlsh) || string.IsNullOrEmpty(content))
                 {
                     _logger.LogWarning("发票作废回调缺少必要参数");
                     return BadRequest(new { status = "9999", message = "缺少必要参数" });
                 }
-
                 _logger.LogInformation("处理发票作废回调, 发票流水号: {InvoiceSerialNum}", fpqqlsh);
-
                 // 解析JSON内容
                 var invalidData = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(content);
                 if (invalidData == null)
@@ -532,11 +469,9 @@ namespace PowerLmsWebApi.Controllers
                     _logger.LogWarning("无法解析发票作废数据");
                     return BadRequest(new { status = "9999", message = "无法解析发票作废数据" });
                 }
-
                 // 查找对应的发票记录
                 var invoiceInfo = _dbContext.TaxInvoiceInfos
                     .FirstOrDefault(i => i.InvoiceSerialNum == fpqqlsh);
-
                 if (invoiceInfo != null)
                 {
                     // 尝试获取作废状态
@@ -570,7 +505,6 @@ namespace PowerLmsWebApi.Controllers
                         }
                     }
                 }
-
                 // 记录回调日志
                 _dbContext.OwSystemLogs.Add(new OwSystemLog
                 {
@@ -580,7 +514,6 @@ namespace PowerLmsWebApi.Controllers
                     WorldDateTime = DateTime.Now
                 });
                 _dbContext.SaveChanges();
-
                 return Ok(new { status = "0000", message = "同步成功" });
             }
             catch (Exception ex)
@@ -589,7 +522,6 @@ namespace PowerLmsWebApi.Controllers
                 return Ok(new { status = "0000", message = "同步成功" });
             }
         }
-
         /// <summary>
         /// 处理开票申请结果回调
         /// </summary>
@@ -603,16 +535,13 @@ namespace PowerLmsWebApi.Controllers
                 string taxNo = form["taxNo"];
                 string isSuccess = form["isSuccess"];
                 string invoiceId = form["invoiceId"];
-
                 // 验证必填参数
                 if (string.IsNullOrEmpty(orderno) || string.IsNullOrEmpty(isSuccess))
                 {
                     _logger.LogWarning("开票申请结果回调缺少必要参数");
                     return BadRequest(new { status = "9999", message = "缺少必要参数" });
                 }
-
                 _logger.LogInformation("处理开票申请结果回调, 订单号: {OrderNo}, 成功: {IsSuccess}", orderno, isSuccess);
-
                 // 记录回调日志
                 _dbContext.OwSystemLogs.Add(new OwSystemLog
                 {
@@ -628,7 +557,6 @@ namespace PowerLmsWebApi.Controllers
                     WorldDateTime = DateTime.Now
                 });
                 _dbContext.SaveChanges();
-
                 return Ok(new { status = "0000", message = "同步成功" });
             }
             catch (Exception ex)
@@ -637,7 +565,6 @@ namespace PowerLmsWebApi.Controllers
                 return Ok(new { status = "0000", message = "同步成功" });
             }
         }
-
         /// <summary>
         /// 处理红字信息表申请结果回调
         /// </summary>
@@ -649,16 +576,13 @@ namespace PowerLmsWebApi.Controllers
             {
                 string billNo = form["billNo"];
                 string content = form["content"];
-
                 // 验证必填参数
                 if (string.IsNullOrEmpty(billNo) || string.IsNullOrEmpty(content))
                 {
                     _logger.LogWarning("红字信息表申请结果回调缺少必要参数");
                     return BadRequest(new { status = "9999", message = "缺少必要参数" });
                 }
-
                 _logger.LogInformation("处理红字信息表申请结果回调, 申请单号: {BillNo}", billNo);
-
                 // 记录回调日志
                 _dbContext.OwSystemLogs.Add(new OwSystemLog
                 {
@@ -668,7 +592,6 @@ namespace PowerLmsWebApi.Controllers
                     WorldDateTime = DateTime.Now
                 });
                 _dbContext.SaveChanges();
-
                 return Ok(new { status = "0000", message = "同步成功" });
             }
             catch (Exception ex)
@@ -677,7 +600,6 @@ namespace PowerLmsWebApi.Controllers
                 return Ok(new { status = "0000", message = "同步成功" });
             }
         }
-
         /// <summary>
         /// 处理红字确认单申请结果回调
         /// </summary>
@@ -689,16 +611,13 @@ namespace PowerLmsWebApi.Controllers
             {
                 string billId = form["billId"];
                 string content = form["content"];
-
                 // 验证必填参数
                 if (string.IsNullOrEmpty(billId) || string.IsNullOrEmpty(content))
                 {
                     _logger.LogWarning("红字确认单申请结果回调缺少必要参数");
                     return BadRequest(new { status = "9999", message = "缺少必要参数" });
                 }
-
                 _logger.LogInformation("处理红字确认单申请结果回调, 申请单ID: {BillId}", billId);
-
                 // 记录回调日志
                 _dbContext.OwSystemLogs.Add(new OwSystemLog
                 {
@@ -708,7 +627,6 @@ namespace PowerLmsWebApi.Controllers
                     WorldDateTime = DateTime.Now
                 });
                 _dbContext.SaveChanges();
-
                 return Ok(new { status = "0000", message = "同步成功" });
             }
             catch (Exception ex)

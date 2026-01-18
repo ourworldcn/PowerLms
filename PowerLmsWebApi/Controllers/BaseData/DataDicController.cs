@@ -9,7 +9,6 @@ using System.Net;
 using OW.Data;
 using AutoMapper;
 using PowerLmsServer;
-
 namespace PowerLmsWebApi.Controllers
 {
     /// <summary>
@@ -35,7 +34,6 @@ namespace PowerLmsWebApi.Controllers
             _Logger = logger;
             _DataDicManager = dataDicManager;
         }
-
         readonly PowerLmsUserDbContext _DbContext;
         readonly AccountManager _AccountManager;
         readonly IServiceProvider _ServiceProvider;
@@ -45,9 +43,7 @@ namespace PowerLmsWebApi.Controllers
         readonly AuthorizationManager _AuthorizationManager;
         readonly ILogger<DataDicController> _Logger;
         readonly DataDicManager _DataDicManager;
-
         #region 日常费用种类相关
-
         /// <summary>
         /// 获取日常费用类型。超管可以查看系统级，其他用户只能看到公司/组织下的实体。
         /// </summary>
@@ -64,17 +60,14 @@ namespace PowerLmsWebApi.Controllers
             var result = new GetAllDailyFeesTypeReturnDto();
             var dbSet = _DbContext.DD_DailyFeesTypes;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-            
             // 使用统一的组织权限控制方法
             var allowedOrgIds = GetOrgIds(context.User, _OrgManager);
             coll = coll.Where(c => allowedOrgIds.Contains(c.OrgId));
-            
             coll = EfHelper.GenerateWhereAnd(coll, conditional);
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }
-
         /// <summary>
         /// 增加日常费用种类记录。
         /// </summary>
@@ -89,19 +82,14 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             if (!_AuthorizationManager.Demand(out string err, "B.8")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-
             var result = new AddDailyFeesTypeReturnDto();
-
             // 确保使用当前用户的组织机构ID
             model.Item.OrgId = context.User.OrgId;
-
             // 生成主记录ID
             model.Item.GenerateNewId();
             var id = model.Item.Id;
-
             // 添加主记录
             _DbContext.DD_DailyFeesTypes.Add(model.Item);
-
             // 如果需要同步到子机构
             if (model.CopyToChildren)
             {
@@ -111,29 +99,24 @@ namespace PowerLmsWebApi.Controllers
                 {
                     var allOrgs = _OrgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs.Values.ToArray();
                     var companyIds = allOrgs.Where(o => o.Otc == 2).Select(o => o.Id);
-
                     // 修复Bug：排除本机构，避免重复创建
                     foreach (var orgId in companyIds.Where(id => id != context.User.OrgId))
                     {
                         // 检查是否已存在相同Code的记录
                         if (_DbContext.DD_DailyFeesTypes.Any(f => f.OrgId == orgId && f.Code == model.Item.Code))
                             continue;
-
                         // 使用Clone方法创建深表副本
                         var newItem = (DailyFeesType)model.Item.Clone();
                         newItem.OrgId = orgId;
                         newItem.GenerateNewId(); // 确保新记录有唯一ID
-
                         _DbContext.DD_DailyFeesTypes.Add(newItem);
                     }
                 }
             }
-
             _DbContext.SaveChanges();
             result.Id = id;
             return result;
         }
-
         /// <summary>
         /// 修改日常费用种类记录。
         /// </summary>
@@ -164,7 +147,6 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.SaveChanges();
             return result;
         }
-
         /// <summary>
         /// 删除日常费用种类的记录。
         /// </summary>
@@ -188,7 +170,6 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.SaveChanges();
             return result;
         }
-
         /// <summary>
         /// 恢复指定的被删除日常费用种类记录。
         /// </summary>
@@ -212,7 +193,6 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.SaveChanges();
             return result;
         }
-
         #endregion 日常费用种类相关
     }
 }

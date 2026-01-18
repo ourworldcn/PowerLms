@@ -6,7 +6,6 @@ using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
-
 namespace PowerLmsWebApi.Controllers
 {
     /// <summary>
@@ -21,9 +20,7 @@ namespace PowerLmsWebApi.Controllers
         {
             _Db = db;
         }
-
         readonly PowerLmsUserDbContext _Db;
-
         /// <summary>
         /// 获取一组语言资源。
         /// </summary>
@@ -36,7 +33,6 @@ namespace PowerLmsWebApi.Controllers
         {
             prefix ??= string.Empty;
             var result = new MultilingualGetReturnDto();
-
             if (token is null)  //若未登录
             {
                 var coll = from tmp in _Db.Multilinguals
@@ -49,7 +45,6 @@ namespace PowerLmsWebApi.Controllers
             }
             return result;
         }
-
         /// <summary>
         /// 更新或追加多语言资源。
         /// </summary>
@@ -60,7 +55,6 @@ namespace PowerLmsWebApi.Controllers
         {
             var result = new MultilingualSetReturnDto();
             //检验Token
-
             // 基于联合主键(Key, LanguageTag)处理删除
             foreach (var deleteItem in model.DeleteDatas)
             {
@@ -72,7 +66,6 @@ namespace PowerLmsWebApi.Controllers
                     _Db.Multilinguals.Remove(entity);
                 }
             }
-
             // 更新或添加
             foreach (var item in model.AddOrUpdateDatas)
             {
@@ -90,10 +83,8 @@ namespace PowerLmsWebApi.Controllers
                     _Db.Multilinguals.Add(item);
                 }
             }
-
             _Db.SaveChanges();
             return result;
         }
     }
-
 }

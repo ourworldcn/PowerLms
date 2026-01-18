@@ -1,4 +1,4 @@
-using AutoMapper;
+ï»¿using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PowerLms.Data;
@@ -8,16 +8,15 @@ using PowerLmsWebApi.Dto;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Net;
-
 namespace PowerLmsWebApi.Controllers
 {
     /// <summary>
-    /// ÏµÍ³ÄÚÏûÏ¢¹¦ÄÜ¿ØÖÆÆ÷¡£
+    /// ç³»ç»Ÿå†…æ¶ˆæ¯åŠŸèƒ½æ§åˆ¶å™¨ã€‚
     /// </summary>
     public class OwMessageController : PlControllerBase
     {
         /// <summary>
-        /// ¹¹Ôìº¯Êı¡£
+        /// æ„é€ å‡½æ•°ã€‚
         /// </summary>
         public OwMessageController(AccountManager accountManager, IServiceProvider serviceProvider, EntityManager entityManager,
             PowerLmsUserDbContext dbContext, ILogger<OwMessageController> logger, IMapper mapper, AuthorizationManager authorizationManager, OwSqlAppLogger sqlAppLogger, OrgManager<PowerLmsUserDbContext> orgManager)
@@ -32,7 +31,6 @@ namespace PowerLmsWebApi.Controllers
             _SqlAppLogger = sqlAppLogger;
             _OrgManager = orgManager;
         }
-
         private readonly AccountManager _AccountManager;
         private readonly IServiceProvider _ServiceProvider;
         private readonly EntityManager _EntityManager;
@@ -42,153 +40,133 @@ namespace PowerLmsWebApi.Controllers
         private readonly AuthorizationManager _AuthorizationManager;
         private readonly OwSqlAppLogger _SqlAppLogger;
         private readonly OrgManager<PowerLmsUserDbContext> _OrgManager;
-
-        #region ÏûÏ¢²éÑ¯
-
+        #region æ¶ˆæ¯æŸ¥è¯¢
         /// <summary>
-        /// »ñÈ¡ÏûÏ¢ÁĞ±í£¬Ö§³Ö·ÖÒ³ºÍÉ¸Ñ¡¡£
+        /// è·å–æ¶ˆæ¯åˆ—è¡¨ï¼Œæ”¯æŒåˆ†é¡µå’Œç­›é€‰ã€‚
         /// </summary>
-        /// <param name="model">·ÖÒ³²ÎÊı</param>
-        /// <param name="conditional">²éÑ¯Ìõ¼ş¡£Ö§³ÖÍ¨ÓÃ²éÑ¯½Ó¿Ú¡£</param>
-        /// <returns>ÏûÏ¢ÁĞ±í¼°×ÜÊıÁ¿</returns>
-        /// <response code="200">Î´·¢ÉúÏµÍ³¼¶´íÎó¡£µ«¿ÉÄÜ³öÏÖÓ¦ÓÃ´íÎó£¬¾ßÌå²Î¼û HasError ºÍ ErrorCode ¡£</response>  
-        /// <response code="401">ÎŞĞ§ÁîÅÆ¡£</response>  
+        /// <param name="model">åˆ†é¡µå‚æ•°</param>
+        /// <param name="conditional">æŸ¥è¯¢æ¡ä»¶ã€‚æ”¯æŒé€šç”¨æŸ¥è¯¢æ¥å£ã€‚</param>
+        /// <returns>æ¶ˆæ¯åˆ—è¡¨åŠæ€»æ•°é‡</returns>
+        /// <response code="200">æœªå‘ç”Ÿç³»ç»Ÿçº§é”™è¯¯ã€‚ä½†å¯èƒ½å‡ºç°åº”ç”¨é”™è¯¯ï¼Œå…·ä½“å‚è§ HasError å’Œ ErrorCode ã€‚</response>  
+        /// <response code="401">æ— æ•ˆä»¤ç‰Œã€‚</response>  
         [HttpGet]
         public ActionResult<GetAllOwMessageReturnDto> GetAllOwMessage([FromQuery] PagingParamsDtoBase model,
             [FromQuery] Dictionary<string, string> conditional = null)
         {
-            // ÑéÖ¤ÁîÅÆ
+            // éªŒè¯ä»¤ç‰Œ
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
                 return Unauthorized();
-
             var result = new GetAllOwMessageReturnDto();
-
             try
             {
-                // »ñÈ¡µ±Ç°ÓÃ»§µÄÏûÏ¢
+                // è·å–å½“å‰ç”¨æˆ·çš„æ¶ˆæ¯
                 var dbSet = _DbContext.Set<OwMessage>();
                 var coll = dbSet.Where(m => m.UserId == context.User.Id).AsNoTracking();
-
-                // Ó¦ÓÃ²éÑ¯Ìõ¼ş
+                // åº”ç”¨æŸ¥è¯¢æ¡ä»¶
                 coll = EfHelper.GenerateWhereAnd(coll, conditional);
-
-                // Ó¦ÓÃÅÅĞò
+                // åº”ç”¨æ’åº
                 coll = coll.OrderBy(model.OrderFieldName, model.IsDesc);
-
-                // »ñÈ¡·ÖÒ³½á¹û
+                // è·å–åˆ†é¡µç»“æœ
                 var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
                 _Mapper.Map(prb, result);
                 return result;
             }
             catch (Exception ex)
             {
-                _Logger.LogError(ex, "»ñÈ¡ÏûÏ¢ÁĞ±íÊ±·¢ÉúÒì³£");
+                _Logger.LogError(ex, "è·å–æ¶ˆæ¯åˆ—è¡¨æ—¶å‘ç”Ÿå¼‚å¸¸");
                 result.HasError = true;
                 result.ErrorCode = 500;
-                result.DebugMessage = $"»ñÈ¡ÏûÏ¢ÁĞ±íÊ±·¢ÉúÒì³£: {ex.Message}";
+                result.DebugMessage = $"è·å–æ¶ˆæ¯åˆ—è¡¨æ—¶å‘ç”Ÿå¼‚å¸¸: {ex.Message}";
                 return result;
             }
         }
-
         /// <summary>
-        /// ·¢ËÍÏûÏ¢¡£ÓÃ»§¿ÉÒÔÏòÍ¬Ò»ÉÌ»§ÄÚµÄÆäËûÓÃ»§·¢ËÍÏûÏ¢£¬³ı·ÇÊÇ³¬¼¶¹ÜÀíÔ±¡£
+        /// å‘é€æ¶ˆæ¯ã€‚ç”¨æˆ·å¯ä»¥å‘åŒä¸€å•†æˆ·å†…çš„å…¶ä»–ç”¨æˆ·å‘é€æ¶ˆæ¯ï¼Œé™¤éæ˜¯è¶…çº§ç®¡ç†å‘˜ã€‚
         /// </summary>
-        /// <param name="model">ÏûÏ¢²ÎÊı</param>
-        /// <returns>²Ù×÷½á¹û</returns>
-        /// <response code="200">Î´·¢ÉúÏµÍ³¼¶´íÎó¡£µ«¿ÉÄÜ³öÏÖÓ¦ÓÃ´íÎó£¬¾ßÌå²Î¼û HasError ºÍ ErrorCode ¡£</response>  
-        /// <response code="400">ÇëÇó²ÎÊı´íÎó¡£</response>  
-        /// <response code="401">ÎŞĞ§ÁîÅÆ¡£</response>  
-        /// <response code="403">³¢ÊÔÏò²»Í¬ÉÌ»§µÄÓÃ»§·¢ËÍÏûÏ¢¡£</response>  
+        /// <param name="model">æ¶ˆæ¯å‚æ•°</param>
+        /// <returns>æ“ä½œç»“æœ</returns>
+        /// <response code="200">æœªå‘ç”Ÿç³»ç»Ÿçº§é”™è¯¯ã€‚ä½†å¯èƒ½å‡ºç°åº”ç”¨é”™è¯¯ï¼Œå…·ä½“å‚è§ HasError å’Œ ErrorCode ã€‚</response>  
+        /// <response code="400">è¯·æ±‚å‚æ•°é”™è¯¯ã€‚</response>  
+        /// <response code="401">æ— æ•ˆä»¤ç‰Œã€‚</response>  
+        /// <response code="403">å°è¯•å‘ä¸åŒå•†æˆ·çš„ç”¨æˆ·å‘é€æ¶ˆæ¯ã€‚</response>  
         [HttpPost]
-        [Description("·¢ËÍÏûÏ¢¸øÖ¸¶¨ÓÃ»§")]
+        [Description("å‘é€æ¶ˆæ¯ç»™æŒ‡å®šç”¨æˆ·")]
         public ActionResult<SendOwMessageReturnDto> SendOwMessage(SendOwMessageParamsDto model)
         {
-            // ÑéÖ¤ÁîÅÆ
+            // éªŒè¯ä»¤ç‰Œ
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
                 return Unauthorized();
-
             var result = new SendOwMessageReturnDto();
-
             try
             {
-                // ÑéÖ¤²ÎÊı
+                // éªŒè¯å‚æ•°
                 if (string.IsNullOrWhiteSpace(model.Title))
                 {
                     result.HasError = true;
                     result.ErrorCode = 400;
-                    result.DebugMessage = "ÏûÏ¢±êÌâ²»ÄÜÎª¿Õ";
+                    result.DebugMessage = "æ¶ˆæ¯æ ‡é¢˜ä¸èƒ½ä¸ºç©º";
                     return BadRequest(result);
                 }
-
                 if (string.IsNullOrWhiteSpace(model.Content))
                 {
                     result.HasError = true;
                     result.ErrorCode = 400;
-                    result.DebugMessage = "ÏûÏ¢ÄÚÈİ²»ÄÜÎª¿Õ";
+                    result.DebugMessage = "æ¶ˆæ¯å†…å®¹ä¸èƒ½ä¸ºç©º";
                     return BadRequest(result);
                 }
-
                 if (model.ReceiverIds == null || model.ReceiverIds.Count == 0)
                 {
                     result.HasError = true;
                     result.ErrorCode = 400;
-                    result.DebugMessage = "½ÓÊÕÕß²»ÄÜÎª¿Õ";
+                    result.DebugMessage = "æ¥æ”¶è€…ä¸èƒ½ä¸ºç©º";
                     return BadRequest(result);
                 }
-
-                // ´ÓÊı¾İ¿âÖĞ»ñÈ¡·¢ËÍÕßµÄÍêÕûĞÅÏ¢£¬°üÀ¨ÉÌ»§ID
+                // ä»æ•°æ®åº“ä¸­è·å–å‘é€è€…çš„å®Œæ•´ä¿¡æ¯ï¼ŒåŒ…æ‹¬å•†æˆ·ID
                 var currentUser = _DbContext.Accounts.Find(context.User.Id);
                 if (currentUser == null)
                 {
                     result.HasError = true;
                     result.ErrorCode = 500;
-                    result.DebugMessage = "ÎŞ·¨»ñÈ¡µ±Ç°ÓÃ»§ĞÅÏ¢";
+                    result.DebugMessage = "æ— æ³•è·å–å½“å‰ç”¨æˆ·ä¿¡æ¯";
                     return StatusCode((int)HttpStatusCode.InternalServerError, result);
                 }
-
-                // ´ÓÊı¾İ¿âÖĞ»ñÈ¡µ±Ç°ÓÃ»§ËùÊôµÄÉÌ»§ID
+                // ä»æ•°æ®åº“ä¸­è·å–å½“å‰ç”¨æˆ·æ‰€å±çš„å•†æˆ·ID
                 var senderMerchantId = currentUser.MerchantId;
-
-                // ¼ì²éÊÇ·ñÎª³¬¼¶¹ÜÀíÔ±
+                // æ£€æŸ¥æ˜¯å¦ä¸ºè¶…çº§ç®¡ç†å‘˜
                 bool isSuperAdmin = _AccountManager.IsAdmin(currentUser);
-
                 var orgManager = _ServiceProvider.GetService<OrgManager<PowerLmsUserDbContext>>();
-
-                // ÑéÖ¤ËùÓĞ½ÓÊÕÕß¶¼ÊôÓÚÍ¬Ò»ÉÌ»§£¬³ı·ÇÊÇ³¬¼¶¹ÜÀíÔ±
+                // éªŒè¯æ‰€æœ‰æ¥æ”¶è€…éƒ½å±äºåŒä¸€å•†æˆ·ï¼Œé™¤éæ˜¯è¶…çº§ç®¡ç†å‘˜
                 if (!isSuperAdmin && senderMerchantId.HasValue)
                 {
-                    // »ñÈ¡ËùÓĞ½ÓÊÕÕßÕË»§
+                    // è·å–æ‰€æœ‰æ¥æ”¶è€…è´¦æˆ·
                     var receivers = _DbContext.Accounts
                         .Where(a => model.ReceiverIds.Contains(a.Id))
                         .ToList();
-
-                    // ¼ì²éÃ¿¸ö½ÓÊÕÕß
+                    // æ£€æŸ¥æ¯ä¸ªæ¥æ”¶è€…
                     foreach (var receiver in receivers)
                     {
-                        // ¼ì²é½ÓÊÕÕß²»Îª¿Õ
+                        // æ£€æŸ¥æ¥æ”¶è€…ä¸ä¸ºç©º
                         if (receiver == null)
                         {
                             result.HasError = true;
                             result.ErrorCode = 400;
-                            result.DebugMessage = "½ÓÊÕÕß²»´æÔÚ";
+                            result.DebugMessage = "æ¥æ”¶è€…ä¸å­˜åœ¨";
                             return BadRequest(result);
                         }
                         var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
-                        // ¼ì²é½ÓÊÕÕß²»ÊôÓÚÍ¬Ò»ÉÌ»§
+                        // æ£€æŸ¥æ¥æ”¶è€…ä¸å±äºåŒä¸€å•†æˆ·
                         if (merchantId != senderMerchantId)
                         {
                             result.HasError = true;
                             result.ErrorCode = 403;
-                            result.DebugMessage = "Ö»ÄÜÏòÍ¬Ò»ÉÌ»§ÄÚµÄÓÃ»§·¢ËÍÏûÏ¢";
+                            result.DebugMessage = "åªèƒ½å‘åŒä¸€å•†æˆ·å†…çš„ç”¨æˆ·å‘é€æ¶ˆæ¯";
                             return StatusCode((int)HttpStatusCode.Forbidden, result);
                         }
                     }
                 }
-
-                // ´´½¨ÏûÏ¢ÊµÌå
+                // åˆ›å»ºæ¶ˆæ¯å®ä½“
                 var messages = new List<OwMessage>();
                 var now = DateTime.UtcNow;
-
                 foreach (var receiverId in model.ReceiverIds)
                 {
                     var message = new OwMessage
@@ -198,194 +176,170 @@ namespace PowerLmsWebApi.Controllers
                         Content = model.Content,
                         CreateBy = context.User.Id,
                         CreateUtc = now,
-                        IsSystemMessage = isSuperAdmin, // Ö»ÓĞ³¬¼¶¹ÜÀíÔ±·¢ËÍµÄÏûÏ¢²Å±ê¼ÇÎªÏµÍ³ÏûÏ¢
+                        IsSystemMessage = isSuperAdmin, // åªæœ‰è¶…çº§ç®¡ç†å‘˜å‘é€çš„æ¶ˆæ¯æ‰æ ‡è®°ä¸ºç³»ç»Ÿæ¶ˆæ¯
                     };
                     message.GenerateNewId();
                     messages.Add(message);
                 }
-
-                // Ìí¼Óµ½Êı¾İ¿â
+                // æ·»åŠ åˆ°æ•°æ®åº“
                 _DbContext.Set<OwMessage>().AddRange(messages);
                 _DbContext.SaveChanges();
-
-                // ¼ÇÂ¼ÈÕÖ¾
-                _SqlAppLogger.LogGeneralInfo($"·¢ËÍÏûÏ¢.{messages.Count}Ìõ");
-
+                // è®°å½•æ—¥å¿—
+                _SqlAppLogger.LogGeneralInfo($"å‘é€æ¶ˆæ¯.{messages.Count}æ¡");
                 result.MessageIds = messages.Select(m => m.Id).ToList();
                 return result;
             }
             catch (Exception ex)
             {
-                _Logger.LogError(ex, "·¢ËÍÏûÏ¢Ê±·¢ÉúÒì³£");
+                _Logger.LogError(ex, "å‘é€æ¶ˆæ¯æ—¶å‘ç”Ÿå¼‚å¸¸");
                 result.HasError = true;
                 result.ErrorCode = 500;
-                result.DebugMessage = $"·¢ËÍÏûÏ¢Ê±·¢ÉúÒì³£: {ex.Message}";
+                result.DebugMessage = $"å‘é€æ¶ˆæ¯æ—¶å‘ç”Ÿå¼‚å¸¸: {ex.Message}";
                 return BadRequest(result);
             }
         }
-
         /// <summary>
-        /// ÅúÁ¿±ê¼ÇÏûÏ¢ÎªÒÑ¶Á¡£
-        /// µ± MarkAll=true Ê±£¬½«±ê¼ÇÓÃ»§ËùÓĞÎ´¶ÁÏûÏ¢ÎªÒÑ¶Á£»
-        /// ·ñÔò±ê¼ÇÖ¸¶¨ MessageIds ÖĞµÄÏûÏ¢ÎªÒÑ¶Á¡£
+        /// æ‰¹é‡æ ‡è®°æ¶ˆæ¯ä¸ºå·²è¯»ã€‚
+        /// å½“ MarkAll=true æ—¶ï¼Œå°†æ ‡è®°ç”¨æˆ·æ‰€æœ‰æœªè¯»æ¶ˆæ¯ä¸ºå·²è¯»ï¼›
+        /// å¦åˆ™æ ‡è®°æŒ‡å®š MessageIds ä¸­çš„æ¶ˆæ¯ä¸ºå·²è¯»ã€‚
         /// </summary>
-        /// <param name="model">²ÎÊı</param>
-        /// <returns>²Ù×÷½á¹û</returns>
-        /// <response code="200">Î´·¢ÉúÏµÍ³¼¶´íÎó¡£µ«¿ÉÄÜ³öÏÖÓ¦ÓÃ´íÎó£¬¾ßÌå²Î¼û HasError ºÍ ErrorCode ¡£</response>  
-        /// <response code="401">ÎŞĞ§ÁîÅÆ¡£</response>  
-        /// <response code="400">µ± MarkAll=false ÇÒ MessageIds Îª¿ÕÊ±·µ»Ø´Ë´íÎó¡£</response>  
+        /// <param name="model">å‚æ•°</param>
+        /// <returns>æ“ä½œç»“æœ</returns>
+        /// <response code="200">æœªå‘ç”Ÿç³»ç»Ÿçº§é”™è¯¯ã€‚ä½†å¯èƒ½å‡ºç°åº”ç”¨é”™è¯¯ï¼Œå…·ä½“å‚è§ HasError å’Œ ErrorCode ã€‚</response>  
+        /// <response code="401">æ— æ•ˆä»¤ç‰Œã€‚</response>  
+        /// <response code="400">å½“ MarkAll=false ä¸” MessageIds ä¸ºç©ºæ—¶è¿”å›æ­¤é”™è¯¯ã€‚</response>  
         [HttpPut]
         public ActionResult<MarkMessagesAsReadReturnDto> MarkMessagesAsRead(MarkMessagesAsReadParamsDto model)
         {
-            // ÑéÖ¤ÁîÅÆ
+            // éªŒè¯ä»¤ç‰Œ
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
                 return Unauthorized();
-
             var result = new MarkMessagesAsReadReturnDto();
-
             try
             {
-                // ÑéÖ¤²ÎÊı
+                // éªŒè¯å‚æ•°
                 if (!model.MarkAll && (model.MessageIds == null || model.MessageIds.Count == 0))
                 {
                     result.HasError = true;
                     result.ErrorCode = 400;
-                    result.DebugMessage = "ÇëÖ¸¶¨Òª±ê¼ÇÎªÒÑ¶ÁµÄÏûÏ¢IDÁĞ±í£¬»òÉèÖÃ MarkAll=true ±ê¼ÇËùÓĞÎ´¶ÁÏûÏ¢";
+                    result.DebugMessage = "è¯·æŒ‡å®šè¦æ ‡è®°ä¸ºå·²è¯»çš„æ¶ˆæ¯IDåˆ—è¡¨ï¼Œæˆ–è®¾ç½® MarkAll=true æ ‡è®°æ‰€æœ‰æœªè¯»æ¶ˆæ¯";
                     return BadRequest(result);
                 }
-
-                // ±ê¼ÇÏûÏ¢ÎªÒÑ¶Á
+                // æ ‡è®°æ¶ˆæ¯ä¸ºå·²è¯»
                 var now = DateTime.UtcNow;
                 IQueryable<OwMessage> query;
-
                 if (model.MarkAll)
                 {
-                    // ±ê¼ÇËùÓĞÎ´¶ÁÏûÏ¢
+                    // æ ‡è®°æ‰€æœ‰æœªè¯»æ¶ˆæ¯
                     query = _DbContext.Set<OwMessage>()
                         .Where(m => m.UserId == context.User.Id && m.ReadUtc == null);
-
-                    // ¼ÇÂ¼ÈÕÖ¾²Ù×÷ÀàĞÍ
-                    _SqlAppLogger.LogGeneralInfo("±ê¼ÇËùÓĞÏûÏ¢ÒÑ¶Á");
+                    // è®°å½•æ—¥å¿—æ“ä½œç±»å‹
+                    _SqlAppLogger.LogGeneralInfo("æ ‡è®°æ‰€æœ‰æ¶ˆæ¯å·²è¯»");
                 }
                 else
                 {
-                    // ±ê¼ÇÖ¸¶¨ÏûÏ¢
+                    // æ ‡è®°æŒ‡å®šæ¶ˆæ¯
                     query = _DbContext.Set<OwMessage>()
                         .Where(m => model.MessageIds.Contains(m.Id) && m.UserId == context.User.Id && m.ReadUtc == null);
-
-                    // ¼ÇÂ¼ÈÕÖ¾²Ù×÷ÀàĞÍ
-                    _SqlAppLogger.LogGeneralInfo($"±ê¼ÇÏûÏ¢ÒÑ¶Á.{model.MessageIds.Count}Ìõ");
+                    // è®°å½•æ—¥å¿—æ“ä½œç±»å‹
+                    _SqlAppLogger.LogGeneralInfo($"æ ‡è®°æ¶ˆæ¯å·²è¯».{model.MessageIds.Count}æ¡");
                 }
-
-                // »ñÈ¡ÏûÏ¢²¢±ê¼ÇÎªÒÑ¶Á
+                // è·å–æ¶ˆæ¯å¹¶æ ‡è®°ä¸ºå·²è¯»
                 var messages = query.ToList();
                 foreach (var message in messages)
                 {
                     message.ReadUtc = now;
                 }
-
                 _DbContext.SaveChanges();
-
                 result.MarkedCount = messages.Count;
                 return result;
             }
             catch (Exception ex)
             {
-                _Logger.LogError(ex, "±ê¼ÇÏûÏ¢ÒÑ¶ÁÊ±·¢ÉúÒì³£");
+                _Logger.LogError(ex, "æ ‡è®°æ¶ˆæ¯å·²è¯»æ—¶å‘ç”Ÿå¼‚å¸¸");
                 result.HasError = true;
                 result.ErrorCode = 500;
-                result.DebugMessage = $"±ê¼ÇÏûÏ¢ÒÑ¶ÁÊ±·¢ÉúÒì³£: {ex.Message}";
+                result.DebugMessage = $"æ ‡è®°æ¶ˆæ¯å·²è¯»æ—¶å‘ç”Ÿå¼‚å¸¸: {ex.Message}";
                 return result;
             }
         }
-
         /// <summary>
-        /// ÅúÁ¿É¾³ıÏûÏ¢¡£ÓÃ»§Ö»ÄÜÉ¾³ı×Ô¼ºµÄÏûÏ¢¡£
+        /// æ‰¹é‡åˆ é™¤æ¶ˆæ¯ã€‚ç”¨æˆ·åªèƒ½åˆ é™¤è‡ªå·±çš„æ¶ˆæ¯ã€‚
         /// </summary>
-        /// <param name="model">²ÎÊı</param>
-        /// <returns>²Ù×÷½á¹û</returns>
-        /// <response code="200">Î´·¢ÉúÏµÍ³¼¶´íÎó¡£µ«¿ÉÄÜ³öÏÖÓ¦ÓÃ´íÎó£¬¾ßÌå²Î¼û HasError ºÍ ErrorCode ¡£</response>  
-        /// <response code="401">ÎŞĞ§ÁîÅÆ¡£</response>  
+        /// <param name="model">å‚æ•°</param>
+        /// <returns>æ“ä½œç»“æœ</returns>
+        /// <response code="200">æœªå‘ç”Ÿç³»ç»Ÿçº§é”™è¯¯ã€‚ä½†å¯èƒ½å‡ºç°åº”ç”¨é”™è¯¯ï¼Œå…·ä½“å‚è§ HasError å’Œ ErrorCode ã€‚</response>  
+        /// <response code="401">æ— æ•ˆä»¤ç‰Œã€‚</response>  
         [HttpDelete]
         public ActionResult<RemoveAllOwMessageReturnDto> RemoveAllOwMessage(RemoveAllOwMessageParamsDto model)
         {
-            // ÑéÖ¤ÁîÅÆ
+            // éªŒè¯ä»¤ç‰Œ
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
                 return Unauthorized();
-
             var result = new RemoveAllOwMessageReturnDto();
-
             try
             {
-                // ÑéÖ¤²ÎÊı
+                // éªŒè¯å‚æ•°
                 if (model.Ids == null || model.Ids.Count == 0)
                 {
                     result.HasError = true;
                     result.ErrorCode = 400;
-                    result.DebugMessage = "ÏûÏ¢IDÁĞ±í²»ÄÜÎª¿Õ";
+                    result.DebugMessage = "æ¶ˆæ¯IDåˆ—è¡¨ä¸èƒ½ä¸ºç©º";
                     return BadRequest(result);
                 }
-
-                // ²éÕÒÓÃ»§ÓĞÈ¨É¾³ıµÄÏûÏ¢
+                // æŸ¥æ‰¾ç”¨æˆ·æœ‰æƒåˆ é™¤çš„æ¶ˆæ¯
                 var messages = _DbContext.Set<OwMessage>()
                     .Where(m => model.Ids.Contains(m.Id) && m.UserId == context.User.Id)
                     .ToList();
-
-                // É¾³ıÏûÏ¢
+                // åˆ é™¤æ¶ˆæ¯
                 _DbContext.Set<OwMessage>().RemoveRange(messages);
                 _DbContext.SaveChanges();
-
-                // ¼ÇÂ¼ÈÕÖ¾
-                _SqlAppLogger.LogGeneralInfo($"ÅúÁ¿É¾³ıÏûÏ¢.{messages.Count}Ìõ");
-
+                // è®°å½•æ—¥å¿—
+                _SqlAppLogger.LogGeneralInfo($"æ‰¹é‡åˆ é™¤æ¶ˆæ¯.{messages.Count}æ¡");
                 result.RemovedCount = messages.Count;
                 return result;
             }
             catch (Exception ex)
             {
-                _Logger.LogError(ex, "ÅúÁ¿É¾³ıÏûÏ¢Ê±·¢ÉúÒì³£");
+                _Logger.LogError(ex, "æ‰¹é‡åˆ é™¤æ¶ˆæ¯æ—¶å‘ç”Ÿå¼‚å¸¸");
                 result.HasError = true;
                 result.ErrorCode = 500;
-                result.DebugMessage = $"ÅúÁ¿É¾³ıÏûÏ¢Ê±·¢ÉúÒì³£: {ex.Message}";
+                result.DebugMessage = $"æ‰¹é‡åˆ é™¤æ¶ˆæ¯æ—¶å‘ç”Ÿå¼‚å¸¸: {ex.Message}";
                 return result;
             }
         }
-
         /// <summary>
-        /// »ñÈ¡µ±Ç°ÓÃ»§Î´¶ÁÏûÏ¢ÊıÁ¿¡£
+        /// è·å–å½“å‰ç”¨æˆ·æœªè¯»æ¶ˆæ¯æ•°é‡ã€‚
         /// </summary>
-        /// <param name="model">²ÎÊı£¬½öĞèÌá¹©ÁîÅÆ</param>
-        /// <returns>Î´¶ÁÏûÏ¢ÊıÁ¿</returns>
-        /// <response code="200">Î´·¢ÉúÏµÍ³¼¶´íÎó¡£µ«¿ÉÄÜ³öÏÖÓ¦ÓÃ´íÎó£¬¾ßÌå²Î¼û HasError ºÍ ErrorCode¡£</response>  
-        /// <response code="401">ÎŞĞ§ÁîÅÆ¡£</response>  
+        /// <param name="model">å‚æ•°ï¼Œä»…éœ€æä¾›ä»¤ç‰Œ</param>
+        /// <returns>æœªè¯»æ¶ˆæ¯æ•°é‡</returns>
+        /// <response code="200">æœªå‘ç”Ÿç³»ç»Ÿçº§é”™è¯¯ã€‚ä½†å¯èƒ½å‡ºç°åº”ç”¨é”™è¯¯ï¼Œå…·ä½“å‚è§ HasError å’Œ ErrorCodeã€‚</response>  
+        /// <response code="401">æ— æ•ˆä»¤ç‰Œã€‚</response>  
         [HttpGet]
         public ActionResult<GetUnreadMessageCountReturnDto> GetUnreadMessageCount([FromQuery]TokenDtoBase model)
         {
-            // ÑéÖ¤ÁîÅÆ
+            // éªŒè¯ä»¤ç‰Œ
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
                 return Unauthorized();
-
             var result = new GetUnreadMessageCountReturnDto();
-
             try
             {
-                // ²éÑ¯Î´¶ÁÏûÏ¢ÊıÁ¿
+                // æŸ¥è¯¢æœªè¯»æ¶ˆæ¯æ•°é‡
                 var unreadCount = _DbContext.Set<OwMessage>()
                     .Where(m => m.UserId == context.User.Id && m.ReadUtc == null)
                     .Count();
-
                 result.UnreadCount = unreadCount;
                 return result;
             }
             catch (Exception ex)
             {
-                _Logger.LogError(ex, "»ñÈ¡Î´¶ÁÏûÏ¢ÊıÁ¿Ê±·¢ÉúÒì³£");
+                _Logger.LogError(ex, "è·å–æœªè¯»æ¶ˆæ¯æ•°é‡æ—¶å‘ç”Ÿå¼‚å¸¸");
                 result.HasError = true;
                 result.ErrorCode = 500;
-                result.DebugMessage = $"»ñÈ¡Î´¶ÁÏûÏ¢ÊıÁ¿Ê±·¢ÉúÒì³£: {ex.Message}";
+                result.DebugMessage = $"è·å–æœªè¯»æ¶ˆæ¯æ•°é‡æ—¶å‘ç”Ÿå¼‚å¸¸: {ex.Message}";
                 return result;
             }
         }
-        #endregion ÏûÏ¢²éÑ¯
+        #endregion æ¶ˆæ¯æŸ¥è¯¢
     }
 }

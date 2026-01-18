@@ -17,7 +17,6 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-
 namespace PowerLmsServer.Managers
 {
     /// <summary>
@@ -40,9 +39,7 @@ namespace PowerLmsServer.Managers
             //{ "<h>","h"},
             { "<hh>","hh"},
         };
-
         #region 编号相关
-
         /// <summary>
         /// 生成编号。
         /// </summary>
@@ -122,7 +119,6 @@ namespace PowerLmsServer.Managers
             });
             return str;
         }
-
         /// <summary>
         /// 生成编号。
         /// </summary>
@@ -203,9 +199,7 @@ namespace PowerLmsServer.Managers
             return str;
         }
         #endregion 编号相关
-
         #region 任务相关
-
         /// <summary>
         /// 审核工作任务并审核所有下属费用。
         /// </summary>
@@ -231,7 +225,6 @@ namespace PowerLmsServer.Managers
             });
             return true;
         }
-
         /// <summary>
         /// 取消审核工作任务并取消审核所有下属费用。
         /// </summary>
@@ -257,7 +250,6 @@ namespace PowerLmsServer.Managers
             });
             return true;
         }
-
         /// <summary>
         /// 关闭任务的审核状态。
         /// </summary>
@@ -281,7 +273,6 @@ namespace PowerLmsServer.Managers
             });
             return true;
         }
-
         /// <summary>
         /// 用指定的任务Id获取其下属业务对象。
         /// </summary>
@@ -297,9 +288,7 @@ namespace PowerLmsServer.Managers
             return null;
         }
         #endregion 任务相关
-
         #region 财务日期填充
-
         /// <summary>
         /// 为一组工作任务对象填充财务日期。
         /// 批量处理，注重性能，避免N+1查询问题。
@@ -313,13 +302,10 @@ namespace PowerLmsServer.Managers
         public void FillFinancialDates(IEnumerable<PlJob> jobs, DbContext context)
         {
             if (jobs?.Any() != true) return;
-
             var jobList = jobs.ToList();
             var jobIds = jobList.Select(j => j.Id).ToHashSet();
-
             // 批量查询所有相关的业务方向，避免N+1问题
             var businessDirections = GetBusinessDirectionsBatch(jobIds, context);
-
             // 为每个job计算财务日期（供前端参考）
             foreach (var job in jobList)
             {
@@ -328,7 +314,6 @@ namespace PowerLmsServer.Managers
                 // job.AccountDate = calculatedDate;
             }
         }
-
         /// <summary>
         /// 为单个工作任务对象填充财务日期
         /// 
@@ -341,14 +326,12 @@ namespace PowerLmsServer.Managers
         public void FillFinancialDate(PlJob job, DbContext context)
         {
             if (job == null) return;
-
             // 优化：只查询业务方向，不获取完整单据对象
             var businessDirections = GetBusinessDirectionsBatch(new HashSet<Guid> { job.Id }, context);
             var calculatedDate = CalculateFinancialDate(job, businessDirections.GetValueOrDefault(job.Id));
             // 注意：不再自动设置AccountDate，由前端负责
             // job.AccountDate = calculatedDate;
         }
-
         /// <summary>
         /// 批量获取业务单据类型，避免N+1查询
         /// 优化：只查询业务方向判断所需的最小数据，不返回完整单据对象
@@ -359,48 +342,38 @@ namespace PowerLmsServer.Managers
         private Dictionary<Guid, bool?> GetBusinessDirectionsBatch(HashSet<Guid> jobIds, DbContext context)
         {
             var result = new Dictionary<Guid, bool?>();
-
             // 批量查询各类业务单据的类型信息（只查询JobId，不查询完整对象）
             // 空运出口单 - 出口方向
             var eaDocJobIds = context.Set<PlEaDoc>()
                 .Where(d => d.JobId.HasValue && jobIds.Contains(d.JobId.Value))
                 .Select(d => d.JobId.Value)
                 .ToList();
-
             // 空运进口单 - 进口方向
             var iaDocJobIds = context.Set<PlIaDoc>()
                 .Where(d => d.JobId.HasValue && jobIds.Contains(d.JobId.Value))
                 .Select(d => d.JobId.Value)
                 .ToList();
-
             // 海运出口单 - 出口方向
             var esDocJobIds = context.Set<PlEsDoc>()
                 .Where(d => d.JobId.HasValue && jobIds.Contains(d.JobId.Value))
                 .Select(d => d.JobId.Value)
                 .ToList();
-
             // 海运进口单 - 进口方向
             var isDocJobIds = context.Set<PlIsDoc>()
                 .Where(d => d.JobId.HasValue && jobIds.Contains(d.JobId.Value))
                 .Select(d => d.JobId.Value)
                 .ToList();
-
             // 填充结果：true=进口，false=出口
             foreach (var jobId in eaDocJobIds)
                 result[jobId] = false; // 空运出口
-
             foreach (var jobId in iaDocJobIds)
                 result[jobId] = true;  // 空运进口
-
             foreach (var jobId in esDocJobIds)
                 result[jobId] = false; // 海运出口
-
             foreach (var jobId in isDocJobIds)
                 result[jobId] = true;  // 海运进口
-
             return result;
         }
-
         /// <summary>
         /// 计算财务日期
         /// 优化版本：基于业务方向而非完整业务单据对象
@@ -415,18 +388,14 @@ namespace PowerLmsServer.Managers
         private DateTime? CalculateFinancialDate(PlJob job, bool? isImport)
         {
             if (!isImport.HasValue) return null;
-
             return isImport.Value switch
             {
                 true => job.ETA,   // 进口业务：使用到港日期
                 false => job.Etd   // 出口业务：使用开航日期
             };
         }
-
         #endregion 财务日期填充
-
         #region 支撑类型定义
-
         /// <summary>
         /// 申请单回退操作的结果类型。
         /// 用于统一服务层方法的返回格式。
@@ -437,22 +406,18 @@ namespace PowerLmsServer.Managers
             /// 操作是否成功的布尔值。
             /// </summary>
             public bool Success { get; set; }
-
             /// <summary>
             /// 业务单据ID，用于确认操作目标。
             /// </summary>
             public Guid JobId { get; set; }
-
             /// <summary>
             /// 清空的工作流数量，用于审计统计。
             /// </summary>
             public int ClearedWorkflowCount { get; set; }
-
             /// <summary>
             /// 操作结果描述信息。
             /// </summary>
             public string Message { get; set; }
-
             /// <summary>
             /// 创建成功的回退结果。
             /// </summary>
@@ -470,7 +435,6 @@ namespace PowerLmsServer.Managers
                     Message = message
                 };
             }
-
             /// <summary>
             /// 创建失败的回退结果。
             /// </summary>
@@ -488,11 +452,8 @@ namespace PowerLmsServer.Managers
                 };
             }
         }
-
         #endregion 支撑类型定义
-
         #region 账期反关闭
-
         /// <summary>
         /// 账期反关闭操作的结果类型。
         /// </summary>
@@ -519,7 +480,6 @@ namespace PowerLmsServer.Managers
             /// </summary>
             public string ErrorMessage { get; set; }
         }
-
         /// <summary>
         /// 账期反关闭功能。
         /// 将指定公司的账期设置为目标账期,可选择性解关该账期的已关闭工作号。
@@ -587,7 +547,6 @@ namespace PowerLmsServer.Managers
                 UnclosedJobCount = unclosedJobCount
             };
         }
-
         /// <summary>
         /// 验证账期格式是否正确(YYYYMM)。
         /// </summary>
@@ -601,7 +560,6 @@ namespace PowerLmsServer.Managers
                 return false;
             return year >= 1900 && year <= 9999 && month >= 1 && month <= 12;
         }
-
         /// <summary>
         /// 根据账期字符串生成起始和结束日期。
         /// </summary>
@@ -617,11 +575,8 @@ namespace PowerLmsServer.Managers
             var endDate = startDate.AddMonths(1);
             return (startDate, endDate);
         }
-
         #endregion 账期反关闭
-
         #region 财务日期账期校验
-
         /// <summary>
         /// 验证财务日期是否符合账期要求。
         /// 财务日期不能早于当前已开放账期的起始日期。
@@ -657,7 +612,6 @@ namespace PowerLmsServer.Managers
             }
             return (true, string.Empty);
         }
-
         #endregion 财务日期账期校验
     }
 }

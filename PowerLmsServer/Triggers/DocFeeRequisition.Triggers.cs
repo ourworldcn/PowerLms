@@ -54,7 +54,6 @@
  * 修改日期: 2025-02-10
  * 修改记录: 2025-01-27 整合账单申请单合计设计需求
  */
-
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -62,7 +61,6 @@ using Microsoft.Extensions.Logging;
 using PowerLms.Data;
 using OW.EntityFrameworkCore;
 using PowerLmsServer.Managers;
-
 namespace PowerLmsServer.Triggers
 {
     /// <summary>
@@ -84,7 +82,6 @@ namespace PowerLmsServer.Triggers
         /// </summary>
         public const string ChangedRequisitionItemIdsKey = "ChangedRequisitionItemIds";
     }
-
     /// <summary>
     /// 费用申请单和明细项的数据库触发器处理器
     /// 
@@ -119,7 +116,6 @@ namespace PowerLmsServer.Triggers
         private readonly ILogger<DocFeeRequisitionTriggerHandler> _Logger;
         private readonly IServiceProvider _ServiceProvider;
         #endregion 私有字段
-
         #region 延迟获取的服务
         /// <summary>
         /// 业务逻辑管理器（延迟加载）
@@ -131,7 +127,6 @@ namespace PowerLmsServer.Triggers
         /// </summary>
         private BusinessLogicManager _BusinessLogic => _ServiceProvider.GetRequiredService<BusinessLogicManager>();
         #endregion 延迟获取的服务
-
         #region 构造函数
         /// <summary>
         /// 构造函数，初始化日志记录器和服务提供者
@@ -148,7 +143,6 @@ namespace PowerLmsServer.Triggers
             _ServiceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         }
         #endregion 构造函数
-
         #region Saving 事件处理
         /// <summary>
         /// 在保存申请单和明细项之前执行的合计金额计算
@@ -176,7 +170,6 @@ namespace PowerLmsServer.Triggers
         {
             var dbContext = entities.First().Context;
             var parentIds = new HashSet<Guid>();
-
             foreach (var entry in entities)
             {
                 var id = entry.Entity switch
@@ -190,13 +183,10 @@ namespace PowerLmsServer.Triggers
                     parentIds.Add(id.Value);
                 }
             }
-
             // 计算并更新父申请单的金额合计
             var requisitions = dbContext.Set<DocFeeRequisition>().WhereWithLocalSafe(c => parentIds.Contains(c.Id)); // 获取所有相关的 DocFeeRequisition 记录
             var lkupRequisitionItem = dbContext.Set<DocFeeRequisitionItem>().WhereWithLocal(c => parentIds.Contains(c.ParentId.Value)).ToLookup(c => c.ParentId.Value); // 获取所有相关的 DocFeeRequisitionItem 记录
-
             var financialManager = service.GetRequiredService<FinancialManager>();
-
             foreach (var requisition in requisitions)
             {
                 // 跳过已删除的申请单
@@ -204,7 +194,6 @@ namespace PowerLmsServer.Triggers
                 {
                     continue;
                 }
-                
                 // 重新计算申请单的金额合计和收付性质
                 if (financialManager.GetRequisitionAmountAndIO(lkupRequisitionItem[requisition.Id], out decimal amount, out bool isOut, dbContext))
                 {
@@ -214,7 +203,6 @@ namespace PowerLmsServer.Triggers
             }
         }
         #endregion Saving 事件处理
-
         #region AfterSaving 事件处理
         /// <summary>
         /// 在保存申请单和明细项之后执行的后续处理
@@ -240,7 +228,6 @@ namespace PowerLmsServer.Triggers
         }
         #endregion AfterSaving 事件处理
     }
-
     // ✅ 已删除 DocFeeRequisitionTotalSettledAmountTriggerHandler 触发器
     // 理由：
     // 1. 功能重复：与 PlInvoicesItemTriggerHandler 触发器重复（DocBill.Triggers.cs）

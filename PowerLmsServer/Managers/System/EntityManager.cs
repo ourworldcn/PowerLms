@@ -21,7 +21,6 @@ using System.Net;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-
 namespace PowerLmsServer.Managers
 {
     /// <summary>
@@ -40,10 +39,8 @@ namespace PowerLmsServer.Managers
             _DbContext = dbContext;
             _Mapper = mapper;
         }
-
         readonly PowerLmsUserDbContext _DbContext;
         readonly IMapper _Mapper;
-
         /// <summary>
         /// 修改可软删除的对象集合。
         /// </summary>
@@ -57,7 +54,6 @@ namespace PowerLmsServer.Managers
             entities.ForEach(c => _DbContext.Entry(c).Property(c => c.IsDelete).IsModified = false);
             return true;
         }
-
         /// <summary>
         /// 修改的对象集合。
         /// </summary>
@@ -105,7 +101,6 @@ namespace PowerLmsServer.Managers
             }
             return true;
         }
-
         /// <summary>
         /// 恢复已经被软删除的实体。
         /// </summary>
@@ -126,7 +121,6 @@ namespace PowerLmsServer.Managers
             entity.IsDelete = false;
             return true;
         }
-
         /// <summary>
         /// 获取一个集合的分页结果。
         /// </summary>
@@ -144,7 +138,6 @@ namespace PowerLmsServer.Managers
             result.Total = count == -1 ? result.Result.Count : values.Count();
             return result;
         }
-
         /// <summary>
         /// 移除一个实体。
         /// </summary>
@@ -161,7 +154,6 @@ namespace PowerLmsServer.Managers
             else
                 return _DbContext.Remove(item);
         }
-
         /// <summary>
         /// 比对新旧集合 进行增加，更改删除操作。
         /// </summary>
@@ -171,10 +163,8 @@ namespace PowerLmsServer.Managers
         public void Set<T>(IEnumerable<T> older, IEnumerable<T> newer) where T : GuidKeyObjectBase
         {
             var dbSet = _DbContext.Set<T>();    //数据集
-
             //ISet<T> o = older as ISet<T>; o ??= older.ToHashSet();
             //ISet<T> n = newer as ISet<T>; n ??= newer.ToHashSet();
-
             var olderIds = older.Select(c => c.Id).ToHashSet();
             var newerIds = newer.Select(c => c.Id).ToHashSet();
             //删除
@@ -183,7 +173,6 @@ namespace PowerLmsServer.Managers
             var adds = newer.ExceptBy(olderIds, c => c.Id).ToArray();
             //更新
             var updates = older.Join(newer, c => c.Id, c => c.Id, (c, d) => (c, d)).ToArray();
-
             dbSet.RemoveRange(removes);
             dbSet.AddRange(adds);
             foreach (var (o, n) in updates)
@@ -193,7 +182,6 @@ namespace PowerLmsServer.Managers
                 //entry.State = EntityState.Modified;
             }
         }
-
         /// <summary>
         /// 复制对象，并能指定忽略属性和强行设置的新值。
         /// </summary>
@@ -238,7 +226,6 @@ namespace PowerLmsServer.Managers
             }
             return true;
         }
-
         /// <summary>
         /// 复制对象，强制不区分大小写处理属性名称，并能指定忽略属性和强行设置的新值。
         /// </summary>
@@ -254,17 +241,13 @@ namespace PowerLmsServer.Managers
             var caseInsensitiveNewVals = newVals != null
                 ? new Dictionary<string, string>(newVals, StringComparer.OrdinalIgnoreCase)
                 : null;
-
             var caseInsensitiveIgnoreProps = ignorePropertyNames != null
                 ? new HashSet<string>(ignorePropertyNames, StringComparer.OrdinalIgnoreCase)
                 : null;
-
             // 复用现有的 Copy 方法实现
             return Copy(src, dest, caseInsensitiveNewVals, caseInsensitiveIgnoreProps);
         }
-
     }
-
     /// <summary>
     /// 分页/排序要求的基类。
     /// </summary>
@@ -275,26 +258,22 @@ namespace PowerLmsServer.Managers
         /// </summary>
         [Required, Range(0, int.MaxValue)]
         public int StartIndex { get; set; }
-
         /// <summary>
         /// 最大返回数量。
         /// 默认值-1，不限定返回数量。
         /// </summary>
         [Range(-1, int.MaxValue)]
         public int Count { get; set; } = -1;
-
         /// <summary>
         /// 排序的字段名。
         /// </summary>
         [Required]
         public string OrderFieldName { get; set; }
-
         /// <summary>
         /// 是否降序排序：true降序排序，false升序排序（省略或默认）。
         /// </summary>
         public bool IsDesc { get; set; }
     }
-
     /// <summary>
     /// 返回分页数据的封装类的基类
     /// </summary>
@@ -306,21 +285,16 @@ namespace PowerLmsServer.Managers
         /// </summary>
         public PagingReturnBase()
         {
-
         }
-
         /// <summary>
         /// 集合元素的最大总数量。
         /// </summary>
         public int Total { get; set; }
-
         /// <summary>
         /// 返回的集合。
         /// </summary>
         public List<T> Result { get; set; } = new List<T>();
-
     }
-
     /// <summary>
     /// 返回对象的基类。
     /// </summary>
@@ -331,26 +305,19 @@ namespace PowerLmsServer.Managers
         /// </summary>
         public ReturnBase()
         {
-
         }
-
         /// <summary>
         /// 是否有错误。不设置则使用<see cref="ErrorCode"/>来判定。
         /// </summary>
         /// <value>0没有错误，其它数值含义由应用定义。</value>
         public bool HasError { get; set; }
-
         /// <summary>
         /// 错误码，参见 ErrorCodes。
         /// </summary>
         public int ErrorCode { get; set; }
-
         /// <summary>
         /// 调试信息，如果发生错误，这里给出简要说明。
         /// </summary>
         public string DebugMessage { get; set; }
-
     }
-
-
 }

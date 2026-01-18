@@ -14,13 +14,11 @@
  * 创建：2025-01
  * 修改：2025-01-27 删除Status字段，调整时间精度为毫秒，移除备注长度限制
  */
-
 using Microsoft.EntityFrameworkCore;
 using OW.Data;
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
-
 namespace PowerLms.Data
 {
     /// <summary>
@@ -40,20 +38,17 @@ namespace PowerLms.Data
             TransactionDate = DateTime.Today;
             CreateDateTime = OwHelper.WorldNow;
         }
-
         /// <summary>
         /// 挂靠的父单据Id。通用设计，当前主要关联到结算单(PlInvoices)。
         /// 父单据包含币种、汇率、结算单位等基本信息，避免冗余存储。
         /// </summary>
         [Comment("挂靠的父单据Id，通用设计，当前主要关联到结算单")]
         public Guid? ParentId { get; set; }
-
         /// <summary>
         /// 收付款日期。实际发生收付款的业务日期，精确到毫秒。
         /// </summary>
         [Comment("收付款日期，实际发生收付款的业务日期，精确到毫秒")]
         public DateTime TransactionDate { get; set; }
-
         /// <summary>
         /// 实收付金额。本次实际收付的金额，2位小数精度。
         /// 多条记录的sum后，应对应结算单的收付金额。
@@ -61,7 +56,6 @@ namespace PowerLms.Data
         [Comment("实收付金额，本次实际收付的金额，2位小数精度")]
         [Precision(18, 2)]
         public decimal Amount { get; set; }
-
         /// <summary>
         /// 手续费。本次收付产生的手续费，2位小数精度。
         /// 包括银行手续费、汇款费等各类收付相关费用。
@@ -69,54 +63,43 @@ namespace PowerLms.Data
         [Comment("手续费，本次收付产生的手续费，2位小数精度")]
         [Precision(18, 2)]
         public decimal ServiceFee { get; set; }
-
         /// <summary>
         /// 银行流水号(水单号)。银行转账的流水号或水单号，用于对账和确认。
         /// </summary>
         [Comment("银行流水号(水单号)，银行转账的流水号，用于对账和确认")]
         [MaxLength(64)]
         public string BankFlowNumber { get; set; }
-
         /// <summary>
         /// 结算账号Id。本公司信息中的银行账号ID，关联到BankInfo表。
         /// 标识使用哪个银行账号进行收付款。
         /// </summary>
         [Comment("结算账号Id，本公司信息中的银行账号ID，关联到BankInfo表")]
         public Guid? BankAccountId { get; set; }
-
         /// <summary>
         /// 备注。记录收付款的备注信息，如收付原因、特殊说明等。
         /// </summary>
         [Comment("备注，记录收付款的备注信息")]
         public string Remark { get; set; }
-
         #region ICreatorInfo
-
         /// <summary>
         /// 创建者Id。记录创建这条收付记录的操作员。
         /// </summary>
         [Comment("创建者Id，记录创建这条收付记录的操作员")]
         public Guid? CreateBy { get; set; }
-
         /// <summary>
         /// 创建时间。记录创建的时间，精确到毫秒。
         /// </summary>
         [Comment("创建时间，记录创建的时间，精确到毫秒")]
         public DateTime CreateDateTime { get; set; }
-
         #endregion
-
         #region IMarkDelete
-
         /// <summary>
         /// 是否已标记为删除。false(默认)未标记为删除，true标记为删除。
         /// </summary>
         [Comment("是否已标记为删除。false(默认)未标记为删除，true标记为删除。")]
         public bool IsDelete { get; set; }
-
         #endregion
     }
-
     /// <summary>
     /// 实际收付记录扩展方法
     /// </summary>
@@ -133,7 +116,6 @@ namespace PowerLms.Data
             return transaction.BankAccountId.HasValue ? 
                 context.Set<BankInfo>().Find(transaction.BankAccountId.Value) : null;
         }
-
         /// <summary>
         /// 获取关联的结算单信息
         /// </summary>
@@ -145,7 +127,6 @@ namespace PowerLms.Data
             return transaction.ParentId.HasValue ? 
                 context.Set<PlInvoices>().Find(transaction.ParentId.Value) : null;
         }
-
         /// <summary>
         /// 获取创建人信息
         /// </summary>
@@ -157,7 +138,6 @@ namespace PowerLms.Data
             return transaction.CreateBy.HasValue ? 
                 context.Set<Account>().Find(transaction.CreateBy.Value) : null;
         }
-
         /// <summary>
         /// 获取某个结算单的所有实际收付记录
         /// </summary>
@@ -169,7 +149,6 @@ namespace PowerLms.Data
             return context.Set<ActualFinancialTransaction>()
                 .Where(t => t.ParentId == settlementId && !t.IsDelete);
         }
-
         /// <summary>
         /// 计算某个结算单的实收付金额合计（仅包含未删除的记录）
         /// </summary>

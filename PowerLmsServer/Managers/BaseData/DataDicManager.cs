@@ -13,7 +13,6 @@
  * 创建：2023-12
  * 修改：2025-01-27 新增Excel导入导出功能
  */
-
 using AutoMapper;
 using MathNet.Numerics.Optimization.LineSearch;
 using Microsoft.EntityFrameworkCore;
@@ -34,7 +33,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
 namespace PowerLmsServer.Managers
 {
     /// <summary>
@@ -53,9 +51,7 @@ namespace PowerLmsServer.Managers
             _Mapper = mapper;
             _Logger = logger;
         }
-
         private readonly PowerLmsUserDbContext _DbContext;
-
         /// <summary>
         /// 获取该管理器的数据库上下文。
         /// </summary>
@@ -63,7 +59,6 @@ namespace PowerLmsServer.Managers
         private readonly OwContext _OwContext;
         private readonly IMapper _Mapper;
         private readonly ILogger<DataDicManager> _Logger;
-
         /// <summary>
         /// 复制数据字典。调用者需要自己保存更改。
         /// </summary>
@@ -85,7 +80,6 @@ namespace PowerLmsServer.Managers
             });
             _DbContext.AddRange(baseDataDic);
         }
-
         /// <summary>
         /// 复制特殊字典到指定的组织机构中。
         /// </summary>
@@ -104,7 +98,6 @@ namespace PowerLmsServer.Managers
             }
             _DbContext.AddRange(list);
         }
-
         /// <summary>
         /// 将一组特殊字典，追加到指定的组织机构中。
         /// </summary>
@@ -119,9 +112,7 @@ namespace PowerLmsServer.Managers
                 _DbContext.Add(item);
             }
         }
-
         #region Excel导入导出核心功能
-
         /// <summary>
         /// 导出字典数据到Excel工作表。
         /// 支持所有已评估的字典实体，自动处理Code字段和组织权限。
@@ -142,10 +133,8 @@ namespace PowerLmsServer.Managers
                     _Logger?.LogWarning("未找到实体 {EntityName} 对应的DbSet", entityName);
                     return 0;
                 }
-
                 // 构建查询条件 - 根据实体类型处理组织权限
                 var query = dbSet.AsNoTracking();
-                
                 // 简化权限过滤逻辑
                 if (typeof(T).GetProperty("OrgId") != null && orgId.HasValue)
                 {
@@ -162,7 +151,6 @@ namespace PowerLmsServer.Managers
                               (sdd, catalog) => sdd);
                     query = simpleQuery.Cast<T>();
                 }
-
                 var data = query.ToList();
                 _Logger?.LogInformation("成功查询字典 {EntityName}：{Count}条记录", entityName, data.Count);
                 return data.Count;
@@ -173,7 +161,6 @@ namespace PowerLmsServer.Managers
                 throw;
             }
         }
-
         /// <summary>
         /// 从Excel工作表导入字典数据。
         /// 支持新增和更新，自动处理GUID生成和组织权限。
@@ -198,7 +185,6 @@ namespace PowerLmsServer.Managers
                 throw;
             }
         }
-
         /// <summary>
         /// 导入后处理：设置组织ID和其他必需字段。
         /// </summary>
@@ -211,18 +197,14 @@ namespace PowerLmsServer.Managers
                     .FirstOrDefault(p => p.PropertyType.IsGenericType &&
                                         p.PropertyType.GetGenericTypeDefinition() == typeof(DbSet<>) &&
                                         p.PropertyType.GetGenericArguments()[0] == typeof(T));
-
                 if (dbSetProperty == null) return;
-
                 var dbSet = dbSetProperty.GetValue(_DbContext) as DbSet<T>;
                 if (dbSet == null) return;
-
                 // 获取最近导入的记录（通过ChangeTracker）
                 var recentEntities = _DbContext.ChangeTracker.Entries<T>()
                     .Where(e => e.State == EntityState.Added)
                     .Select(e => e.Entity)
                     .ToList();
-                
                 foreach (var entity in recentEntities)
                 {
                     // 设置组织ID
@@ -231,14 +213,12 @@ namespace PowerLmsServer.Managers
                     {
                         orgIdProp.SetValue(entity, orgId);
                     }
-
                     // 设置创建信息
                     var createTimeProp = typeof(T).GetProperty("CreateDateTime");
                     if (createTimeProp != null && createTimeProp.CanWrite)
                     {
                         createTimeProp.SetValue(entity, _OwContext.CreateDateTime);
                     }
-
                     var createAccountProp = typeof(T).GetProperty("CreateAccountId");
                     if (createAccountProp != null && createAccountProp.CanWrite && _OwContext.User?.Id != null)
                     {
@@ -251,9 +231,7 @@ namespace PowerLmsServer.Managers
                 _Logger?.LogWarning(ex, "后处理导入的 {EntityName} 实体时发生错误", entityName);
             }
         }
-
         #region 私有辅助方法
-
         /// <summary>
         /// 获取指定实体类型的DbSet。
         /// </summary>
@@ -262,7 +240,6 @@ namespace PowerLmsServer.Managers
         private IQueryable<T> GetDbSet<T>() where T : class
         {
             var entityType = typeof(T);
-            
             return entityType.Name switch
             {
                 nameof(PlCountry) => _DbContext.DD_PlCountrys.Cast<T>(),
@@ -280,12 +257,9 @@ namespace PowerLmsServer.Managers
                 _ => throw new NotSupportedException($"不支持的实体类型: {entityType.Name}")
             };
         }
-
         #endregion 私有辅助方法
-
         #endregion Excel导入导出核心功能
     }
-
     /// <summary>
     /// <see cref="DataDicManager"/>类扩展方法封装类。
     /// </summary>
@@ -307,11 +281,9 @@ namespace PowerLmsServer.Managers
             mng.AddTo(mng.DbContext.DD_PlPorts.Where(c => c.OrgId == null).AsNoTracking(), orgId);
             mng.AddTo(mng.DbContext.DD_UnitConversions.Where(c => c.OrgId == null).AsNoTracking(), orgId);
             mng.AddTo(mng.DbContext.DD_ShippingContainersKinds.Where(c => c.OrgId == null).AsNoTracking(), orgId);
-
             // 特殊处理其他编码规则 - 因为它不继承自SpecialDataDicBase
             CopyOtherNumberRules(mng, orgId);
         }
-
         /// <summary>
         /// 复制其他编码规则到指定组织机构。
         /// </summary>
@@ -323,7 +295,6 @@ namespace PowerLmsServer.Managers
                 .Where(c => c.OrgId == null)
                 .AsNoTracking()
                 .ToList();
-
             foreach (var sourceRule in sourceRules)
             {
                 var newRule = new OtherNumberRule
@@ -339,7 +310,6 @@ namespace PowerLmsServer.Managers
                     RepeatDate = sourceRule.RepeatDate,
                     IsDelete = false // 新创建的规则不应被标记删除
                 };
-
                 mng.DbContext.DD_OtherNumberRules.Add(newRule);
             }
         }

@@ -13,7 +13,6 @@ using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
 using System.Net;
-
 namespace PowerLmsWebApi.Controllers.Forum
 {
     /// <summary>论坛板块控制器。</summary>
@@ -40,7 +39,6 @@ namespace PowerLmsWebApi.Controllers.Forum
             _AuthorizationManager = authorizationManager;
             _Logger = logger;
         }
-
         /// <summary>账号管理器。</summary>
         readonly AccountManager _AccountManager;
         /// <summary>服务提供程序。</summary>
@@ -57,7 +55,6 @@ namespace PowerLmsWebApi.Controllers.Forum
         readonly AuthorizationManager _AuthorizationManager;
         /// <summary>日志记录器。</summary>
         readonly ILogger<ForumCategoryController> _Logger;
-
         /// <summary>
         /// 获取论坛板块列表，支持分页和条件过滤。
         /// 自动进行商户隔离，用户只能看到自己商户的板块。
@@ -74,12 +71,10 @@ namespace PowerLmsWebApi.Controllers.Forum
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllOwForumCategoryReturnDto();
-
             try
             {
                 var dbSet = _DbContext.OwForumCategories;
                 var query = dbSet.AsNoTracking();
-
                 // 商户隔离：只显示当前用户商户的板块
                 if (!context.User.IsSuperAdmin)
                 {
@@ -94,9 +89,7 @@ namespace PowerLmsWebApi.Controllers.Forum
                         query = query.Where(c => false);
                     }
                 }
-
                 query = query.OrderBy(model.OrderFieldName, model.IsDesc);
-
                 if (conditional != null && conditional.Count > 0)
                 {
                     var filteredQuery = EfHelper.GenerateWhereAnd(query, conditional);
@@ -106,7 +99,6 @@ namespace PowerLmsWebApi.Controllers.Forum
                     }
                     query = filteredQuery;
                 }
-
                 var prb = _EntityManager.GetAll(query, model.StartIndex, model.Count);
                 _Mapper.Map(prb, result);
             }
@@ -119,7 +111,6 @@ namespace PowerLmsWebApi.Controllers.Forum
             }
             return result;
         }
-
         /// <summary>增加一个论坛板块。</summary>
         /// <param name="model">论坛板块参数</param>
         /// <returns>创建结果</returns>
@@ -131,13 +122,11 @@ namespace PowerLmsWebApi.Controllers.Forum
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddOwForumCategoryReturnDto();
-
             try
             {
                 model.Item.GenerateNewId();
                 model.Item.CreatedAt = OwHelper.WorldNow;
                 model.Item.EditedAt = null;
-
                 // 商户隔离：自动设置ParentId为当前用户的商户ID
                 if (!context.User.IsSuperAdmin)
                 {
@@ -157,16 +146,13 @@ namespace PowerLmsWebApi.Controllers.Forum
                         return BadRequest("超级管理员必须指定ParentId（商户ID）");
                     }
                 }
-
                 if (string.IsNullOrWhiteSpace(model.Item.AuthorId))
                     model.Item.AuthorId = context.User.Id.ToString();
                 if (string.IsNullOrWhiteSpace(model.Item.AuthorDisplayName))
                     model.Item.AuthorDisplayName = context.User.DisplayName ?? context.User.LoginName;
-
                 _DbContext.OwForumCategories.Add(model.Item);
                 _DbContext.SaveChanges();
                 result.Id = model.Item.Id;
-
                 _Logger.LogInformation("用户 {UserId} 成功创建论坛板块 {CategoryId}，商户 {MerchantId}",
                     context.User.Id, model.Item.Id, model.Item.ParentId);
             }
@@ -177,7 +163,6 @@ namespace PowerLmsWebApi.Controllers.Forum
             }
             return result;
         }
-
         /// <summary>修改已有论坛板块。</summary>
         /// <param name="model">论坛板块修改参数</param>
         /// <returns>修改结果</returns>
@@ -190,7 +175,6 @@ namespace PowerLmsWebApi.Controllers.Forum
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new ModifyOwForumCategoryReturnDto();
-
             try
             {
                 foreach (var item in model.Items)
@@ -201,7 +185,6 @@ namespace PowerLmsWebApi.Controllers.Forum
                         _Logger.LogWarning("修改论坛板块失败：找不到ID为 {categoryId} 的板块", item.Id);
                         return NotFound($"找不到ID为 {item.Id} 的论坛板块");
                     }
-
                     // 商户隔离：验证用户是否有权限修改此板块
                     if (!context.User.IsSuperAdmin)
                     {
@@ -213,14 +196,11 @@ namespace PowerLmsWebApi.Controllers.Forum
                             return StatusCode(403, "权限不足，无法修改其他商户的板块");
                         }
                     }
-
                     item.EditedAt = OwHelper.WorldNow;
                 }
-
                 var list = new List<OwForumCategory>();
                 if (!_EntityManager.Modify(model.Items, list))
                     return NotFound();
-
                 // 保护核心属性不被修改
                 foreach (var item in list)  // ✅ 修复：使用已跟踪的实体列表
                 {
@@ -228,9 +208,7 @@ namespace PowerLmsWebApi.Controllers.Forum
                     entry.Property(c => c.CreatedAt).IsModified = false;
                     entry.Property(c => c.ParentId).IsModified = false; // 商户归属不可修改
                 }
-
                 _DbContext.SaveChanges();
-
                 _Logger.LogInformation("用户 {UserId} 成功修改了 {Count} 个论坛板块",
                     context.User.Id, model.Items.Count);
             }
@@ -239,10 +217,8 @@ namespace PowerLmsWebApi.Controllers.Forum
                 _Logger.LogError(excp, "修改论坛板块时发生错误");
                 return BadRequest(excp.Message);
             }
-
             return result;
         }
-
         /// <summary>删除一个论坛板块。</summary>
         /// <param name="model">删除参数</param>
         /// <returns>删除结果</returns>
@@ -254,24 +230,20 @@ namespace PowerLmsWebApi.Controllers.Forum
         public ActionResult<RemoveOwForumCategoryReturnDto> RemoveOwForumCategory([FromBody] RemoveOwForumCategoryParamsDto model)
         {
             _Logger.LogInformation("开始执行删除论坛板块操作，板块ID: {categoryId}", model.Id);
-
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
             {
                 _Logger.LogWarning("删除论坛板块失败：无效令牌 {token}", model.Token);
                 return Unauthorized();
             }
-
             var result = new RemoveOwForumCategoryReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.OwForumCategories;
-
             var item = dbSet.Find(id);
             if (item is null)
             {
                 _Logger.LogWarning("删除论坛板块失败：找不到ID为 {categoryId} 的板块", id);
                 return BadRequest($"找不到ID为 {id} 的论坛板块");
             }
-
             try
             {
                 // 商户隔离：验证用户是否有权限删除此板块
@@ -285,13 +257,10 @@ namespace PowerLmsWebApi.Controllers.Forum
                         return StatusCode(403, "权限不足，无法删除其他商户的板块");
                     }
                 }
-
                 _Logger.LogInformation("准备删除论坛板块: ID={categoryId}, 标题={title}, 商户={merchantId}",
                     item.Id, item.Title, item.ParentId);
-
                 _EntityManager.Remove(item);
                 _DbContext.SaveChanges();
-
                 _Logger.LogInformation("成功删除论坛板块 {categoryId}", id);
             }
             catch (Exception ex)
@@ -304,10 +273,8 @@ namespace PowerLmsWebApi.Controllers.Forum
                     CategoryId = id
                 });
             }
-
             return result;
         }
-
         /// <summary>通过板块Id获取详细信息。</summary>
         /// <param name="token">登录令牌。</param>
         /// <param name="categoryId">板块Id。</param>
@@ -321,11 +288,9 @@ namespace PowerLmsWebApi.Controllers.Forum
         {
             if (_AccountManager.GetOrLoadContextByToken(token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetOwForumCategoryByIdReturnDto();
-
             var category = _DbContext.OwForumCategories.AsNoTracking().FirstOrDefault(c => c.Id == categoryId);
             if (category is null)
                 return BadRequest("找不到指定的论坛板块");
-
             // 商户隔离：验证用户是否有权限访问此板块
             if (!context.User.IsSuperAdmin)
             {
@@ -337,7 +302,6 @@ namespace PowerLmsWebApi.Controllers.Forum
                     return StatusCode(403, "权限不足，无法访问其他商户的板块");
                 }
             }
-
             result.Result = category;
             return result;
         }

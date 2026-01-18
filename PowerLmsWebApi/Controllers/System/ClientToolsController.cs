@@ -12,13 +12,11 @@
  * 创建：2025-01
  * 修改：2025-01-27 实现费用核销计算功能
  */
-
 using Microsoft.AspNetCore.Mvc;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
 using System.ComponentModel.DataAnnotations;
-
 namespace PowerLmsWebApi.Controllers.System
 {
     /// <summary>
@@ -30,7 +28,6 @@ namespace PowerLmsWebApi.Controllers.System
         private readonly AccountManager _AccountManager;
         private readonly IServiceProvider _ServiceProvider;
         private readonly ILogger<ClientToolsController> _Logger;
-
         /// <summary>
         /// 构造函数。
         /// </summary>
@@ -40,7 +37,6 @@ namespace PowerLmsWebApi.Controllers.System
             _ServiceProvider = serviceProvider;
             _Logger = logger;
         }
-
         /// <summary>
         /// 费用核销金额计算接口。
         /// 
@@ -73,9 +69,7 @@ namespace PowerLmsWebApi.Controllers.System
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
                 return Unauthorized();
-
             var result = new CalculateReturnDto();
-
             try
             {
                 // 参数验证
@@ -86,7 +80,6 @@ namespace PowerLmsWebApi.Controllers.System
                     result.DebugMessage = "主币种计算明细不能为空";
                     return result;
                 }
-
                 if (model.BaseCurrencyDetails == null || !model.BaseCurrencyDetails.Any())
                 {
                     result.HasError = true;
@@ -94,7 +87,6 @@ namespace PowerLmsWebApi.Controllers.System
                     result.DebugMessage = "本位币计算明细不能为空";
                     return result;
                 }
-
                 // 第一个公式：核销金额（主币种）= SUM（明细.结算汇率 × 本次结算金额）
                 decimal writeOffAmountMainCurrency = 0m;
                 foreach (var detail in model.MainCurrencyDetails)
@@ -106,7 +98,6 @@ namespace PowerLmsWebApi.Controllers.System
                         result.DebugMessage = $"主币种明细本次结算金额不能为负数: {detail.SettlementAmount}";
                         return result;
                     }
-
                     if (detail.SettlementExchangeRate <= 0)
                     {
                         result.HasError = true;
@@ -114,12 +105,10 @@ namespace PowerLmsWebApi.Controllers.System
                         result.DebugMessage = $"主币种明细结算汇率必须大于0: {detail.SettlementExchangeRate}";
                         return result;
                     }
-
                     // 直接按公式计算，不理解含义
                     var mainCurrencyAmount = detail.SettlementExchangeRate * detail.SettlementAmount;
                     writeOffAmountMainCurrency += mainCurrencyAmount;
                 }
-
                 // 第二个公式：核销金额本位币 = SUM（本位币汇率 × 明细本次结算金额）
                 decimal writeOffAmountBaseCurrency = 0m;
                 foreach (var detail in model.BaseCurrencyDetails)
@@ -131,21 +120,17 @@ namespace PowerLmsWebApi.Controllers.System
                         result.DebugMessage = $"本位币明细本次结算金额不能为负数: {detail.SettlementAmount}";
                         return result;
                     }
-
                     // 直接按公式计算，不理解含义
                     var baseCurrencyAmount = detail.BaseCurrencyRate * detail.SettlementAmount;
                     writeOffAmountBaseCurrency += baseCurrencyAmount;
                 }
-
                 // 直接保留两位小数返回
                 result.WriteOffAmountMainCurrency = Math.Round(writeOffAmountMainCurrency, 2, MidpointRounding.AwayFromZero);
                 result.WriteOffAmountBaseCurrency = Math.Round(writeOffAmountBaseCurrency, 2, MidpointRounding.AwayFromZero);
-
                 _Logger.LogInformation("费用核销计算完成 - 用户: {UserId}, 核销金额(主币种): {WriteOffMain}, " +
                                      "核销金额(本位币): {WriteOffBase}",
                                      context.User.Id, result.WriteOffAmountMainCurrency,
                                      result.WriteOffAmountBaseCurrency);
-
                 return result;
             }
             catch (Exception ex)

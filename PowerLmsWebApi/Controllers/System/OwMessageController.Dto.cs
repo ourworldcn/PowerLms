@@ -1,110 +1,99 @@
-using PowerLms.Data;
+ï»¿using PowerLms.Data;
 using PowerLmsWebApi.Dto;
 using System.ComponentModel.DataAnnotations;
-
 namespace PowerLmsWebApi.Controllers
 {
     /// <summary>
-    /// »ñÈ¡Î´¶ÁÏûÏ¢ÊıÁ¿µÄ·µ»ØÖµ·â×°Àà¡£
+    /// è·å–æœªè¯»æ¶ˆæ¯æ•°é‡çš„è¿”å›å€¼å°è£…ç±»ã€‚
     /// </summary>
     public class GetUnreadMessageCountReturnDto : ReturnDtoBase
     {
         /// <summary>
-        /// Î´¶ÁÏûÏ¢ÊıÁ¿¡£
+        /// æœªè¯»æ¶ˆæ¯æ•°é‡ã€‚
         /// </summary>
         public int UnreadCount { get; set; }
     }
-
     /// <summary>
-    /// »ñÈ¡ËùÓĞÏûÏ¢ÁĞ±íµÄ·µ»ØÖµ·â×°Àà¡£
+    /// è·å–æ‰€æœ‰æ¶ˆæ¯åˆ—è¡¨çš„è¿”å›å€¼å°è£…ç±»ã€‚
     /// </summary>
     public class GetAllOwMessageReturnDto : PagingReturnDtoBase<OwMessage>
     {
     }
-
     /// <summary>
-    /// ·¢ËÍÏûÏ¢µÄ²ÎÊı·â×°Àà¡£
+    /// å‘é€æ¶ˆæ¯çš„å‚æ•°å°è£…ç±»ã€‚
     /// </summary>
     public class SendOwMessageParamsDto : TokenDtoBase
     {
         /// <summary>
-        /// ½ÓÊÕÕßÓÃ»§IDÁĞ±í¡£
+        /// æ¥æ”¶è€…ç”¨æˆ·IDåˆ—è¡¨ã€‚
         /// </summary>
         [Required]
         public List<Guid> ReceiverIds { get; set; } = new List<Guid>();
-
         /// <summary>
-        /// ÏûÏ¢±êÌâ¡£
+        /// æ¶ˆæ¯æ ‡é¢˜ã€‚
         /// </summary>
         [Required, MaxLength(64)]
         public string Title { get; set; }
-
         /// <summary>
-        /// ÏûÏ¢ÄÚÈİ¡£HTML¸ñÊ½¡£
+        /// æ¶ˆæ¯å†…å®¹ã€‚HTMLæ ¼å¼ã€‚
         /// </summary>
         [Required]
         public string Content { get; set; }
     }
-
     /// <summary>
-    /// ·¢ËÍÏûÏ¢µÄ·µ»ØÖµ·â×°Àà¡£
+    /// å‘é€æ¶ˆæ¯çš„è¿”å›å€¼å°è£…ç±»ã€‚
     /// </summary>
     public class SendOwMessageReturnDto : ReturnDtoBase
     {
         /// <summary>
-        /// ·¢ËÍ³É¹¦µÄÏûÏ¢IDÁĞ±í¡£
+        /// å‘é€æˆåŠŸçš„æ¶ˆæ¯IDåˆ—è¡¨ã€‚
         /// </summary>
         public List<Guid> MessageIds { get; set; } = new List<Guid>();
     }
-
     /// <summary>
-    /// ±ê¼ÇÏûÏ¢ÎªÒÑ¶ÁµÄ²ÎÊı·â×°Àà¡£
+    /// æ ‡è®°æ¶ˆæ¯ä¸ºå·²è¯»çš„å‚æ•°å°è£…ç±»ã€‚
     /// </summary>
     public class MarkMessagesAsReadParamsDto : TokenDtoBase
     {
         /// <summary>
-        /// Òª±ê¼ÇÎªÒÑ¶ÁµÄÏûÏ¢IDÁĞ±í¡£
-        /// µ± MarkAll Îª true Ê±£¬´ËÁĞ±í¿ÉÎª¿Õ¡£
+        /// è¦æ ‡è®°ä¸ºå·²è¯»çš„æ¶ˆæ¯IDåˆ—è¡¨ã€‚
+        /// å½“ MarkAll ä¸º true æ—¶ï¼Œæ­¤åˆ—è¡¨å¯ä¸ºç©ºã€‚
         /// </summary>
         public List<Guid> MessageIds { get; set; } = new List<Guid>();
-
         /// <summary>
-        /// ÊÇ·ñ±ê¼ÇËùÓĞÎ´¶ÁÏûÏ¢ÎªÒÑ¶Á¡£
-        /// µ±´ËÖµÎª true Ê±£¬½«ºöÂÔ MessageIds ÁĞ±í£¬±ê¼Çµ±Ç°ÓÃ»§µÄËùÓĞÎ´¶ÁÏûÏ¢ÎªÒÑ¶Á¡£
+        /// æ˜¯å¦æ ‡è®°æ‰€æœ‰æœªè¯»æ¶ˆæ¯ä¸ºå·²è¯»ã€‚
+        /// å½“æ­¤å€¼ä¸º true æ—¶ï¼Œå°†å¿½ç•¥ MessageIds åˆ—è¡¨ï¼Œæ ‡è®°å½“å‰ç”¨æˆ·çš„æ‰€æœ‰æœªè¯»æ¶ˆæ¯ä¸ºå·²è¯»ã€‚
         /// </summary>
         public bool MarkAll { get; set; } = false;
     }
-
     /// <summary>
-    /// ±ê¼ÇÏûÏ¢ÎªÒÑ¶ÁµÄ·µ»ØÖµ·â×°Àà¡£
+    /// æ ‡è®°æ¶ˆæ¯ä¸ºå·²è¯»çš„è¿”å›å€¼å°è£…ç±»ã€‚
     /// </summary>
     public class MarkMessagesAsReadReturnDto : ReturnDtoBase
     {
         /// <summary>
-        /// ³É¹¦±ê¼ÇÎªÒÑ¶ÁµÄÏûÏ¢ÊıÁ¿¡£
+        /// æˆåŠŸæ ‡è®°ä¸ºå·²è¯»çš„æ¶ˆæ¯æ•°é‡ã€‚
         /// </summary>
         public int MarkedCount { get; set; }
     }
-
     /// <summary>
-    /// ÅúÁ¿É¾³ıÏûÏ¢µÄ²ÎÊı·â×°Àà¡£
+    /// æ‰¹é‡åˆ é™¤æ¶ˆæ¯çš„å‚æ•°å°è£…ç±»ã€‚
     /// </summary>
     public class RemoveAllOwMessageParamsDto : TokenDtoBase
     {
         /// <summary>
-        /// ÒªÉ¾³ıµÄÏûÏ¢IDÁĞ±í¡£
+        /// è¦åˆ é™¤çš„æ¶ˆæ¯IDåˆ—è¡¨ã€‚
         /// </summary>
         [Required]
         public List<Guid> Ids { get; set; } = new List<Guid>();
     }
-
     /// <summary>
-    /// ÅúÁ¿É¾³ıÏûÏ¢µÄ·µ»ØÖµ·â×°Àà¡£
+    /// æ‰¹é‡åˆ é™¤æ¶ˆæ¯çš„è¿”å›å€¼å°è£…ç±»ã€‚
     /// </summary>
     public class RemoveAllOwMessageReturnDto : ReturnDtoBase
     {
         /// <summary>
-        /// ³É¹¦É¾³ıµÄÏûÏ¢ÊıÁ¿¡£
+        /// æˆåŠŸåˆ é™¤çš„æ¶ˆæ¯æ•°é‡ã€‚
         /// </summary>
         public int RemovedCount { get; set; }
     }

@@ -4,26 +4,20 @@
  * 技术要点：权限分离、参数验证
  * 作者：zc | 创建：2025-01 | 修改：2025-01-27 简化为基础CRUD功能
  */
-
 using PowerLms.Data;
 using PowerLmsWebApi.Dto;
 using System.ComponentModel.DataAnnotations;
-
 namespace PowerLmsWebApi.Controllers.System
 {
     #region 查询相关DTO
-
     /// <summary>
     /// 获取机构参数列表的返回值。
     /// </summary>
     public class GetAllOrganizationParameterReturnDto : PagingReturnDtoBase<PlOrganizationParameter>
     {
     }
-
     #endregion 查询相关DTO
-
     #region 增加相关DTO
-
     /// <summary>
     /// 增加机构参数的参数封装类。
     /// </summary>
@@ -35,7 +29,6 @@ namespace PowerLmsWebApi.Controllers.System
         [Required]
         public PlOrganizationParameter Item { get; set; }
     }
-
     /// <summary>
     /// 增加机构参数的返回值。
     /// </summary>
@@ -46,11 +39,8 @@ namespace PowerLmsWebApi.Controllers.System
         /// </summary>
         public Guid OrgId { get; set; }
     }
-
     #endregion 增加相关DTO
-
     #region 修改相关DTO
-
     /// <summary>
     /// 修改机构参数的参数封装类。
     /// </summary>
@@ -62,18 +52,14 @@ namespace PowerLmsWebApi.Controllers.System
         [Required]
         public PlOrganizationParameter[] Items { get; set; }
     }
-
     /// <summary>
     /// 修改机构参数的返回值。
     /// </summary>
     public class ModifyOrganizationParameterReturnDto : ReturnDtoBase
     {
     }
-
     #endregion 修改相关DTO
-
     #region 删除相关DTO
-
     /// <summary>
     /// 删除机构参数的参数封装类。
     /// </summary>
@@ -85,13 +71,11 @@ namespace PowerLmsWebApi.Controllers.System
         [Required]
         public Guid OrgId { get; set; }
     }
-
     /// <summary>
     /// 删除机构参数的返回值。
     /// </summary>
     public class RemoveOrganizationParameterReturnDto : ReturnDtoBase
     {
     }
-
     #endregion 删除相关DTO
 }

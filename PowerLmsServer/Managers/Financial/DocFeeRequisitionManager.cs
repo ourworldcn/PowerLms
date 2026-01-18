@@ -4,7 +4,6 @@
  * 技术要点：依赖注入、服务层业务逻辑、工作流管理、单一实体查询
  * 作者：zc | 创建：2025-01 | 修改：2025-02-06 修复费用过滤Bug，bill表改为左连接
  */
-
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using OW.Data;
@@ -14,7 +13,6 @@ using PowerLmsServer.EfData;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-
 namespace PowerLmsServer.Managers.Financial
 {
     /// <summary>
@@ -32,12 +30,9 @@ namespace PowerLmsServer.Managers.Financial
             _DbContext = dbContext;
             _SqlAppLogger = sqlAppLogger;
         }
-
         private readonly PowerLmsUserDbContext _DbContext;
         private readonly OwSqlAppLogger _SqlAppLogger;
-
         #region 子表查询服务
-
         /// <summary>
         /// 获取费用申请单明细（子表）的专一化查询。
         /// 这是唯一的基准函数，集中所有复杂的过滤和联合查询逻辑。
@@ -55,28 +50,23 @@ namespace PowerLmsServer.Managers.Financial
         public IQueryable<DocFeeRequisitionItem> GetAllDocFeeRequisitionItemQuery(Dictionary<string, string> conditional = null, Guid? orgId = null)
         {
             conditional ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
             // 第一步：逐一生成条件字典
             var itemConditions = conditional.Where(p => p.Key.StartsWith($"{nameof(DocFeeRequisitionItem)}.", StringComparison.OrdinalIgnoreCase) || !p.Key.Contains('.')).ToDictionary(p => p.Key.StartsWith($"{nameof(DocFeeRequisitionItem)}.", StringComparison.OrdinalIgnoreCase) ? p.Key[(nameof(DocFeeRequisitionItem).Length + 1)..] : p.Key, p => p.Value, StringComparer.OrdinalIgnoreCase);
             var jobConditions = conditional.Where(p => p.Key.StartsWith($"{nameof(PlJob)}.", StringComparison.OrdinalIgnoreCase)).ToDictionary(p => p.Key[(nameof(PlJob).Length + 1)..], p => p.Value, StringComparer.OrdinalIgnoreCase);
             var feeConditions = conditional.Where(p => p.Key.StartsWith($"{nameof(DocFee)}.", StringComparison.OrdinalIgnoreCase)).ToDictionary(p => p.Key[(nameof(DocFee).Length + 1)..], p => p.Value, StringComparer.OrdinalIgnoreCase);
             var requisitionConditions = conditional.Where(p => p.Key.StartsWith($"{nameof(DocFeeRequisition)}.", StringComparison.OrdinalIgnoreCase)).ToDictionary(p => p.Key[(nameof(DocFeeRequisition).Length + 1)..], p => p.Value, StringComparer.OrdinalIgnoreCase);
             var billConditions = conditional.Where(p => p.Key.StartsWith($"{nameof(DocBill)}.", StringComparison.OrdinalIgnoreCase)).ToDictionary(p => p.Key[(nameof(DocBill).Length + 1)..], p => p.Value, StringComparer.OrdinalIgnoreCase);
-
             // 第二步：生成各个子查询的过滤
             var itemsQuery = EfHelper.GenerateWhereAnd(_DbContext.DocFeeRequisitionItems.AsQueryable(), itemConditions) ?? _DbContext.DocFeeRequisitionItems.AsQueryable();
             var jobsQuery = EfHelper.GenerateWhereAnd(_DbContext.PlJobs.AsQueryable(), jobConditions) ?? _DbContext.PlJobs.AsQueryable();
             var feesQuery = EfHelper.GenerateWhereAnd(_DbContext.DocFees.AsQueryable(), feeConditions) ?? _DbContext.DocFees.AsQueryable();
-
             // 在申请单子查询中直接应用OrgId过滤
             var requisitionsQuery = EfHelper.GenerateWhereAnd(_DbContext.DocFeeRequisitions.AsQueryable(), requisitionConditions) ?? _DbContext.DocFeeRequisitions.AsQueryable();
             if (orgId.HasValue)
             {
                 requisitionsQuery = requisitionsQuery.Where(req => req.OrgId == orgId.Value);
             }
-
             var billsQuery = EfHelper.GenerateWhereAnd(_DbContext.DocBills.AsQueryable(), billConditions) ?? _DbContext.DocBills.AsQueryable();
-
             // 第三步：把子查询连接起来
             // 🔧 Bug修复：将bill表的内连接改为左连接，避免无账单关联的费用数据丢失
             var joinedQuery = from item in itemsQuery
@@ -86,10 +76,8 @@ namespace PowerLmsServer.Managers.Financial
                               join bill in billsQuery on fee.BillId equals bill.Id into billGroup
                               from bill in billGroup.DefaultIfEmpty()
                               select item;
-
             return joinedQuery;
         }
-
         /// <summary>
         /// 获取费用申请单父表查询。
         /// </summary>
@@ -98,20 +86,15 @@ namespace PowerLmsServer.Managers.Financial
         public IQueryable<DocFeeRequisition> GetAllDocFeeRequisitionQuery(Guid? orgId = null)
         {
             var query = _DbContext.DocFeeRequisitions.AsQueryable();
-
             // 添加组织ID限制
             if (orgId.HasValue)
             {
                 query = query.Where(r => r.OrgId == orgId.Value);
             }
-
             return query;
         }
-
         #endregion 子表查询服务
-
         #region 回退功能
-
         /// <summary>
         /// 回退主营业务费用申请单到初始状态。
         /// 会清空相关工作流、重置申请单状态并释放被锁定的费用。
@@ -127,13 +110,10 @@ namespace PowerLmsServer.Managers.Financial
             // 1. 参数有效性验证
             if (requisitionId == Guid.Empty)
                 throw new ArgumentException("申请单ID不能为空", nameof(requisitionId));
-
             if (operatorId == Guid.Empty)
                 throw new ArgumentException("操作人ID不能为空", nameof(operatorId));
-
             if (wfManager == null)
                 throw new ArgumentNullException(nameof(wfManager));
-
             try
             {
                 // 2. 验证主营业务费用申请单是否存在（任何状态都可回退）
@@ -142,26 +122,19 @@ namespace PowerLmsServer.Managers.Financial
                 {
                     return DocFeeRequisitionRevertResult.CreateFailure(requisitionId, $"未找到ID为 {requisitionId} 的主营业务费用申请单");
                 }
-
                 _SqlAppLogger.LogGeneralInfo($"开始回退主营业务费用申请单：申请单ID={requisitionId}, 申请单号={requisition.FrNo}, 操作人={operatorId}");
-
                 // 3. 调用工作流清理服务清空相关工作流
                 var clearedWorkflows = wfManager.ClearWorkflowByDocId(requisitionId);
-
                 // 4. 重置主营业务费用申请单状态为初始状态
                 // 注意：DocFeeRequisition没有像OaExpenseRequisition那样的Status枚举字段
                 // 它的状态主要通过工作流来管理，所以主要是清空工作流相关数据
-
                 // 5. 清空与结算相关的字段（如果有的话）
                 // DocFeeRequisition的状态主要体现在是否有关联的工作流和结算数据
                 // 这里主要是确保工作流被清空，费用可以被重新申请
-
                 // 6. 保存数据库更改
                 _DbContext.SaveChanges();
-
                 var message = $"成功回退主营业务费用申请单：申请单ID={requisitionId}, 申请单号={requisition.FrNo}, 清空工作流{clearedWorkflows.Count}个";
                 _SqlAppLogger.LogGeneralInfo($"主营业务费用申请单回退成功：{message}, 操作人={operatorId}");
-
                 // 7. 返回操作结果摘要
                 return DocFeeRequisitionRevertResult.CreateSuccess(requisitionId, clearedWorkflows.Count, message);
             }
@@ -172,7 +145,6 @@ namespace PowerLmsServer.Managers.Financial
                 throw new InvalidOperationException(errorMessage, ex);
             }
         }
-
         /// <summary>
         /// 验证申请单是否可以进行回退操作。
         /// </summary>
@@ -185,7 +157,6 @@ namespace PowerLmsServer.Managers.Financial
                 var requisition = _DbContext.DocFeeRequisitions.Find(requisitionId);
                 if (requisition == null)
                     return false;
-
                 // 根据会议纪要，业务在任何状态下都可能被清空工作流并回退到工作流的初始状态
                 // 因此这里总是返回true，但可以根据具体业务需求添加限制条件
                 return true;
@@ -196,7 +167,6 @@ namespace PowerLmsServer.Managers.Financial
                 return false;
             }
         }
-
         /// <summary>
         /// 获取申请单的当前状态信息。
         /// </summary>
@@ -209,10 +179,8 @@ namespace PowerLmsServer.Managers.Financial
                 var requisition = _DbContext.DocFeeRequisitions.Find(requisitionId);
                 if (requisition == null)
                     return null;
-
                 // 检查是否有关联的工作流
                 var hasWorkflow = _DbContext.OwWfs.Any(wf => wf.DocId == requisitionId);
-
                 // 检查是否有关联的结算单
                 var hasSettlement = _DbContext.PlInvoicesItems
                     .Join(_DbContext.DocFeeRequisitionItems,
@@ -220,7 +188,6 @@ namespace PowerLmsServer.Managers.Financial
                           ri => ri.Id,
                           (ii, ri) => ri.ParentId)
                     .Any(parentId => parentId == requisitionId);
-
                 return new DocFeeRequisitionStatusInfo
                 {
                     RequisitionId = requisitionId,
@@ -238,10 +205,8 @@ namespace PowerLmsServer.Managers.Financial
                 return null;
             }
         }
-
         #endregion 回退功能
     }
-
     /// <summary>
     /// 主营业务费用申请单回退操作的结果类型。
     /// 专门用于主营业务费用申请单的回退操作结果封装。
@@ -252,22 +217,18 @@ namespace PowerLmsServer.Managers.Financial
         /// 操作是否成功的布尔值。
         /// </summary>
         public bool Success { get; set; }
-
         /// <summary>
         /// 申请单ID，用于确认操作目标。
         /// </summary>
         public Guid RequisitionId { get; set; }
-
         /// <summary>
         /// 清空的工作流数量，用于审计统计。
         /// </summary>
         public int ClearedWorkflowCount { get; set; }
-
         /// <summary>
         /// 操作结果描述信息。
         /// </summary>
         public string Message { get; set; }
-
         /// <summary>
         /// 创建成功的回退结果。
         /// </summary>
@@ -285,7 +246,6 @@ namespace PowerLmsServer.Managers.Financial
                 Message = message
             };
         }
-
         /// <summary>
         /// 创建失败的回退结果。
         /// </summary>
@@ -303,7 +263,6 @@ namespace PowerLmsServer.Managers.Financial
             };
         }
     }
-
     /// <summary>
     /// 主营业务费用申请单状态信息。
     /// 用于封装申请单的状态详情。
@@ -314,27 +273,22 @@ namespace PowerLmsServer.Managers.Financial
         /// 申请单ID。
         /// </summary>
         public Guid RequisitionId { get; set; }
-
         /// <summary>
         /// 申请单号。
         /// </summary>
         public string RequisitionNumber { get; set; }
-
         /// <summary>
         /// 是否有关联的工作流。
         /// </summary>
         public bool HasWorkflow { get; set; }
-
         /// <summary>
         /// 是否有关联的结算单。
         /// </summary>
         public bool HasSettlement { get; set; }
-
         /// <summary>
         /// 制单时间。
         /// </summary>
         public DateTime? MakeDateTime { get; set; }
-
         /// <summary>
         /// 申请金额。
         /// </summary>

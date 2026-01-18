@@ -35,7 +35,6 @@
  * 修改日期: 2025-3-6
  * 修改记录: 2025-01-27 整合应用日志系统需求文档
  */
-
 using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -54,7 +53,6 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-
 namespace PowerLmsServer.Managers
 {
     /// <summary>
@@ -91,7 +89,6 @@ namespace PowerLmsServer.Managers
         private const string LoggerStoresCacheKey = "LoggerStoresCache";
         private readonly IMapper _Mapper;
         #endregion
-
         #region 公共属性
         /// <summary>
         /// 所有日志源。
@@ -106,7 +103,6 @@ namespace PowerLmsServer.Managers
             return LoadLoggerStores();
         });
         #endregion
-
         #region 构造函数
         /// <summary>
         /// 构造函数，初始化应用日志服务。
@@ -135,7 +131,6 @@ namespace PowerLmsServer.Managers
             _Mapper = mapper;
         }
         #endregion
-
         #region 私有方法
         /// <summary>
         /// 初始化方法。
@@ -144,7 +139,6 @@ namespace PowerLmsServer.Managers
         {
             // 初始化操作
         }
-
         /// <summary>
         /// 加载所有 OwAppLogStore 对象并存储到缓存中。
         /// </summary>
@@ -156,9 +150,7 @@ namespace PowerLmsServer.Managers
             return new ConcurrentDictionary<Guid, OwAppLogStore>(loggerStores);
         }
         #endregion
-
         #region 公共方法
-
         /// <summary>
         /// 定义事件源。
         /// </summary>
@@ -169,7 +161,6 @@ namespace PowerLmsServer.Managers
         {
             if (string.IsNullOrEmpty(formatString))
                 throw new ArgumentException("格式字符串不能为空。", nameof(formatString));
-
             var appLogStore = new OwAppLogStore
             {
                 Id = typeId,
@@ -178,7 +169,6 @@ namespace PowerLmsServer.Managers
             };
             LoggerStores.AddOrUpdate(typeId, appLogStore, (id, ov) => appLogStore);
         }
-
         /// <summary>
         /// 记录通用信息日志条目。
         /// </summary>
@@ -187,20 +177,17 @@ namespace PowerLmsServer.Managers
         {
             var context = _HttpContextAccessor.HttpContext;
             var request = context?.Request;
-
             var clientType = request?.Headers["User-Agent"].ToString() ?? "Unknown";
             var operationIp = context?.Connection?.RemoteIpAddress?.ToString() ?? "Unknown";
             // 动态获取服务
             var owContext = _ServiceProvider.GetService<OwContext>();
             var loginName = owContext?.User?.LoginName ?? "Unknown";
             var displayName = owContext?.User?.DisplayName ?? "Unknown";
-
             var orgManager = _ServiceProvider.GetService<OrgManager<PowerLmsUserDbContext>>();
             var userId = owContext?.User?.Id;
             var userMerchantId = userId.HasValue ? orgManager?.GetMerchantIdByUserId(userId.Value) : null;
             var merchant = userMerchantId.HasValue ? orgManager?.GetOrLoadOrgCacheItem(userMerchantId.Value)?.Merchant : null;
             var companyName = merchant?.Name_DisplayName ?? "Unknown";
-
             // 通用日志记录
             var generalInfo = new GeneralInfoLogEntry
             {
@@ -211,9 +198,7 @@ namespace PowerLmsServer.Managers
                 OperationIp = operationIp,
                 ClientType = clientType
             };
-
             var merchantId = merchant?.Id;
-
             // 将 generalInfo 写入日志
             WriteLogItem(new OwAppLogItemStore
             {
@@ -225,7 +210,6 @@ namespace PowerLmsServer.Managers
                 ExtraBytes = null // 根据需要设置额外的二进制信息
             });
         }
-
         /// <summary>
         /// 写入日志项。
         /// </summary>
@@ -234,16 +218,13 @@ namespace PowerLmsServer.Managers
         {
             if (logItem == null)
                 throw new ArgumentNullException(nameof(logItem));
-
             var dbOperation = new DbOperation
             {
                 OperationType = DbOperationType.Insert,
                 Entity = logItem
             };
-
             _BatchDbWriter.AddItem(dbOperation);
         }
-
         /// <summary>
         /// 释放资源。
         /// </summary>
@@ -253,5 +234,4 @@ namespace PowerLmsServer.Managers
         }
         #endregion
     }
-
 }

@@ -7,7 +7,6 @@ using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
 using System.Net;
-
 namespace PowerLmsWebApi.Controllers
 {
     /// <summary>
@@ -26,13 +25,11 @@ namespace PowerLmsWebApi.Controllers
             _JobNumber = jobNumber;
             _AuthorizationManager = authorizationManager;
         }
-
         readonly IServiceProvider _ServiceProvider;
         readonly AccountManager _AccountManager;
         readonly PowerLmsUserDbContext _DbContext;
         readonly JobManager _JobNumber;
         readonly AuthorizationManager _AuthorizationManager;
-
         /// <summary>
         /// 用指定的编码规则生成一个新的编码。
         /// </summary>
@@ -53,14 +50,12 @@ namespace PowerLmsWebApi.Controllers
             }
             else if (jnr.BusinessTypeId == ProjectContent.AiId)    //若是空运进口业务
                 if (!_AuthorizationManager.Demand(out string err, "D1.1.1.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-
             var result = new GeneratedJobNumberReturnDto();
             using var dw = DisposeHelper.Create((key, timeout) => SingletonLocker.TryEnter(key, timeout), key => SingletonLocker.Exit(key), model.RuleId.ToString(), TimeSpan.FromSeconds(2)); //锁定该规则
             result.Result = _JobNumber.Generated(jnr, context?.User, OwHelper.WorldNow);
             _DbContext.SaveChanges();
             return result;
         }
-
         /// <summary>
         /// 用指定的其它编码规则生成一个新的编码。
         /// </summary>
@@ -80,7 +75,6 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.SaveChanges();
             return result;
         }
-
         /// <summary>
         /// 复制编码规则。
         /// </summary>
@@ -94,10 +88,8 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new CopyJobNumberRuleReturnDto();
-
             var srcs = _DbContext.DD_JobNumberRules.Where(c => model.Codes.Contains(c.Code)).ToArray();
             if (srcs.Length != model.Codes.Count) return BadRequest("至少有一个指定代码的规则无法找到。");
-
             var dests = srcs.Select(c =>
             {
                 var r = new JobNumberRule

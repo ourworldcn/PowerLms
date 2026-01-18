@@ -19,7 +19,6 @@ using AutoMapper.Internal.Mappers;
 using PowerLmsServer;
 using Microsoft.EntityFrameworkCore.Internal;
 using System.ComponentModel;
-
 namespace PowerLmsWebApi.Controllers.System
 {
     /// <summary>
@@ -53,7 +52,6 @@ namespace PowerLmsWebApi.Controllers.System
             _AuthorizationManager = authorizationManager;
             _Logger = logger;
         }
-
         readonly PowerLmsUserDbContext _DbContext;
         readonly AccountManager _AccountManager;
         readonly IServiceProvider _ServiceProvider;
@@ -63,7 +61,6 @@ namespace PowerLmsWebApi.Controllers.System
         readonly DataDicManager _DataManager;
         readonly AuthorizationManager _AuthorizationManager;
         readonly ILogger<AdminController> _Logger;
-
         /// <summary>
         /// 获取所有业务大类的数据。此接口返回的是缓存数据,客户端通常会2分钟才实际刷新一次.
         /// </summary>
@@ -82,9 +79,7 @@ namespace PowerLmsWebApi.Controllers.System
             _Mapper.Map(prb, result);
             return result;
         }
-
         #region 港口相关
-
         /// <summary>
         /// 获取港口。
         /// </summary>
@@ -116,15 +111,12 @@ namespace PowerLmsWebApi.Controllers.System
                     coll = coll.Where(c => c.OrgId == context.User.OrgId);
                 }
             }
-
             // 使用EfHelper.GenerateWhereAnd进行通用查询条件处理
             coll = EfHelper.GenerateWhereAnd(coll, conditional);
-
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }
-
         /// <summary>
         /// 增加一个港口数据字典。
         /// </summary>
@@ -140,7 +132,6 @@ namespace PowerLmsWebApi.Controllers.System
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             if (!_AuthorizationManager.Demand(out string err, "B.6")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new AddPlPortReturnDto();
-
             var dbSet = _DbContext.DD_PlPorts;
             if (dbSet.Any(c => c.OrgId == model.Item.OrgId && c.Code == model.Item.Code))   //若重复
                 return BadRequest("重复");
@@ -151,7 +142,6 @@ namespace PowerLmsWebApi.Controllers.System
             result.Id = id;
             return result;
         }
-
         /// <summary>
         /// 修改港口数据字典项。
         /// </summary>
@@ -180,7 +170,6 @@ namespace PowerLmsWebApi.Controllers.System
             _DbContext.SaveChanges();
             return result;
         }
-
         /// <summary>
         /// 删除港口字典中的一项。
         /// </summary>
@@ -204,7 +193,6 @@ namespace PowerLmsWebApi.Controllers.System
             _DbContext.SaveChanges();
             return result;
         }
-
         /// <summary>
         /// 恢复指定的被删除港口字典。
         /// </summary>
@@ -229,9 +217,7 @@ namespace PowerLmsWebApi.Controllers.System
             return result;
         }
         #endregion 港口相关
-
         #region 航线相关
-
         /// <summary>
         /// 获取航线。
         /// </summary>
@@ -246,7 +232,6 @@ namespace PowerLmsWebApi.Controllers.System
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlCargoRouteReturnDto();
-
             var dbSet = _DbContext.DD_PlCargoRoutes;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             if (_AccountManager.IsAdmin(context.User))  //若是超管
@@ -264,15 +249,12 @@ namespace PowerLmsWebApi.Controllers.System
                     coll = coll.Where(c => c.OrgId == context.User.OrgId);
                 }
             }
-
             // 使用EfHelper.GenerateWhereAnd进行通用查询条件处理
             coll = EfHelper.GenerateWhereAnd(coll, conditional);
-
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }
-
         /// <summary>
         /// 增加一个航线数据字典。
         /// </summary>
@@ -298,7 +280,6 @@ namespace PowerLmsWebApi.Controllers.System
             result.Id = id;
             return result;
         }
-
         /// <summary>
         /// 修改航线数据字典项。
         /// </summary>
@@ -327,7 +308,6 @@ namespace PowerLmsWebApi.Controllers.System
             _DbContext.SaveChanges();
             return result;
         }
-
         /// <summary>
         /// 删除航线字典中的一项。
         /// </summary>
@@ -351,7 +331,6 @@ namespace PowerLmsWebApi.Controllers.System
             _DbContext.SaveChanges();
             return result;
         }
-
         /// <summary>
         /// 恢复指定的被删除航线字典。
         /// </summary>
@@ -376,7 +355,6 @@ namespace PowerLmsWebApi.Controllers.System
             return result;
         }
         #endregion 航线相关
-
         #region 单位换算相关
         /// <summary>
         /// 获取单位换算。
@@ -410,15 +388,12 @@ namespace PowerLmsWebApi.Controllers.System
                     coll = coll.Where(c => c.OrgId == context.User.OrgId);
                 }
             }
-
             // 使用EfHelper.GenerateWhereAnd进行通用查询条件处理
             coll = EfHelper.GenerateWhereAnd(coll, conditional);
-
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }
-
         /// <summary>
         /// 增加单位换算记录。
         /// </summary>
@@ -441,7 +416,6 @@ namespace PowerLmsWebApi.Controllers.System
             result.Id = id;
             return result;
         }
-
         /// <summary>
         /// 修改单位换算记录。
         /// </summary>
@@ -465,7 +439,6 @@ namespace PowerLmsWebApi.Controllers.System
             _DbContext.SaveChanges();
             return result;
         }
-
         /// <summary>
         /// 删除单位换算的记录。
         /// </summary>
@@ -491,11 +464,9 @@ namespace PowerLmsWebApi.Controllers.System
             //    _DbContext.Database.ExecuteSqlRaw($"delete from {nameof(_DbContext.SimpleDataDics)} where {nameof(SimpleDataDic.DataDicId)}='{id.ToString()}'");
             //else //其他字典待定
             //{
-
             //}
             return result;
         }
-
         /// <summary>
         /// 恢复指定的被删除单位换算记录。
         /// </summary>
@@ -519,9 +490,7 @@ namespace PowerLmsWebApi.Controllers.System
             _DbContext.SaveChanges();
             return result;
         }
-
         #endregion 单位换算相关
-
         #region 费用种类相关
         /// <summary>
         /// 获取费用种类。
@@ -549,14 +518,12 @@ namespace PowerLmsWebApi.Controllers.System
             var result = new GetAllFeesTypeReturnDto();
             var dbSet = _DbContext.DD_FeesTypes;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-
             if (_AccountManager.IsAdmin(context.User))  // 超管
                 coll = coll.Where(c => c.OrgId == null);
             else
             {
                 var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
                 if (!merchantId.HasValue) return BadRequest("未知的商户Id");
-
                 if (context.User.OrgId is null) // 商管
                 {
                     coll = coll.Where(c => c.OrgId == merchantId);
@@ -567,11 +534,9 @@ namespace PowerLmsWebApi.Controllers.System
                     // 注意：这里只查询公司级别的费用种类，不包含同公司下其他机构的费用种类
                     var companyId = _OrgManager.GetCompanyIdByOrgId(context.User.OrgId.Value);
                     if (!companyId.HasValue) return BadRequest("无法确定用户所属的公司");
-
                     coll = coll.Where(c => c.OrgId == companyId.Value);
                 }
             }
-
             coll = EfHelper.GenerateWhereAnd(coll, conditional);
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
@@ -591,19 +556,14 @@ namespace PowerLmsWebApi.Controllers.System
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             if (!_AuthorizationManager.Demand(out string err, "B.8")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-
             var result = new AddFeesTypeReturnDto();
-
             // 确保使用当前用户的组织机构ID
             model.Item.OrgId = context.User.OrgId;
-
             // 生成主记录ID
             model.Item.GenerateNewId();
             var id = model.Item.Id;
-
             // 添加主记录
             _DbContext.DD_FeesTypes.Add(model.Item);
-
             // 如果需要同步到子机构
             if (model.CopyToChildren)
             {
@@ -613,28 +573,23 @@ namespace PowerLmsWebApi.Controllers.System
                 {
                     var allOrgs = _OrgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs.Values.ToArray();
                     var companyIds = allOrgs.Where(o => o.Otc == 2).Select(o => o.Id);
-
                     foreach (var orgId in companyIds)
                     {
                         // 检查是否已存在相同Code的记录
                         if (_DbContext.DD_FeesTypes.Any(f => f.OrgId == orgId && f.Code == model.Item.Code))
                             continue;
-
                         // 使用Clone方法创建深表副本
                         var newItem = (FeesType)model.Item.Clone();
                         newItem.OrgId = orgId;
                         newItem.GenerateNewId(); // 确保新记录有唯一ID
-
                         _DbContext.DD_FeesTypes.Add(newItem);
                     }
                 }
             }
-
             _DbContext.SaveChanges();
             result.Id = id;
             return result;
         }
-
         /// <summary>
         /// 修改费用种类记录。
         /// </summary>
@@ -665,7 +620,6 @@ namespace PowerLmsWebApi.Controllers.System
             _DbContext.SaveChanges();
             return result;
         }
-
         /// <summary>
         /// 删除费用种类的记录。
         /// </summary>
@@ -689,7 +643,6 @@ namespace PowerLmsWebApi.Controllers.System
             _DbContext.SaveChanges();
             return result;
         }
-
         /// <summary>
         /// 恢复指定的被删除费用种类记录。
         /// </summary>
@@ -713,9 +666,7 @@ namespace PowerLmsWebApi.Controllers.System
             _DbContext.SaveChanges();
             return result;
         }
-
         #endregion 费用种类相关
-
         #region 箱型相关
         /// <summary>
         /// 获取箱型。
@@ -749,15 +700,12 @@ namespace PowerLmsWebApi.Controllers.System
                     coll = coll.Where(c => c.OrgId == context.User.OrgId);
                 }
             }
-
             // 使用EfHelper.GenerateWhereAnd进行通用查询条件处理
             coll = EfHelper.GenerateWhereAnd(coll, conditional);
-
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }
-
         /// <summary>
         /// 增加箱型记录。
         /// </summary>
@@ -781,7 +729,6 @@ namespace PowerLmsWebApi.Controllers.System
             result.Id = id;
             return result;
         }
-
         /// <summary>
         /// 修改箱型记录。
         /// </summary>
@@ -812,7 +759,6 @@ namespace PowerLmsWebApi.Controllers.System
             _DbContext.SaveChanges();
             return result;
         }
-
         /// <summary>
         /// 删除箱型的记录。
         /// </summary>
@@ -838,11 +784,9 @@ namespace PowerLmsWebApi.Controllers.System
             //    _DbContext.Database.ExecuteSqlRaw($"delete from {nameof(_DbContext.SimpleDataDics)} where {nameof(SimpleDataDic.DataDicId)}='{id.ToString()}'");
             //else //其他字典待定
             //{
-
             //}
             return result;
         }
-
         /// <summary>
         /// 恢复指定的被删除箱型记录。
         /// </summary>
@@ -866,9 +810,7 @@ namespace PowerLmsWebApi.Controllers.System
             _DbContext.SaveChanges();
             return result;
         }
-
         #endregion 箱型相关
-
         #region 日志相关
         /// <summary>
         /// 获取系统日志。
@@ -884,7 +826,6 @@ namespace PowerLmsWebApi.Controllers.System
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllSystemLogReturnDto();
-
             var dbSet = _DbContext.OwSystemLogs;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             coll = EfHelper.GenerateWhereAnd(coll, conditional);
@@ -892,9 +833,6 @@ namespace PowerLmsWebApi.Controllers.System
             _Mapper.Map(prb, result);
             return result;
         }
-
         #endregion 日志相关
-
     }
-
 }

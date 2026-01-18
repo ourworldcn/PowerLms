@@ -10,7 +10,6 @@ using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
 using System.ComponentModel.DataAnnotations;
 using System.Net;
-
 namespace PowerLmsWebApi.Controllers
 {
     /// <summary>
@@ -34,7 +33,6 @@ namespace PowerLmsWebApi.Controllers
             _AuthorizationManager = authorizationManager;
             _Logger = logger;
         }
-
         readonly AccountManager _AccountManager;
         readonly IServiceProvider _ServiceProvider;
         readonly PowerLmsUserDbContext _DbContext;
@@ -44,7 +42,6 @@ namespace PowerLmsWebApi.Controllers
         readonly DataDicManager _DataManager;
         readonly AuthorizationManager _AuthorizationManager;
         readonly ILogger<OrganizationController> _Logger;
-
         /// <summary>
         /// 获取组织机构。暂不考虑分页。
         /// </summary>
@@ -139,7 +136,6 @@ namespace PowerLmsWebApi.Controllers
             }
             return result;
         }
-
         /// <summary>
         /// 获取组织机构列表，支持分页和条件过滤。
         /// </summary>
@@ -215,7 +211,6 @@ namespace PowerLmsWebApi.Controllers
             }
             return result;
         }
-
         /// <summary>
         /// 增加一个组织机构。
         /// </summary>
@@ -305,7 +300,6 @@ namespace PowerLmsWebApi.Controllers
             }
             return result;
         }
-
         /// <summary>
         /// 修改已有组织机构。不能修改父子关系。请使用 AddOrgRelation 和 RemoveOrgRelation修改。
         /// </summary>
@@ -365,7 +359,6 @@ namespace PowerLmsWebApi.Controllers
             }
             return result;
         }
-
         /// <summary>
         /// 增加机构父子关系的功能。
         /// </summary>
@@ -386,7 +379,6 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.SaveChanges();
             return result;
         }
-
         /// <summary>
         /// 删除机构父子关系的功能。
         /// </summary>
@@ -408,7 +400,6 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.SaveChanges();
             return result;
         }
-
         /// <summary>
         /// 删除一个组织机构。该机构必须没有子组织机构。
         /// </summary>
@@ -480,7 +471,6 @@ namespace PowerLmsWebApi.Controllers
             }
             return result;
         }
-
         /// <summary>
         /// 检查组织机构是否有关联业务
         /// </summary>
@@ -504,7 +494,6 @@ namespace PowerLmsWebApi.Controllers
                 return true; //为安全起见，发生异常时阻止删除
             }
         }
-
         /// <summary>
         /// 通过组织机构Id获取所属的商户Id。
         /// </summary>
@@ -525,9 +514,7 @@ namespace PowerLmsWebApi.Controllers
             result.Result = merchantId;
             return result;
         }
-
         #region 用户和商户/组织机构的所属关系的CRUD
-
         /// <summary>
         /// 获取用户和商户/组织机构的所属关系。
         /// </summary>
@@ -560,7 +547,6 @@ namespace PowerLmsWebApi.Controllers
             _Mapper.Map(prb, result);
             return result;
         }
-
         /// <summary>
         /// 增加用户和商户/组织机构的所属关系。
         /// </summary>
@@ -578,7 +564,6 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.SaveChanges();
             return result;
         }
-
         /// <summary>
         /// 删除用户和商户/组织机构的所属关系。
         /// </summary>
@@ -599,9 +584,7 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.SaveChanges();
             return result;
         }
-
         #endregion 用户和商户/组织机构的所属关系的CRUD
-
         /// <summary>
         /// 为指定机构复制一份所有数据字典的副本。
         /// </summary>
@@ -628,9 +611,7 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.SaveChanges();
             return result;
         }
-
         #region 开户行信息
-
         /// <summary>
         /// 获取全部客户开户行信息。
         /// </summary>
@@ -662,7 +643,6 @@ namespace PowerLmsWebApi.Controllers
             _Mapper.Map(prb, result);
             return result;
         }
-
         /// <summary>
         /// 增加新客户开户行信息。
         /// </summary>
@@ -681,7 +661,6 @@ namespace PowerLmsWebApi.Controllers
             result.Id = model.BankInfo.Id;
             return result;
         }
-
         /// <summary>
         /// 修改客户开户行信息信息。
         /// </summary>
@@ -702,7 +681,6 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.SaveChanges();
             return result;
         }
-
         /// <summary>
         /// 删除指定Id的客户开户行信息。慎用！
         /// </summary>
@@ -724,7 +702,6 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.SaveChanges();
             return result;
         }
-
         #endregion 开户行信息
     }
 }

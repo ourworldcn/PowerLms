@@ -6,7 +6,6 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
 namespace PowerLms.Data
 {
     /// <summary>
@@ -23,24 +22,20 @@ namespace PowerLms.Data
         {
             // 确保主键字段有值 - 基类构造函数会处理 Id 的初始化
         }
-
         public OwSystemLog(Guid id) : base(id)
         {
         }
-
         /// <summary>
         /// 所属机构Id。
         /// </summary>
         [Comment("所属机构Id")]
         public Guid? OrgId { get; set; }
-
         /// <summary>
         /// 行为Id。如操作名.实体名.Id。
         /// </summary>
         [MaxLength(64)]
         [Comment("行为Id。如操作名.实体名.Id")]
         public string ActionId { get; set; }
-
         /// <summary>
         /// 这个行为发生的世界时间。
         /// </summary>
@@ -48,27 +43,22 @@ namespace PowerLms.Data
         [Comment("这个行为发生的世界时间。")]
         [Precision(3)]
         public DateTime WorldDateTime { get; set; } = OwHelper.WorldNow;
-
         /// <summary>
         /// 额外Guid。
         /// </summary>
         [Comment("额外Guid。")]
         public Guid? ExtraGuid { get; set; }
-
         /// <summary>
         /// 额外的字符串，通常行为Id，最长64字符。
         /// </summary>
         [MaxLength(64)]
         [Comment("额外的字符串，通常行为Id，最长64字符。")]
         public string ExtraString { get; set; }
-
         /// <summary>
         /// 额外数字，具体意义取决于该条记录的类型。
         /// </summary>
         [Precision(18, 4)]
         [Comment("额外数字，具体意义取决于该条记录的类型。")]
         public decimal ExtraDecimal { get; set; }
-
     }
-
 }

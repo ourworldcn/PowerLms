@@ -10,7 +10,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-
 namespace PowerLmsServer.Managers
 {
     /// <summary>
@@ -22,23 +21,19 @@ namespace PowerLmsServer.Managers
         /// 配置节名称
         /// </summary>
         public const string SectionName = "OwMessage";
-
         /// <summary>
         /// 已读消息的保存天数，默认30天
         /// </summary>
         public int ReadMessageExpiryDays { get; set; } = 30;
-
         /// <summary>
         /// 未读消息的保存天数，默认90天
         /// </summary>
         public int UnreadMessageExpiryDays { get; set; } = 90;
-
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
         public OwMessageOptions Value => this;
     }
-
     /// <summary>
     /// 系统内消息管理器，用于处理消息的发送、查询、标记已读和删除等操作
     /// </summary>
@@ -50,7 +45,6 @@ namespace PowerLmsServer.Managers
         private readonly IOptionsMonitor<OwMessageOptions> _optionsMonitor;
         private readonly Timer _cleanupTimer;
         private bool _isDisposed;
-
         /// <summary>
         /// 构造函数
         /// </summary>
@@ -65,7 +59,6 @@ namespace PowerLmsServer.Managers
             _dbContextFactory = dbContextFactory;
             _logger = logger;
             _optionsMonitor = optionsMonitor;
-
             // 注册配置变更通知
             _optionsMonitor.OnChange(options =>
             {
@@ -73,17 +66,13 @@ namespace PowerLmsServer.Managers
                     options.ReadMessageExpiryDays,
                     options.UnreadMessageExpiryDays);
             });
-
             // 创建定时器，每小时执行一次清理过期消息
             _cleanupTimer = new Timer(CleanupExpiredMessages, null, TimeSpan.FromMinutes(1), TimeSpan.FromHours(1));
-
             _logger.LogInformation("消息管理器初始化完成，已读消息保存期限: {ReadDays} 天，未读消息保存期限: {UnreadDays} 天",
                 _optionsMonitor.CurrentValue.ReadMessageExpiryDays,
                 _optionsMonitor.CurrentValue.UnreadMessageExpiryDays);
         }
-
         #region 发送消息
-
         /// <summary>
         /// 发送消息给指定用户
         /// </summary>
@@ -104,20 +93,15 @@ namespace PowerLmsServer.Managers
             {
                 if (string.IsNullOrEmpty(title))
                     throw new ArgumentException("消息标题不能为空", nameof(title));
-
                 if (string.IsNullOrEmpty(content))
                     throw new ArgumentException("消息内容不能为空", nameof(content));
-
                 if (title.Length > 64)
                     title = title[..64];
-
                 var receiverList = receiverIds?.Distinct().ToList();
                 if (receiverList == null || receiverList.Count == 0)
                     throw new ArgumentException("接收者列表不能为空", nameof(receiverIds));
-
                 // 在后台发送消息
                 Task.Run(() => SendMessageInternal(senderId, receiverList, title, content, isSystemMessage));
-
                 return receiverList.Count;
             }
             catch (Exception ex)
@@ -126,7 +110,6 @@ namespace PowerLmsServer.Managers
                 throw;
             }
         }
-
         /// <summary>
         /// 内部方法：发送消息给指定用户
         /// </summary>
@@ -140,10 +123,8 @@ namespace PowerLmsServer.Managers
             try
             {
                 using var dbContext = _dbContextFactory.CreateDbContext();
-
                 var messages = new List<OwMessage>();
                 var currentTime = DateTime.UtcNow;
-
                 foreach (var receiverId in receiverIds)
                 {
                     var message = new OwMessage
@@ -157,10 +138,8 @@ namespace PowerLmsServer.Managers
                     };
                     messages.Add(message);
                 }
-
                 dbContext.AddRange(messages);
                 dbContext.SaveChanges();
-
                 _logger.LogInformation(
                     "已成功发送消息 \"{Title}\" 给 {ReceiverCount} 位用户",
                     title,
@@ -172,7 +151,6 @@ namespace PowerLmsServer.Managers
                 throw;
             }
         }
-
         /// <summary>
         /// 发送系统消息给指定用户
         /// </summary>
@@ -187,11 +165,8 @@ namespace PowerLmsServer.Managers
         {
             return SendMessage(null, receiverIds, title, content, true);
         }
-
         #endregion
-
         #region 读取消息
-
         /// <summary>
         /// 获取用户的消息列表
         /// </summary>
@@ -209,28 +184,22 @@ namespace PowerLmsServer.Managers
             try
             {
                 using var dbContext = _dbContextFactory.CreateDbContext();
-
                 var query = dbContext.OwMessages
                     .AsNoTracking()
                     .Where(m => m.UserId == userId);
-
                 if (onlyUnread)
                 {
                     query = query.Where(m => m.ReadUtc == null);
                 }
-
                 query = query.OrderByDescending(m => m.CreateUtc);
-
                 if (startIndex > 0)
                 {
                     query = query.Skip(startIndex);
                 }
-
                 if (count > 0)
                 {
                     query = query.Take(count);
                 }
-
                 return query.ToList();
             }
             catch (Exception ex)
@@ -239,7 +208,6 @@ namespace PowerLmsServer.Managers
                 throw;
             }
         }
-
         /// <summary>
         /// 获取用户未读消息数量
         /// </summary>
@@ -250,7 +218,6 @@ namespace PowerLmsServer.Managers
             try
             {
                 using var dbContext = _dbContextFactory.CreateDbContext();
-
                 return dbContext.OwMessages
                     .Count(m => m.UserId == userId && m.ReadUtc == null);
             }
@@ -260,7 +227,6 @@ namespace PowerLmsServer.Managers
                 throw;
             }
         }
-
         /// <summary>
         /// 获取指定ID的消息详情
         /// </summary>
@@ -273,20 +239,16 @@ namespace PowerLmsServer.Managers
             try
             {
                 using var dbContext = _dbContextFactory.CreateDbContext();
-
                 var message = dbContext.OwMessages
                     .FirstOrDefault(m => m.Id == messageId && m.UserId == userId);
-
                 if (message == null)
                     return null;
-
                 // 如果消息未读且需要标记为已读，则更新已读时间
                 if (markAsRead && message.ReadUtc == null)
                 {
                     message.ReadUtc = DateTime.UtcNow;
                     dbContext.SaveChanges();
                 }
-
                 return message;
             }
             catch (Exception ex)
@@ -295,11 +257,8 @@ namespace PowerLmsServer.Managers
                 throw;
             }
         }
-
         #endregion
-
         #region 标记已读
-
         /// <summary>
         /// 标记消息为已读
         /// </summary>
@@ -311,13 +270,10 @@ namespace PowerLmsServer.Managers
             try
             {
                 using var dbContext = _dbContextFactory.CreateDbContext();
-
                 var message = dbContext.OwMessages
                     .FirstOrDefault(m => m.Id == messageId && m.UserId == userId);
-
                 if (message == null || message.ReadUtc != null)
                     return false;
-
                 message.ReadUtc = DateTime.UtcNow;
                 dbContext.SaveChanges();
                 return true;
@@ -328,7 +284,6 @@ namespace PowerLmsServer.Managers
                 throw;
             }
         }
-
         /// <summary>
         /// 批量标记消息为已读
         /// </summary>
@@ -340,21 +295,17 @@ namespace PowerLmsServer.Managers
             try
             {
                 using var dbContext = _dbContextFactory.CreateDbContext();
-
                 var idList = messageIds.ToList();
                 var messages = dbContext.OwMessages
                     .Where(m => idList.Contains(m.Id) && m.UserId == userId && m.ReadUtc == null)
                     .ToList();
-
                 if (messages.Count == 0)
                     return 0;
-
                 var now = DateTime.UtcNow;
                 foreach (var message in messages)
                 {
                     message.ReadUtc = now;
                 }
-
                 dbContext.SaveChanges();
                 return messages.Count;
             }
@@ -364,7 +315,6 @@ namespace PowerLmsServer.Managers
                 throw;
             }
         }
-
         /// <summary>
         /// 标记所有消息为已读
         /// </summary>
@@ -375,14 +325,11 @@ namespace PowerLmsServer.Managers
             try
             {
                 using var dbContext = _dbContextFactory.CreateDbContext();
-
                 var now = DateTime.UtcNow;
-
                 // 直接使用SQL更新语句提高性能
                 var count = dbContext.Database.ExecuteSqlRaw(
                     "UPDATE OwMessages SET ReadUtc = {0} WHERE UserId = {1} AND ReadUtc IS NULL",
                     now, userId);
-
                 return count;
             }
             catch (Exception ex)
@@ -391,11 +338,8 @@ namespace PowerLmsServer.Managers
                 throw;
             }
         }
-
         #endregion
-
         #region 删除消息
-
         /// <summary>
         /// 删除指定消息
         /// </summary>
@@ -407,13 +351,10 @@ namespace PowerLmsServer.Managers
             try
             {
                 using var dbContext = _dbContextFactory.CreateDbContext();
-
                 var message = dbContext.OwMessages
                     .FirstOrDefault(m => m.Id == messageId && m.UserId == userId);
-
                 if (message == null)
                     return false;
-
                 dbContext.Remove(message);
                 dbContext.SaveChanges();
                 return true;
@@ -424,7 +365,6 @@ namespace PowerLmsServer.Managers
                 throw;
             }
         }
-
         /// <summary>
         /// 批量删除消息
         /// </summary>
@@ -436,15 +376,12 @@ namespace PowerLmsServer.Managers
             try
             {
                 using var dbContext = _dbContextFactory.CreateDbContext();
-
                 var idList = messageIds.ToList();
                 var messages = dbContext.OwMessages
                     .Where(m => idList.Contains(m.Id) && m.UserId == userId)
                     .ToList();
-
                 if (messages.Count == 0)
                     return 0;
-
                 dbContext.RemoveRange(messages);
                 dbContext.SaveChanges();
                 return messages.Count;
@@ -455,7 +392,6 @@ namespace PowerLmsServer.Managers
                 throw;
             }
         }
-
         /// <summary>
         /// 删除用户的所有消息
         /// </summary>
@@ -466,12 +402,10 @@ namespace PowerLmsServer.Managers
             try
             {
                 using var dbContext = _dbContextFactory.CreateDbContext();
-
                 // 直接使用SQL删除语句提高性能
                 var count = dbContext.Database.ExecuteSqlRaw(
                     "DELETE FROM OwMessages WHERE UserId = {0}",
                     userId);
-
                 return count;
             }
             catch (Exception ex)
@@ -480,11 +414,8 @@ namespace PowerLmsServer.Managers
                 throw;
             }
         }
-
         #endregion
-
         #region 定时清理
-
         /// <summary>
         /// 清理过期消息的定时任务
         /// </summary>
@@ -494,23 +425,18 @@ namespace PowerLmsServer.Managers
             {
                 // 获取当前配置值
                 var options = _optionsMonitor.CurrentValue;
-
                 using var dbContext = _dbContextFactory.CreateDbContext();
-
                 var now = DateTime.UtcNow;
                 var readExpiry = now.AddDays(-options.ReadMessageExpiryDays);
                 var unreadExpiry = now.AddDays(-options.UnreadMessageExpiryDays);
-
                 // 删除已读的过期消息
                 var readCount = dbContext.Database.ExecuteSqlRaw(
                     "DELETE FROM OwMessages WHERE ReadUtc IS NOT NULL AND ReadUtc < {0}",
                     readExpiry);
-
                 // 删除未读的过期消息
                 var unreadCount = dbContext.Database.ExecuteSqlRaw(
                     "DELETE FROM OwMessages WHERE ReadUtc IS NULL AND CreateUtc < {0}",
                     unreadExpiry);
-
                 _logger.LogInformation(
                     "已清理过期消息: {ReadCount} 条已读消息, {UnreadCount} 条未读消息",
                     readCount,
@@ -521,7 +447,6 @@ namespace PowerLmsServer.Managers
                 _logger.LogError(ex, "清理过期消息失败");
             }
         }
-
         /// <summary>
         /// 手动触发清理过期消息
         /// </summary>
@@ -532,28 +457,22 @@ namespace PowerLmsServer.Managers
             {
                 // 获取当前配置值
                 var options = _optionsMonitor.CurrentValue;
-
                 using var dbContext = _dbContextFactory.CreateDbContext();
-
                 var now = DateTime.UtcNow;
                 var readExpiry = now.AddDays(-options.ReadMessageExpiryDays);
                 var unreadExpiry = now.AddDays(-options.UnreadMessageExpiryDays);
-
                 // 删除已读的过期消息
                 var readCount = dbContext.Database.ExecuteSqlRaw(
                     "DELETE FROM OwMessages WHERE ReadUtc IS NOT NULL AND ReadUtc < {0}",
                     readExpiry);
-
                 // 删除未读的过期消息
                 var unreadCount = dbContext.Database.ExecuteSqlRaw(
                     "DELETE FROM OwMessages WHERE ReadUtc IS NULL AND CreateUtc < {0}",
                     unreadExpiry);
-
                 _logger.LogInformation(
                     "手动清理过期消息: {ReadCount} 条已读消息, {UnreadCount} 条未读消息",
                     readCount,
                     unreadCount);
-
                 return readCount + unreadCount;
             }
             catch (Exception ex)
@@ -562,11 +481,8 @@ namespace PowerLmsServer.Managers
                 throw;
             }
         }
-
         #endregion
-
         #region IDisposable 实现
-
         /// <summary>
         /// 释放资源
         /// </summary>
@@ -575,7 +491,6 @@ namespace PowerLmsServer.Managers
             Dispose(true);
             GC.SuppressFinalize(this);
         }
-
         /// <summary>
         /// 释放资源
         /// </summary>
@@ -589,14 +504,11 @@ namespace PowerLmsServer.Managers
                     _cleanupTimer?.Dispose();
                     _logger.LogInformation("消息管理器已释放资源");
                 }
-
                 _isDisposed = true;
             }
         }
-
         #endregion
     }
-
     /// <summary>
     /// 消息管理器扩展方法，用于配置服务
     /// </summary>
@@ -619,10 +531,8 @@ namespace PowerLmsServer.Managers
             }
             // 配置选项
             services.Configure(configureOptions);
-
             // 注册消息管理器服务
             services.AddSingleton<OwMessageManager>();
-
             return services;
         }
     }

@@ -14,7 +14,6 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Net;
 using PowerLmsServer;
-
 namespace PowerLmsWebApi.Controllers.OA
 {
     /// <summary>
@@ -33,7 +32,6 @@ namespace PowerLmsWebApi.Controllers.OA
         private readonly AuthorizationManager _AuthorizationManager;
         private readonly OaExpenseManager _OaExpenseManager;
         private readonly OrgManager<PowerLmsUserDbContext> _OrgManager;
-
         /// <summary>
         /// 构造函数。
         /// </summary>
@@ -59,9 +57,7 @@ namespace PowerLmsWebApi.Controllers.OA
             _OaExpenseManager = oaExpenseManager;
             _OrgManager = orgManager;
         }
-
         #region OA费用申请单主表操作
-
         /// <summary>
         /// 获取所有OA费用申请单。
         /// </summary>
@@ -79,32 +75,25 @@ namespace PowerLmsWebApi.Controllers.OA
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
                 return Unauthorized();
-
             var result = new GetAllOaExpenseRequisitionReturnDto();
-
             try
             {
                 // 🔧 修复权限过滤：使用机构管理器获取同公司所有机构ID
                 var allowedOrgIds = GetOrgIds(context.User, _OrgManager);
                 var dbSet = _DbContext.OaExpenseRequisitions.Where(c => allowedOrgIds.Contains(c.OrgId.Value));
-
                 // 确保条件字典不区分大小写
                 var normalizedConditional = conditional != null ?
                     new Dictionary<string, string>(conditional, StringComparer.OrdinalIgnoreCase) :
                     null;
-
                 // 应用通用条件查询
                 var coll = EfHelper.GenerateWhereAnd(dbSet, normalizedConditional);
-
                 // 移除了专用的搜索文本处理，改为完全依赖 conditional 参数
                 // 文本搜索示例：
                 // - conditional["RelatedCustomer"] = "*客户名称*"  
                 // - conditional["Remark"] = "*备注关键词*"
                 // - 复合条件可组合使用，更加灵活和强大
-
                 // 排序应用在修改的查询
                 coll = coll.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-
                 // 使用EntityManager进行分页
                 var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
                 result.Total = prb.Total;
@@ -117,10 +106,8 @@ namespace PowerLmsWebApi.Controllers.OA
                 result.ErrorCode = 500;
                 result.DebugMessage = $"获取OA费用申请单列表时发生错误: {ex.Message}";
             }
-
             return result;
         }
-
         /// <summary>
         /// 创建新的OA费用申请单。
         /// </summary>
@@ -134,9 +121,7 @@ namespace PowerLmsWebApi.Controllers.OA
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
                 return Unauthorized();
-
             var result = new AddOaExpenseRequisitionReturnDto();
-
             try
             {
                 var entity = model.Item;
@@ -144,18 +129,13 @@ namespace PowerLmsWebApi.Controllers.OA
                 entity.OrgId = context.User.OrgId;
                 entity.CreateBy = context.User.Id;
                 entity.CreateDateTime = OwHelper.WorldNow;
-
                 // 申请编号由前端调用 GeneratedOtherNumber 接口获取后传入
                 // 这里不再自动生成，而是使用前端传入的值
-                
                 entity.AuditDateTime = null;
                 entity.AuditOperatorId = null;
-
                 _DbContext.OaExpenseRequisitions.Add(entity);
                 _DbContext.SaveChanges();
-
                 result.Id = entity.Id;
-                
                 _Logger.LogInformation("成功创建OA费用申请单 - 申请单ID: {RequisitionId}, 申请编号: {ApplicationNumber}, 操作人: {UserId}",
                     entity.Id, entity.ApplicationNumber, context.User.Id);
             }
@@ -166,10 +146,8 @@ namespace PowerLmsWebApi.Controllers.OA
                 result.ErrorCode = 500;
                 result.DebugMessage = $"创建OA费用申请单时发生错误: {ex.Message}";
             }
-
             return result;
         }
-
         /// <summary>
         /// 修改OA费用申请单信息。
         /// </summary>
@@ -263,7 +241,6 @@ namespace PowerLmsWebApi.Controllers.OA
             }
             return result;
         }
-
         /// <summary>
         /// 删除OA费用申请单。
         /// </summary>
@@ -277,13 +254,10 @@ namespace PowerLmsWebApi.Controllers.OA
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
                 return Unauthorized();
-
             var result = new RemoveOaExpenseRequisitionReturnDto();
-
             try
             {
                 var entities = _DbContext.OaExpenseRequisitions.Where(e => model.Ids.Contains(e.Id)).ToList();
-
                 foreach (var entity in entities)
                 {
                     // 检查权限和状态
@@ -294,7 +268,6 @@ namespace PowerLmsWebApi.Controllers.OA
                         result.DebugMessage = $"申请单已审核，无法删除";
                         return result;
                     }
-
                     // 检查用户权限：只能删除自己创建/登记的申请单（废弃ApplicantId，统一使用CreateBy）
                     if (entity.CreateBy.HasValue && entity.CreateBy.Value != context.User.Id && !context.User.IsSuperAdmin)
                     {
@@ -303,15 +276,12 @@ namespace PowerLmsWebApi.Controllers.OA
                         result.DebugMessage = $"权限不足，无法删除申请单";
                         return result;
                     }
-
                     // 删除关联的明细记录
                     var items = _DbContext.OaExpenseRequisitionItems.Where(i => i.ParentId == entity.Id);
                     _DbContext.OaExpenseRequisitionItems.RemoveRange(items);
-
                     // 使用EntityManager进行删除（支持级联删除）
                     _EntityManager.Remove(entity);
                 }
-
                 _DbContext.SaveChanges();
             }
             catch (Exception ex)
@@ -321,10 +291,8 @@ namespace PowerLmsWebApi.Controllers.OA
                 result.ErrorCode = 500;
                 result.DebugMessage = $"删除OA费用申请单时发生错误: {ex.Message}";
             }
-
             return result;
         }
-
         /// <summary>
         /// 回退OA费用申请单到初始状态。
         /// 会清空相关工作流、重置申请单状态并释放被锁定的费用。
@@ -346,9 +314,7 @@ namespace PowerLmsWebApi.Controllers.OA
                 _Logger.LogWarning("无效的令牌{token}", model.Token);
                 return Unauthorized();
             }
-
             var result = new RevertOaExpenseRequisitionReturnDto();
-
             try
             {
                 // 1. 权限验证（使用OA.1.3日常费用撤销权限，专门控制OA日常费用申请单的撤销）
@@ -357,30 +323,25 @@ namespace PowerLmsWebApi.Controllers.OA
                     _Logger.LogWarning("权限不足，用户{UserId}尝试回退OA费用申请单{RequisitionId}", context.User.Id, model.RequisitionId);
                     return StatusCode((int)HttpStatusCode.Forbidden, "权限不足：需要日常费用撤销权限（OA.1.3）");
                 }
-
                 // 2. 记录回退原因到审计日志
                 if (!string.IsNullOrWhiteSpace(model.Reason))
                 {
                     _Logger.LogInformation("OA费用申请单回退原因：RequisitionId={RequisitionId}, 操作人={UserId}, 原因={Reason}", 
                         model.RequisitionId, context.User.Id, model.Reason);
                 }
-
                 // 3. 调用OaExpenseManager的回退服务方法
                 var revertResult = _OaExpenseManager.RevertRequisition(
                     model.RequisitionId, 
                     context.User.Id, 
                     _WfManager);
-
                 // 4. 根据服务返回结果构造API响应
                 if (revertResult.Success)
                 {
                     result.RequisitionId = revertResult.RequisitionId;
                     result.ClearedWorkflowCount = revertResult.ClearedWorkflowCount;
                     result.Message = revertResult.Message;
-
                     _Logger.LogInformation("OA费用申请单回退成功：RequisitionId={RequisitionId}, 操作人={UserId}, 清空工作流{WorkflowCount}个", 
                         model.RequisitionId, context.User.Id, revertResult.ClearedWorkflowCount);
-
                     return result;
                 }
                 else
@@ -388,7 +349,6 @@ namespace PowerLmsWebApi.Controllers.OA
                     // 回退失败，根据错误信息确定HTTP状态码
                     _Logger.LogWarning("OA费用申请单回退失败：RequisitionId={RequisitionId}, 操作人={UserId}, 错误={Error}", 
                         model.RequisitionId, context.User.Id, revertResult.Message);
-
                     if (revertResult.Message.Contains("未找到"))
                     {
                         return NotFound(revertResult.Message);
@@ -427,9 +387,7 @@ namespace PowerLmsWebApi.Controllers.OA
                 return StatusCode(StatusCodes.Status500InternalServerError, result);
             }
         }
-
         #region 私有辅助方法
-
         /// <summary>
         /// 获取编辑限制的友好提示消息。
         /// </summary>
@@ -447,7 +405,6 @@ namespace PowerLmsWebApi.Controllers.OA
                 _ => "申请单状态不允许修改"
             };
         }
-
         /// <summary>
         /// 检查修改是否包含主要字段变更。
         /// </summary>
@@ -460,9 +417,7 @@ namespace PowerLmsWebApi.Controllers.OA
                    newItem.ExchangeRate != existing.ExchangeRate ||
                    newItem.CurrencyCode != existing.CurrencyCode;
         }
-
         #endregion
-
         #endregion
     }
 }

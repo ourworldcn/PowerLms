@@ -12,7 +12,6 @@ using System.Data;
 using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Net;
-
 namespace PowerLmsWebApi.Controllers
 {
     /// <summary>
@@ -38,7 +37,6 @@ namespace PowerLmsWebApi.Controllers
             _RoleManager = roleManager;
             _Logger = logger;
         }
-
         readonly IServiceProvider _ServiceProvider;
         readonly AccountManager _AccountManager;
         readonly PowerLmsUserDbContext _DbContext;
@@ -49,9 +47,7 @@ namespace PowerLmsWebApi.Controllers
         readonly PermissionManager _PermissionManager;
         readonly RoleManager _RoleManager;
         readonly ILogger<AuthorizationController> _Logger;
-
         #region 角色的CRUD
-
         /// <summary>
         /// 获取全部角色。通用查询。
         /// </summary>
@@ -73,7 +69,6 @@ namespace PowerLmsWebApi.Controllers
             _Mapper.Map(prb, result);
             return result;
         }
-
         /// <summary>
         /// 增加新角色。
         /// </summary>
@@ -98,7 +93,6 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.PlRoles.Add(model.Item);
             _DbContext.SaveChanges();
             result.Id = model.Item.Id;
-
             // 更新以适应新的缓存管理接口
             if (model.Item.OrgId.HasValue)
             {
@@ -108,10 +102,8 @@ namespace PowerLmsWebApi.Controllers
                     _RoleManager.InvalidateRoleCache(merchantId.Value);
                 }
             }
-
             return result;
         }
-
         /// <summary>
         /// 修改角色信息。
         /// </summary>
@@ -167,7 +159,6 @@ namespace PowerLmsWebApi.Controllers
             }
             return result;
         }
-
         /// <summary>
         /// 删除指定Id的角色。慎用！
         /// </summary>
@@ -182,19 +173,15 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemovePlRoleReturnDto();
             var id = model.Id;
-
             var dbSet = _DbContext.PlRoles;
             var item = dbSet.Find(id);
             if (item is null) return BadRequest();
-
             Guid? merchantId = null;
             if (item.OrgId.HasValue)
             {
                 merchantId = _OrgManager.GetMerchantIdByOrgId(item.OrgId.Value);
             }
-
             List<Guid> affectedUserIds = new List<Guid>();
-
             try
             {
                 // 删除角色-用户关联关系
@@ -204,25 +191,21 @@ namespace PowerLmsWebApi.Controllers
                     affectedUserIds = userRoles.Select(r => r.UserId).Distinct().ToList();
                     _DbContext.PlAccountRoles.RemoveRange(userRoles);
                 }
-
                 // 删除角色-权限关联关系
                 var rolePermissions = _DbContext.PlRolePermissions.Where(rp => rp.RoleId == id).ToList();
                 if (rolePermissions.Any())
                 {
                     _DbContext.PlRolePermissions.RemoveRange(rolePermissions);
                 }
-
                 // 删除角色本身
                 _EntityManager.Remove(item);
                 _DbContext.SaveChanges();
-
                 // 级联失效所有相关缓存
                 if (merchantId.HasValue)
                 {
                     _OrgManager.InvalidateOrgCaches(merchantId.Value);
                     _RoleManager.InvalidateRoleCache(merchantId.Value);
                 }
-
                 // 失效受影响用户的角色和权限缓存
                 if (affectedUserIds.Any())
                 {
@@ -232,7 +215,6 @@ namespace PowerLmsWebApi.Controllers
                         _PermissionManager.InvalidateUserPermissionsCache(userId);
                     }
                 }
-
                 // ✅ 只保留成功总结日志
                 _Logger.LogInformation("成功删除角色 {roleName} (ID:{roleId})，影响 {userCount} 个用户",
                     item.Name_Name, id, affectedUserIds.Count);
@@ -245,12 +227,10 @@ namespace PowerLmsWebApi.Controllers
                 result.DebugMessage = $"删除角色失败: {ex.Message}";
                 return result;
             }
-
             return result;
         }
         #endregion 角色的CRUD
         #region 权限的CRUD
-
         /// <summary>
         /// 获取全部权限。Name=root返回总根。由于返回嵌套类，无法支持分页。
         /// </summary>
@@ -284,7 +264,6 @@ namespace PowerLmsWebApi.Controllers
             _Mapper.Map(prb, result);
             return result;
         }
-
         /// <summary>
         /// 增加新权限。
         /// </summary>
@@ -301,13 +280,10 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.PlPermissions.Add(model.PlPermission);
             _DbContext.SaveChanges();
             result.Id = model.PlPermission.Name;
-
             // 更新以适应新的缓存管理接口
             _PermissionManager.InvalidatePermissionCache();
-
             return result;
         }
-
         /// <summary>
         /// 修改权限信息。
         /// </summary>
@@ -333,21 +309,16 @@ namespace PowerLmsWebApi.Controllers
             catch (AutoMapperMappingException)  //忽略不能映射的情况
             {
             }
-
             if (tmp is ICreatorInfo ci) //若实现创建信息接口
             {
                 entity.Property(nameof(ci.CreateBy)).IsModified = false;
                 entity.Property(nameof(ci.CreateDateTime)).IsModified = false;
             }
-
             _DbContext.SaveChanges();
-
             // 更新以适应新的缓存管理接口
             _PermissionManager.InvalidatePermissionCache();
-
             return result;
         }
-
         /// <summary>
         /// 删除指定Id的权限。慎用！
         /// </summary>
@@ -367,15 +338,12 @@ namespace PowerLmsWebApi.Controllers
             if (item is null) return BadRequest();
             _EntityManager.Remove(item);
             _DbContext.SaveChanges();
-
             // 更新以适应新的缓存管理接口
             _PermissionManager.InvalidatePermissionCache();
-
             return result;
         }
         #endregion 权限的CRUD
         #region 用户-角色关系的CRUD
-
         /// <summary>
         /// 获取全部用户-角色关系。
         /// </summary>
@@ -391,13 +359,10 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllAccountRoleReturnDto();
             var dbSet = _DbContext.PlAccountRoles;
-
             // 首先应用排序
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-
             // 使用EfHelper.GenerateWhereAnd方法直接应用条件,忽略条件字典中键的大小写
             coll = EfHelper.GenerateWhereAnd(coll, new Dictionary<string, string>(conditional, StringComparer.OrdinalIgnoreCase));
-
             if (coll == null)   // 如果GenerateWhereAnd返回null，表示发生了条件转换错误
             {
                 result.HasError = true;
@@ -405,12 +370,10 @@ namespace PowerLmsWebApi.Controllers
                 result.DebugMessage = OwHelper.GetLastErrorMessage();
                 return result;
             }
-
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }
-
         /// <summary>
         /// 增加新用户-角色关系。
         /// </summary>
@@ -426,14 +389,11 @@ namespace PowerLmsWebApi.Controllers
             //model.AccountRole.GenerateNewId();
             _DbContext.PlAccountRoles.Add(model.AccountRole);
             _DbContext.SaveChanges();
-
             // ✅ 清理：移除重复调用
             _RoleManager.InvalidateUserRolesCache(model.AccountRole.UserId);             // 失效角色缓存
             _PermissionManager.InvalidateUserPermissionsCache(model.AccountRole.UserId); // 失效权限缓存
-
             return result;
         }
-
         /// <summary>
         /// 删除指定Id的用户-角色关系。慎用！
         /// </summary>
@@ -447,23 +407,18 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveAccountRoleReturnDto();
-
             var dbSet = _DbContext.PlAccountRoles;
             var item = dbSet.Find(model.UserId, model.RoleId);
             if (item is null) return BadRequest();
             _EntityManager.Remove(item);
             _DbContext.SaveChanges();
-
             // ✅ 清理：移除重复调用
             _RoleManager.InvalidateUserRolesCache(model.UserId);             // 失效角色缓存
             _PermissionManager.InvalidateUserPermissionsCache(model.UserId); // 失效权限缓存
-
             return result;
         }
         #endregion 用户-角色关系的CRUD
-
         #region 角色-权限关系的CRUD
-
         /// <summary>
         /// 获取全部角色-权限关系。
         /// </summary>
@@ -494,7 +449,6 @@ namespace PowerLmsWebApi.Controllers
             _Mapper.Map(prb, result);
             return result;
         }
-
         /// <summary>
         /// 增加新角色-权限关系。
         /// </summary>
@@ -507,22 +461,17 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new AddRolePermissionReturnDto();
-
             _DbContext.PlRolePermissions.Add(model.RolePermission);
             _DbContext.SaveChanges();
-
             var userIds = _DbContext.PlAccountRoles.Where(c => model.RolePermission.RoleId == c.RoleId).Select(c => c.UserId).ToArray();
-
             // ✅ 清理：移除重复调用
             foreach (var userId in userIds)
             {
                 _RoleManager.InvalidateUserRolesCache(userId);             // 失效角色缓存
                 _PermissionManager.InvalidateUserPermissionsCache(userId); // 失效权限缓存
             }
-
             return result;
         }
-
         /// <summary>
         /// 删除指定Id的角色-权限关系。慎用！
         /// </summary>
@@ -536,25 +485,20 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveRolePermissionReturnDto();
-
             var dbSet = _DbContext.PlRolePermissions;
             var item = dbSet.Find(model.RoleId, model.PermissionId);
             if (item is null) return BadRequest();
             _EntityManager.Remove(item);
             _DbContext.SaveChanges();
-
             var userIds = _DbContext.PlAccountRoles.Where(c => model.RoleId == c.RoleId).Select(c => c.UserId).ToArray();
-
             // 更新以适应新的缓存管理接口
             foreach (var userId in userIds)
             {
                 _PermissionManager.InvalidateUserPermissionsCache(userId);
             }
-
             return result;
         }
         #endregion 角色-权限关系的CRUD
-
         /// <summary>
         /// 设置角色的所属用户。
         /// </summary>
@@ -570,28 +514,22 @@ namespace PowerLmsWebApi.Controllers
             var result = new SetUsersReturnDto();
             var ids = new HashSet<Guid>(model.UserIds);
             if (ids.Count != model.UserIds.Count) return BadRequest($"{nameof(model.UserIds)}中有重复键值。");
-
             // ✅ 修复：检查用户ID应该查询Accounts表，而不是PlRoles表
             var count = _DbContext.Accounts.Count(c => ids.Contains(c.Id));
             if (count != ids.Count) return BadRequest($"{nameof(model.UserIds)}中至少有一个用户Id不存在。");
-
             var removes = _DbContext.PlAccountRoles.Where(c => c.RoleId == model.RoleId && !ids.Contains(c.UserId));
             _DbContext.PlAccountRoles.RemoveRange(removes);
-
             var adds = ids.Except(_DbContext.PlAccountRoles.Where(c => c.RoleId == model.RoleId).Select(c => c.UserId).AsEnumerable()).ToArray();
             _DbContext.PlAccountRoles.AddRange(adds.Select(c => new AccountRole { RoleId = model.RoleId, UserId = c }));
             _DbContext.SaveChanges();
-
             // ✅ 清理：移除重复调用
             foreach (var userId in model.UserIds)
             {
                 _RoleManager.InvalidateUserRolesCache(userId); //失效角色缓存
                 _PermissionManager.InvalidateUserPermissionsCache(userId); //失效权限缓存
             }
-
             return result;
         }
-
         /// <summary>
         /// 设置角色的许可权限。
         /// </summary>
@@ -605,20 +543,15 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new SetPermissionsReturnDto();
-
             var ids = new HashSet<string>(model.PermissionIds);
             if (ids.Count != model.PermissionIds.Count) return BadRequest($"{nameof(model.PermissionIds)}中有重复键值。");
-
             var setRela = _DbContext.PlRolePermissions;
             var removes = setRela.Where(c => c.RoleId == model.RoleId && !ids.Contains(c.PermissionId));
             setRela.RemoveRange(removes);
-
             var adds = ids.Except(setRela.Where(c => c.RoleId == model.RoleId).Select(c => c.PermissionId).AsEnumerable()).ToArray();
             setRela.AddRange(adds.Select(c => new RolePermission { RoleId = model.RoleId, PermissionId = c, CreateBy = context.User.Id }));
             _DbContext.SaveChanges();
-
             var userIds = _DbContext.PlAccountRoles.Where(c => model.RoleId == c.RoleId).Select(c => c.UserId).ToArray();
-
             // ✅ 清理：移除重复调用
             foreach (var userId in userIds)
             {
@@ -626,13 +559,10 @@ namespace PowerLmsWebApi.Controllers
                 _PermissionManager.InvalidateUserPermissionsCache(userId); // 失效权限缓存
                 _RoleManager.InvalidateUserRolesCache(userId);             // 失效角色缓存
             }
-
             _Logger.LogInformation("用户 {OperatorId} 修改了角色 {RoleId} 的权限，影响 {Count} 个用户",
                 context.User.Id, model.RoleId, userIds.Length);
-
             return result;
         }
-
         /// <summary>
         /// 获取当前用户在当前机构下的所有权限。
         /// </summary>
@@ -646,14 +576,12 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPermissionsInCurrentUserReturnDto();
-
             // 更新以适应新的权限管理接口获取方式
             var permissions = _PermissionManager.GetOrLoadUserCurrentPermissions(context.User);
             if (permissions != null)
             {
                 result.Permissions.AddRange(permissions.Values);
             }
-
             return result;
         }
     }

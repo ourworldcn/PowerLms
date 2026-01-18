@@ -1,708 +1,609 @@
-using System;
+ï»¿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
-
 namespace PowerLms.Data.Finance
 {
     /// <summary>
-    /// ½ğµûÊı¾İ½»»»Æ¾Ö¤·ÖÂ¼Ä£ĞÍ
+    /// é‡‘è¶æ•°æ®äº¤æ¢å‡­è¯åˆ†å½•æ¨¡å‹
     /// </summary>
     [Table("KingdeeVouchers")]
-    [Comment("½ğµûÊı¾İ½»»»Æ¾Ö¤·ÖÂ¼")]
+    [Comment("é‡‘è¶æ•°æ®äº¤æ¢å‡­è¯åˆ†å½•")]
     public class KingdeeVoucher
     {
         /// <summary>
-        /// Ö÷¼üID£¨ÏµÍ³ÄÚ²¿Ê¹ÓÃ£©
+        /// ä¸»é”®IDï¼ˆç³»ç»Ÿå†…éƒ¨ä½¿ç”¨ï¼‰
         /// </summary>
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public Guid Id { get; set; }
-
         /// <summary>
-        /// ÖÆµ¥ÈÕÆÚ
+        /// åˆ¶å•æ—¥æœŸ
         /// </summary>
         [Column("FDATE")]
-        [Comment("ÖÆµ¥ÈÕÆÚ")]
+        [Comment("åˆ¶å•æ—¥æœŸ")]
         public DateTime FDATE { get; set; }
-
         /// <summary>
-        /// Æ¾Ö¤ÈÕÆÚ
+        /// å‡­è¯æ—¥æœŸ
         /// </summary>
         [Column("FTRANSDATE")]
-        [Comment("Æ¾Ö¤ÈÕÆÚ")]
+        [Comment("å‡­è¯æ—¥æœŸ")]
         public DateTime FTRANSDATE { get; set; }
-
         /// <summary>
-        /// ÆÚ¼ä£¬²ÆÎñÆÚ¼äĞòºÅ»òÔÂ·İ
+        /// æœŸé—´ï¼Œè´¢åŠ¡æœŸé—´åºå·æˆ–æœˆä»½
         /// </summary>
         [Column("FPERIOD")]
-        [Comment("ÆÚ¼ä£¬²ÆÎñÆÚ¼äĞòºÅ»òÔÂ·İ")]
+        [Comment("æœŸé—´ï¼Œè´¢åŠ¡æœŸé—´åºå·æˆ–æœˆä»½")]
         [Precision(10, 5)]
         public decimal FPERIOD { get; set; }
-
         /// <summary>
-        /// Æ¾Ö¤Àà±ğ×Ö
+        /// å‡­è¯ç±»åˆ«å­—
         /// </summary>
         [Column("FGROUP")]
-        [Comment("Æ¾Ö¤Àà±ğ×Ö")]
+        [Comment("å‡­è¯ç±»åˆ«å­—")]
         [StringLength(10)]
         public string FGROUP { get; set; }
-
         /// <summary>
-        /// Æ¾Ö¤ºÅ
+        /// å‡­è¯å·
         /// </summary>
         [Column("FNUM")]
-        [Comment("Æ¾Ö¤ºÅ")]
+        [Comment("å‡­è¯å·")]
         [Precision(10, 5)]
         public decimal FNUM { get; set; }
-
         /// <summary>
-        /// ·ÖÂ¼ºÅ£¬Ò»¸öÆ¾Ö¤ºÅÄÚ²»ÖØ¸´
+        /// åˆ†å½•å·ï¼Œä¸€ä¸ªå‡­è¯å·å†…ä¸é‡å¤
         /// </summary>
         [Column("FENTRYID")]
-        [Comment("·ÖÂ¼ºÅ£¬Ò»¸öÆ¾Ö¤ºÅÄÚ²»ÖØ¸´")]
+        [Comment("åˆ†å½•å·ï¼Œä¸€ä¸ªå‡­è¯å·å†…ä¸é‡å¤")]
         [Precision(10, 5)]
         public decimal FENTRYID { get; set; }
-
         /// <summary>
-        /// ÕªÒª£¬¿Í»§Ãû+¿ªÆ±Ã÷Ï¸+¿Í»§²ÆÎñ´úÂë
+        /// æ‘˜è¦ï¼Œå®¢æˆ·å+å¼€ç¥¨æ˜ç»†+å®¢æˆ·è´¢åŠ¡ä»£ç 
         /// </summary>
         [Column("FEXP")]
-        [Comment("ÕªÒª£¬¿Í»§Ãû+¿ªÆ±Ã÷Ï¸+¿Í»§²ÆÎñ´úÂë")]
+        [Comment("æ‘˜è¦ï¼Œå®¢æˆ·å+å¼€ç¥¨æ˜ç»†+å®¢æˆ·è´¢åŠ¡ä»£ç ")]
         [StringLength(500)]
         public string FEXP { get; set; }
-
         /// <summary>
-        /// ¿ÆÄ¿´úÂë
+        /// ç§‘ç›®ä»£ç 
         /// </summary>
         [Column("FACCTID")]
-        [Comment("¿ÆÄ¿´úÂë")]
+        [Comment("ç§‘ç›®ä»£ç ")]
         [StringLength(50)]
         public string FACCTID { get; set; }
-
         /// <summary>
-        /// ºËËãÀà±ğ
+        /// æ ¸ç®—ç±»åˆ«
         /// </summary>
         [Column("FCLSNAME1")]
-        [Comment("ºËËãÀà±ğ")]
+        [Comment("æ ¸ç®—ç±»åˆ«")]
         [StringLength(50)]
         public string FCLSNAME1 { get; set; }
-
         /// <summary>
-        /// ¿Í»§²ÆÎñ¼ò³Æ
+        /// å®¢æˆ·è´¢åŠ¡ç®€ç§°
         /// </summary>
         [Column("FOBJID1")]
-        [Comment("¿Í»§²ÆÎñ¼ò³Æ")]
+        [Comment("å®¢æˆ·è´¢åŠ¡ç®€ç§°")]
         [StringLength(50)]
         public string FOBJID1 { get; set; }
-
         /// <summary>
-        /// ¿Í»§Ãû³Æ
+        /// å®¢æˆ·åç§°
         /// </summary>
         [Column("FOBJNAME1")]
-        [Comment("¿Í»§Ãû³Æ")]
+        [Comment("å®¢æˆ·åç§°")]
         [StringLength(200)]
         public string FOBJNAME1 { get; set; }
-
         /// <summary>
-        /// ºËËãÀà±ğ2
+        /// æ ¸ç®—ç±»åˆ«2
         /// </summary>
         [Column("FCLSNAME2")]
         [StringLength(50)]
         public string FCLSNAME2 { get; set; }
-
         /// <summary>
-        /// ºËËã¶ÔÏó±àÂë2
+        /// æ ¸ç®—å¯¹è±¡ç¼–ç 2
         /// </summary>
         [Column("FOBJID2")]
         [StringLength(50)]
         public string FOBJID2 { get; set; }
-
         /// <summary>
-        /// ºËËã¶ÔÏóÃû³Æ2
+        /// æ ¸ç®—å¯¹è±¡åç§°2
         /// </summary>
         [Column("FOBJNAME2")]
         [StringLength(200)]
         public string FOBJNAME2 { get; set; }
-
         /// <summary>
-        /// ºËËãÀà±ğ3
+        /// æ ¸ç®—ç±»åˆ«3
         /// </summary>
         [Column("FCLSNAME3")]
         [StringLength(50)]
         public string FCLSNAME3 { get; set; }
-
         /// <summary>
-        /// ºËËã¶ÔÏó±àÂë3
+        /// æ ¸ç®—å¯¹è±¡ç¼–ç 3
         /// </summary>
         [Column("FOBJID3")]
         [StringLength(50)]
         public string FOBJID3 { get; set; }
-
         /// <summary>
-        /// ºËËã¶ÔÏóÃû³Æ3
+        /// æ ¸ç®—å¯¹è±¡åç§°3
         /// </summary>
         [Column("FOBJNAME3")]
         [StringLength(200)]
         public string FOBJNAME3 { get; set; }
-
         /// <summary>
-        /// ºËËãÀà±ğ4
+        /// æ ¸ç®—ç±»åˆ«4
         /// </summary>
         [Column("FCLSNAME4")]
         [StringLength(50)]
         public string FCLSNAME4 { get; set; }
-
         /// <summary>
-        /// ºËËã¶ÔÏó±àÂë4
+        /// æ ¸ç®—å¯¹è±¡ç¼–ç 4
         /// </summary>
         [Column("FOBJID4")]
         [StringLength(50)]
         public string FOBJID4 { get; set; }
-
         /// <summary>
-        /// ºËËã¶ÔÏóÃû³Æ4
+        /// æ ¸ç®—å¯¹è±¡åç§°4
         /// </summary>
         [Column("FOBJNAME4")]
         [StringLength(200)]
         public string FOBJNAME4 { get; set; }
-
         /// <summary>
-        /// ºËËãÀà±ğ5
+        /// æ ¸ç®—ç±»åˆ«5
         /// </summary>
         [Column("FCLSNAME5")]
         [StringLength(50)]
         public string FCLSNAME5 { get; set; }
-
         /// <summary>
-        /// ºËËã¶ÔÏó±àÂë5
+        /// æ ¸ç®—å¯¹è±¡ç¼–ç 5
         /// </summary>
         [Column("FOBJID5")]
         [StringLength(50)]
         public string FOBJID5 { get; set; }
-
         /// <summary>
-        /// ºËËã¶ÔÏóÃû³Æ5
+        /// æ ¸ç®—å¯¹è±¡åç§°5
         /// </summary>
         [Column("FOBJNAME5")]
         [StringLength(200)]
         public string FOBJNAME5 { get; set; }
-
         /// <summary>
-        /// ºËËãÀà±ğ6
+        /// æ ¸ç®—ç±»åˆ«6
         /// </summary>
         [Column("FCLSNAME6")]
         [StringLength(50)]
         public string FCLSNAME6 { get; set; }
-
         /// <summary>
-        /// ºËËã¶ÔÏó±àÂë6
+        /// æ ¸ç®—å¯¹è±¡ç¼–ç 6
         /// </summary>
         [Column("FOBJID6")]
         [StringLength(50)]
         public string FOBJID6 { get; set; }
-
         /// <summary>
-        /// ºËËã¶ÔÏóÃû³Æ6
+        /// æ ¸ç®—å¯¹è±¡åç§°6
         /// </summary>
         [Column("FOBJNAME6")]
         [StringLength(200)]
         public string FOBJNAME6 { get; set; }
-
         /// <summary>
-        /// ºËËãÀà±ğ7
+        /// æ ¸ç®—ç±»åˆ«7
         /// </summary>
         [Column("FCLSNAME7")]
         [StringLength(50)]
         public string FCLSNAME7 { get; set; }
-
         /// <summary>
-        /// ºËËã¶ÔÏó±àÂë7
+        /// æ ¸ç®—å¯¹è±¡ç¼–ç 7
         /// </summary>
         [Column("FOBJID7")]
         [StringLength(50)]
         public string FOBJID7 { get; set; }
-
         /// <summary>
-        /// ºËËã¶ÔÏóÃû³Æ7
+        /// æ ¸ç®—å¯¹è±¡åç§°7
         /// </summary>
         [Column("FOBJNAME7")]
         [StringLength(200)]
         public string FOBJNAME7 { get; set; }
-
         /// <summary>
-        /// ºËËãÀà±ğ8
+        /// æ ¸ç®—ç±»åˆ«8
         /// </summary>
         [Column("FCLSNAME8")]
         [StringLength(50)]
         public string FCLSNAME8 { get; set; }
-
         /// <summary>
-        /// ºËËã¶ÔÏó±àÂë8
+        /// æ ¸ç®—å¯¹è±¡ç¼–ç 8
         /// </summary>
         [Column("FOBJID8")]
         [StringLength(50)]
         public string FOBJID8 { get; set; }
-
         /// <summary>
-        /// ºËËã¶ÔÏóÃû³Æ8
+        /// æ ¸ç®—å¯¹è±¡åç§°8
         /// </summary>
         [Column("FOBJNAME8")]
         [StringLength(200)]
         public string FOBJNAME8 { get; set; }
-
         /// <summary>
-        /// ºËËãÀà±ğ9
+        /// æ ¸ç®—ç±»åˆ«9
         /// </summary>
         [Column("FCLSNAME9")]
         [StringLength(50)]
         public string FCLSNAME9 { get; set; }
-
         /// <summary>
-        /// ºËËã¶ÔÏó±àÂë9
+        /// æ ¸ç®—å¯¹è±¡ç¼–ç 9
         /// </summary>
         [Column("FOBJID9")]
         [StringLength(50)]
         public string FOBJID9 { get; set; }
-
         /// <summary>
-        /// ºËËã¶ÔÏóÃû³Æ9
+        /// æ ¸ç®—å¯¹è±¡åç§°9
         /// </summary>
         [Column("FOBJNAME9")]
         [StringLength(200)]
         public string FOBJNAME9 { get; set; }
-
         /// <summary>
-        /// ºËËãÀà±ğ10
+        /// æ ¸ç®—ç±»åˆ«10
         /// </summary>
         [Column("FCLSNAME10")]
         [StringLength(50)]
         public string FCLSNAME10 { get; set; }
-
         /// <summary>
-        /// ºËËã¶ÔÏó±àÂë10
+        /// æ ¸ç®—å¯¹è±¡ç¼–ç 10
         /// </summary>
         [Column("FOBJID10")]
         [StringLength(50)]
         public string FOBJID10 { get; set; }
-
         /// <summary>
-        /// ºËËã¶ÔÏóÃû³Æ10
+        /// æ ¸ç®—å¯¹è±¡åç§°10
         /// </summary>
         [Column("FOBJNAME10")]
         [StringLength(200)]
         public string FOBJNAME10 { get; set; }
-
         /// <summary>
-        /// ºËËãÀà±ğ11
+        /// æ ¸ç®—ç±»åˆ«11
         /// </summary>
         [Column("FCLSNAME11")]
         [StringLength(50)]
         public string FCLSNAME11 { get; set; }
-
         /// <summary>
-        /// ºËËã¶ÔÏó±àÂë11
+        /// æ ¸ç®—å¯¹è±¡ç¼–ç 11
         /// </summary>
         [Column("FOBJID11")]
         [StringLength(50)]
         public string FOBJID11 { get; set; }
-
         /// <summary>
-        /// ºËËã¶ÔÏóÃû³Æ11
+        /// æ ¸ç®—å¯¹è±¡åç§°11
         /// </summary>
         [Column("FOBJNAME11")]
         [StringLength(200)]
         public string FOBJNAME11 { get; set; }
-
         /// <summary>
-        /// ºËËãÀà±ğ12
+        /// æ ¸ç®—ç±»åˆ«12
         /// </summary>
         [Column("FCLSNAME12")]
         [StringLength(50)]
         public string FCLSNAME12 { get; set; }
-
         /// <summary>
-        /// ºËËã¶ÔÏó±àÂë12
+        /// æ ¸ç®—å¯¹è±¡ç¼–ç 12
         /// </summary>
         [Column("FOBJID12")]
         [StringLength(50)]
         public string FOBJID12 { get; set; }
-
         /// <summary>
-        /// ºËËã¶ÔÏóÃû³Æ12
+        /// æ ¸ç®—å¯¹è±¡åç§°12
         /// </summary>
         [Column("FOBJNAME12")]
         [StringLength(200)]
         public string FOBJNAME12 { get; set; }
-
         /// <summary>
-        /// ºËËãÀà±ğ13
+        /// æ ¸ç®—ç±»åˆ«13
         /// </summary>
         [Column("FCLSNAME13")]
         [StringLength(50)]
         public string FCLSNAME13 { get; set; }
-
         /// <summary>
-        /// ºËËã¶ÔÏó±àÂë13
+        /// æ ¸ç®—å¯¹è±¡ç¼–ç 13
         /// </summary>
         [Column("FOBJID13")]
         [StringLength(50)]
         public string FOBJID13 { get; set; }
-
         /// <summary>
-        /// ºËËã¶ÔÏóÃû³Æ13
+        /// æ ¸ç®—å¯¹è±¡åç§°13
         /// </summary>
         [Column("FOBJNAME13")]
         [StringLength(200)]
         public string FOBJNAME13 { get; set; }
-
         /// <summary>
-        /// ºËËãÀà±ğ14
+        /// æ ¸ç®—ç±»åˆ«14
         /// </summary>
         [Column("FCLSNAME14")]
         [StringLength(50)]
         public string FCLSNAME14 { get; set; }
-
         /// <summary>
-        /// ºËËã¶ÔÏó±àÂë14
+        /// æ ¸ç®—å¯¹è±¡ç¼–ç 14
         /// </summary>
         [Column("FOBJID14")]
         [StringLength(50)]
         public string FOBJID14 { get; set; }
-
         /// <summary>
-        /// ºËËã¶ÔÏóÃû³Æ14
+        /// æ ¸ç®—å¯¹è±¡åç§°14
         /// </summary>
         [Column("FOBJNAME14")]
         [StringLength(200)]
         public string FOBJNAME14 { get; set; }
-
         /// <summary>
-        /// ºËËãÀà±ğ15
+        /// æ ¸ç®—ç±»åˆ«15
         /// </summary>
         [Column("FCLSNAME15")]
         [StringLength(50)]
         public string FCLSNAME15 { get; set; }
-
         /// <summary>
-        /// ºËËã¶ÔÏó±àÂë15
+        /// æ ¸ç®—å¯¹è±¡ç¼–ç 15
         /// </summary>
         [Column("FOBJID15")]
         [StringLength(50)]
         public string FOBJID15 { get; set; }
-
         /// <summary>
-        /// ºËËã¶ÔÏóÃû³Æ15
+        /// æ ¸ç®—å¯¹è±¡åç§°15
         /// </summary>
         [Column("FOBJNAME15")]
         [StringLength(200)]
         public string FOBJNAME15 { get; set; }
-
         /// <summary>
-        /// ¿Í»§²ÆÎñ±àÂë
+        /// å®¢æˆ·è´¢åŠ¡ç¼–ç 
         /// </summary>
         [Column("FTRANSID")]
-        [Comment("¿Í»§²ÆÎñ±àÂë")]
+        [Comment("å®¢æˆ·è´¢åŠ¡ç¼–ç ")]
         [StringLength(50)]
         public string FTRANSID { get; set; }
-
         /// <summary>
-        /// ±Ò±ğ´úÂë
+        /// å¸åˆ«ä»£ç 
         /// </summary>
         [Column("FCYID")]
-        [Comment("±Ò±ğ´úÂë")]
+        [Comment("å¸åˆ«ä»£ç ")]
         [StringLength(10)]
         public string FCYID { get; set; }
-
         /// <summary>
-        /// »ãÂÊ
+        /// æ±‡ç‡
         /// </summary>
         [Column("FEXCHRATE")]
-        [Comment("»ãÂÊ")]
+        [Comment("æ±‡ç‡")]
         [Precision(18, 7)]
         public decimal FEXCHRATE { get; set; }
-
         /// <summary>
-        /// ½è´û·½Ïò£º0-½è·½£¬1-´û·½
+        /// å€Ÿè´·æ–¹å‘ï¼š0-å€Ÿæ–¹ï¼Œ1-è´·æ–¹
         /// </summary>
         [Column("FDC")]
-        [Comment("½è´û·½Ïò£º0-½è·½£¬1-´û·½")]
+        [Comment("å€Ÿè´·æ–¹å‘ï¼š0-å€Ÿæ–¹ï¼Œ1-è´·æ–¹")]
         public int FDC { get; set; }
-
         /// <summary>
-        /// Íâ±Ò½ğ¶î
+        /// å¤–å¸é‡‘é¢
         /// </summary>
         [Column("FFCYAMT")]
-        [Comment("Íâ±Ò½ğ¶î")]
+        [Comment("å¤–å¸é‡‘é¢")]
         [Precision(18, 5)]
         public decimal? FFCYAMT { get; set; }
-
         /// <summary>
-        /// ÊıÁ¿
+        /// æ•°é‡
         /// </summary>
         [Column("FQTY")]
-        [Comment("ÊıÁ¿")]
+        [Comment("æ•°é‡")]
         [Precision(18, 5)]
         public decimal? FQTY { get; set; }
-
         /// <summary>
-        /// µ¥¼Û
+        /// å•ä»·
         /// </summary>
         [Column("FPRICE")]
-        [Comment("µ¥¼Û")]
+        [Comment("å•ä»·")]
         [Precision(18, 5)]
         public decimal? FPRICE { get; set; }
-
         /// <summary>
-        /// ½ğ¶î½è·½
+        /// é‡‘é¢å€Ÿæ–¹
         /// </summary>
         [Column("FDEBIT")]
-        [Comment("½ğ¶î½è·½")]
+        [Comment("é‡‘é¢å€Ÿæ–¹")]
         [Precision(18, 5)]
         public decimal? FDEBIT { get; set; }
-
         /// <summary>
-        /// ½ğ¶î´û·½
+        /// é‡‘é¢è´·æ–¹
         /// </summary>
         [Column("FCREDIT")]
-        [Comment("½ğ¶î´û·½")]
+        [Comment("é‡‘é¢è´·æ–¹")]
         [Precision(18, 5)]
         public decimal? FCREDIT { get; set; }
-
         /// <summary>
-        /// ½áËã·½Ê½´úÂë
+        /// ç»“ç®—æ–¹å¼ä»£ç 
         /// </summary>
         [Column("FSETTLCODE")]
-        [Comment("½áËã·½Ê½´úÂë")]
+        [Comment("ç»“ç®—æ–¹å¼ä»£ç ")]
         [StringLength(20)]
         public string FSETTLCODE { get; set; }
-
         /// <summary>
-        /// ½áËãºÅ
+        /// ç»“ç®—å·
         /// </summary>
         [Column("FSETTLENO")]
-        [Comment("½áËãºÅ")]
+        [Comment("ç»“ç®—å·")]
         [StringLength(50)]
         public string FSETTLENO { get; set; }
-
         /// <summary>
-        /// ÖÆµ¥ÈËĞÕÃû
+        /// åˆ¶å•äººå§“å
         /// </summary>
         [Column("FPREPARE")]
-        [Comment("ÖÆµ¥ÈËĞÕÃû")]
+        [Comment("åˆ¶å•äººå§“å")]
         [StringLength(50)]
         public string FPREPARE { get; set; }
-
         /// <summary>
-        /// Ö§¸¶
+        /// æ”¯ä»˜
         /// </summary>
         [Column("FPAY")]
-        [Comment("Ö§¸¶")]
+        [Comment("æ”¯ä»˜")]
         [StringLength(50)]
         public string FPAY { get; set; }
-
         /// <summary>
-        /// ³öÄÉÈËĞÕÃû
+        /// å‡ºçº³äººå§“å
         /// </summary>
         [Column("FCASH")]
-        [Comment("³öÄÉÈËĞÕÃû")]
+        [Comment("å‡ºçº³äººå§“å")]
         [StringLength(50)]
         public string FCASH { get; set; }
-
         /// <summary>
-        /// ¹ıÕÊÈËĞÕÃû
+        /// è¿‡å¸äººå§“å
         /// </summary>
         [Column("FPOSTER")]
-        [Comment("¹ıÕÊÈËĞÕÃû")]
+        [Comment("è¿‡å¸äººå§“å")]
         [StringLength(50)]
         public string FPOSTER { get; set; }
-
         /// <summary>
-        /// ÉóºËÈËĞÕÃû
+        /// å®¡æ ¸äººå§“å
         /// </summary>
         [Column("FCHECKER")]
-        [Comment("ÉóºËÈËĞÕÃû")]
+        [Comment("å®¡æ ¸äººå§“å")]
         [StringLength(50)]
         public string FCHECKER { get; set; }
-
         /// <summary>
-        /// ¸½µ¥¾İÊı
+        /// é™„å•æ®æ•°
         /// </summary>
         [Column("FATTCHMENT")]
-        [Comment("¸½µ¥¾İÊı")]
+        [Comment("é™„å•æ®æ•°")]
         public int? FATTCHMENT { get; set; }
-
         /// <summary>
-        /// ¹ıÕÊ×´Ì¬
+        /// è¿‡å¸çŠ¶æ€
         /// </summary>
         [Column("FPOSTED")]
-        [Comment("¹ıÕÊ×´Ì¬")]
+        [Comment("è¿‡å¸çŠ¶æ€")]
         public int? FPOSTED { get; set; }
-
         /// <summary>
-        /// Ä£¿é
+        /// æ¨¡å—
         /// </summary>
         [Column("FMODULE")]
-        [Comment("Ä£¿é")]
+        [Comment("æ¨¡å—")]
         [StringLength(50)]
         public string FMODULE { get; set; }
-
         /// <summary>
-        /// É¾³ı±ê¼Ç
+        /// åˆ é™¤æ ‡è®°
         /// </summary>
         [Column("FDELETED")]
-        [Comment("É¾³ı±ê¼Ç")]
+        [Comment("åˆ é™¤æ ‡è®°")]
         public bool? FDELETED { get; set; }
-
         /// <summary>
-        /// ĞòÁĞºÅ
+        /// åºåˆ—å·
         /// </summary>
         [Column("FSERIALNO")]
-        [Comment("ĞòÁĞºÅ")]
+        [Comment("åºåˆ—å·")]
         [StringLength(50)]
         public string FSERIALNO { get; set; }
-
         /// <summary>
-        /// µ¥Î»Ãû³Æ
+        /// å•ä½åç§°
         /// </summary>
         [Column("FUNITNAME")]
-        [Comment("µ¥Î»Ãû³Æ")]
+        [Comment("å•ä½åç§°")]
         [StringLength(100)]
         public string FUNITNAME { get; set; }
-
         /// <summary>
-        /// ²Î¿¼
+        /// å‚è€ƒ
         /// </summary>
         [Column("FREFERENCE")]
-        [Comment("²Î¿¼")]
+        [Comment("å‚è€ƒ")]
         [StringLength(200)]
         public string FREFERENCE { get; set; }
-
         /// <summary>
-        /// ÏÖ½ğÁ÷
+        /// ç°é‡‘æµ
         /// </summary>
         [Column("FCASHFLOW")]
-        [Comment("ÏÖ½ğÁ÷")]
+        [Comment("ç°é‡‘æµ")]
         [StringLength(50)]
         public string FCASHFLOW { get; set; }
-
         /// <summary>
-        /// ´¦ÀíÕß
+        /// å¤„ç†è€…
         /// </summary>
         [Column("FHANDLER")]
-        [Comment("´¦ÀíÕß")]
+        [Comment("å¤„ç†è€…")]
         [StringLength(50)]
         public string FHANDLER { get; set; }
-
         /// <summary>
-        /// Éú³É½ğµûÆ¾Ö¤¼ÇÂ¼µÄÖÖ×ÓÊı¾İ
+        /// ç”Ÿæˆé‡‘è¶å‡­è¯è®°å½•çš„ç§å­æ•°æ®
         /// </summary>
-        /// <param name="count">ÒªÉú³ÉµÄ¼ÇÂ¼ÊıÁ¿</param>
-        /// <returns>½ğµûÆ¾Ö¤¼ÇÂ¼µÄ¼¯ºÏ</returns>
+        /// <param name="count">è¦ç”Ÿæˆçš„è®°å½•æ•°é‡</param>
+        /// <returns>é‡‘è¶å‡­è¯è®°å½•çš„é›†åˆ</returns>
         public static IEnumerable<KingdeeVoucher> GenerateSeedData(int count)
         {
             if (count <= 0)
-                throw new ArgumentException("Éú³ÉµÄ¼ÇÂ¼ÊıÁ¿±ØĞë´óÓÚÁã", nameof(count));
-
+                throw new ArgumentException("ç”Ÿæˆçš„è®°å½•æ•°é‡å¿…é¡»å¤§äºé›¶", nameof(count));
             var random = new Random();
             var result = new List<KingdeeVoucher>(count);
-
-            // ¶¨ÒåÒ»Ğ©Ñù±¾Êı¾İ£¬ÓÃÓÚËæ»úÑ¡Ôñ
+            // å®šä¹‰ä¸€äº›æ ·æœ¬æ•°æ®ï¼Œç”¨äºéšæœºé€‰æ‹©
             string[] accountIds = { "1001", "1002", "2001", "2002", "5001", "6001" };
-            string[] groups = { "¼Ç", "¸¶", "ÊÕ", "×ª" };
-            string[] classNames = { "¿Í»§", "²¿ÃÅ", "Ô±¹¤", "ÏîÄ¿", "µØÇø", "ÒøĞĞÕË»§", "¹©Ó¦ÉÌ" };
+            string[] groups = { "è®°", "ä»˜", "æ”¶", "è½¬" };
+            string[] classNames = { "å®¢æˆ·", "éƒ¨é—¨", "å‘˜å·¥", "é¡¹ç›®", "åœ°åŒº", "é“¶è¡Œè´¦æˆ·", "ä¾›åº”å•†" };
             string[] objIds = { "C001", "C002", "D001", "D002", "E001", "E002", "P001", "P002" };
-            string[] objNames = { "»ªÎª¿Æ¼¼", "ÌÚÑ¶¹«Ë¾", "ÑĞ·¢²¿", "ÊĞ³¡²¿", "ÀîÃ÷", "ÕÅ»ª", "ERPÏîÄ¿", "CRMÏîÄ¿" };
+            string[] objNames = { "åä¸ºç§‘æŠ€", "è…¾è®¯å…¬å¸", "ç ”å‘éƒ¨", "å¸‚åœºéƒ¨", "ææ˜", "å¼ å", "ERPé¡¹ç›®", "CRMé¡¹ç›®" };
             string[] currencies = { "RMB", "USD", "EUR", "GBP", "JPY" };
-            string[] handlers = { "Íõ¾­Àí", "Àî²ÆÎñ", "ÕÅ×Ü¼à", "³ÂÖ÷¹Ü" };
-
-            var baseDate = DateTime.Now.Date.AddDays(-30); // »ù×¼ÈÕÆÚÎªµ±Ç°ÈÕÆÚÍùÇ°30Ìì
-
+            string[] handlers = { "ç‹ç»ç†", "æè´¢åŠ¡", "å¼ æ€»ç›‘", "é™ˆä¸»ç®¡" };
+            var baseDate = DateTime.Now.Date.AddDays(-30); // åŸºå‡†æ—¥æœŸä¸ºå½“å‰æ—¥æœŸå¾€å‰30å¤©
             for (int i = 0; i < count; i++)
             {
-                var voucherDate = baseDate.AddDays(random.Next(30)); // Ëæ»úÆ¾Ö¤ÈÕÆÚ(×î½ü30ÌìÄÚ)
-                var transDate = voucherDate.AddDays(-random.Next(5)); // ½»Ò×ÈÕÆÚÍ¨³£ÔÚÆ¾Ö¤ÈÕÆÚÖ®Ç°
-                var period = Math.Floor((decimal)voucherDate.Month) + (decimal)voucherDate.Day / 100; // ÆÚ¼ä£¬ÀıÈç5ÔÂ10ÈÕÎª5.10
-
-                // Ëæ»ú½ğ¶î£¬±£ÁôÁ½Î»Ğ¡Êı
+                var voucherDate = baseDate.AddDays(random.Next(30)); // éšæœºå‡­è¯æ—¥æœŸ(æœ€è¿‘30å¤©å†…)
+                var transDate = voucherDate.AddDays(-random.Next(5)); // äº¤æ˜“æ—¥æœŸé€šå¸¸åœ¨å‡­è¯æ—¥æœŸä¹‹å‰
+                var period = Math.Floor((decimal)voucherDate.Month) + (decimal)voucherDate.Day / 100; // æœŸé—´ï¼Œä¾‹å¦‚5æœˆ10æ—¥ä¸º5.10
+                // éšæœºé‡‘é¢ï¼Œä¿ç•™ä¸¤ä½å°æ•°
                 var amount = Math.Round((decimal)(random.NextDouble() * 10000 + 100), 2);
-                // Ëæ»ú¾ö¶¨ÊÇ½è·½»¹ÊÇ´û·½
+                // éšæœºå†³å®šæ˜¯å€Ÿæ–¹è¿˜æ˜¯è´·æ–¹
                 var isDC = random.Next(2);
-                // ÏÈÑ¡Ôñ±ÒÖÖ
+                // å…ˆé€‰æ‹©å¸ç§
                 var currency = currencies[random.Next(currencies.Length)];
-                // ¸ù¾İ±ÒÖÖÈ·¶¨»ãÂÊ
+                // æ ¹æ®å¸ç§ç¡®å®šæ±‡ç‡
                 var exchangeRate = currency == "RMB" ? 1.0m : Math.Round((decimal)(random.NextDouble() * 2 + 5), 4);
-
                 var voucher = new KingdeeVoucher
                 {
-                    // ÏµÍ³»á×Ô¶¯Éú³ÉId
-                    FDATE = voucherDate, // Æ¾µ¥ÈÕÆÚ
-                    FTRANSDATE = transDate, // Æ¾Ö¤ÈÕÆÚ
-                    FPERIOD = period, // ÆÚ¼ä
-                    FGROUP = groups[random.Next(groups.Length)], // Ëæ»úÆ¾Ö¤×Ö
-                    FNUM = i + 1, // Æ¾Ö¤ºÅ£¬´Ó1¿ªÊ¼µİÔö
-                    FENTRYID = i + 1, // ¼ÇÂ¼ºÅ
-                    FEXP = $"ÒµÎñÕªÒª{i + 1} - {objNames[random.Next(objNames.Length)]}µÄ{random.Next(1000, 9999)}ºÅÒµÎñ", // ÕªÒª
-                    FACCTID = accountIds[random.Next(accountIds.Length)], // Ëæ»ú¿ÆÄ¿´úÂë
-
-                    // ºËËãÎ¬¶È1 - Í¨³£ÊÇ¿Í»§
-                    FCLSNAME1 = classNames[0], // ¿Í»§
-                    FOBJID1 = objIds[random.Next(2)], // Ëæ»ú¿Í»§´úÂë
-                    FOBJNAME1 = objNames[random.Next(2)], // Ëæ»ú¿Í»§Ãû³Æ
-
-                    // ºËËãÎ¬¶È2 - Í¨³£ÊÇ²¿ÃÅ
-                    FCLSNAME2 = classNames[1], // ²¿ÃÅ
-                    FOBJID2 = objIds[2 + random.Next(2)], // Ëæ»ú²¿ÃÅ´úÂë
-                    FOBJNAME2 = objNames[2 + random.Next(2)], // Ëæ»ú²¿ÃÅÃû³Æ
-
-                    // ¿Í»§½»Ò×ºÅ
-                    FTRANSID = $"TX{DateTime.Now:yyyyMMdd}{i + 1:D4}", // Éú³É½»Ò×±àºÅ
-
-                    // ±ÒÖÖĞÅÏ¢
-                    FCYID = currency, // Ê¹ÓÃÌáÇ°Ñ¡ÔñµÄ±ÒÖÖ
-                    FEXCHRATE = exchangeRate, // Ê¹ÓÃÌáÇ°¼ÆËãµÄ»ãÂÊ
-
-                    // ½è´û·½Ïò
-                    FDC = isDC, // 0-½è·½£¬1-´û·½
-
-                    // ½ğ¶îĞÅÏ¢
-                    FFCYAMT = amount, // Ô­±Ò½ğ¶î
-                    FQTY = random.Next(1, 10), // ÊıÁ¿£¬1-10Ö®¼ä
-                    FPRICE = Math.Round(amount / (decimal)random.Next(1, 10), 2), // µ¥¼Û
-
-                    // ¸ù¾İ½è´û·½ÏòÉèÖÃ½ğ¶î
-                    FDEBIT = isDC == 0 ? amount : 0, // ½è·½½ğ¶î
-                    FCREDIT = isDC == 1 ? amount : 0, // ´û·½½ğ¶î
-
-                    // ½áËãĞÅÏ¢
-                    FSETTLCODE = $"JS{random.Next(10000, 99999)}", // ½áËã·½Ê½´úÂë
-                    FSETTLENO = $"JH{DateTime.Now:yyyyMMdd}{i + 1:D4}", // ½áËãºÅ
-
-                    // ²Ù×÷ÈËÔ±ĞÅÏ¢
-                    FPREPARE = handlers[random.Next(handlers.Length)], // ÖÆµ¥ÈËÔ±
-                    FPAY = handlers[random.Next(handlers.Length)], // Ö§¸¶
-                    FCASH = handlers[random.Next(handlers.Length)], // ÏÖ½ğ²Ù×÷ÈË
-                    FPOSTER = handlers[random.Next(handlers.Length)], // ¹ıÕË²Ù×÷ÈË
-                    FCHECKER = handlers[random.Next(handlers.Length)], // ÉóºË²Ù×÷ÈË
-
-                    // ÆäËûĞÅÏ¢
-                    FATTCHMENT = random.Next(1, 5), // ¸½¼şÕÅÊı
-                    FPOSTED = random.Next(0, 2), // ¹ıÕË×´Ì¬£¬0»ò1
-                    FMODULE = "GL", // Ä£¿é£¬GLÎª×ÜÕË
-                    FDELETED = false, // ·ÇÉ¾³ı
-                    FSERIALNO = $"SN{DateTime.Now:yyyyMMdd}{i + 1:D6}", // Á÷Ë®ºÅ
-                    FUNITNAME = "Æª", // µ¥Î»Ãû³Æ
-                    FREFERENCE = $"REF{i + 1:D6}", // ²Î¿¼±àºÅ
-                    FCASHFLOW = $"CSF{random.Next(1000, 9999)}", // ÏÖ½ğÁ÷±àºÅ
-                    FHANDLER = handlers[random.Next(handlers.Length)] // ¾­ÊÖÈË
+                    // ç³»ç»Ÿä¼šè‡ªåŠ¨ç”ŸæˆId
+                    FDATE = voucherDate, // å‡­å•æ—¥æœŸ
+                    FTRANSDATE = transDate, // å‡­è¯æ—¥æœŸ
+                    FPERIOD = period, // æœŸé—´
+                    FGROUP = groups[random.Next(groups.Length)], // éšæœºå‡­è¯å­—
+                    FNUM = i + 1, // å‡­è¯å·ï¼Œä»1å¼€å§‹é€’å¢
+                    FENTRYID = i + 1, // è®°å½•å·
+                    FEXP = $"ä¸šåŠ¡æ‘˜è¦{i + 1} - {objNames[random.Next(objNames.Length)]}çš„{random.Next(1000, 9999)}å·ä¸šåŠ¡", // æ‘˜è¦
+                    FACCTID = accountIds[random.Next(accountIds.Length)], // éšæœºç§‘ç›®ä»£ç 
+                    // æ ¸ç®—ç»´åº¦1 - é€šå¸¸æ˜¯å®¢æˆ·
+                    FCLSNAME1 = classNames[0], // å®¢æˆ·
+                    FOBJID1 = objIds[random.Next(2)], // éšæœºå®¢æˆ·ä»£ç 
+                    FOBJNAME1 = objNames[random.Next(2)], // éšæœºå®¢æˆ·åç§°
+                    // æ ¸ç®—ç»´åº¦2 - é€šå¸¸æ˜¯éƒ¨é—¨
+                    FCLSNAME2 = classNames[1], // éƒ¨é—¨
+                    FOBJID2 = objIds[2 + random.Next(2)], // éšæœºéƒ¨é—¨ä»£ç 
+                    FOBJNAME2 = objNames[2 + random.Next(2)], // éšæœºéƒ¨é—¨åç§°
+                    // å®¢æˆ·äº¤æ˜“å·
+                    FTRANSID = $"TX{DateTime.Now:yyyyMMdd}{i + 1:D4}", // ç”Ÿæˆäº¤æ˜“ç¼–å·
+                    // å¸ç§ä¿¡æ¯
+                    FCYID = currency, // ä½¿ç”¨æå‰é€‰æ‹©çš„å¸ç§
+                    FEXCHRATE = exchangeRate, // ä½¿ç”¨æå‰è®¡ç®—çš„æ±‡ç‡
+                    // å€Ÿè´·æ–¹å‘
+                    FDC = isDC, // 0-å€Ÿæ–¹ï¼Œ1-è´·æ–¹
+                    // é‡‘é¢ä¿¡æ¯
+                    FFCYAMT = amount, // åŸå¸é‡‘é¢
+                    FQTY = random.Next(1, 10), // æ•°é‡ï¼Œ1-10ä¹‹é—´
+                    FPRICE = Math.Round(amount / (decimal)random.Next(1, 10), 2), // å•ä»·
+                    // æ ¹æ®å€Ÿè´·æ–¹å‘è®¾ç½®é‡‘é¢
+                    FDEBIT = isDC == 0 ? amount : 0, // å€Ÿæ–¹é‡‘é¢
+                    FCREDIT = isDC == 1 ? amount : 0, // è´·æ–¹é‡‘é¢
+                    // ç»“ç®—ä¿¡æ¯
+                    FSETTLCODE = $"JS{random.Next(10000, 99999)}", // ç»“ç®—æ–¹å¼ä»£ç 
+                    FSETTLENO = $"JH{DateTime.Now:yyyyMMdd}{i + 1:D4}", // ç»“ç®—å·
+                    // æ“ä½œäººå‘˜ä¿¡æ¯
+                    FPREPARE = handlers[random.Next(handlers.Length)], // åˆ¶å•äººå‘˜
+                    FPAY = handlers[random.Next(handlers.Length)], // æ”¯ä»˜
+                    FCASH = handlers[random.Next(handlers.Length)], // ç°é‡‘æ“ä½œäºº
+                    FPOSTER = handlers[random.Next(handlers.Length)], // è¿‡è´¦æ“ä½œäºº
+                    FCHECKER = handlers[random.Next(handlers.Length)], // å®¡æ ¸æ“ä½œäºº
+                    // å…¶ä»–ä¿¡æ¯
+                    FATTCHMENT = random.Next(1, 5), // é™„ä»¶å¼ æ•°
+                    FPOSTED = random.Next(0, 2), // è¿‡è´¦çŠ¶æ€ï¼Œ0æˆ–1
+                    FMODULE = "GL", // æ¨¡å—ï¼ŒGLä¸ºæ€»è´¦
+                    FDELETED = false, // éåˆ é™¤
+                    FSERIALNO = $"SN{DateTime.Now:yyyyMMdd}{i + 1:D6}", // æµæ°´å·
+                    FUNITNAME = "ç¯‡", // å•ä½åç§°
+                    FREFERENCE = $"REF{i + 1:D6}", // å‚è€ƒç¼–å·
+                    FCASHFLOW = $"CSF{random.Next(1000, 9999)}", // ç°é‡‘æµç¼–å·
+                    FHANDLER = handlers[random.Next(handlers.Length)] // ç»æ‰‹äºº
                 };
-
                 result.Add(voucher);
             }
-
             return result;
         }
-
     }
 }

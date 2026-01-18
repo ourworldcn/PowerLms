@@ -1,12 +1,11 @@
-/*
+ï»¿/*
  * OwAppLogView.cs
- * °æÈ¨ËùÓĞ (c) 2023 PowerLms. ±£ÁôËùÓĞÈ¨Àû¡£
- * ´ËÎÄ¼ş°üº¬Ó¦ÓÃÈÕÖ¾ÊÓÍ¼ÊµÌå¶¨Òå¡£
- * ×÷Õß: OW
- * ´´½¨ÈÕÆÚ: 2023-12-11
- * ĞŞ¸ÄÈÕÆÚ: 2025-03-06
+ * ç‰ˆæƒæ‰€æœ‰ (c) 2023 PowerLms. ä¿ç•™æ‰€æœ‰æƒåˆ©ã€‚
+ * æ­¤æ–‡ä»¶åŒ…å«åº”ç”¨æ—¥å¿—è§†å›¾å®ä½“å®šä¹‰ã€‚
+ * ä½œè€…: OW
+ * åˆ›å»ºæ—¥æœŸ: 2023-12-11
+ * ä¿®æ”¹æ—¥æœŸ: 2025-03-06
  */
-
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using OW.Data;
@@ -14,96 +13,80 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json;
-
 namespace PowerLms.Data
 {
     /// <summary>
-    /// Ó¦ÓÃÈÕÖ¾ÊÓÍ¼¶ÔÏó£¬ÁªºÏOwAppLogStoreºÍOwAppLogItemStoreµÄÊı¾İ¡£
+    /// åº”ç”¨æ—¥å¿—è§†å›¾å¯¹è±¡ï¼Œè”åˆOwAppLogStoreå’ŒOwAppLogItemStoreçš„æ•°æ®ã€‚
     /// </summary>
     [Keyless]
     public class OwAppLogView
     {
         /// <summary>
-        /// Ó¦ÓÃÈÕÖ¾ÏêÏ¸ĞÅÏ¢Id¡£
+        /// åº”ç”¨æ—¥å¿—è¯¦ç»†ä¿¡æ¯Idã€‚
         /// </summary>
         public Guid Id { get; set; }
-
         /// <summary>
-        /// ÈÕÖ¾ÀàĞÍID¡£
+        /// æ—¥å¿—ç±»å‹IDã€‚
         /// </summary>
         public Guid TypeId { get; set; }
-
         /// <summary>
-        /// ÈÕÖ¾¼¶±ğ¡£
-        /// Trace (0)£º°üº¬×îÏêÏ¸ÏûÏ¢µÄÈÕÖ¾£¬¿ÉÄÜ°üº¬Ãô¸ĞÊı¾İ£¬Ä¬ÈÏ½ûÓÃ£¬²»Ó¦ÔÚÉú²ú»·¾³ÖĞÆôÓÃ¡£
-        /// Debug (1)£ºÓÃÓÚ¿ª·¢¹ı³ÌÖĞµÄ½»»¥Ê½µ÷²éÈÕÖ¾£¬°üº¬¶Ôµ÷ÊÔÓĞÓÃµÄĞÅÏ¢£¬ÎŞ³¤ÆÚ¼ÛÖµ¡£
-        /// Information (2)£º¸ú×ÙÓ¦ÓÃ³ÌĞò³£¹æÁ÷µÄÈÕÖ¾£¬¾ßÓĞ³¤ÆÚ¼ÛÖµ¡£
-        /// Warning (3)£ºÍ»³öÏÔÊ¾Òì³£»òÒâÍâÊÂ¼şµÄÈÕÖ¾£¬²»»áµ¼ÖÂÓ¦ÓÃ³ÌĞòÍ£Ö¹¡£
-        /// Error (4)£ºµ±Ç°Ö´ĞĞÁ÷Òò¹ÊÕÏ¶øÍ£Ö¹Ê±µÄÈÕÖ¾£¬Ö¸Ê¾µ±Ç°»î¶¯ÖĞµÄ¹ÊÕÏ¡£
-        /// Critical (5)£ºÃèÊö²»¿É»Ö¸´µÄÓ¦ÓÃ³ÌĞò/ÏµÍ³±ÀÀ£»òĞèÒªÁ¢¼´×¢ÒâµÄÔÖÄÑĞÔ¹ÊÕÏµÄÈÕÖ¾¡£
-        /// None (6)£º²»ÓÃÓÚĞ´ÈëÈÕÖ¾ÏûÏ¢£¬Ö¸¶¨ÈÕÖ¾¼ÇÂ¼Àà±ğ²»Ó¦Ğ´ÈëÈÎºÎÏûÏ¢¡£¡£
+        /// æ—¥å¿—çº§åˆ«ã€‚
+        /// Trace (0)ï¼šåŒ…å«æœ€è¯¦ç»†æ¶ˆæ¯çš„æ—¥å¿—ï¼Œå¯èƒ½åŒ…å«æ•æ„Ÿæ•°æ®ï¼Œé»˜è®¤ç¦ç”¨ï¼Œä¸åº”åœ¨ç”Ÿäº§ç¯å¢ƒä¸­å¯ç”¨ã€‚
+        /// Debug (1)ï¼šç”¨äºå¼€å‘è¿‡ç¨‹ä¸­çš„äº¤äº’å¼è°ƒæŸ¥æ—¥å¿—ï¼ŒåŒ…å«å¯¹è°ƒè¯•æœ‰ç”¨çš„ä¿¡æ¯ï¼Œæ— é•¿æœŸä»·å€¼ã€‚
+        /// Information (2)ï¼šè·Ÿè¸ªåº”ç”¨ç¨‹åºå¸¸è§„æµçš„æ—¥å¿—ï¼Œå…·æœ‰é•¿æœŸä»·å€¼ã€‚
+        /// Warning (3)ï¼šçªå‡ºæ˜¾ç¤ºå¼‚å¸¸æˆ–æ„å¤–äº‹ä»¶çš„æ—¥å¿—ï¼Œä¸ä¼šå¯¼è‡´åº”ç”¨ç¨‹åºåœæ­¢ã€‚
+        /// Error (4)ï¼šå½“å‰æ‰§è¡Œæµå› æ•…éšœè€Œåœæ­¢æ—¶çš„æ—¥å¿—ï¼ŒæŒ‡ç¤ºå½“å‰æ´»åŠ¨ä¸­çš„æ•…éšœã€‚
+        /// Critical (5)ï¼šæè¿°ä¸å¯æ¢å¤çš„åº”ç”¨ç¨‹åº/ç³»ç»Ÿå´©æºƒæˆ–éœ€è¦ç«‹å³æ³¨æ„çš„ç¾éš¾æ€§æ•…éšœçš„æ—¥å¿—ã€‚
+        /// None (6)ï¼šä¸ç”¨äºå†™å…¥æ—¥å¿—æ¶ˆæ¯ï¼ŒæŒ‡å®šæ—¥å¿—è®°å½•ç±»åˆ«ä¸åº”å†™å…¥ä»»ä½•æ¶ˆæ¯ã€‚ã€‚
         /// </summary>
         public LogLevel LogLevel { get; set; }
-
         /// <summary>
-        /// ¸ñÊ½×Ö·û´®¡£Èç"ÓÃ»§{LoginName}µÇÂ¼³É¹¦"¡£
+        /// æ ¼å¼å­—ç¬¦ä¸²ã€‚å¦‚"ç”¨æˆ·{LoginName}ç™»å½•æˆåŠŸ"ã€‚
         /// </summary>
         public string FormatString { get; set; }
-        
         /// <summary>
-        /// Json×Ö·û´®£¬´æ´¢²ÎÊı×Öµä¡£
+        /// Jsonå­—ç¬¦ä¸²ï¼Œå­˜å‚¨å‚æ•°å­—å…¸ã€‚
         /// </summary>
         public string ParamstersJson { get; set; }
-        
         /// <summary>
-        /// ¸ÃÌõÄ¿¼ÇÂ¼µÄ¶îÍâµÄ¶ş½øÖÆĞÅÏ¢¡£
+        /// è¯¥æ¡ç›®è®°å½•çš„é¢å¤–çš„äºŒè¿›åˆ¶ä¿¡æ¯ã€‚
         /// </summary>
         public byte[] ExtraBytes { get; set; }
-        
         /// <summary>
-        /// ¸ÃÈÕÖ¾ÌõÄ¿µÄ´´½¨UTCÊ±¼ä¡£
+        /// è¯¥æ—¥å¿—æ¡ç›®çš„åˆ›å»ºUTCæ—¶é—´ã€‚
         /// </summary>
         public DateTime CreateUtc { get; set; }
-        
         /// <summary>
-        /// ËùÊôÉÌ»§Id¡£
+        /// æ‰€å±å•†æˆ·Idã€‚
         /// </summary>
         public Guid? MerchantId { get; set; }
-        
         /// <summary>
-        /// ²Ù×÷ÈËµÇÂ¼Ãû¡£
+        /// æ“ä½œäººç™»å½•åã€‚
         /// </summary>
         public string LoginName { get; set; }
-        
         /// <summary>
-        /// ¹«Ë¾Ãû³Æ¡£
+        /// å…¬å¸åç§°ã€‚
         /// </summary>
         public string CompanyName { get; set; }
-        
         /// <summary>
-        /// ²Ù×÷ÈËÏÔÊ¾Ãû³Æ¡£
+        /// æ“ä½œäººæ˜¾ç¤ºåç§°ã€‚
         /// </summary>
         public string DisplayName { get; set; }
-        
         /// <summary>
-        /// ²Ù×÷IPµØÖ·¡£
+        /// æ“ä½œIPåœ°å€ã€‚
         /// </summary>
         public string OperationIp { get; set; }
-        
         /// <summary>
-        /// ²Ù×÷ÀàĞÍ¡£
+        /// æ“ä½œç±»å‹ã€‚
         /// </summary>
         public string OperationType { get; set; }
-        
         /// <summary>
-        /// ¿Í»§¶ËÀàĞÍ¡£
+        /// å®¢æˆ·ç«¯ç±»å‹ã€‚
         /// </summary>
         public string ClientType { get; set; }
-
         private Dictionary<string, string> _ParamsDic;
-
         /// <summary>
-        /// ²ÎÊı×Öµä¡£
+        /// å‚æ•°å­—å…¸ã€‚
         /// </summary>
         [NotMapped]
         public Dictionary<string, string> ParamsDic
@@ -118,11 +101,9 @@ namespace PowerLms.Data
                 return _ParamsDic ?? new Dictionary<string, string>();
             }
         }
-
         private string _Message;
-
         /// <summary>
-        /// ÈÕÖ¾ÌõÄ¿µÄ×Ö·û´®ĞÅÏ¢¡£
+        /// æ—¥å¿—æ¡ç›®çš„å­—ç¬¦ä¸²ä¿¡æ¯ã€‚
         /// </summary>
         [NotMapped]
         public string Message

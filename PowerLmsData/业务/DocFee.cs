@@ -10,7 +10,6 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
 namespace PowerLms.Data
 {
     /// <summary>
@@ -25,132 +24,111 @@ namespace PowerLms.Data
         /// </summary>
         [Comment("业务Id")]
         public Guid? JobId { get; set; }
-
         /// <summary>
         /// 账单号。关联<see cref="DocBill"/>。
         /// </summary>
         [Comment("账单表中的id")]
         public Guid? BillId { get; set; }
-
         /// <summary>
         /// 费用种类字典项Id。
         /// </summary>
         [Comment("费用种类字典项Id")]
         public Guid? FeeTypeId { get; set; }
-
         /// <summary>
         /// 结算单位，客户资料中为结算单位的客户id。
         /// </summary>
         [Comment("结算单位，客户资料中为结算单位的客户id。")]
         public Guid? BalanceId { get; set; }
-
         /// <summary>
         /// 收入或支出，true收入，false为支出。
         /// </summary>
         [Comment("收入或支出，true为收入，false为支出。")]
         public bool IO { get; set; }
-
         /// <summary>
         /// 结算方式，简单字典FeePayType。
         /// </summary>
         [Comment("结算方式，简单字典FeePayType")]
         public Guid? GainTypeId { get; set; }
-
         /// <summary>
         /// 单位,简单字典ContainerType,按票、按重量等
         /// </summary>
         [Comment("单位，简单字典ContainerType，按票、按重量等")]
         public Guid? ContainerTypeId { get; set; }
-
         /// <summary>
         /// 数量。
         /// </summary>
         [Comment("数量")]
         public decimal UnitCount { get; set; }
-
         /// <summary>
         /// 单价，4位小数。
         /// </summary>
         [Comment("单价，4位小数。")]
         [Precision(18, 4)]
         public decimal UnitPrice { get; set; }
-
         /// <summary>
         /// 金额，两位小数，可以为负数。
         /// </summary>
         [Comment("金额，两位小数，可以为负数。")]
         [Precision(18, 2)]
         public decimal Amount { get; set; }
-
         /// <summary>
         /// 币种。标准货币缩写。申请或结算时用的原币种。
         /// </summary>
         [MaxLength(4), Unicode(false)]
         [Comment("币种。标准货币缩写。")]
         public string Currency { get; set; }
-
         /// <summary>
         /// 本位币汇率，默认从汇率表调取，Amount乘以该属性得到本位币金额。
         /// </summary>
         [Comment("本位币汇率，默认从汇率表调取，Amount乘以该属性得到本位币金额。")]
         [Precision(18, 4)]
         public decimal ExchangeRate { get; set; }
-
         /// <summary>
         /// 备注。
         /// </summary>
         [Comment("备注")]
         public string Remark { get; set; }
-
         /// <summary>
         /// 创建人，建立时系统默认，默认不可更改。
         /// </summary>
         [Comment("创建人，建立时系统默认，默认不可更改")]
         public Guid? CreateBy { get; set; }
-
         /// <summary>
         /// 创建时间，系统默认，不能更改。
         /// </summary>
         [Comment("创建时间，系统默认，不能更改。")]
         [Precision(3)]
         public DateTime CreateDateTime { get; set; } = OwHelper.WorldNow;
-
         /// <summary>
         /// 预计结算日期，客户资料中信用日期自动计算出。
         /// </summary>
         [Comment("预计结算日期，客户资料中信用日期自动计算出。")]
         [Precision(3)]
         public DateTime PreclearDate { get; set; }
-
         /// <summary>
         /// 审核日期，为空则未审核。
         /// </summary>
         [Comment("审核日期，为空则未审核。")]
         [Precision(3)]
         public DateTime? AuditDateTime { get; set; }
-
         /// <summary>
         /// 审核人Id，为空则未审核。
         /// </summary>
         [Comment("审核人Id，为空则未审核。")]
         public Guid? AuditOperatorId { get; set; }
-
         /// <summary>
         /// 已经申请的合计金额。计算属性。
         /// </summary>
         [Comment("已经申请的合计金额。计算属性。")]
         [Precision(18, 2)]
         public decimal TotalRequestedAmount { get; set; }
-
         /// <summary>
         /// 已经结算的金额。计算属性。
         /// </summary>
         [Comment("已经结算的金额。计算属性。")]
         [Precision(18, 2)]
         public decimal TotalSettledAmount { get; set; }
-
         #region IFinancialExportable
-
         /// <summary>
         /// 导出时间。null表示未导出，非null表示已导出ARAB或APAB。
         /// 
@@ -164,7 +142,6 @@ namespace PowerLms.Data
         [Comment("导出时间，null表示未导出，非null表示已导出ARAB或APAB")]
         [Precision(3)]
         public DateTime? ExportedDateTime { get; set; }
-
         /// <summary>
         /// 导出用户ID。记录执行导出操作的用户，用于审计和权限验证。
         /// 
@@ -173,9 +150,7 @@ namespace PowerLms.Data
         /// </summary>
         [Comment("导出用户ID，用于审计和权限验证")]
         public Guid? ExportedUserId { get; set; }
-
         #endregion
-
         /// <summary>
         /// 行版本号。用于开放式并发控制，防止并发更新时的数据覆盖问题。
         /// EF Core 会在更新时自动检查此字段，如果值不匹配则抛出 DbUpdateConcurrencyException。
@@ -183,9 +158,7 @@ namespace PowerLms.Data
         [Timestamp]
         [Comment("行版本号，用于开放式并发控制")]
         public byte[] RowVersion { get; set; }
-
         #region 金额计算方法
-
         /// <summary>
         /// 计算费用的已申请金额。
         /// </summary>
@@ -213,7 +186,6 @@ namespace PowerLms.Data
                 .Where(c => c.FeeId == feeId && dbContext.Entry(c).State != EntityState.Deleted)
                 .Sum(c => c.Amount);
         }
-
         /// <summary>
         /// 计算费用的已结算金额。
         /// </summary>
@@ -242,7 +214,6 @@ namespace PowerLms.Data
                 .Where(c => c.FeeId == feeId && dbContext.Entry(c).State != EntityState.Deleted)
                 .Sum(c => c.TotalSettledAmount);
         }
-
         /// <summary>
         /// 校验申请单明细是否超额。
         /// </summary>
@@ -313,10 +284,8 @@ namespace PowerLms.Data
             errorMessage = null;
             return true;
         }
-
         #endregion 金额计算方法
     }
-
     public static class DocFeeExtensions
     {
         /// <summary>
@@ -329,7 +298,6 @@ namespace PowerLms.Data
         {
             return docFee.JobId is null ? null : context.Set<PlJob>().Find(docFee.JobId.Value);
         }
-
         /// <summary>
         /// 获取相关的 Bill 对象。
         /// </summary>
@@ -340,7 +308,6 @@ namespace PowerLms.Data
         {
             return docFee.BillId is null ? null : context.Set<DocBill>().Find(docFee.BillId.Value);
         }
-
         /// <summary>
         /// 获取相关的 Balance Customer 对象。
         /// </summary>
@@ -351,7 +318,6 @@ namespace PowerLms.Data
         {
             return docFee.BalanceId is null ? null : context.Set<PlCustomer>().Find(docFee.BalanceId.Value);
         }
-
         /// <summary>
         /// 获取相关的 申请 对象。
         /// </summary>
@@ -364,28 +330,3 @@ namespace PowerLms.Data
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

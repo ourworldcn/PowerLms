@@ -14,7 +14,6 @@
  * 创建：2025-01
  * 修改：2025-01-27 重构为基础通用逻辑
  */
-
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -25,7 +24,6 @@ using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
 using System.Collections.Concurrent;
 using DotNetDBF;
-
 namespace PowerLmsServer.Managers
 {
     /// <summary>
@@ -49,11 +47,9 @@ namespace PowerLmsServer.Managers
         private readonly IDbContextFactory<PowerLmsUserDbContext> _dbContextFactory;
         private readonly ILogger<FinancialSystemExportManager> _logger;
         private readonly IServiceProvider _serviceProvider;
-
         // 缓存字典 - 单例服务中的内存缓存
         private readonly ConcurrentDictionary<string, Dictionary<string, SubjectConfiguration>> _configCache;
         private readonly ConcurrentDictionary<Guid, HashSet<Guid>> _orgPermissionCache;
-
         /// <summary>
         /// 初始化财务系统导出管理器的新实例
         /// </summary>
@@ -68,13 +64,10 @@ namespace PowerLmsServer.Managers
             _dbContextFactory = dbContextFactory ?? throw new ArgumentNullException(nameof(dbContextFactory));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
-
             _configCache = new ConcurrentDictionary<string, Dictionary<string, SubjectConfiguration>>();
             _orgPermissionCache = new ConcurrentDictionary<Guid, HashSet<Guid>>();
         }
-
         #region 科目配置管理服务
-
         /// <summary>
         /// 加载指定前缀的科目配置（带缓存）
         /// </summary>
@@ -84,22 +77,17 @@ namespace PowerLmsServer.Managers
         public Dictionary<string, SubjectConfiguration> LoadConfigurationsByPrefix(string prefix, Guid? orgId)
         {
             var cacheKey = $"{prefix}_{orgId}";
-            
             return _configCache.GetOrAdd(cacheKey, _ =>
             {
                 using var dbContext = _dbContextFactory.CreateDbContext();
-                
                 var configs = dbContext.SubjectConfigurations
                     .Where(c => !c.IsDelete && c.OrgId == orgId && c.Code.StartsWith(prefix))
                     .ToList();
-
                 _logger.LogDebug("加载科目配置，前缀: {Prefix}, 组织: {OrgId}, 数量: {Count}", 
                     prefix, orgId, configs.Count);
-
                 return configs.ToDictionary(c => c.Code, c => c);
             });
         }
-
         /// <summary>
         /// 验证配置完整性
         /// </summary>
@@ -109,24 +97,19 @@ namespace PowerLmsServer.Managers
         public bool ValidateConfigurations(string[] requiredCodes, Guid? orgId)
         {
             using var dbContext = _dbContextFactory.CreateDbContext();
-            
             var existingCodes = dbContext.SubjectConfigurations
                 .Where(c => !c.IsDelete && c.OrgId == orgId && requiredCodes.Contains(c.Code))
                 .Select(c => c.Code)
                 .ToList();
-
             var missingCodes = requiredCodes.Except(existingCodes).ToList();
-            
             if (missingCodes.Any())
             {
                 _logger.LogWarning("科目配置不完整，缺少配置项: {MissingCodes}, 组织: {OrgId}", 
                     string.Join(", ", missingCodes), orgId);
                 return false;
             }
-
             return true;
         }
-
         /// <summary>
         /// 获取配置值（带默认值）
         /// </summary>
@@ -137,17 +120,12 @@ namespace PowerLmsServer.Managers
         public string GetConfigValue(string code, Guid? orgId, string defaultValue = null)
         {
             using var dbContext = _dbContextFactory.CreateDbContext();
-            
             var config = dbContext.SubjectConfigurations
                 .FirstOrDefault(c => !c.IsDelete && c.OrgId == orgId && c.Code == code);
-
             return config?.DisplayName ?? defaultValue;
         }
-
         #endregion
-
         #region DBF文件生成服务
-
         /// <summary>
         /// 生成DBF文件到内存流（通用方法）
         /// </summary>
@@ -163,16 +141,13 @@ namespace PowerLmsServer.Managers
         {
             ArgumentNullException.ThrowIfNull(fieldMappings, "字段映射不能为空，应由调用方提供具体的字段映射定义");
             ArgumentNullException.ThrowIfNull(fieldTypes, "字段类型不能为空，应由调用方提供具体的字段类型定义");
-
             var memoryStream = new MemoryStream();
             try
             {
                 DotNetDbfUtil.WriteToStream(data, memoryStream, fieldMappings, fieldTypes);
                 memoryStream.Position = 0;
-                
                 _logger.LogDebug("生成DBF文件成功，数据量: {Count}, 文件大小: {Size} bytes", 
                     data.Count(), memoryStream.Length);
-                
                 return memoryStream;
             }
             catch
@@ -181,11 +156,8 @@ namespace PowerLmsServer.Managers
                 throw;
             }
         }
-
         #endregion
-
         #region 凭证生成基础服务
-
         /// <summary>
         /// 凭证号生成（防并发冲突）
         /// </summary>
@@ -198,10 +170,8 @@ namespace PowerLmsServer.Managers
             // 简化实现：期间-凭证字-时间戳序号
             var period = voucherDate.Month;
             var timestamp = DateTime.Now.Ticks % 10000; // 取最后4位作为序号
-            
             return $"{period}-{voucherGroup}-{timestamp}";
         }
-
         /// <summary>
         /// 通用凭证基础数据填充
         /// </summary>
@@ -227,7 +197,6 @@ namespace PowerLmsServer.Managers
             voucher.FMODULE = "GL";
             voucher.FDELETED = false;
         }
-
         /// <summary>
         /// 多币种金额计算
         /// </summary>
@@ -239,14 +208,12 @@ namespace PowerLmsServer.Managers
             decimal amount, decimal exchangeRate, bool isDebit)
         {
             var baseCurrencyAmount = amount * exchangeRate;
-            
             return (
                 FFCyAmt: amount,
                 FDebit: isDebit ? baseCurrencyAmount : 0,
                 FCredit: isDebit ? 0 : baseCurrencyAmount
             );
         }
-
         /// <summary>
         /// 核算项目处理（客户、供应商、部门、员工）
         /// </summary>
@@ -271,11 +238,8 @@ namespace PowerLmsServer.Managers
             voucher.FOBJNAME2 = objName2 ?? "";
             voucher.FTRANSID = transId ?? "";
         }
-
         #endregion
-
         #region 权限与过滤服务
-
         /// <summary>
         /// 验证导出权限（基础检查）
         /// </summary>
@@ -286,7 +250,6 @@ namespace PowerLmsServer.Managers
         {
             if (user is null) return false;
             if (user.IsSuperAdmin) return true;
-
             // 基础权限检查，具体的权限节点由调用方确定
             try
             {
@@ -301,7 +264,6 @@ namespace PowerLmsServer.Managers
                 return false;
             }
         }
-
         /// <summary>
         /// 组织权限过滤 - 通用方法
         /// </summary>
@@ -313,13 +275,10 @@ namespace PowerLmsServer.Managers
         {
             if (user is null) return query.Where(_ => false);
             if (user.IsSuperAdmin) return query;
-
             var orgManager = _serviceProvider.GetRequiredService<OrgManager<PowerLmsUserDbContext>>();
             var merchantId = orgManager.GetMerchantIdByUserId(user.Id);
             if (!merchantId.HasValue) return query.Where(_ => false);
-
             HashSet<Guid?> allowedOrgIds;
-
             if (user.IsMerchantAdmin)
             {
                 // 商户管理员可以访问整个商户下的所有组织机构
@@ -332,19 +291,14 @@ namespace PowerLmsServer.Managers
                 // 普通用户只能访问其当前登录的公司及下属机构
                 var companyId = user.OrgId.HasValue ? orgManager.GetCompanyIdByOrgId(user.OrgId.Value) : null;
                 if (!companyId.HasValue) return query.Where(_ => false);
-                
                 var companyOrgIds = orgManager.GetOrgIdsByCompanyId(companyId.Value).ToList();
                 allowedOrgIds = new HashSet<Guid?>(companyOrgIds.Cast<Guid?>());
                 allowedOrgIds.Add(merchantId.Value);
             }
-
             return query.Where(entity => allowedOrgIds.Contains(entity.OrgId));
         }
-
         #endregion
-
         #region 数据验证与完整性服务
-
         /// <summary>
         /// 数据一致性检查（如金额平衡）
         /// </summary>
@@ -353,17 +307,14 @@ namespace PowerLmsServer.Managers
         public (bool IsValid, List<string> Errors) ValidateVoucherBalance(IEnumerable<KingdeeVoucher> vouchers)
         {
             var errors = new List<string>();
-            
             try
             {
                 // 按凭证号分组检查借贷平衡
                 var voucherGroups = vouchers.GroupBy(v => v.FNUM);
-                
                 foreach (var group in voucherGroups)
                 {
                     var totalDebit = group.Sum(v => v.FDEBIT ?? 0);
                     var totalCredit = group.Sum(v => v.FCREDIT ?? 0);
-                    
                     if (Math.Abs(totalDebit - totalCredit) > 0.01m)
                     {
                         errors.Add($"凭证号 {group.Key} 借贷不平衡，借方: {totalDebit}, 贷方: {totalCredit}");
@@ -375,14 +326,10 @@ namespace PowerLmsServer.Managers
                 _logger.LogError(ex, "验证凭证平衡时发生错误");
                 errors.Add($"验证过程中发生错误: {ex.Message}");
             }
-
             return (errors.Count == 0, errors);
         }
-
         #endregion
-
         #region 缓存管理
-
         /// <summary>
         /// 清除配置缓存
         /// </summary>
@@ -404,7 +351,6 @@ namespace PowerLmsServer.Managers
                 _logger.LogInformation("已清除前缀为 {Prefix} 的配置缓存，数量: {Count}", prefix, keysToRemove.Count);
             }
         }
-
         /// <summary>
         /// 清除权限缓存
         /// </summary>
@@ -413,11 +359,8 @@ namespace PowerLmsServer.Managers
             _orgPermissionCache.Clear();
             _logger.LogInformation("已清除所有权限缓存");
         }
-
         #endregion
-
         #region 导出防重机制
-
         /// <summary>
         /// 标记财务数据为已导出
         /// 此方法仅修改实体属性,不调用SaveChanges,调用者需自行保存
@@ -441,7 +384,6 @@ namespace PowerLmsServer.Managers
                 count, typeof(T).Name, userId);
             return count;
         }
-
         /// <summary>
         /// 取消财务数据的导出标记
         /// 此方法仅修改实体属性,不调用SaveChanges,调用者需自行保存
@@ -470,7 +412,6 @@ namespace PowerLmsServer.Managers
                 count, typeof(T).Name, currentUserId);
             return count;
         }
-
         /// <summary>
         /// 为查询添加"未导出"过滤条件
         /// </summary>
@@ -482,7 +423,6 @@ namespace PowerLmsServer.Managers
         {
             return query.Where(e => e.ExportedDateTime == null);
         }
-
         /// <summary>
         /// 为查询添加"已导出"过滤条件
         /// </summary>
@@ -494,7 +434,6 @@ namespace PowerLmsServer.Managers
         {
             return query.Where(e => e.ExportedDateTime != null);
         }
-
         /// <summary>
         /// 验证是否可以取消导出
         /// </summary>
@@ -523,7 +462,6 @@ namespace PowerLmsServer.Managers
             }
             return (false, $"只有导出人或管理员可以取消导出");
         }
-
         #endregion
     }
 }

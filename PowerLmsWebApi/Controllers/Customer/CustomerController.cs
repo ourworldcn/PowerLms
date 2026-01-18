@@ -13,7 +13,6 @@ using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Net;
 using System.Text;
-
 namespace PowerLmsWebApi.Controllers
 {
     /// <summary>
@@ -36,20 +35,15 @@ namespace PowerLmsWebApi.Controllers
             _AuthorizationManager = authorizationManager;
             _CustomerManager = customerManager;
         }
-
         readonly IServiceProvider _ServiceProvider;
         readonly AccountManager _AccountManager;
-
         readonly PowerLmsUserDbContext _DbContext;
         readonly OrgManager<PowerLmsUserDbContext> _OrgManager;
-
         readonly EntityManager _EntityManager;
         readonly IMapper _Mapper;
         readonly AuthorizationManager _AuthorizationManager;
         readonly CustomerManager _CustomerManager;
-
         #region 客户资料本体的
-
         /// <summary>
         /// 获取全部客户。
         /// </summary>
@@ -80,7 +74,6 @@ namespace PowerLmsWebApi.Controllers
             _Mapper.Map(prb, result);
             return result;
         }
-
         /// <summary>
         /// 增加新客户。
         /// </summary>
@@ -103,7 +96,6 @@ namespace PowerLmsWebApi.Controllers
             result.Id = model.Customer.Id;
             return result;
         }
-
         /// <summary>
         /// 修改客户信息。
         /// </summary>
@@ -130,7 +122,6 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.SaveChanges();
             return result;
         }
-
         /// <summary>
         /// 删除指定Id的客户。慎用！
         /// </summary>
@@ -171,7 +162,6 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.SaveChanges();
             return result;
         }
-
         /// <summary>
         /// 按指定条件获取客户本体。支持多个bool类型的或关系查询。
         /// </summary>
@@ -202,11 +192,8 @@ namespace PowerLmsWebApi.Controllers
             _Mapper.Map(prb, result);
             return result;
         }
-
         #endregion 客户资料本体的
-
         #region 客户上的联系人操作
-
         /// <summary>
         /// 获取全部客户联系人。
         /// </summary>
@@ -224,12 +211,10 @@ namespace PowerLmsWebApi.Controllers
             var dbSet = _DbContext.PlCustomerContacts;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             coll = EfHelper.GenerateWhereAnd(coll, conditional);
-
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }
-
         /// <summary>
         /// 增加新客户联系人。
         /// </summary>
@@ -248,7 +233,6 @@ namespace PowerLmsWebApi.Controllers
             result.Id = model.CustomerContact.Id;
             return result;
         }
-
         /// <summary>
         /// 修改客户联系人信息。
         /// </summary>
@@ -267,7 +251,6 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.SaveChanges();
             return result;
         }
-
         /// <summary>
         /// 删除指定Id的客户联系人。慎用！
         /// </summary>
@@ -290,9 +273,7 @@ namespace PowerLmsWebApi.Controllers
             return result;
         }
         #endregion 客户上的联系人操作
-
         #region 业务负责人的所属关系的CRUD
-
         /// <summary>
         /// 获取业务负责人的所属关系。
         /// </summary>
@@ -309,7 +290,6 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlBusinessHeaderReturnDto();
             if (model.OrderFieldName == "Id") model.OrderFieldName = "CustomerId";
-
             var dbSet = _DbContext.PlCustomerBusinessHeaders;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             coll = EfHelper.GenerateWhereAnd(coll, conditional);
@@ -317,7 +297,6 @@ namespace PowerLmsWebApi.Controllers
             _Mapper.Map(prb, result);
             return result;
         }
-
         /// <summary>
         /// 增加业务负责人的所属关系。
         /// </summary>
@@ -337,7 +316,6 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.SaveChanges();
             return result;
         }
-
         /// <summary>
         /// 删除业务负责人的所属关系。
         /// </summary>
@@ -360,11 +338,8 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.SaveChanges();
             return result;
         }
-
         #endregion 业务负责人的所属关系的CRUD
-
         #region 客户上的开票信息操作
-
         /// <summary>
         /// 获取全部客户开票信息。
         /// </summary>
@@ -379,7 +354,6 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlTaxInfoReturnDto();
-
             var dbSet = _DbContext.PlCustomerTaxInfos;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             coll = EfHelper.GenerateWhereAnd(coll, conditional);
@@ -387,7 +361,6 @@ namespace PowerLmsWebApi.Controllers
             _Mapper.Map(prb, result);
             return result;
         }
-
         /// <summary>
         /// 增加新客户开票信息。
         /// </summary>
@@ -406,7 +379,6 @@ namespace PowerLmsWebApi.Controllers
             result.Id = model.PlTaxInfo.Id;
             return result;
         }
-
         /// <summary>
         /// 修改客户开票信息信息。
         /// </summary>
@@ -425,7 +397,6 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.SaveChanges();
             return result;
         }
-
         /// <summary>
         /// 删除指定Id的客户开票信息。慎用！
         /// </summary>
@@ -448,9 +419,7 @@ namespace PowerLmsWebApi.Controllers
             return result;
         }
         #endregion 客户上的开票信息操作
-
         #region 客户上的提单操作
-
         /// <summary>
         /// 获取全部客户提单。
         /// </summary>
@@ -467,7 +436,6 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             //if (!_AuthorizationManager.Demand(out var err, "D0.1.5.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new GetAllPlTidanReturnDto();
-
             var dbSet = _DbContext.PlCustomerTidans;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             coll = EfHelper.GenerateWhereAnd(coll, conditional);
@@ -475,7 +443,6 @@ namespace PowerLmsWebApi.Controllers
             _Mapper.Map(prb, result);
             return result;
         }
-
         /// <summary>
         /// 增加新客户提单。
         /// </summary>
@@ -496,7 +463,6 @@ namespace PowerLmsWebApi.Controllers
             result.Id = model.PlTidan.Id;
             return result;
         }
-
         /// <summary>
         /// 修改客户提单信息。
         /// </summary>
@@ -517,7 +483,6 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.SaveChanges();
             return result;
         }
-
         /// <summary>
         /// 删除指定Id的客户提单。慎用！
         /// </summary>
@@ -542,9 +507,7 @@ namespace PowerLmsWebApi.Controllers
             return result;
         }
         #endregion 客户上的提单操作
-
         #region 客户上的黑名单操作
-
         /// <summary>
         /// 获取全部客户黑名单。
         /// </summary>
@@ -561,13 +524,11 @@ namespace PowerLmsWebApi.Controllers
             var result = new GetAllCustomerBlacklistReturnDto();
             var dbSet = _DbContext.CustomerBlacklists;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-
             coll = EfHelper.GenerateWhereAnd(coll, conditional);
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }
-
         /// <summary>
         /// 增加新客户黑名单。
         /// </summary>
@@ -584,7 +545,6 @@ namespace PowerLmsWebApi.Controllers
             model.CustomerBlacklist.GenerateNewId();
             if (_DbContext.PlCustomers.Find(model.CustomerBlacklist.CustomerId) is not PlCustomer customer)
                 return BadRequest($"指定的客户Id不存在。{model.CustomerBlacklist.CustomerId}");
-
             var entity = _DbContext.CustomerBlacklists.Add(model.CustomerBlacklist);
             if (entity.Entity.Kind != 1 && entity.Entity.Kind != 2) return BadRequest("Kind 应该是 1或2");
             if (entity.Entity.Kind == 1)
@@ -595,7 +555,6 @@ namespace PowerLmsWebApi.Controllers
             result.Id = model.CustomerBlacklist.Id;
             return result;
         }
-
         /// <summary>
         /// 删除指定Id的客户黑名单。
         /// 特别地，不是删除指定Id的实体，而是建立一个新的实体，用于"冲红"指定实体的操作。指定Id的实体必须是添加黑名单的操作。
@@ -619,7 +578,6 @@ namespace PowerLmsWebApi.Controllers
             var item = dbSet.Where(c => c.CustomerId == model.CustomerId && (c.Kind == model.Kind - 2 || c.Kind == model.Kind)).OrderByDescending(c => c.Datetime).FirstOrDefault();
             if (item is null) return BadRequest("指定客户不在黑名单中。");
             if (item.Kind == model.Kind) return BadRequest("指定客户不在黑名单中。");
-
             if (item.Kind != 1 && item.Kind != 2) return BadRequest("不能对非添加项\"冲红\"");
             var newItem = new CustomerBlacklist
             {
@@ -637,11 +595,8 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.SaveChanges();
             return result;
         }
-
         #endregion 客户上的黑名单操作
-
         #region 客户上的装货地址操作
-
         /// <summary>
         /// 获取全部客户装货地址。
         /// </summary>
@@ -656,7 +611,6 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllPlLoadingAddrReturnDto();
-
             var dbSet = _DbContext.PlCustomerLoadingAddrs;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             coll = EfHelper.GenerateWhereAnd(coll, conditional);
@@ -664,7 +618,6 @@ namespace PowerLmsWebApi.Controllers
             _Mapper.Map(prb, result);
             return result;
         }
-
         /// <summary>
         /// 增加新客户装货地址。
         /// </summary>
@@ -683,7 +636,6 @@ namespace PowerLmsWebApi.Controllers
             result.Id = model.PlLoadingAddr.Id;
             return result;
         }
-
         /// <summary>
         /// 修改客户装货地址信息。
         /// </summary>
@@ -702,7 +654,6 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.SaveChanges();
             return result;
         }
-
         /// <summary>
         /// 删除指定Id的客户装货地址。慎用！
         /// </summary>
@@ -725,9 +676,7 @@ namespace PowerLmsWebApi.Controllers
             return result;
         }
         #endregion 客户上的装货地址操作
-
         #region 客户有效性管理
-
         /// <summary>
         /// 设置客户有效性状态。专门用于启用或停用客户。
         /// </summary>
@@ -759,8 +708,6 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.SaveChanges();
             return result;
         }
-
         #endregion 客户有效性管理
-
     }
 }

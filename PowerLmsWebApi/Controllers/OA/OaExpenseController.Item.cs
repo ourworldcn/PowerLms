@@ -9,7 +9,6 @@ using PowerLmsWebApi.Dto;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-
 namespace PowerLmsWebApi.Controllers.OA
 {
     /// <summary>
@@ -18,7 +17,6 @@ namespace PowerLmsWebApi.Controllers.OA
     public partial class OaExpenseController
     {
         #region OA费用申请单明细操作
-
         /// <summary>
         /// 获取所有OA费用申请单明细。
         /// </summary>
@@ -72,7 +70,6 @@ namespace PowerLmsWebApi.Controllers.OA
             }
             return result;
         }
-
         /// <summary>
         /// 创建新的OA费用申请单明细。
         /// 权限要求：OA.1.2 - 日常费用拆分结算
@@ -87,9 +84,7 @@ namespace PowerLmsWebApi.Controllers.OA
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
                 return Unauthorized();
-
             var result = new AddOaExpenseRequisitionItemReturnDto();
-
             try
             {
                 // 🔧 权限验证 - 使用 OA.1.2 权限：日常费用拆分结算（子表增删改权限）
@@ -102,7 +97,6 @@ namespace PowerLmsWebApi.Controllers.OA
                     result.DebugMessage = $"权限不足: {err}";
                     return result;
                 }
-
                 // 检查申请单是否存在和权限
                 var requisition = _DbContext.OaExpenseRequisitions.Find(model.Item.ParentId);
                 if (requisition == null)
@@ -112,7 +106,6 @@ namespace PowerLmsWebApi.Controllers.OA
                     result.DebugMessage = "指定的OA费用申请单不存在";
                     return result;
                 }
-
                 // 多租户数据隔离检查
                 if (!context.User.IsSuperAdmin && requisition.OrgId != context.User.OrgId)
                 {
@@ -121,7 +114,6 @@ namespace PowerLmsWebApi.Controllers.OA
                     result.DebugMessage = "权限不足，无法操作此申请单";
                     return result;
                 }
-
                 // 检查申请单状态：结算后不能修改明细项
                 if (!requisition.CanEditItems(_DbContext))
                 {
@@ -130,15 +122,11 @@ namespace PowerLmsWebApi.Controllers.OA
                     result.DebugMessage = "申请单当前状态不允许添加明细";
                     return result;
                 }
-
                 var entity = model.Item;
                 entity.GenerateNewId();
-
                 _DbContext.OaExpenseRequisitionItems.Add(entity);
                 _DbContext.SaveChanges();
-
                 result.Id = entity.Id;
-
                 _Logger.LogInformation("成功添加OA费用申请单明细 - 申请单ID: {RequisitionId}, 明细ID: {ItemId}, 操作人: {UserId}",
                     model.Item.ParentId, entity.Id, context.User.Id);
             }
@@ -149,10 +137,8 @@ namespace PowerLmsWebApi.Controllers.OA
                 result.ErrorCode = 500;
                 result.DebugMessage = $"创建OA费用申请单明细时发生错误: {ex.Message}";
             }
-
             return result;
         }
-
         /// <summary>
         /// 修改OA费用申请单明细信息。
         /// 权限要求：OA.1.2 - 日常费用拆分结算
@@ -233,7 +219,6 @@ namespace PowerLmsWebApi.Controllers.OA
             }
             return result;
         }
-
         /// <summary>
         /// 删除OA费用申请单明细。
         /// 权限要求：OA.1.2 - 日常费用拆分结算
@@ -248,9 +233,7 @@ namespace PowerLmsWebApi.Controllers.OA
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
                 return Unauthorized();
-
             var result = new RemoveOaExpenseRequisitionItemReturnDto();
-
             try
             {
                 // 🔧 权限验证 - 使用 OA.1.2 权限：日常费用拆分结算（子表增删改权限）
@@ -263,9 +246,7 @@ namespace PowerLmsWebApi.Controllers.OA
                     result.DebugMessage = $"权限不足: {err}";
                     return result;
                 }
-
                 var entities = _DbContext.OaExpenseRequisitionItems.Where(e => model.Ids.Contains(e.Id)).ToList();
-
                 foreach (var entity in entities)
                 {
                     // 检查申请单状态和权限
@@ -277,7 +258,6 @@ namespace PowerLmsWebApi.Controllers.OA
                         result.DebugMessage = "关联的申请单不存在";
                         return result;
                     }
-
                     // 多租户数据隔离检查
                     if (!context.User.IsSuperAdmin && requisition.OrgId != context.User.OrgId)
                     {
@@ -286,7 +266,6 @@ namespace PowerLmsWebApi.Controllers.OA
                         result.DebugMessage = "权限不足，无法操作此申请单";
                         return result;
                     }
-
                     if (!requisition.CanEditItems(_DbContext))
                     {
                         result.HasError = true;
@@ -294,12 +273,9 @@ namespace PowerLmsWebApi.Controllers.OA
                         result.DebugMessage = "申请单当前状态不允许删除明细";
                         return result;
                     }
-
                     _EntityManager.Remove(entity);
                 }
-
                 _DbContext.SaveChanges();
-
                 _Logger.LogInformation("成功删除OA费用申请单明细 - 明细数量: {Count}, 操作人: {UserId}",
                     entities.Count, context.User.Id);
             }
@@ -310,14 +286,10 @@ namespace PowerLmsWebApi.Controllers.OA
                 result.ErrorCode = 500;
                 result.DebugMessage = $"删除OA费用申请单明细时发生错误: {ex.Message}";
             }
-
             return result;
         }
-
         #endregion
-
         #region 私有辅助方法
-
         /// <summary>
         /// 获取指定期间和凭证字的最大序号。
         /// </summary>
@@ -331,7 +303,6 @@ namespace PowerLmsWebApi.Controllers.OA
             {
                 // 查询当月所有使用该凭证字的明细记录
                 var voucherPattern = $"{period}-{voucherCharacter}-";
-
                 var maxSequence = _DbContext.OaExpenseRequisitionItems
                     .Where(item => item.VoucherNumber != null &&
                                    item.VoucherNumber.StartsWith(voucherPattern) &&
@@ -341,7 +312,6 @@ namespace PowerLmsWebApi.Controllers.OA
                     .Where(seq => seq.HasValue)
                     .DefaultIfEmpty(0)
                     .Max();
-
                 return maxSequence ?? 0;
             }
             catch (Exception ex)
@@ -350,7 +320,6 @@ namespace PowerLmsWebApi.Controllers.OA
                 return 0; // 出错时返回0，从1开始
             }
         }
-
         /// <summary>
         /// 从凭证号中提取序号。
         /// </summary>
@@ -361,11 +330,9 @@ namespace PowerLmsWebApi.Controllers.OA
         {
             if (string.IsNullOrEmpty(voucherNumber) || !voucherNumber.StartsWith(pattern))
                 return null;
-
             var sequencePart = voucherNumber.Substring(pattern.Length);
             return int.TryParse(sequencePart, out var sequence) ? sequence : (int?)null;
         }
-
         /// <summary>
         /// 检查凭证号是否存在重复。
         /// </summary>
@@ -386,7 +353,6 @@ namespace PowerLmsWebApi.Controllers.OA
                 return false; // 出错时返回false，避免阻塞流程
             }
         }
-
         #endregion
     }
 }

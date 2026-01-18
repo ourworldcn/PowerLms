@@ -4,7 +4,6 @@
  * 技术要点：表白名单机制、数据隔离、动态查询条件、安全过滤
  * 作者：zc | 创建：2025-01 | 修改：2025-01-27 创建通用数据查询接口
  */
-
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PowerLms.Data;
@@ -15,7 +14,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-
 namespace PowerLmsWebApi.Controllers.System
 {
     /// <summary>
@@ -30,7 +28,6 @@ namespace PowerLmsWebApi.Controllers.System
         private readonly AccountManager _AccountManager;
         private readonly IServiceProvider _ServiceProvider;
         private readonly ILogger<CommonDataQueryController> _Logger;
-
         /// <summary>
         /// 表白名单：允许查询的表名
         /// 当前支持：OaExpenseRequisitions、DocFeeRequisitions
@@ -41,7 +38,6 @@ namespace PowerLmsWebApi.Controllers.System
             "OaExpenseRequisitions",
             "DocFeeRequisitions"
         };
-
         /// <summary>
         /// 构造函数。
         /// 初始化通用数据查询控制器的依赖项。
@@ -60,7 +56,6 @@ namespace PowerLmsWebApi.Controllers.System
             _ServiceProvider = serviceProvider;
             _Logger = logger;
         }
-
         /// <summary>
         /// 获取指定表字段的所有值。
         /// 支持多种实体类型的字段值查询，根据表名和字段名动态查询数据。
@@ -150,9 +145,7 @@ namespace PowerLmsWebApi.Controllers.System
             }
             return result;
         }
-
         #region 查询辅助函数
-
         /// <summary>
         /// 查询OA费用申请单数据。
         /// 强制按当前用户的机构ID进行过滤，确保数据隔离。
@@ -222,7 +215,6 @@ namespace PowerLmsWebApi.Controllers.System
             }
             return results;
         }
-
         /// <summary>
         /// 查询业务费用申请单数据。
         /// 强制按当前用户的机构ID进行过滤，确保数据隔离。
@@ -292,7 +284,6 @@ namespace PowerLmsWebApi.Controllers.System
             }
             return results;
         }
-
         #endregion 查询辅助函数
     }
 }

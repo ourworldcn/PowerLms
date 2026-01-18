@@ -11,7 +11,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-
 namespace PowerLmsWebApi.Controllers.OA
 {
     /// <summary>
@@ -20,7 +19,6 @@ namespace PowerLmsWebApi.Controllers.OA
     public partial class OaExpenseController
     {
         #region 凭证号生成功能
-
         /// <summary>
         /// 生成凭证号。
         /// 根据账期时间和结算账号生成符合财务要求的凭证号。
@@ -37,9 +35,7 @@ namespace PowerLmsWebApi.Controllers.OA
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
                 return Unauthorized();
-
             var result = new GenerateVoucherNumberReturnDto();
-
             try
             {
                 // 检查结算账号是否存在
@@ -51,7 +47,6 @@ namespace PowerLmsWebApi.Controllers.OA
                     result.DebugMessage = "指定的结算账号不存在";
                     return result;
                 }
-
                 // 检查凭证字是否配置
                 if (string.IsNullOrEmpty(settlementAccount.VoucherCharacter))
                 {
@@ -60,35 +55,27 @@ namespace PowerLmsWebApi.Controllers.OA
                     result.DebugMessage = "结算账号未配置凭证字，无法生成凭证号";
                     return result;
                 }
-
                 // 生成凭证号
                 var period = model.AccountingPeriod.Month;
                 var voucherCharacter = settlementAccount.VoucherCharacter;
-
                 // 使用VoucherSequence表的乐观锁控制获取下一个序号
                 var nextSequence = await GetNextVoucherSequenceAsync(context.User.OrgId.Value, period, voucherCharacter);
-
                 // 生成凭证号：格式为"期间-凭证字-序号"
                 var voucherNumber = $"{period}-{voucherCharacter}-{nextSequence}";
-
                 // 检查是否存在重号（基于当前组织）
                 var duplicateExists = CheckVoucherNumberDuplicateInOrg(voucherNumber, context.User.OrgId.Value);
-
                 result.VoucherNumber = voucherNumber;
                 result.VoucherCharacter = voucherCharacter;
                 result.Period = period;
                 result.SequenceNumber = nextSequence;
                 result.HasDuplicateWarning = duplicateExists;
-
                 if (duplicateExists)
                 {
                     result.DuplicateWarningMessage = $"凭证号 {voucherNumber} 已存在，请核查是否重复";
                     _Logger.LogWarning("生成的凭证号存在重复: {VoucherNumber}", voucherNumber);
-
                     // 返回201状态码表示成功但有警告
                     return StatusCode(201, result);
                 }
-
                 _Logger.LogInformation("成功生成凭证号: {VoucherNumber}，账期: {Period}, 凭证字: {VoucherCharacter}",
                     voucherNumber, period, voucherCharacter);
             }
@@ -99,14 +86,10 @@ namespace PowerLmsWebApi.Controllers.OA
                 result.ErrorCode = 500;
                 result.DebugMessage = $"生成凭证号时发生错误: {ex.Message}";
             }
-
             return result;
         }
-
         #endregion
-
         #region 新增结算确认功能
-
         /// <summary>
         /// 执行OA费用申请单结算操作。
         /// 出纳权限：OA.1.1，工作流完成后将状态从"待结算"更新为"待确认"。
@@ -122,9 +105,7 @@ namespace PowerLmsWebApi.Controllers.OA
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
                 return Unauthorized();
-
             var result = new SettleOaExpenseRequisitionReturnDto();
-
             try
             {
                 // 🔧 修复权限验证 - 使用正确的权限代码 OA.1.1
@@ -137,7 +118,6 @@ namespace PowerLmsWebApi.Controllers.OA
                     result.DebugMessage = $"权限不足: {err}";
                     return result;
                 }
-
                 var requisition = _DbContext.OaExpenseRequisitions.Find(model.RequisitionId);
                 if (requisition == null)
                 {
@@ -146,7 +126,6 @@ namespace PowerLmsWebApi.Controllers.OA
                     result.DebugMessage = "指定的OA费用申请单不存在";
                     return result;
                 }
-
                 // 多租户数据隔离检查
                 if (!context.User.IsSuperAdmin && requisition.OrgId != context.User.OrgId)
                 {
@@ -155,7 +134,6 @@ namespace PowerLmsWebApi.Controllers.OA
                     result.DebugMessage = "权限不足，无法操作此申请单";
                     return result;
                 }
-
                 // 🔑 自动状态同步：如果申请单在审批中但工作流已完成，先自动切换到待结算状态
                 if (requisition.Status == OaExpenseStatus.InApproval)
                 {
@@ -166,18 +144,15 @@ namespace PowerLmsWebApi.Controllers.OA
                         // InApproval → ApprovedPendingSettlement
                         requisition.Status = OaExpenseStatus.ApprovedPendingSettlement;
                         requisition.AuditDateTime = OwHelper.WorldNow;
-                        
                         // 从工作流中获取最后审批人
                         var lastApprover = workflow.Children
                             .OrderByDescending(n => n.ArrivalDateTime)
                             .SelectMany(n => n.Children.Where(i => i.OperationKind == 0 && i.IsSuccess == true))
                             .FirstOrDefault();
-                        
                         if (lastApprover != null)
                         {
                             requisition.AuditOperatorId = lastApprover.OpertorId;
                         }
-                        
                         _Logger.LogInformation(
                             "自动同步申请单状态：RequisitionId={RequisitionId}, " +
                             "OldStatus=InApproval, NewStatus=ApprovedPendingSettlement, " +
@@ -185,7 +160,6 @@ namespace PowerLmsWebApi.Controllers.OA
                             requisition.Id);
                     }
                 }
-
                 // 状态检查：必须是审批完成待结算状态
                 if (requisition.Status != OaExpenseStatus.ApprovedPendingSettlement)
                 {
@@ -194,7 +168,6 @@ namespace PowerLmsWebApi.Controllers.OA
                     result.DebugMessage = $"申请单状态不正确，当前状态：{requisition.GetApprovalStatus()}，只能对待结算状态的申请单执行结算操作";
                     return result;
                 }
-
                 // 工作流状态检查：使用OwWfManager
                 if (!_WfManager.IsWorkflowCompleted(requisition.Id))
                 {
@@ -203,19 +176,15 @@ namespace PowerLmsWebApi.Controllers.OA
                     result.DebugMessage = "申请单工作流尚未完成，无法执行结算操作";
                     return result;
                 }
-
                 // 执行结算操作：ApprovedPendingSettlement → SettledPendingConfirm
                 requisition.Status = OaExpenseStatus.SettledPendingConfirm;
                 requisition.SettlementOperatorId = context.User.Id;
                 requisition.SettlementDateTime = OwHelper.WorldNow;
                 requisition.SettlementMethod = model.SettlementMethod;
                 requisition.SettlementRemark = model.SettlementRemark;
-
                 _DbContext.SaveChanges();
-
                 result.SettlementDateTime = requisition.SettlementDateTime.Value;
                 result.NewStatus = requisition.Status;
-
                 _Logger.LogInformation("申请单结算完成 - 申请单ID: {RequisitionId}, 结算人: {OperatorId}, 结算方式: {Method}",
                     model.RequisitionId, context.User.Id, model.SettlementMethod);
             }
@@ -226,10 +195,8 @@ namespace PowerLmsWebApi.Controllers.OA
                 result.ErrorCode = 500;
                 result.DebugMessage = $"执行结算操作时发生错误: {ex.Message}";
             }
-
             return result;
         }
-
         /// <summary>
         /// 执行OA费用申请单确认操作。
         /// 会计权限：OA.1.1，结算完成后将状态从"待确认"更新为"可导入财务"。
@@ -245,9 +212,7 @@ namespace PowerLmsWebApi.Controllers.OA
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
                 return Unauthorized();
-
             var result = new ConfirmOaExpenseRequisitionReturnDto();
-
             try
             {
                 // 🔧 修复权限验证 - 使用正确的权限代码 OA.1.1
@@ -260,7 +225,6 @@ namespace PowerLmsWebApi.Controllers.OA
                     result.DebugMessage = $"权限不足: {err}";
                     return result;
                 }
-
                 var requisition = _DbContext.OaExpenseRequisitions.Find(model.RequisitionId);
                 if (requisition == null)
                 {
@@ -269,7 +233,6 @@ namespace PowerLmsWebApi.Controllers.OA
                     result.DebugMessage = "指定的OA费用申请单不存在";
                     return result;
                 }
-
                 // 多租户数据隔离检查
                 if (!context.User.IsSuperAdmin && requisition.OrgId != context.User.OrgId)
                 {
@@ -278,7 +241,6 @@ namespace PowerLmsWebApi.Controllers.OA
                     result.DebugMessage = "权限不足，无法操作此申请单";
                     return result;
                 }
-
                 // 状态检查：必须是已结算待确认状态
                 if (requisition.Status != OaExpenseStatus.SettledPendingConfirm)
                 {
@@ -287,7 +249,6 @@ namespace PowerLmsWebApi.Controllers.OA
                     result.DebugMessage = $"申请单状态不正确，当前状态：{requisition.GetApprovalStatus()}，只能对待确认状态的申请单执行确认操作";
                     return result;
                 }
-
                 // 职责分离检查：确认人不能是结算人
                 if (context.User.Id == requisition.SettlementOperatorId)
                 {
@@ -296,19 +257,15 @@ namespace PowerLmsWebApi.Controllers.OA
                     result.DebugMessage = "职责分离限制：确认操作不能由结算人执行，请使用不同的账号进行确认";
                     return result;
                 }
-
                 // 执行确认操作
                 requisition.Status = OaExpenseStatus.ConfirmedReadyForExport;
                 requisition.ConfirmOperatorId = context.User.Id;
                 requisition.ConfirmDateTime = OwHelper.WorldNow;
                 requisition.BankFlowNumber = model.BankFlowNumber;
                 requisition.ConfirmRemark = model.ConfirmRemark;
-
                 _DbContext.SaveChanges();
-
                 result.ConfirmDateTime = requisition.ConfirmDateTime.Value;
                 result.NewStatus = requisition.Status;
-
                 _Logger.LogInformation("申请单确认完成 - 申请单ID: {RequisitionId}, 确认人: {OperatorId}, 银行流水号: {BankFlowNumber}",
                     model.RequisitionId, context.User.Id, model.BankFlowNumber);
             }
@@ -319,14 +276,10 @@ namespace PowerLmsWebApi.Controllers.OA
                 result.ErrorCode = 500;
                 result.DebugMessage = $"执行确认操作时发生错误: {ex.Message}";
             }
-
             return result;
         }
-
         #endregion
-
         #region 凭证序号管理辅助方法
-
         /// <summary>
         /// 获取下一个凭证序号（基于VoucherSequence表，支持乐观锁）。
         /// </summary>
@@ -339,7 +292,6 @@ namespace PowerLmsWebApi.Controllers.OA
             const int maxRetries = 3;
             var retryCount = 0;
             VoucherSequence manager = null;
-            
             while (retryCount < maxRetries)
             {
                 try
@@ -349,7 +301,6 @@ namespace PowerLmsWebApi.Controllers.OA
                         .FirstOrDefaultAsync(x => x.OrgId == orgId && 
                                                  x.Month == month && 
                                                  x.VoucherCharacter == voucherCharacter);
-                    
                     if (manager == null)
                     {
                         // 首次创建记录
@@ -370,10 +321,8 @@ namespace PowerLmsWebApi.Controllers.OA
                         manager.MaxSequence++;
                         manager.LastUpdateDateTime = DateTime.Now;
                     }
-                    
                     // 保存更改（乐观锁生效）
                     await _DbContext.SaveChangesAsync();
-                    
                     return manager.MaxSequence;
                 }
                 catch (DbUpdateConcurrencyException)
@@ -381,19 +330,15 @@ namespace PowerLmsWebApi.Controllers.OA
                     retryCount++;
                     if (retryCount >= maxRetries)
                         throw new InvalidOperationException("获取凭证序号失败，并发冲突次数过多");
-                    
                     // 重新加载实体以获取最新状态
                     if (manager != null)
                         await _DbContext.Entry(manager).ReloadAsync();
-                    
                     // 短暂延迟后重试
                     await Task.Delay(50);
                 }
             }
-            
             throw new InvalidOperationException("获取凭证序号失败");
         }
-
         /// <summary>
         /// 检查凭证号在指定组织内是否重复。
         /// </summary>
@@ -414,9 +359,7 @@ namespace PowerLmsWebApi.Controllers.OA
                 return false; // 出错时返回false，避免阻塞流程
             }
         }
-
         #endregion
-
         /// <summary>
         /// 获取当前用户相关的OA费用申请单和审批流状态。
         /// 跑完标准审批流程后可审核。
@@ -438,9 +381,7 @@ namespace PowerLmsWebApi.Controllers.OA
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
                 return Unauthorized();
-
             var result = new GetAllOaExpenseRequisitionWithWfReturnDto();
-
             try
             {
                 // 从条件中分离出不同前缀的条件
@@ -449,18 +390,15 @@ namespace PowerLmsWebApi.Controllers.OA
                     ? new Dictionary<string, string>(conditional, StringComparer.OrdinalIgnoreCase)
                     : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 byte wfState = 15; // 默认值，意味着获取指定操作人相关的所有工作流节点项
-
                 if (reqConditions.Count > 0)
                 {
                     List<string> keysToRemove = new List<string>();
-
                     foreach (var pair in reqConditions)
                     {
                         // 处理工作流条件
                         if (pair.Key.StartsWith("OwWf.", StringComparison.OrdinalIgnoreCase))
                         {
                             string wfFieldName = pair.Key.Substring(5); // 去掉"OwWf."前缀
-
                             // 处理 State 的特殊情况
                             if (string.Equals(wfFieldName, "State", StringComparison.OrdinalIgnoreCase))
                             {
@@ -490,34 +428,27 @@ namespace PowerLmsWebApi.Controllers.OA
                             keysToRemove.Add(pair.Key);
                         }
                     }
-
                     // 从原始条件中移除特殊前缀的条件
                     foreach (var key in keysToRemove)
                     {
                         reqConditions.Remove(key);
                     }
                 }
-
                 // 查询关联的工作流
                 var docIdsQuery = _WfManager.GetWfNodeItemByOpertorId(context.User.Id, wfState)
                     .Select(c => c.Parent.Parent);
-
                 // 如果有其他工作流条件，先应用它们
                 if (wfConditions.Count > 0)
                 {
                     _Logger.LogDebug("应用工作流过滤条件: {conditions}",
                         string.Join(", ", wfConditions.Select(kv => $"{kv.Key}={kv.Value}")));
-
                     // 应用工作流筛选条件
                     docIdsQuery = EfHelper.GenerateWhereAnd(docIdsQuery, wfConditions);
                 }
-
                 // 获取符合条件的文档ID
                 var docIds = docIdsQuery.Select(wf => wf.DocId.Value).Distinct();
-
                 // 构建申请单查询
                 var dbSet = _DbContext.OaExpenseRequisitions.Where(r => docIds.Contains(r.Id));
-
                 // 🔥 修复Bug：工作流查询已经包含权限控制，只需保留组织隔离
                 // 移除 (r.ApplicantId == context.User.Id || r.CreateBy == context.User.Id) 条件
                 // 这样审批人就能看到分配给自己审批的申请单了
@@ -525,25 +456,20 @@ namespace PowerLmsWebApi.Controllers.OA
                 {
                     dbSet = dbSet.Where(r => r.OrgId == context.User.OrgId);
                 }
-
                 // 应用申请单条件
                 if (reqConditions.Count > 0)
                 {
                     dbSet = EfHelper.GenerateWhereAnd(dbSet, reqConditions);
                 }
-
                 // 应用分页和排序
                 var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
                 var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
-
                 // 获取结果ID集合
                 var resultIds = prb.Result.Select(c => c.Id).ToList();
-
                 // 只查询结果相关的工作流
                 var wfsArray = _DbContext.OwWfs
                     .Where(c => resultIds.Contains(c.DocId.Value))
                     .ToArray();
-
                 // 🔑 自动同步工作流状态到申请单状态
                 int syncedCount = 0;
                 foreach (var requisition in prb.Result)
@@ -560,18 +486,15 @@ namespace PowerLmsWebApi.Controllers.OA
                             {
                                 trackedRequisition.Status = OaExpenseStatus.ApprovedPendingSettlement;
                                 trackedRequisition.AuditDateTime = OwHelper.WorldNow;
-                                
                                 // 从工作流中获取最后审批人
                                 var lastApprover = wf.Children
                                     .OrderByDescending(n => n.ArrivalDateTime)
                                     .SelectMany(n => n.Children.Where(i => i.OperationKind == 0 && i.IsSuccess == true))
                                     .FirstOrDefault();
-                                
                                 if (lastApprover != null)
                                 {
                                     trackedRequisition.AuditOperatorId = lastApprover.OpertorId;
                                 }
-                                
                                 syncedCount++;
                                 _Logger.LogInformation(
                                     "自动同步申请单状态：RequisitionId={RequisitionId}, " +
@@ -595,14 +518,12 @@ namespace PowerLmsWebApi.Controllers.OA
                         }
                     }
                 }
-
                 // 保存状态同步的更改
                 if (syncedCount > 0)
                 {
                     _DbContext.SaveChanges();
                     _Logger.LogInformation("本次查询自动同步了 {Count} 个申请单的状态", syncedCount);
                 }
-
                 // 组装结果
                 foreach (var requisition in prb.Result)
                 {
@@ -613,7 +534,6 @@ namespace PowerLmsWebApi.Controllers.OA
                         Wf = _Mapper.Map<OwWfDto>(wf),
                     });
                 }
-
                 result.Total = prb.Total;
             }
             catch (Exception ex)
@@ -623,7 +543,6 @@ namespace PowerLmsWebApi.Controllers.OA
                 result.ErrorCode = 500;
                 result.DebugMessage = $"获取OA费用申请单审批流程列表时发生错误: {ex.Message}";
             }
-
             return result;
         }
     }

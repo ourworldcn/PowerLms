@@ -1,31 +1,26 @@
-# PowerLms ¿ª·¢¹æ·¶¸ÅÒª
-
-## ÏîÄ¿¼Ü¹¹
-- **PowerLmsData**: Êı¾İ²ã - ÊµÌåÀà¡¢Ã¶¾Ù¡¢Êı¾İÄ£ĞÍ
-- **PowerLmsServer**: ·şÎñ²ã - ÒµÎñÂß¼­¡¢¹ÜÀíÆ÷Àà  
-- **PowerLmsWebApi**: API²ã - ¿ØÖÆÆ÷¡¢DTOÀà
-
-## ºËĞÄ¹æ·¶
-
-### ÊµÌåÉè¼Æ
+ï»¿# PowerLms å¼€å‘è§„èŒƒæ¦‚è¦
+## é¡¹ç›®æ¶æ„
+- **PowerLmsData**: æ•°æ®å±‚ - å®ä½“ç±»ã€æšä¸¾ã€æ•°æ®æ¨¡å‹
+- **PowerLmsServer**: æœåŠ¡å±‚ - ä¸šåŠ¡é€»è¾‘ã€ç®¡ç†å™¨ç±»  
+- **PowerLmsWebApi**: APIå±‚ - æ§åˆ¶å™¨ã€DTOç±»
+## æ ¸å¿ƒè§„èŒƒ
+### å®ä½“è®¾è®¡
 ```csharp
-// ±ê×¼ÊµÌå¼Ì³Ğ
+// æ ‡å‡†å®ä½“ç»§æ‰¿
 public class EntityName : GuidKeyObjectBase, ISpecificOrg, ICreatorInfo
 {
-    /// <summary>ÒµÎñ×Ö¶ÎÃèÊö¡£ÏêÏ¸ÒµÎñ¹æÔòËµÃ÷¡£</summary>
-    [Comment("Êı¾İ¿â×¢ÊÍ")]
+    /// <summary>ä¸šåŠ¡å­—æ®µæè¿°ã€‚è¯¦ç»†ä¸šåŠ¡è§„åˆ™è¯´æ˜ã€‚</summary>
+    [Comment("æ•°æ®åº“æ³¨é‡Š")]
     [MaxLength(64), Required]
     public string FieldName { get; set; }
 }
 ```
-
-**ÌØÊâ×Ö¶Î¹æ·¶**:
-- **OrgId**: »ú¹¹Id£¬´´½¨Ê±È·¶¨£¬²»¿ÉĞŞ¸Ä
-- **CreateBy/CreateDateTime**: Éó¼Æ×Ö¶Î£¬Ê¹ÓÃ `OwHelper.WorldNow`
-- **±ÒÖÖ×Ö¶Î**: "CNY"£¬³¤¶È4£¬`Unicode(false)`
-- **»ãÂÊ/½ğ¶î**: `[Precision(18, 6)]` / `[Precision(18, 2)]`
-
-### ¿ØÖÆÆ÷Éè¼Æ
+**ç‰¹æ®Šå­—æ®µè§„èŒƒ**:
+- **OrgId**: æœºæ„Idï¼Œåˆ›å»ºæ—¶ç¡®å®šï¼Œä¸å¯ä¿®æ”¹
+- **CreateBy/CreateDateTime**: å®¡è®¡å­—æ®µï¼Œä½¿ç”¨ `OwHelper.WorldNow`
+- **å¸ç§å­—æ®µ**: "CNY"ï¼Œé•¿åº¦4ï¼Œ`Unicode(false)`
+- **æ±‡ç‡/é‡‘é¢**: `[Precision(18, 6)]` / `[Precision(18, 2)]`
+### æ§åˆ¶å™¨è®¾è®¡
 ```csharp
 [ApiController]
 [Route("api/[controller]/[action]")]
@@ -37,71 +32,61 @@ public partial class EntityController : ControllerBase
     private readonly EntityManager _EntityManager;
 }
 ```
-
-**±ê×¼·½·¨ÃüÃû**:
-- `GetAll{Entity}`: »ñÈ¡ÁĞ±í£¨·ÖÒ³+Ìõ¼ş²éÑ¯£©
-- `Add{Entity}`: ĞÂÔö
-- `Modify{Entity}`: ĞŞ¸Ä  
-- `Remove{Entity}`: É¾³ı
-- `Audit{Entity}`: ÉóºË
-
-### DTOÉè¼Æ
+**æ ‡å‡†æ–¹æ³•å‘½å**:
+- `GetAll{Entity}`: è·å–åˆ—è¡¨ï¼ˆåˆ†é¡µ+æ¡ä»¶æŸ¥è¯¢ï¼‰
+- `Add{Entity}`: æ–°å¢
+- `Modify{Entity}`: ä¿®æ”¹  
+- `Remove{Entity}`: åˆ é™¤
+- `Audit{Entity}`: å®¡æ ¸
+### DTOè®¾è®¡
 ```csharp
-// ²ÎÊıDTO
+// å‚æ•°DTO
 public class ActionEntityParamsDto : TokenDtoBase
 {
     [Required]
     public Entity Entity { get; set; }
 }
-
-// ·µ»ØDTO  
+// è¿”å›DTO  
 public class ActionEntityReturnDto : ReturnDtoBase
 {
     public Guid Id { get; set; }
 }
 ```
-
-### È¨ÏŞÑéÖ¤
+### æƒé™éªŒè¯
 ```csharp
 if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
     return Unauthorized();
 ```
-
-### Êı¾İ²Ù×÷
+### æ•°æ®æ“ä½œ
 ```csharp
-// IdÉú³É
+// Idç”Ÿæˆ
 entity.GenerateNewId();
-
-// ×Ö¶Î±£»¤
+// å­—æ®µä¿æŠ¤
 var entry = _DbContext.Entry(model.Entity);
 entry.Property(e => e.OrgId).IsModified = false;
 entry.Property(e => e.CreateBy).IsModified = false;
-
-// ²éÑ¯ÓÅ»¯
+// æŸ¥è¯¢ä¼˜åŒ–
 coll = coll.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
 ```
-
-### ´íÎó´¦Àí
+### é”™è¯¯å¤„ç†
 ```csharp
 try
 {
-    // ÒµÎñÂß¼­
+    // ä¸šåŠ¡é€»è¾‘
 }
 catch (Exception ex)
 {
-    _Logger.LogError(ex, "²Ù×÷ÃèÊöÊ±·¢Éú´íÎó");
+    _Logger.LogError(ex, "æ“ä½œæè¿°æ—¶å‘ç”Ÿé”™è¯¯");
     result.HasError = true;
     result.ErrorCode = 500;
-    result.DebugMessage = $"²Ù×÷Ê§°Ü: {ex.Message}";
+    result.DebugMessage = $"æ“ä½œå¤±è´¥: {ex.Message}";
 }
 ```
-
-### ÒµÎñ¹æÔò
-- **Êı¾İ¸ôÀë**: Í¨¹ı `OrgId` ÊµÏÖ¶à×â»§¸ôÀë
-- **ÉóºËÁ÷³Ì**: `AuditDateTime` ÅĞ¶ÏÉóºË×´Ì¬
-- **×Ö¶Î±£»¤**: ¹Ø¼üÉó¼Æ×Ö¶Î²»¿ÉĞŞ¸Ä
-
-### À©Õ¹·½·¨
+### ä¸šåŠ¡è§„åˆ™
+- **æ•°æ®éš”ç¦»**: é€šè¿‡ `OrgId` å®ç°å¤šç§Ÿæˆ·éš”ç¦»
+- **å®¡æ ¸æµç¨‹**: `AuditDateTime` åˆ¤æ–­å®¡æ ¸çŠ¶æ€
+- **å­—æ®µä¿æŠ¤**: å…³é”®å®¡è®¡å­—æ®µä¸å¯ä¿®æ”¹
+### æ‰©å±•æ–¹æ³•
 ```csharp
 public static class EntityExtensions
 {
@@ -111,16 +96,13 @@ public static class EntityExtensions
     }
 }
 ```
-
-## ÃüÃû¹æ·¶
-- **Ë½ÓĞ×Ö¶Î**: `_fieldName`
-- **¹«¹²³ÉÔ±**: `PascalCase`  
-- **ÎÄ¼şÃüÃû**: `EntityController.cs`, `EntityController.Dto.cs`
-
-## ĞÔÄÜÓÅ»¯
-- Ê¹ÓÃ `AsNoTracking()` ½øĞĞÖ»¶Á²éÑ¯
-- ´óÊı¾İ¼¯Ê¹ÓÃ·ÖÒ³²éÑ¯
-- Ê¹ÓÃ `using` Óï¾ä¹ÜÀí×ÊÔ´
-
+## å‘½åè§„èŒƒ
+- **ç§æœ‰å­—æ®µ**: `_fieldName`
+- **å…¬å…±æˆå‘˜**: `PascalCase`  
+- **æ–‡ä»¶å‘½å**: `EntityController.cs`, `EntityController.Dto.cs`
+## æ€§èƒ½ä¼˜åŒ–
+- ä½¿ç”¨ `AsNoTracking()` è¿›è¡Œåªè¯»æŸ¥è¯¢
+- å¤§æ•°æ®é›†ä½¿ç”¨åˆ†é¡µæŸ¥è¯¢
+- ä½¿ç”¨ `using` è¯­å¥ç®¡ç†èµ„æº
 ---
-*ÏêÏ¸¹æ·¶Çë²Î¿¼ÍêÕûµÄ¿ª·¢ÎÄµµ*
+*è¯¦ç»†è§„èŒƒè¯·å‚è€ƒå®Œæ•´çš„å¼€å‘æ–‡æ¡£*

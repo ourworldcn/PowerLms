@@ -1,74 +1,67 @@
-using PowerLmsWebApi.Dto;
-
+ï»¿using PowerLmsWebApi.Dto;
 namespace PowerLmsWebApi.Controllers
 {
     /// <summary>
-    /// ¸´ÖÆ±àÂë¹æÔò¹¦ÄÜµÄ²ÎÊı·â×°Àà¡£
+    /// å¤åˆ¶ç¼–ç è§„åˆ™åŠŸèƒ½çš„å‚æ•°å°è£…ç±»ã€‚
     /// </summary>
     public class CopyJobNumberRuleParamsDto : TokenDtoBase
     {
         /// <summary>
-        /// Ö¸¶¨Òª¸´ÖÆµÄ¹æÔòµÄCode´úÂëµÄ¼¯ºÏ¡£Îª¿ÕÔòÃ»ÓĞ×Öµä»á±»¸´ÖÆ¡£
+        /// æŒ‡å®šè¦å¤åˆ¶çš„è§„åˆ™çš„Codeä»£ç çš„é›†åˆã€‚ä¸ºç©ºåˆ™æ²¡æœ‰å­—å…¸ä¼šè¢«å¤åˆ¶ã€‚
         /// </summary>
         public List<string> Codes { get; set; } = new List<string>();
-
         /// <summary>
-        /// Ä¿±ê×éÖ¯»ú¹¹Id¡£
+        /// ç›®æ ‡ç»„ç»‡æœºæ„Idã€‚
         /// </summary>
         public Guid DestOrgId { get; set; }
     }
-
     /// <summary>
-    /// ¸´ÖÆ±àÂë¹æÔò¹¦ÄÜµÄ·µ»ØÖµ·â×°Àà¡£
+    /// å¤åˆ¶ç¼–ç è§„åˆ™åŠŸèƒ½çš„è¿”å›å€¼å°è£…ç±»ã€‚
     /// </summary>
     public class CopyJobNumberRuleReturnDto : ReturnDtoBase
     {
         /// <summary>
-        /// ĞÂµÄ±àÂë¹æÔòµÄId¼¯ºÏ¡£
+        /// æ–°çš„ç¼–ç è§„åˆ™çš„Idé›†åˆã€‚
         /// </summary>
         public List<Guid> Result = new List<Guid>();
     }
-
     /// <summary>
-    /// ÓÃÖ¸¶¨µÄ±àÂë¹æÔòÉú³ÉÒ»¸öĞÂµÄÆäËü±àÂëµÄ¹¦ÄÜ²ÎÊı·â×°Àà¡£
+    /// ç”¨æŒ‡å®šçš„ç¼–ç è§„åˆ™ç”Ÿæˆä¸€ä¸ªæ–°çš„å…¶å®ƒç¼–ç çš„åŠŸèƒ½å‚æ•°å°è£…ç±»ã€‚
     /// </summary>
     public class GeneratedOtherNumberParamsDto : TokenDtoBase
     {
         /// <summary>
-        /// ¹æÔòµÄId.
+        /// è§„åˆ™çš„Id.
         /// </summary>
         public Guid RuleId { get; set; }
     }
-
     /// <summary>
-    /// ÓÃÖ¸¶¨µÄ±àÂë¹æÔòÉú³ÉÒ»¸öĞÂµÄÆäËü±àÂëµÄ¹¦ÄÜ·µ»ØÖµ·â×°Àà¡£
+    /// ç”¨æŒ‡å®šçš„ç¼–ç è§„åˆ™ç”Ÿæˆä¸€ä¸ªæ–°çš„å…¶å®ƒç¼–ç çš„åŠŸèƒ½è¿”å›å€¼å°è£…ç±»ã€‚
     /// </summary>
     public class GeneratedOtherNumberReturnDto : ReturnDtoBase
     {
         /// <summary>
-        /// ·µ»ØµÄÒµÎñÂë¡£
+        /// è¿”å›çš„ä¸šåŠ¡ç ã€‚
         /// </summary>
         public string Result { get; set; }
     }
-
     /// <summary>
-    /// ÓÃÖ¸¶¨µÄ±àÂë¹æÔòÉú³ÉÒ»¸öĞÂµÄ±àÂëµÄ¹¦ÄÜ·µ»ØÖµ·â×°Àà¡£
+    /// ç”¨æŒ‡å®šçš„ç¼–ç è§„åˆ™ç”Ÿæˆä¸€ä¸ªæ–°çš„ç¼–ç çš„åŠŸèƒ½è¿”å›å€¼å°è£…ç±»ã€‚
     /// </summary>
     public class GeneratedJobNumberReturnDto : ReturnDtoBase
     {
         /// <summary>
-        /// ·µ»ØµÄÒµÎñÂë¡£
+        /// è¿”å›çš„ä¸šåŠ¡ç ã€‚
         /// </summary>
         public string Result { get; set; }
     }
-
     /// <summary>
-    /// ÓÃÖ¸¶¨µÄ±àÂë¹æÔòÉú³ÉÒ»¸öĞÂµÄ±àÂëµÄ¹¦ÄÜ²ÎÊı·â×°Àà¡£
+    /// ç”¨æŒ‡å®šçš„ç¼–ç è§„åˆ™ç”Ÿæˆä¸€ä¸ªæ–°çš„ç¼–ç çš„åŠŸèƒ½å‚æ•°å°è£…ç±»ã€‚
     /// </summary>
     public class GeneratedJobNumberParamsDto : TokenDtoBase
     {
         /// <summary>
-        /// ¹æÔòµÄId.
+        /// è§„åˆ™çš„Id.
         /// </summary>
         public Guid RuleId { get; set; }
     }

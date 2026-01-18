@@ -2,8 +2,6 @@
  * 项目特定的Json转换器
  */
 using System.Text.Json;
-
-
 namespace PowerLmsWebApi
 {
     /// <summary>
@@ -23,7 +21,6 @@ namespace PowerLmsWebApi
             var str = reader.GetString();
             return DateTime.Parse(str);
         }
-
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
@@ -34,9 +31,5 @@ namespace PowerLmsWebApi
         {
             writer.WriteStringValue(value.ToString("yyyy-MM-dd HH:mm:ss.fff"));
         }
-
     }
-
-
 }
-

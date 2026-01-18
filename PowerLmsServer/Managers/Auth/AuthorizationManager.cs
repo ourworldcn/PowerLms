@@ -12,7 +12,6 @@ using System.Linq;
 using System.Security;
 using System.Text;
 using System.Threading.Tasks;
-
 namespace PowerLmsServer.Managers
 {
     /// <summary>
@@ -31,17 +30,14 @@ namespace PowerLmsServer.Managers
             _PermissionManager = permissionManager;
             _OwContext = owContext;
         }
-
         readonly PermissionManager _PermissionManager;
         readonly PowerLmsUserDbContext _DbContext;
         readonly IMemoryCache _Cache;
         readonly OwContext _OwContext;
-
         /// <summary>
         /// 缓存项的前缀。
         /// </summary>
         public const string CachePrefix = "Permissions.";
-
         /// <summary>
         /// 是否拥有指定的一组权限。对于超管，商管总是返回true。
         /// </summary>
@@ -51,7 +47,6 @@ namespace PowerLmsServer.Managers
         {
             return Demand(out _, pIds);
         }
-
         /// <summary>
         /// 测试是否拥有指定的权限
         /// </summary>
@@ -62,17 +57,14 @@ namespace PowerLmsServer.Managers
         {
             err = null;
             var user = _OwContext.User;
-
             // 超级管理员和商户管理员默认拥有所有权限
             if (user.IsSuperAdmin || user.IsMerchantAdmin)
             {
                 return true;
             }
-
             // 获取用户当前的权限集合
             // 修复：使用正确的方法名称 GetOrLoadUserCurrentPermissions
             var permissions = _PermissionManager.GetOrLoadUserCurrentPermissions(user);
-
             // 检查用户是否拥有所有指定的权限
             foreach (var permissionId in pIds)
             {
@@ -91,7 +83,6 @@ namespace PowerLmsServer.Managers
                     return false;
                 }
             }
-
             return true;
         }
     }

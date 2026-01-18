@@ -9,7 +9,6 @@ using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
 using System.ComponentModel.DataAnnotations;
 using System.Net;
-
 namespace PowerLmsWebApi.Controllers
 {
     /// <summary>
@@ -62,7 +61,6 @@ namespace PowerLmsWebApi.Controllers
         /// 日志记录器
         /// </summary>
         protected readonly ILogger<GenericEfController<TEntity, TGetAllReturnDto, TAddParamsDto, TAddReturnDto, TModifyParamsDto, TModifyReturnDto, TRemoveParamsDto, TRemoveReturnDto>> _logger;
-
         /// <summary>
         /// 构造函数
         /// </summary>
@@ -90,20 +88,17 @@ namespace PowerLmsWebApi.Controllers
             _authorizationManager = authorizationManager;
             _logger = logger;
         }
-
         /// <summary>
         /// 获取数据库上下文中的实体集合。
         /// </summary>
         /// <returns>实体集合</returns>
         protected abstract DbSet<TEntity> GetDbSet();
-
         /// <summary>
         /// 获取指定操作的权限代码。
         /// </summary>
         /// <param name="operation">操作类型：1=查询，2=添加，3=修改，4=删除</param>
         /// <returns>权限代码，返回null表示不需要权限检查</returns>
         protected abstract string GetPermissionCode(int operation);
-
         /// <summary>
         /// 创建新实体前的准备工作。
         /// </summary>
@@ -118,7 +113,6 @@ namespace PowerLmsWebApi.Controllers
                 creatorInfo.CreateDateTime = OwHelper.WorldNow;
             }
         }
-
         /// <summary>
         /// 修改实体前的验证。
         /// </summary>
@@ -130,7 +124,6 @@ namespace PowerLmsWebApi.Controllers
         {
             return true;
         }
-
         /// <summary>
         /// 删除实体前的验证。
         /// </summary>
@@ -141,7 +134,6 @@ namespace PowerLmsWebApi.Controllers
         {
             return true;
         }
-
         /// <summary>
         /// 从添加参数中提取实体。
         /// </summary>
@@ -152,7 +144,6 @@ namespace PowerLmsWebApi.Controllers
             // 使用 Item 而不是 Entity
             return parameters.Item;
         }
-
         /// <summary>
         /// 从修改参数中提取实体集合。
         /// </summary>
@@ -163,7 +154,6 @@ namespace PowerLmsWebApi.Controllers
             // 直接返回 Items 集合
             return parameters.Items;
         }
-
         /// <summary>
         /// 设置返回DTO中的Id。
         /// </summary>
@@ -173,7 +163,6 @@ namespace PowerLmsWebApi.Controllers
         {
             returnDto.Id = id;
         }
-
         /// <summary>
         /// 获取实体列表。
         /// </summary>
@@ -188,7 +177,6 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_accountManager.GetOrLoadContextByToken(model.Token, _serviceProvider) is not OwContext context)
                 return Unauthorized();
-
             // 权限检查
             string permissionCode = GetPermissionCode(1); // 查询操作
             if (permissionCode != null)
@@ -196,10 +184,8 @@ namespace PowerLmsWebApi.Controllers
                 if (!_authorizationManager.Demand(out string errorMessage, permissionCode))
                     return StatusCode((int)HttpStatusCode.Forbidden, errorMessage);
             }
-
             var result = new TGetAllReturnDto();
             var dbSet = GetDbSet();
-
             try
             {
                 // 构建查询
@@ -208,17 +194,13 @@ namespace PowerLmsWebApi.Controllers
                 {
                     query = EfHelper.GenerateWhereAnd(query, conditional);
                 }
-
                 // 应用排序
                 query = query.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-
                 // 应用额外的查询条件
                 query = ApplyAdditionalQueryFilters(query, context);
-
                 // 执行查询并分页
                 var pagingResult = _entityManager.GetAll(query, model.StartIndex, model.Count);
                 _mapper.Map(pagingResult, result);
-
                 return result;
             }
             catch (Exception ex)
@@ -230,7 +212,6 @@ namespace PowerLmsWebApi.Controllers
                 return result;
             }
         }
-
         /// <summary>
         /// 应用额外的查询过滤条件。子类可重写此方法以添加特定的过滤逻辑。
         /// </summary>
@@ -241,7 +222,6 @@ namespace PowerLmsWebApi.Controllers
         {
             return query;
         }
-
         /// <summary>
         /// 添加新实体。
         /// </summary>
@@ -259,7 +239,6 @@ namespace PowerLmsWebApi.Controllers
                 _logger.LogWarning("无效的令牌{token}", model.Token);
                 return Unauthorized();
             }
-
             // 权限检查
             string permissionCode = GetPermissionCode(2); // 添加操作
             if (permissionCode != null)
@@ -267,9 +246,7 @@ namespace PowerLmsWebApi.Controllers
                 if (!_authorizationManager.Demand(out string errorMessage, permissionCode))
                     return StatusCode((int)HttpStatusCode.Forbidden, errorMessage);
             }
-
             var result = new TAddReturnDto();
-
             try
             {
                 // 验证添加参数
@@ -280,23 +257,17 @@ namespace PowerLmsWebApi.Controllers
                     result.DebugMessage = "添加参数不能为空";
                     return BadRequest(result);
                 }
-
                 // 从参数中提取实体
                 var entity = ExtractEntityFromAddParams(model);
-
                 // 生成新ID
                 entity.GenerateNewId();
-
                 // 进行实体准备工作
                 PrepareNewEntity(entity, context);
-
                 // 添加到数据库
                 GetDbSet().Add(entity);
                 _dbContext.SaveChanges();
-
                 // 设置返回值
                 SetReturnDtoId(result, entity.Id);
-
                 return result;
             }
             catch (Exception ex)
@@ -308,7 +279,6 @@ namespace PowerLmsWebApi.Controllers
                 return BadRequest(result);
             }
         }
-
         /// <summary>
         /// 修改实体。
         /// </summary>
@@ -324,7 +294,6 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_accountManager.GetOrLoadContextByToken(model.Token, _serviceProvider) is not OwContext context)
                 return Unauthorized();
-
             // 权限检查
             string permissionCode = GetPermissionCode(3); // 修改操作
             if (permissionCode != null)
@@ -332,9 +301,7 @@ namespace PowerLmsWebApi.Controllers
                 if (!_authorizationManager.Demand(out string errorMessage, permissionCode))
                     return StatusCode((int)HttpStatusCode.Forbidden, errorMessage);
             }
-
             var result = new TModifyReturnDto();
-
             try
             {
                 // 验证要修改的项
@@ -345,10 +312,8 @@ namespace PowerLmsWebApi.Controllers
                     result.DebugMessage = "没有提供要修改的实体";
                     return BadRequest(result);
                 }
-
                 // 获取要修改的实体集合
                 var entities = ExtractEntitiesFromModifyParams(model);
-
                 // 验证每个实体
                 foreach (var entity in entities)
                 {
@@ -361,7 +326,6 @@ namespace PowerLmsWebApi.Controllers
                         result.DebugMessage = $"ID为{entity.Id}的实体不存在";
                         return NotFound(result);
                     }
-
                     // 验证修改
                     if (!ValidateModify(entity, original, context))
                     {
@@ -371,7 +335,6 @@ namespace PowerLmsWebApi.Controllers
                         return BadRequest(result);
                     }
                 }
-
                 // 批量修改
                 if (!_entityManager.Modify(entities.ToList()))
                 {
@@ -380,10 +343,8 @@ namespace PowerLmsWebApi.Controllers
                     result.DebugMessage = "修改实体时发生错误";
                     return BadRequest(result);
                 }
-
                 // 保存更改
                 _dbContext.SaveChanges();
-
                 return result;
             }
             catch (Exception ex)
@@ -395,7 +356,6 @@ namespace PowerLmsWebApi.Controllers
                 return BadRequest(result);
             }
         }
-
         /// <summary>
         /// 删除实体。
         /// </summary>
@@ -411,7 +371,6 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_accountManager.GetOrLoadContextByToken(model.Token, _serviceProvider) is not OwContext context)
                 return Unauthorized();
-
             // 权限检查
             string permissionCode = GetPermissionCode(4); // 删除操作
             if (permissionCode != null)
@@ -419,16 +378,13 @@ namespace PowerLmsWebApi.Controllers
                 if (!_authorizationManager.Demand(out string errorMessage, permissionCode))
                     return StatusCode((int)HttpStatusCode.Forbidden, errorMessage);
             }
-
             var result = new TRemoveReturnDto();
-
             try
             {
                 // 查找实体
                 var entity = GetDbSet().Find(model.Id);
                 if (entity == null)
                     return NotFound($"ID为{model.Id}的实体不存在");
-
                 // 验证删除
                 if (!ValidateDelete(entity, context))
                 {
@@ -437,11 +393,9 @@ namespace PowerLmsWebApi.Controllers
                     result.DebugMessage = "实体当前状态不允许删除";
                     return BadRequest(result);
                 }
-
                 // 执行删除
                 _entityManager.Remove(entity);
                 _dbContext.SaveChanges();
-
                 return result;
             }
             catch (Exception ex)
@@ -454,7 +408,6 @@ namespace PowerLmsWebApi.Controllers
             }
         }
     }
-
     /*
     /// <summary>
     /// 简化版的通用CRUD控制器基类，使用相同的实体类型参数。
@@ -488,14 +441,12 @@ namespace PowerLmsWebApi.Controllers
                   (ILogger<GenericCrudController<TEntity, PagingReturnDtoBase<TEntity>, SimpleAddParamsDto<TEntityDto>, SimpleAddReturnDto, SimpleModifyParamsDto<TEntityDto>, SimpleReturnDto, RemoveParamsDtoBase, SimpleReturnDto>>)logger)
         {
         }
-
         /// <summary>
         /// 从DTO转换为实体
         /// </summary>
         /// <param name="dto">DTO对象</param>
         /// <returns>实体对象</returns>
         protected abstract TEntity ConvertDtoToEntity(TEntityDto dto);
-
         /// <summary>
         /// 从参数中提取实体
         /// </summary>
@@ -505,7 +456,6 @@ namespace PowerLmsWebApi.Controllers
         {
             return ConvertDtoToEntity(parameters.Item);
         }
-
         /// <summary>
         /// 从参数中提取实体
         /// </summary>
@@ -515,7 +465,6 @@ namespace PowerLmsWebApi.Controllers
         {
             return ConvertDtoToEntity(parameters.Item);
         }
-
         /// <summary>
         /// 设置返回DTO中的Id
         /// </summary>
@@ -526,9 +475,7 @@ namespace PowerLmsWebApi.Controllers
             returnDto.Id = id;
         }
     }
-
     #region 简化DTO类
-
     /// <summary>
     /// 简化版的添加参数DTO类
     /// </summary>
@@ -540,7 +487,6 @@ namespace PowerLmsWebApi.Controllers
         /// </summary>
         public T Item { get; set; }
     }
-
     /// <summary>
     /// 简化版的添加返回DTO类
     /// </summary>
@@ -551,7 +497,6 @@ namespace PowerLmsWebApi.Controllers
         /// </summary>
         public Guid Id { get; set; }
     }
-
     /// <summary>
     /// 简化版的修改参数DTO类
     /// </summary>
@@ -563,7 +508,6 @@ namespace PowerLmsWebApi.Controllers
         /// </summary>
         public T Item { get; set; }
     }
-
     /// <summary>
     /// 简化版的返回DTO类
     /// </summary>
@@ -571,7 +515,6 @@ namespace PowerLmsWebApi.Controllers
     {
     }
     #endregion
-
     // 简单实现示例
 public class CustomerController : SimpleCrudController<PlCustomer, PlCustomerDto>
 {
@@ -586,12 +529,10 @@ public class CustomerController : SimpleCrudController<PlCustomer, PlCustomerDto
         : base(accountManager, serviceProvider, dbContext, mapper, entityManager, authorizationManager, logger)
     {
     }
-
     protected override DbSet<PlCustomer> GetDbSet()
     {
         return _dbContext.PlCustomers;
     }
-
     protected override String GetPermissionCode(int operation)
     {
         return operation switch
@@ -603,12 +544,10 @@ public class CustomerController : SimpleCrudController<PlCustomer, PlCustomerDto
             _ => null
         };
     }
-
     protected override PlCustomer ConvertDtoToEntity(PlCustomerDto dto)
     {
         return _mapper.Map<PlCustomer>(dto);
     }
 }
-
     */
 }

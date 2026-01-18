@@ -1,5 +1,4 @@
 ﻿using PowerLms.Data;
-
 namespace PowerLmsWebApi.Dto
 {
     /// <summary>
@@ -12,7 +11,6 @@ namespace PowerLmsWebApi.Dto
         /// </summary>
         public List<SystemResource> Resources { get; set; } = new List<SystemResource>();
     }
-
     /// <summary>
     /// 通用的数据字典功能返回值封装类。
     /// </summary>
@@ -23,12 +21,10 @@ namespace PowerLmsWebApi.Dto
         /// </summary>
         public List<object> Result { get; set; } = new List<object>();
     }
-
     /// <summary>
     /// 通用的导入数据字典功能返回值封装类。
     /// </summary>
     public class ImportDataDicReturnDto : ReturnDtoBase
     {
     }
-
 }

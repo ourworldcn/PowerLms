@@ -3,7 +3,6 @@ using Newtonsoft.Json;
 using PowerLmsServer.Managers;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
-
 namespace PowerLmsWebApi.Dto
 {
     /// <summary>
@@ -17,7 +16,6 @@ namespace PowerLmsWebApi.Dto
         [Required]
         public Guid Token { get; set; }
     }
-
     /// <summary>
     /// 返回对象的基类。
     /// </summary>
@@ -28,27 +26,21 @@ namespace PowerLmsWebApi.Dto
         /// </summary>
         public ReturnDtoBase()
         {
-
         }
-
         /// <summary>
         /// 是否有错误。不设置则使用<see cref="ErrorCode"/>来判定。
         /// </summary>
         /// <value>0没有错误，其它数值含义由应用定义。</value>
         public bool HasError { get; set; }
-
         /// <summary>
         /// 错误码，参见 ErrorCodes。
         /// </summary>
         public int ErrorCode { get; set; }
-
         /// <summary>
         /// 调试信息，如果发生错误，这里给出简要说明。
         /// </summary>
         public string DebugMessage { get; set; }
-
     }
-
     /// <summary>
     /// 分页/排序要求的基类。
     /// </summary>
@@ -60,25 +52,21 @@ namespace PowerLmsWebApi.Dto
         /// </summary>
         [Required, Range(0, int.MaxValue)]
         public int StartIndex { get; set; }
-
         /// <summary>
         /// 最大返回数量。
         /// 默认值-1，不限定返回数量。
         /// </summary>
         [Range(-1, int.MaxValue)]
         public int Count { get; set; } = -1;
-
         /// <summary>
         /// 排序的字段名。默认值:"Id"。
         /// </summary>
         public string OrderFieldName { get; set; } = nameof(GuidKeyObjectBase.Id);
-
         /// <summary>
         /// 是否降序排序：true降序排序，false升序排序（省略或默认）。
         /// </summary>
         public bool IsDesc { get; set; }
     }
-
     /// <summary>
     /// 返回分页数据的封装类的基类
     /// </summary>
@@ -91,20 +79,16 @@ namespace PowerLmsWebApi.Dto
         /// </summary>
         public PagingReturnDtoBase()
         {
-
         }
-
         /// <summary>
         /// 集合元素的最大总数量。
         /// </summary>
         public int Total { get; set; }
-
         /// <summary>
         /// 返回的集合。
         /// </summary>
         public List<T> Result { get; set; } = new List<T>();
     }
-
     /// <summary>
     /// 增加实体功能的参数封装类的基类。
     /// </summary>
@@ -116,7 +100,6 @@ namespace PowerLmsWebApi.Dto
         /// </summary>
         public T Item { get; set; }
     }
-
     /// <summary>
     /// 增加实体功能的返回值封装类的基类.
     /// </summary>
@@ -127,7 +110,6 @@ namespace PowerLmsWebApi.Dto
         /// </summary>
         public Guid Id { get; set; }
     }
-
     /// <summary>
     /// 修改实体功能的参数封装类的基类。
     /// </summary>
@@ -139,15 +121,12 @@ namespace PowerLmsWebApi.Dto
         /// </summary>
         public List<T> Items { get; set; } = new List<T>();
     }
-
     /// <summary>
     /// 修改实体功能的返回值封装类的基类。
     /// </summary>
     public class ModifyReturnDtoBase : ReturnDtoBase
     {
-
     }
-
     /// <summary>
     /// 删除实体功能的参数封装类的基类。
     /// </summary>
@@ -159,15 +138,12 @@ namespace PowerLmsWebApi.Dto
         [Required]
         public Guid Id { get; set; }
     }
-
     /// <summary>
     /// 删除实体功能的返回值封装类的基类。
     /// </summary>
     public class RemoveReturnDtoBase : ReturnDtoBase
     {
-
     }
-
     /// <summary>
     /// 删除实体功能的参数封装类的基类。
     /// </summary>
@@ -178,15 +154,12 @@ namespace PowerLmsWebApi.Dto
         /// </summary>
         public List<Guid> Ids { get; set; } = new List<Guid>();
     }
-
     /// <summary>
     /// 删除实体功能的返回值封装类的基类。
     /// </summary>
     public class RemoveItemsReturnDtoBase : ReturnDtoBase
     {
-
     }
-
     /// <summary>
     /// 恢复被软删除实体功能的参数封装类的基类。
     /// </summary>
@@ -197,12 +170,10 @@ namespace PowerLmsWebApi.Dto
         /// </summary>
         public Guid Id { get; set; }
     }
-
     /// <summary>
     /// 恢复被软删除实体功能的返回值封装类的基类。
     /// </summary>
     public class RestoreReturnDtoBase : ReturnDtoBase
     {
-
     }
 }

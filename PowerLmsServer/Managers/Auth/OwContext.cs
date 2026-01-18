@@ -2,7 +2,6 @@
 using OW;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
-
 namespace PowerLmsServer.Managers
 {
     /// <summary>
@@ -19,29 +18,23 @@ namespace PowerLmsServer.Managers
         {
             ServiceProvider = serviceProvider;
         }
-
         /// <summary>
         /// 令牌。
         /// </summary>
         public Guid Token { get; set; }
-
         /// <summary>
         /// 账号对象。
         /// </summary>
         public Account User { get; set; }
-
         /// <summary>
         /// 这次工作上下文的创建时间。
         /// </summary>
         public DateTime CreateDateTime { get; set; } = OwHelper.WorldNow;
-
         /// <summary>
         /// 当前使用的范围服务容器。
         /// </summary>
         public IServiceProvider ServiceProvider { get; }
-
         #region 方法
-
         /// <summary>
         /// 标记当前进行了一次有效操作，这将导致延迟清理时间。
         /// </summary>
@@ -52,7 +45,6 @@ namespace PowerLmsServer.Managers
             // ✅ 正确做法: 调用 AccountManager.UpdateToken(user.Id, newToken)
             throw new NotSupportedException("此方法已废弃。请使用AccountManager.UpdateToken()方法更新令牌。");
         }
-
         /// <summary>
         /// 保存变化。
         /// </summary>
@@ -63,7 +55,6 @@ namespace PowerLmsServer.Managers
             int result = ServiceProvider.GetRequiredService<PowerLmsUserDbContext>().SaveChanges();
             return result;
         }
-
         /// <summary>
         /// <inheritdoc/>
         /// </summary>

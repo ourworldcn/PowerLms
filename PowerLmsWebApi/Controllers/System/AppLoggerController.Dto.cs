@@ -1,63 +1,55 @@
-using PowerLms.Data;
+ï»¿using PowerLms.Data;
 using PowerLmsWebApi.Dto;
-
 namespace PowerLmsWebApi.Controllers
 {
     /// <summary>
-    /// µ¼³öÈÕÖ¾¹¦ÄÜµÄ²ÎÊı·â×°Àà¡£
+    /// å¯¼å‡ºæ—¥å¿—åŠŸèƒ½çš„å‚æ•°å°è£…ç±»ã€‚
     /// </summary>
     public class ExportLoggerParamsDto : TokenDtoBase
     {
         /// <summary>
-        /// Ö¸¶¨ÏÂÔØÎÄ¼şµÄÃû×Ö¡£²»¿ÉÒÔº¬Â·¾¶¡£
+        /// æŒ‡å®šä¸‹è½½æ–‡ä»¶çš„åå­—ã€‚ä¸å¯ä»¥å«è·¯å¾„ã€‚
         /// </summary>
         public string FileName { get; set; }
     }
-
     /// <summary>
-    /// µ¼³öÈÕÖ¾¹¦ÄÜµÄ·µ»ØÖµ·â×°Àà¡£
+    /// å¯¼å‡ºæ—¥å¿—åŠŸèƒ½çš„è¿”å›å€¼å°è£…ç±»ã€‚
     /// </summary>
     public class ExportLoggerReturnDto
     {
     }
-
     /// <summary>
-    /// Çå³ıÈÕÖ¾Ïî¹¦ÄÜµÄ²ÎÊı·â×°Àà¡£
+    /// æ¸…é™¤æ—¥å¿—é¡¹åŠŸèƒ½çš„å‚æ•°å°è£…ç±»ã€‚
     /// </summary>
     public class RemoveAllLoggerItemParamsDto : TokenDtoBase
     {
     }
-
     /// <summary>
-    /// Çå³ıÈÕÖ¾Ïî¹¦ÄÜµÄ·µ»ØÖµ·â×°Àà¡£
+    /// æ¸…é™¤æ—¥å¿—é¡¹åŠŸèƒ½çš„è¿”å›å€¼å°è£…ç±»ã€‚
     /// </summary>
     public class RemoveAllLoggerItemReturnDto : ReturnDtoBase
     {
     }
-
     /// <summary>
-    /// ·µ»ØÈÕÖ¾Ïî¹¦ÄÜµÄ²ÎÊı·â×°Àà¡£
+    /// è¿”å›æ—¥å¿—é¡¹åŠŸèƒ½çš„å‚æ•°å°è£…ç±»ã€‚
     /// </summary>
     public class GetAllAppLogItemParamsDto
     {
     }
-
     /// <summary>
-    /// ·µ»ØÈÕÖ¾Ïî¹¦ÄÜµÄ·µ»ØÖµ·â×°Àà¡£
+    /// è¿”å›æ—¥å¿—é¡¹åŠŸèƒ½çš„è¿”å›å€¼å°è£…ç±»ã€‚
     /// </summary>
     public class GetAllAppLogItemReturnDto : PagingReturnDtoBase<OwAppLogView>
     {
     }
-
     /// <summary>
-    /// ×·¼ÓÒ»¸öÈÕÖ¾Ïî¹¦ÄÜµÄ²ÎÊı·â×°Àà¡£
+    /// è¿½åŠ ä¸€ä¸ªæ—¥å¿—é¡¹åŠŸèƒ½çš„å‚æ•°å°è£…ç±»ã€‚
     /// </summary>
     public class AddLoggerItemParamsDto
     {
     }
-
     /// <summary>
-    /// ×·¼ÓÒ»¸öÈÕÖ¾Ïî¹¦ÄÜµÄ·µ»ØÖµ·â×°Àà¡£
+    /// è¿½åŠ ä¸€ä¸ªæ—¥å¿—é¡¹åŠŸèƒ½çš„è¿”å›å€¼å°è£…ç±»ã€‚
     /// </summary>
     public class AddLoggerItemReturnDto
     {

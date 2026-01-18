@@ -1,103 +1,93 @@
-# PowerLms Ä¿Â¼½á¹¹ÓÅ»¯½¨Òé
-
-»ùÓÚ¶ÔÄúµ±Ç°ÏîÄ¿½á¹¹µÄ·ÖÎö£¬ÕûÌå·ûºÏ.NET±ê×¼¹ßÀý£¬µ«ÓÐÒÔÏÂÓÅ»¯½¨Òé£º
-
-## ? **µ±Ç°½á¹¹ÓÅµã**
-
-### 1. ÇåÎúµÄ·Ö²ã¼Ü¹¹
-- **PowerLmsData**: Êý¾Ý²ãÉè¼ÆºÏÀí
-- **PowerLmsServer**: ÒµÎñÂß¼­²ãÖ°ÔðÃ÷È·  
-- **PowerLmsWebApi**: API²ã×éÖ¯ÇåÎú
-- **Docs**: ÎÄµµ½á¹¹×¨Òµ
-
-### 2. Á¼ºÃµÄ×éÖ¯Ä£Ê½
-- °´ÒµÎñÄ£¿é·Ö×é
-- ·Ö²¿ÀàºÏÀíÊ¹ÓÃ
-- DTOÓë¿ØÖÆÆ÷·ÖÀë
-
-## ?? **½¨ÒéµÄÓÅ»¯Ïî**
-
-### 1. ÎÄ¼þ¼ÐÃüÃûÓ¢ÎÄ»¯
+ï»¿# PowerLms ç›®å½•ç»“æž„ä¼˜åŒ–å»ºè®®
+åŸºäºŽå¯¹æ‚¨å½“å‰é¡¹ç›®ç»“æž„çš„åˆ†æžï¼Œæ•´ä½“ç¬¦åˆ.NETæ ‡å‡†æƒ¯ä¾‹ï¼Œä½†æœ‰ä»¥ä¸‹ä¼˜åŒ–å»ºè®®ï¼š
+## ? **å½“å‰ç»“æž„ä¼˜ç‚¹**
+### 1. æ¸…æ™°çš„åˆ†å±‚æž¶æž„
+- **PowerLmsData**: æ•°æ®å±‚è®¾è®¡åˆç†
+- **PowerLmsServer**: ä¸šåŠ¡é€»è¾‘å±‚èŒè´£æ˜Žç¡®  
+- **PowerLmsWebApi**: APIå±‚ç»„ç»‡æ¸…æ™°
+- **Docs**: æ–‡æ¡£ç»“æž„ä¸“ä¸š
+### 2. è‰¯å¥½çš„ç»„ç»‡æ¨¡å¼
+- æŒ‰ä¸šåŠ¡æ¨¡å—åˆ†ç»„
+- åˆ†éƒ¨ç±»åˆç†ä½¿ç”¨
+- DTOä¸ŽæŽ§åˆ¶å™¨åˆ†ç¦»
+## ?? **å»ºè®®çš„ä¼˜åŒ–é¡¹**
+### 1. æ–‡ä»¶å¤¹å‘½åè‹±æ–‡åŒ–
 ```diff
 PowerLmsData/
-- ©À©¤©¤ »ù´¡Êý¾Ý/
-- ©À©¤©¤ ²ÆÎñ/
-- ©À©¤©¤ ¿Í»§×ÊÁÏ/
-- ©À©¤©¤ ÒµÎñ/
-- ©À©¤©¤ È¨ÏÞ/
-- ©À©¤©¤ »ú¹¹/
-- ©À©¤©¤ ÏûÏ¢ÏµÍ³/
-- ©À©¤©¤ Ó¦ÓÃÈÕÖ¾/
-- ©À©¤©¤ Á÷³Ì/
-- ©À©¤©¤ ¶àÓïÑÔ/
-- ©À©¤©¤ º½Ïß¹ÜÀí/
-- ©À©¤©¤ »ù´¡Ö§³Ö/
-- ©À©¤©¤ ÕËºÅ/
-- ©À©¤©¤ ÏµÍ³×ÊÔ´/
-+ ©À©¤©¤ BaseData/           # »ù´¡Êý¾Ý
-+ ©À©¤©¤ Finance/            # ²ÆÎñ
-+ ©À©¤©¤ Customer/           # ¿Í»§×ÊÁÏ
-+ ©À©¤©¤ Business/           # ÒµÎñ
-+ ©À©¤©¤ Authorization/      # È¨ÏÞ
-+ ©À©¤©¤ Organization/       # »ú¹¹
-+ ©À©¤©¤ Messaging/          # ÏûÏ¢ÏµÍ³
-+ ©À©¤©¤ Logging/            # Ó¦ÓÃÈÕÖ¾
-+ ©À©¤©¤ Workflow/           # Á÷³Ì
-+ ©À©¤©¤ Localization/       # ¶àÓïÑÔ
-+ ©À©¤©¤ ShippingRoute/      # º½Ïß¹ÜÀí
-+ ©À©¤©¤ Infrastructure/     # »ù´¡Ö§³Ö
-+ ©À©¤©¤ Identity/           # ÕËºÅ
-+ ©À©¤©¤ Resources/          # ÏµÍ³×ÊÔ´
-+ ©¸©¤©¤ OfficeAutomation/   # OA°ì¹«×Ô¶¯»¯
+- â”œâ”€â”€ åŸºç¡€æ•°æ®/
+- â”œâ”€â”€ è´¢åŠ¡/
+- â”œâ”€â”€ å®¢æˆ·èµ„æ–™/
+- â”œâ”€â”€ ä¸šåŠ¡/
+- â”œâ”€â”€ æƒé™/
+- â”œâ”€â”€ æœºæž„/
+- â”œâ”€â”€ æ¶ˆæ¯ç³»ç»Ÿ/
+- â”œâ”€â”€ åº”ç”¨æ—¥å¿—/
+- â”œâ”€â”€ æµç¨‹/
+- â”œâ”€â”€ å¤šè¯­è¨€/
+- â”œâ”€â”€ èˆªçº¿ç®¡ç†/
+- â”œâ”€â”€ åŸºç¡€æ”¯æŒ/
+- â”œâ”€â”€ è´¦å·/
+- â”œâ”€â”€ ç³»ç»Ÿèµ„æº/
++ â”œâ”€â”€ BaseData/           # åŸºç¡€æ•°æ®
++ â”œâ”€â”€ Finance/            # è´¢åŠ¡
++ â”œâ”€â”€ Customer/           # å®¢æˆ·èµ„æ–™
++ â”œâ”€â”€ Business/           # ä¸šåŠ¡
++ â”œâ”€â”€ Authorization/      # æƒé™
++ â”œâ”€â”€ Organization/       # æœºæž„
++ â”œâ”€â”€ Messaging/          # æ¶ˆæ¯ç³»ç»Ÿ
++ â”œâ”€â”€ Logging/            # åº”ç”¨æ—¥å¿—
++ â”œâ”€â”€ Workflow/           # æµç¨‹
++ â”œâ”€â”€ Localization/       # å¤šè¯­è¨€
++ â”œâ”€â”€ ShippingRoute/      # èˆªçº¿ç®¡ç†
++ â”œâ”€â”€ Infrastructure/     # åŸºç¡€æ”¯æŒ
++ â”œâ”€â”€ Identity/           # è´¦å·
++ â”œâ”€â”€ Resources/          # ç³»ç»Ÿèµ„æº
++ â””â”€â”€ OfficeAutomation/   # OAåŠžå…¬è‡ªåŠ¨åŒ–
 ```
-
-### 2. Ìí¼Ó±ê×¼.NETÏîÄ¿ÎÄ¼þ¼Ð
+### 2. æ·»åŠ æ ‡å‡†.NETé¡¹ç›®æ–‡ä»¶å¤¹
 ```
 PowerLmsWebApi/
-©À©¤©¤ Controllers/
-©À©¤©¤ Dto/
-©À©¤©¤ Middleware/
-©À©¤©¤ AutoMapper/
-+ ©À©¤©¤ Extensions/         # À©Õ¹·½·¨
-+ ©À©¤©¤ Constants/          # ³£Á¿¶¨Òå
-+ ©À©¤©¤ Attributes/         # ×Ô¶¨ÒåÌØÐÔ
-+ ©À©¤©¤ Filters/            # ¹ýÂËÆ÷
-+ ©¸©¤©¤ Validators/         # ÑéÖ¤Æ÷
+â”œâ”€â”€ Controllers/
+â”œâ”€â”€ Dto/
+â”œâ”€â”€ Middleware/
+â”œâ”€â”€ AutoMapper/
++ â”œâ”€â”€ Extensions/         # æ‰©å±•æ–¹æ³•
++ â”œâ”€â”€ Constants/          # å¸¸é‡å®šä¹‰
++ â”œâ”€â”€ Attributes/         # è‡ªå®šä¹‰ç‰¹æ€§
++ â”œâ”€â”€ Filters/            # è¿‡æ»¤å™¨
++ â””â”€â”€ Validators/         # éªŒè¯å™¨
 ```
-
 ```
 PowerLmsServer/
-+ ©À©¤©¤ Services/           # ÒµÎñ·þÎñ
-+ ©À©¤©¤ Interfaces/         # ·þÎñ½Ó¿Ú
-+ ©À©¤©¤ Extensions/         # À©Õ¹·½·¨
-+ ©À©¤©¤ Constants/          # ³£Á¿
-+ ©À©¤©¤ Exceptions/         # ×Ô¶¨ÒåÒì³£
-+ ©¸©¤©¤ Utilities/          # ¹¤¾ßÀà
++ â”œâ”€â”€ Services/           # ä¸šåŠ¡æœåŠ¡
++ â”œâ”€â”€ Interfaces/         # æœåŠ¡æŽ¥å£
++ â”œâ”€â”€ Extensions/         # æ‰©å±•æ–¹æ³•
++ â”œâ”€â”€ Constants/          # å¸¸é‡
++ â”œâ”€â”€ Exceptions/         # è‡ªå®šä¹‰å¼‚å¸¸
++ â””â”€â”€ Utilities/          # å·¥å…·ç±»
 ```
-
-### 3. Ï¸»¯ÒµÎñÄ£¿é½á¹¹
+### 3. ç»†åŒ–ä¸šåŠ¡æ¨¡å—ç»“æž„
 ```
 PowerLmsData/
-©À©¤©¤ BaseData/
-©¦   ©À©¤©¤ Geography/        # µØÀíÏà¹Ø(¸Û¿Ú¡¢¹ú¼ÒµÈ)
-©¦   ©À©¤©¤ Dictionary/       # Êý¾Ý×Öµä
-©¦   ©À©¤©¤ Configuration/    # ÅäÖÃÏà¹Ø
-©¦   ©¸©¤©¤ Reference/        # ²Î¿¼Êý¾Ý
-©À©¤©¤ Finance/
-©¦   ©À©¤©¤ Accounting/       # »á¼Æ¿ÆÄ¿
-©¦   ©À©¤©¤ Invoice/          # ·¢Æ±¹ÜÀí
-©¦   ©À©¤©¤ Settlement/       # ½áËãÏà¹Ø
-©¦   ©¸©¤©¤ Voucher/          # Æ¾Ö¤Ïà¹Ø
-©À©¤©¤ Business/
-©¦   ©À©¤©¤ Jobs/             # ¹¤×÷ÈÎÎñ
-©¦   ©À©¤©¤ Documents/        # ÒµÎñµ¥¾Ý
-©¦   ©À©¤©¤ Fees/             # ·ÑÓÃ¹ÜÀí
-©¦   ©¸©¤©¤ Templates/        # Ä£°åÏà¹Ø
+â”œâ”€â”€ BaseData/
+â”‚   â”œâ”€â”€ Geography/        # åœ°ç†ç›¸å…³(æ¸¯å£ã€å›½å®¶ç­‰)
+â”‚   â”œâ”€â”€ Dictionary/       # æ•°æ®å­—å…¸
+â”‚   â”œâ”€â”€ Configuration/    # é…ç½®ç›¸å…³
+â”‚   â””â”€â”€ Reference/        # å‚è€ƒæ•°æ®
+â”œâ”€â”€ Finance/
+â”‚   â”œâ”€â”€ Accounting/       # ä¼šè®¡ç§‘ç›®
+â”‚   â”œâ”€â”€ Invoice/          # å‘ç¥¨ç®¡ç†
+â”‚   â”œâ”€â”€ Settlement/       # ç»“ç®—ç›¸å…³
+â”‚   â””â”€â”€ Voucher/          # å‡­è¯ç›¸å…³
+â”œâ”€â”€ Business/
+â”‚   â”œâ”€â”€ Jobs/             # å·¥ä½œä»»åŠ¡
+â”‚   â”œâ”€â”€ Documents/        # ä¸šåŠ¡å•æ®
+â”‚   â”œâ”€â”€ Fees/             # è´¹ç”¨ç®¡ç†
+â”‚   â””â”€â”€ Templates/        # æ¨¡æ¿ç›¸å…³
 ```
-
-### 4. Í³Ò»ÃüÃû¿Õ¼ä
+### 4. ç»Ÿä¸€å‘½åç©ºé—´
 ```csharp
-// ½¨ÒéµÄÃüÃû¿Õ¼ä½á¹¹
+// å»ºè®®çš„å‘½åç©ºé—´ç»“æž„
 PowerLms.Data.BaseData
 PowerLms.Data.Finance  
 PowerLms.Data.Business
@@ -106,47 +96,35 @@ PowerLms.Server.Interfaces
 PowerLms.WebApi.Controllers
 PowerLms.WebApi.Dto
 ```
-
-## ?? **ÊµÊ©ÓÅÏÈ¼¶**
-
-### ¸ßÓÅÏÈ¼¶ (Á¢¼´ÊµÊ©)
-1. ? ÎÄµµ½á¹¹ÒÑÍêÉÆ
-2. ?? Ìí¼ÓÈ±Ê§µÄ±ê×¼ÎÄ¼þ¼Ð
-3. ?? Í³Ò»ÃüÃû¹æ·¶
-
-### ÖÐÓÅÏÈ¼¶ (Öð²½ÊµÊ©)  
-1. ?? ÖÐÎÄÎÄ¼þ¼ÐÓ¢ÎÄ»¯
-2. ?? Ï¸»¯ÒµÎñÄ£¿é
-3. ??? ÓÅ»¯ÃüÃû¿Õ¼ä
-
-### µÍÓÅÏÈ¼¶ (³¤ÆÚ¹æ»®)
-1. ?? ÖØ¹¹´óÐÍ¿ØÖÆÆ÷
-2. ?? ÍêÉÆµ¥Ôª²âÊÔ½á¹¹
-3. ?? ÐÔÄÜÓÅ»¯×éÖ¯
-
-## ?? **·ûºÏµÄ.NET±ê×¼¹ßÀý**
-
-? **Á¼ºÃÊµ¼ù**:
-- ÇåÎúµÄ·Ö²ã¼Ü¹¹
-- Ö°Ôð·ÖÀëÔ­Ôò
-- Ä£¿é»¯Éè¼Æ
-- ÎÄµµÍêÕûÐÔ
-
-? **±ê×¼Ä¿Â¼½á¹¹**:
-- Controllers, Models, Services ·ÖÀë
-- ÒÀÀµ×¢ÈëÊ¹ÓÃ
-- ÖÐ¼ä¼þ×éÖ¯
-- AutoMapper ÅäÖÃ
-
-## ?? **×Ü½á**
-
-ÄúµÄÏîÄ¿½á¹¹**ÕûÌåÉÏ·ûºÏ.NET±ê×¼¹ßÀý**£¬Ö÷ÒªÓÅÊÆÔÚÓÚ£º
-- ÇåÎúµÄÒµÎñÄ£¿é»®·Ö
-- ºÏÀíµÄ·Ö²ã¼Ü¹¹
-- Á¼ºÃµÄÎÄµµ×éÖ¯
-
-½¨ÒéÓÅÏÈ½â¾öÎÄ¼þ¼ÐÃüÃûºÍÌí¼Ó±ê×¼Ä¿Â¼£¬ÕâÑùÄÜÈÃÏîÄ¿¸ü¼Ó×¨ÒµºÍ¹ú¼Ê»¯¡£
-
+## ?? **å®žæ–½ä¼˜å…ˆçº§**
+### é«˜ä¼˜å…ˆçº§ (ç«‹å³å®žæ–½)
+1. ? æ–‡æ¡£ç»“æž„å·²å®Œå–„
+2. ?? æ·»åŠ ç¼ºå¤±çš„æ ‡å‡†æ–‡ä»¶å¤¹
+3. ?? ç»Ÿä¸€å‘½åè§„èŒƒ
+### ä¸­ä¼˜å…ˆçº§ (é€æ­¥å®žæ–½)  
+1. ?? ä¸­æ–‡æ–‡ä»¶å¤¹è‹±æ–‡åŒ–
+2. ?? ç»†åŒ–ä¸šåŠ¡æ¨¡å—
+3. ??? ä¼˜åŒ–å‘½åç©ºé—´
+### ä½Žä¼˜å…ˆçº§ (é•¿æœŸè§„åˆ’)
+1. ?? é‡æž„å¤§åž‹æŽ§åˆ¶å™¨
+2. ?? å®Œå–„å•å…ƒæµ‹è¯•ç»“æž„
+3. ?? æ€§èƒ½ä¼˜åŒ–ç»„ç»‡
+## ?? **ç¬¦åˆçš„.NETæ ‡å‡†æƒ¯ä¾‹**
+? **è‰¯å¥½å®žè·µ**:
+- æ¸…æ™°çš„åˆ†å±‚æž¶æž„
+- èŒè´£åˆ†ç¦»åŽŸåˆ™
+- æ¨¡å—åŒ–è®¾è®¡
+- æ–‡æ¡£å®Œæ•´æ€§
+? **æ ‡å‡†ç›®å½•ç»“æž„**:
+- Controllers, Models, Services åˆ†ç¦»
+- ä¾èµ–æ³¨å…¥ä½¿ç”¨
+- ä¸­é—´ä»¶ç»„ç»‡
+- AutoMapper é…ç½®
+## ?? **æ€»ç»“**
+æ‚¨çš„é¡¹ç›®ç»“æž„**æ•´ä½“ä¸Šç¬¦åˆ.NETæ ‡å‡†æƒ¯ä¾‹**ï¼Œä¸»è¦ä¼˜åŠ¿åœ¨äºŽï¼š
+- æ¸…æ™°çš„ä¸šåŠ¡æ¨¡å—åˆ’åˆ†
+- åˆç†çš„åˆ†å±‚æž¶æž„
+- è‰¯å¥½çš„æ–‡æ¡£ç»„ç»‡
+å»ºè®®ä¼˜å…ˆè§£å†³æ–‡ä»¶å¤¹å‘½åå’Œæ·»åŠ æ ‡å‡†ç›®å½•ï¼Œè¿™æ ·èƒ½è®©é¡¹ç›®æ›´åŠ ä¸“ä¸šå’Œå›½é™…åŒ–ã€‚
 ---
-
-*±¾½¨Òé»ùÓÚ.NET 6±ê×¼Êµ¼ùºÍÆóÒµ¼¶ÏîÄ¿¾­ÑéÖÆ¶¨*
+*æœ¬å»ºè®®åŸºäºŽ.NET 6æ ‡å‡†å®žè·µå’Œä¼ä¸šçº§é¡¹ç›®ç»éªŒåˆ¶å®š*

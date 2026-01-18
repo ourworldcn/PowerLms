@@ -7,9 +7,7 @@
  * - 空值表示未导出，非空表示已导出
  * 作者：zc | 创建：2025-01-31
  */
-
 using System;
-
 namespace PowerLms.Data.Finance
 {
     /// <summary>
@@ -50,7 +48,6 @@ namespace PowerLms.Data.Finance
         /// </list>
         /// </summary>
         DateTime? ExportedDateTime { get; set; }
-
         /// <summary>
         /// 导出用户ID。
         /// 记录执行导出操作的用户，用于审计和权限验证。

@@ -4,7 +4,6 @@
  * 技术要点：依赖注入、服务层业务逻辑、工作流管理、工作流状态变更回调
  * 作者：zc | 创建：2025-01 | 修改：2025-02-06 集成工作流回调机制
  */
-
 using Microsoft.Extensions.DependencyInjection;
 using PowerLms.Data;
 using PowerLms.Data.OA;
@@ -12,7 +11,6 @@ using PowerLmsServer.EfData;
 using PowerLmsServer.Managers.Workflow;
 using System;
 using System.Linq;
-
 namespace PowerLmsServer.Managers.OA
 {
     /// <summary>
@@ -41,11 +39,9 @@ namespace PowerLmsServer.Managers.OA
             _DbContext = dbContext;
             _SqlAppLogger = sqlAppLogger;
         }
-
         private readonly PowerLmsUserDbContext _DbContext;
         private readonly OwSqlAppLogger _SqlAppLogger;
         private readonly JobManager _JobManager;
-
         /// <summary>
         /// 回退OA费用申请单到初始状态。
         /// 会清空相关工作流、重置申请单状态并释放被锁定的费用。
@@ -61,13 +57,10 @@ namespace PowerLmsServer.Managers.OA
             // 1. 参数有效性验证
             if (requisitionId == Guid.Empty)
                 throw new ArgumentException("申请单ID不能为空", nameof(requisitionId));
-
             if (operatorId == Guid.Empty)
                 throw new ArgumentException("操作人ID不能为空", nameof(operatorId));
-
             if (wfManager == null)
                 throw new ArgumentNullException(nameof(wfManager));
-
             try
             {
                 // 2. 验证OA费用申请单是否存在（任何状态都可回退）
@@ -76,13 +69,10 @@ namespace PowerLmsServer.Managers.OA
                 {
                     return OaExpenseRevertResult.CreateFailure(requisitionId, $"未找到ID为 {requisitionId} 的OA费用申请单");
                 }
-
                 var originalStatus = requisition.Status;
                 _SqlAppLogger.LogGeneralInfo($"开始回退OA费用申请单：申请单ID={requisitionId}, 当前状态={originalStatus}, 操作人={operatorId}");
-
                 // 3. 调用工作流清理服务清空相关工作流
                 var clearedWorkflows = wfManager.ClearWorkflowByDocId(requisitionId);
-
                 // 4. 重置OA费用申请单状态为草稿状态（初始状态）
                 requisition.Status = OaExpenseStatus.Draft;
                 requisition.AuditDateTime = null;
@@ -95,13 +85,10 @@ namespace PowerLmsServer.Managers.OA
                 requisition.ConfirmOperatorId = null;
                 requisition.BankFlowNumber = null;
                 requisition.ConfirmRemark = null;
-
                 // 5. 保存数据库更改
                 _DbContext.SaveChanges();
-
                 var message = $"成功回退OA费用申请单：申请单ID={requisitionId}, 状态从{originalStatus}回退为{requisition.Status}, 清空工作流{clearedWorkflows.Count}个";
                 _SqlAppLogger.LogGeneralInfo($"OA费用申请单回退成功：{message}, 操作人={operatorId}");
-
                 // 6. 返回操作结果摘要
                 return OaExpenseRevertResult.CreateSuccess(requisitionId, clearedWorkflows.Count, message);
             }
@@ -112,7 +99,6 @@ namespace PowerLmsServer.Managers.OA
                 throw new InvalidOperationException(errorMessage, ex);
             }
         }
-
         /// <summary>
         /// 验证申请单是否可以进行回退操作。
         /// </summary>
@@ -125,7 +111,6 @@ namespace PowerLmsServer.Managers.OA
                 var requisition = _DbContext.OaExpenseRequisitions.Find(requisitionId);
                 if (requisition == null)
                     return false;
-
                 // 根据会议纪要，业务在任何状态下都可能被清空工作流并回退到工作流的初始状态
                 // 因此这里总是返回true，但可以根据具体业务需求添加限制条件
                 return true;
@@ -136,7 +121,6 @@ namespace PowerLmsServer.Managers.OA
                 return false;
             }
         }
-
         /// <summary>
         /// 获取申请单的当前状态信息。
         /// </summary>
@@ -149,7 +133,6 @@ namespace PowerLmsServer.Managers.OA
                 var requisition = _DbContext.OaExpenseRequisitions.Find(requisitionId);
                 if (requisition == null)
                     return null;
-
                 return new OaExpenseStatusInfo
                 {
                     RequisitionId = requisitionId,
@@ -168,9 +151,7 @@ namespace PowerLmsServer.Managers.OA
                 return null;
             }
         }
-
         #region 工作流回调
-
         /// <summary>
         /// 工作流状态变更回调入口。
         /// 从本地缓存读取数据，不进行数据库查询，不调用 SaveChanges()。
@@ -216,7 +197,6 @@ namespace PowerLmsServer.Managers.OA
                 _SqlAppLogger.LogGeneralInfo($"OA费用回调异常：WorkflowId={workflow.Id}, DocId={workflow.DocId}, 错误={ex.Message}");
             }
         }
-
         /// <summary>
         /// 同步OA申请单状态（从本地缓存读取，不调用 SaveChanges()）。
         /// 
@@ -272,9 +252,7 @@ namespace PowerLmsServer.Managers.OA
                     break;
             }
         }
-
         #endregion 工作流回调
-
         /// <summary>
         /// OA费用申请单回退操作的结果类型。
         /// 专门用于OA费用申请单的回退操作结果封装。
@@ -285,22 +263,18 @@ namespace PowerLmsServer.Managers.OA
             /// 操作是否成功的布尔值。
             /// </summary>
             public bool Success { get; set; }
-
             /// <summary>
             /// 申请单ID，用于确认操作目标。
             /// </summary>
             public Guid RequisitionId { get; set; }
-
             /// <summary>
             /// 清空的工作流数量，用于审计统计。
             /// </summary>
             public int ClearedWorkflowCount { get; set; }
-
             /// <summary>
             /// 操作结果描述信息。
             /// </summary>
             public string Message { get; set; }
-
             /// <summary>
             /// 创建成功的回退结果。
             /// </summary>
@@ -318,7 +292,6 @@ namespace PowerLmsServer.Managers.OA
                     Message = message
                 };
             }
-
             /// <summary>
             /// 创建失败的回退结果。
             /// </summary>
@@ -336,7 +309,6 @@ namespace PowerLmsServer.Managers.OA
                 };
             }
         }
-
         /// <summary>
         /// OA费用申请单状态信息。
         /// 用于封装申请单的状态详情。
@@ -347,37 +319,30 @@ namespace PowerLmsServer.Managers.OA
             /// 申请单ID。
             /// </summary>
             public Guid RequisitionId { get; set; }
-
             /// <summary>
             /// 当前状态。
             /// </summary>
             public OaExpenseStatus Status { get; set; }
-
             /// <summary>
             /// 是否已审核。
             /// </summary>
             public bool IsAudited { get; set; }
-
             /// <summary>
             /// 是否已结算。
             /// </summary>
             public bool IsSettled { get; set; }
-
             /// <summary>
             /// 是否已确认。
             /// </summary>
             public bool IsConfirmed { get; set; }
-
             /// <summary>
             /// 审核时间。
             /// </summary>
             public DateTime? AuditDateTime { get; set; }
-
             /// <summary>
             /// 结算时间。
             /// </summary>
             public DateTime? SettlementDateTime { get; set; }
-
             /// <summary>
             /// 确认时间。
             /// </summary>

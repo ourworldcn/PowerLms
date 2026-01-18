@@ -4,7 +4,6 @@
  * 技术要点：独立权限控制、OrgId作为主键
  * 作者：zc | 创建：2025-01 | 修改：2025-01-27 简化为基础CRUD功能
  */
-
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,7 +12,6 @@ using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
 using System.Net;
-
 namespace PowerLmsWebApi.Controllers.System
 {
     /// <summary>
@@ -41,7 +39,6 @@ namespace PowerLmsWebApi.Controllers.System
             _EntityManager = entityManager;
             _Logger = logger;
         }
-
         readonly AccountManager _AccountManager;
         readonly IServiceProvider _ServiceProvider;
         readonly PowerLmsUserDbContext _DbContext;
@@ -49,9 +46,7 @@ namespace PowerLmsWebApi.Controllers.System
         readonly IMapper _Mapper;
         readonly EntityManager _EntityManager;
         readonly ILogger<OrganizationParameterController> _Logger;
-
         #region 机构参数CRUD操作
-
         /// <summary>
         /// 获取机构参数列表。支持分页和条件过滤。
         /// </summary>
@@ -67,17 +62,13 @@ namespace PowerLmsWebApi.Controllers.System
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) 
                 return Unauthorized();
-
             var result = new GetAllOrganizationParameterReturnDto();
-
             // 获取用户有权限访问的机构ID列表
             var allowedOrgIds = GetOrgIds(context.User, _OrgManager);
-            
             var dbSet = _DbContext.PlOrganizationParameters;
             var query = dbSet.Where(p => allowedOrgIds.Contains(p.OrgId))
                             .OrderBy(model.OrderFieldName, model.IsDesc)
                             .AsNoTracking();
-
             // 应用条件过滤
             if (conditional != null && conditional.Count > 0)
             {
@@ -87,7 +78,6 @@ namespace PowerLmsWebApi.Controllers.System
                     return BadRequest(OwHelper.GetLastErrorMessage());
                 }
             }
-
             try
             {
                 var prb = _EntityManager.GetAll(query, model.StartIndex, model.Count);
@@ -100,10 +90,8 @@ namespace PowerLmsWebApi.Controllers.System
                 result.ErrorCode = 500;
                 result.DebugMessage = ex.Message;
             }
-
             return result;
         }
-
         /// <summary>
         /// 新增机构参数。
         /// </summary>
@@ -118,28 +106,23 @@ namespace PowerLmsWebApi.Controllers.System
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) 
                 return Unauthorized();
-
             var result = new AddOrganizationParameterReturnDto();
-
             // 验证机构是否存在
             if (!_DbContext.PlOrganizations.Any(o => o.Id == model.Item.OrgId))
             {
                 return BadRequest($"机构 {model.Item.OrgId} 不存在");
             }
-
             // 验证是否已存在参数
             if (_DbContext.PlOrganizationParameters.Any(p => p.OrgId == model.Item.OrgId))
             {
                 return BadRequest($"机构 {model.Item.OrgId} 已存在参数配置");
             }
-
             // 验证用户权限
             var allowedOrgIds = GetOrgIds(context.User, _OrgManager);
             if (!allowedOrgIds.Contains(model.Item.OrgId))
             {
                 return StatusCode((int)HttpStatusCode.Forbidden, "无权限为该机构添加参数");
             }
-
             try
             {
                 // 设置默认账期为当前年月
@@ -147,10 +130,8 @@ namespace PowerLmsWebApi.Controllers.System
                 {
                     model.Item.CurrentAccountingPeriod = DateTime.Now.ToString("yyyyMM");
                 }
-
                 _DbContext.PlOrganizationParameters.Add(model.Item);
                 _DbContext.SaveChanges();
-                
                 result.OrgId = model.Item.OrgId;
                 _Logger.LogInformation("用户 {userId} 为机构 {orgId} 创建了参数配置", 
                     context.User.Id, model.Item.OrgId);
@@ -160,10 +141,8 @@ namespace PowerLmsWebApi.Controllers.System
                 _Logger.LogError(ex, "创建机构参数时发生错误，机构ID: {orgId}", model.Item.OrgId);
                 return BadRequest($"创建机构参数失败: {ex.Message}");
             }
-
             return result;
         }
-
         /// <summary>
         /// 修改机构参数。
         /// </summary>
@@ -179,9 +158,7 @@ namespace PowerLmsWebApi.Controllers.System
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) 
                 return Unauthorized();
-
             var result = new ModifyOrganizationParameterReturnDto();
-
             // 验证用户权限
             var allowedOrgIds = GetOrgIds(context.User, _OrgManager);
             foreach (var item in model.Items)
@@ -192,7 +169,6 @@ namespace PowerLmsWebApi.Controllers.System
                         $"无权限修改机构 {item.OrgId} 的参数");
                 }
             }
-
             try
             {
                 foreach (var item in model.Items)
@@ -202,16 +178,13 @@ namespace PowerLmsWebApi.Controllers.System
                     {
                         return NotFound($"机构 {item.OrgId} 的参数不存在");
                     }
-
                     // 更新所有字段
                     existing.CurrentAccountingPeriod = item.CurrentAccountingPeriod;
                     existing.BillHeader1 = item.BillHeader1;
                     existing.BillHeader2 = item.BillHeader2;
                     existing.BillFooter = item.BillFooter;
                 }
-
                 _DbContext.SaveChanges();
-                
                 _Logger.LogInformation("用户 {userId} 修改了机构参数，涉及机构: {orgIds}", 
                     context.User.Id, string.Join(",", model.Items.Select(i => i.OrgId)));
             }
@@ -220,10 +193,8 @@ namespace PowerLmsWebApi.Controllers.System
                 _Logger.LogError(ex, "修改机构参数时发生错误");
                 return BadRequest($"修改机构参数失败: {ex.Message}");
             }
-
             return result;
         }
-
         /// <summary>
         /// 删除机构参数。慎用！
         /// </summary>
@@ -239,27 +210,22 @@ namespace PowerLmsWebApi.Controllers.System
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) 
                 return Unauthorized();
-
             var result = new RemoveOrganizationParameterReturnDto();
-
             var parameter = _DbContext.PlOrganizationParameters.Find(model.OrgId);
             if (parameter == null)
             {
                 return NotFound("指定的机构参数不存在");
             }
-
             // 验证用户权限
             var allowedOrgIds = GetOrgIds(context.User, _OrgManager);
             if (!allowedOrgIds.Contains(parameter.OrgId))
             {
                 return StatusCode((int)HttpStatusCode.Forbidden, "无权限删除该机构参数");
             }
-
             try
             {
                 _DbContext.PlOrganizationParameters.Remove(parameter);
                 _DbContext.SaveChanges();
-                
                 _Logger.LogInformation("用户 {userId} 删除了机构 {orgId} 的参数配置", 
                     context.User.Id, parameter.OrgId);
             }
@@ -268,14 +234,10 @@ namespace PowerLmsWebApi.Controllers.System
                 _Logger.LogError(ex, "删除机构参数时发生错误，机构ID: {orgId}", model.OrgId);
                 return BadRequest($"删除机构参数失败: {ex.Message}");
             }
-
             return result;
         }
-
         #endregion 机构参数CRUD操作
-
         #region 私有辅助方法
-
         /// <summary>
         /// 为指定机构创建默认参数。
         /// </summary>
@@ -288,7 +250,6 @@ namespace PowerLmsWebApi.Controllers.System
             {
                 return null;
             }
-
             var parameter = new PlOrganizationParameter
             {
                 OrgId = orgId,
@@ -297,14 +258,11 @@ namespace PowerLmsWebApi.Controllers.System
                 BillHeader2 = "",
                 BillFooter = org.Name_Name ?? ""
             };
-
             _DbContext.PlOrganizationParameters.Add(parameter);
             _DbContext.SaveChanges();
-
             _Logger.LogInformation("为机构 {orgId} 自动创建了默认参数配置", orgId);
             return parameter;
         }
-
         #endregion 私有辅助方法
     }
 }

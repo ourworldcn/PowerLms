@@ -15,7 +15,6 @@
  * - 多Sheet批量处理，Sheet名称直接使用数据库表名
  * 作者：zc | 创建：2025-01-27 | 修改：2025-01-27 添加四个新的基础数据表支持
  */
-
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -30,7 +29,6 @@ using PowerLmsServer.Managers;
 using System.Data;
 using System.Linq.Expressions;
 using System.Reflection;
-
 namespace PowerLmsServer.Services
 {
     /// <summary>
@@ -44,7 +42,6 @@ namespace PowerLmsServer.Services
         private readonly PowerLmsUserDbContext _DbContext;
         private readonly AuthorizationManager _AuthManager;
         private readonly ILogger<ImportExportService> _Logger;
-
         /// <summary>
         /// 构造函数
         /// </summary>
@@ -57,9 +54,7 @@ namespace PowerLmsServer.Services
             _AuthManager = authManager;
             _Logger = logger;
         }
-
         #region 支持的导入导出类型管理
-
         /// <summary>
         /// 获取支持的独立表字典类型列表
         /// 包含：PlCountry、PlPort、PlCargoRoute、PlCurrency、FeesType、PlExchangeRate、UnitConversion、ShippingContainersKind、
@@ -69,15 +64,12 @@ namespace PowerLmsServer.Services
         public List<(string TypeName, string DisplayName)> GetSupportedDictionaryTypes()
         {
             var supportedTypes = new List<(string TypeName, string DisplayName)>();
-
             // 从DbContext中获取所有实体类型
             var entityTypes = _DbContext.Model.GetEntityTypes();
-
             foreach (var entityType in entityTypes)
             {
                 var clrType = entityType.ClrType;
                 var typeName = clrType.Name;
-
                 // 过滤出独立表字典类型的实体，并确保有Comment注释
                 if (IsIndependentDictionaryEntity(typeName))
                 {
@@ -93,10 +85,8 @@ namespace PowerLmsServer.Services
                     }
                 }
             }
-
             return supportedTypes.OrderBy(x => x.TypeName).ToList();
         }
-
         /// <summary>
         /// 获取支持的客户资料子表类型列表
         /// 包含：PlCustomerContact、PlBusinessHeader、PlTidan、CustomerBlacklist、PlLoadingAddr
@@ -105,15 +95,12 @@ namespace PowerLmsServer.Services
         public List<(string TypeName, string DisplayName)> GetSupportedCustomerSubTableTypes()
         {
             var supportedTypes = new List<(string TypeName, string DisplayName)>();
-
             // 从DbContext中获取所有实体类型
             var entityTypes = _DbContext.Model.GetEntityTypes();
-
             foreach (var entityType in entityTypes)
             {
                 var clrType = entityType.ClrType;
                 var typeName = clrType.Name;
-
                 // 过滤出客户资料子表类型的实体，并确保有Comment注释
                 if (IsCustomerSubTableEntity(typeName))
                 {
@@ -129,10 +116,8 @@ namespace PowerLmsServer.Services
                     }
                 }
             }
-
             return supportedTypes.OrderBy(x => x.TypeName).ToList();
         }
-
         /// <summary>
         /// 验证导入导出类型是否支持
         /// 支持独立表字典和客户资料表
@@ -144,13 +129,10 @@ namespace PowerLmsServer.Services
             var supportedTypes = GetSupportedDictionaryTypes()
                 .Concat(GetSupportedCustomerSubTableTypes())
                 .Select(x => x.TypeName);
-
             // 明确支持PlCustomer客户主表
             var allSupportedTypes = supportedTypes.Concat(new[] { "PlCustomer" });
-
             return allSupportedTypes.Any(x => x.Equals(typeName, StringComparison.OrdinalIgnoreCase));
         }
-
         /// <summary>
         /// 判断是否为独立表字典实体
         /// 包含：PlCountry、PlPort、PlCargoRoute、PlCurrency、FeesType、PlExchangeRate、UnitConversion、ShippingContainersKind、
@@ -185,7 +167,6 @@ namespace PowerLmsServer.Services
                     typeName.Contains("Shipping")) ||
                    typeName.Equals("FeesType", StringComparison.OrdinalIgnoreCase);
         }
-
         /// <summary>
         /// 判断是否为客户资料子表实体
         /// 包含：PlCustomerContact、PlBusinessHeader、PlTidan、CustomerBlacklist、PlLoadingAddr
@@ -201,7 +182,6 @@ namespace PowerLmsServer.Services
                    typeName.Equals("CustomerBlacklist", StringComparison.OrdinalIgnoreCase) ||
                    typeName.Equals("PlLoadingAddr", StringComparison.OrdinalIgnoreCase);
         }
-
         /// <summary>
         /// 从EntityType获取表注释
         /// </summary>
@@ -229,11 +209,8 @@ namespace PowerLmsServer.Services
                 return entityType.ClrType.Name;
             }
         }
-
         #endregion
-
         #region 批量独立表字典导入导出
-
         /// <summary>
         /// 批量导出多个独立表字典类型到Excel（多Sheet结构）
         /// 支持：PlCountry、PlPort、PlCargoRoute、PlCurrency、FeesType、PlExchangeRate、UnitConversion、ShippingContainersKind、
@@ -248,14 +225,11 @@ namespace PowerLmsServer.Services
         {
             if (dictionaryTypes == null || !dictionaryTypes.Any())
                 throw new ArgumentException("请至少指定一个表类型");
-
             try
             {
                 var supportedTypes = GetSupportedDictionaryTypes().Select(x => x.TypeName).ToHashSet(StringComparer.OrdinalIgnoreCase);
-
                 using var workbook = new HSSFWorkbook();
                 int totalExported = 0;
-
                 foreach (var dictionaryType in dictionaryTypes)
                 {
                     if (supportedTypes.Contains(dictionaryType))
@@ -278,7 +252,6 @@ namespace PowerLmsServer.Services
                             _ => throw new InvalidOperationException($"不支持的独立字典类型: {dictionaryType}，这可能是配置错误")
                         };
                         totalExported += exportedCount;
-
                         _Logger.LogInformation("导出独立表字典 {DictionaryType} 到Sheet，共 {Count} 条记录", dictionaryType, exportedCount);
                     }
                     else
@@ -286,11 +259,9 @@ namespace PowerLmsServer.Services
                         _Logger.LogWarning("不支持的独立表字典类型: {DictionaryType}，跳过导出", dictionaryType);
                     }
                 }
-
                 using var stream = new MemoryStream();
                 workbook.Write(stream, true);
                 workbook.Close();
-
                 _Logger.LogInformation("批量导出独立表字典完成，共 {TotalCount} 条记录，{SheetCount} 个Sheet", totalExported, dictionaryTypes.Count);
                 return stream.ToArray();
             }
@@ -300,7 +271,6 @@ namespace PowerLmsServer.Services
                 throw;
             }
         }
-
         /// <summary>
         /// 批量导入多个独立表字典类型（多Sheet结构）
         /// 自动识别Excel中的所有Sheet，根据Sheet名称匹配实体类型
@@ -393,11 +363,8 @@ namespace PowerLmsServer.Services
                 throw;
             }
         }
-
         #endregion
-
         #region 批量客户资料导入导出
-
         /// <summary>
         /// 批量导出客户资料表到Excel（多Sheet结构）
         /// 支持客户主表和所有客户子表
@@ -411,15 +378,12 @@ namespace PowerLmsServer.Services
         {
             if (tableTypes == null || !tableTypes.Any())
                 throw new ArgumentException("请至少指定一个表类型");
-
             try
             {
                 var supportedSubTypes = GetSupportedCustomerSubTableTypes().Select(x => x.TypeName).ToHashSet(StringComparer.OrdinalIgnoreCase);
                 supportedSubTypes.Add("PlCustomer"); // 添加客户主表支持
-
                 using var workbook = new HSSFWorkbook();
                 int totalExported = 0;
-
                 foreach (var tableType in tableTypes)
                 {
                     if (supportedSubTypes.Contains(tableType))
@@ -436,7 +400,6 @@ namespace PowerLmsServer.Services
                             _ => throw new InvalidOperationException($"不支持的客户资料表类型: {tableType}，这可能是配置错误")
                         };
                         totalExported += exportedCount;
-
                         _Logger.LogInformation("导出客户资料表 {TableType} 到Sheet，共 {Count} 条记录", tableType, exportedCount);
                     }
                     else
@@ -444,11 +407,9 @@ namespace PowerLmsServer.Services
                         _Logger.LogWarning("不支持的客户资料表类型: {TableType}，跳过导出", tableType);
                     }
                 }
-
                 using var stream = new MemoryStream();
                 workbook.Write(stream, true);
                 workbook.Close();
-
                 _Logger.LogInformation("批量导出客户资料表完成，共 {TotalCount} 条记录，{SheetCount} 个Sheet", totalExported, tableTypes.Count);
                 return stream.ToArray();
             }
@@ -458,7 +419,6 @@ namespace PowerLmsServer.Services
                 throw;
             }
         }
-
         /// <summary>
         /// 批量导入客户资料表（多Sheet结构）
         /// 自动识别Excel中的所有Sheet，根据Sheet名称匹配实体类型
@@ -496,17 +456,14 @@ namespace PowerLmsServer.Services
                                 "PlLoadingAddr" => ImportEntityData<PlLoadingAddr>(sheet, orgId, updateExisting),
                                 _ => throw new InvalidOperationException($"不支持的客户资料表类型: {tableType}，这可能是配置错误")
                             };
-
                             result.SheetResults.Add(new TableImportResult
                             {
                                 TableName = sheetName,
                                 ImportedCount = importedCount,
                                 Success = true
                             });
-
                             result.TotalImportedCount += importedCount;
                             result.ProcessedSheets++;
-
                             _Logger.LogInformation("导入客户资料表Sheet {TableName} 成功，共 {Count} 条记录", sheetName, importedCount);
                         }
                         else
@@ -518,7 +475,6 @@ namespace PowerLmsServer.Services
                                 Success = false,
                                 ErrorMessage = $"不支持的表类型: {sheetName}"
                             });
-
                             _Logger.LogWarning("导入客户资料表Sheet {TableName} 失败：不支持的表类型", sheetName);
                         }
                     }
@@ -531,17 +487,13 @@ namespace PowerLmsServer.Services
                             Success = false,
                             ErrorMessage = ex.Message
                         });
-
                         _Logger.LogWarning(ex, "导入客户资料表Sheet {TableName} 失败", sheetName);
                     }
                 }
-
                 // 批量保存所有更改
                 _DbContext.SaveChanges();
-
                 _Logger.LogInformation("批量导入客户资料表完成，共处理 {ProcessedSheets} 个Sheet，导入 {TotalCount} 条记录",
                     result.ProcessedSheets, result.TotalImportedCount);
-
                 return result;
             }
             catch (Exception ex)
@@ -550,11 +502,8 @@ namespace PowerLmsServer.Services
                 throw;
             }
         }
-
         #endregion
-
         #region 通用数据处理私有方法
-
         /// <summary>
         /// 把指定数据源填充到数据库上下文中。
         /// 重要：假定数据库上下本文地已经加载了所有相关数据，排重仅在本地进行，以增强效率。
@@ -581,7 +530,6 @@ namespace PowerLmsServer.Services
             var dbSet = _DbContext.Set<T>();
             var sourceList = source as IList<T> ?? source.ToList();
             if (!sourceList.Any()) return result;
-
             // ✅ 使用ILookup处理可能的重复键（更容错）
             ILookup<TKey, T> existingLookup;
             try
@@ -594,10 +542,8 @@ namespace PowerLmsServer.Services
                 _Logger.LogError(ex, "构建业务键索引时发生错误，表: {EntityType}", typeof(T).Name);
                 throw new InvalidOperationException($"构建业务键索引失败: {ex.Message}", ex);
             }
-
             // ✅ 正确识别软删除：检查是否实现IMarkDelete接口
             var supportsMarkDelete = typeof(IMarkDelete).IsAssignableFrom(typeof(T));
-
             foreach (var entity in sourceList)
             {
                 result.TotalCount++;
@@ -618,10 +564,8 @@ namespace PowerLmsServer.Services
                     result.SkippedCount++;
                     continue;
                 }
-
                 // ✅ 查找所有匹配的现有记录（可能有多个重复）
                 var existingRecords = existingLookup[key];
-
                 if (existingRecords.Any())
                 {
                     // ✅ 发现重复数据，记录警告
@@ -630,7 +574,6 @@ namespace PowerLmsServer.Services
                         _Logger.LogWarning("发现重复业务键 {Key}，共 {Count} 条记录，表: {EntityType}",
                             key, existingRecords.Count(), typeof(T).Name);
                     }
-
                     if (isUpdate)
                     {
                         // ✅ 覆盖模式：处理所有重复记录
@@ -658,7 +601,6 @@ namespace PowerLmsServer.Services
                                 result.DeletedCount++;
                             }
                         }
-
                         // ✅ 添加新实体（仅添加一次）
                         if (supportsMarkDelete || existingRecords.Count() > 1)
                         {
@@ -679,13 +621,11 @@ namespace PowerLmsServer.Services
                     result.AddedCount++;
                 }
             }
-
             _Logger.LogInformation(
                 "填充完成：总数={Total}，新增={Added}，删除={Deleted}，跳过={Skipped}，表={EntityType}",
                 result.TotalCount, result.AddedCount, result.DeletedCount, result.SkippedCount, typeof(T).Name);
             return result;
         }
-
         /// <summary>
         /// 导出实体数据到工作表
         /// 即使没有数据也会创建表头，便于客户填写数据模板
@@ -752,7 +692,6 @@ namespace PowerLmsServer.Services
                 throw;
             }
         }
-
         /// <summary>
         /// 导入实体数据（重构版 - 使用FillToDbContext）
         /// 新策略：按业务键判断重复，支持真正的覆盖导入
@@ -787,10 +726,8 @@ namespace PowerLmsServer.Services
                     _Logger.LogInformation("表 {EntityType} 没有有效数据可导入", typeof(T).Name);
                     return 0;
                 }
-
                 var entityType = typeof(T);
                 var typeName = entityType.Name;
-
                 // ✅ 步骤2: 特殊处理 - PlExchangeRate（无业务键，直接添加）
                 if (typeName == "PlExchangeRate")
                 {
@@ -799,50 +736,42 @@ namespace PowerLmsServer.Services
                     _Logger.LogInformation("表 {EntityType} 准备导入 {Count} 条记录（无业务键去重）", typeName, entities.Count);
                     return entities.Count;
                 }
-
                 // ✅ 步骤3: 特殊处理 - UnitConversion（使用Basic+Rim复合键）
                 if (typeName == "UnitConversion")
                 {
                     var basicProperty = entityType.GetProperty("Basic");
                     var rimProperty = entityType.GetProperty("Rim");
-
                     if (basicProperty != null && rimProperty != null)
                     {
                         // 预加载现有数据
                         var existingData = GetEntityDataByOrgId<T>(orgId);
-
                         // 使用复合键(Basic + Rim)
                         var result = FillToDbContext(
                             entities,
                             existingData,
                             e => $"{basicProperty.GetValue(e)}|{rimProperty.GetValue(e)}",
                             updateExisting);
-
                         _Logger.LogInformation("表 {EntityType} 导入完成：新增{Added}条，删除{Deleted}条，跳过{Skipped}条（使用Basic+Rim复合键）",
                             typeName, result.AddedCount, result.DeletedCount, result.SkippedCount);
                         return result.AddedCount;
                     }
                 }
-
                 // ✅ 步骤4: 标准处理 - 有Code属性的实体
                 var codeProperty = entityType.GetProperty("Code");
                 if (codeProperty != null)
                 {
                     // 预加载现有数据（仅查询一次）
                     var existingData = GetEntityDataByOrgId<T>(orgId);
-
                     // 使用FillToDbContext统一处理
                     var result = FillToDbContext(
                         entities,
                         existingData,
                         e => codeProperty.GetValue(e) as string ?? string.Empty,
                         updateExisting);
-
                     _Logger.LogInformation("表 {EntityType} 导入完成：新增{Added}条，删除{Deleted}条，跳过{Skipped}条（使用Code）",
                         typeName, result.AddedCount, result.DeletedCount, result.SkippedCount);
                     return result.AddedCount;
                 }
-
                 // ✅ 步骤5: 其他无业务键的实体，直接添加
                 _DbContext.Set<T>().AddRange(entities);
                 _Logger.LogInformation("表 {EntityType} 准备导入 {Count} 条记录（无业务键）", typeName, entities.Count);
@@ -854,7 +783,6 @@ namespace PowerLmsServer.Services
                 throw new InvalidOperationException($"导入表 {typeof(T).Name} 失败: {ex.Message}", ex);
             }
         }
-
         /// <summary>
         /// 从Excel工作表读取实体数据（使用OwNpoiExtensions扩展方法）
         /// </summary>
@@ -866,15 +794,12 @@ namespace PowerLmsServer.Services
         {
             // ✅ 使用OwNpoiExtensions.ReadEntities扩展方法
             var entities = new List<T>();
-
             // 排除Id、OrgId和计算属性（IdString、Base64IdString）
             var excludedProperties = new[] { "Id", "OrgId", "IdString", "Base64IdString" };
-
             try
             {
                 // ✅ 调用扩展方法（自动处理列映射、属性过滤、复杂类型排除）
                 sheet.ReadEntities(entities, excludedProperties);
-
                 // ✅ 手动设置OrgId（如果实体有OrgId属性）
                 var orgIdProperty = typeof(T).GetProperty("OrgId");
                 if (orgIdProperty != null && orgId.HasValue)
@@ -884,7 +809,6 @@ namespace PowerLmsServer.Services
                         orgIdProperty.SetValue(entity, orgId);
                     }
                 }
-
                 _Logger.LogDebug("从Sheet读取 {Count} 条数据，表: {EntityType}", entities.Count, typeof(T).Name);
             }
             catch (Exception ex)
@@ -892,10 +816,8 @@ namespace PowerLmsServer.Services
                 _Logger.LogError(ex, "读取Sheet数据时发生错误，表: {EntityType}", typeof(T).Name);
                 throw;
             }
-
             return entities;
         }
-
         /// <summary>
         /// 获取指定类型的实体数据（排除软删除数据）
         /// 支持多租户数据隔离，启用 EF Core 变更跟踪以支持后续修改操作
@@ -947,7 +869,6 @@ namespace PowerLmsServer.Services
                 throw new InvalidOperationException($"查询实体 {typeof(T).Name} 数据失败: {ex.Message}", ex);
             }
         }
-
         /// <summary>
         /// 判断是否为复杂类型（需要排除的类型）
         /// </summary>
@@ -963,11 +884,8 @@ namespace PowerLmsServer.Services
             }
             return false;
         }
-
         #endregion
-
         #region 填充结果类型定义
-
         /// <summary>
         /// 数据填充结果统计
         /// </summary>
@@ -977,28 +895,22 @@ namespace PowerLmsServer.Services
             /// 总数据量
             /// </summary>
             public int TotalCount { get; set; }
-
             /// <summary>
             /// 新增数量
             /// </summary>
             public int AddedCount { get; set; }
-
             /// <summary>
             /// 删除数量（软删除+物理删除）
             /// </summary>
             public int DeletedCount { get; set; }
-
             /// <summary>
             /// 跳过数量（追加模式下已存在的实体）
             /// </summary>
             public int SkippedCount { get; set; }
         }
-
         #endregion
     }
-
     #region 多表导入结果类型定义
-
     /// <summary>
     /// 多表导入结果（通用表字典和客户资料表）
     /// </summary>
@@ -1008,18 +920,15 @@ namespace PowerLmsServer.Services
         /// 总导入记录数
         /// </summary>
         public int TotalImportedCount { get; set; }
-
         /// <summary>
         /// 处理的Sheet数量
         /// </summary>
         public int ProcessedSheets { get; set; }
-
         /// <summary>
         /// 各Sheet的导入结果
         /// </summary>
         public List<TableImportResult> SheetResults { get; set; } = new();
     }
-
     /// <summary>
     /// 表导入结果
     /// </summary>
@@ -1029,23 +938,19 @@ namespace PowerLmsServer.Services
         /// 表名称（Sheet名称）
         /// </summary>
         public string TableName { get; set; }
-
         /// <summary>
         /// 导入记录数
         /// </summary>
         public int ImportedCount { get; set; }
-
         /// <summary>
         /// 是否成功
         /// </summary>
         public bool Success { get; set; }
-
         /// <summary>
         /// 错误信息
         /// </summary>
         public string ErrorMessage { get; set; }
     }
-
     /// <summary>
     /// 简单字典导入结果
     /// </summary>
@@ -1055,18 +960,15 @@ namespace PowerLmsServer.Services
         /// 总导入记录数
         /// </summary>
         public int TotalImportedCount { get; set; }
-
         /// <summary>
         /// 处理的Sheet数量
         /// </summary>
         public int ProcessedSheets { get; set; }
-
         /// <summary>
         /// 各Sheet的导入结果
         /// </summary>
         public List<SheetImportResult> SheetResults { get; set; } = new();
     }
-
     /// <summary>
     /// Sheet导入结果
     /// </summary>
@@ -1076,22 +978,18 @@ namespace PowerLmsServer.Services
         /// Sheet名称（Catalog Code）
         /// </summary>
         public string SheetName { get; set; }
-
         /// <summary>
         /// 导入记录数
         /// </summary>
         public int ImportedCount { get; set; }
-
         /// <summary>
         /// 是否成功
         /// </summary>
         public bool Success { get; set; }
-
         /// <summary>
         /// 错误信息
         /// </summary>
         public string ErrorMessage { get; set; }
     }
-
     #endregion
 }

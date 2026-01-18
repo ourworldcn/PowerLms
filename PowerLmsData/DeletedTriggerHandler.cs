@@ -1,9 +1,8 @@
-/*
- * ×÷Õß: OW
- * ´´½¨ÈÕÆÚ: 2023-10-20
- * ĞŞ¸ÄÈÕÆÚ: 2023-10-20
+ï»¿/*
+ * ä½œè€…: OW
+ * åˆ›å»ºæ—¥æœŸ: 2023-10-20
+ * ä¿®æ”¹æ—¥æœŸ: 2023-10-20
  */
-
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,11 +12,10 @@ using PowerLms.Data;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-
 namespace PowerLmsServer.Triggers
 {
     /// <summary>
-    /// ÔÚÉ¾³ı²Ù×÷Ê±£¬¼à¿ØÕËµ¥¡¢·ÑÓÃ¡¢ÉêÇë¡¢½áËã¼°ËüÃÇµÄ×Ó¶ÔÏó£¬²¢½«¹ØÁª¶ÔÏóµÄ¹ØÁªIdÖÃÎªnull¡£
+    /// åœ¨åˆ é™¤æ“ä½œæ—¶ï¼Œç›‘æ§è´¦å•ã€è´¹ç”¨ã€ç”³è¯·ã€ç»“ç®—åŠå®ƒä»¬çš„å­å¯¹è±¡ï¼Œå¹¶å°†å…³è”å¯¹è±¡çš„å…³è”Idç½®ä¸ºnullã€‚
     /// </summary>
     [OwAutoInjection(ServiceLifetime.Scoped, ServiceType = typeof(IDbContextSaving<DocBill>))]
     [OwAutoInjection(ServiceLifetime.Scoped, ServiceType = typeof(IDbContextSaving<DocFee>))]
@@ -28,24 +26,21 @@ namespace PowerLmsServer.Triggers
     public class DeletedTriggerHandler : IDbContextSaving<DocBill>, IDbContextSaving<DocFee>, IDbContextSaving<DocFeeRequisitionItem>, IDbContextSaving<PlInvoicesItem>, IDbContextSaving<DocFeeRequisition>, IDbContextSaving<PlInvoices>
     {
         private readonly ILogger<DeletedTriggerHandler> _Logger;
-
         /// <summary>
-        /// ¹¹Ôìº¯Êı£¬³õÊ¼»¯ÈÕÖ¾¼ÇÂ¼Æ÷¡£
+        /// æ„é€ å‡½æ•°ï¼Œåˆå§‹åŒ–æ—¥å¿—è®°å½•å™¨ã€‚
         /// </summary>
-        /// <param name="logger">ÈÕÖ¾¼ÇÂ¼Æ÷¡£</param>
+        /// <param name="logger">æ—¥å¿—è®°å½•å™¨ã€‚</param>
         public DeletedTriggerHandler(ILogger<DeletedTriggerHandler> logger)
         {
             _Logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
-
         public int Priority => 10;
-
         /// <summary>
-        /// ÔÚÉ¾³ı²Ù×÷Ê±£¬¼à¿ØÕËµ¥¡¢·ÑÓÃ¡¢ÉêÇë¡¢½áËã¼°ËüÃÇµÄ×Ó¶ÔÏó£¬²¢½«¹ØÁª¶ÔÏóµÄ¹ØÁªIdÖÃÎªnull¡£
+        /// åœ¨åˆ é™¤æ“ä½œæ—¶ï¼Œç›‘æ§è´¦å•ã€è´¹ç”¨ã€ç”³è¯·ã€ç»“ç®—åŠå®ƒä»¬çš„å­å¯¹è±¡ï¼Œå¹¶å°†å…³è”å¯¹è±¡çš„å…³è”Idç½®ä¸ºnullã€‚
         /// </summary>
-        /// <param name="entities">µ±Ç°ÊµÌåÌõÄ¿¼¯ºÏ¡£</param>
-        /// <param name="service">·şÎñÌá¹©Õß¡£</param>
-        /// <param name="states">×´Ì¬×Öµä¡£</param>
+        /// <param name="entities">å½“å‰å®ä½“æ¡ç›®é›†åˆã€‚</param>
+        /// <param name="service">æœåŠ¡æä¾›è€…ã€‚</param>
+        /// <param name="states">çŠ¶æ€å­—å…¸ã€‚</param>
         public void Saving(IEnumerable<EntityEntry> entities, IServiceProvider service, Dictionary<object, object> states)
         {
             var dbContext = entities.First().Context;
@@ -77,22 +72,19 @@ namespace PowerLmsServer.Triggers
                 }
             }
         }
-
         private void HandleDocBillDeletion(DbContext dbContext, DocBill deletedBill)
         {
-            // Ê¹ÓÃ WhereWithLocal ²éÕÒ±¾µØ»º´æºÍÊı¾İ¿âÖĞµÄÊµÌå
+            // ä½¿ç”¨ WhereWithLocal æŸ¥æ‰¾æœ¬åœ°ç¼“å­˜å’Œæ•°æ®åº“ä¸­çš„å®ä½“
             var relatedFees = dbContext.Set<DocFee>().WhereWithLocal(f => f.BillId.HasValue && f.BillId.Value == deletedBill.Id).ToList();
-
             foreach (var fee in relatedFees)
             {
                 if (dbContext.Entry(fee).State != EntityState.Deleted)
                 {
-                    _Logger.LogInformation("Çå³ı·ÑÓÃ(Id = {FeeId})µÄBillId(Ô­Öµ = {BillId})¡£", fee.Id, fee.BillId);
+                    _Logger.LogInformation("æ¸…é™¤è´¹ç”¨(Id = {FeeId})çš„BillId(åŸå€¼ = {BillId})ã€‚", fee.Id, fee.BillId);
                     fee.BillId = null;
                 }
             }
         }
-
         private void HandleDocFeeDeletion(DbContext dbContext, DocFee deletedFee)
         {
             var relatedRequisitionItems = dbContext.Set<DocFeeRequisitionItem>().Where(ri => ri.FeeId == deletedFee.Id).ToList();
@@ -104,7 +96,6 @@ namespace PowerLmsServer.Triggers
                 }
             }
         }
-
         private void HandleDocFeeRequisitionItemDeletion(DbContext dbContext, DocFeeRequisitionItem deletedRequisitionItem)
         {
             var relatedInvoicesItems = dbContext.Set<PlInvoicesItem>().Where(ii => ii.RequisitionItemId == deletedRequisitionItem.Id).ToList();
@@ -116,12 +107,10 @@ namespace PowerLmsServer.Triggers
                 }
             }
         }
-
         private void HandlePlInvoicesItemDeletion(DbContext dbContext, PlInvoicesItem deletedInvoicesItem)
         {
-            // Èç¹ûÓĞÆäËû×Ó¶ÔÏóĞèÒª´¦Àí£¬¿ÉÒÔÔÚÕâÀïÌí¼ÓÂß¼­
+            // å¦‚æœæœ‰å…¶ä»–å­å¯¹è±¡éœ€è¦å¤„ç†ï¼Œå¯ä»¥åœ¨è¿™é‡Œæ·»åŠ é€»è¾‘
         }
-
         private void HandleDocFeeRequisitionDeletion(DbContext dbContext, DocFeeRequisition deletedRequisition)
         {
             var relatedItems = dbContext.Set<DocFeeRequisitionItem>().Where(ri => ri.ParentId == deletedRequisition.Id).ToList();
@@ -133,7 +122,6 @@ namespace PowerLmsServer.Triggers
                 }
             }
         }
-
         private void HandlePlInvoicesDeletion(DbContext dbContext, PlInvoices deletedInvoices)
         {
             var relatedItems = dbContext.Set<PlInvoicesItem>().Where(ii => ii.ParentId == deletedInvoices.Id).ToList();

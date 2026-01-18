@@ -10,79 +10,67 @@
  * 作者：zc
  * 创建：2025-01
  */
-
 using PowerLms.Data;
 using PowerLmsWebApi.Dto;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-
 namespace PowerLmsWebApi.Controllers.Financial
 {
     #region 实际收付记录相关
-
     /// <summary>
     /// 获取全部实际收付记录的返回值封装类。
     /// </summary>
     public class GetAllActualFinancialTransactionReturnDto : PagingReturnDtoBase<ActualFinancialTransaction>
     {
     }
-
     /// <summary>
     /// 添加实际收付记录的功能参数封装类。
     /// </summary>
     public class AddActualFinancialTransactionParamsDto : AddParamsDtoBase<ActualFinancialTransaction>
     {
     }
-
     /// <summary>
     /// 添加实际收付记录的功能返回值封装类。
     /// </summary>
     public class AddActualFinancialTransactionReturnDto : AddReturnDtoBase
     {
     }
-
     /// <summary>
     /// 修改实际收付记录的功能参数封装类。
     /// </summary>
     public class ModifyActualFinancialTransactionParamsDto : ModifyParamsDtoBase<ActualFinancialTransaction>
     {
     }
-
     /// <summary>
     /// 修改实际收付记录的功能返回值封装类。
     /// </summary>
     public class ModifyActualFinancialTransactionReturnDto : ModifyReturnDtoBase
     {
     }
-
     /// <summary>
     /// 删除实际收付记录的功能参数封装类。
     /// </summary>
     public class RemoveActualFinancialTransactionParamsDto : RemoveParamsDtoBase
     {
     }
-
     /// <summary>
     /// 删除实际收付记录的功能返回值封装类。
     /// </summary>
     public class RemoveActualFinancialTransactionReturnDto : RemoveReturnDtoBase
     {
     }
-
     /// <summary>
     /// 恢复指定被删除实际收付记录的功能参数封装类。
     /// </summary>
     public class RestoreActualFinancialTransactionParamsDto : RestoreParamsDtoBase
     {
     }
-
     /// <summary>
     /// 恢复指定被删除实际收付记录的功能返回值封装类。
     /// </summary>
     public class RestoreActualFinancialTransactionReturnDto : RestoreReturnDtoBase
     {
     }
-
     #endregion 实际收付记录相关
 }

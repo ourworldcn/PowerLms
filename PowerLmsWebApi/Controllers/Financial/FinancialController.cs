@@ -13,7 +13,6 @@ using PowerLmsServer.Managers.Financial;
 using PowerLmsWebApi.Dto;
 using System.Linq;
 using System.Net;
-
 namespace PowerLmsWebApi.Controllers
 {
     /// <summary>
@@ -37,7 +36,6 @@ namespace PowerLmsWebApi.Controllers
             _AuthorizationManager = authorizationManager;
             _SqlAppLogger = sqlAppLogger;
         }
-
         readonly AccountManager _AccountManager;
         readonly IServiceProvider _ServiceProvider;
         readonly EntityManager _EntityManager;
@@ -47,9 +45,7 @@ namespace PowerLmsWebApi.Controllers
         readonly OwWfManager _WfManager;
         readonly AuthorizationManager _AuthorizationManager;
         readonly OwSqlAppLogger _SqlAppLogger;
-
         #region 业务费用申请单
-
         /// <summary>
         /// 获取全部业务费用申请单。
         /// </summary>
@@ -67,21 +63,17 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllDocFeeRequisitionReturnDto();
-
             try
             {
                 // 获取DocFeeRequisitionManager服务
                 var requisitionManager = _ServiceProvider.GetRequiredService<DocFeeRequisitionManager>();
-
                 IQueryable<DocFeeRequisition> dbSet;
-
                 // 判断是否有子表相关条件，如果没有使用简单查询
                 if (conditional == null || !conditional.Any() ||
                     conditional.All(kv => kv.Key.StartsWith($"{nameof(DocFeeRequisition)}.", StringComparison.OrdinalIgnoreCase) || !kv.Key.Contains('.')))
                 {
                     // 使用简单的父表查询
                     dbSet = requisitionManager.GetAllDocFeeRequisitionQuery(context.User.OrgId);
-
                     // 应用父表条件
                     if (conditional != null && conditional.Any())
                     {
@@ -98,7 +90,6 @@ namespace PowerLmsWebApi.Controllers
                     var parentIds = itemsQuery.Select(item => item.ParentId.Value).Distinct();
                     dbSet = _DbContext.DocFeeRequisitions.Where(req => parentIds.Contains(req.Id));
                 }
-
                 // 如果需要工作流状态过滤
                 if (model.WfState.HasValue)
                 {
@@ -106,7 +97,6 @@ namespace PowerLmsWebApi.Controllers
                         .Select(c => c.Parent.Parent.DocId);
                     dbSet = dbSet.Where(c => tmpColl.Contains(c.Id));
                 }
-
                 // 应用排序和分页
                 var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
                 var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
@@ -119,10 +109,8 @@ namespace PowerLmsWebApi.Controllers
                 result.ErrorCode = 500;
                 result.DebugMessage = $"获取业务费用申请单时发生错误: {ex.Message}";
             }
-
             return result;
         }
-
         /// <summary>
         /// 获取当前用户相关的业务费用申请单和审批流状态。
         /// </summary>
@@ -144,7 +132,6 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllDocFeeRequisitionWithWfReturnDto();
-
             try
             {
                 var orgManager = _ServiceProvider.GetRequiredService<OrgManager<PowerLmsUserDbContext>>();
@@ -155,18 +142,15 @@ namespace PowerLmsWebApi.Controllers
                     ? new Dictionary<string, string>(conditional, StringComparer.OrdinalIgnoreCase)
                     : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 byte wfState = 15; // 默认值，意味着获取指定操作人相关的所有工作流节点项
-
                 if (otherConditions.Count > 0)
                 {
                     List<string> keysToRemove = new List<string>();
-
                     foreach (var pair in otherConditions)
                     {
                         // 处理工作流条件
                         if (pair.Key.StartsWith("OwWf.", StringComparison.OrdinalIgnoreCase))
                         {
                             string wfFieldName = pair.Key[5..]; // 去掉"OwWf."前缀
-
                             // 处理 State 的特殊情况
                             if (string.Equals(wfFieldName, "State", StringComparison.OrdinalIgnoreCase))
                             {
@@ -196,36 +180,28 @@ namespace PowerLmsWebApi.Controllers
                             keysToRemove.Add(pair.Key);
                         }
                     }
-
                     // 从原始条件中移除工作流前缀的条件
                     foreach (var key in keysToRemove)
                     {
                         otherConditions.Remove(key);
                     }
                 }
-
                 // 查询关联的工作流
                 var docIdsQuery = _WfManager.GetWfNodeItemByOpertorId(context.User.Id, wfState)
                     .Select(c => c.Parent.Parent);
-
                 // 如果有其他工作流条件，先应用它们
                 if (wfConditions.Count > 0)
                 {
                     _Logger.LogDebug("应用工作流过滤条件: {conditions}",
                         string.Join(", ", wfConditions.Select(kv => $"{kv.Key}={kv.Value}")));
-
                     // 应用工作流筛选条件
                     docIdsQuery = EfHelper.GenerateWhereAnd(docIdsQuery, wfConditions);
                 }
-
                 // 获取符合条件的文档ID
                 var docIds = docIdsQuery.Select(wf => wf.DocId.Value).Distinct();
-
                 // 获取DocFeeRequisitionManager服务
                 var requisitionManager = _ServiceProvider.GetRequiredService<DocFeeRequisitionManager>();
-
                 IQueryable<DocFeeRequisition> dbSet;
-
                 // 判断是否有子表相关条件，如果没有使用简单查询
                 if (otherConditions == null || !otherConditions.Any() ||
                     otherConditions.All(kv => kv.Key.StartsWith($"{nameof(DocFeeRequisition)}.", StringComparison.OrdinalIgnoreCase) || !kv.Key.Contains('.')))
@@ -233,7 +209,6 @@ namespace PowerLmsWebApi.Controllers
                     // 使用简单的父表查询并添加工作流ID限制
                     dbSet = requisitionManager.GetAllDocFeeRequisitionQuery(context.User.OrgId)
                         .Where(c => docIds.Contains(c.Id));
-
                     // 应用父表条件
                     if (otherConditions != null && otherConditions.Any())
                     {
@@ -250,7 +225,6 @@ namespace PowerLmsWebApi.Controllers
                     var parentIds = itemsQuery.Select(item => item.ParentId.Value).Distinct();
                     dbSet = _DbContext.DocFeeRequisitions.Where(req => parentIds.Contains(req.Id) && docIds.Contains(req.Id));
                 }
-
                 if (!hasE3Permission && !context.User.IsSuperAdmin)
                 {
                     dbSet = dbSet.Where(r => r.MakerId == context.User.Id);
@@ -265,15 +239,12 @@ namespace PowerLmsWebApi.Controllers
                 // 应用分页和排序
                 var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
                 var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
-
                 // 获取结果ID集合
                 var resultIds = prb.Result.Select(c => c.Id).ToList();
-
                 // 只查询结果相关的工作流
                 var wfsArray = _DbContext.OwWfs
                     .Where(c => resultIds.Contains(c.DocId.Value))
                     .ToArray();
-
                 // 组装结果
                 foreach (var requisition in prb.Result)
                 {
@@ -284,7 +255,6 @@ namespace PowerLmsWebApi.Controllers
                         Wf = _Mapper.Map<OwWfDto>(wf),
                     });
                 }
-
                 result.Total = prb.Total;
             }
             catch (Exception ex)
@@ -294,10 +264,8 @@ namespace PowerLmsWebApi.Controllers
                 result.ErrorCode = 500;
                 result.DebugMessage = $"获取业务费用申请单时发生错误: {ex.Message}";
             }
-
             return result;
         }
-
         /// <summary>
         /// 增加新业务费用申请单。
         /// </summary>
@@ -314,32 +282,24 @@ namespace PowerLmsWebApi.Controllers
                 _Logger.LogWarning("添加业务费用申请单时提供了无效的令牌: {token}", model.Token);
                 return Unauthorized();
             }
-
             var result = new AddDocFeeRequisitionReturnDto();
-
             try
             {
                 // 获取要保存的实体并进行基础设置
                 var entity = model.DocFeeRequisition;
                 entity.GenerateIdIfEmpty(); // 生成新的GUID
-
                 // 设置创建信息
                 entity.MakerId = context.User.Id; // 设置创建者ID
                 entity.MakeDateTime = OwHelper.WorldNow; // 设置创建时间
                 entity.OrgId = context.User.OrgId; // 设置组织ID
-
                 // 添加实体到数据库上下文
                 _DbContext.DocFeeRequisitions.Add(entity);
-
                 // 应用审计日志(可选) - 修改为只传递一个参数
                 _SqlAppLogger.LogGeneralInfo($"用户 {context.User.Id} 创建了业务费用申请单ID:{entity.Id}，操作：AddDocFeeRequisition");
-
                 // 保存更改到数据库
                 _DbContext.SaveChanges();
-
                 // 设置返回结果
                 result.Id = entity.Id;
-
                 _Logger.LogDebug("成功创建业务费用申请单: {id}", entity.Id);
             }
             catch (Exception ex)
@@ -350,10 +310,8 @@ namespace PowerLmsWebApi.Controllers
                 result.ErrorCode = 500;
                 result.DebugMessage = $"创建业务费用申请单时发生错误: {ex.Message}";
             }
-
             return result;
         }
-
         /// <summary>
         /// 修改业务费用申请单信息。
         /// </summary>
@@ -382,7 +340,6 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.SaveChanges();
             return result;
         }
-
         /// <summary>
         /// 删除指定Id的业务费用申请单。慎用！
         /// </summary>
@@ -397,12 +354,10 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new RemoveDocFeeRequisitionReturnDto();
-
             try
             {
                 var id = model.Id;
                 _Logger.LogInformation($"开始处理删除业务费用申请单请求，申请单ID：{id}");
-
                 // 查找申请单
                 var dbSet = _DbContext.DocFeeRequisitions;
                 var item = dbSet.Find(id);
@@ -411,20 +366,17 @@ namespace PowerLmsWebApi.Controllers
                     _Logger.LogWarning($"未找到指定的申请单，ID：{id}");
                     return BadRequest("找不到指定的申请单");
                 }
-
                 // 获取所有关联的申请单明细项
                 var items = _DbContext.DocFeeRequisitionItems.Where(c => c.ParentId == id).ToList();
                 if (items.Count > 0)
                 {
                     _Logger.LogInformation($"申请单 {id} 包含 {items.Count} 个明细项，正在检查是否可删除");
-
                     // 检查明细项是否已结算 - 仅通过直接查询数据库中是否存在关联的结算单明细
                     foreach (var detail in items)
                     {
                         // 直接查询数据库中是否存在关联的结算单明细
                         bool hasInvoiceItems = _DbContext.PlInvoicesItems.Any(invoiceItem =>
                             invoiceItem.RequisitionItemId == detail.Id);
-
                         if (hasInvoiceItems)
                         {
                             _Logger.LogWarning($"申请单明细(ID:{detail.Id})存在关联的结算单明细，无法删除申请单");
@@ -432,7 +384,6 @@ namespace PowerLmsWebApi.Controllers
                         }
                     }
                 }
-
                 // 记录操作日志
                 _DbContext.OwSystemLogs.Add(new OwSystemLog
                 {
@@ -442,20 +393,16 @@ namespace PowerLmsWebApi.Controllers
                     ExtraDecimal = items.Count,
                     WorldDateTime = OwHelper.WorldNow,
                 });
-
                 // 如果有关联的明细项，先删除它们
                 if (items.Count > 0)
                 {
                     _Logger.LogInformation($"删除业务费用申请单 {id} 的 {items.Count} 个明细项");
                     _DbContext.DocFeeRequisitionItems.RemoveRange(items);
                 }
-
                 // 删除申请单
                 _EntityManager.Remove(item);
-
                 // 保存所有更改
                 _DbContext.SaveChanges();
-
                 _Logger.LogInformation($"成功删除业务费用申请单 {id} 及其所有关联明细项");
             }
             catch (Exception ex)
@@ -465,10 +412,8 @@ namespace PowerLmsWebApi.Controllers
                 result.ErrorCode = 500;
                 result.DebugMessage = $"删除业务费用申请单时发生错误: {ex.Message}";
             }
-
             return result;
         }
-
         /// <summary>
         /// 获取指定费用的剩余未申请金额。
         /// </summary>
@@ -484,20 +429,15 @@ namespace PowerLmsWebApi.Controllers
             var result = new GetFeeRemainingReturnDto();
             var fees = _DbContext.DocFees.Where(c => model.FeeIds.Contains(c.Id));
             if (fees.Count() != model.FeeIds.Count) return NotFound();
-
             var coll = from fee in fees
                        join job in _DbContext.PlJobs
                        on fee.JobId equals job.Id
-
                        //join fqi in _DbContext.DocFeeRequisitionItems
                        //on fee.Id equals fqi.FeeId
-
                        //join fq in _DbContext.DocFeeRequisitions
                        //on fqi.ParentId equals fq.Id
-
                        //group fee by fq.Id into g
                        select new { fee, job };
-
             var ary = coll.AsNoTracking().ToArray();
             var collRem = from fee in fees
                           join fqi in _DbContext.DocFeeRequisitionItems
@@ -505,7 +445,6 @@ namespace PowerLmsWebApi.Controllers
                           group fqi by fqi.FeeId into g
                           select new { FeeId = g.Key, Amount = g.Sum(d => d.Amount) };
             var dicRem = collRem.AsNoTracking().ToDictionary(c => c.FeeId, c => c.Amount);  //已申请的金额
-
             result.Result.AddRange(ary.Select(c =>
             {
                 var r = new GetFeeRemainingItemReturnDto
@@ -519,9 +458,7 @@ namespace PowerLmsWebApi.Controllers
             return result;
         }
         #endregion 业务费用申请单
-
         #region 业务费用申请单明细
-
         /// <summary>
         /// 获取全部业务费用申请单明细。
         /// </summary>
@@ -537,15 +474,12 @@ namespace PowerLmsWebApi.Controllers
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllDocFeeRequisitionItemReturnDto();
-
             try
             {
                 // 获取DocFeeRequisitionManager服务
                 var requisitionManager = _ServiceProvider.GetRequiredService<DocFeeRequisitionManager>();
-
                 // 使用唯一基准函数获取已过滤的子表查询
                 var coll = requisitionManager.GetAllDocFeeRequisitionItemQuery(conditional, context.User.OrgId);
-
                 // 应用排序和分页
                 coll = coll.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
                 var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
@@ -558,10 +492,8 @@ namespace PowerLmsWebApi.Controllers
                 result.ErrorCode = 500;
                 result.DebugMessage = $"获取业务费用申请单明细时发生错误: {ex.Message}";
             }
-
             return result;
         }
-
         /// <summary>
         /// 获取申请单明细增强接口功能。
         /// </summary>
@@ -579,63 +511,49 @@ namespace PowerLmsWebApi.Controllers
             // 查询需要返回：申请单、job、费用实体、申请明细的余额（未结算）
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
                 return Unauthorized();
-
             var result = new GetDocFeeRequisitionItemReturnDto();
-
             try
             {
                 // 获取DocFeeRequisitionManager服务
                 var requisitionManager = _ServiceProvider.GetRequiredService<DocFeeRequisitionManager>();
-
                 // 使用唯一基准函数获取已过滤的子表查询
                 var filteredItemsQuery = requisitionManager.GetAllDocFeeRequisitionItemQuery(conditional, context.User.OrgId);
-
                 // 应用排序
                 var orderedQuery = filteredItemsQuery.OrderBy(model.OrderFieldName, model.IsDesc);
-
                 // 计算总数
                 result.Total = orderedQuery.Count();
-
                 // 应用分页
                 var pagedQuery = orderedQuery.Skip(model.StartIndex);
                 if (model.Count > 0)
                     pagedQuery = pagedQuery.Take(model.Count);
-
                 // 执行查询获取子表数据
                 var items = pagedQuery.AsNoTracking().ToList();
-
                 // 获取关联数据（父表、费用、工作任务、账单）
                 var parentIds = items.Select(x => x.ParentId).Where(x => x.HasValue).Select(x => x.Value).Distinct().ToList();
                 var feeIds = items.Select(x => x.FeeId).Where(x => x.HasValue).Select(x => x.Value).Distinct().ToList();
-
                 // 批量加载关联数据
                 var requisitions = parentIds.Any() ? _DbContext.DocFeeRequisitions
                     .Where(r => parentIds.Contains(r.Id))
                     .AsNoTracking()
                     .ToList()
                     .ToDictionary(r => r.Id) : new Dictionary<Guid, DocFeeRequisition>();
-
                 var fees = feeIds.Any() ? _DbContext.DocFees
                     .Where(f => feeIds.Contains(f.Id))
                     .AsNoTracking()
                     .ToList()
                     .ToDictionary(f => f.Id) : new Dictionary<Guid, DocFee>();
-
                 var jobIds = fees.Values.Select(f => f.JobId).Where(x => x.HasValue).Select(x => x.Value).Distinct().ToList();
                 var billIds = fees.Values.Select(f => f.BillId).Where(x => x.HasValue).Select(x => x.Value).Distinct().ToList();
-
                 var jobs = jobIds.Any() ? _DbContext.PlJobs
                     .Where(j => jobIds.Contains(j.Id))
                     .AsNoTracking()
                     .ToList()
                     .ToDictionary(j => j.Id) : new Dictionary<Guid, PlJob>();
-
                 var bills = billIds.Any() ? _DbContext.DocBills
                     .Where(b => billIds.Contains(b.Id))
                     .AsNoTracking()
                     .ToList()
                     .ToDictionary(b => b.Id) : new Dictionary<Guid, DocBill>();
-
                 // 组装结果
                 foreach (var item in items)
                 {
@@ -643,7 +561,6 @@ namespace PowerLmsWebApi.Controllers
                     var fee = item.FeeId.HasValue ? fees.GetValueOrDefault(item.FeeId.Value) : null;
                     var job = fee?.JobId.HasValue == true ? jobs.GetValueOrDefault(fee.JobId.Value) : null;
                     var bill = fee?.BillId.HasValue == true ? bills.GetValueOrDefault(fee.BillId.Value) : null;
-
                     var resultItem = new GetDocFeeRequisitionItemItem
                     {
                         DocFeeRequisitionItem = item,
@@ -652,10 +569,8 @@ namespace PowerLmsWebApi.Controllers
                         PlJob = job,
                         DocBill = bill
                     };
-
                     // 计算余额：直接使用实体字段，不再动态计算已结算金额
                     resultItem.Remainder = item.Amount - item.TotalSettledAmount;
-
                     result.Result.Add(resultItem);
                 }
             }
@@ -666,10 +581,8 @@ namespace PowerLmsWebApi.Controllers
                 result.ErrorCode = 500;
                 result.DebugMessage = $"获取申请单明细时发生错误: {ex.Message}";
             }
-
             return result;
         }
-
         /// <summary>
         /// 增加新业务费用申请单明细。
         /// </summary>
@@ -715,14 +628,11 @@ namespace PowerLmsWebApi.Controllers
             var req = _DbContext.DocFeeRequisitions.Find(model.DocFeeRequisitionItem.ParentId);
             var parent = _DbContext.DocFeeRequisitions.Find(model.DocFeeRequisitionItem.ParentId);
             if (parent is null) return BadRequest("没有找到 指定的 ParentId 实体");
-
             // 已删除显式回写代码 - 由FeeTotalTriggerHandler触发器自动处理
-
             _DbContext.SaveChanges();
             result.Id = model.DocFeeRequisitionItem.Id;
             return result;
         }
-
         /// <summary>
         /// 修改业务费用申请单明细信息。
         /// </summary>
@@ -764,13 +674,10 @@ namespace PowerLmsWebApi.Controllers
             var entryEntity = _DbContext.Entry(modifiedEntities[0]);
             var parent = _DbContext.DocFeeRequisitions.Find(model.DocFeeRequisitionItem.ParentId);
             if (parent is null) return BadRequest("没有找到 指定的 ParentId 实体");
-
             // 不需要显式回写 - 由FeeTotalTriggerHandler触发器自动处理
-
             _DbContext.SaveChanges();
             return result;
         }
-
         /// <summary>
         /// 删除指定Id的业务费用申请单明细。慎用！
         /// </summary>
@@ -788,20 +695,15 @@ namespace PowerLmsWebApi.Controllers
             var dbSet = _DbContext.DocFeeRequisitionItems;
             var item = dbSet.Find(id);
             if (item is null) return BadRequest();
-
             // 不需要保存FeeId和显式回写 - 由FeeTotalTriggerHandler触发器自动处理
-
             _EntityManager.Remove(item);
             //计算合计
             var parent = _DbContext.DocFeeRequisitions.Find(item.ParentId);
             if (parent is null) return BadRequest("没有找到 指定的 ParentId 实体");
-
             // 已删除显式回写代码 - 由FeeTotalTriggerHandler触发器自动处理
-
             _DbContext.SaveChanges();
             return result;
         }
-
         /// <summary>
         /// 设置指定的申请单下所有明细。
         /// 指定存在id的明细则更新，Id全0或不存在的Id到自动添加，原有未指定的明细将被删除。
@@ -859,18 +761,13 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.AddRange(adds);
             var removeIds = existsIds.Except(aryIds).ToArray();
             _DbContext.RemoveRange(_DbContext.DocFeeRequisitionItems.Where(c => removeIds.Contains(c.Id)));
-
             // 不需要显式回写 - 由FeeTotalTriggerHandler触发器自动处理
-
             _DbContext.SaveChanges();
             result.Result.AddRange(model.Items);
             return result;
         }
-
         #endregion 业务费用申请单明细
-
         #region 回退主营业务费用申请单
-
         /// <summary>
         /// 回退主营业务费用申请单到初始状态。
         /// 会清空相关工作流、重置申请单状态并释放被锁定的费用。
@@ -892,9 +789,7 @@ namespace PowerLmsWebApi.Controllers
                 _Logger.LogWarning("无效的令牌{token}", model.Token);
                 return Unauthorized();
             }
-
             var result = new RevertDocFeeRequisitionReturnDto();
-
             try
             {
                 // 1. 权限验证（使用E.2审批撤销权限，专门用于一键在任何情况下撤销的接口）
@@ -903,32 +798,26 @@ namespace PowerLmsWebApi.Controllers
                     _Logger.LogWarning("权限不足，用户{UserId}尝试回退主营业务费用申请单{RequisitionId}", context.User.Id, model.RequisitionId);
                     return StatusCode((int)HttpStatusCode.Forbidden, "权限不足：需要审批撤销权限（E.2）");
                 }
-
                 // 2. 获取DocFeeRequisitionManager
                 var requisitionManager = _ServiceProvider.GetRequiredService<DocFeeRequisitionManager>();
-
                 // 3. 记录回退原因到审计日志
                 if (!string.IsNullOrWhiteSpace(model.Reason))
                 {
                     _SqlAppLogger.LogGeneralInfo($"主营业务费用申请单回退原因：RequisitionId={model.RequisitionId}, 操作人={context.User.Id}, 原因={model.Reason}");
                 }
-
                 // 4. 调用DocFeeRequisitionManager的回退服务方法
                 var revertResult = requisitionManager.RevertRequisition(
                     model.RequisitionId,
                     context.User.Id,
                     _WfManager);
-
                 // 5. 根据服务返回结果构造API响应
                 if (revertResult.Success)
                 {
                     result.RequisitionId = revertResult.RequisitionId;
                     result.ClearedWorkflowCount = revertResult.ClearedWorkflowCount;
                     result.Message = revertResult.Message;
-
                     _Logger.LogInformation("主营业务费用申请单回退成功：RequisitionId={RequisitionId}, 操作人={UserId}, 清空工作流{WorkflowCount}个",
                         model.RequisitionId, context.User.Id, revertResult.ClearedWorkflowCount);
-
                     return result;
                 }
                 else
@@ -936,7 +825,6 @@ namespace PowerLmsWebApi.Controllers
                     // 回退失败，根据错误信息确定HTTP状态码
                     _Logger.LogWarning("主营业务费用申请单回退失败：RequisitionId={RequisitionId}, 操作人={UserId}, 错误={Error}",
                         model.RequisitionId, context.User.Id, revertResult.Message);
-
                     if (revertResult.Message.Contains("未找到"))
                     {
                         return NotFound(revertResult.Message);
@@ -975,11 +863,8 @@ namespace PowerLmsWebApi.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, result);
             }
         }
-
         #endregion 回退主营业务费用申请单
-
         #region 费用方案
-
         /// <summary>
         /// 获取全部费用方案。
         /// </summary>
@@ -994,18 +879,15 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetAllDocFeeTemplateReturnDto> GetAllDocFeeTemplate([FromQuery] PagingParamsDtoBase model,
             [FromQuery][ModelBinder(typeof(DotKeyDictionaryModelBinder))] Dictionary<string, string> conditional = null)
         {
-
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllDocFeeTemplateReturnDto();
             var dbSet = _DbContext.DocFeeTemplates;
-
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             coll = EfHelper.GenerateWhereAnd(coll, conditional);
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }
-
         /// <summary>
         /// 增加新费用方案。
         /// </summary>
@@ -1022,7 +904,6 @@ namespace PowerLmsWebApi.Controllers
                 _Logger.LogWarning("无效的令牌: {token}", model.Token);
                 return Unauthorized();
             }
-
             #region 权限判定
             var docFeeTT = model.DocFeeTemplate;
             if (docFeeTT.JobTypeId == ProjectContent.AeId)    //若是空运出口业务
@@ -1042,20 +923,16 @@ namespace PowerLmsWebApi.Controllers
                 if (!_AuthorizationManager.Demand(out string err, "D20.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             }
             #endregion 权限判定
-
             var result = new AddDocFeeTemplateReturnDto();
             var entity = model.DocFeeTemplate;
             entity.GenerateNewId();
             model.DocFeeTemplate.CreateBy = context.User.Id;
             model.DocFeeTemplate.CreateDateTime = OwHelper.WorldNow;
             _DbContext.DocFeeTemplates.Add(model.DocFeeTemplate);
-
             _DbContext.SaveChanges();
-
             result.Id = model.DocFeeTemplate.Id;
             return result;
         }
-
         /// <summary>
         /// 修改费用方案信息。
         /// </summary>
@@ -1095,7 +972,6 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.SaveChanges();
             return result;
         }
-
         /// <summary>
         /// 删除指定Id的费用方案。这会删除所有费用方案明细项。慎用！
         /// </summary>
@@ -1144,11 +1020,8 @@ namespace PowerLmsWebApi.Controllers
             _DbContext.SaveChanges();
             return result;
         }
-
         #endregion 费用方案
-
         #region 费用方案明细
-
         /// <summary>
         /// 获取全部费用方案明细。
         /// </summary>
@@ -1167,14 +1040,12 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllDocFeeTemplateItemReturnDto();
             var dbSet = _DbContext.DocFeeTemplateItems;
-
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             coll = EfHelper.GenerateWhereAnd(coll, conditional);
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }
-
         /// <summary>
         /// 增加新费用方案明细。
         /// </summary>
@@ -1193,7 +1064,6 @@ namespace PowerLmsWebApi.Controllers
             }
             var result = new AddDocFeeTemplateItemReturnDto();
             var entity = model.DocFeeTemplateItem;
-
             var id = model.DocFeeTemplateItem.ParentId;
             if (id is null) return BadRequest();
             if (_DbContext.DocFeeTemplates.Find(id.Value) is not DocFeeTemplate item) return BadRequest();
@@ -1216,16 +1086,12 @@ namespace PowerLmsWebApi.Controllers
                 if (!_AuthorizationManager.Demand(out string err, "D20.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             }
             #endregion 权限判定
-
             entity.GenerateNewId();
             _DbContext.DocFeeTemplateItems.Add(model.DocFeeTemplateItem);
-
             _DbContext.SaveChanges();
-
             result.Id = model.DocFeeTemplateItem.Id;
             return result;
         }
-
         /// <summary>
         /// 修改费用方案明细信息。
         /// </summary>
@@ -1262,14 +1128,12 @@ namespace PowerLmsWebApi.Controllers
                 if (!_AuthorizationManager.Demand(out string err, "D20.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             }
             #endregion 权限判定
-
             var modifiedEntities = new List<DocFeeTemplateItem>();
             if (!_EntityManager.Modify(new[] { model.DocFeeTemplateItem }, modifiedEntities)) return NotFound();
             var entity = _DbContext.Entry(modifiedEntities[0]);
             _DbContext.SaveChanges();
             return result;
         }
-
         /// <summary>
         /// 删除指定Id的费用方案明细。慎用！
         /// </summary>
@@ -1286,10 +1150,8 @@ namespace PowerLmsWebApi.Controllers
             var result = new RemoveDocFeeTemplateItemReturnDto();
             var id = model.Id;
             if (_DbContext.DocFeeTemplateItems.Find(id) is not DocFeeTemplateItem item) return BadRequest();
-
             var idTT = item.ParentId;
             if (idTT is null) return BadRequest();
-
             if (_DbContext.DocFeeTemplates.Find(idTT.Value) is not DocFeeTemplate tt) return BadRequest();
             #region 权限判定
             var docFeeTT = tt;
@@ -1310,12 +1172,10 @@ namespace PowerLmsWebApi.Controllers
                 if (!_AuthorizationManager.Demand(out string err, "D20.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             }
             #endregion 权限判定
-
             _EntityManager.Remove(item);
             _DbContext.SaveChanges();
             return result;
         }
-
         /// <summary>
         /// 设置指定的费用方案下所有明细。
         /// 指定存在id的明细则更新，Id全0或不存在的Id到自动添加，原有未指定的明细将被删除。
@@ -1332,7 +1192,6 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new SetDocFeeTemplateItemReturnDto();
             if (_DbContext.DocFeeRequisitions.Find(model.FrId) is not DocFeeRequisition fr) return NotFound();
-
             var idTT = model.FrId;
             if (_DbContext.DocFeeTemplates.Find(idTT) is not DocFeeTemplate tt) return BadRequest();
             #region 权限判定
@@ -1371,14 +1230,11 @@ namespace PowerLmsWebApi.Controllers
             //删除
             var removeIds = existsIds.Except(aryIds).ToArray();
             _DbContext.RemoveRange(_DbContext.DocFeeTemplateItems.Where(c => removeIds.Contains(c.Id)));
-
             _DbContext.SaveChanges();
             //后处理
             result.Result.AddRange(model.Items);
             return result;
         }
-
         #endregion 费用方案明细
-
     }
 }

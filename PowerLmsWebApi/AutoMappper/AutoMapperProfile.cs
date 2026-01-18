@@ -3,7 +3,6 @@ using PowerLms.Data;
 using PowerLmsServer.Managers;
 using PowerLmsWebApi.Controllers;
 using PowerLmsWebApi.Dto;
-
 namespace PowerLmsWebApi.AutoMappper
 {
     /// <summary>
@@ -18,7 +17,6 @@ namespace PowerLmsWebApi.AutoMappper
         {
             // 基本返回类型映射
             CreateMap<ReturnBase, ReturnDtoBase>().IncludeAllDerived();
-            
             #region 权限相关
             #endregion 权限相关
         }

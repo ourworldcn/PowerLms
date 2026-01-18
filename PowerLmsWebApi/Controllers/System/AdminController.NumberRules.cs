@@ -5,7 +5,6 @@ using PowerLmsServer;
 using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
 using System.Net;
-
 namespace PowerLmsWebApi.Controllers.System
 {
     /// <summary>
@@ -45,15 +44,12 @@ namespace PowerLmsWebApi.Controllers.System
                     coll = coll.Where(c => c.OrgId == context.User.OrgId);
                 }
             }
-
             // 使用EfHelper.GenerateWhereAnd进行通用查询条件处理
             coll = EfHelper.GenerateWhereAnd(coll, conditional);
-
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }
-
         /// <summary>
         /// 增加业务编码规则记录。
         /// </summary>
@@ -75,7 +71,6 @@ namespace PowerLmsWebApi.Controllers.System
             }
             else if (model.Item.BusinessTypeId == ProjectContent.AiId)    //若是空运进口业务
                 if (!_AuthorizationManager.Demand(out err, "D1.1.1.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-
             var result = new AddJobNumberRuleReturnDto();
             model.Item.GenerateNewId();
             var id = model.Item.Id;
@@ -85,7 +80,6 @@ namespace PowerLmsWebApi.Controllers.System
             result.Id = id;
             return result;
         }
-
         /// <summary>
         /// 修改业务编码规则记录。
         /// </summary>
@@ -130,7 +124,6 @@ namespace PowerLmsWebApi.Controllers.System
                 return result;
             }
         }
-
         /// <summary>
         /// 删除业务编码规则的记录。
         /// </summary>
@@ -146,7 +139,6 @@ namespace PowerLmsWebApi.Controllers.System
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             string err;
             if (!_AuthorizationManager.Demand(out err, "B.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
-
             var result = new RemoveJobNumberRuleReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.DD_JobNumberRules;
@@ -164,11 +156,9 @@ namespace PowerLmsWebApi.Controllers.System
             //    _DbContext.Database.ExecuteSqlRaw($"delete from {nameof(_DbContext.SimpleDataDics)} where {nameof(SimpleDataDic.DataDicId)}='{id.ToString()}'");
             //else //其他字典待定
             //{
-
             //}
             return result;
         }
-
         /// <summary>
         /// 恢复指定的被删除业务编码规则记录。
         /// </summary>
@@ -193,9 +183,7 @@ namespace PowerLmsWebApi.Controllers.System
             _DbContext.SaveChanges();
             return result;
         }
-
         #endregion 业务编码规则相关
-
         #region 其它编码规则相关
         /// <summary>
         /// 获取其它编码规则。
@@ -228,15 +216,12 @@ namespace PowerLmsWebApi.Controllers.System
                     coll = coll.Where(c => c.OrgId == context.User.OrgId);
                 }
             }
-
             // 使用EfHelper.GenerateWhereAnd进行通用查询条件处理
             coll = EfHelper.GenerateWhereAnd(coll, conditional);
-
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }
-
         /// <summary>
         /// 增加其它编码规则记录。
         /// </summary>
@@ -258,7 +243,6 @@ namespace PowerLmsWebApi.Controllers.System
             result.Id = id;
             return result;
         }
-
         /// <summary>
         /// 修改其它编码规则记录。
         /// </summary>
@@ -287,7 +271,6 @@ namespace PowerLmsWebApi.Controllers.System
             _DbContext.SaveChanges();
             return result;
         }
-
         /// <summary>
         /// 删除其它编码规则的记录。
         /// </summary>
@@ -311,11 +294,9 @@ namespace PowerLmsWebApi.Controllers.System
             //    _DbContext.Database.ExecuteSqlRaw($"delete from {nameof(_DbContext.SimpleDataDics)} where {nameof(SimpleDataDic.DataDicId)}='{id.ToString()}'");
             //else //其他字典待定
             //{
-
             //}
             return result;
         }
-
         /// <summary>
         /// 恢复指定的被删除其它编码规则记录。
         /// </summary>
@@ -337,8 +318,6 @@ namespace PowerLmsWebApi.Controllers.System
             _DbContext.SaveChanges();
             return result;
         }
-
         #endregion 其它编码规则相关
-
     }
 }

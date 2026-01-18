@@ -13,7 +13,6 @@
  * 创建：2025-01
  * 修改：2025-01-27 修复删除操作的多租户验证和错误处理
  */
-
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -23,7 +22,6 @@ using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
 using System.Net;
-
 namespace PowerLmsWebApi.Controllers.Financial
 {
     /// <summary>
@@ -52,7 +50,6 @@ namespace PowerLmsWebApi.Controllers.Financial
             _Mapper = mapper;
             _SqlAppLogger = sqlAppLogger;
         }
-
         private readonly AccountManager _AccountManager;
         private readonly IServiceProvider _ServiceProvider;
         private readonly EntityManager _EntityManager;
@@ -60,9 +57,7 @@ namespace PowerLmsWebApi.Controllers.Financial
         private readonly ILogger<ActualFinancialTransactionController> _Logger;
         private readonly IMapper _Mapper;
         private readonly OwSqlAppLogger _SqlAppLogger;
-
         #region 基础CRUD操作
-
         /// <summary>
         /// 获取全部实际收付记录。
         /// </summary>
@@ -81,16 +76,12 @@ namespace PowerLmsWebApi.Controllers.Financial
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) 
                 return Unauthorized();
-
             var result = new GetAllActualFinancialTransactionReturnDto();
-
             try
             {
                 var dbSet = _DbContext.ActualFinancialTransactions;
-
                 // 默认只显示未删除的记录，除非明确指定查询已删除的记录
                 var coll = dbSet.Where(x => !x.IsDelete);
-
                 // 处理软删除条件
                 if (conditional != null && conditional.TryGetValue("IsDelete", out var isDeleteValue))
                 {
@@ -103,15 +94,12 @@ namespace PowerLmsWebApi.Controllers.Financial
                         }
                         // 否则保持默认的未删除记录查询
                     }
-                    
                     // 从条件中移除 IsDelete，避免重复处理
                     conditional = new Dictionary<string, string>(conditional, StringComparer.OrdinalIgnoreCase);
                     conditional.Remove("IsDelete");
                 }
-
                 // 应用其他查询条件
                 coll = EfHelper.GenerateWhereAnd(coll, conditional);
-
                 // 应用排序和分页
                 coll = coll.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
                 var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
@@ -124,10 +112,8 @@ namespace PowerLmsWebApi.Controllers.Financial
                 result.ErrorCode = 500;
                 result.DebugMessage = $"获取实际收付记录时发生错误: {ex.Message}";
             }
-
             return result;
         }
-
         /// <summary>
         /// 添加新的实际收付记录。
         /// </summary>
@@ -144,9 +130,7 @@ namespace PowerLmsWebApi.Controllers.Financial
                 _Logger.LogWarning("添加实际收付记录时提供了无效的令牌: {token}", model.Token);
                 return Unauthorized();
             }
-
             var result = new AddActualFinancialTransactionReturnDto();
-
             try
             {
                 // 验证输入参数
@@ -157,30 +141,22 @@ namespace PowerLmsWebApi.Controllers.Financial
                     result.DebugMessage = "实际收付记录数据不能为空";
                     return result;
                 }
-
                 // 获取要保存的实体并进行基础设置
                 var entity = model.Item;
                 entity.GenerateIdIfEmpty(); // 生成新的GUID
-
                 // 设置创建信息
                 entity.CreateBy = context.User.Id;
                 entity.CreateDateTime = OwHelper.WorldNow;
-
                 // 确保软删除标记为false（新建记录默认未删除）
                 entity.IsDelete = false;
-
                 // 添加实体到数据库上下文
                 _DbContext.ActualFinancialTransactions.Add(entity);
-
                 // 记录操作日志
                 _SqlAppLogger.LogGeneralInfo($"用户 {context.User.Id} 创建了实际收付记录ID:{entity.Id}");
-
                 // 保存更改到数据库
                 _DbContext.SaveChanges();
-
                 // 设置返回结果
                 result.Id = entity.Id;
-
                 _Logger.LogDebug("成功创建实际收付记录: {id}", entity.Id);
             }
             catch (Exception ex)
@@ -190,10 +166,8 @@ namespace PowerLmsWebApi.Controllers.Financial
                 result.ErrorCode = 500;
                 result.DebugMessage = $"创建实际收付记录时发生错误: {ex.Message}";
             }
-
             return result;
         }
-
         /// <summary>
         /// 修改实际收付记录信息。
         /// </summary>
@@ -209,20 +183,15 @@ namespace PowerLmsWebApi.Controllers.Financial
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) 
                 return Unauthorized();
-
             var result = new ModifyActualFinancialTransactionReturnDto();
-
             try
             {
                 // 使用EntityManager的软删除安全修改方法
                 if (!_EntityManager.ModifyWithMarkDelete(model.Items))
                     return NotFound();
-
                 // 记录操作日志
                 _SqlAppLogger.LogGeneralInfo($"用户 {context.User.Id} 修改了 {model.Items.Count} 条实际收付记录");
-
                 _DbContext.SaveChanges();
-
                 _Logger.LogDebug("成功修改实际收付记录: {count} 条", model.Items.Count);
             }
             catch (Exception ex)
@@ -232,10 +201,8 @@ namespace PowerLmsWebApi.Controllers.Financial
                 result.ErrorCode = 500;
                 result.DebugMessage = $"修改实际收付记录时发生错误: {ex.Message}";
             }
-
             return result;
         }
-
         /// <summary>
         /// 删除指定Id的实际收付记录（软删除）。
         /// </summary>
@@ -252,9 +219,7 @@ namespace PowerLmsWebApi.Controllers.Financial
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) 
                 return Unauthorized();
-
             var result = new RemoveActualFinancialTransactionReturnDto();
-
             try
             {
                 var id = model.Id;
@@ -264,7 +229,6 @@ namespace PowerLmsWebApi.Controllers.Financial
                     _Logger.LogWarning("尝试删除不存在的实际收付记录: {id}", id);
                     return NotFound("指定ID的实际收付记录不存在");
                 }
-
                 if (item.IsDelete)
                 {
                     _Logger.LogWarning("尝试删除已被删除的实际收付记录: {id}", id);
@@ -273,7 +237,6 @@ namespace PowerLmsWebApi.Controllers.Financial
                     result.DebugMessage = "记录已被删除";
                     return BadRequest(result.DebugMessage);
                 }
-
                 // 🔧 多租户数据隔离验证 - 确保用户只能删除自己租户的数据
                 if (!_AccountManager.IsAdmin(context.User))
                 {
@@ -283,13 +246,11 @@ namespace PowerLmsWebApi.Controllers.Financial
                     {
                         var parentInvoice = _DbContext.PlInvoicess.AsNoTracking()
                             .FirstOrDefault(p => p.Id == item.ParentId.Value);
-                        
                         if (parentInvoice != null && parentInvoice.CreateBy.HasValue)
                         {
                             // 验证结算单的创建者是否与当前用户属于同一组织
                             var creator = _DbContext.Accounts.AsNoTracking()
                                 .FirstOrDefault(a => a.Id == parentInvoice.CreateBy.Value);
-                            
                             if (creator != null && creator.OrgId != context.User.OrgId)
                             {
                                 _Logger.LogWarning("用户 {userId} 尝试删除不属于其租户的实际收付记录: {id}", 
@@ -302,7 +263,6 @@ namespace PowerLmsWebApi.Controllers.Financial
                         }
                     }
                 }
-
                 // 🔧 检查是否存在业务关联约束
                 if (!CheckCanDelete(item.Id))
                 {
@@ -312,10 +272,8 @@ namespace PowerLmsWebApi.Controllers.Financial
                     result.DebugMessage = "记录存在业务关联，无法删除";
                     return result;
                 }
-
                 // 执行软删除
                 _EntityManager.Remove(item);
-
                 // 🔧 正确创建系统日志实体 - 确保包含主键ID和适当的ActionId长度
                 var systemLog = new OwSystemLog
                 {
@@ -329,12 +287,9 @@ namespace PowerLmsWebApi.Controllers.Financial
                     WorldDateTime = OwHelper.WorldNow,
                 };
                 _DbContext.OwSystemLogs.Add(systemLog);
-
                 // 记录应用日志
                 _SqlAppLogger.LogGeneralInfo($"用户 {context.User.Id} 删除了实际收付记录ID:{item.Id}");
-
                 _DbContext.SaveChanges();
-
                 _Logger.LogInformation("成功删除实际收付记录: {id}, 操作用户: {userId}", id, context.User.Id);
             }
             catch (DbUpdateException dbEx)
@@ -351,10 +306,8 @@ namespace PowerLmsWebApi.Controllers.Financial
                 result.ErrorCode = 500;
                 result.DebugMessage = $"删除实际收付记录时发生错误: {ex.Message}";
             }
-
             return result;
         }
-
         /// <summary>
         /// 恢复指定的被删除实际收付记录。
         /// </summary>
@@ -369,9 +322,7 @@ namespace PowerLmsWebApi.Controllers.Financial
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) 
                 return Unauthorized();
-
             var result = new RestoreActualFinancialTransactionReturnDto();
-
             try
             {
                 if (!_EntityManager.Restore<ActualFinancialTransaction>(model.Id))
@@ -379,12 +330,9 @@ namespace PowerLmsWebApi.Controllers.Financial
                     var errResult = new StatusCodeResult(OwHelper.GetLastError());
                     return errResult;
                 }
-
                 // 记录操作日志
                 _SqlAppLogger.LogGeneralInfo($"用户 {context.User.Id} 恢复了实际收付记录ID:{model.Id}");
-
                 _DbContext.SaveChanges();
-
                 _Logger.LogDebug("成功恢复实际收付记录: {id}", model.Id);
             }
             catch (Exception ex)
@@ -394,14 +342,10 @@ namespace PowerLmsWebApi.Controllers.Financial
                 result.ErrorCode = 500;
                 result.DebugMessage = $"恢复实际收付记录时发生错误: {ex.Message}";
             }
-
             return result;
         }
-
         #endregion 基础CRUD操作
-
         #region 私有辅助方法
-
         /// <summary>
         /// 检查实际收付记录是否可以删除
         /// </summary>
@@ -414,7 +358,6 @@ namespace PowerLmsWebApi.Controllers.Financial
                 // 🔧 检查是否存在业务关联约束
                 // 这里可以根据实际业务规则添加具体的约束检查
                 // 例如：检查是否被审计记录引用、是否在特定状态下等
-
                 // 当前实现：允许删除（软删除模式下通常可以删除）
                 // 如果将来有具体的业务约束，可以在这里添加检查逻辑
                 return true;
@@ -425,7 +368,6 @@ namespace PowerLmsWebApi.Controllers.Financial
                 return false; // 发生错误时，出于安全考虑，不允许删除
             }
         }
-
         #endregion 私有辅助方法
     }
 }

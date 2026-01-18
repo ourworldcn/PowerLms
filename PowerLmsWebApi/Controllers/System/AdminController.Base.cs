@@ -21,7 +21,6 @@ using AutoMapper.Internal.Mappers;
 using PowerLmsServer;
 using Microsoft.EntityFrameworkCore.Internal;
 using System.ComponentModel;
-
 namespace PowerLmsWebApi.Controllers.System
 {
     /// <summary>
@@ -61,15 +60,12 @@ namespace PowerLmsWebApi.Controllers.System
                     coll = coll.Where(c => c.OrgId == context.User.OrgId);
                 }
             }
-
             // 使用EfHelper.GenerateWhereAnd进行通用查询条件处理
             coll = EfHelper.GenerateWhereAnd(coll, conditional);
-
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }
-
         /// <summary>
         /// 增加国家记录。
         /// </summary>
@@ -92,7 +88,6 @@ namespace PowerLmsWebApi.Controllers.System
             result.Id = id;
             return result;
         }
-
         /// <summary>
         /// 修改国家记录。
         /// </summary>
@@ -121,7 +116,6 @@ namespace PowerLmsWebApi.Controllers.System
             _DbContext.SaveChanges();
             return result;
         }
-
         /// <summary>
         /// 删除国家的记录。
         /// </summary>
@@ -147,11 +141,9 @@ namespace PowerLmsWebApi.Controllers.System
             //    _DbContext.Database.ExecuteSqlRaw($"delete from {nameof(_DbContext.SimpleDataDics)} where {nameof(SimpleDataDic.DataDicId)}='{id.ToString()}'");
             //else //其他字典待定
             //{
-
             //}
             return result;
         }
-
         /// <summary>
         /// 恢复指定的被删除国家记录。
         /// </summary>
@@ -175,9 +167,7 @@ namespace PowerLmsWebApi.Controllers.System
             _DbContext.SaveChanges();
             return result;
         }
-
         #endregion 国家相关
-
         #region 币种相关
         /// <summary>
         /// 获取币种。
@@ -210,15 +200,12 @@ namespace PowerLmsWebApi.Controllers.System
                     coll = coll.Where(c => c.OrgId == context.User.OrgId);
                 }
             }
-
             // 使用EfHelper.GenerateWhereAnd进行通用查询条件处理
             coll = EfHelper.GenerateWhereAnd(coll, conditional);
-
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }
-
         /// <summary>
         /// 增加币种记录。
         /// </summary>
@@ -241,7 +228,6 @@ namespace PowerLmsWebApi.Controllers.System
             result.Id = id;
             return result;
         }
-
         /// <summary>
         /// 修修改币种记录。
         /// </summary>
@@ -270,7 +256,6 @@ namespace PowerLmsWebApi.Controllers.System
             _DbContext.SaveChanges();
             return result;
         }
-
         /// <summary>
         /// 删除币种的记录。
         /// </summary>
@@ -296,11 +281,9 @@ namespace PowerLmsWebApi.Controllers.System
             //    _DbContext.Database.ExecuteSqlRaw($"delete from {nameof(_DbContext.SimpleDataDics)} where {nameof(SimpleDataDic.DataDicId)}='{id.ToString()}'");
             //else //其他字典待定
             //{
-
             //}
             return result;
         }
-
         /// <summary>
         /// 恢复指定的被删除币种记录。
         /// </summary>
@@ -324,11 +307,8 @@ namespace PowerLmsWebApi.Controllers.System
             _DbContext.SaveChanges();
             return result;
         }
-
         #endregion 币种相关
-
         #region 汇率相关
-
         /// <summary>
         /// 导入汇率对象.符合条件的汇率对象会被导入到当前用户登录的机构中。
         /// </summary>
@@ -342,22 +322,17 @@ namespace PowerLmsWebApi.Controllers.System
         {
             // 验证令牌并获取上下文
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-
             var result = new ImportPlExchangeRateReturnDto();
-
             try
             {
                 // 确保条件字典键不区分大小写
                 var conditionalIgnoreCase = model.Conditional != null
                     ? new Dictionary<string, string>(model.Conditional, StringComparer.OrdinalIgnoreCase)
                     : new Dictionary<string, string>();
-
                 // 获取汇率数据集
                 var dbSet = _DbContext.DD_PlExchangeRates;
-
                 // 构建基本查询
                 var sourceColl = dbSet.AsNoTracking();
-
                 // 根据用户角色确定源数据筛选条件
                 if (_AccountManager.IsAdmin(context.User)) // 若是超管，可以查看全局汇率
                 {
@@ -369,7 +344,6 @@ namespace PowerLmsWebApi.Controllers.System
                     var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
                     if (!merchantId.HasValue)
                         return BadRequest("未知的商户Id");
-
                     if (context.User.OrgId is null) // 若没有指定机构
                     {
                         // 返回错误信息，要求用户指定机构
@@ -380,7 +354,6 @@ namespace PowerLmsWebApi.Controllers.System
                         // 获取当前登录机构及其所有子机构包含下属公司的所有机构Id
                         var allOrgs = _OrgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs.Values.ToArray();
                         var allOrgIds = allOrgs.Select(c => c.Id).ToList();  // 获取所有机构ID
-
                         var currentCompany = _OrgManager.GetCurrentCompanyByUser(context.User);
                         if (currentCompany != null)
                         {
@@ -393,14 +366,12 @@ namespace PowerLmsWebApi.Controllers.System
                         }
                     }
                 }
-
                 // 使用EfHelper.GenerateWhereAnd进行通用查询条件处理
                 var filteredQuery = EfHelper.GenerateWhereAnd(sourceColl, conditionalIgnoreCase);
                 if (filteredQuery == null)
                 {
                     return BadRequest(OwHelper.GetLastErrorMessage() ?? "条件格式错误");
                 }
-
                 // 执行查询并获取源汇率数据
                 var sourceRates = filteredQuery.ToList();
                 if (sourceRates.Count == 0)
@@ -409,7 +380,6 @@ namespace PowerLmsWebApi.Controllers.System
                     result.DebugMessage = "未找到符合条件的汇率记录";
                     return result;
                 }
-
                 // 确定目标组织ID - 导入到当前用户的机构中
                 Guid? targetOrgId;
                 if (context.User.OrgId.HasValue) // 若用户属于某个机构
@@ -420,7 +390,6 @@ namespace PowerLmsWebApi.Controllers.System
                 {
                     return BadRequest("未知的商户Id");
                 }
-
                 // 导入汇率记录到目标机构
                 int importedCount = 0;
                 int skippedCount = 0;
@@ -443,7 +412,6 @@ namespace PowerLmsWebApi.Controllers.System
                             OrgId = targetOrgId,
                             ShortcutName = sourceRate.ShortcutName,
                             IsDelete = false,
-
                             BusinessTypeId = sourceRate.BusinessTypeId,
                             SCurrency = sourceRate.SCurrency,
                             DCurrency = sourceRate.DCurrency,
@@ -452,7 +420,6 @@ namespace PowerLmsWebApi.Controllers.System
                             BeginDate = sourceRate.BeginDate,
                             EndData = sourceRate.EndData
                         };
-
                         // 添加到数据库
                         _DbContext.DD_PlExchangeRates.Add(newRate);
                         importedCount++;
@@ -464,10 +431,8 @@ namespace PowerLmsWebApi.Controllers.System
                             sourceRate.BusinessTypeId, sourceRate.SCurrency, sourceRate.DCurrency, sourceRate.BeginDate, sourceRate.EndData);
                     }
                 }
-
                 // 保存更改
                 _DbContext.SaveChanges();
-
                 // 设置返回结果
                 result.HasError = false;
                 result.DebugMessage = skippedCount > 0
@@ -485,7 +450,6 @@ namespace PowerLmsWebApi.Controllers.System
                 return result;
             }
         }
-
         /// <summary>
         /// 获取汇率。
         /// </summary>
@@ -518,15 +482,12 @@ namespace PowerLmsWebApi.Controllers.System
                     coll = coll.Where(c => c.OrgId == context.User.OrgId);
                 }
             }
-
             // 使用EfHelper.GenerateWhereAnd进行通用查询条件处理
             coll = EfHelper.GenerateWhereAnd(coll, conditional);
-
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }
-
         /// <summary>
         /// 扩展获取汇率。返回当前用户登录机构的汇率，且符合条件的所有汇率对象。
         /// </summary>
@@ -542,30 +503,23 @@ namespace PowerLmsWebApi.Controllers.System
             var result = new GetCurrentOrgExchangeRateReturnDto();
             model.StartDateTime ??= DateTime.Now;
             model.EndDateTime ??= DateTime.Now;
-
             var dbSet = _DbContext.DD_PlExchangeRates;
             var coll = dbSet.AsNoTracking();
             coll = coll.Where(c => c.OrgId == context.User.OrgId);
             coll = coll.Where(c => c.BeginDate <= model.StartDateTime && c.EndData >= model.EndDateTime);
-
             var merchantId = _OrgManager.GetMerchantIdByUserId(context.User.Id);
             if (!merchantId.HasValue)
                 return result;
-
             var orgs = _OrgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs.Values.ToArray();
             if (!orgs.Any(o => o.Id == context.User.OrgId.Value))
                 return BadRequest($"找不到指定的登录公司Id={merchantId}");
-
             var org = orgs.First(o => o.Id == context.User.OrgId.Value);
             if (string.IsNullOrWhiteSpace(org.BaseCurrencyCode))
                 return BadRequest($"公司本币设置错误，本币代码为:{org.BaseCurrencyCode}");
-
             coll = coll.Where(c => c.DCurrency == org.BaseCurrencyCode);
-
             result.Result.AddRange(coll);
             return result;
         }
-
         /// <summary>
         /// 增加一个汇率记录。
         /// </summary>
@@ -588,7 +542,6 @@ namespace PowerLmsWebApi.Controllers.System
             result.Id = id;
             return result;
         }
-
         /// <summary>
         /// 修改汇率项。
         /// </summary>
@@ -612,8 +565,6 @@ namespace PowerLmsWebApi.Controllers.System
             _DbContext.SaveChanges();
             return result;
         }
-
         #endregion 汇率相关
-
     }
 }

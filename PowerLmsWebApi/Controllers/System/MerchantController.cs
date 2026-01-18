@@ -9,9 +9,7 @@ using PowerLmsServer.Managers;
 using PowerLmsWebApi.Dto;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
-
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-
 namespace PowerLmsWebApi.Controllers
 {
     /// <summary>
@@ -39,7 +37,6 @@ namespace PowerLmsWebApi.Controllers
             _Mapper = mapper;
             _OrgManager = orgManager;
         }
-
         readonly PowerLmsUserDbContext _DbContext;
         readonly AccountManager _AccountManager;
         readonly IServiceProvider _ServiceProvider;
@@ -47,9 +44,7 @@ namespace PowerLmsWebApi.Controllers
         readonly EntityManager _EntityManager;
         private readonly IMapper _Mapper;
         private readonly OrgManager<PowerLmsUserDbContext> _OrgManager;
-
         #region 简单CRUD
-
         /// <summary>
         /// 获取全部商户。
         /// </summary>
@@ -68,15 +63,12 @@ namespace PowerLmsWebApi.Controllers
             var result = new GetAllMerchantReturnDto();
             var dbSet = _DbContext.Merchants;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-            
             // 使用通用查询
             coll = EfHelper.GenerateWhereAnd(coll, conditional);
-            
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }
-
         /// <summary>
         /// 修改商户信息。
         /// </summary>
@@ -96,7 +88,6 @@ namespace PowerLmsWebApi.Controllers
             _OrgManager.InvalidateOrgCaches(modifiedEntities[0].Id);
             return result;
         }
-
         /// <summary>
         /// 增加新商户。
         /// </summary>
@@ -120,7 +111,6 @@ namespace PowerLmsWebApi.Controllers
             });
             return result;
         }
-
         /// <summary>
         /// 删除指定Id的商户。慎用！
         /// </summary>
@@ -144,12 +134,10 @@ namespace PowerLmsWebApi.Controllers
             //    _DbContext.Database.ExecuteSqlRaw($"delete from {nameof(_DbContext.SimpleDataDics)} where {nameof(SimpleDataDic.DataDicId)}='{id.ToString()}'");
             //else //其他字典待定
             //{
-
             //}
             return result;
         }
         #endregion 简单CRUD
-
         /// <summary>
         /// 初始化商户。商户已有信息会被复位为初始化状态。
         /// </summary>
@@ -173,11 +161,9 @@ namespace PowerLmsWebApi.Controllers
             }
             _DataManager.CopyAllSpecialDataDicBase(model.Id);
             #endregion 复制简单字典
-
             _DbContext.SaveChanges();
             return result;
         }
-
         /// <summary>
         /// 获取指定商户/机构下（含自身和子机构）的所有用户对象。
         /// </summary>
@@ -190,7 +176,6 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<GetUsersByOrgIdsReturnDto> GetUsersByOrgIds([FromQuery] GetUsersByOrgIdsParamsDto model)
         {
             var result = new GetUsersByOrgIdsReturnDto();
-            
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var merchIds = _DbContext.Merchants.Where(c => model.OrgOrMerchantIds.Contains(c.Id)).Select(c => c.Id).Distinct().ToArray(); //选出商户Id
             var orgIds = _DbContext.PlOrganizations.Where(c => model.OrgOrMerchantIds.Contains(c.Id)).Select(c => c.Id).Distinct().ToArray(); //选出机构Id
@@ -204,8 +189,5 @@ namespace PowerLmsWebApi.Controllers
             result.Result.AddRange(users);
             return result;
         }
-
-
     }
-
 }

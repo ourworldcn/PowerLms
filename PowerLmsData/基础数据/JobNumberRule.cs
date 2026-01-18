@@ -7,7 +7,6 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
 namespace PowerLms.Data
 {
     /// <summary>
@@ -34,38 +33,32 @@ namespace PowerLms.Data
         /// </summary>
         [MaxLength(64)]
         public string RuleString { get; set; }
-
         /// <summary>
         /// 当前未用的最小编号。
         /// </summary>
         [Comment("当前未用的最小编号")]
         public int CurrentNumber { get; set; }
-
         /// <summary>
         /// 归零方式，0不归零，1按年，2按月，3按日
         /// </summary>
         [Comment("归零方式，0不归零，1按年，2按月，3按日")]
         public short RepeatMode { get; set; }
-
         /// <summary>
         /// "归零"后的起始值。
         /// </summary>
         [Comment("\"归零\"后的起始值")]
         public int StartValue { get; set; }
-
         /// <summary>
         /// 记录最后一次归零的日期。
         /// </summary>
         [Comment("记录最后一次归零的日期")]
         public DateTime RepeatDate { get; set; }
-
         /// <summary>
         /// 业务类型Id。链接到业务大类表。
         /// </summary>
         [Comment("业务类型Id，链接到业务大类表")]
         public Guid? BusinessTypeId { get; set; }
     }
-
     /// <summary>
     /// 可重用的序列号。
     /// </summary>
@@ -77,13 +70,11 @@ namespace PowerLms.Data
         /// </summary>
         [Comment("规则Id")]
         public Guid RuleId { get; set; }
-
         /// <summary>
         /// 回收的时间。
         /// </summary>
         [Comment("回收的时间")]
         public DateTime CreateDateTime { get; set; }
-
         /// <summary>
         /// 可重用的序列号。
         /// </summary>

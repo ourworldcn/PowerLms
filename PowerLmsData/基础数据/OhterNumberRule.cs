@@ -7,7 +7,6 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
 namespace PowerLms.Data
 {
     /// <summary>
@@ -26,37 +25,31 @@ namespace PowerLms.Data
 	[GLZ] [int] NULL,
 	[LJRQ] [char](10) NULL,
          * */
-
         /// <summary>
         /// 构造函数。
         /// </summary>
         public OtherNumberRule() { }
-
         /// <summary>
         /// 所属商户/机构Id。
         /// </summary>
         public Guid? OrgId { get; set; }
-
         /// <summary>
         /// 规则编码（标准英文名）。
         /// </summary>
         [Comment("规则编码（标准英文名）")]
         [MaxLength(32), Unicode(false)]
         public string Code { get; set; }
-
         /// <summary>
         /// 规则显示名称。
         /// </summary>
         [Comment("规则显示名称")]
         [MaxLength(32)]
         public string DisplayName { get; set; }
-
         /// <summary>
         /// 当前未用的最小编号。
         /// </summary>
         [Comment("当前未用的最小编号")]
         public int CurrentNumber { get; set; }
-
         /// <summary>
         /// 规则字符串。包含前缀，后缀。
         /// 以下控制代码区分大小写。
@@ -74,30 +67,25 @@ namespace PowerLms.Data
         [Comment("规则字符串。包含前缀，后缀。")]
         [MaxLength(64)]
         public string RuleString { get; set; }
-
         /// <summary>
         /// 归零方式，0不归零，1按年，2按月，3按日
         /// </summary>
         [Comment("归零方式，0不归零，1按年，2按月，3按日")]
         public short RepeatMode { get; set; }
-
         /// <summary>
         /// "归零"后的起始值。
         /// </summary>
         [Comment("\"归零\"后的起始值")]
         public int StartValue { get; set; }
-
         /// <summary>
         /// 记录最后一次归零的日期。
         /// </summary>
         [Comment("记录最后一次归零的日期")]
         public DateTime RepeatDate { get; set; }
-
         /// <summary>
         /// 是否已标记为删除。false(默认)未标记为删除，true标记为删除。
         /// </summary>
         [Comment("是否已标记为删除。false(默认)未标记为删除，true标记为删除。")]
         public bool IsDelete { get; set; }
-
     }
 }

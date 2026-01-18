@@ -9,7 +9,6 @@
     •	下载文件
     •	获取全部文件信息
  */
-
 using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
@@ -33,7 +32,6 @@ using System.Net.Mime;
 using System.Text;
 using System.Text.Unicode;
 using SysIO = System.IO;
-
 namespace PowerLmsWebApi.Controllers.System
 {
     /// <summary>
@@ -56,7 +54,6 @@ namespace PowerLmsWebApi.Controllers.System
             _FileService = fileService;
             _Logger = logger;
         }
-
         private readonly PowerLmsUserDbContext _DbContext;
         private readonly AccountManager _AccountManager;
         private readonly IServiceProvider _ServiceProvider;
@@ -65,12 +62,10 @@ namespace PowerLmsWebApi.Controllers.System
         private readonly AuthorizationManager _AuthorizationManager;
         private readonly OwFileService<PowerLmsUserDbContext> _FileService;
         private readonly ILogger<FileController> _Logger;
-
         /// <summary>
         /// 存储文件的根目录。
         /// </summary>
         public static string RootPath = Path.Combine(AppContext.BaseDirectory, "Files");
-
         /// <summary>
         /// 获取业务负责人的所属关系。
         /// </summary>
@@ -86,20 +81,16 @@ namespace PowerLmsWebApi.Controllers.System
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllCustomerFileListReturnDto();
-
             var dbSet = _DbContext.PlFileInfos;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-
             if (conditional != null && conditional.Any())
             {
                 coll = EfHelper.GenerateWhereAnd(coll, conditional);
             }
-
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
         }
-
         /// <summary>
         /// 下载客户资料的特定接口。
         /// </summary>
@@ -116,11 +107,9 @@ namespace PowerLmsWebApi.Controllers.System
         {
             _Logger.LogWarning("尝试使用已废弃的客户文件下载接口，令牌: {Token}, 文件ID: {FileId}",
                 token, fileId);
-
             return StatusCode(StatusCodes.Status410Gone,
                 "此接口已废弃，请使用新的通用文件下载接口 GetFile。新接口提供更好的安全性和权限控制。");
         }
-
         /// <summary>
         /// 上传客户资料的特定接口。
         /// 已废弃：强烈建议使用 AddFile 接口替代，该接口将在未来版本中移除。
@@ -138,17 +127,13 @@ namespace PowerLmsWebApi.Controllers.System
             // 🔧 紧急修复：禁用旧版接口，强制使用新版通用接口
             _Logger.LogWarning("尝试使用已废弃的客户文件上传接口，用户: {UserId}, 文件: {FileName}",
                 model.Token, file?.FileName);
-
             var result = new UploadCustomerFileReturnDto();
             result.HasError = true;
             result.ErrorCode = 410; // Gone
             result.DebugMessage = "此接口已废弃，请使用新的通用文件上传接口 AddFile。新接口提供更好的安全性和文件类型验证。";
-
             return StatusCode(StatusCodes.Status410Gone, result);
         }
-
         #region 通用文件管理接口
-
         /// <summary>
         /// 删除存储的文件。
         /// </summary>
@@ -165,20 +150,16 @@ namespace PowerLmsWebApi.Controllers.System
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
                 return Unauthorized();
-
             var result = new RemoveFileReturnDto();
-
             try
             {
                 var item = _DbContext.PlFileInfos.Find(model.Id);
                 if (item is null) return NotFound(model.Id);
-
                 // 检查权限
                 if (item.ParentId.HasValue)
                 {
                     CheckJobPermissions(item.ParentId.Value, "8.4");
                 }
-
                 // 使用 OwFileService 删除文件（包括磁盘文件和数据库记录）
                 var fileDeleted = _FileService.DeleteFile(model.Id);
                 if (!fileDeleted)
@@ -186,7 +167,6 @@ namespace PowerLmsWebApi.Controllers.System
                     _Logger.LogWarning("文件删除失败，文件ID: {FileId}", model.Id);
                     return StatusCode((int)HttpStatusCode.Gone, $"指定文件不存在或删除失败");
                 }
-
                 _Logger.LogInformation("文件删除成功：{fileName}，ID：{fileId}", item.FileName, item.Id);
                 return result;
             }
@@ -203,7 +183,6 @@ namespace PowerLmsWebApi.Controllers.System
                 return StatusCode((int)HttpStatusCode.InternalServerError, result);
             }
         }
-
         /// <summary>
         /// 上传(追加)通用的文件。
         /// </summary>
@@ -237,16 +216,13 @@ namespace PowerLmsWebApi.Controllers.System
         public ActionResult<AddFileReturnDto> AddFile([FromForm] AddFileParamsDto model)
         {
             var result = new AddFileReturnDto();
-
             // 身份验证
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context)
                 return Unauthorized(result);
-
             try
             {
                 // 权限检查 - 可以提取为独立方法进一步简化
                 CheckJobPermissions(model.ParentId, "8.1");
-
                 // 使用 OwFileService 创建文件 - 文件会自动保存到磁盘和数据库
                 PlFileInfo fileInfo;
                 using (var fileStream = model.File.OpenReadStream())
@@ -262,11 +238,9 @@ namespace PowerLmsWebApi.Controllers.System
                         clientString: model.ClientString
                     );
                 }
-
                 result.Id = fileInfo.Id;
                 _Logger.LogInformation("文件上传成功：{fileName}，大小：{fileSize}MB，ID：{fileId}",
                     model.File.FileName, Math.Round(model.File.Length / 1024.0 / 1024.0, 2), fileInfo.Id);
-
                 return result;
             }
             catch (ArgumentNullException)
@@ -315,7 +289,6 @@ namespace PowerLmsWebApi.Controllers.System
                 return StatusCode(StatusCodes.Status500InternalServerError, result);
             }
         }
-
         /// <summary>
         /// 下载文件。一般应先调用GetAllFileInfo接口以获得文件Id。
         /// Token可以从以下位置获取（优先级从高到低）：
@@ -392,7 +365,6 @@ namespace PowerLmsWebApi.Controllers.System
                 return StatusCode((int)HttpStatusCode.InternalServerError, "下载文件时发生错误");
             }
         }
-
         /// <summary>
         /// 获取全部通用文件信息。
         /// </summary>
@@ -407,7 +379,6 @@ namespace PowerLmsWebApi.Controllers.System
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllFileInfoReturnDto();
-
             var dbSet = _DbContext.PlFileInfos;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             coll = EfHelper.GenerateWhereAnd(coll, conditional);
@@ -416,9 +387,7 @@ namespace PowerLmsWebApi.Controllers.System
             return result;
         }
         #endregion 通用文件管理接口
-
         #region 私有辅助方法
-
         /// <summary>
         /// 检查作业相关的权限
         /// </summary>
@@ -437,15 +406,12 @@ namespace PowerLmsWebApi.Controllers.System
                     var id when id == ProjectContent.SiId => $"D3.{operationCode}",
                     _ => null
                 };
-
                 if (permissionCode != null && !_AuthorizationManager.Demand(out var err, permissionCode))
                 {
                     throw new UnauthorizedAccessException(err);
                 }
             }
         }
-
         #endregion
     }
-
 }

@@ -1,91 +1,86 @@
-using Microsoft.EntityFrameworkCore;
+ï»¿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-
 namespace PowerLmsServer.Managers
 {
     /// <summary>
-    /// Ìá¹©²ÆÎñÏà¹Ø·şÎñµÄÀà¡£
+    /// æä¾›è´¢åŠ¡ç›¸å…³æœåŠ¡çš„ç±»ã€‚
     /// </summary>
     [OwAutoInjection(ServiceLifetime.Scoped)]
     public class FinancialManager
     {
-        #region Ë½ÓĞ×Ö¶Î
+        #region ç§æœ‰å­—æ®µ
         private readonly IServiceProvider _ServiceProvider;
         private DbContext _DbContext;
         private BusinessLogicManager _BusinessLogicManager;
         #endregion
-
-        #region ÊôĞÔ
-        private DbContext DbContext => _DbContext ??= _ServiceProvider.GetRequiredService<PowerLmsUserDbContext>(); // ÑÓ³Ù¼ÓÔØÊı¾İ¿âÉÏÏÂÎÄ
-        private BusinessLogicManager BusinessLogicManager => _BusinessLogicManager ??= _ServiceProvider.GetRequiredService<BusinessLogicManager>(); // ÑÓ³Ù¼ÓÔØÒµÎñÂß¼­¹ÜÀíÆ÷
+        #region å±æ€§
+        private DbContext DbContext => _DbContext ??= _ServiceProvider.GetRequiredService<PowerLmsUserDbContext>(); // å»¶è¿ŸåŠ è½½æ•°æ®åº“ä¸Šä¸‹æ–‡
+        private BusinessLogicManager BusinessLogicManager => _BusinessLogicManager ??= _ServiceProvider.GetRequiredService<BusinessLogicManager>(); // å»¶è¿ŸåŠ è½½ä¸šåŠ¡é€»è¾‘ç®¡ç†å™¨
         #endregion
-
-        #region ¹¹Ôìº¯Êı
+        #region æ„é€ å‡½æ•°
         /// <summary>
-        /// ¹¹Ôìº¯Êı£¬×¢ÈëËùĞèµÄ·şÎñ¡£
+        /// æ„é€ å‡½æ•°ï¼Œæ³¨å…¥æ‰€éœ€çš„æœåŠ¡ã€‚
         /// </summary>
-        /// <param name="serviceProvider">·şÎñÌá¹©Õß¡£</param>
+        /// <param name="serviceProvider">æœåŠ¡æä¾›è€…ã€‚</param>
         public FinancialManager(IServiceProvider serviceProvider)
         {
-            _ServiceProvider = serviceProvider; // ±£´æ·şÎñÌá¹©ÕßÒÔ±ãºóĞøÊ¹ÓÃ
+            _ServiceProvider = serviceProvider; // ä¿å­˜æœåŠ¡æä¾›è€…ä»¥ä¾¿åç»­ä½¿ç”¨
         }
         #endregion
-
-        #region ¹«¹²·½·¨
+        #region å…¬å…±æ–¹æ³•
         /// <summary>
-        /// »ñÈ¡½áËãµ¥µÄ½ğ¶îºÍ½ø³ö¿Ú¡£
+        /// è·å–ç»“ç®—å•çš„é‡‘é¢å’Œè¿›å‡ºå£ã€‚
         /// </summary>
-        /// <param name="items">½áËãµ¥Ã÷Ï¸Ïî¡£</param>
-        /// <param name="amount">½ğ¶î¡£</param>
-        /// <param name="isOut">ÊÇ·ñÖ§³ö¡£</param>
-        /// <param name="db">Êı¾İ¿âÉÏÏÂÎÄ¡£</param>
-        /// <returns>ÊÇ·ñ³É¹¦¡£</returns>
+        /// <param name="items">ç»“ç®—å•æ˜ç»†é¡¹ã€‚</param>
+        /// <param name="amount">é‡‘é¢ã€‚</param>
+        /// <param name="isOut">æ˜¯å¦æ”¯å‡ºã€‚</param>
+        /// <param name="db">æ•°æ®åº“ä¸Šä¸‹æ–‡ã€‚</param>
+        /// <returns>æ˜¯å¦æˆåŠŸã€‚</returns>
         public bool GetInvoiceAmountAndIO(IEnumerable<PlInvoicesItem> items, out decimal amount, out bool isOut, DbContext db = null)
         {
-            db ??= DbContext; // Èç¹ûÃ»ÓĞÌá¹©Êı¾İ¿âÉÏÏÂÎÄ£¬ÔòÊ¹ÓÃÄ¬ÈÏµÄ
-            var inner = items.AsEnumerable(); // ×ª»»Îª¿ÉÃ¶¾Ù¼¯ºÏ
-            if (!inner.Any()) { amount = 0; isOut = false; return true; } // ÎŞÃ÷Ï¸ÏîÊ±Ö±½Ó·µ»Ø
-            if (inner.FirstOrDefault()?.GetParent(db) is not PlInvoices invoices) goto lblErr; // »ñÈ¡¸¸½áËãµ¥Ê§°ÜÊ±Ìø×ªµ½´íÎó´¦Àí
-            var debit = inner.Where(c => c.GetRequisitionItem(db)?.GetDocFee(db)?.IO ?? false).Sum(c => Math.Round(c.Amount * c.ExchangeRate, 4, MidpointRounding.AwayFromZero)); // ¼ÆËã½è·½½ğ¶î
-            var credit = inner.Where(c => !c.GetRequisitionItem(db)?.GetDocFee(db)?.IO ?? false).Sum(c => Math.Round(c.Amount * c.ExchangeRate, 4, MidpointRounding.AwayFromZero)); // ¼ÆËã´û·½½ğ¶î
-            amount = Math.Abs(debit - credit); // ¼ÆËã¾»¶î
-            isOut = debit > credit; // ½è·½´óÓÚ´û·½±íÊ¾Ö§³ö
+            db ??= DbContext; // å¦‚æœæ²¡æœ‰æä¾›æ•°æ®åº“ä¸Šä¸‹æ–‡ï¼Œåˆ™ä½¿ç”¨é»˜è®¤çš„
+            var inner = items.AsEnumerable(); // è½¬æ¢ä¸ºå¯æšä¸¾é›†åˆ
+            if (!inner.Any()) { amount = 0; isOut = false; return true; } // æ— æ˜ç»†é¡¹æ—¶ç›´æ¥è¿”å›
+            if (inner.FirstOrDefault()?.GetParent(db) is not PlInvoices invoices) goto lblErr; // è·å–çˆ¶ç»“ç®—å•å¤±è´¥æ—¶è·³è½¬åˆ°é”™è¯¯å¤„ç†
+            var debit = inner.Where(c => c.GetRequisitionItem(db)?.GetDocFee(db)?.IO ?? false).Sum(c => Math.Round(c.Amount * c.ExchangeRate, 4, MidpointRounding.AwayFromZero)); // è®¡ç®—å€Ÿæ–¹é‡‘é¢
+            var credit = inner.Where(c => !c.GetRequisitionItem(db)?.GetDocFee(db)?.IO ?? false).Sum(c => Math.Round(c.Amount * c.ExchangeRate, 4, MidpointRounding.AwayFromZero)); // è®¡ç®—è´·æ–¹é‡‘é¢
+            amount = Math.Abs(debit - credit); // è®¡ç®—å‡€é¢
+            isOut = debit > credit; // å€Ÿæ–¹å¤§äºè´·æ–¹è¡¨ç¤ºæ”¯å‡º
             return true;
         lblErr:
             amount = 0;
             isOut = false;
-            return false; // ³ö´íÊ±·µ»ØÊ§°Ü
+            return false; // å‡ºé”™æ—¶è¿”å›å¤±è´¥
         }
-
         /// <summary>
-        /// »ñÈ¡ÉêÇëµ¥µÄºÏ¼Æ½ğ¶îºÍ½è´û·½Ïò¡£
+        /// è·å–ç”³è¯·å•çš„åˆè®¡é‡‘é¢å’Œå€Ÿè´·æ–¹å‘ã€‚
         /// </summary>
-        /// <param name="items">ÉêÇëµ¥Ã÷Ï¸Ïî</param>
-        /// <param name="amount">½ğ¶î</param>
-        /// <param name="isOut">ÊÇ·ñÖ§³ö</param>
-        /// <param name="db">Êı¾İ¿âÉÏÏÂÎÄ</param>
-        /// <returns>ÊÇ·ñ³É¹¦</returns>
+        /// <param name="items">ç”³è¯·å•æ˜ç»†é¡¹</param>
+        /// <param name="amount">é‡‘é¢</param>
+        /// <param name="isOut">æ˜¯å¦æ”¯å‡º</param>
+        /// <param name="db">æ•°æ®åº“ä¸Šä¸‹æ–‡</param>
+        /// <returns>æ˜¯å¦æˆåŠŸ</returns>
         public bool GetRequisitionAmountAndIO(IEnumerable<DocFeeRequisitionItem> items, out decimal amount, out bool isOut, DbContext db = null)
         {
-            var inner = items.AsEnumerable(); // ×ª»»Îª¿ÉÃ¶¾Ù¼¯ºÏ
-            if (!inner.Any()) { amount = 0; isOut = false; return true; } // ÎŞÃ÷Ï¸ÏîÊ±Ö±½Ó·µ»Ø
-            db ??= DbContext; // Èç¹ûÃ»ÓĞÌá¹©Êı¾İ¿âÉÏÏÂÎÄ£¬ÔòÊ¹ÓÃÄ¬ÈÏµÄ
-            if (inner.FirstOrDefault()?.GetParent(db) is not DocFeeRequisition requisition) goto lblErr; // »ñÈ¡¸¸ÉêÇëµ¥Ê§°ÜÊ±Ìø×ªµ½´íÎó´¦Àí
-            var baseCurrency = BusinessLogicManager.GetBaseCurrencyCode(requisition, db); // »ñÈ¡»ù´¡»õ±Ò´úÂë
-            var debit = inner.Where(c => c.GetDocFee(db)?.IO ?? false).Sum(c => Math.Round(c.Amount * BusinessLogicManager.GetExchageRate(c, db), 4, MidpointRounding.AwayFromZero)); // ¼ÆËã½è·½½ğ¶î
-            var credit = inner.Where(c => !c.GetDocFee(db)?.IO ?? false).Sum(c => Math.Round(c.Amount * BusinessLogicManager.GetExchageRate(c, db), 4, MidpointRounding.AwayFromZero)); // ¼ÆËã´û·½½ğ¶î
-            amount = Math.Abs(debit - credit); // ¼ÆËã¾»¶î
-            isOut = debit > credit; // ½è·½´óÓÚ´û·½±íÊ¾Ö§³ö
+            var inner = items.AsEnumerable(); // è½¬æ¢ä¸ºå¯æšä¸¾é›†åˆ
+            if (!inner.Any()) { amount = 0; isOut = false; return true; } // æ— æ˜ç»†é¡¹æ—¶ç›´æ¥è¿”å›
+            db ??= DbContext; // å¦‚æœæ²¡æœ‰æä¾›æ•°æ®åº“ä¸Šä¸‹æ–‡ï¼Œåˆ™ä½¿ç”¨é»˜è®¤çš„
+            if (inner.FirstOrDefault()?.GetParent(db) is not DocFeeRequisition requisition) goto lblErr; // è·å–çˆ¶ç”³è¯·å•å¤±è´¥æ—¶è·³è½¬åˆ°é”™è¯¯å¤„ç†
+            var baseCurrency = BusinessLogicManager.GetBaseCurrencyCode(requisition, db); // è·å–åŸºç¡€è´§å¸ä»£ç 
+            var debit = inner.Where(c => c.GetDocFee(db)?.IO ?? false).Sum(c => Math.Round(c.Amount * BusinessLogicManager.GetExchageRate(c, db), 4, MidpointRounding.AwayFromZero)); // è®¡ç®—å€Ÿæ–¹é‡‘é¢
+            var credit = inner.Where(c => !c.GetDocFee(db)?.IO ?? false).Sum(c => Math.Round(c.Amount * BusinessLogicManager.GetExchageRate(c, db), 4, MidpointRounding.AwayFromZero)); // è®¡ç®—è´·æ–¹é‡‘é¢
+            amount = Math.Abs(debit - credit); // è®¡ç®—å‡€é¢
+            isOut = debit > credit; // å€Ÿæ–¹å¤§äºè´·æ–¹è¡¨ç¤ºæ”¯å‡º
             return true;
         lblErr:
             amount = 0;
             isOut = false;
-            return false; // ³ö´íÊ±·µ»ØÊ§°Ü
+            return false; // å‡ºé”™æ—¶è¿”å›å¤±è´¥
         }
         #endregion
     }

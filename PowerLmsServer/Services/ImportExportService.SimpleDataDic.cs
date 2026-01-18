@@ -8,7 +8,6 @@
  * - Sheet级别错误隔离处理
  * 作者：zc | 创建：2025-01-27 | 修改：2025-02 简化调用链，优化Id生成
  */
-
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -19,13 +18,11 @@ using OwExtensions.NPOI;
 using PowerLms.Data;
 using System.Linq.Expressions;
 using System.Reflection;
-
 namespace PowerLmsServer.Services
 {
     public partial class ImportExportService
     {
         #region 简单字典专用功能
-
         /// <summary>
         /// 获取可用的简单字典Catalog Code列表
         /// </summary>
@@ -53,7 +50,6 @@ namespace PowerLmsServer.Services
                 throw;
             }
         }
-
         /// <summary>
         /// 导出简单字典到Excel
         /// </summary>
@@ -159,7 +155,6 @@ namespace PowerLmsServer.Services
                 throw;
             }
         }
-
         /// <summary>
         /// 从Excel导入简单字典
         /// </summary>
@@ -230,7 +225,6 @@ namespace PowerLmsServer.Services
                 throw;
             }
         }
-
         /// <summary>
         /// 从单个Sheet导入简单字典数据（重构版 - 使用FillToDbContext）
         /// 功能：根据Sheet名称自动创建或使用DataDicCatalog，支持软删除重复数据
@@ -303,9 +297,7 @@ namespace PowerLmsServer.Services
             }
         }
         #endregion
-
         #region 简单字典性能优化的私有方法
-
         /// <summary>
         /// 导出简单字典数据到指定Sheet
         /// </summary>
@@ -345,7 +337,6 @@ namespace PowerLmsServer.Services
             }
             return data.Count;
         }
-
         #endregion
     }
 }
