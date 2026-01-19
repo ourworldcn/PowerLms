@@ -53,6 +53,7 @@ namespace PowerLms.Data
         /// 制单时间,系统默认，不能更改
         /// </summary>
         [Comment("新建时间,系统默认，不能更改。")]
+        [Precision(3)]
         public DateTime CreateDateTime { get; set; }
 
         #endregion ICreatorInfo接口相关
@@ -125,6 +126,7 @@ namespace PowerLms.Data
         /// 订舱日期。
         /// </summary>
         [Comment("订舱日期")]
+        [Precision(3)]
         public DateTime BookingsDateTime { get; set; }
 
         /// <summary>
@@ -161,6 +163,7 @@ namespace PowerLms.Data
         /// 放舱日期。
         /// </summary>
         [Comment("放舱日期")]
+        [Precision(3)]
         public DateTime WarehousingDateTime { get; set; }
 
         /// <summary>
@@ -185,12 +188,14 @@ namespace PowerLms.Data
         /// 截货日期
         /// </summary>
         [Comment("截货日期")]
+        [Precision(3)]
         public DateTime? CutOffGoodsDateTime { get; set; }
 
         /// <summary>
         /// 截关日期
         /// </summary>
         [Comment("截关日期")]
+        [Precision(3)]
         public DateTime? CutOffDateTime { get; set; }
 
         /// <summary>
@@ -217,12 +222,14 @@ namespace PowerLms.Data
         /// 驳船开航日期.
         /// </summary>
         [Comment("驳船开航日期")]
+        [Precision(3)]
         public DateTime? BargeSailDateTime { get; set; }
 
         /// <summary>
         /// 驳船到港日期.
         /// </summary>
         [Comment("驳船到港日期")]
+        [Precision(3)]
         public DateTime? BargeArrivalDateTime { get; set; }
 
         /// <summary>

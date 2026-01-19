@@ -44,6 +44,7 @@ namespace PowerLms.Data
         /// 创建时间。记录字典项创建的时间点。
         /// </summary>
         [Comment("创建时间")]
+        [Precision(3)]
         public DateTime? CreateDateTime { get; set; }
 
         /// <summary>

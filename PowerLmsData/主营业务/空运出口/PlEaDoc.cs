@@ -57,6 +57,7 @@ namespace PowerLms.Data
         /// 制单时间,系统默认，不能更改
         /// </summary>
         [Comment("新建时间,系统默认，不能更改。")]
+        [Precision(3)]
         public DateTime CreateDateTime { get; set; }
 
         /// <summary>

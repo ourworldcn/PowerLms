@@ -133,6 +133,7 @@ namespace PowerLms.Data
         /// 新建时间,系统默认，不能更改
         /// </summary>
         [Comment("新建时间,系统默认，不能更改。")]
+        [Precision(3)]
         public DateTime CreateDateTime { get; set; }
 
         /// <summary>
@@ -145,6 +146,7 @@ namespace PowerLms.Data
         /// 操作时间
         /// </summary>
         [Comment("操作时间。")]
+        [Precision(3)]
         public DateTime? OperatingDateTime { get; set; }
 
         /// <summary>
@@ -159,24 +161,28 @@ namespace PowerLms.Data
         /// 后端在关账/计提等功能中直接读取该字段，不参与计算逻辑。
         /// </summary>
         [Comment("财务日期，前端自动计算设置，后端直接使用")]
+        [Precision(3)]
         public DateTime? AccountDate { get; set; }
 
         /// <summary>
         /// 开航日期。
         /// </summary>
         [Comment("开航日期。")]
+        [Precision(3)]
         public DateTime? Etd { get; set; }
 
         /// <summary>
         /// 到港日期。
         /// </summary>
         [Comment("到港日期")]
+        [Precision(3)]
         public DateTime? ETA { get; set; }
 
         /// <summary>
         /// 提送货日期
         /// </summary>
         [Comment("提送货日期")]
+        [Precision(3)]
         public DateTime? DeliveryDate { get; set; }
         
         /// <summary>
@@ -227,6 +233,7 @@ namespace PowerLms.Data
         /// 关闭日期。
         /// </summary>
         [Comment("关闭日期")]
+        [Precision(3)]
         public DateTime? CloseDate { get; set; }
 
         /// <summary>

@@ -59,13 +59,49 @@ API 层（PowerLmsWebApi）
             └─ 基础设施（Bak/OwDbBase, Bak/OwBaseCore, bak/OwExtensions）
 ```
 
-### 📁 解决方案结构（概要）
+### 📁 解决方案结构（详细）
 ```
 PowerLms
-├── PowerLmsWebApi/      # API层：RESTful + Swagger + JWT
-├── PowerLmsServer/      # 业务层：Managers + 基础设施集成
-├── PowerLmsData/        # 数据层：实体与迁移
-└── Bak/                 # 基础设施：OwDbBase, OwBaseCore, OwExtensions
+├── PowerLmsWebApi/                # API层：RESTful + Swagger + JWT
+│   └── Controllers/
+│       ├── Business/              # 业务控制器
+│       │   ├── AirFreight/        # 空运业务
+│       │   ├── Common/            # 通用业务
+│       │   └── ...
+│       ├── Customer/              # 客户资料
+│       ├── Financial/             # 财务管理
+│       └── ...
+├── PowerLmsServer/                # 业务层：Managers + 基础设施集成
+│   └── Managers/
+│       ├── Business/              # 业务Manager
+│       ├── Financial/             # 财务Manager
+│       ├── Customer/              # 客户Manager
+│       └── ...
+├── PowerLmsData/                  # 数据层：实体与迁移
+│   ├── 主营业务/                  # 主营业务实体（按业务类型分类）
+│   │   ├── PlJob.cs               # 业务总表（所有业务类型的入口）
+│   │   ├── DocFee.cs              # 费用表（通用）
+│   │   ├── DocBill.cs             # 账单表（通用）
+│   │   ├── 空运出口/              # 空运出口专属实体
+│   │   │   ├── PlEaDoc.cs         # 空运出口单
+│   │   │   ├── PlEaMawbInbound.cs # 主单领入登记
+│   │   │   └── PlEaMawbOutbound.cs# 主单领出登记
+│   │   ├── 空运进口/              # 空运进口专属实体
+│   │   │   └── PlIaDoc.cs         # 空运进口单
+│   │   ├── 海运出口/              # 海运出口专属实体
+│   │   │   ├── PlEsDoc.cs         # 海运出口单
+│   │   │   └── ContainerKindCount.cs # 箱型箱量子表（海运通用）
+│   │   └── 海运进口/              # 海运进口专属实体
+│   │       └── PlIsDoc.cs         # 海运进口单
+│   ├── 客户资料/                  # 客户相关实体
+│   ├── 财务/                      # 财务相关实体
+│   ├── 权限/                      # 权限相关实体
+│   ├── 机构/                      # 组织机构实体
+│   └── Migrations/                # 数据库迁移（150+文件）
+└── Bak/                           # 基础设施：外部项目
+    ├── OwDbBase/                  # 数据访问基类、Excel工具
+    ├── OwBaseCore/                # 核心扩展、缓存管理
+    └── OwExtensions/              # NPOI扩展方法
 ```
 
 ## 🔩 基础设施能力

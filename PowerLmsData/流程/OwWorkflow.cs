@@ -107,6 +107,7 @@ namespace PowerLms.Data
         /// 到达此节点的时间，如果是第一个节点则是创建并保存节点的时间。
         /// </summary>
         [Comment("到达此节点的时间，如果是第一个节点则是创建并保存节点的时间。")]
+        [Precision(3)]
         public DateTime ArrivalDateTime { get; set; }
 
         /// <summary>

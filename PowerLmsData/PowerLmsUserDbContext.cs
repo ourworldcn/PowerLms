@@ -369,22 +369,12 @@ namespace PowerLmsServer.EfData
         /// </summary>
         public DbSet<ShippingLane> ShippingLanes { get; set; }
 
-        #region 业务相关
+        #region 主营业务相关
 
         /// <summary>
         /// 业务总表。
         /// </summary>
         public DbSet<PlJob> PlJobs { get; set; }
-
-        /// <summary>
-        /// 空运出口表。
-        /// </summary>
-        public DbSet<PlEaDoc> PlEaDocs { get; set; }
-
-        /// <summary>
-        /// 现场出重子表。
-        /// </summary>
-        public DbSet<HuochangChuchong> HuochangChuchongs { get; set; }
 
         /// <summary>
         /// 业务单的费用表。
@@ -396,15 +386,40 @@ namespace PowerLmsServer.EfData
         /// </summary>
         public DbSet<DocBill> DocBills { get; set; }
 
+        #region 空运出口
+
+        /// <summary>
+        /// 空运出口单表。
+        /// </summary>
+        public DbSet<PlEaDoc> PlEaDocs { get; set; }
+
+        /// <summary>
+        /// 空运出口主单领入登记表。
+        /// </summary>
+        public DbSet<PlEaMawbInbound> PlEaMawbInbounds { get; set; }
+
+        /// <summary>
+        /// 空运出口主单领出登记表。
+        /// </summary>
+        public DbSet<PlEaMawbOutbound> PlEaMawbOutbounds { get; set; }
+
+        /// <summary>
+        /// 货场出重子表（空运出口）。
+        /// </summary>
+        public DbSet<HuochangChuchong> HuochangChuchongs { get; set; }
+
+        #endregion 空运出口
+
+        #region 空运进口
+
         /// <summary>
         /// 空运进口单表。
         /// </summary>
         public DbSet<PlIaDoc> PlIaDocs { get; set; }
 
-        /// <summary>
-        /// 海运进口单表。
-        /// </summary>
-        public DbSet<PlIsDoc> PlIsDocs { get; set; }
+        #endregion 空运进口
+
+        #region 海运出口
 
         /// <summary>
         /// 海运出口单表。
@@ -412,12 +427,22 @@ namespace PowerLmsServer.EfData
         public DbSet<PlEsDoc> PlEsDocs { get; set; }
 
         /// <summary>
-        /// 海运箱量表。
+        /// 海运箱量表（海运出口）。
         /// </summary>
         public DbSet<ContainerKindCount> ContainerKindCounts { get; set; }
 
+        #endregion 海运出口
 
-        #endregion
+        #region 海运进口
+
+        /// <summary>
+        /// 海运进口单表。
+        /// </summary>
+        public DbSet<PlIsDoc> PlIsDocs { get; set; }
+
+        #endregion 海运进口
+
+        #endregion 主营业务相关
 
         #region 财务相关
         /// <summary>

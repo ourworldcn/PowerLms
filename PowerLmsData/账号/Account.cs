@@ -69,6 +69,7 @@ namespace PowerLms.Data
         /// 创建该对象的世界时间。
         /// </summary>
         [Comment("创建该对象的世界时间")]
+        [Precision(3)]
         public DateTime CreateUtc { get; set; } = OwHelper.WorldNow;
         /// <summary>
         /// 超时时间。
@@ -79,6 +80,7 @@ namespace PowerLms.Data
         /// <summary>
         /// 最后一次操作的时间。
         /// </summary>
+        [Precision(3)]
         public DateTime LastModifyDateTimeUtc { get; set; } = OwHelper.WorldNow;
         /// <summary>
         /// 最近使用的Token。

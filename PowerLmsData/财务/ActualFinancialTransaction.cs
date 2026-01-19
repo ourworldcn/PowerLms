@@ -48,6 +48,7 @@ namespace PowerLms.Data
         /// 收付款日期。实际发生收付款的业务日期，精确到毫秒。
         /// </summary>
         [Comment("收付款日期，实际发生收付款的业务日期，精确到毫秒")]
+        [Precision(3)]
         public DateTime TransactionDate { get; set; }
         /// <summary>
         /// 实收付金额。本次实际收付的金额，2位小数精度。
@@ -90,6 +91,7 @@ namespace PowerLms.Data
         /// 创建时间。记录创建的时间，精确到毫秒。
         /// </summary>
         [Comment("创建时间，记录创建的时间，精确到毫秒")]
+        [Precision(3)]
         public DateTime CreateDateTime { get; set; }
         #endregion
         #region IMarkDelete

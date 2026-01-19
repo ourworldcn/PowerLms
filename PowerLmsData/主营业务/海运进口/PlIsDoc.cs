@@ -41,6 +41,7 @@ namespace PowerLms.Data
         /// 制单时间,系统默认，不能更改
         /// </summary>
         [Comment("新建时间,系统默认，不能更改。")]
+        [Precision(3)]
         public DateTime CreateDateTime { get; set; }
 
         #endregion ICreatorInfo接口相关
@@ -82,36 +83,42 @@ namespace PowerLms.Data
         /// 驳船开航日期。
         /// </summary>
         [Comment("驳船开航日期。")]
+        [Precision(3)]
         public DateTime? BargeStartDateTime { get; set; }
 
         /// <summary>
         /// 预计换单日期。
         /// </summary>
         [Comment("预计换单日期。")]
+        [Precision(3)]
         public DateTime? AnticipateBillDateTime { get; set; }
 
         /// <summary>
         /// 实际换单日期。
         /// </summary>
         [Comment("实际换单日期。")]
+        [Precision(3)]
         public DateTime? BillDateTime { get; set; }
 
         /// <summary>
         /// 进口日期。
         /// </summary>
         [Comment("进口日期。")]
+        [Precision(3)]
         public DateTime? ArrivedDateTime { get; set; }
 
         /// <summary>
         /// 提货日期。
         /// </summary>
         [Comment("提货日期。")]
+        [Precision(3)]
         public DateTime? DeliveryDateTime { get; set; }
 
         /// <summary>
         /// 截关日期。
         /// </summary>
         [Comment("提货日期。")]
+        [Precision(3)]
         public DateTime? UpToDateTime { get; set; }
 
         /// <summary>
@@ -124,6 +131,7 @@ namespace PowerLms.Data
         /// 免箱期。
         /// </summary>
         [Comment("免箱期。")]
+        [Precision(3)]
         public DateTime? ContainerFreeDateTime { get; set; }
 
         /// <summary>
@@ -176,31 +184,5 @@ namespace PowerLms.Data
         /// </summary>
         [Comment("随船文件。服务器不解析，逗号分隔。")]
         public string FileStrings { get; set; }
-    }
-
-    /// <summary>
-    /// 箱型箱量。
-    /// </summary>
-    [Index(nameof(ParentId), IsUnique = false)]
-    public class ContainerKindCount : GuidKeyObjectBase,IOwSubtables
-    {
-        /// <summary>
-        /// 所属业务单据Id。
-        /// </summary>
-        [Comment("所属业务单据Id。")]
-        public Guid? ParentId { get; set; }
-
-        /// <summary>
-        /// 箱型。
-        /// </summary>
-        [Comment("箱型。")]
-        [MaxLength(64)]
-        public string Kind { get; set; }
-
-        /// <summary>
-        /// 数量。
-        /// </summary>
-        [Comment("数量。")]
-        public int Count { get; set; }
     }
 }

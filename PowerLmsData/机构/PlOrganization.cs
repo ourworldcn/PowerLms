@@ -85,6 +85,7 @@ namespace PowerLms.Data
         /// 创建的时间。
         /// </summary>
         [Comment("创建的时间")]
+        [Precision(3)]
         public DateTime CreateDateTime { get; set; } = OwHelper.WorldNow;
 
         /// <summary>

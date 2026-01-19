@@ -61,6 +61,7 @@ namespace PowerLms.Data
         /// 首付日期。
         /// </summary>
         [Comment("首付日期")]
+        [Precision(3)]
         public DateTime? IoDateTime { get; set; }
 
         /// <summary>
@@ -138,6 +139,7 @@ namespace PowerLms.Data
         /// 财务日期
         /// </summary>
         [Comment("财务日期。")]
+        [Precision(3)]
         public DateTime? FinanceDateTime { get; set; }
 
         //public bool IsConfirm { get; set; }
@@ -146,6 +148,7 @@ namespace PowerLms.Data
         /// 确认时间,为null表示未确认。
         /// </summary>
         [Comment("确认时间。")]
+        [Precision(3)]
         public DateTime? ConfirmDateTime { get; set; }
 
         /// <summary>
@@ -303,6 +306,7 @@ namespace PowerLms.Data
         /// <inheritdoc/>
         /// </summary>
         [Comment("创建的时间。")]
+        [Precision(3)]
         public DateTime CreateDateTime { get; set; }
 
         #endregion ICreatorInfo

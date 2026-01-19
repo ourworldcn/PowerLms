@@ -81,6 +81,7 @@ namespace PowerLms.Data
         /// 记录最后一次归零的日期。
         /// </summary>
         [Comment("记录最后一次归零的日期")]
+        [Precision(3)]
         public DateTime RepeatDate { get; set; }
         /// <summary>
         /// 是否已标记为删除。false(默认)未标记为删除，true标记为删除。

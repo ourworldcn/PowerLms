@@ -39,6 +39,7 @@ namespace PowerLms.Data
         /// <inheritdoc/>
         /// </summary>
         [Comment("创建的时间。")]
+        [Precision(3)]
         public DateTime CreateDateTime { get; set; }
         #endregion ICreatorInfo
     }

@@ -453,6 +453,7 @@ namespace PowerLms.Data
         /// 创建的时间。
         /// </summary>
         [Comment("创建的时间")]
+        [Precision(3)]
         public DateTime CreateDateTime { get; set; } = OwHelper.WorldNow;
 
         #endregion 客户性质
@@ -623,6 +624,7 @@ namespace PowerLms.Data
         /// 创建时间。默认值为创建对象的时间。
         /// </summary>
         [Comment("创建时间。默认值为创建对象的时间。")]
+        [Precision(3)]
         public DateTime CreateDateTime { get; set; } = OwHelper.WorldNow;
     }
 
@@ -662,6 +664,7 @@ namespace PowerLms.Data
         /// 执行时间
         /// </summary>
         [Comment("执行时间")]
+        [Precision(3)]
         public DateTime Datetime { get; set; } = OwHelper.WorldNow;
 
         /// <summary>

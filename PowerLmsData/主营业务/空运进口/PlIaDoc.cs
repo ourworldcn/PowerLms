@@ -41,6 +41,7 @@ namespace PowerLms.Data
         /// 制单时间,系统默认，不能更改
         /// </summary>
         [Comment("新建时间,系统默认，不能更改。")]
+        [Precision(3)]
         public DateTime CreateDateTime { get; set; }
 
         /// <summary>
@@ -73,6 +74,7 @@ namespace PowerLms.Data
         /// 入库日期。
         /// </summary>
         [Comment("入库日期。")]
+        [Precision(3)]
         public DateTime? RukuDateTime { get; set; }
 
         /// <summary>
@@ -109,6 +111,7 @@ namespace PowerLms.Data
         /// 提货时间。
         /// </summary>
         [Comment("提货时间。")]
+        [Precision(3)]
         public DateTime? PickUpDateTime { get; set; }
 
         /// <summary>
@@ -139,12 +142,14 @@ namespace PowerLms.Data
         /// 预计消保日期。
         /// </summary>
         [Comment("预计消保日期。")]
+        [Precision(3)]
         public DateTime? YujiXiaobaoDateTime { get; set; }
 
         /// <summary>
         /// 实际消保日期，null表示未消保。
         /// </summary>
         [Comment("实际消保日期，null表示未消保。")]
+        [Precision(3)]
         public DateTime? XiaobaoDateTime { get; set; }
 
         /// <summary>
