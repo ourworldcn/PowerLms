@@ -1,0 +1,48 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Class Name="OW.Data.GuidKeyObjectBase" Collapsed="true">
+    <Position X="2.25" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAACAEAAAAAAAQAQAQAAAAAABAAAAAAAAAAAAAAABAA=</HashCode>
+      <FileName>Data\GuidKeyObjectBase.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="OW.Data.JsonDynamicPropertyBase">
+    <Position X="2.25" Y="3.25" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>AAgJAACAACAAACACABAAABABAAABACIBAAAAAAAAAAA=</HashCode>
+      <FileName>Data\JsonDynamicPropertyBase.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Interface Name="OW.Data.IBeforeSave" Collapsed="true">
+    <Position X="4.75" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAIAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Data\IBeforeSave.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="OW.Data.IDbTreeNode&lt;TNode&gt;" Collapsed="true">
+    <Position X="6.5" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAEQAAAAAAAAAAAAgAAAAAAAAA=</HashCode>
+      <FileName>Data\IDbTreeNode.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="OW.Data.IEntityWithSingleKey&lt;T&gt;" Collapsed="true">
+    <Position X="4.75" Y="2.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Data\GuidKeyObjectBase.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="OW.Data.IJsonDynamicProperty" Collapsed="true">
+    <Position X="6.5" Y="2.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAgBAAAAAAAAACAAAAAAAAAAAAAAAAABAAAAAAAAAAA=</HashCode>
+      <FileName>Data\JsonDynamicPropertyBase.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Font Name="Microsoft YaHei UI" Size="9" />
+</ClassDiagram>

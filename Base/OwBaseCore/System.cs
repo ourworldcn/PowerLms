@@ -1,0 +1,258 @@
+﻿/*
+ * 包含一些简单的类。
+ */
+using Microsoft.Extensions.DependencyInjection;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Text.Json.Serialization;
+using System.Threading;
+
+namespace System
+{
+    /// <summary>
+    /// 支持一种文字化显示时间间隔及不确定间隔的类。支持：s秒，d天，w周，m月，y年
+    /// 如1m，1y分别表示一月和一年，其中一些是不确定时长度的间间隔，但在实际应用中却常有需求。
+    /// </summary>
+    public readonly struct TimeSpanEx
+    {
+        /// <summary>
+        /// 支持的单位符号。
+        /// 秒，日，周，月，年。
+        /// </summary>
+        public const string UnitChars = "sdwmy";
+
+        public static TimeSpanEx Infinite = new TimeSpanEx(-1, 's');
+
+        public static bool TryParse([NotNull] string str, [MaybeNullWhen(false)] out TimeSpanEx result)
+        {
+            if (string.IsNullOrWhiteSpace(str))
+            {
+                result = Infinite;
+                return true;
+            }
+            var u = str[^1];
+            if (!UnitChars.Contains(u))
+            {
+                result = default;
+                return false;
+            }
+            if (!int.TryParse(str[..^1], out var v))
+            {
+                result = default;
+                return false;
+            }
+            result = new TimeSpanEx(v, u);
+            return true;
+        }
+
+        /// <summary>
+        /// 构造函数。
+        /// </summary>
+        /// <param name="str">空字符串标识无限的周期。</param>
+        public TimeSpanEx(string str)
+        {
+            if (string.IsNullOrWhiteSpace(str))
+            {
+                Value = -1;
+                Unit = 's';
+                return;
+            }
+            Value = int.Parse(str[..^1]);
+            Unit = str[^1];
+        }
+
+        /// <summary>
+        /// 构造函数。
+        /// </summary>
+        /// <param name="value"></param>
+        /// <param name="unit"></param>
+        [JsonConstructor]
+        public TimeSpanEx(int value, char unit)
+        {
+            Value = value;
+            Unit = unit;
+        }
+
+        /// <summary>
+        /// 数值。
+        /// </summary>
+        [JsonInclude]
+        public readonly int Value;
+
+        /// <summary>
+        /// 表示时间长度单位，支持：s秒，d天，w周，m月，y年
+        /// </summary>
+        [JsonInclude]
+        public readonly char Unit;
+
+        /// <summary>
+        /// 重载计算加法的运算符。
+        /// </summary>
+        /// <param name="dt"></param>
+        /// <param name="ts"></param>
+        /// <returns></returns>
+        public static DateTime operator +(DateTime dt, TimeSpanEx ts)
+        {
+            return ts + dt;
+        }
+
+        /// <summary>
+        /// 重载计算加法的运算符。
+        /// </summary>
+        /// <param name="ts"></param>
+        /// <param name="dt"></param>
+        /// <returns></returns>
+        public static DateTime operator +(TimeSpanEx ts, DateTime dt)
+        {
+            if (ts.Value == -1)
+                return DateTime.MaxValue;
+            DateTime result;
+            switch (ts.Unit)
+            {
+                case 's':
+                    result = dt + TimeSpan.FromSeconds(ts.Value);
+                    break;
+                case 'd':
+                    result = dt + TimeSpan.FromDays(ts.Value);
+                    break;
+                case 'w':
+                    result = dt + TimeSpan.FromDays(ts.Value * 7);
+                    break;
+                case 'm':
+                    result = dt.AddMonths(ts.Value);
+                    break;
+                case 'y':
+                    result = dt.AddYears(ts.Value);
+                    break;
+                default:
+                    throw new InvalidOperationException($"{ts.Unit}不是有效字符。");
+            }
+            return result;
+        }
+    }
+
+    /// <summary>
+    /// 指定起始时间的周期对象。
+    /// </summary>
+    public class DateTimePeriod
+    {
+        public DateTimePeriod()
+        {
+
+        }
+
+        public DateTimePeriod(DateTime startDateTime, TimeSpanEx period)
+        {
+            StartDateTime = startDateTime;
+            Period = period;
+        }
+
+        /// <summary>
+        /// 起始时间。
+        /// </summary>
+        public DateTime StartDateTime { get; set; }
+
+        /// <summary>
+        /// 周期。
+        /// </summary>
+        public TimeSpanEx Period { get; set; }
+
+        /// <summary>
+        /// 获取指定时间所处周期的起始时间点。
+        /// </summary>
+        /// <param name="dt"></param>
+        /// <returns></returns>
+        public DateTime GetPeriodStart(DateTime dt)
+        {
+            DateTime start; //最近一个周期的开始时间
+            switch (Period.Unit)
+            {
+                case 'n':   //无限
+                    start = StartDateTime;
+                    break;
+                case 's':
+                    var times = (dt - StartDateTime).Ticks / TimeSpan.FromSeconds(Period.Value).Ticks;  //相隔秒数
+                    start = StartDateTime.AddTicks(times * TimeSpan.FromSeconds(Period.Value).Ticks);
+                    break;
+                case 'd':   //日周期
+                    times = (dt - StartDateTime).Ticks / TimeSpan.FromDays(Period.Value).Ticks;  //相隔日数
+                    start = StartDateTime.AddTicks(times * TimeSpan.FromDays(Period.Value).Ticks);
+                    break;
+                case 'w':   //周周期
+                    times = (dt - StartDateTime).Ticks / TimeSpan.FromDays(7 * Period.Value).Ticks;  //相隔周数
+                    start = StartDateTime.AddTicks(TimeSpan.FromDays(7 * Period.Value).Ticks * times);
+                    break;
+                case 'm':   //月周期
+                    DateTime tmp;
+                    for (tmp = StartDateTime; tmp <= dt; tmp = tmp.AddMonths(Period.Value))
+                    {
+                    }
+                    start = tmp.AddMonths(-Period.Value);
+                    break;
+                case 'y':   //年周期
+                    for (tmp = StartDateTime; tmp <= dt; tmp = tmp.AddYears(Period.Value))
+                    {
+                    }
+                    start = tmp.AddYears(-Period.Value);
+                    break;
+                default:
+                    throw new InvalidOperationException("无效的周期表示符。");
+            }
+            return start;
+
+        }
+
+    }
+
+    public static class Win32Methods
+    {
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="mi"></param>
+        /// <returns></returns>
+        [DllImport("kernel32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool GlobalMemoryStatusEx(ref MEMORYINFO mi);
+
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct MEMORYINFO
+    {
+        /// <summary>
+        /// 初始化该结构。
+        /// </summary>
+        /// <returns></returns>
+        public void Initialize()
+        {
+            dwLength = (uint)Marshal.SizeOf(typeof(MEMORYINFO));
+        }
+
+        public uint dwLength; //Current structure size
+        public uint dwMemoryLoad; //Current memory utilization
+        public ulong ullTotalPhys; //Total physical memory size
+        public ulong ullAvailPhys; //Available physical memory size
+        public ulong ullTotalPageFile; //Total Exchange File Size
+        public ulong ullAvailPageFile; //Total Exchange File Size
+        public ulong ullTotalVirtual; //Total virtual memory size
+        public ulong ullAvailVirtual; //Available virtual memory size
+        public ulong ullAvailExtendedVirtual; //Keep this value always zero
+    }
+
+    /// <summary>
+    /// 获取跟容器。
+    /// </summary>
+    [OwAutoInjection(ServiceLifetime.Singleton)]
+    public class RootServiceProviderMarker
+    {
+        public RootServiceProviderMarker(IServiceProvider serviceProvider)
+        {
+            RootServiceProvider = serviceProvider;
+        }
+
+        public readonly IServiceProvider RootServiceProvider;
+    }
+}
