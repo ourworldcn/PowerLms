@@ -56,7 +56,7 @@ namespace PowerLmsServer.Managers
         /// <summary>
         /// 校验主单号格式与校验位（IATA国际标准）。
         /// </summary>
-        /// <param name="mawbNo">主单号（可含空格，如"999-12345678"、"999 12345678"或"999 1234567 8"）。</param>
+        /// <param name="mawbNo">主单号（支持"999-12345678"或"999-1234 5678"两种格式）。</param>
         /// <returns>
         /// 元组：
         /// - isValid: 是否有效
@@ -65,8 +65,9 @@ namespace PowerLmsServer.Managers
         /// <remarks>
         /// 校验规则（IATA国际标准）：
         /// 1. 格式：3位航司代码 + "-" + 8位数字（第8位为校验位）
-        /// 2. 校验位算法：(前7位数字 - 第8位数字) % 7 == 0
-        /// 3. 自动兼容空格输入，内部标准化处理
+        /// 2. 支持格式："999-12345678"或"999-1234 5678"
+        /// 3. 校验位算法：(前7位数字 - 第8位数字) % 7 == 0
+        /// 4. 自动兼容空格输入，内部标准化处理
         /// </remarks>
         public (bool isValid, string errorMsg) ValidateMawbNo(string mawbNo)
         {
@@ -167,10 +168,11 @@ namespace PowerLmsServer.Managers
         /// <summary>
         /// 标准化主单号（去除空格，保留连字符）。
         /// </summary>
-        /// <param name="mawbNo">原始主单号（可能含空格）。</param>
+        /// <param name="mawbNo">原始主单号（支持"999-12345678"或"999-1234 5678"格式）。</param>
         /// <returns>标准化后的主单号（格式：前3位-后8位，如"999-12345678"）。</returns>
         /// <remarks>
         /// IATA国际标准：连字符"-"位置固定，必须保留。
+        /// 支持输入格式："999-12345678"或"999-1234 5678"。
         /// </remarks>
         public string NormalizeMawbNo(string mawbNo)
         {
@@ -187,7 +189,7 @@ namespace PowerLmsServer.Managers
         /// <summary>
         /// 格式化主单号为标准显示格式（IATA标准：前3位-后8位）。
         /// </summary>
-        /// <param name="mawbNo">主单号（任意格式）。</param>
+        /// <param name="mawbNo">主单号（支持"999-12345678"或"999-1234 5678"格式）。</param>
         /// <returns>格式化后的主单号（如"999-12345678"）。</returns>
         public string FormatMawbNo(string mawbNo)
         {
@@ -211,7 +213,7 @@ namespace PowerLmsServer.Managers
         /// <param name="transferAgentId">过单代理Id（当SourceType=1时使用）。</param>
         /// <param name="registerDate">登记日期。</param>
         /// <param name="remark">备注。</param>
-        /// <param name="mawbNos">主单号列表（保留原始格式，可能含空格）。</param>
+        /// <param name="mawbNos">主单号列表（支持"999-12345678"或"999-1234 5678"格式）。</param>
         /// <param name="orgId">所属机构Id。</param>
         /// <param name="createBy">创建人Id。</param>
         /// <returns>元组：(成功数量, 失败数量, 失败详情列表)。</returns>
@@ -376,7 +378,7 @@ namespace PowerLmsServer.Managers
         /// <summary>
         /// 创建主单领出记录（单张主单）。
         /// </summary>
-        /// <param name="mawbNo">主单号（可含空格，将自动标准化）。</param>
+        /// <param name="mawbNo">主单号（支持"999-12345678"或"999-1234 5678"格式，将自动标准化）。</param>
         /// <param name="agentId">领单代理Id。</param>
         /// <param name="recipientName">领用人姓名。</param>
         /// <param name="issueDate">领用日期。</param>

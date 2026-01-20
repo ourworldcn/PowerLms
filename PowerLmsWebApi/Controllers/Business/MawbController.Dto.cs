@@ -24,7 +24,7 @@ namespace PowerLmsWebApi.Controllers.Business
     public class ValidateMawbNoParamsDto : TokenDtoBase
     {
         /// <summary>
-        /// 要校验的主单号（可含空格，如"999-12345678"或"999 12345678"）。
+        /// 要校验的主单号（支持"999-12345678"或"999-1234 5678"两种格式）。
         /// </summary>
         [Required]
         public string MawbNo { get; set; }
@@ -159,7 +159,7 @@ namespace PowerLmsWebApi.Controllers.Business
         public string Remark { get; set; }
 
         /// <summary>
-        /// 批量主单号列表（标准格式或含空格均可）。
+        /// 批量主单号列表（支持"999-12345678"或"999-1234 5678"格式）。
         /// </summary>
         [Required]
         public List<string> MawbNos { get; set; } = new List<string>();
@@ -256,7 +256,7 @@ namespace PowerLmsWebApi.Controllers.Business
     public class AddMawbOutboundParamsDto : TokenDtoBase
     {
         /// <summary>
-        /// 主单号（标准格式或含空格均可）。
+        /// 主单号（支持"999-12345678"或"999-1234 5678"格式）。
         /// </summary>
         [Required]
         public string MawbNo { get; set; }

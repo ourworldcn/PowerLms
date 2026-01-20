@@ -5,7 +5,30 @@
 ### 🚀 主单领用登记模块开发（进行中）
 
 #### 功能变更总览
-**命名规范统一**：重构MawbController所有CRUD方法与DTO命名，遵循项目统一的GetAll/Add/Modify/Remove命名模式，提升代码一致性
+**文件结构优化**：合并PlEaMawbInbound和PlEaMawbOutbound到PlEaMawb.cs，统一主单号格式说明为"999-12345678"或"999-1234 5678"两种标准格式
+
+#### 🗂️ 文件结构优化（2025-01-17）
+
+**目标**：优化实体文件组织，统一主单号格式说明
+
+**变更内容**：
+- **文件合并**：
+  - 删除：`PlEaMawbInbound.cs`
+  - 删除：`PlEaMawbOutbound.cs`
+  - 新建：`PlEaMawb.cs`（包含PlEaMawbInbound和PlEaMawbOutbound两个类）
+- **主单号格式统一说明**：
+  - 旧格式：多种描述方式（"999-12345678"、"999 12345678"、"999 1234567 8"）
+  - 新格式：**仅支持两种标准格式**
+    - `"999-12345678"`（标准格式）
+    - `"999-1234 5678"`（带空格格式）
+- **注释更新范围**：
+  - `MawbManager.cs`：所有主单号相关方法注释
+  - `MawbController.Dto.cs`：所有主单号参数DTO注释
+  - `PlEaMawb.cs`：实体类主单号字段注释
+
+**影响范围**：
+- 前端开发：明确主单号输入格式要求
+- 数据库：实体类无逻辑变更，仅注释优化
 
 #### 📝 命名规范重构（2025-01-17）
 
@@ -541,25 +564,109 @@ PowerLmsData/主营业务/
 
 ---
 
-## [历史记录] - 2025-01-XX
+## [历史记录] - 2025-01-17
 
-### 业务变更(面向项目经理)
-#### 主营业务费用申请单权限控制
-- 功能名称: 主营业务费用申请单查看权限
-- 业务价值: 实现申请单数据权限分级管理,保障数据安全
-- 权限说明:
-  - 无E.3权限(默认): 用户只能查看自己创建的申请单
-  - 有E.3权限: 用户可以查看公司范围内所有申请单
-  - 超级管理员/商户管理员: 默认拥有全部数据访问权限
-### API变更(面向前端)
-#### 变更API
-- 接口: GET /api/Financial/GetAllDocFeeRequisitionWithWf
-- 变更说明: 添加基于E.3权限的数据过滤逻辑
+### 🔒 主营业务费用申请单权限修正
+
+#### 功能变更总览
+**权限控制修正**：根据会议纪要要求，调整GetAllDocFeeRequisition和GetAllDocFeeRequisitionWithWf接口的权限过滤逻辑，明确"费用申请单获取接口"与"WF接口（审批人视角）"的不同权限规则
+
+#### 业务变更（面向项目经理）
+
+GetAllDocFeeRequisition 用E.3 权限过滤；GetAllDocFeeRequisitionWithWf - 不再使用 E.3 权限过滤；主单号仅支持"999-12345678"或"999-1234 5678"两种模式。
+
+**权限原则（会议纪要）**：
+> "「1.3 权限」应放置在 费用申请单获取接口（例如 getAll…）而非工作流（WF）接口；WF 接口用于审批人视角，无需额外限制。
+> 含义：无该权限仅可见「自己」的申请；拥有该权限可查看「所有人」的申请。"
+
+**权限说明（E.3 - 查看所有申请单）**：
+- **无E.3权限**（默认）：用户只能查看自己创建的申请单（where MakerId == 当前用户）
+- **有E.3权限**：用户可以查看公司范围内所有机构的申请单（where allowedOrgIds.Contains(OrgId)）
+- **超级管理员**：默认拥有全部数据访问权限
+
+**业务价值**：
+- 实现申请单数据权限分级管理，保障数据安全
+- 审批人可以看到所有需要审批的单据，不受权限限制
+- 普通用户查看权限可通过E.3权限灵活控制
+
+#### API变更（面向前端）
+
+**修正接口1: GetAllDocFeeRequisition（✅ 补充权限过滤）**
+- 接口路径: `GET /api/Financial/GetAllDocFeeRequisition`
+- 接口类型: **费用申请单获取接口**
+- 修正说明: **补充E.3权限过滤逻辑**
+- 修正前: ❌ 无任何权限检查，所有用户都能看到同OrgId的所有申请单
+- 修正后: ✅ 根据E.3权限过滤数据
+  - 无E.3权限: 仅返回本人创建的申请单（`where r.MakerId == context.User.Id`）
+  - 有E.3权限: 返回同公司所有机构的申请单
 - 影响范围:
-  - 无权限用户返回数据减少(仅返回本人创建的申请单)
-  - 有权限用户返回数据保持不变(公司范围申请单)
-- 前端适配: 无需修改,接口返回结构不变
+  - **无E.3权限用户**: 返回数据减少（仅返回本人申请单）⚠️
+  - **有E.3权限用户**: 返回数据保持不变（公司范围申请单）
+  - **超级管理员**: 返回全部数据
+- 前端适配: 无需修改，接口返回结构不变
 - 测试要点:
   1. 验证无E.3权限用户只能查看自己的申请单
   2. 验证有E.3权限用户可以查看公司所有申请单
   3. 验证超级管理员可以查看所有数据
+
+**修正接口2: GetAllDocFeeRequisitionWithWf（❌ 移除权限过滤）**
+- 接口路径: `GET /api/Financial/GetAllDocFeeRequisitionWithWf`
+- 接口类型: **WF接口（审批人视角）**
+- 修正说明: **移除E.3权限过滤逻辑**
+- 修正前: ⚠️ 错误地添加了E.3权限过滤
+  - 无E.3权限: 仅返回本人申请单
+  - 有E.3权限: 返回公司范围申请单
+- 修正后: ✅ 移除E.3权限检查
+  - **所有审批人**: 可以看到所有需要审批的单据（通过GetWfNodeItemByOpertorId自动过滤）
+  - **理由**: WF接口用于审批人视角，审批人需要看到所有待审批单据，不应受E.3权限限制
+- 影响范围:
+  - **所有用户**: 返回数据增加（可以看到所有需要审批的单据）✅
+  - **审批流程**: 更符合业务逻辑（审批人不应被权限限制）
+- 前端适配: 无需修改，接口返回结构不变
+- 测试要点:
+  1. 验证审批人可以看到所有需要审批的单据（无论是否有E.3权限）
+  2. 验证工作流状态过滤正常工作
+  3. 验证GetWfNodeItemByOpertorId自动过滤逻辑正确
+
+#### 权限设计对照表
+
+| 接口名称 | 接口类型 | 修正前 | 修正后 | 符合会议要求 |
+|---------|---------|--------|--------|-------------|
+| `GetAllDocFeeRequisition` | **费用申请单获取接口** | ❌ 无权限过滤 | ✅ 有E.3权限过滤 | ✅ 符合 |
+| `GetAllDocFeeRequisitionWithWf` | **WF接口（审批人视角）** | ⚠️ 错误地有E.3权限过滤 | ✅ 移除E.3权限过滤 | ✅ 符合 |
+
+#### 技术细节（面向开发团队）
+
+**修改文件**: `PowerLmsWebApi\Controllers\Financial\FinancialController.cs`
+
+**GetAllDocFeeRequisition 补充逻辑**:
+```csharp
+// 应用E.3权限过滤（无该权限仅可见「自己」的申请；拥有该权限可查看「所有人」的申请）
+var orgManager = _ServiceProvider.GetRequiredService<OrgManager<PowerLmsUserDbContext>>();
+bool hasE3Permission = _AuthorizationManager.Demand("E.3");
+
+if (!hasE3Permission && !context.User.IsSuperAdmin)
+{
+    // 无E.3权限：仅查看本人创建的申请单
+    dbSet = dbSet.Where(r => r.MakerId == context.User.Id);
+    _Logger.LogDebug("用户 {UserId} 无E.3权限，仅显示本人申请单", context.User.Id);
+}
+else if (hasE3Permission && !context.User.IsSuperAdmin)
+{
+    // 有E.3权限：查看同公司所有机构的申请单
+    var allowedOrgIds = orgManager.GetOrgIdsByCompanyId(context.User.OrgId.Value);
+    dbSet = dbSet.Where(r => allowedOrgIds.Contains(r.OrgId.Value));
+    _Logger.LogDebug("用户 {UserId} 拥有E.3权限，显示公司所有申请单", context.User.Id);
+}
+```
+
+**GetAllDocFeeRequisitionWithWf 移除逻辑**:
+```csharp
+// WF接口用于审批人视角，无需额外的E.3权限限制
+// 审批人能看到所有需要他审批的单据（已通过GetWfNodeItemByOpertorId过滤）
+```
+
+#### 参考文档
+- 会议纪要: `临时输入.md`
+- 权限定义: `权限.md`（E.3 - 查看所有申请单）
+- 参考实现: `OaExpenseController.GetAllOaExpenseRequisitionWithWf`
