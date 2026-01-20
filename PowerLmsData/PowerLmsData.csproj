@@ -40,7 +40,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Bak\OwDbBase\OwDbBase.csproj" />
+    <ProjectReference Include="..\Base\OwExtensions\OwExtensions.csproj" />
   </ItemGroup>
 
 </Project>
