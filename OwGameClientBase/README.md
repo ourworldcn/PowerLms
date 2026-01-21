@@ -676,17 +676,34 @@ for each entity:
 
 本目录通过 Git Subtree 管理，是独立的可共享模块。
 
-### 推送更新到远程仓库
+### ⚠️ 重要提示：手动管理 Git 操作
+
+**请注意**：
+- ❌ **不要自动使用 GitHub 功能提交代码**（需手动操作）
+- ❌ **不要自动生成数据库迁移脚本**（本项目无数据库）
+- ✅ 所有 Git 操作应由开发者手动执行
+- ✅ AI 助手仅提供命令建议，不执行 push/commit
+
+### 推送更新到远程仓库（手动操作）
 
 ```bash
 # 进入项目根目录
 cd OwGame202601
 
-# 推送 Base 目录的更新
+# 1. 手动查看状态
+git status
+
+# 2. 手动添加更改
+git add Base/OwGameClientBase/
+
+# 3. 手动提交
+git commit -m "更新描述"
+
+# 4. 手动推送 Base 目录到远程仓库
 git subtree push --prefix=Base https://github.com/ourworldcn/Bak.git main
 ```
 
-### 拉取远程更新
+### 拉取远程更新（手动操作）
 
 ```bash
 git subtree pull --prefix=Base https://github.com/ourworldcn/Bak.git main --squash
@@ -706,3 +723,36 @@ git subtree pull --prefix=Base https://github.com/ourworldcn/Bak.git main --squa
 - ✅ 新增软删除系统：`Actor.Deleted` / `MoveState.Deleted` / `ColliderState.Deleted`
 - ✅ `ActorManager.Compact()` 批量压缩：使用 `IRefPredicate` 零分配
 - ✅ 性能提升：软删除速度提升 ~20 倍
+
+---
+
+## 📝 AI 助手使用规范
+
+### ⚠️ 禁止的自动操作
+在协助开发本项目时，AI 助手**不应**自动执行以下操作：
+
+1. **Git/GitHub 操作**
+   - ❌ 不要自动执行 `git push`
+   - ❌ 不要自动执行 `git commit`
+   - ❌ 不要自动创建 Pull Request
+   - ❌ 不要自动合并分支
+   - ✅ **仅提供命令建议**，由开发者手动执行
+
+2. **数据库操作**
+   - ❌ 不要自动生成数据库迁移脚本（本项目无数据库）
+   - ❌ 不要自动执行 Entity Framework 迁移命令
+   - ❌ 不要假设项目需要数据库功能
+
+3. **构建和部署**
+   - ✅ 可以建议构建命令（`dotnet build`）
+   - ✅ 可以建议测试命令（`dotnet test`）
+   - ❌ 不要自动执行部署脚本
+
+### ✅ 推荐的协助方式
+- 提供代码优化建议
+- 解释架构设计和性能优化
+- 生成代码示例和文档
+- 分析问题并提供解决方案
+- **提供 Git 命令建议，但由开发者手动执行**
+
+---
