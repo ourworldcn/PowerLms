@@ -83,8 +83,8 @@
 
 | 系统 | 说明 | 文件 |
 |------|------|------|
-| `ActorManager` | **实体管理服务**（创建/销毁的统一入口） | `ActorManager.cs` |
-| `MovementService` | 移动系统（批量更新位置） | `MovementService.cs` |
+| `ActorManager` | **实体管理服务**（创建/销毁的统一入口，✅ 完整组件清理） | `ActorManager.cs` |
+| `MovementService` | 移动系统（批量更新位置 + ✅ 边界碰撞检测） | `MovementService.cs` |
 | `CollisionService` | 碰撞检测系统（空间哈希） | `CollisionService.cs` |
 | `InputService` | 输入服务（键盘/鼠标/触摸） | `InputService.cs` |
 
@@ -148,8 +148,9 @@ Base/OwGameClientBase/
 │   ├── DetectCollisions()    # 检测碰撞
 │   └── DispatchEvents()      # 分发事件
 │
-├── MovementService.cs        # 移动系统
-│   └── Update()              # 批量更新移动
+├── MovementService.cs        # 移动系统（✅ 含边界碰撞检测）
+│   ├── Update()              # 批量更新移动
+│   └── ProcessBoundaries()   # ✅ 处理场景边界行为（Clamp/Bounce/Pass）
 │
 ├── InputService.cs           # 输入服务
 │   ├── KeyboardMain          # 主键盘区（64 键）
@@ -404,14 +405,15 @@ storage.RemoveActor(actorId);
 - ✅ 删除同步：删除 Actor 时自动删除所有组件
 - ✅ 索引修正：删除后自动修正后续 Actor 的索引
 
-**⚠️ 已知问题**：
-- 删除时未同步删除 `Colliders` 和 `ColliderShapes`（参见下方 Bug 修复）
+**⚠️ 建议**：
+- 推荐使用 `ActorManager` 而非直接操作 `EcsStorageService`
+- `ActorManager.DestroyActor()` 和 `Compact()` 提供完整的组件清理
 
 ---
 
-### MovementService
+### MovementService（✅ v1.1.0 新增边界碰撞检测）
 
-**职责**：批量更新所有实体的位置、速度方向角和速率。
+**职责**：批量更新所有实体的位置、速度方向角、速率，并处理场景边界碰撞。
 
 ```csharp
 // 每帧调用
@@ -423,11 +425,27 @@ movementSystem.Update(deltaTime);
 2. 更新速度方向角（`VelocityAngle`）
 3. 更新速率（`Speed`）
 4. 更新位置（`Position += Velocity * deltaTime`）
+5. **✅ 处理边界碰撞**（根据 `LeftBoundary/RightBoundary/TopBoundary/BottomBoundary` 设置）
+
+**边界行为类型**：
+- `Pass`：允许穿越边界（默认）
+- `Clamp`：限制在边界内，速度清零
+- `Bounce`：法线反弹
+
+**使用示例**：
+```csharp
+ref var move = ref storage.Moves.AsSpan()[actorId];
+move.LeftBoundary = BoundaryBehavior.Clamp;    // 左边界限制
+move.RightBoundary = BoundaryBehavior.Bounce;  // 右边界反弹
+move.TopBoundary = BoundaryBehavior.Pass;      // 上边界穿越
+move.BottomBoundary = BoundaryBehavior.Clamp;  // 下边界限制
+```
 
 **性能优化**：
 - ✅ 使用 `Span<T>` 批量访问
 - ✅ 连续内存遍历，CPU 缓存友好
 - ✅ 无 GC 分配
+- ✅ 边界检测集成在移动更新中，零额外开销
 
 ---
 
@@ -459,9 +477,6 @@ collisionSystem.DispatchEvents();    // 分发
 - ✅ 空间划分减少检测次数（避免 N²）
 - ✅ LayerMask 过滤不必要的检测
 - ✅ 事件队列延迟分发（避免热路径虚函数调用）
-
-**⚠️ 已知问题**：
-- 未实现边界碰撞检测（`BoundaryMask` 未使用）
 
 ---
 
@@ -546,9 +561,9 @@ collider.ShapeCount = 2;
 
 ## 🐛 已知问题与修复
 
-### ✅ 已修复问题
+### ✅ 已修复问题（v1.1.0）
 
-#### 1. ColliderState 内存优化（v1.1.0）
+#### 1. ColliderState 内存优化
 
 **优化内容**：
 - 移除独立的 `ushort LayerMask` 字段（2 字节）
@@ -562,52 +577,34 @@ Flags (32 bits):
 [预留 15位 (bit 17-31)] [Layer 16位 (bit 1-16)] [Deleted 1位 (bit 0)]
 ```
 
-#### 2. ActorManager 软删除优化（v1.1.0）
+#### 2. ActorManager 软删除系统
 
 **新增功能**：
 - `MarkForDestroy()` - 软删除单个实体
 - `MarkForDestroyWhere()` - 批量软删除
 - `Compact()` - 使用 `IRefPredicate` 批量压缩，零分配
+- `DestroyActor()` / `DestroyActorsWhere()` - 完整的组件清理
 - `ActorCount` / `PendingDestroyCount` - 实体统计
 
 **性能提升**：
 - 软删除速度提升 **~20 倍**（仅标志位操作）
 - 批量压缩使用高性能谓词，零 GC 分配
+- `DestroyActor()` 正确清理 `ColliderShapes` 和所有组件
 
----
+#### 3. MovementService 边界碰撞检测
 
-### ⚠️ 待修复问题
+**实现内容**：
+- 在 `MovementService.Update()` 中实现了完整的边界碰撞检测
+- 支持三种边界行为：`Pass`（穿越）、`Clamp`（限制）、`Bounce`（反弹）
+- 支持四个方向的独立配置：`LeftBoundary` / `RightBoundary` / `TopBoundary` / `BottomBoundary`
 
-#### 1. RemoveActor 未删除碰撞组件（已被 ActorManager 替代）
-
-**问题描述**：`EcsStorageService.RemoveActor()` 删除 Actor 时，只删除了 `Actors` 和 `Moves`，未删除 `Colliders` 和 `ColliderShapes`。
-
-**当前状态**：✅ 已通过 `ActorManager` 修复
-- `DestroyActor()` 会正确清理所有组件
-- `Compact()` 会批量清理所有组件
-- **建议**：使用 `ActorManager` 而非直接操作 `EcsStorageService`
-
-**未来计划**：重构 `EcsStorageService.RemoveActor()` 以支持完整的组件清理
-
----
-
-#### 2. CollisionService 未实现边界碰撞（计划中）
-
-**问题描述**：`MoveState.LeftBoundary/RightBoundary/TopBoundary/BottomBoundary` 已定义，但 `CollisionService` 未处理场景边界碰撞。
-
-**当前状态**：⏳ 待实现
-
-**计划方案**：在 `MovementService` 或 `CollisionService` 中添加边界检测阶段：
-
+**使用示例**：
 ```csharp
-// 伪代码
-for each entity:
-    if LeftBoundary == Clamp && position.X < scene.MinX:
-        position.X = scene.MinX
-        velocity.X = 0
-    if LeftBoundary == Bounce && position.X < scene.MinX:
-        position.X = scene.MinX
-        velocity.X = -velocity.X
+ref var move = ref storage.Moves.AsSpan()[actorId];
+move.LeftBoundary = BoundaryBehavior.Clamp;    // 左边界限制位置
+move.RightBoundary = BoundaryBehavior.Bounce;  // 右边界反弹
+move.TopBoundary = BoundaryBehavior.Pass;      // 上边界允许穿越
+move.BottomBoundary = BoundaryBehavior.Clamp;  // 下边界限制位置
 ```
 
 ---
@@ -722,6 +719,8 @@ git subtree pull --prefix=Base https://github.com/ourworldcn/Bak.git main --squa
 - ✅ `MoveState` 内存优化：40 字节（-37.5%）
 - ✅ 新增软删除系统：`Actor.Deleted` / `MoveState.Deleted` / `ColliderState.Deleted`
 - ✅ `ActorManager.Compact()` 批量压缩：使用 `IRefPredicate` 零分配
+- ✅ `ActorManager.DestroyActor()` 完整组件清理：正确删除 `ColliderShapes`
+- ✅ `MovementService` 边界碰撞检测：支持 `Pass` / `Clamp` / `Bounce` 三种行为
 - ✅ 性能提升：软删除速度提升 ~20 倍
 
 ---
