@@ -166,7 +166,6 @@ namespace PowerLms.Data
         /// 不建立物理外键约束。
         /// </summary>
         [Comment("领单代理Id（客户资料，通常为二级代理）")]
-        [Required]
         public Guid AgentId { get; set; }
 
         /// <summary>

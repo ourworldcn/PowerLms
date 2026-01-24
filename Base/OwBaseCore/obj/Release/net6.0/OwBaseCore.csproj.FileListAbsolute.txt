@@ -80,3 +80,17 @@ D:\Users\光元\source\Repos1\Bak\OwBaseCore\obj\Release\net6.0\OwBaseCore.dll
 D:\Users\光元\source\Repos1\Bak\OwBaseCore\obj\Release\net6.0\refint\OwBaseCore.dll
 D:\Users\光元\source\Repos1\Bak\OwBaseCore\obj\Release\net6.0\OwBaseCore.pdb
 D:\Users\光元\source\Repos1\Bak\OwBaseCore\obj\Release\net6.0\ref\OwBaseCore.dll
+C:\Users\zc-home\source\ourworldcn\PowerLms\Base\OwBaseCore\bin\Release\net6.0\OwBaseCore.deps.json
+C:\Users\zc-home\source\ourworldcn\PowerLms\Base\OwBaseCore\bin\Release\net6.0\OwBaseCore.dll
+C:\Users\zc-home\source\ourworldcn\PowerLms\Base\OwBaseCore\bin\Release\net6.0\OwBaseCore.pdb
+C:\Users\zc-home\source\ourworldcn\PowerLms\Base\OwBaseCore\bin\Release\net6.0\OwBaseCoreApiDoc.xml
+C:\Users\zc-home\source\ourworldcn\PowerLms\Base\OwBaseCore\obj\Release\net6.0\OwBaseCore.csproj.AssemblyReference.cache
+C:\Users\zc-home\source\ourworldcn\PowerLms\Base\OwBaseCore\obj\Release\net6.0\OwBaseCore.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\zc-home\source\ourworldcn\PowerLms\Base\OwBaseCore\obj\Release\net6.0\OwBaseCore.AssemblyInfoInputs.cache
+C:\Users\zc-home\source\ourworldcn\PowerLms\Base\OwBaseCore\obj\Release\net6.0\OwBaseCore.AssemblyInfo.cs
+C:\Users\zc-home\source\ourworldcn\PowerLms\Base\OwBaseCore\obj\Release\net6.0\OwBaseCore.csproj.CoreCompileInputs.cache
+C:\Users\zc-home\source\ourworldcn\PowerLms\Base\OwBaseCore\obj\Release\net6.0\OwBaseCore.sourcelink.json
+C:\Users\zc-home\source\ourworldcn\PowerLms\Base\OwBaseCore\obj\Release\net6.0\OwBaseCore.dll
+C:\Users\zc-home\source\ourworldcn\PowerLms\Base\OwBaseCore\obj\Release\net6.0\refint\OwBaseCore.dll
+C:\Users\zc-home\source\ourworldcn\PowerLms\Base\OwBaseCore\obj\Release\net6.0\OwBaseCore.pdb
+C:\Users\zc-home\source\ourworldcn\PowerLms\Base\OwBaseCore\obj\Release\net6.0\ref\OwBaseCore.dll

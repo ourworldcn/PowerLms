@@ -108,11 +108,16 @@ namespace PowerLmsServer.Managers
         /// </remarks>
         public string GenerateNextMawbNo(string prefix, string currentNo)
         {
-            if (currentNo.Length != 8 || !currentNo.All(char.IsDigit))
-                throw new ArgumentException("当前主单号必须为8位数字", nameof(currentNo));
+            if (string.IsNullOrWhiteSpace(currentNo))
+                throw new ArgumentException("当前主单号不能为空", nameof(currentNo));
+
+            // 支持 "12345678" 或带空格的 "1234 5678" 格式，先清理空格和连字符再校验
+            var cleanedCurrent = currentNo.Replace(" ", "").Replace("-", "");
+            if (cleanedCurrent.Length != 8 || !cleanedCurrent.All(char.IsDigit))
+                throw new ArgumentException("当前主单号必须为8位数字（支持 '12345678' 或 '1234 5678' 格式）", nameof(currentNo));
             if (prefix.Length != 3 || !prefix.All(char.IsDigit))
                 throw new ArgumentException("前缀必须为3位数字", nameof(prefix));
-            var first7 = int.Parse(currentNo.Substring(0, 7));
+            var first7 = int.Parse(cleanedCurrent.Substring(0, 7));
             if (first7 >= 9999999)
                 throw new InvalidOperationException($"主单号序列已达到最大值（{prefix}-99999996），无法继续生成");
             first7++;

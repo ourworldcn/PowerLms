@@ -84,7 +84,6 @@ namespace PowerLmsWebApi.Controllers
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             var result = new GetAllWorkflowTemplateReturnDto();
             var dbSet = _DbContext.WfTemplates.Where(c => c.OrgId == context.User.OrgId);
-            dbSet = _DbContext.WfTemplates;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsQueryable();
             foreach (var item in conditional)
                 if (string.Equals(item.Key, nameof(OwWfTemplate.DisplayName), StringComparison.OrdinalIgnoreCase))

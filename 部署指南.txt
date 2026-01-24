@@ -3,6 +3,8 @@
 
 安装IIS
 安装NetCore绑定
+git subtree add --prefix=Base https://github.com/ourworldcn/Bak.git main --squash
+git subtree push --prefix=Base https://github.com/ourworldcn/Bak.git main
 
 Enable-Migrations –EnableAutomaticMigrations -Context PowerLmsUserDbContext
 Add-Migration 26010701 -Context PowerLmsUserDbContext

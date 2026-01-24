@@ -58,9 +58,9 @@ namespace PowerLmsWebApi.Controllers.Business
         public string Prefix { get; set; }
 
         /// <summary>
-        /// 当前8位数字部分（如"12345678"）。
+        /// 当前8位数字部分（如"12345678"）。支持不带空格的"12345678"或带空格的"1234 5678"输入。
         /// </summary>
-        [Required, StringLength(8, MinimumLength = 8)]
+        [Required, StringLength(9, MinimumLength = 8)]
         public string CurrentNo { get; set; }
     }
 
@@ -264,7 +264,6 @@ namespace PowerLmsWebApi.Controllers.Business
         /// <summary>
         /// 领单代理Id（不建FK约束）。
         /// </summary>
-        [Required]
         public Guid? AgentId { get; set; }
 
         /// <summary>
