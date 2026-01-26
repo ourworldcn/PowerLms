@@ -364,3 +364,5 @@ FodyWeavers.xsd
 /PowerLmsData/PowerLmsDataApiDoc.xml
 /PowerLmsWebApi/PowerLmsWebApiApiDoc.xml
 /PowerLmsServer/PowerLmsServerApiDoc.xml
+/Base/OwBaseCore/obj/Release/net6.0/OwBaseCore.csproj.FileListAbsolute.txt
+/Base/OwDbBase/obj/Release/net6.0/OwDbBase.csproj.FileListAbsolute.txt
