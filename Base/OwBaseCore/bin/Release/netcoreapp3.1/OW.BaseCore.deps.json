@@ -1,0 +1,41 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v3.1",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v3.1": {
+      "OW.BaseCore/1.0.0": {
+        "dependencies": {
+          "Microsoft.Extensions.ObjectPool": "3.1.16"
+        },
+        "runtime": {
+          "OW.BaseCore.dll": {}
+        }
+      },
+      "Microsoft.Extensions.ObjectPool/3.1.16": {
+        "runtime": {
+          "lib/netstandard2.0/Microsoft.Extensions.ObjectPool.dll": {
+            "assemblyVersion": "3.1.16.0",
+            "fileVersion": "3.100.1621.26206"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "OW.BaseCore/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Microsoft.Extensions.ObjectPool/3.1.16": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-2KuMg4NLLA1NRuZSsmEE3cUlcGd0timRveBtq+DVrOYLVC844YEmckb12d/gwrP/TQqSh7g52Omb06hAIogOXw==",
+      "path": "microsoft.extensions.objectpool/3.1.16",
+      "hashPath": "microsoft.extensions.objectpool.3.1.16.nupkg.sha512"
+    }
+  }
+}
