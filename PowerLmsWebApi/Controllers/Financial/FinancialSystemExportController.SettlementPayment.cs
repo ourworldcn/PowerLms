@@ -10,6 +10,7 @@ using PowerLms.Data;
 using PowerLms.Data.Finance;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
+using PowerLmsServer.Helpers;
 using PowerLmsWebApi.Dto;
 using System.Text.Json;
 using System.Runtime.ExceptionServices;
@@ -82,7 +83,7 @@ namespace PowerLmsWebApi.Controllers.Financial
                 // 应用查询条件
                 if (conditions.Any())
                 {
-                    settlementPaymentsQuery = EfHelper.GenerateWhereAnd(settlementPaymentsQuery, conditions);
+                    settlementPaymentsQuery = QueryHelper.GenerateWhereAnd(settlementPaymentsQuery, conditions);
                 }
                 // 应用组织权限过滤
                 settlementPaymentsQuery = ApplyOrganizationFilterForSettlementPayments(settlementPaymentsQuery, context.User);
@@ -198,7 +199,7 @@ namespace PowerLmsWebApi.Controllers.Financial
                 var settlementPaymentsQuery = exportManager.FilterUnexported(baseQuery);
                 if (conditions.Any())
                 {
-                    settlementPaymentsQuery = EfHelper.GenerateWhereAnd(settlementPaymentsQuery, conditions);
+                    settlementPaymentsQuery = QueryHelper.GenerateWhereAnd(settlementPaymentsQuery, conditions);
                 }
                 // 应用组织权限过滤
                 settlementPaymentsQuery = ApplyOrganizationFilterForSettlementPaymentsStatic(settlementPaymentsQuery, taskUser, dbContext, serviceProvider);

@@ -4,6 +4,7 @@ using PowerLms.Data;
 using PowerLms.Data.Finance;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
+using PowerLmsServer.Helpers;
 using PowerLmsWebApi.Dto;
 using System.Text.Json;
 using OW.Data;
@@ -185,7 +186,7 @@ namespace PowerLmsWebApi.Controllers.Financial
                 // 应用额外的查询条件
                 if (conditions != null && conditions.Any())
                 {
-                    feesQuery = EfHelper.GenerateWhereAnd(feesQuery, conditions);
+                    feesQuery = QueryHelper.GenerateWhereAnd(feesQuery, conditions);
                 }
                 // 应用组织权限过滤
                 var taskUser = dbContext.Accounts?.FirstOrDefault(a => a.Id == userId);

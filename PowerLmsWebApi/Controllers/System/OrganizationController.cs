@@ -7,6 +7,7 @@ using Microsoft.Extensions.Caching.Memory;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
+using PowerLmsServer.Helpers;
 using PowerLmsWebApi.Dto;
 using System.ComponentModel.DataAnnotations;
 using System.Net;
@@ -175,7 +176,7 @@ namespace PowerLmsWebApi.Controllers
                 }
                 if (orgConditions.Count > 0) //应用PlOrganization直接属性条件
                 {
-                    var filteredQuery = EfHelper.GenerateWhereAnd(query, orgConditions);
+                    var filteredQuery = QueryHelper.GenerateWhereAnd(query, orgConditions);
                     if (filteredQuery == null)
                     {
                         return BadRequest(OwHelper.GetLastErrorMessage());
@@ -185,7 +186,7 @@ namespace PowerLmsWebApi.Controllers
                 if (accountOrgConditions.Count > 0) //应用AccountPlOrganization关联条件
                 {
                     var accountOrgQuery = _DbContext.AccountPlOrganizations.AsQueryable();
-                    var filteredAccountOrgQuery = EfHelper.GenerateWhereAnd(accountOrgQuery, accountOrgConditions);
+                    var filteredAccountOrgQuery = QueryHelper.GenerateWhereAnd(accountOrgQuery, accountOrgConditions);
                     if (filteredAccountOrgQuery == null)
                     {
                         return BadRequest(OwHelper.GetLastErrorMessage());

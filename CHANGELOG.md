@@ -1,6 +1,83 @@
 ﻿# 变更日志
 
-## [未发布] - 2025-01-17
+## [未发布] - 2026-01-26
+
+### 📋 空运出口主单命名规范重构
+
+#### 功能变更总览
+**命名简化优化**：移除空运出口主单相关实体和控制器的`Pl`前缀，采用更简洁的`Ea`（Export Air）前缀，提升代码可读性和维护性
+
+#### 业务变更（面向项目经理）
+空运出口主单相关接口路由保持不变，仅内部类名和文件名优化，对前端无影响
+
+#### API变更（面向前端）
+**无API变更**：所有接口路径、参数、返回值保持不变，前端无需任何修改
+
+#### 架构调整（面向开发团队）
+
+**1. 实体类重命名**
+- 文件：`PowerLmsData/主营业务/空运出口/PlEaMawb.cs` → `EaMawb.cs`
+- 类名变更：
+  - `PlEaMawb` → `EaMawb`（空运出口主单）
+  - `PlEaMawbOtherCharge` → `EaMawbOtherCharge`（主单其他费用）
+  - `PlEaCubage` → `EaCubage`（主单委托明细）
+  - `PlEaGoodsDetail` → `EaGoodsDetail`（主单品名明细）
+  - `PlEaContainer` → `EaContainer`（主单集装器）
+
+**2. 控制器重命名**
+- 文件夹：`PowerLmsWebApi/Controllers/Business/AirFreight/`
+- 文件变更：
+  - `PlEaMawbController.cs` → `EaMawbController.cs`
+  - `PlEaMawbController.Dto.cs` → `EaMawbController.Dto.cs`
+  - `PlEaMawbController.OtherCharge.cs` → `EaMawbController.OtherCharge.cs`
+  - `PlEaMawbController.Cubage.cs` → `EaMawbController.Cubage.cs`
+  - `PlEaMawbController.GoodsDetail.cs` → `EaMawbController.GoodsDetail.cs`
+  - `PlEaMawbController.Container.cs` → `EaMawbController.Container.cs`
+- 类名：`PlEaMawbController` → `EaMawbController`
+
+**3. DbContext更新**
+- DbSet属性重命名（`PowerLmsUserDbContext.cs`）：
+  - `PlEaMawbs` → `EaMawbs`
+  - `PlEaMawbOtherCharges` → `EaMawbOtherCharges`
+  - `PlEaCubages` → `EaCubages`
+  - `PlEaGoodsDetails` → `EaGoodsDetails`
+  - `PlEaContainers` → `EaContainers`
+
+**4. DTO类更新**
+- 实体类型引用：所有DTO中的`PlEaMawb*`引用改为`EaMawb*`
+- DTO类名保持不变：继续使用`PlEaMawb`前缀以保持API向后兼容
+- 示例：
+  - `GetAllPlEaMawbReturnDto : PagingReturnDtoBase<EaMawb>`
+  - `AddPlEaMawbParamsDto.EaMawb` 属性类型为 `EaMawb`
+
+**5. 权限配置修正**
+- 所有控制器方法已按照最新权限文档（权限.md）配置正确权限：
+  - GetAll系列方法：`D0.15.2`（查看主单）
+  - Add系列方法：`D0.15.1`（新建主单）
+  - Modify系列方法：`D0.15.3`（编辑主单）
+  - Remove系列方法：`D0.15.4`（删除主单）
+- 覆盖范围：主表及所有子表（OtherCharge、Cubage、GoodsDetail、Container）
+
+#### 技术细节
+
+**命名原则**：
+- ❌ **去除理由**：`PlEaMawb`中的`Pl`是PowerLms项目前缀，对于业务特定性强的实体显得冗余
+- ✅ **保留语义**：`Ea`（Export Air）已经清晰表达空运出口，不会与其他类混淆
+- ✅ **一致性**：与其他业务特定实体（如`DocFee`、`PlEaDoc`等）命名风格更统一
+
+**影响范围**：
+- ✅ 编译验证：100%通过
+- ✅ 数据库表名：保持不变（EF Core通过类名映射）
+- ✅ API接口：DTO类名保持不变，前端无感知
+- ✅ 业务逻辑：所有引用已同步更新
+
+**未来规划**：
+- 建议其他业务特定实体也考虑类似简化（如`PlIaMawb` → `IaMawb`）
+- 保持`Pl`前缀用于通用业务实体（如`PlJob`、`PlCustomer`等）
+
+---
+
+## [历史记录] - 2025-01-17
 
 ### 🚀 主单领用登记模块开发（进行中）
 

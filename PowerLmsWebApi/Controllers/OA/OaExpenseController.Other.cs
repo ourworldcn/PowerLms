@@ -5,6 +5,7 @@ using OW.Data;
 using PowerLms.Data.OA;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
+using PowerLmsServer.Helpers;
 using PowerLmsWebApi.Dto;
 using System;
 using System.Collections.Generic;
@@ -443,7 +444,7 @@ namespace PowerLmsWebApi.Controllers.OA
                     _Logger.LogDebug("应用工作流过滤条件: {conditions}",
                         string.Join(", ", wfConditions.Select(kv => $"{kv.Key}={kv.Value}")));
                     // 应用工作流筛选条件
-                    docIdsQuery = EfHelper.GenerateWhereAnd(docIdsQuery, wfConditions);
+                    docIdsQuery = QueryHelper.GenerateWhereAnd(docIdsQuery, wfConditions);
                 }
                 // 获取符合条件的文档ID
                 var docIds = docIdsQuery.Select(wf => wf.DocId.Value).Distinct();
@@ -459,7 +460,7 @@ namespace PowerLmsWebApi.Controllers.OA
                 // 应用申请单条件
                 if (reqConditions.Count > 0)
                 {
-                    dbSet = EfHelper.GenerateWhereAnd(dbSet, reqConditions);
+                    dbSet = QueryHelper.GenerateWhereAnd(dbSet, reqConditions);
                 }
                 // 应用分页和排序
                 var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();

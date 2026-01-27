@@ -9,6 +9,7 @@ using PowerLms.Data;
 using PowerLmsServer;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
+using PowerLmsServer.Helpers;
 using PowerLmsServer.Managers.Financial;
 using PowerLmsWebApi.Dto;
 using System.Linq;
@@ -80,7 +81,7 @@ namespace PowerLmsWebApi.Controllers
                         var reqConditions = conditional.Where(kv => kv.Key.StartsWith($"{nameof(DocFeeRequisition)}.", StringComparison.OrdinalIgnoreCase) || !kv.Key.Contains('.'))
                             .ToDictionary(kv => kv.Key.StartsWith($"{nameof(DocFeeRequisition)}.", StringComparison.OrdinalIgnoreCase) ?
                                 kv.Key[(nameof(DocFeeRequisition).Length + 1)..] : kv.Key, kv => kv.Value, StringComparer.OrdinalIgnoreCase);
-                        dbSet = EfHelper.GenerateWhereAnd(dbSet, reqConditions);
+                        dbSet = QueryHelper.GenerateWhereAnd(dbSet, reqConditions);
                     }
                 }
                 else
@@ -209,7 +210,7 @@ namespace PowerLmsWebApi.Controllers
                     _Logger.LogDebug("应用工作流过滤条件: {conditions}",
                         string.Join(", ", wfConditions.Select(kv => $"{kv.Key}={kv.Value}")));
                     // 应用工作流筛选条件
-                    docIdsQuery = EfHelper.GenerateWhereAnd(docIdsQuery, wfConditions);
+                    docIdsQuery = QueryHelper.GenerateWhereAnd(docIdsQuery, wfConditions);
                 }
                 // 获取符合条件的文档ID
                 var docIds = docIdsQuery.Select(wf => wf.DocId.Value).Distinct();
@@ -229,7 +230,7 @@ namespace PowerLmsWebApi.Controllers
                         var reqConditions = otherConditions.Where(kv => kv.Key.StartsWith($"{nameof(DocFeeRequisition)}.", StringComparison.OrdinalIgnoreCase) || !kv.Key.Contains('.'))
                             .ToDictionary(kv => kv.Key.StartsWith($"{nameof(DocFeeRequisition)}.", StringComparison.OrdinalIgnoreCase) ?
                                 kv.Key[(nameof(DocFeeRequisition).Length + 1)..] : kv.Key, kv => kv.Value, StringComparer.OrdinalIgnoreCase);
-                        dbSet = EfHelper.GenerateWhereAnd(dbSet, reqConditions);
+                        dbSet = QueryHelper.GenerateWhereAnd(dbSet, reqConditions);
                     }
                 }
                 else
@@ -888,7 +889,7 @@ namespace PowerLmsWebApi.Controllers
             var result = new GetAllDocFeeTemplateReturnDto();
             var dbSet = _DbContext.DocFeeTemplates;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+            coll = QueryHelper.GenerateWhereAnd(coll, conditional);
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
@@ -1046,7 +1047,7 @@ namespace PowerLmsWebApi.Controllers
             var result = new GetAllDocFeeTemplateItemReturnDto();
             var dbSet = _DbContext.DocFeeTemplateItems;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+            coll = QueryHelper.GenerateWhereAnd(coll, conditional);
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;

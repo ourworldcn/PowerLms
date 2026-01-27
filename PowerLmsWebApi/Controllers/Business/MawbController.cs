@@ -14,6 +14,7 @@ using Microsoft.EntityFrameworkCore;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
+using PowerLmsServer.Helpers;
 using PowerLmsWebApi.Dto;
 using System;
 using System.Collections.Generic;
@@ -206,7 +207,7 @@ namespace PowerLmsWebApi.Controllers.Business
                 // 应用筛选条件
                 if (conditional != null)
                 {
-                    query = EfHelper.GenerateWhereAnd(query, conditional);
+                    query = QueryHelper.GenerateWhereAnd(query, conditional);
                 }
 
                 // 应用排序
@@ -420,7 +421,7 @@ namespace PowerLmsWebApi.Controllers.Business
                 // 应用筛选条件
                 if (conditional != null)
                 {
-                    query = EfHelper.GenerateWhereAnd(query, conditional);
+                    query = QueryHelper.GenerateWhereAnd(query, conditional);
                 }
 
                 // 应用排序

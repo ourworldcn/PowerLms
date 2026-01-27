@@ -11,6 +11,7 @@ using OW.Forum;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
+using PowerLmsServer.Helpers;
 using PowerLmsWebApi.Dto;
 using System.Net;
 
@@ -105,7 +106,7 @@ namespace PowerLmsWebApi.Controllers.Forum
 
                 if (conditional != null && conditional.Count > 0)
                 {
-                    var filteredQuery = EfHelper.GenerateWhereAnd(query, conditional);
+                    var filteredQuery = QueryHelper.GenerateWhereAnd(query, conditional);
                     if (filteredQuery == null)
                     {
                         return BadRequest(OwHelper.GetLastErrorMessage());

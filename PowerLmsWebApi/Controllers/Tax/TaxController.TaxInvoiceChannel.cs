@@ -5,6 +5,7 @@ using OW.EntityFrameworkCore;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
+using PowerLmsServer.Helpers;
 using PowerLmsWebApi.Dto;
 using System.ComponentModel;
 using System.Net;
@@ -35,7 +36,7 @@ namespace PowerLmsWebApi.Controllers
             var dbSet = _DbContext.TaxInvoiceChannels;
             var coll = dbSet.AsNoTracking();
             // 使用通用查询条件处理方式
-            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+            coll = QueryHelper.GenerateWhereAnd(coll, conditional);
             // 应用排序
             coll = coll.OrderBy(model.OrderFieldName, model.IsDesc);
             // 获取分页结果

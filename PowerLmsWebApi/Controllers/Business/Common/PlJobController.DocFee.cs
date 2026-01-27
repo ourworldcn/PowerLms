@@ -5,6 +5,7 @@ using PowerLms.Data;
 using PowerLmsServer;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
+using PowerLmsServer.Helpers;
 using PowerLmsWebApi.Dto;
 using System.Linq.Expressions;
 using System.Net;
@@ -97,7 +98,7 @@ namespace PowerLmsWebApi.Controllers
                 null;
 
             // 应用其他条件
-            coll = EfHelper.GenerateWhereAnd(coll, normalizedConditional);
+            coll = QueryHelper.GenerateWhereAnd(coll, normalizedConditional);
 
             #region 验证权限
             var r = coll.AsEnumerable();
@@ -234,7 +235,7 @@ namespace PowerLmsWebApi.Controllers
                 if (jobConditional.Count > 0)
                 {
                     var jobQuery = _DbContext.PlJobs.AsQueryable();
-                    jobQuery = EfHelper.GenerateWhereAnd(jobQuery, jobConditional);
+                    jobQuery = QueryHelper.GenerateWhereAnd(jobQuery, jobConditional);
 
                     // 获取符合条件的工作ID
                     var filteredJobIds = jobQuery.Select(j => j.Id).ToList();
@@ -255,7 +256,7 @@ namespace PowerLmsWebApi.Controllers
                 if (billConditional.Count > 0)
                 {
                     var billQuery = _DbContext.DocBills.AsQueryable();
-                    billQuery = EfHelper.GenerateWhereAnd(billQuery, billConditional);
+                    billQuery = QueryHelper.GenerateWhereAnd(billQuery, billConditional);
 
                     // 获取符合条件的账单ID
                     var filteredBillIds = billQuery.Select(b => b.Id).ToList();
@@ -273,7 +274,7 @@ namespace PowerLmsWebApi.Controllers
                 }
 
                 // 应用DocFee自身的条件过滤
-                feeQuery = EfHelper.GenerateWhereAnd(feeQuery, docFeeConditional);
+                feeQuery = QueryHelper.GenerateWhereAnd(feeQuery, docFeeConditional);
 
                 // 应用排序
                 feeQuery = feeQuery.OrderBy(model.OrderFieldName, model.IsDesc);
@@ -434,11 +435,11 @@ namespace PowerLmsWebApi.Controllers
 
             var keyJob = insensitiveConditional.Where(c => c.Key.StartsWith(nameof(PlJob) + ".", StringComparison.OrdinalIgnoreCase));
             var dicJob = new Dictionary<string, string>(keyJob.Select(c => new KeyValuePair<string, string>(c.Key.Replace(nameof(PlJob) + ".", string.Empty, StringComparison.OrdinalIgnoreCase), c.Value)));
-            var collJob = EfHelper.GenerateWhereAnd(_DbContext.PlJobs.Where(c => c.OrgId == context.User.OrgId), dicJob);
+            var collJob = QueryHelper.GenerateWhereAnd(_DbContext.PlJobs.Where(c => c.OrgId == context.User.OrgId), dicJob);
 
             var keyBill = insensitiveConditional.Where(c => c.Key.StartsWith(nameof(DocBill) + ".", StringComparison.OrdinalIgnoreCase));
             var dicBill = new Dictionary<string, string>(keyBill.Select(c => new KeyValuePair<string, string>(c.Key.Replace(nameof(DocBill) + ".", string.Empty, StringComparison.OrdinalIgnoreCase), c.Value)));
-            var collBill = EfHelper.GenerateWhereAnd(_DbContext.DocBills, dicBill);
+            var collBill = QueryHelper.GenerateWhereAnd(_DbContext.DocBills, dicBill);
 
             var jobIds = collJob.Select(c => c.Id).ToArray();
             var keyDocFee = insensitiveConditional.Where(c => c.Key.StartsWith(nameof(DocFee) + ".", StringComparison.OrdinalIgnoreCase));
@@ -466,7 +467,7 @@ namespace PowerLmsWebApi.Controllers
             }
 
             // 应用其他 DocFee 条件
-            var collDocFee = EfHelper.GenerateWhereAnd(docFeeQuery, dicDocFee);
+            var collDocFee = QueryHelper.GenerateWhereAnd(docFeeQuery, dicDocFee);
 
             var collBase =
                 from fee in collDocFee

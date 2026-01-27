@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore.Internal;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
+using PowerLmsServer.Helpers;
 using PowerLmsWebApi.Dto;
 using System.ComponentModel.DataAnnotations;
 using System.Net;
@@ -192,7 +193,7 @@ namespace PowerLmsWebApi.Controllers
                 var query = dbSet.AsQueryable();
                 if (conditional != null)
                 {
-                    query = EfHelper.GenerateWhereAnd(query, conditional);
+                    query = QueryHelper.GenerateWhereAnd(query, conditional);
                 }
                 // 应用排序
                 query = query.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();

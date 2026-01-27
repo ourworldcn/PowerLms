@@ -20,6 +20,7 @@ using OW.Data;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
+using PowerLmsServer.Helpers;
 using PowerLmsWebApi.Dto;
 using System.Net;
 namespace PowerLmsWebApi.Controllers.Financial
@@ -99,7 +100,7 @@ namespace PowerLmsWebApi.Controllers.Financial
                     conditional.Remove("IsDelete");
                 }
                 // 应用其他查询条件
-                coll = EfHelper.GenerateWhereAnd(coll, conditional);
+                coll = QueryHelper.GenerateWhereAnd(coll, conditional);
                 // 应用排序和分页
                 coll = coll.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
                 var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);

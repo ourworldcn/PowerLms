@@ -5,6 +5,7 @@ using OW.EntityFrameworkCore;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
+using PowerLmsServer.Helpers;
 using PowerLmsWebApi.Dto;
 using System.ComponentModel;
 using System.Net;
@@ -56,7 +57,7 @@ namespace PowerLmsWebApi.Controllers
             var result = new GetAllOrgTaxChannelAccountReturnDto();
             var dbSet = _DbContext.OrgTaxChannelAccounts;    //.Where(c => c.OrgId == context.User.OrgId); // 仅查询当前用户机构的数据
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking(); // 排序并禁用实体追踪
-            coll = EfHelper.GenerateWhereAnd(coll, conditional); // 应用查询条件
+            coll = QueryHelper.GenerateWhereAnd(coll, conditional); // 应用查询条件
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count); // 获取分页数据
             _Mapper.Map(prb, result); // 映射到返回对象
             return result;
@@ -277,7 +278,7 @@ namespace PowerLmsWebApi.Controllers
                         string.Join(", ", reqConditions.Select(kv => $"{kv.Key}={kv.Value}")));
 
                     // 先获取符合条件的申请单
-                    var requisitions = EfHelper.GenerateWhereAnd(_DbContext.DocFeeRequisitions.AsNoTracking(), reqConditions);
+                    var requisitions = QueryHelper.GenerateWhereAnd(_DbContext.DocFeeRequisitions.AsNoTracking(), reqConditions);
 
                     // 通过申请单关联查询发票信息
                     dbSet = from invoice in _DbContext.TaxInvoiceInfos
@@ -291,7 +292,7 @@ namespace PowerLmsWebApi.Controllers
                 }
 
                 // 应用发票信息自身的过滤条件
-                var coll = EfHelper.GenerateWhereAnd(dbSet, invoiceConditions);
+                var coll = QueryHelper.GenerateWhereAnd(dbSet, invoiceConditions);
 
                 // 应用排序和分页
                 coll = coll.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
@@ -654,7 +655,7 @@ namespace PowerLmsWebApi.Controllers
             var dbSet = _DbContext.TaxInvoiceInfoItems;
 
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+            coll = QueryHelper.GenerateWhereAnd(coll, conditional);
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;

@@ -27,6 +27,7 @@ using NPOI.SS.UserModel;
 using OwExtensions.NPOI; // 添加OwExtensions.NPOI命名空间
 using PowerLms.Data;
 using PowerLmsServer.Managers;
+using PowerLmsServer.Helpers;
 using PowerLmsWebApi.Dto;
 using System.Net;
 namespace PowerLmsWebApi.Controllers.System
@@ -68,8 +69,8 @@ namespace PowerLmsWebApi.Controllers.System
                     coll = coll.Where(c => c.OrgId == context.User.OrgId);
                 }
             }
-            // 使用EfHelper.GenerateWhereAnd处理通用查询条件分析
-            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+            // 使用QueryHelper.GenerateWhereAnd处理通用查询条件分析
+            coll = QueryHelper.GenerateWhereAnd(coll, conditional);
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
@@ -289,8 +290,8 @@ namespace PowerLmsWebApi.Controllers.System
             var result = new GetAllDataDicReturnDto();
             var dbSet = _DbContext.DD_SimpleDataDics;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-            // 使用EfHelper.GenerateWhereAnd处理通用查询条件分析
-            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+            // 使用QueryHelper.GenerateWhereAnd处理通用查询条件分析
+            coll = QueryHelper.GenerateWhereAnd(coll, conditional);
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;

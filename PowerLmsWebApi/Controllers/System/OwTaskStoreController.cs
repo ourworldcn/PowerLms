@@ -6,6 +6,7 @@ using PowerLms.Data;
 using PowerLmsServer;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
+using PowerLmsServer.Helpers;
 using PowerLmsWebApi.Dto;
 using System;
 using System.Collections.Generic;
@@ -70,7 +71,7 @@ namespace PowerLmsWebApi.Controllers
 
                 // 使用EfHelper的动态条件生成功能一次性应用所有条件
                 var dbSet = _DbContext.Set<OwTaskStore>().AsQueryable();
-                dbSet = EfHelper.GenerateWhereAnd(dbSet, conditionDictionary);
+                dbSet = QueryHelper.GenerateWhereAnd(dbSet, conditionDictionary);
 
                 // 应用排序和分页
                 var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();

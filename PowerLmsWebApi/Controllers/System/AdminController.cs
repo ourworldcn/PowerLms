@@ -4,6 +4,7 @@ using NuGet.Common;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
+using PowerLmsServer.Helpers;
 using PowerLmsWebApi.Dto;
 using System.Collections.Specialized;
 using System.ComponentModel.DataAnnotations;
@@ -111,8 +112,8 @@ namespace PowerLmsWebApi.Controllers.System
                     coll = coll.Where(c => c.OrgId == context.User.OrgId);
                 }
             }
-            // 使用EfHelper.GenerateWhereAnd进行通用查询条件处理
-            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+            // 使用QueryHelper.GenerateWhereAnd进行通用查询条件处理
+            coll = QueryHelper.GenerateWhereAnd(coll, conditional);
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
@@ -249,8 +250,8 @@ namespace PowerLmsWebApi.Controllers.System
                     coll = coll.Where(c => c.OrgId == context.User.OrgId);
                 }
             }
-            // 使用EfHelper.GenerateWhereAnd进行通用查询条件处理
-            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+            // 使用QueryHelper.GenerateWhereAnd进行通用查询条件处理
+            coll = QueryHelper.GenerateWhereAnd(coll, conditional);
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
@@ -388,8 +389,8 @@ namespace PowerLmsWebApi.Controllers.System
                     coll = coll.Where(c => c.OrgId == context.User.OrgId);
                 }
             }
-            // 使用EfHelper.GenerateWhereAnd进行通用查询条件处理
-            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+            // 使用QueryHelper.GenerateWhereAnd进行通用查询条件处理
+            coll = QueryHelper.GenerateWhereAnd(coll, conditional);
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
@@ -537,7 +538,7 @@ namespace PowerLmsWebApi.Controllers.System
                     coll = coll.Where(c => c.OrgId == companyId.Value);
                 }
             }
-            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+            coll = QueryHelper.GenerateWhereAnd(coll, conditional);
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
@@ -700,8 +701,8 @@ namespace PowerLmsWebApi.Controllers.System
                     coll = coll.Where(c => c.OrgId == context.User.OrgId);
                 }
             }
-            // 使用EfHelper.GenerateWhereAnd进行通用查询条件处理
-            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+            // 使用QueryHelper.GenerateWhereAnd进行通用查询条件处理
+            coll = QueryHelper.GenerateWhereAnd(coll, conditional);
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
@@ -828,7 +829,7 @@ namespace PowerLmsWebApi.Controllers.System
             var result = new GetAllSystemLogReturnDto();
             var dbSet = _DbContext.OwSystemLogs;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+            coll = QueryHelper.GenerateWhereAnd(coll, conditional);
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;

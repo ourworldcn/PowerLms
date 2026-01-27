@@ -5,6 +5,7 @@ using OW.Data;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
+using PowerLmsServer.Helpers;
 using PowerLmsWebApi.Dto;
 using System.ComponentModel.DataAnnotations;
 using System.Net;
@@ -75,7 +76,7 @@ namespace PowerLmsWebApi.Controllers
             var dbSet = _DbContext.SubjectConfigurations;
             var query = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
 
-            // 使用EfHelper.GenerateWhereAnd简化条件过滤
+            // 使用QueryHelper.GenerateWhereAnd简化条件过滤
             if (conditional != null && conditional.Count > 0)
             {
                 // 创建不区分大小写的字典，支持实体名.属性名语法
@@ -86,7 +87,7 @@ namespace PowerLmsWebApi.Controllers
                 }
 
                 // 尝试使用实体名.属性名语法
-                var filteredQuery = EfHelper.GenerateWhereAnd(query, normalizedConditional);
+                var filteredQuery = QueryHelper.GenerateWhereAnd(query, normalizedConditional);
 
                 if (filteredQuery == null)
                 {

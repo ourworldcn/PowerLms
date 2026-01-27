@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
+using PowerLmsServer.Helpers;
 using PowerLmsWebApi.Dto;
 using System.ComponentModel.DataAnnotations;
 using System.Net;
@@ -138,7 +139,7 @@ namespace PowerLmsWebApi.Controllers
 
                     if (roleConditions.Count > 0)
                     {
-                        var filteredQuery = EfHelper.GenerateWhereAnd(query, roleConditions);
+                        var filteredQuery = QueryHelper.GenerateWhereAnd(query, roleConditions);
                         if (filteredQuery == null)
                         {
                             return BadRequest(OwHelper.GetLastErrorMessage());
@@ -149,7 +150,7 @@ namespace PowerLmsWebApi.Controllers
                     if (accountRoleConditions.Count > 0)
                     {
                         var accountRoleQuery = _DbContext.PlAccountRoles.AsQueryable();
-                        var filteredAccountRoleQuery = EfHelper.GenerateWhereAnd(accountRoleQuery, accountRoleConditions);
+                        var filteredAccountRoleQuery = QueryHelper.GenerateWhereAnd(accountRoleQuery, accountRoleConditions);
 
                         if (filteredAccountRoleQuery == null)
                         {

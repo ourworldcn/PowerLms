@@ -10,6 +10,7 @@ using OW.Data;
 using PowerLms.Data;
 using PowerLmsServer;
 using PowerLmsServer.EfData;
+using PowerLmsServer.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -57,16 +58,16 @@ namespace PowerLmsServer.Managers.Financial
             var requisitionConditions = conditional.Where(p => p.Key.StartsWith($"{nameof(DocFeeRequisition)}.", StringComparison.OrdinalIgnoreCase)).ToDictionary(p => p.Key[(nameof(DocFeeRequisition).Length + 1)..], p => p.Value, StringComparer.OrdinalIgnoreCase);
             var billConditions = conditional.Where(p => p.Key.StartsWith($"{nameof(DocBill)}.", StringComparison.OrdinalIgnoreCase)).ToDictionary(p => p.Key[(nameof(DocBill).Length + 1)..], p => p.Value, StringComparer.OrdinalIgnoreCase);
             // 第二步：生成各个子查询的过滤
-            var itemsQuery = EfHelper.GenerateWhereAnd(_DbContext.DocFeeRequisitionItems.AsQueryable(), itemConditions) ?? _DbContext.DocFeeRequisitionItems.AsQueryable();
-            var jobsQuery = EfHelper.GenerateWhereAnd(_DbContext.PlJobs.AsQueryable(), jobConditions) ?? _DbContext.PlJobs.AsQueryable();
-            var feesQuery = EfHelper.GenerateWhereAnd(_DbContext.DocFees.AsQueryable(), feeConditions) ?? _DbContext.DocFees.AsQueryable();
+            var itemsQuery = QueryHelper.GenerateWhereAnd(_DbContext.DocFeeRequisitionItems.AsQueryable(), itemConditions) ?? _DbContext.DocFeeRequisitionItems.AsQueryable();
+            var jobsQuery = QueryHelper.GenerateWhereAnd(_DbContext.PlJobs.AsQueryable(), jobConditions) ?? _DbContext.PlJobs.AsQueryable();
+            var feesQuery = QueryHelper.GenerateWhereAnd(_DbContext.DocFees.AsQueryable(), feeConditions) ?? _DbContext.DocFees.AsQueryable();
             // 在申请单子查询中直接应用OrgId过滤
-            var requisitionsQuery = EfHelper.GenerateWhereAnd(_DbContext.DocFeeRequisitions.AsQueryable(), requisitionConditions) ?? _DbContext.DocFeeRequisitions.AsQueryable();
+            var requisitionsQuery = QueryHelper.GenerateWhereAnd(_DbContext.DocFeeRequisitions.AsQueryable(), requisitionConditions) ?? _DbContext.DocFeeRequisitions.AsQueryable();
             if (orgId.HasValue)
             {
                 requisitionsQuery = requisitionsQuery.Where(req => req.OrgId == orgId.Value);
             }
-            var billsQuery = EfHelper.GenerateWhereAnd(_DbContext.DocBills.AsQueryable(), billConditions) ?? _DbContext.DocBills.AsQueryable();
+            var billsQuery = QueryHelper.GenerateWhereAnd(_DbContext.DocBills.AsQueryable(), billConditions) ?? _DbContext.DocBills.AsQueryable();
             // 第三步：把子查询连接起来
             // 🔧 Bug修复：将bill表的内连接改为左连接，避免无账单关联的费用数据丢失
             var joinedQuery = from item in itemsQuery

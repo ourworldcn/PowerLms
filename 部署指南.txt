@@ -5,6 +5,11 @@
 安装NetCore绑定
 git subtree add --prefix=Base https://github.com/ourworldcn/Bak.git main --squash
 git subtree push --prefix=Base https://github.com/ourworldcn/Bak.git main
+git rm -r Base
+git commit -m "Remove local Base to import bak/main"
+git add -A
+git commit -m "Save changes before subtree add (remove/modify Base etc.)"
+git subtree add --prefix=Base https://github.com/ourworldcn/Bak.git main
 
 Enable-Migrations –EnableAutomaticMigrations -Context PowerLmsUserDbContext
 Add-Migration 26010701 -Context PowerLmsUserDbContext

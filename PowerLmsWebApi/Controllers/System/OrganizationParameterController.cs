@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
+using PowerLmsServer.Helpers;
 using PowerLmsWebApi.Dto;
 using System.Net;
 namespace PowerLmsWebApi.Controllers.System
@@ -72,7 +73,7 @@ namespace PowerLmsWebApi.Controllers.System
             // 应用条件过滤
             if (conditional != null && conditional.Count > 0)
             {
-                query = EfHelper.GenerateWhereAnd(query, conditional);
+                query = QueryHelper.GenerateWhereAnd(query, conditional);
                 if (query == null)
                 {
                     return BadRequest(OwHelper.GetLastErrorMessage());

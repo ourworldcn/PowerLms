@@ -19,6 +19,7 @@ using PowerLms.Data;
 using PowerLmsServer;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
+using PowerLmsServer.Helpers;
 using PowerLmsWebApi.Dto;
 using System.Net;
 
@@ -48,7 +49,7 @@ namespace PowerLmsWebApi.Controllers
 
             var dbSet = _DbContext.PlEaDocs;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+            coll = QueryHelper.GenerateWhereAnd(coll, conditional);
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;

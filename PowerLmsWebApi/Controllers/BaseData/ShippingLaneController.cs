@@ -30,6 +30,7 @@ using NPOI; // 引入OwNpoiUnit.GetStringList
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
+using PowerLmsServer.Helpers;
 using PowerLmsWebApi.Dto;
 using System.Net;
 using System.Text.Json;
@@ -100,7 +101,7 @@ namespace PowerLmsWebApi.Controllers
             var result = new GetAllShippingLaneReturnDto();
             var dbSet = _DbContext.ShippingLanes.Where(c => c.OrgId == context.User.OrgId);
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+            coll = QueryHelper.GenerateWhereAnd(coll, conditional);
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;

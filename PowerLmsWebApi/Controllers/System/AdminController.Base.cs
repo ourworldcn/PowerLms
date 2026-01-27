@@ -5,6 +5,7 @@ using NuGet.Common;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
+using PowerLmsServer.Helpers;
 using PowerLmsWebApi.Dto;
 using System.Collections.Specialized;
 using System.ComponentModel.DataAnnotations;
@@ -60,8 +61,8 @@ namespace PowerLmsWebApi.Controllers.System
                     coll = coll.Where(c => c.OrgId == context.User.OrgId);
                 }
             }
-            // 使用EfHelper.GenerateWhereAnd进行通用查询条件处理
-            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+            // 使用QueryHelper.GenerateWhereAnd进行通用查询条件处理
+            coll = QueryHelper.GenerateWhereAnd(coll, conditional);
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
@@ -200,8 +201,8 @@ namespace PowerLmsWebApi.Controllers.System
                     coll = coll.Where(c => c.OrgId == context.User.OrgId);
                 }
             }
-            // 使用EfHelper.GenerateWhereAnd进行通用查询条件处理
-            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+            // 使用QueryHelper.GenerateWhereAnd进行通用查询条件处理
+            coll = QueryHelper.GenerateWhereAnd(coll, conditional);
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
@@ -366,8 +367,8 @@ namespace PowerLmsWebApi.Controllers.System
                         }
                     }
                 }
-                // 使用EfHelper.GenerateWhereAnd进行通用查询条件处理
-                var filteredQuery = EfHelper.GenerateWhereAnd(sourceColl, conditionalIgnoreCase);
+                // 使用QueryHelper.GenerateWhereAnd进行通用查询条件处理
+                var filteredQuery = QueryHelper.GenerateWhereAnd(sourceColl, conditionalIgnoreCase);
                 if (filteredQuery == null)
                 {
                     return BadRequest(OwHelper.GetLastErrorMessage() ?? "条件格式错误");
@@ -482,8 +483,8 @@ namespace PowerLmsWebApi.Controllers.System
                     coll = coll.Where(c => c.OrgId == context.User.OrgId);
                 }
             }
-            // 使用EfHelper.GenerateWhereAnd进行通用查询条件处理
-            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+            // 使用QueryHelper.GenerateWhereAnd进行通用查询条件处理
+            coll = QueryHelper.GenerateWhereAnd(coll, conditional);
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;

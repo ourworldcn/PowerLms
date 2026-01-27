@@ -6,6 +6,7 @@ using PowerLms.Data;
 using PowerLmsServer;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
+using PowerLmsServer.Helpers;
 using PowerLmsWebApi.Dto;
 using System.Net;
 
@@ -112,22 +113,22 @@ namespace PowerLmsWebApi.Controllers
                         StringComparer.OrdinalIgnoreCase
                     );
                 var coll = _DbContext.PlInvoicess.AsNoTracking();
-                coll = EfHelper.GenerateWhereAnd(coll, invoiceConditions);
+                coll = QueryHelper.GenerateWhereAnd(coll, invoiceConditions);
                 bool needJoin = reqConditions.Count > 0 || reqItemConditions.Count > 0 || 
                                 feeConditions.Count > 0 || jobConditions.Count > 0;
                 if (needJoin)
                 {
                     var collRequisitions = reqConditions.Count > 0
-                        ? EfHelper.GenerateWhereAnd(_DbContext.DocFeeRequisitions.AsNoTracking(), reqConditions)
+                        ? QueryHelper.GenerateWhereAnd(_DbContext.DocFeeRequisitions.AsNoTracking(), reqConditions)
                         : _DbContext.DocFeeRequisitions.AsNoTracking();
                     var collRequisitionItems = reqItemConditions.Count > 0
-                        ? EfHelper.GenerateWhereAnd(_DbContext.DocFeeRequisitionItems.AsNoTracking(), reqItemConditions)
+                        ? QueryHelper.GenerateWhereAnd(_DbContext.DocFeeRequisitionItems.AsNoTracking(), reqItemConditions)
                         : _DbContext.DocFeeRequisitionItems.AsNoTracking();
                     var collFees = feeConditions.Count > 0
-                        ? EfHelper.GenerateWhereAnd(_DbContext.DocFees.AsNoTracking(), feeConditions)
+                        ? QueryHelper.GenerateWhereAnd(_DbContext.DocFees.AsNoTracking(), feeConditions)
                         : _DbContext.DocFees.AsNoTracking();
                     var collJobs = jobConditions.Count > 0
-                        ? EfHelper.GenerateWhereAnd(_DbContext.PlJobs.AsNoTracking(), jobConditions)
+                        ? QueryHelper.GenerateWhereAnd(_DbContext.PlJobs.AsNoTracking(), jobConditions)
                         : _DbContext.PlJobs.AsNoTracking();
                     coll = (from invoice in coll
                             join item in _DbContext.PlInvoicesItems on invoice.Id equals item.ParentId
@@ -319,7 +320,7 @@ namespace PowerLmsWebApi.Controllers
                     pair => pair.Value,
                     StringComparer.OrdinalIgnoreCase
                 );
-            coll = EfHelper.GenerateWhereAnd(coll, itemConditions); // 应用本体条件过滤
+            coll = QueryHelper.GenerateWhereAnd(coll, itemConditions); // 应用本体条件过滤
             var hasInvoiceConditions = conditional.Any(c => c.Key.StartsWith($"{nameof(PlInvoices)}.", StringComparison.OrdinalIgnoreCase)); // 检查是否有结算单总单条件
             IQueryable<PlInvoices> collInvoices = null;
             if (hasInvoiceConditions)
@@ -331,7 +332,7 @@ namespace PowerLmsWebApi.Controllers
                         pair => pair.Value,
                         StringComparer.OrdinalIgnoreCase
                     );
-                collInvoices = EfHelper.GenerateWhereAnd(_DbContext.PlInvoicess.AsNoTracking(), invoiceConditions); // 应用结算单条件
+                collInvoices = QueryHelper.GenerateWhereAnd(_DbContext.PlInvoicess.AsNoTracking(), invoiceConditions); // 应用结算单条件
                 coll = from item in coll
                        join invoice in collInvoices on item.ParentId equals invoice.Id
                        select item; // 连接结算单总单
@@ -348,7 +349,7 @@ namespace PowerLmsWebApi.Controllers
                         pair => pair.Value,
                         StringComparer.OrdinalIgnoreCase
                     );
-                collRequisitionItems = EfHelper.GenerateWhereAnd(_DbContext.DocFeeRequisitionItems.AsNoTracking(), requisitionItemConditions); // 应用申请明细条件
+                collRequisitionItems = QueryHelper.GenerateWhereAnd(_DbContext.DocFeeRequisitionItems.AsNoTracking(), requisitionItemConditions); // 应用申请明细条件
                 coll = from item in coll
                        join reqItem in collRequisitionItems on item.RequisitionItemId equals reqItem.Id
                        select item; // 连接申请明细
@@ -365,7 +366,7 @@ namespace PowerLmsWebApi.Controllers
                         pair => pair.Value,
                         StringComparer.OrdinalIgnoreCase
                     );
-                collRequisitions = EfHelper.GenerateWhereAnd(_DbContext.DocFeeRequisitions.AsNoTracking(), requisitionConditions).Where(c => c.OrgId == context.User.OrgId); // 应用申请单条件+组织隔离
+                collRequisitions = QueryHelper.GenerateWhereAnd(_DbContext.DocFeeRequisitions.AsNoTracking(), requisitionConditions).Where(c => c.OrgId == context.User.OrgId); // 应用申请单条件+组织隔离
                 if (!requisitionItemJoined) // 申请明细未连接则需先连接
                 {
                     coll = from item in coll
@@ -394,7 +395,7 @@ namespace PowerLmsWebApi.Controllers
                         pair => pair.Value,
                         StringComparer.OrdinalIgnoreCase
                     );
-                collFees = EfHelper.GenerateWhereAnd(_DbContext.DocFees.AsNoTracking(), feeConditions); // 应用费用条件
+                collFees = QueryHelper.GenerateWhereAnd(_DbContext.DocFees.AsNoTracking(), feeConditions); // 应用费用条件
                 if (!requisitionItemJoined) // 申请明细未连接则需先连接申请明细和费用
                 {
                     coll = from item in coll
@@ -423,7 +424,7 @@ namespace PowerLmsWebApi.Controllers
                         pair => pair.Value,
                         StringComparer.OrdinalIgnoreCase
                     );
-                collJobs = EfHelper.GenerateWhereAnd(_DbContext.PlJobs.AsNoTracking(), jobConditions); // 应用工作号条件
+                collJobs = QueryHelper.GenerateWhereAnd(_DbContext.PlJobs.AsNoTracking(), jobConditions); // 应用工作号条件
                 if (!requisitionItemJoined) // 申请明细未连接则需先连接申请明细、费用、工作号
                 {
                     coll = from item in coll
@@ -533,7 +534,7 @@ namespace PowerLmsWebApi.Controllers
                     pair => pair.Value,
                     StringComparer.OrdinalIgnoreCase
                 );
-            coll = EfHelper.GenerateWhereAnd(coll, itemConditions); // 应用本体条件过滤
+            coll = QueryHelper.GenerateWhereAnd(coll, itemConditions); // 应用本体条件过滤
             var hasInvoiceConditions = conditional.Any(c => c.Key.StartsWith($"{nameof(PlInvoices)}.", StringComparison.OrdinalIgnoreCase)); // 检查是否有结算单总单条件
             if (hasInvoiceConditions)
             {
@@ -544,7 +545,7 @@ namespace PowerLmsWebApi.Controllers
                         pair => pair.Value,
                         StringComparer.OrdinalIgnoreCase
                     );
-                var collInvoices = EfHelper.GenerateWhereAnd(_DbContext.PlInvoicess.AsNoTracking(), invoiceConditions); // 应用结算单条件
+                var collInvoices = QueryHelper.GenerateWhereAnd(_DbContext.PlInvoicess.AsNoTracking(), invoiceConditions); // 应用结算单条件
                 coll = from item in coll
                        join invoice in collInvoices on item.ParentId equals invoice.Id
                        select item; // 连接结算单总单
@@ -560,7 +561,7 @@ namespace PowerLmsWebApi.Controllers
                         pair => pair.Value,
                         StringComparer.OrdinalIgnoreCase
                     );
-                var collRequisitionItems = EfHelper.GenerateWhereAnd(_DbContext.DocFeeRequisitionItems.AsNoTracking(), requisitionItemConditions); // 应用申请明细条件
+                var collRequisitionItems = QueryHelper.GenerateWhereAnd(_DbContext.DocFeeRequisitionItems.AsNoTracking(), requisitionItemConditions); // 应用申请明细条件
                 coll = from item in coll
                        join reqItem in collRequisitionItems on item.RequisitionItemId equals reqItem.Id
                        select item; // 连接申请明细
@@ -576,7 +577,7 @@ namespace PowerLmsWebApi.Controllers
                         pair => pair.Value,
                         StringComparer.OrdinalIgnoreCase
                     );
-                var collRequisitions = EfHelper.GenerateWhereAnd(_DbContext.DocFeeRequisitions.AsNoTracking(), requisitionConditions).Where(c => c.OrgId == context.User.OrgId); // 应用申请单条件+组织隔离
+                var collRequisitions = QueryHelper.GenerateWhereAnd(_DbContext.DocFeeRequisitions.AsNoTracking(), requisitionConditions).Where(c => c.OrgId == context.User.OrgId); // 应用申请单条件+组织隔离
                 if (!requisitionItemJoined) // 申请明细未连接则需先连接
                 {
                     coll = from item in coll
@@ -604,7 +605,7 @@ namespace PowerLmsWebApi.Controllers
                         pair => pair.Value,
                         StringComparer.OrdinalIgnoreCase
                     );
-                var collFees = EfHelper.GenerateWhereAnd(_DbContext.DocFees.AsNoTracking(), feeConditions); // 应用费用条件
+                var collFees = QueryHelper.GenerateWhereAnd(_DbContext.DocFees.AsNoTracking(), feeConditions); // 应用费用条件
                 if (!requisitionItemJoined) // 申请明细未连接则需先连接申请明细和费用
                 {
                     coll = from item in coll
@@ -632,7 +633,7 @@ namespace PowerLmsWebApi.Controllers
                         pair => pair.Value,
                         StringComparer.OrdinalIgnoreCase
                     );
-                var collJobs = EfHelper.GenerateWhereAnd(_DbContext.PlJobs.AsNoTracking(), jobConditions); // 应用工作号条件
+                var collJobs = QueryHelper.GenerateWhereAnd(_DbContext.PlJobs.AsNoTracking(), jobConditions); // 应用工作号条件
                 if (!requisitionItemJoined) // 申请明细未连接则需先连接申请明细、费用、工作号
                 {
                     coll = from item in coll

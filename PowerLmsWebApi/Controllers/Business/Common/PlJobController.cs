@@ -5,6 +5,7 @@ using PowerLms.Data;
 using PowerLmsServer;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
+using PowerLmsServer.Helpers;
 using PowerLmsWebApi.Dto;
 using System.Linq.Expressions;
 using System.Net;
@@ -72,7 +73,7 @@ namespace PowerLmsWebApi.Controllers
                 var dbSet = _DbContext.PlJobs.Where(c => c.OrgId == context.User.OrgId);
                 var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
 
-                coll = EfHelper.GenerateWhereAnd(coll, conditional);
+                coll = QueryHelper.GenerateWhereAnd(coll, conditional);
                 #region 业务表单关联过滤
                 if (conditional != null)
                 {
@@ -87,7 +88,7 @@ namespace PowerLmsWebApi.Controllers
                     if (eaDocConditions.Any())
                     {
                         var eaDocQuery = _DbContext.PlEaDocs.AsNoTracking();
-                        eaDocQuery = EfHelper.GenerateWhereAnd(eaDocQuery, eaDocConditions);
+                        eaDocQuery = QueryHelper.GenerateWhereAnd(eaDocQuery, eaDocConditions);
                         var eaDocJobIds = eaDocQuery.Select(doc => doc.JobId);
                         coll = coll.Where(job => eaDocJobIds.Contains(job.Id));
                     }
@@ -103,7 +104,7 @@ namespace PowerLmsWebApi.Controllers
                     if (iaDocConditions.Any())
                     {
                         var iaDocQuery = _DbContext.PlIaDocs.AsNoTracking();
-                        iaDocQuery = EfHelper.GenerateWhereAnd(iaDocQuery, iaDocConditions);
+                        iaDocQuery = QueryHelper.GenerateWhereAnd(iaDocQuery, iaDocConditions);
                         var iaDocJobIds = iaDocQuery.Select(doc => doc.JobId);
                         coll = coll.Where(job => iaDocJobIds.Contains(job.Id));
                     }
@@ -119,7 +120,7 @@ namespace PowerLmsWebApi.Controllers
                     if (esDocConditions.Any())
                     {
                         var esDocQuery = _DbContext.PlEsDocs.AsNoTracking();
-                        esDocQuery = EfHelper.GenerateWhereAnd(esDocQuery, esDocConditions);
+                        esDocQuery = QueryHelper.GenerateWhereAnd(esDocQuery, esDocConditions);
                         var esDocJobIds = esDocQuery.Select(doc => doc.JobId);
                         coll = coll.Where(job => esDocJobIds.Contains(job.Id));
                     }
@@ -136,7 +137,7 @@ namespace PowerLmsWebApi.Controllers
                     if (isDocConditions.Any())
                     {
                         var isDocQuery = _DbContext.PlIsDocs.AsNoTracking();
-                        isDocQuery = EfHelper.GenerateWhereAnd(isDocQuery, isDocConditions);
+                        isDocQuery = QueryHelper.GenerateWhereAnd(isDocQuery, isDocConditions);
                         var isDocJobIds = isDocQuery.Select(doc => doc.JobId);
                         coll = coll.Where(job => isDocJobIds.Contains(job.Id));
                     }

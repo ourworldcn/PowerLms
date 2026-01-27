@@ -13,6 +13,7 @@ using NPOI.SS.Formula.Functions;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
+using PowerLmsServer.Helpers;
 using PowerLmsWebApi.Dto;
 using SixLabors.ImageSharp.Processing;
 using System.ComponentModel.DataAnnotations;
@@ -138,7 +139,7 @@ namespace PowerLmsWebApi.Controllers
                         .ToDictionary(kvp => kvp.Key, kvp => kvp.Value, StringComparer.OrdinalIgnoreCase);
                     if (standardConditions.Count > 0) // 首先应用标准条件
                     {
-                        coll = EfHelper.GenerateWhereAnd(coll, standardConditions);
+                        coll = QueryHelper.GenerateWhereAnd(coll, standardConditions);
                     }
                     foreach (var item in specialConditions) // 手动应用特殊条件
                     {

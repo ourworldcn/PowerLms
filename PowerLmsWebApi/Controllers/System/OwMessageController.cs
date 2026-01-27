@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
+using PowerLmsServer.Helpers;
 using PowerLmsWebApi.Dto;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
@@ -63,7 +64,7 @@ namespace PowerLmsWebApi.Controllers
                 var dbSet = _DbContext.Set<OwMessage>();
                 var coll = dbSet.Where(m => m.UserId == context.User.Id).AsNoTracking();
                 // 应用查询条件
-                coll = EfHelper.GenerateWhereAnd(coll, conditional);
+                coll = QueryHelper.GenerateWhereAnd(coll, conditional);
                 // 应用排序
                 coll = coll.OrderBy(model.OrderFieldName, model.IsDesc);
                 // 获取分页结果

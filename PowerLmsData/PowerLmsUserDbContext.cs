@@ -403,10 +403,40 @@ namespace PowerLmsServer.EfData
         /// </summary>
         public DbSet<PlEaMawbOutbound> PlEaMawbOutbounds { get; set; }
 
+        #region 空运出口主单及其子表
+
+        /// <summary>
+        /// 空运出口主单表
+        /// </summary>
+        public DbSet<EaMawb> EaMawbs { get; set; }
+
+        /// <summary>
+        /// 空运出口主单其他费用表
+        /// </summary>
+        public DbSet<EaMawbOtherCharge> EaMawbOtherCharges { get; set; }
+
+        /// <summary>
+        /// 空运出口主单委托明细表
+        /// </summary>
+        public DbSet<EaCubage> EaCubages { get; set; }
+
+        /// <summary>
+        /// 空运出口主单品名明细表
+        /// </summary>
+        public DbSet<EaGoodsDetail> EaGoodsDetails { get; set; }
+
+        /// <summary>
+        /// 空运出口主单集装器表
+        /// </summary>
+        public DbSet<EaContainer> EaContainers { get; set; }
+
+        #endregion 空运出口主单及其子表
+
         /// <summary>
         /// 货场出重子表（空运出口）。
         /// </summary>
         public DbSet<HuochangChuchong> HuochangChuchongs { get; set; }
+
 
         #endregion 空运出口
 

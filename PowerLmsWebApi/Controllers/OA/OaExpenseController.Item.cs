@@ -5,6 +5,7 @@ using OW.Data;
 using PowerLms.Data.OA;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
+using PowerLmsServer.Helpers;
 using PowerLmsWebApi.Dto;
 using System;
 using System.Collections.Generic;
@@ -43,7 +44,7 @@ namespace PowerLmsWebApi.Controllers.OA
                     new Dictionary<string, string>(conditional, StringComparer.OrdinalIgnoreCase) :
                     null;
                 // 应用通用条件查询
-                var coll = EfHelper.GenerateWhereAnd(dbSet, normalizedConditional);
+                var coll = QueryHelper.GenerateWhereAnd(dbSet, normalizedConditional);
                 // 权限过滤:使用GetOrgIdsByCompanyId获取同公司下所有机构ID(包括下属机构)
                 if (!context.User.IsSuperAdmin)
                 {

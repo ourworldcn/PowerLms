@@ -65,8 +65,7 @@ PowerLms
 ├── PowerLmsWebApi/                # API层：RESTful + Swagger + JWT
 │   └── Controllers/
 │       ├── Business/              # 业务控制器
-│       │   ├── AirFreight/        # 空运业务
-│       │   ├── Common/            # 通用业务
+│       │   ├── MawbController.cs  # 主单领用登记（含DTO）
 │       │   └── ...
 │       ├── Customer/              # 客户资料
 │       ├── Financial/             # 财务管理
@@ -74,6 +73,8 @@ PowerLms
 ├── PowerLmsServer/                # 业务层：Managers + 基础设施集成
 │   └── Managers/
 │       ├── Business/              # 业务Manager
+│       │   ├── MawbManager.cs     # 主单领用登记业务逻辑
+│       │   └── ...
 │       ├── Financial/             # 财务Manager
 │       ├── Customer/              # 客户Manager
 │       └── ...
@@ -84,8 +85,7 @@ PowerLms
 │   │   ├── DocBill.cs             # 账单表（通用）
 │   │   ├── 空运出口/              # 空运出口专属实体
 │   │   │   ├── PlEaDoc.cs         # 空运出口单
-│   │   │   ├── PlEaMawbInbound.cs # 主单领入登记
-│   │   │   └── PlEaMawbOutbound.cs# 主单领出登记
+│   │   │   └── PlEaMawb.cs        # 主单领用登记（含领入PlEaMawbInbound、领出PlEaMawbOutbound两个实体类）
 │   │   ├── 空运进口/              # 空运进口专属实体
 │   │   │   └── PlIaDoc.cs         # 空运进口单
 │   │   ├── 海运出口/              # 海运出口专属实体
@@ -94,33 +94,101 @@ PowerLms
 │   │   └── 海运进口/              # 海运进口专属实体
 │   │       └── PlIsDoc.cs         # 海运进口单
 │   ├── 客户资料/                  # 客户相关实体
+│   │   ├── PlCustomer.cs          # 客户主表
+│   │   ├── PlTaxInfo.cs           # 客户开票信息
+│   │   └── ...
 │   ├── 财务/                      # 财务相关实体
+│   │   ├── ActualFinancialTransaction.cs # 分次收付记录
+│   │   ├── PlInvoices.cs          # 发票表
+│   │   ├── DocFeeRequisition.cs   # 费用申请单
+│   │   ├── DocFeeTemplate.cs      # 费用模板
+│   │   ├── KingdeeVoucher.cs      # 金蝶凭证
+│   │   ├── SubjectConfiguration.cs# 科目配置
+│   │   └── ...
 │   ├── 权限/                      # 权限相关实体
+│   │   ├── PlRole.cs              # 角色表
+│   │   ├── PlPermission.cs        # 权限表
+│   │   └── ...
 │   ├── 机构/                      # 组织机构实体
+│   │   ├── PlMerchant.cs          # 商户表
+│   │   ├── PlOrganization.cs      # 机构表
+│   │   ├── PlOrganizationParameter.cs # 机构参数
+│   │   └── ...
+│   ├── 基础数据/                  # 基础数据字典
+│   │   ├── PlPort.cs              # 港口字典
+│   │   ├── PlCountry.cs           # 国家字典
+│   │   ├── PlCurrency.cs          # 币种字典
+│   │   ├── PlExchangeRate.cs      # 汇率表
+│   │   ├── FeesType.cs            # 费用类型
+│   │   ├── DataDicCatalog.cs      # 数据字典目录
+│   │   ├── SimpleDataDic.cs       # 简单数据字典
+│   │   ├── BusinessTypeDataDic.cs # 业务类型字典
+│   │   └── ...
+│   ├── 流程/                      # 工作流实体
+│   │   ├── OwWfTemplate.cs        # 工作流模板
+│   │   ├── OwWorkflow.cs          # 工作流实例
+│   │   └── ...
+│   ├── OA/                        # OA相关实体
+│   │   ├── OaExpenseRequisition.cs# OA费用申请
+│   │   ├── VoucherSequence.cs     # 凭证序号
+│   │   └── ...
+│   ├── 账号/                      # 账号相关
+│   │   └── Account.cs             # 账号表
+│   ├── 应用日志/                  # 应用日志
+│   │   ├── OwAppLogStore.cs       # 日志存储
+│   │   └── OwAppLogView.cs        # 日志视图
+│   ├── 航线管理/                  # 航线管理
+│   │   └── ShippingLane.cs        # 航线表
+│   ├── 消息系统/                  # 消息系统
+│   │   └── OwMessage.cs           # 消息表
+│   ├── 基础支持/                  # 基础支持实体
+│   │   ├── BusinessBase.cs        # 业务基类
+│   │   ├── DataDicBase.cs         # 数据字典基类
+│   │   └── PlAddress.cs           # 地址表
+│   ├── 系统资源/                  # 系统资源
+│   │   └── SystemResource.cs      # 系统资源表
+│   ├── 多语言/                    # 多语言支持
+│   │   └── Multilingual.cs        # 多语言表
+│   ├── PowerLmsUserDbContext.cs   # EF Core DbContext
 │   └── Migrations/                # 数据库迁移（150+文件）
-└── Bak/                           # 基础设施：外部项目
-    ├── OwDbBase/                  # 数据访问基类、Excel工具
+└── Base/                          # 基础设施：外部通用项目
+    ├── OwDbBase/                  # 数据访问基类、Excel工具（OwDataUnit）
     ├── OwBaseCore/                # 核心扩展、缓存管理
-    └── OwExtensions/              # NPOI扩展方法
+    └── OwExtensions/              # NPOI扩展方法（OwNpoiUnit）
 ```
 
 ## 🔩 基础设施能力
-- 文件管理：`OwFileService`（存储、权限、元数据）
-- 工作流引擎：`OwWfManager`（多级审批、状态流转）
-- 权限系统：`AuthorizationManager`（细粒度权限 + 多租户隔离）
-- 组织管理：`OrgManager`（商户/公司/机构树 + 缓存）
-- 数据字典：`DataDicManager`（参数与枚举配置）
-- Excel处理：`OwDataUnit` + `OwNpoiUnit`（高性能导入/导出）
-- 费用分次收付：`ActualFinancialTransaction`
+- **文件管理**：`OwFileService`（存储、权限、元数据）
+- **工作流引擎**：`OwWfManager`（多级审批、状态流转）
+- **权限系统**：`AuthorizationManager`（细粒度权限 + 多租户隔离）
+- **组织管理**：`OrgManager`（商户/公司/机构树 + 缓存）
+- **数据字典**：`DataDicManager`（参数与枚举配置）
+- **Excel处理**：
+  - `OwDataUnit`（位于OwDbBase） - EF Core + NPOI批量导入导出
+  - `OwNpoiUnit`（位于OwExtensions） - 高性能Excel数据处理
+- **费用分次收付**：`ActualFinancialTransaction`（支持分次结算）
+- **主单管理**：`MawbManager`（主单号校验、批量生成、领入领出登记）
 
 > 规范：禁止重复造轮子，优先复用以上基础设施。缓存体系统一使用 `OwCacheExtensions`。
 
 ## 📦 业务能力（模块总览）
-- 客户资料：客户、联系人、开票信息、装货地址、海关检疫
-- 业务单据：海运/空运/进口/出口/工作号与费用核算
-- 财务管理：结算单、发票、凭证、AR/AP、金蝶导出
-- 办公与流程：OA日常费用、流程模板与审批
-- 权限与组织：角色权限、商户/公司/机构多层级
+- **客户资料**：客户、联系人、开票信息、装货地址、海关检疫
+- **业务单据**：
+  - 海运/空运/进口/出口业务单据
+  - 工作号（PlJob）统一管理
+  - 费用核算与账单生成
+  - 主单领用登记（空运出口）
+- **财务管理**：
+  - 结算单、发票、凭证
+  - AR/AP分次收付
+  - 金蝶导出与科目配置
+- **办公与流程**：
+  - OA日常费用申请
+  - 工作流模板与多级审批
+- **权限与组织**：
+  - 角色权限精细控制
+  - 商户/公司/机构多层级
+  - 多租户数据隔离
 
 ## 🧰 技术栈
 - 运行时：.NET 6, ASP.NET Core, EF Core 6, SQL Server 2016+
@@ -170,11 +238,25 @@ https://localhost:5001/swagger
 > 说明：README 仅保留全局与概要信息。具体问题、任务与阶段计划请见 `CHANGELOG.md` 与 `TODO.md`。
 
 ## 🤝 贡献与协作
-- 风格统一：遵循项目代码风格与命名规范
-- 分层约束：业务逻辑写在 Manager；控制器仅做校验与异常处理
-- 数据约束：不在实体使用 `record`；不采用自动迁移
-- 提交规范：功能完成→自测通过→更新 `CHANGELOG.md`（必要时）
+- **风格统一**：遵循项目代码风格与命名规范（详见 `.github/copilot-instructions.md`）
+- **实体命名约束**：
+  - 禁止Type后缀（如 ~~`CustomerType`~~，应为 `CustomerCategory`）
+  - 禁止Class后缀（如 ~~`ProductClass`~~，应为 `ProductCategory`）
+  - 语义化命名，直接表达业务概念
+- **分层约束**：
+  - 业务逻辑写在 Manager
+  - 控制器仅做校验与异常处理
+- **数据约束**：
+  - 不在实体使用 `record` 类型
+  - 不采用自动迁移（手动执行Add-Migration和Update-Database）
+  - DateTime字段统一使用 `[Precision(3)]` 特性（毫秒级精度）
+- **提交规范**：
+  - 功能完成→自测通过→更新 `CHANGELOG.md`（必要时）
+  - 重大变更需同步更新文档
 
 ---
 
-PowerLms —— 专业的货运物流业务管理系统。专注架构一致性、基础设施复用与企业级质量。
+**PowerLms —— 专业的货运物流业务管理系统**  
+专注架构一致性、基础设施复用与企业级质量。
+
+**最后更新**：2026-01-24

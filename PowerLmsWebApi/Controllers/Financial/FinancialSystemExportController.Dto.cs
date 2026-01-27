@@ -11,7 +11,7 @@ namespace PowerLmsWebApi.Controllers.Financial
     {
         /// <summary>
         /// 导出条件字典，键为字段名，值为条件值。
-        /// 用于筛选要导出的发票数据，支持EfHelper.GenerateWhereAnd的所有查询操作。
+        /// 用于筛选要导出的发票数据，支持QueryHelper.GenerateWhereAnd的所有查询操作。
         /// </summary>
         public Dictionary<string, string> ExportConditions { get; set; } = new();
         /// <summary>
@@ -51,7 +51,7 @@ namespace PowerLmsWebApi.Controllers.Financial
     {
         /// <summary>
         /// 导出条件字典，键为字段名，值为条件值。
-        /// 用于筛选要导出的OA申请单数据，支持EfHelper.GenerateWhereAnd的所有查询操作。
+        /// 用于筛选要导出的OA申请单数据，支持QueryHelper.GenerateWhereAnd的所有查询操作。
         /// 支持的过滤条件包括：
         /// - StartDate: 统计开始日期(yyyy-MM-dd格式)，默认为当月月初
         /// - EndDate: 统计结束日期(yyyy-MM-dd格式)，默认为操作当日
@@ -104,7 +104,7 @@ namespace PowerLmsWebApi.Controllers.Financial
     {
         /// <summary>
         /// 导出条件字典，键为字段名，值为条件值。
-        /// 用于筛选要导出的费用数据，支持EfHelper.GenerateWhereAnd的所有查询操作。
+        /// 用于筛选要导出的费用数据，支持QueryHelper.GenerateWhereAnd的所有查询操作。
         /// 支持的过滤条件包括：
         /// - StartDate: 统计开始日期(yyyy-MM-dd格式)，默认为当月月初
         /// - EndDate: 统计结束日期(yyyy-MM-dd格式)，默认为操作当日
@@ -157,7 +157,7 @@ namespace PowerLmsWebApi.Controllers.Financial
     {
         /// <summary>
         /// 导出条件字典，键为字段名，值为条件值。
-        /// 用于筛选要导出的费用数据，支持EfHelper.GenerateWhereAnd的所有查询操作。
+        /// 用于筛选要导出的费用数据，支持QueryHelper.GenerateWhereAnd的所有查询操作。
         /// 支持的过滤条件包括：
         /// - StartDate: 统计开始日期(yyyy-MM-dd格式)，默认为当月月初
         /// - EndDate: 统计结束日期(yyyy-MM-dd格式)，默认为操作当日
@@ -210,7 +210,7 @@ namespace PowerLmsWebApi.Controllers.Financial
     {
         /// <summary>
         /// 导出条件字典，键为字段名，值为条件值。
-        /// 用于筛选要导出的OA日常费用付款明细数据，支持EfHelper.GenerateWhereAnd的所有查询操作。
+        /// 用于筛选要导出的OA日常费用付款明细数据，支持QueryHelper.GenerateWhereAnd的所有查询操作。
         /// 支持的过滤条件包括：
         /// - StartDate: 统计开始日期(yyyy-MM-dd格式)，默认为当月月初
         /// - EndDate: 统计结束日期(yyyy-MM-dd格式)，默认为操作当日
@@ -300,7 +300,7 @@ namespace PowerLmsWebApi.Controllers.Financial
         public DateTime ExportedDateTimeEnd { get; set; }
         /// <summary>
         /// 额外的过滤条件（可选）
-        /// 用于进一步缩小取消范围，支持EfHelper.GenerateWhereAnd的查询语法
+        /// 用于进一步缩小取消范围，支持QueryHelper.GenerateWhereAnd的查询语法
         /// 常见用法：
         /// - 限定导出用户: { "ExportedUserId": "guid" }
         /// - 限定机构: { "OrgId": "guid" }

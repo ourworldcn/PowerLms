@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
+using PowerLmsServer.Helpers;
 using PowerLmsServer.Services;
 using PowerLmsWebApi.Dto;
 using System.Net;
@@ -63,7 +64,7 @@ namespace PowerLmsWebApi.Controllers
             // 使用统一的组织权限控制方法
             var allowedOrgIds = GetOrgIds(context.User, _OrgManager);
             coll = coll.Where(c => allowedOrgIds.Contains(c.OrgId));
-            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+            coll = QueryHelper.GenerateWhereAnd(coll, conditional);
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;

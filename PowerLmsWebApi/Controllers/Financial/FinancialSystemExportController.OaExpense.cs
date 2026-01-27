@@ -22,6 +22,7 @@ using PowerLms.Data.Finance;
 using PowerLms.Data.OA;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
+using PowerLmsServer.Helpers;
 using PowerLmsWebApi.Dto;
 using System.Text.Json;
 using OW.Data;
@@ -88,7 +89,7 @@ namespace PowerLmsWebApi.Controllers.Financial
                 // 应用查询条件
                 if (conditions.Any())
                 {
-                    requisitionsQuery = EfHelper.GenerateWhereAnd(requisitionsQuery, conditions);
+                    requisitionsQuery = QueryHelper.GenerateWhereAnd(requisitionsQuery, conditions);
                 }
                 // 应用组织权限过滤
                 requisitionsQuery = exportManager.ApplyOrganizationFilter(requisitionsQuery, context.User);
@@ -220,7 +221,7 @@ namespace PowerLmsWebApi.Controllers.Financial
                 var requisitionsQuery = exportManager.FilterUnexported(dbContext.OaExpenseRequisitions.AsQueryable());
                 if (conditions.Any())
                 {
-                    requisitionsQuery = EfHelper.GenerateWhereAnd(requisitionsQuery, conditions);
+                    requisitionsQuery = QueryHelper.GenerateWhereAnd(requisitionsQuery, conditions);
                 }
                 // 应用组织权限过滤（静态版本）
                 requisitionsQuery = ApplyOrganizationFilterForOaExpenseStatic(requisitionsQuery, taskUser, dbContext, serviceProvider);

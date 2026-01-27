@@ -5,6 +5,7 @@ using PowerLms.Data.Finance;
 using PowerLms.Data.OA;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
+using PowerLmsServer.Helpers;
 using PowerLmsWebApi.Dto;
 using System.Text.Json;
 using System.Runtime.ExceptionServices;
@@ -295,7 +296,7 @@ namespace PowerLmsWebApi.Controllers.Financial
                 var invoicesQuery = exportManager.FilterUnexported(_DbContext.TaxInvoiceInfos.AsQueryable());
                 if (model.ExportConditions != null && model.ExportConditions.Any())
                 {
-                    invoicesQuery = EfHelper.GenerateWhereAnd(invoicesQuery, model.ExportConditions);
+                    invoicesQuery = QueryHelper.GenerateWhereAnd(invoicesQuery, model.ExportConditions);
                 }
                 invoicesQuery = ApplyOrganizationFilter(invoicesQuery, context.User);
                 var invoiceCount = invoicesQuery.Count();
@@ -404,8 +405,8 @@ namespace PowerLmsWebApi.Controllers.Financial
                 var exportManager = serviceProvider.GetRequiredService<FinancialSystemExportManager>();
                 invoicesQuery = exportManager.FilterUnexported(invoicesQuery);
                 if (conditions != null && conditions.Any())
-                    invoicesQuery = EfHelper.GenerateWhereAnd(invoicesQuery, conditions) ??
-                        throw new InvalidOperationException("EfHelper.GenerateWhereAnd 返回 null");
+                    invoicesQuery = QueryHelper.GenerateWhereAnd(invoicesQuery, conditions) ??
+                        throw new InvalidOperationException("QueryHelper.GenerateWhereAnd 返回 null");
                 currentStep = "应用权限过滤";
                 var taskUser = dbContext.Accounts?.Find(userId) ??
                     throw new InvalidOperationException($"未找到用户 {userId}，无法应用权限过滤");
@@ -1086,7 +1087,7 @@ namespace PowerLmsWebApi.Controllers.Financial
             // 3. 应用额外的过滤条件（如果有）
             if (model.AdditionalConditions != null && model.AdditionalConditions.Any())
             {
-                query = EfHelper.GenerateWhereAnd(query, model.AdditionalConditions);
+                query = QueryHelper.GenerateWhereAnd(query, model.AdditionalConditions);
                 if (query == null)
                 {
                     errorMessage = "额外过滤条件格式错误";

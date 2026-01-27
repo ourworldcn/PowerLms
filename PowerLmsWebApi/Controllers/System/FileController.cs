@@ -23,6 +23,7 @@ using PowerLms.Data;
 using PowerLmsServer;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
+using PowerLmsServer.Helpers;
 using PowerLmsWebApi.Dto;
 using SixLabors.ImageSharp.Metadata;
 using System.ComponentModel.DataAnnotations;
@@ -85,7 +86,7 @@ namespace PowerLmsWebApi.Controllers.System
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
             if (conditional != null && conditional.Any())
             {
-                coll = EfHelper.GenerateWhereAnd(coll, conditional);
+                coll = QueryHelper.GenerateWhereAnd(coll, conditional);
             }
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
@@ -381,7 +382,7 @@ namespace PowerLmsWebApi.Controllers.System
             var result = new GetAllFileInfoReturnDto();
             var dbSet = _DbContext.PlFileInfos;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+            coll = QueryHelper.GenerateWhereAnd(coll, conditional);
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;

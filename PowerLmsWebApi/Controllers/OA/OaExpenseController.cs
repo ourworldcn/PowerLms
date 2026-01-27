@@ -5,6 +5,7 @@ using PowerLms.Data;
 using PowerLms.Data.OA;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
+using PowerLmsServer.Helpers;
 using PowerLmsServer.Managers.OA;
 using PowerLmsWebApi.Dto;
 using AutoMapper;
@@ -86,7 +87,7 @@ namespace PowerLmsWebApi.Controllers.OA
                     new Dictionary<string, string>(conditional, StringComparer.OrdinalIgnoreCase) :
                     null;
                 // 应用通用条件查询
-                var coll = EfHelper.GenerateWhereAnd(dbSet, normalizedConditional);
+                var coll = QueryHelper.GenerateWhereAnd(dbSet, normalizedConditional);
                 // 移除了专用的搜索文本处理，改为完全依赖 conditional 参数
                 // 文本搜索示例：
                 // - conditional["RelatedCustomer"] = "*客户名称*"  

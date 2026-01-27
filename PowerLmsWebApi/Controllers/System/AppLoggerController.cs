@@ -7,6 +7,7 @@ using NPOI.SS.Formula.Functions;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
+using PowerLmsServer.Helpers;
 using PowerLmsWebApi.Controllers;
 using PowerLmsWebApi.Dto;
 using System.Data.SqlTypes;
@@ -66,7 +67,7 @@ namespace GY02.Controllers
             }
             var dic = new Dictionary<string, string>(conditional, StringComparer.OrdinalIgnoreCase);
             dic.Remove(nameof(OwAppLogView.Message), out var message);
-            coll = EfHelper.GenerateWhereAnd(coll, dic);
+            coll = QueryHelper.GenerateWhereAnd(coll, dic);
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;

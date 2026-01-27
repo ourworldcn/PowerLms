@@ -6,6 +6,7 @@ using NPOI.SS.Formula.Functions;
 using PowerLms.Data;
 using PowerLmsServer.EfData;
 using PowerLmsServer.Managers;
+using PowerLmsServer.Helpers;
 using PowerLmsWebApi.Dto;
 using System.ComponentModel.DataAnnotations;
 using System.Data;
@@ -64,7 +65,7 @@ namespace PowerLmsWebApi.Controllers
             var result = new GetAllPlRoleReturnDto();
             var dbSet = _DbContext.PlRoles;
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-            coll = EfHelper.GenerateWhereAnd(coll, conditional);
+            coll = QueryHelper.GenerateWhereAnd(coll, conditional);
             var prb = _EntityManager.GetAll(coll, model.StartIndex, model.Count);
             _Mapper.Map(prb, result);
             return result;
@@ -361,8 +362,8 @@ namespace PowerLmsWebApi.Controllers
             var dbSet = _DbContext.PlAccountRoles;
             // 首先应用排序
             var coll = dbSet.OrderBy(model.OrderFieldName, model.IsDesc).AsNoTracking();
-            // 使用EfHelper.GenerateWhereAnd方法直接应用条件,忽略条件字典中键的大小写
-            coll = EfHelper.GenerateWhereAnd(coll, new Dictionary<string, string>(conditional, StringComparer.OrdinalIgnoreCase));
+            // 使用QueryHelper.GenerateWhereAnd方法直接应用条件,忽略条件字典中键的大小写
+            coll = QueryHelper.GenerateWhereAnd(coll, new Dictionary<string, string>(conditional, StringComparer.OrdinalIgnoreCase));
             if (coll == null)   // 如果GenerateWhereAnd返回null，表示发生了条件转换错误
             {
                 result.HasError = true;
