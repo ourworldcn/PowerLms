@@ -22,6 +22,7 @@ using AutoMapper.Internal.Mappers;
 using PowerLmsServer;
 using Microsoft.EntityFrameworkCore.Internal;
 using System.ComponentModel;
+using System.Globalization;
 namespace PowerLmsWebApi.Controllers.System
 {
     /// <summary>
@@ -567,5 +568,68 @@ namespace PowerLmsWebApi.Controllers.System
             return result;
         }
         #endregion 汇率相关
+        #region Windows区域文化信息相关
+        /// <summary>
+        /// 获取Windows支持的所有国家/地区的两字代码和三字代码。
+        /// 基于.NET框架的CultureInfo和RegionInfo获取所有支持的区域信息。
+        /// </summary>
+        /// <param name="token">登录令牌</param>
+        /// <returns>包含两字代码和三字代码的国家/地区信息列表</returns>
+        /// <response code="200">未发生系统级错误。但可能出现应用错误，具体参见 HasError 和 ErrorCode 。</response>  
+        /// <response code="401">无效令牌。</response>  
+        [HttpGet]
+        public ActionResult<GetWindowsRegionCodesReturnDto> GetWindowsRegionCodes(Guid token)
+        {
+            if (_AccountManager.GetOrLoadContextByToken(token, _ServiceProvider) is not OwContext context)
+                return Unauthorized();
+            var result = new GetWindowsRegionCodesReturnDto();
+            try
+            {
+                // 获取所有可用的区域文化信息
+                var cultures = CultureInfo.GetCultures(CultureTypes.SpecificCultures);
+                // 使用HashSet去重（按两字代码）
+                var regionDict = new Dictionary<string, WindowsRegionCodeItem>(StringComparer.OrdinalIgnoreCase);
+                foreach (var culture in cultures)
+                {
+                    try
+                    {
+                        // 创建RegionInfo对象获取国家/地区信息
+                        var region = new RegionInfo(culture.Name);
+                        // 使用两字代码作为唯一键，避免重复
+                        if (!regionDict.ContainsKey(region.TwoLetterISORegionName))
+                        {
+                            regionDict[region.TwoLetterISORegionName] = new WindowsRegionCodeItem
+                            {
+                                TwoLetterCode = region.TwoLetterISORegionName,
+                                ThreeLetterCode = region.ThreeLetterISORegionName,
+                                EnglishName = region.EnglishName,
+                                NativeName = region.NativeName,
+                                DisplayName = region.DisplayName,
+                                CultureName = culture.Name
+                            };
+                        }
+                    }
+                    catch (ArgumentException)
+                    {
+                        // 某些文化信息可能无法创建RegionInfo，跳过
+                        continue;
+                    }
+                }
+                // 按两字代码排序后返回
+                result.Result = regionDict.Values
+                    .OrderBy(r => r.TwoLetterCode)
+                    .ToList();
+                _Logger.LogInformation("成功获取{Count}个Windows支持的国家/地区代码", result.Result.Count);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _Logger.LogError(ex, "获取Windows区域代码时发生错误");
+                result.HasError = true;
+                result.DebugMessage = $"获取Windows区域代码时发生错误: {ex.Message}";
+                return result;
+            }
+        }
+        #endregion Windows区域文化信息相关
     }
 }

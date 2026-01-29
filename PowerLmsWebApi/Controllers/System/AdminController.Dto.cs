@@ -771,4 +771,46 @@ namespace PowerLmsWebApi.Controllers.System
     {
     }
     #endregion 国家代码及相关
+    #region Windows区域文化信息相关
+    /// <summary>
+    /// Windows区域文化信息国家代码项
+    /// </summary>
+    public class WindowsRegionCodeItem
+    {
+        /// <summary>
+        /// 国家/地区的英文名称
+        /// </summary>
+        public string EnglishName { get; set; }
+        /// <summary>
+        /// 国家/地区的本地化名称
+        /// </summary>
+        public string NativeName { get; set; }
+        /// <summary>
+        /// 两字母国家/地区代码（ISO 3166-1 alpha-2）
+        /// </summary>
+        public string TwoLetterCode { get; set; }
+        /// <summary>
+        /// 三字母国家/地区代码（ISO 3166-1 alpha-3）
+        /// </summary>
+        public string ThreeLetterCode { get; set; }
+        /// <summary>
+        /// 区域文化名称（如：zh-CN, en-US）
+        /// </summary>
+        public string CultureName { get; set; }
+        /// <summary>
+        /// 区域信息显示名称
+        /// </summary>
+        public string DisplayName { get; set; }
+    }
+    /// <summary>
+    /// 获取Windows支持的所有区域文化信息国家代码的功能返回值封装类
+    /// </summary>
+    public class GetWindowsRegionCodesReturnDto : ReturnDtoBase
+    {
+        /// <summary>
+        /// 区域代码列表
+        /// </summary>
+        public List<WindowsRegionCodeItem> Result { get; set; } = new List<WindowsRegionCodeItem>();
+    }
+    #endregion Windows区域文化信息相关
 }

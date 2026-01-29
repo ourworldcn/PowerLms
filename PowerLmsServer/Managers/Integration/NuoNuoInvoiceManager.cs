@@ -45,24 +45,30 @@ namespace PowerLmsServer.Managers
         readonly ILogger<NuoNuoManager> _logger;
         readonly IMapper _mapper;
         readonly IMemoryCache _cache;
-        readonly IDbContextFactory<PowerLmsUserDbContext> _dbContextFactory;
-        PowerLmsUserDbContext DbContext => _DbContext ??= _dbContextFactory.CreateDbContext();
-        PowerLmsUserDbContext _DbContext;
+        readonly PowerLmsUserDbContext _dbContext;
         /// <summary>
         /// 构造函数，初始化HttpClient实例。
         /// </summary>
-        /// <param name="httpClient">HttpClient实例。</param>
+        /// <param name="httpClient">HttpClient实例（由IHttpClientFactory注入，线程安全）。</param>
+        /// <param name="dbContext">数据库上下文（Scoped生命周期，每个HTTP请求共享同一实例，由AddDbContextFactory自动注册）。</param>
         /// <param name="mapper">AutoMapper实例</param>
         /// <param name="logger">日志记录器(可选)</param>
         /// <param name="cache">缓存对象</param>
-        /// <param name="dbContextFactory"></param>
-        public NuoNuoManager(HttpClient httpClient, IMapper mapper, ILogger<NuoNuoManager> logger, IMemoryCache cache, IDbContextFactory<PowerLmsUserDbContext> dbContextFactory)
+        /// <remarks>
+        /// 并发安全性说明：
+        /// - HttpClient：使用HttpRequestMessage模式，支持线程安全的并发调用
+        /// - DbContext：Scoped生命周期，同一HTTP请求内所有组件共享同一实例
+        /// - 设计原则：保持与项目其他Manager一致的Scoped模式，避免DbContext不一致导致的数据问题
+        /// - 限制：不支持同一HTTP请求内使用Task.Run等方式的真正并行调用（会共享DbContext）
+        /// - 适用场景：标准Web API请求处理流程（每个请求串行处理）
+        /// </remarks>
+        public NuoNuoManager(HttpClient httpClient, PowerLmsUserDbContext dbContext, IMapper mapper, ILogger<NuoNuoManager> logger, IMemoryCache cache)
         {
             _httpClient = httpClient;
-            _logger = logger;
+            _dbContext = dbContext;
             _mapper = mapper;
+            _logger = logger;
             _cache = cache;
-            _dbContextFactory = dbContextFactory;
         }
         #region 基础数据查询
         /// <summary>
@@ -74,7 +80,7 @@ namespace PowerLmsServer.Managers
         {
             try
             {
-                var invoiceInfo = DbContext.TaxInvoiceInfos.Find(taxInvoiceInfoId); // 查询发票信息
+                var invoiceInfo = _dbContext.TaxInvoiceInfos.Find(taxInvoiceInfoId); // 查询发票信息
                 if (invoiceInfo == null) // 发票信息不存在
                 {
                     _logger?.LogError("未找到ID为 {TaxInvoiceInfoId} 的发票信息", taxInvoiceInfoId);
@@ -117,7 +123,7 @@ namespace PowerLmsServer.Managers
                     errorCode = (int)HttpStatusCode.BadRequest;
                     goto ErrorHandler;
                 }
-                var channelAccount = DbContext.TaxInvoiceChannelAccounts.Find(channelAccountId.Value); // 查询渠道账号配置
+                var channelAccount = _dbContext.TaxInvoiceChannelAccounts.Find(channelAccountId.Value); // 查询渠道账号配置
                 if (channelAccount == null) // 检查配置是否存在
                 {
                     errorMessage = $"未找到渠道账号ID {channelAccountId} 的配置信息";
@@ -209,6 +215,7 @@ namespace PowerLmsServer.Managers
         #region 令牌相关
         /// <summary>
         /// 从指定发票ID获取有效的访问令牌，如果令牌过期则自动刷新并返回。
+        /// 使用 IMemoryCache 缓存令牌，避免频繁查询数据库。
         /// </summary>
         /// <param name="taxInvoiceInfoId">发票信息ID</param>
         /// <returns>有效的访问令牌，如果获取失败则返回null</returns>
@@ -228,13 +235,28 @@ namespace PowerLmsServer.Managers
                     OwHelper.SetLastErrorAndMessage((int)HttpStatusCode.BadRequest, $"发票ID {taxInvoiceInfoId} 未设置渠道账号ID");
                     return null;
                 }
-                using var dw = DisposeHelper.CreateWithSingletonLocker(invoiceInfo.TaxInvoiceChannelAccountlId.Value.ToString(),
-                    Timeout.InfiniteTimeSpan); // 锁定渠道账号ID
+                var channelAccountId = invoiceInfo.TaxInvoiceChannelAccountlId.Value;
+                string cacheKey = $"NuoNuo:Token:{channelAccountId}";
+                // 优先从缓存获取令牌
+                if (_cache.TryGetValue(cacheKey, out string cachedToken))
+                {
+                    _logger?.LogDebug("从缓存获取令牌，渠道账号ID: {ChannelAccountId}", channelAccountId);
+                    return cachedToken;
+                }
+                // 缓存未命中，锁定渠道账号，防止并发刷新
+                using var dw = DisposeHelper.CreateWithSingletonLocker(channelAccountId.ToString(), Timeout.InfiniteTimeSpan);
+                // 双重检查：锁定后再次检查缓存（避免重复刷新）
+                if (_cache.TryGetValue(cacheKey, out cachedToken))
+                {
+                    _logger?.LogDebug("锁定后从缓存获取令牌，渠道账号ID: {ChannelAccountId}", channelAccountId);
+                    return cachedToken;
+                }
                 // 获取渠道账号
-                var channelAccount = GetChannelAccountFromInvoice(invoiceInfo);
+                var channelAccount = _dbContext.TaxInvoiceChannelAccounts.Find(channelAccountId);
                 if (channelAccount == null)
                 {
-                    _logger?.LogError("未找到发票ID {TaxInvoiceInfoId} 对应的渠道账号配置", taxInvoiceInfoId);
+                    _logger?.LogError("未找到渠道账号ID {ChannelAccountId} 的配置信息", channelAccountId);
+                    OwHelper.SetLastErrorAndMessage((int)HttpStatusCode.NotFound, $"未找到渠道账号ID {channelAccountId} 的配置信息");
                     return null;
                 }
                 // 解析获取诺诺渠道账号对象
@@ -245,23 +267,29 @@ namespace PowerLmsServer.Managers
                 }
                 // 检查令牌是否存在且在有效期内
                 var timeToExpiry = nnChannelAccount.GetTimeToExpiry(DateTime.Now);
-                if (!string.IsNullOrEmpty(nnChannelAccount.Token) && timeToExpiry > TimeSpan.FromMinutes(1)) // 留出1分钟
+                if (!string.IsNullOrEmpty(nnChannelAccount.Token) && timeToExpiry > TimeSpan.FromMinutes(1)) // 留出1分钟缓冲
                 {
-                    // 令牌有效，直接返回
-                    _logger?.LogInformation("使用已有令牌，发票ID: {TaxInvoiceInfoId}, 剩余有效期: {TimeToExpiry}", taxInvoiceInfoId, timeToExpiry);
+                    // 令牌有效，缓存并返回
+                    var cacheOptions = new MemoryCacheEntryOptions
+                    {
+                        AbsoluteExpiration = DateTime.Now.Add(timeToExpiry).AddMinutes(-1), // 提前1分钟过期
+                        Priority = CacheItemPriority.High // 高优先级，避免被驱逐
+                    };
+                    _cache.Set(cacheKey, nnChannelAccount.Token, cacheOptions);
+                    _logger?.LogInformation("令牌有效，已缓存，渠道账号ID: {ChannelAccountId}, 剩余有效期: {TimeToExpiry}", channelAccountId, timeToExpiry);
                     return nnChannelAccount.Token;
                 }
                 // 令牌不存在或已过期，刷新令牌
-                _logger?.LogInformation("令牌已过期或不存在，发票ID: {TaxInvoiceInfoId}, 开始刷新令牌", taxInvoiceInfoId);
+                _logger?.LogWarning("令牌已过期或不存在，渠道账号ID: {ChannelAccountId}，开始刷新令牌", channelAccountId);
                 // 刷新令牌并更新配置
-                var refreshedToken = RefreshAccessToken(nnChannelAccount, channelAccount);
+                var refreshedToken = RefreshAccessToken(nnChannelAccount, channelAccount, cacheKey);
                 if (string.IsNullOrEmpty(refreshedToken))
                 {
-                    _logger?.LogError("刷新令牌失败，发票ID: {TaxInvoiceInfoId}", taxInvoiceInfoId);
-                    OwHelper.SetLastErrorAndMessage((int)HttpStatusCode.InternalServerError, $"刷新发票ID {taxInvoiceInfoId} 的访问令牌失败");
+                    _logger?.LogError("刷新令牌失败，渠道账号ID: {ChannelAccountId}", channelAccountId);
+                    OwHelper.SetLastErrorAndMessage((int)HttpStatusCode.InternalServerError, $"刷新渠道账号ID {channelAccountId} 的访问令牌失败");
                     return null;
                 }
-                _logger?.LogInformation("成功刷新令牌，发票ID: {TaxInvoiceInfoId}", taxInvoiceInfoId);
+                _logger?.LogInformation("成功刷新令牌，渠道账号ID: {ChannelAccountId}", channelAccountId);
                 return refreshedToken;
             }
             catch (Exception ex)
@@ -272,12 +300,13 @@ namespace PowerLmsServer.Managers
             }
         }
         /// <summary>
-        /// 刷新访问令牌并更新到数据库
+        /// 刷新访问令牌并更新到数据库和缓存
         /// </summary>
         /// <param name="channelAccountObject">诺诺渠道账号对象</param>
         /// <param name="channelAccount">渠道账号数据库实体</param>
+        /// <param name="cacheKey">缓存键（可选）</param>
         /// <returns>成功返回新令牌，失败返回null</returns>
-        private string RefreshAccessToken(NNChannelAccountObject channelAccountObject, TaxInvoiceChannelAccount channelAccount)
+        private string RefreshAccessToken(NNChannelAccountObject channelAccountObject, TaxInvoiceChannelAccount channelAccount, string cacheKey = null)
         {
             try
             {
@@ -316,11 +345,22 @@ namespace PowerLmsServer.Managers
                 channelAccountObject.TokenExpiry = TimeSpan.FromSeconds(expiresInSeconds); // 使用服务器返回的过期时间
                 // 更新到数据库
                 channelAccount.JsonObjectString = JsonSerializer.Serialize(channelAccountObject);
-                DbContext.SaveChanges();
-                _logger?.LogInformation(
-                    "成功刷新访问令牌，渠道账号ID: {ChannelAccountId}, 令牌有效期: {ExpirySeconds}秒",
-                    channelAccount.Id,
-                    expiresInSeconds);
+                _dbContext.SaveChanges();
+                // 更新到缓存
+                if (!string.IsNullOrEmpty(cacheKey))
+                {
+                    var cacheOptions = new MemoryCacheEntryOptions
+                    {
+                        AbsoluteExpiration = DateTime.Now.AddSeconds(expiresInSeconds).AddMinutes(-1), // 提前1分钟过期
+                        Priority = CacheItemPriority.High
+                    };
+                    _cache.Set(cacheKey, json.AccessToken, cacheOptions);
+                    _logger?.LogInformation("令牌已刷新并缓存，渠道账号ID: {ChannelAccountId}, 令牌有效期: {ExpirySeconds}秒", channelAccount.Id, expiresInSeconds);
+                }
+                else
+                {
+                    _logger?.LogInformation("成功刷新访问令牌，渠道账号ID: {ChannelAccountId}, 令牌有效期: {ExpirySeconds}秒", channelAccount.Id, expiresInSeconds);
+                }
                 return json.AccessToken;
             }
             catch (Exception ex)
@@ -352,7 +392,7 @@ namespace PowerLmsServer.Managers
                     };
                 }
                 // 获取发票明细
-                var items = DbContext.TaxInvoiceInfoItems
+                var items = _dbContext.TaxInvoiceInfoItems
                     .Where(item => item.ParentId == taxInvoiceInfoId)
                     .ToList();
                 if (items == null || items.Count == 0)
@@ -397,15 +437,15 @@ namespace PowerLmsServer.Managers
                 // 检查是否有关联的申请单，如果有且需要更新关联信息
                 if (invoiceInfo.DocFeeRequisitionId.HasValue)
                 {
-                    var requisition = DbContext.DocFeeRequisitions.Find(invoiceInfo.DocFeeRequisitionId.Value);
+                    var requisition = _dbContext.DocFeeRequisitions.Find(invoiceInfo.DocFeeRequisitionId.Value);
                     if (requisition != null && requisition.TaxInvoiceId != taxInvoiceInfoId)
                     {
                         requisition.TaxInvoiceId = taxInvoiceInfoId;
-                        DbContext.Entry(requisition).Property(x => x.TaxInvoiceId).IsModified = true;
+                        _dbContext.Entry(requisition).Property(x => x.TaxInvoiceId).IsModified = true;
                     }
                 }
                 invoiceInfo.SendTime = OwHelper.WorldNow;   //填写发票发送时间
-                DbContext.SaveChanges();
+                _dbContext.SaveChanges();
                 _logger?.LogInformation("已回填并保存发票基本信息，发票ID: {TaxInvoiceInfoId}, 含税总金额: {TotalTaxInclusiveAmount}", taxInvoiceInfoId, totalTaxInclusiveAmount);
                 // 检查是否使用沙箱模式
                 if (useSandbox)
@@ -424,7 +464,7 @@ namespace PowerLmsServer.Managers
                             invoiceInfo.State = 2; // 已开票状态
                             invoiceInfo.ReturnInvoiceTime = DateTime.Now;
                             invoiceInfo.SellerInvoiceData = $"{{\"sandboxTest\": {useSandbox.ToString().ToLower()}, \"invoiceSerialNum\": \"{sandboxResult.InvoiceSerialNum}\"}}";
-                            DbContext.SaveChanges();
+                            _dbContext.SaveChanges();
                             _logger?.LogInformation("已更新沙箱开票结果信息，发票ID: {TaxInvoiceInfoId}", taxInvoiceInfoId);
                         }
                     }
@@ -471,24 +511,24 @@ namespace PowerLmsServer.Managers
                     request.Nonce,
                     request.Timestamp,
                     jsonContent);
-                // 设置请求头
-                _httpClient.DefaultRequestHeaders.Clear();
-                _httpClient.DefaultRequestHeaders.Add("X-Nuonuo-Sign", sign);
-                _httpClient.DefaultRequestHeaders.Add("accessToken", accessToken);
-                _httpClient.DefaultRequestHeaders.Add("userTax", request.Order.SalerTaxNum);
-                _httpClient.DefaultRequestHeaders.Add("method", "nuonuo.OpeMplatform.requestBillingNew");
                 // 构建带参数的请求URL
                 var requestUrl = $"{InvoiceUrl}?senid={request.Senid}&nonce={request.Nonce}&timestamp={request.Timestamp}&appkey={nnChannelAccount.AppKey}";
-                // 发送请求到构建的URL
-                var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
-                var responseTask = _httpClient.PostAsync(requestUrl, content);
+                // 创建HttpRequestMessage并设置请求头（线程安全）
+                using var httpRequest = new HttpRequestMessage(HttpMethod.Post, requestUrl);
+                httpRequest.Headers.Add("X-Nuonuo-Sign", sign);
+                httpRequest.Headers.Add("accessToken", accessToken);
+                httpRequest.Headers.Add("userTax", request.Order.SalerTaxNum);
+                httpRequest.Headers.Add("method", "nuonuo.OpeMplatform.requestBillingNew");
+                httpRequest.Content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+                // 发送请求
+                var responseTask = _httpClient.SendAsync(httpRequest);
                 responseTask.Wait(); // 同步等待请求
                 var response = responseTask.Result;
                 if (!response.IsSuccessStatusCode)
                 {
                     // 记录失败原因
                     _logger?.LogError("开票失败，发票ID: {TaxInvoiceInfoId}, 错误码: {StatusCode}", taxInvoiceInfoId, response.StatusCode);
-                    DbContext.SaveChanges();
+                    _dbContext.SaveChanges();
                     return new NuoNuoInvoiceResult
                     {
                         Success = false,
@@ -514,7 +554,7 @@ namespace PowerLmsServer.Managers
                     {
                         invoiceInfo.InvoiceNumber = result.Result.InvoiceSerialNum;
                     }
-                    DbContext.SaveChanges();
+                    _dbContext.SaveChanges();
                     _logger?.LogInformation("开票成功并更新了发票状态和信息，发票ID: {TaxInvoiceInfoId}, 流水号: {InvoiceSerialNum}", taxInvoiceInfoId, result.Result?.InvoiceSerialNum);
                     return new NuoNuoInvoiceResult
                     {
@@ -808,18 +848,17 @@ namespace PowerLmsServer.Managers
                     nonce,
                     timestamp,
                     jsonContent);
-                // 设置请求头
-                _httpClient.DefaultRequestHeaders.Clear();
-                //_httpClient.DefaultRequestHeaders.Add("Content-type", "application/json");
-                _httpClient.DefaultRequestHeaders.Add("X-Nuonuo-Sign", sign);
-                _httpClient.DefaultRequestHeaders.Add("accessToken", sandboxChannelAccount.Token);
-                _httpClient.DefaultRequestHeaders.Add("userTax", order.SalerTaxNum);
-                _httpClient.DefaultRequestHeaders.Add("method", "nuonuo.OpeMplatform.requestBillingNew");
+                // 创建HttpRequestMessage并设置请求头（线程安全）
+                using var httpRequest = new HttpRequestMessage(HttpMethod.Post, requestUrl);
+                httpRequest.Headers.Add("X-Nuonuo-Sign", sign);
+                httpRequest.Headers.Add("accessToken", sandboxChannelAccount.Token);
+                httpRequest.Headers.Add("userTax", order.SalerTaxNum);
+                httpRequest.Headers.Add("method", "nuonuo.OpeMplatform.requestBillingNew");
+                httpRequest.Content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
                 // 发送请求
-                var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
                 _logger?.LogInformation("发送沙箱请求URL: {RequestUrl}", requestUrl);
                 _logger?.LogInformation("发送沙箱请求内容: {JsonContent}", jsonContent);
-                var responseTask = _httpClient.PostAsync(requestUrl, content);
+                var responseTask = _httpClient.SendAsync(httpRequest);
                 responseTask.Wait();
                 var response = responseTask.Result;
                 if (!response.IsSuccessStatusCode)
@@ -927,13 +966,17 @@ namespace PowerLmsServer.Managers
         /// <param name="services">IServiceCollection实例</param>
         public static void AddNuoNuoManager(this IServiceCollection services)
         {
-            // 使用AddHttpClient注册NuoNuoManager，它会自动以Scoped生命周期注册服务
-            services.AddHttpClient<NuoNuoManager>(client =>
+            services.AddHttpClient(nameof(NuoNuoManager), client =>
             {
-                // 可以在这里配置HttpClient的默认设置，例如超时时间
                 client.Timeout = TimeSpan.FromSeconds(30);
             });
-            services.AddSingleton<NuoNuoManager>();
+            services.AddScoped<NuoNuoManager>(sp =>
+                new NuoNuoManager(
+                    sp.GetRequiredService<IHttpClientFactory>().CreateClient(nameof(NuoNuoManager)),
+                    sp.GetRequiredService<PowerLmsUserDbContext>(),  // Scoped DbContext，由AddDbContextFactory自动注册
+                    sp.GetRequiredService<IMapper>(),
+                    sp.GetRequiredService<ILogger<NuoNuoManager>>(),
+                    sp.GetRequiredService<IMemoryCache>()));
         }
     }
 }
