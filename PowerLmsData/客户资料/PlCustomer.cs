@@ -314,6 +314,12 @@ namespace PowerLms.Data
         [Comment("结算方式，cass=true/非Cass=false/空=null")]
         public bool? Airlines_SettlementModes { get; set; }
 
+        /// <summary>
+        /// 航空公司服务等级。大文本字段，存储多行文本内容，不做解析处理。
+        /// </summary>
+        [Comment("航空公司服务等级。大文本字段，存储多行文本内容。")]
+        public string Airlines_ServiceLevel { get; set; }
+
         #endregion Airlines 相关属性
 
         /// <summary>
