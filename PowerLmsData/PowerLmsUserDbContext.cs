@@ -432,6 +432,25 @@ namespace PowerLmsServer.EfData
 
         #endregion 空运出口主单及其子表
 
+        #region 空运出口分单及其子表
+
+        /// <summary>
+        /// 空运出口分单表
+        /// </summary>
+        public DbSet<EaHawb> EaHawbs { get; set; }
+
+        /// <summary>
+        /// 空运出口分单其他费用表
+        /// </summary>
+        public DbSet<EaHawbOtherCharge> EaHawbOtherCharges { get; set; }
+
+        /// <summary>
+        /// 空运出口分单委托明细表
+        /// </summary>
+        public DbSet<EaHawbCubage> EaHawbCubages { get; set; }
+
+        #endregion 空运出口分单及其子表
+
         /// <summary>
         /// 货场出重子表（空运出口）。
         /// </summary>

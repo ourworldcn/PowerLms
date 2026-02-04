@@ -1,7 +1,8 @@
 ﻿/*
  * 项目：PowerLms | 模块：主营业务-空运出口
- * 功能：空运出口主单实体
- * 作者：zc | 创建：2026-01-26
+ * 功能：空运出口分单实体（HAWB - House Air Waybill）
+ * 技术要点：纯展平/快照模式，前端传什么存什么，无额外校验逻辑
+ * 作者：zc | 创建：2026-02-01
  */
 using Microsoft.EntityFrameworkCore;
 using OW.Data;
@@ -11,11 +12,12 @@ using System.ComponentModel.DataAnnotations;
 namespace PowerLms.Data
 {
     /// <summary>
-    /// 空运出口主单表
+    /// 空运出口分单表（HAWB）
     /// </summary>
-    [Comment("空运出口主单表")]
-    public class EaMawb : GuidKeyObjectBase, ISpecificOrg, ICreatorInfo
+    [Comment("空运出口分单表")]
+    public class EaHawb : GuidKeyObjectBase, ISpecificOrg, ICreatorInfo
     {
+        #region 基础信息
         /// <summary>
         /// 机构id
         /// </summary>
@@ -44,25 +46,22 @@ namespace PowerLms.Data
         public string MawbNo { get; set; }
 
         /// <summary>
-        /// 是否直单
+        /// 分单号
         /// </summary>
-        [Comment("是否直单")]
-        public bool IsDirectOrder { get; set; }
-
-        /// <summary>
-        /// 电放类型DisplayName
-        /// </summary>
-        [Comment("电放类型DisplayName")]
+        [Comment("分单号")]
         [StringLength(20)]
-        public string EdischargeType { get; set; }
+        [Required]
+        public string HBLNo { get; set; }
 
         /// <summary>
-        /// 主单状态
+        /// 分单状态
         /// </summary>
-        [Comment("主单状态")]
+        [Comment("分单状态")]
         [StringLength(20)]
         public string BillStatus { get; set; }
+        #endregion
 
+        #region 发货人信息
         /// <summary>
         /// 发货人抬头
         /// </summary>
@@ -159,7 +158,9 @@ namespace PowerLms.Data
         [Comment("发货人邮箱")]
         [StringLength(128)]
         public string CnrEmail { get; set; }
+        #endregion
 
+        #region 收货人信息
         /// <summary>
         /// 收货人抬头
         /// </summary>
@@ -256,7 +257,9 @@ namespace PowerLms.Data
         [Comment("收货人邮箱")]
         [StringLength(128)]
         public string CneEmail { get; set; }
+        #endregion
 
+        #region 通知货人信息
         /// <summary>
         /// 通知货人抬头
         /// </summary>
@@ -353,7 +356,9 @@ namespace PowerLms.Data
         [Comment("通知货人邮箱")]
         [StringLength(128)]
         public string NtEmail { get; set; }
+        #endregion
 
+        #region 代理信息
         /// <summary>
         /// 代理公司账号
         /// </summary>
@@ -394,7 +399,9 @@ namespace PowerLms.Data
         [Comment("代理公司Iata账号")]
         [StringLength(20)]
         public string AgentIATANo { get; set; }
+        #endregion
 
+        #region 货物与运输信息
         /// <summary>
         /// HSCODE
         /// </summary>
@@ -502,7 +509,9 @@ namespace PowerLms.Data
         [Comment("特货代码")]
         [StringLength(100)]
         public string SPHCode { get; set; }
+        #endregion
 
+        #region 费用与汇率
         /// <summary>
         /// 运费币种
         /// </summary>
@@ -536,7 +545,9 @@ namespace PowerLms.Data
         [Comment("其他费用付费方式")]
         [StringLength(2)]
         public string OTPayMode { get; set; }
+        #endregion
 
+        #region 航班信息
         /// <summary>
         /// 头程航班号
         /// </summary>
@@ -564,7 +575,9 @@ namespace PowerLms.Data
         [Comment("二程航班日期")]
         [Precision(3)]
         public DateTime? SEDFtDate { get; set; }
+        #endregion
 
+        #region 申明与保险
         /// <summary>
         /// 运费申明价值
         /// </summary>
@@ -592,7 +605,9 @@ namespace PowerLms.Data
         [Comment("服务等级")]
         [StringLength(20)]
         public string FreightCategory { get; set; }
+        #endregion
 
+        #region 目的港信息
         /// <summary>
         /// 最终目的港代码
         /// </summary>
@@ -613,7 +628,9 @@ namespace PowerLms.Data
         [Comment("最终目的港国家")]
         [StringLength(2)]
         public string DestCountryCode { get; set; }
+        #endregion
 
+        #region 货物规格与计费
         /// <summary>
         /// 件数
         /// </summary>
@@ -681,7 +698,9 @@ namespace PowerLms.Data
         [Comment("体积")]
         [Precision(18, 3)]
         public decimal MeasureMent { get; set; }
+        #endregion
 
+        #region 品名
         /// <summary>
         /// 中文品名
         /// </summary>
@@ -693,7 +712,52 @@ namespace PowerLms.Data
         /// </summary>
         [Comment("英文品名")]
         public string GoodsEnglishName { get; set; }
+        #endregion
 
+        #region 到货信息
+        /// <summary>
+        /// 到货件数
+        /// </summary>
+        [Comment("到货件数")]
+        public int ArrivalPkgsNum { get; set; }
+
+        /// <summary>
+        /// 到货地
+        /// </summary>
+        [Comment("到货地")]
+        [StringLength(50)]
+        public string ArrivalPlace { get; set; }
+
+        /// <summary>
+        /// 到货日期
+        /// </summary>
+        [Comment("到货日期")]
+        [Precision(3)]
+        public DateTime? ArrivalDate { get; set; }
+
+        /// <summary>
+        /// 到货重量
+        /// </summary>
+        [Comment("到货重量")]
+        [Precision(18, 3)]
+        public decimal ArrivalWeight { get; set; }
+
+        /// <summary>
+        /// 申报地海关
+        /// </summary>
+        [Comment("申报地海关")]
+        [StringLength(50)]
+        public string ArrivalCustom { get; set; }
+
+        /// <summary>
+        /// 货物号
+        /// </summary>
+        [Comment("货物号")]
+        [StringLength(50)]
+        public string CommodityItemNo { get; set; }
+        #endregion
+
+        #region 费用汇总（PP/CC）
         /// <summary>
         /// 重量计算总运费PP
         /// </summary>
@@ -791,7 +855,9 @@ namespace PowerLms.Data
         [Comment("总的费用CC")]
         [StringLength(32)]
         public string TTCC { get; set; }
+        #endregion
 
+        #region 签发信息
         /// <summary>
         /// 签发日期
         /// </summary>
@@ -812,7 +878,9 @@ namespace PowerLms.Data
         [Comment("签发地点")]
         [StringLength(32)]
         public string IssuedPlace { get; set; }
+        #endregion
 
+        #region 备注
         /// <summary>
         /// 备注
         /// </summary>
@@ -824,19 +892,20 @@ namespace PowerLms.Data
         /// </summary>
         [Comment("备注2")]
         public string Remark2 { get; set; }
+        #endregion
     }
 
     /// <summary>
-    /// 空运出口主单其他费用表
+    /// 空运出口分单其他费用表
     /// </summary>
-    [Comment("空运出口主单其他费用表")]
-    public class EaMawbOtherCharge : GuidKeyObjectBase
+    [Comment("空运出口分单其他费用表")]
+    public class EaHawbOtherCharge : GuidKeyObjectBase
     {
         /// <summary>
-        /// 主表id
+        /// 分单id
         /// </summary>
-        [Comment("主表id")]
-        public Guid MawbId { get; set; }
+        [Comment("分单id")]
+        public Guid HawbId { get; set; }
 
         /// <summary>
         /// 费用代码
@@ -889,16 +958,16 @@ namespace PowerLms.Data
     }
 
     /// <summary>
-    /// 空运出口主单委托明细表
+    /// 空运出口分单委托明细表
     /// </summary>
-    [Comment("空运出口主单委托明细表")]
-    public class EaCubage : GuidKeyObjectBase
+    [Comment("空运出口分单委托明细表")]
+    public class EaHawbCubage : GuidKeyObjectBase
     {
         /// <summary>
-        /// 主表id
+        /// 分单id
         /// </summary>
-        [Comment("主表id")]
-        public Guid MawbId { get; set; }
+        [Comment("分单id")]
+        public Guid HawbId { get; set; }
 
         /// <summary>
         /// 货物长CM
@@ -948,152 +1017,4 @@ namespace PowerLms.Data
         [Precision(18, 3)]
         public decimal Cubagewt { get; set; }
     }
-
-    /// <summary>
-    /// 空运出口主单品名明细表
-    /// </summary>
-    [Comment("空运出口主单品名明细表")]
-    public class EaGoodsDetail : GuidKeyObjectBase
-    {
-        /// <summary>
-        /// 主表id
-        /// </summary>
-        [Comment("主表id")]
-        public Guid MawbId { get; set; }
-
-        /// <summary>
-        /// 中文品名
-        /// </summary>
-        [Comment("中文品名")]
-        [StringLength(100)]
-        public string GoodsName { get; set; }
-
-        /// <summary>
-        /// 英文品名
-        /// </summary>
-        [Comment("英文品名")]
-        [StringLength(100)]
-        public string GoodsEnglishName { get; set; }
-
-        /// <summary>
-        /// 鉴定结论
-        /// </summary>
-        [Comment("鉴定结论")]
-        [StringLength(100)]
-        public string Expertconclusion { get; set; }
-    }
-
-    /// <summary>
-    /// 空运出口主单集装器表
-    /// </summary>
-    [Comment("空运出口主单集装器表")]
-    public class EaContainer : GuidKeyObjectBase
-    {
-        /// <summary>
-        /// 主表id
-        /// </summary>
-        [Comment("主表id")]
-        public Guid MawbId { get; set; }
-
-        /// <summary>
-        /// 集装器号
-        /// </summary>
-        [Comment("集装器号")]
-        [StringLength(20)]
-        public string ContainerNo { get; set; }
-
-        /// <summary>
-        /// 集装器名称
-        /// </summary>
-        [Comment("集装器名称")]
-        [StringLength(50)]
-        public string ContainerName { get; set; }
-
-        /// <summary>
-        /// 集装器规格
-        /// </summary>
-        [Comment("集装器规格")]
-        [StringLength(20)]
-        public string ContainerType { get; set; }
-
-        /// <summary>
-        /// 币种
-        /// </summary>
-        [Comment("币种")]
-        [StringLength(5)]
-        public string CurrType { get; set; }
-
-        /// <summary>
-        /// 件数
-        /// </summary>
-        [Comment("件数")]
-        public int PkgNum { get; set; }
-
-        /// <summary>
-        /// 金额
-        /// </summary>
-        [Comment("金额")]
-        [Precision(18, 2)]
-        public decimal Amount { get; set; }
-
-        /// <summary>
-        /// 净重(KG)
-        /// </summary>
-        [Comment("净重(KG)")]
-        [Precision(18, 3)]
-        public decimal NetWt { get; set; }
-
-        /// <summary>
-        /// 泡重(KG)
-        /// </summary>
-        [Comment("泡重(KG)")]
-        [Precision(18, 3)]
-        public decimal CubageWt { get; set; }
-
-        /// <summary>
-        /// 箱板重(KG)
-        /// </summary>
-        [Comment("箱板重(KG)")]
-        [Precision(18, 3)]
-        public decimal BoardWt { get; set; }
-
-        /// <summary>
-        /// 毛重(KG)
-        /// </summary>
-        [Comment("毛重(KG)")]
-        [Precision(18, 3)]
-        public decimal GrossWt { get; set; }
-
-        /// <summary>
-        /// 托重(KG)
-        /// </summary>
-        [Comment("托重(KG)")]
-        [Precision(18, 3)]
-        public decimal SplintWt { get; set; }
-
-        /// <summary>
-        /// 上架操作员
-        /// </summary>
-        [Comment("上架操作员")]
-        [StringLength(20)]
-        public string OP { get; set; }
-
-        /// <summary>
-        /// 货位号
-        /// </summary>
-        [Comment("货位号")]
-        [StringLength(20)]
-        public string PlanceNo { get; set; }
-
-        /// <summary>
-        /// 备注
-        /// </summary>
-        [Comment("备注")]
-        [StringLength(256)]
-        public string Remark { get; set; }
-    }
 }
-
-
-
-
