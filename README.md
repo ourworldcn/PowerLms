@@ -65,10 +65,17 @@ PowerLms
 ├── PowerLmsWebApi/                # API层：RESTful + Swagger + JWT
 │   └── Controllers/
 │       ├── Business/              # 业务控制器
+│       │   ├── AirFreight/        # 空运模块
+│       │   │   ├── EaMawbController.cs     # 空运出口主单（含DTO、其他费用、委托明细、品名、集装器）
+│       │   │   └── EaHawbController.cs     # 空运出口分单（含DTO、其他费用、委托明细）
 │       │   ├── MawbController.cs  # 主单领用登记（含DTO）
 │       │   └── ...
 │       ├── Customer/              # 客户资料
 │       ├── Financial/             # 财务管理
+│       │   ├── DocFeeController.cs        # 费用管理（从PlJobController独立）
+│       │   ├── DocFeeController.Dto.cs    # 费用DTO
+│       │   ├── DocBillController.cs       # 账单管理（从PlJobController独立）
+│       │   └── DocBillController.Dto.cs   # 账单DTO
 │       └── ...
 ├── PowerLmsServer/                # 业务层：Managers + 基础设施集成
 │   └── Managers/
@@ -85,7 +92,15 @@ PowerLms
 │   │   ├── DocBill.cs             # 账单表（通用）
 │   │   ├── 空运出口/              # 空运出口专属实体
 │   │   │   ├── PlEaDoc.cs         # 空运出口单
-│   │   │   └── PlEaMawb.cs        # 主单领用登记（含领入PlEaMawbInbound、领出PlEaMawbOutbound两个实体类）
+│   │   │   ├── EaMawb.cs          # 主单（重命名自PlEaMawb）
+│   │   │   ├── EaMawbOtherCharge.cs    # 主单其他费用
+│   │   │   ├── EaCubage.cs        # 主单委托明细
+│   │   │   ├── EaGoodsDetail.cs   # 主单品名明细
+│   │   │   ├── EaContainer.cs     # 主单集装器
+│   │   │   ├── EaHawb.cs          # 分单
+│   │   │   ├── EaHawbOtherCharge.cs    # 分单其他费用
+│   │   │   ├── EaHawbCubage.cs    # 分单委托明细
+│   │   │   └── PlEaMawb*.cs       # 主单领用登记（领入/领出）
 │   │   ├── 空运进口/              # 空运进口专属实体
 │   │   │   └── PlIaDoc.cs         # 空运进口单
 │   │   ├── 海运出口/              # 海运出口专属实体
@@ -176,15 +191,18 @@ PowerLms
 - **业务单据**：
   - 海运/空运/进口/出口业务单据
   - 工作号（PlJob）统一管理
-  - 费用核算与账单生成
+  - 费用核算与账单生成（支持批量操作）
   - 主单领用登记（空运出口）
+  - 主单制作（EaMawb）与分单制作（EaHawb）
 - **财务管理**：
+  - 费用管理（DocFeeController）- 支持批量审核
+  - 账单管理（DocBillController）- 支持从费用批量生成账单
   - 结算单、发票、凭证
   - AR/AP分次收付
   - 金蝶导出与科目配置
 - **办公与流程**：
   - OA日常费用申请
-  - 工作流模板与多级审批
+  - 工作流模板与多级审批（已修复状态同步问题）
 - **权限与组织**：
   - 角色权限精细控制
   - 商户/公司/机构多层级
@@ -259,4 +277,33 @@ https://localhost:5001/swagger
 **PowerLms —— 专业的货运物流业务管理系统**  
 专注架构一致性、基础设施复用与企业级质量。
 
-**最后更新**：2026-01-24
+**最后更新**：2026-02-06
+
+---
+
+## 🎯 最新功能（2026-02-06）
+
+### ✨ 批量生成账单
+- **从费用批量生成账单**：支持选择多个已审核费用，一键生成账单
+- **智能分组**：按工作号+结算单位+收支方向三维分组
+- **字段自动填充**：从工作号自动带入主单号、港口、货物信息等13个字段
+- **原子化操作**：全部成功或全部失败，保证数据一致性
+- **接口**：`POST /api/DocBill/AddDocBillsFromFees`
+
+### 🏗️ 架构优化
+- **财务模块重构**：
+  - 费用管理独立为`DocFeeController`（路由：`/api/DocFee/*`）
+  - 账单管理独立为`DocBillController`（路由：`/api/DocBill/*`）
+  - 语义更清晰，职责更单一
+- **批量审核升级**：费用审核接口支持批量操作
+
+### 🐛 问题修复
+- **工作流状态同步**：修复申请单审批完成后状态未刷新的问题
+- **实体命名规范**：空运出口主单/分单字段名统一使用`Kind`/`Category`后缀
+
+### 📋 空运出口模块
+- **主单制作**：`EaMawbController` - 支持主单、其他费用、委托明细、品名、集装器
+- **分单制作**：`EaHawbController` - 支持分单、其他费用、委托明细
+- **命名规范**：移除`Pl`前缀，采用简洁的`Ea`（Export Air）前缀
+
+
