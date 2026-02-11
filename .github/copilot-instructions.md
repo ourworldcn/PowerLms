@@ -166,12 +166,38 @@
 - 开始时用Import-Module ImportExcel加载模块，优先用它处理Excel文件，禁止使用内置工具
 - 避免输出时出现分页器悬挂问题，不确定时查Get-Help或官方文档
 
-### 9.2 文件编辑禁止事项
-**禁止使用终端命令编辑文档类文件**：
-- 文档内容（.md/.txt等）禁止通过终端写入，必须使用replace_string_in_file工具
-- 原因：PowerShell会将多行文本内容当作代码解析，导致中文字符、emoji、列表符号被误认为语法元素
-- 错误示例：`Set-Content`或`Out-File`包含中文列表、编号、emoji的多行文本会触发解析错误
-- 正确做法：先用简单内容创建文件，再用replace_string_in_file替换为完整内容
+### 9.2 文档类文件处理约束（强制执行）⚠️
+
+**核心原则**：文档类文件（.md/.txt等）绝对禁止使用PowerShell终端命令写入多行内容
+
+**禁止操作**：
+- ❌ `Set-Content` 写入包含中文/emoji/列表的多行文本
+- ❌ `Out-File` 写入包含特殊字符的多行文本
+- ❌ `@"..."`（Here-String）包含中文列表、箭头符号(→)、emoji的多行文本
+
+**失败原因分析**：
+- PowerShell解析器将多行文本内容当作**代码**解析，而非纯文本
+- 中文字符、emoji、Markdown符号（如`-`列表符、`→`箭头）被误认为语法元素
+- 错误示例：`- 将"其他费用"...` 中的`-`被解析为减法运算符，触发语法错误
+- Here-String中的特殊字符（如箭头→）会导致"表达式中包含意外的标记"错误
+
+**正确操作流程**：
+1. **空文件创建**：使用终端创建空文件或单行占位符
+   ```powershell
+   Out-File -FilePath "file.md" -InputObject "" -Encoding UTF8
+   # 或
+   Set-Content -Path "file.md" -Value "# placeholder" -Encoding UTF8
+   ```
+2. **内容写入**：使用`replace_string_in_file`工具替换为完整内容
+   ```
+   oldString: "# placeholder"  # 或空字符串（如果文件为空）
+   newString: [完整的文档内容]
+   ```
+
+**适用范围**：
+- ✅ 所有文档类文件：TODO.md、CHANGELOG.md、会议纪要.md、临时输入.md等
+- ✅ 包含中文、emoji、Markdown格式的任何文本文件
+- ⚠️ 简单的纯ASCII单行文本可使用终端命令，但多行内容必须用工具
 
 ## 10. 📊 JSON文件处理规范
 

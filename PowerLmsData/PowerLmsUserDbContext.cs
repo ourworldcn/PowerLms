@@ -466,6 +466,16 @@ namespace PowerLmsServer.EfData
         /// </summary>
         public DbSet<PlIaDoc> PlIaDocs { get; set; }
 
+        /// <summary>
+        /// 空运进口舱单主表（Ia Manifest，Ia=Import Air）。
+        /// </summary>
+        public DbSet<IaManifest> IaManifests { get; set; }
+
+        /// <summary>
+        /// 空运进口舱单明细表（Ia Manifest Detail）。
+        /// </summary>
+        public DbSet<IaManifestDetail> IaManifestDetails { get; set; }
+
         #endregion 空运进口
 
         #region 海运出口
