@@ -490,6 +490,16 @@ namespace PowerLmsServer.EfData
         /// </summary>
         public DbSet<ContainerKindCount> ContainerKindCounts { get; set; }
 
+        /// <summary>
+        /// 海运出口主提单表（船东提单）。
+        /// </summary>
+        public DbSet<EsMbl> EsMbls { get; set; }
+
+        /// <summary>
+        /// 海运出口分提单表（货代提单）。
+        /// </summary>
+        public DbSet<EsHbl> EsHbls { get; set; }
+
         #endregion 海运出口
 
         #region 海运进口

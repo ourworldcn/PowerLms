@@ -12,7 +12,7 @@ git commit -m "Save changes before subtree add (remove/modify Base etc.)"
 git subtree add --prefix=Base https://github.com/ourworldcn/Bak.git main
 
 Enable-Migrations –EnableAutomaticMigrations -Context PowerLmsUserDbContext
-Add-Migration 26010701 -Context PowerLmsUserDbContext
+Add-Migration 27010701 -Context PowerLmsUserDbContext
 
 超管账号 868d61ae-3a86-42a8-8a8c-1ed6cfa90817//1D381427-86BB-4D88-8CB0-5D92F8E1BADF
 
