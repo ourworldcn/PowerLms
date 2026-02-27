@@ -446,22 +446,15 @@ namespace PowerLmsWebApi.Controllers
         /// 
         /// <para><strong>核心逻辑：</strong></para>
         /// <list type="bullet">
-        ///   <item><description>有分单号（HBLNO不为空）：查找并返回<strong>分单ID</strong>（EaHawb.Id）</description></item>
-        ///   <item><description>无分单号（HBLNO为空）：查找并返回<strong>主单ID</strong>（EaMawb.Id）</description></item>
+        ///   <item><description>有分单号（HBLNO不为空）：查找EaHawb（空运出口分单），如果找到则返回分单ID，否则返回null（不报错）</description></item>
+        ///   <item><description>无分单号（HBLNO为空）：查找EaMawb（空运出口主单），如果找到则返回主单ID，否则返回null（不报错）</description></item>
         /// </list>
         /// 
-        /// <para><strong>设计优势（为什么这样记录）：</strong></para>
+        /// <para><strong>设计说明：</strong></para>
         /// <list type="number">
-        ///   <item><description><strong>避免重复查询</strong>：记录分单ID后，通过EaHawb.MawbNo字段可直接获取主单信息，无需重新标准化分单号再查找。</description></item>
-        ///   <item><description><strong>提高查询效率</strong>：需要分单详细信息时，直接通过MawbId（分单ID）查询EaHawbs表即可，无需额外的标准化和匹配。</description></item>
-        ///   <item><description><strong>数据关联清晰</strong>：通过MawbId可以明确知道关联的是主单还是分单（通过HBLNO是否为空判断）。</description></item>
-        ///   <item><description><strong>扩展性好</strong>：分单包含主单号（EaHawb.MawbNo），可以追溯到主单；主单则直接关联。</description></item>
-        /// </list>
-        /// 
-        /// <para><strong>验证机制：</strong></para>
-        /// <list type="bullet">
-        ///   <item><description>找不到对应的主单或分单时，返回错误信息（errorMsg），调用方必须返回BadRequest拒绝保存。</description></item>
-        ///   <item><description>确保数据一致性：只有在空运出口系统中存在的主单/分单才能被舱单引用。</description></item>
+        ///   <item><description><strong>为什么不强制验证存在</strong>：空运进口业务中，主单号来自国外航司，无需在本系统先创建主单/分单。MawbId字段仅用于可选的数据关联，非强制要求。</description></item>
+        ///   <item><description><strong>可选的智能关联</strong>：如果系统中恰好存在对应的主单/分单，则建立关联（便于后续查询）；不存在则MawbId为null，不影响业务流程。</description></item>
+        ///   <item><description><strong>灵活性</strong>：支持先录入进口舱单，后补录出口主单的业务场景。</description></item>
         /// </list>
         /// </summary>
         /// <param name="mawbNo">主单号（11位纯数字或带横杠格式，如：99912345678或999-12345678）</param>
@@ -469,8 +462,8 @@ namespace PowerLmsWebApi.Controllers
         /// <returns>
         /// 元组：(MawbId, 错误信息)
         /// <list type="bullet">
-        ///   <item><description>MawbId：成功时为分单ID或主单ID，失败时为null</description></item>
-        ///   <item><description>errorMsg：成功时为空字符串，失败时包含具体错误信息</description></item>
+        ///   <item><description>MawbId：如果找到对应的主单/分单则返回其ID，否则返回null</description></item>
+        ///   <item><description>errorMsg：始终返回空字符串（已移除强制验证）</description></item>
         /// </list>
         /// </returns>
         private (Guid? mawbId, string errorMsg) FindRelatedMawb(string mawbNo, string hawbNo)
@@ -482,24 +475,16 @@ namespace PowerLmsWebApi.Controllers
                 var hawb = _DbContext.EaHawbs
                     .AsNoTracking()
                     .FirstOrDefault(h => h.HBLNo == normalizedHawb);
-                if (hawb == null)
-                {
-                    return (null, $"未找到分单号 [{hawbNo}] 对应的空运出口分单，请确认分单号是否正确或该分单是否已在系统中创建");
-                }
-                return (hawb.Id, string.Empty);
+                return (hawb?.Id, string.Empty);
             }
             if (!string.IsNullOrWhiteSpace(normalizedMawb))
             {
                 var mawb = _DbContext.EaMawbs
                     .AsNoTracking()
                     .FirstOrDefault(m => m.MawbNo == normalizedMawb);
-                if (mawb == null)
-                {
-                    return (null, $"未找到主单号 [{mawbNo}] 对应的空运出口主单，请确认主单号是否正确或该主单是否已在系统中创建");
-                }
-                return (mawb.Id, string.Empty);
+                return (mawb?.Id, string.Empty);
             }
-            return (null, "主单号和分单号不能同时为空");
+            return (null, string.Empty);
         }
 
         #endregion 辅助方法（主单号/分单号标准化与查找）

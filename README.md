@@ -8,9 +8,10 @@ architecture: API→Server→Data→OwDbBase→OwBaseCore
 code_lines: 91941
 team: 3
 projects: [PowerLmsWebApi, PowerLmsServer, PowerLmsData, OwDbBase, OwBaseCore]
-infrastructure: [OwFileService, OwWfManager, AuthorizationManager, OrgManager, DataDicManager, OwDataUnit, OwNpoiUnit]
+infrastructure: [OwFileService, OwWfManager, AuthorizationManager, OrgManager, DataDicManager, OwDataUnit, OwNpoiUnit, MawbManager]
 deprecated: [NpoiManager]
 workspace_structure: 分层架构(API-业务-数据)，基础设施完备，基于Bak目录的核心组件依赖
+naming_convention: Ea=Export Air(空运出口), Ia=Import Air(空运进口), Es=Export Seaborne(海运出口), Is=Import Seaborne(海运进口)
 -->
 
 <!-- 
@@ -66,33 +67,37 @@ PowerLms
 │   └── Controllers/
 │       ├── Business/              # 业务控制器
 │       │   ├── AirFreight/        # 空运模块
-│       │   │   ├── EaMawbController.cs     # 空运出口主单（含DTO、其他费用、委托明细、品名、集装器）
-│       │   │   └── EaHawbController.cs     # 空运出口分单（含DTO、其他费用、委托明细）
-│       │   ├── MawbController.cs  # 主单领用登记（含DTO）
+│       │   │   ├── EaMawbController.cs     # 空运出口主单（Ea=Export Air）
+│       │   │   ├── EaHawbController.cs     # 空运出口分单
+│       │   │   ├── IaManifestController.cs # 空运进口舱单（Ia=Import Air）⭐
+│       │   │   └── MawbController.cs       # 主单领用登记
+│       │   ├── SeaFreight/        # 海运模块
+│       │   │   ├── EsMblController.cs      # 海运出口主提单（Es=Export Seaborne）
+│       │   │   ├── EsHblController.cs      # 海运出口分提单
+│       │   │   └── ...
 │       │   └── ...
 │       ├── Customer/              # 客户资料
 │       ├── Financial/             # 财务管理
-│       │   ├── DocFeeController.cs        # 费用管理（从PlJobController独立）
-│       │   ├── DocFeeController.Dto.cs    # 费用DTO
-│       │   ├── DocBillController.cs       # 账单管理（从PlJobController独立）
-│       │   └── DocBillController.Dto.cs   # 账单DTO
+│       │   ├── DocFeeController.cs        # 费用管理
+│       │   ├── DocBillController.cs       # 账单管理
+│       │   └── ...
 │       └── ...
 ├── PowerLmsServer/                # 业务层：Managers + 基础设施集成
 │   └── Managers/
 │       ├── Business/              # 业务Manager
-│       │   ├── MawbManager.cs     # 主单领用登记业务逻辑
+│       │   ├── MawbManager.cs     # 主单领用登记业务逻辑 ⭐
 │       │   └── ...
 │       ├── Financial/             # 财务Manager
 │       ├── Customer/              # 客户Manager
 │       └── ...
 ├── PowerLmsData/                  # 数据层：实体与迁移
 │   ├── 主营业务/                  # 主营业务实体（按业务类型分类）
-│   │   ├── PlJob.cs               # 业务总表（所有业务类型的入口）
-│   │   ├── DocFee.cs              # 费用表（通用）
-│   │   ├── DocBill.cs             # 账单表（通用）
-│   │   ├── 空运出口/              # 空运出口专属实体
+│   │   ├── PlJob.cs               # 业务总表
+│   │   ├── DocFee.cs              # 费用表
+│   │   ├── DocBill.cs             # 账单表
+│   │   ├── 空运出口/              # 空运出口专属实体（Ea=Export Air）
 │   │   │   ├── PlEaDoc.cs         # 空运出口单
-│   │   │   ├── EaMawb.cs          # 主单（重命名自PlEaMawb）
+│   │   │   ├── EaMawb.cs          # 主单
 │   │   │   ├── EaMawbOtherCharge.cs    # 主单其他费用
 │   │   │   ├── EaCubage.cs        # 主单委托明细
 │   │   │   ├── EaGoodsDetail.cs   # 主单品名明细
@@ -100,70 +105,27 @@ PowerLms
 │   │   │   ├── EaHawb.cs          # 分单
 │   │   │   ├── EaHawbOtherCharge.cs    # 分单其他费用
 │   │   │   ├── EaHawbCubage.cs    # 分单委托明细
-│   │   │   └── PlEaMawb*.cs       # 主单领用登记（领入/领出）
-│   │   ├── 空运进口/              # 空运进口专属实体
-│   │   │   └── PlIaDoc.cs         # 空运进口单
-│   │   ├── 海运出口/              # 海运出口专属实体
+│   │   │   └── PlEaMawb*.cs       # 主单领用登记（领入/领出）⭐
+│   │   ├── 空运进口/              # 空运进口专属实体（Ia=Import Air）⭐
+│   │   │   ├── PlIaDoc.cs         # 空运进口单
+│   │   │   ├── IaManifest.cs      # 空运进口舱单主表 ⭐
+│   │   │   └── IaManifestDetail.cs# 空运进口舱单明细 ⭐
+│   │   ├── 海运出口/              # 海运出口专属实体（Es=Export Seaborne）
 │   │   │   ├── PlEsDoc.cs         # 海运出口单
-│   │   │   └── ContainerKindCount.cs # 箱型箱量子表（海运通用）
-│   │   └── 海运进口/              # 海运进口专属实体
+│   │   │   ├── EsMbl.cs           # 主提单
+│   │   │   ├── EsHbl.cs           # 分提单
+│   │   │   └── ContainerKindCount.cs # 箱型箱量子表
+│   │   └── 海运进口/              # 海运进口专属实体（Is=Import Seaborne）
 │   │       └── PlIsDoc.cs         # 海运进口单
 │   ├── 客户资料/                  # 客户相关实体
-│   │   ├── PlCustomer.cs          # 客户主表
-│   │   ├── PlTaxInfo.cs           # 客户开票信息
-│   │   └── ...
 │   ├── 财务/                      # 财务相关实体
-│   │   ├── ActualFinancialTransaction.cs # 分次收付记录
-│   │   ├── PlInvoices.cs          # 发票表
-│   │   ├── DocFeeRequisition.cs   # 费用申请单
-│   │   ├── DocFeeTemplate.cs      # 费用模板
-│   │   ├── KingdeeVoucher.cs      # 金蝶凭证
-│   │   ├── SubjectConfiguration.cs# 科目配置
-│   │   └── ...
 │   ├── 权限/                      # 权限相关实体
-│   │   ├── PlRole.cs              # 角色表
-│   │   ├── PlPermission.cs        # 权限表
-│   │   └── ...
 │   ├── 机构/                      # 组织机构实体
-│   │   ├── PlMerchant.cs          # 商户表
-│   │   ├── PlOrganization.cs      # 机构表
-│   │   ├── PlOrganizationParameter.cs # 机构参数
-│   │   └── ...
 │   ├── 基础数据/                  # 基础数据字典
-│   │   ├── PlPort.cs              # 港口字典
-│   │   ├── PlCountry.cs           # 国家字典
-│   │   ├── PlCurrency.cs          # 币种字典
-│   │   ├── PlExchangeRate.cs      # 汇率表
-│   │   ├── FeesType.cs            # 费用类型
-│   │   ├── DataDicCatalog.cs      # 数据字典目录
-│   │   ├── SimpleDataDic.cs       # 简单数据字典
-│   │   ├── BusinessTypeDataDic.cs # 业务类型字典
-│   │   └── ...
 │   ├── 流程/                      # 工作流实体
-│   │   ├── OwWfTemplate.cs        # 工作流模板
-│   │   ├── OwWorkflow.cs          # 工作流实例
-│   │   └── ...
 │   ├── OA/                        # OA相关实体
-│   │   ├── OaExpenseRequisition.cs# OA费用申请
-│   │   ├── VoucherSequence.cs     # 凭证序号
-│   │   └── ...
 │   ├── 账号/                      # 账号相关
-│   │   └── Account.cs             # 账号表
 │   ├── 应用日志/                  # 应用日志
-│   │   ├── OwAppLogStore.cs       # 日志存储
-│   │   └── OwAppLogView.cs        # 日志视图
-│   ├── 航线管理/                  # 航线管理
-│   │   └── ShippingLane.cs        # 航线表
-│   ├── 消息系统/                  # 消息系统
-│   │   └── OwMessage.cs           # 消息表
-│   ├── 基础支持/                  # 基础支持实体
-│   │   ├── BusinessBase.cs        # 业务基类
-│   │   ├── DataDicBase.cs         # 数据字典基类
-│   │   └── PlAddress.cs           # 地址表
-│   ├── 系统资源/                  # 系统资源
-│   │   └── SystemResource.cs      # 系统资源表
-│   ├── 多语言/                    # 多语言支持
-│   │   └── Multilingual.cs        # 多语言表
 │   ├── PowerLmsUserDbContext.cs   # EF Core DbContext
 │   └── Migrations/                # 数据库迁移（150+文件）
 └── Base/                          # 基础设施：外部通用项目
@@ -171,6 +133,8 @@ PowerLms
     ├── OwBaseCore/                # 核心扩展、缓存管理
     └── OwExtensions/              # NPOI扩展方法（OwNpoiUnit）
 ```
+
+> ⭐ 标记：本次修复涉及的关键文件
 
 ## 🔩 基础设施能力
 - **文件管理**：`OwFileService`（存储、权限、元数据）
@@ -185,6 +149,21 @@ PowerLms
 - **主单管理**：`MawbManager`（主单号校验、批量生成、领入领出登记）
 
 > 规范：禁止重复造轮子，优先复用以上基础设施。缓存体系统一使用 `OwCacheExtensions`。
+
+## 🏷️ 命名规范（重要！）
+**业务模块前缀**：
+- `Ea` = Export Air（空运**出口**）
+- `Ia` = Import Air（空运**进口**）
+- `Es` = Export Seaborne（海运**出口**）
+- `Is` = Import Seaborne（海运**进口**）
+
+**示例**：
+- `EaMawb` = 空运出口主单
+- `EaHawb` = 空运出口分单
+- `IaManifest` = 空运进口舱单
+- `IaManifestDetail` = 空运进口舱单明细
+
+> ⚠️ **AI协作注意**：修改代码前请先确认业务模块属于**出口**还是**进口**，避免混淆！
 
 ## 📦 业务能力（模块总览）
 - **客户资料**：客户、联系人、开票信息、装货地址、海关检疫
