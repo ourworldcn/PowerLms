@@ -511,6 +511,20 @@ namespace PowerLmsServer.EfData
 
         #endregion 海运进口
 
+        #region 报关
+
+        /// <summary>
+        /// 报关单主表。
+        /// </summary>
+        public DbSet<CustomsDeclaration> CustomsDeclarations { get; set; }
+
+        /// <summary>
+        /// 报关单货物明细子表。
+        /// </summary>
+        public DbSet<CustomsGoodsList> CustomsGoodsLists { get; set; }
+
+        #endregion 报关
+
         #endregion 主营业务相关
 
         #region 财务相关
