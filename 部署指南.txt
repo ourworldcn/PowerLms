@@ -37,4 +37,24 @@ https://www.power-lms.com:20443
 chenyunxiao1986@hotmail.com
 13910032477@139.com
 
+================================================================================
+Windows 计划任务：每周一凌晨4点强制重启（兼容 PowerShell 5.x / 7.0）
+================================================================================
+以管理员身份运行，一行命令注册任务：
+
+schtasks /create /tn "WeeklyReboot_Monday_0400" /tr "shutdown /r /f /t 0 /d p:2:17" /sc weekly /d MON /st 04:00 /ru SYSTEM /rl HIGHEST /f
+
+删除该任务：
+schtasks /delete /tn "WeeklyReboot_Monday_0400" /f
+
+查看该任务：
+schtasks /query /tn "WeeklyReboot_Monday_0400" /v
+
+参数说明：
+  shutdown /r /f /t 0 = 立即强制重启
+  /d p:2:17 = 重启原因码，允许 Windows Update 在重启时安装补丁
+  /sc weekly /d MON /st 04:00 = 每周一凌晨4点
+  /ru SYSTEM /rl HIGHEST = SYSTEM账户最高权限运行
+  /f = 若任务已存在则强制覆盖
+
 1

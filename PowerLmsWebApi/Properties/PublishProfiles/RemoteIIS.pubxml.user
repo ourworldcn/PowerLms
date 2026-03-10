@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+  发布辅助文件：记录用户名和发布历史，不保存密码。
+  发布时 VS 会弹窗询问密码。
+-->
+<Project>
+  <PropertyGroup>
+    <UserName>administrator</UserName>
+    <_SavePWD>false</_SavePWD>
+  </PropertyGroup>
+</Project>
