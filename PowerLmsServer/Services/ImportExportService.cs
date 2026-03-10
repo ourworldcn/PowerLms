@@ -156,6 +156,17 @@ namespace PowerLmsServer.Services
             {
                 return true;
             }
+            // 报关专用字典实体
+            if (typeName.StartsWith("Custom", StringComparison.OrdinalIgnoreCase) &&
+                (typeName.Equals("CustomHsCode", StringComparison.OrdinalIgnoreCase) ||
+                 typeName.Equals("CustomGoodsVsCiqCode", StringComparison.OrdinalIgnoreCase) ||
+                 typeName.Equals("CustomPlace", StringComparison.OrdinalIgnoreCase) ||
+                 typeName.Equals("CustomDomesticPort", StringComparison.OrdinalIgnoreCase) ||
+                 typeName.Equals("CustomInspectionPlace", StringComparison.OrdinalIgnoreCase) ||
+                 typeName.Equals("CustomPlPort", StringComparison.OrdinalIgnoreCase)))
+            {
+                return true;
+            }
             // 原有的独立表字典实体
             return typeName.StartsWith("Pl") &&
                    (typeName.Contains("Country") ||
@@ -249,6 +260,12 @@ namespace PowerLmsServer.Services
                             "OtherNumberRule" => ExportEntityData<OtherNumberRule>(sheet, orgId),
                             "SubjectConfiguration" => ExportEntityData<SubjectConfiguration>(sheet, orgId),
                             "DailyFeesType" => ExportEntityData<DailyFeesType>(sheet, orgId),
+                            "CustomHsCode" => ExportEntityData<CdHsCode>(sheet, orgId),
+                            "CustomGoodsVsCiqCode" => ExportEntityData<CdGoodsVsCiqCode>(sheet, orgId),
+                            "CustomPlace" => ExportEntityData<CdPlace>(sheet, orgId),
+                            "CustomDomesticPort" => ExportEntityData<CdDomesticPort>(sheet, orgId),
+                            "CustomInspectionPlace" => ExportEntityData<CdInspectionPlace>(sheet, orgId),
+                            "CustomPlPort" => ExportEntityData<CdPort>(sheet, orgId),
                             _ => throw new InvalidOperationException($"不支持的独立字典类型: {dictionaryType}，这可能是配置错误")
                         };
                         totalExported += exportedCount;
@@ -312,6 +329,12 @@ namespace PowerLmsServer.Services
                                 "OtherNumberRule" => ImportEntityData<OtherNumberRule>(sheet, orgId, updateExisting),
                                 "SubjectConfiguration" => ImportEntityData<SubjectConfiguration>(sheet, orgId, updateExisting),
                                 "DailyFeesType" => ImportEntityData<DailyFeesType>(sheet, orgId, updateExisting),
+                                "CustomHsCode" => ImportEntityData<CdHsCode>(sheet, orgId, updateExisting),
+                                "CustomGoodsVsCiqCode" => ImportEntityData<CdGoodsVsCiqCode>(sheet, orgId, updateExisting),
+                                "CustomPlace" => ImportEntityData<CdPlace>(sheet, orgId, updateExisting),
+                                "CustomDomesticPort" => ImportEntityData<CdDomesticPort>(sheet, orgId, updateExisting),
+                                "CustomInspectionPlace" => ImportEntityData<CdInspectionPlace>(sheet, orgId, updateExisting),
+                                "CustomPlPort" => ImportEntityData<CdPort>(sheet, orgId, updateExisting),
                                 _ => throw new InvalidOperationException($"不支持的独立字典类型: {tableType}，这可能是配置错误")
                             };
                             result.SheetResults.Add(new TableImportResult

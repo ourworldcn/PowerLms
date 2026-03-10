@@ -238,6 +238,39 @@ namespace PowerLmsServer.EfData
         /// 箱型。
         /// </summary>
         public DbSet<ShippingContainersKind> DD_ShippingContainersKinds { get; set; }
+
+        #region 报关专用字典
+        /// <summary>
+        /// 报关HSCODE基础表。
+        /// </summary>
+        public DbSet<CdHsCode> CdHsCodes { get; set; }
+
+        /// <summary>
+        /// 报关CIQCODE检疫代码表。
+        /// </summary>
+        public DbSet<CdGoodsVsCiqCode> CdGoodsVsCiqCodes { get; set; }
+
+        /// <summary>
+        /// 国内行政区划表。
+        /// </summary>
+        public DbSet<CdPlace> CdPlaces { get; set; }
+
+        /// <summary>
+        /// 国内口岸代码表。
+        /// </summary>
+        public DbSet<CdDomesticPort> CdDomesticPorts { get; set; }
+
+        /// <summary>
+        /// 国内地区代码（检疫用）表。
+        /// </summary>
+        public DbSet<CdInspectionPlace> CdInspectionPlaces { get; set; }
+
+        /// <summary>
+        /// 报关专用港口表。
+        /// </summary>
+        public DbSet<CdPort> CdPorts { get; set; }
+        #endregion 报关专用字典
+
         #endregion 系统资源相关
 
         #region 多语言相关

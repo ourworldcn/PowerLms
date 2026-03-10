@@ -56,10 +56,14 @@
 6. 编译验证
 
 #### 2.1.5 当前状态
-- ⏳ **等待**：永昌石提供详细表结构和数据（截止：周一）
+- ✅ **已完成**：6个实体类已创建（`PowerLmsData/基础数据/CustomsDictionaries.cs`）
+- ✅ **已完成**：DbContext 已注册6个 DbSet（前缀 `CD_`）
+- ✅ **已完成**：ImportExportService 已支持批量导入/导出
+- ⏳ **等待**：永昌石提供详细表结构和数据，确认字段后补充（截止：周一）
+- ⏳ **待做**：添加CRUD接口（AdminController 或新建控制器）
+- ⏳ **待做**：数据库迁移（手工执行）
 - 报关单主表实体（CustomsDeclaration.cs）和货物明细实体（CustomsGoodsList.cs）已存在
 - 报关单控制器已存在（CustomsDeclarationController、CustomsGoodsListController）
-- 报关单实体中已引用了相关字典字段（如TradeMode、TransMode等），目前使用简单字典编码
 
 ---
 
