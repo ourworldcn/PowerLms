@@ -366,3 +366,4 @@ FodyWeavers.xsd
 /PowerLmsServer/PowerLmsServerApiDoc.xml
 /Base/OwBaseCore/obj/Release/net6.0/OwBaseCore.csproj.FileListAbsolute.txt
 /Base/OwDbBase/obj/Release/net6.0/OwDbBase.csproj.FileListAbsolute.txt
+/PowerLmsWebApi/Properties/PublishProfiles/RemoteIIS.pubxml.user
