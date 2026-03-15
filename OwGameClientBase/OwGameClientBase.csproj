@@ -11,5 +11,9 @@
     <ProjectReference Include="..\OwBaseCore\OwBaseCore.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="docs\" />
+  </ItemGroup>
+
 </Project>
 
