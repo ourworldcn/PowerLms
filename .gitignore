@@ -185,7 +185,7 @@ publish/
 # Note: Comment the next line if you want to checkin your web deploy settings,
 # but database connection strings (with potential passwords) will be unencrypted
 *.pubxml
-# 本项目发布配置已去除密码，允许入库
+# 本项目发布配置入库（不含密码），.pubxml.user 也不含密码可入库
 !/PowerLmsWebApi/Properties/PublishProfiles/RemoteIIS.pubxml
 !/PowerLmsWebApi/Properties/PublishProfiles/RemoteIIS.pubxml.user
 *.publishproj

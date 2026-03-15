@@ -1,5 +1,4 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<?xml version="1.0" encoding="utf-8"?>
 <!--
   发布辅助文件：仅记录用户名，不保存密码。
   发布时 VS 会弹窗询问密码，此文件可安全入库。
@@ -8,5 +7,7 @@
   <PropertyGroup>
     <UserName>administrator</UserName>
     <_SavePWD>false</_SavePWD>
+    <History>True|2026-03-10T12:07:35.5276986Z||;</History>
+    <LastFailureDetails />
   </PropertyGroup>
 </Project>
