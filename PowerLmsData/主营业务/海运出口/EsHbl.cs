@@ -16,7 +16,7 @@ namespace PowerLms.Data
     /// </summary>
     [Comment("海运出口分提单")]
     [Index(nameof(JobId), IsUnique = false)]
-    public class EsHbl : GuidKeyObjectBase
+    public class EsHbl : GuidKeyObjectBase, ICreatorInfo
     {
         /// <summary>
         /// 构造函数。
@@ -24,6 +24,17 @@ namespace PowerLms.Data
         public EsHbl()
         {
         }
+        /// <summary>
+        /// 创建者Id。
+        /// </summary>
+        [Comment("创建者Id")]
+        public Guid? CreateBy { get; set; }
+        /// <summary>
+        /// 创建时间。
+        /// </summary>
+        [Comment("创建时间")]
+        [Precision(3)]
+        public DateTime CreateDateTime { get; set; }
         /// <summary>
         /// 所属海运出口工作号。
         /// </summary>

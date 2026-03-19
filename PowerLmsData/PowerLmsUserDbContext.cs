@@ -741,6 +741,13 @@ namespace PowerLmsServer.EfData
         /// </summary>
         public DbSet<OwReply> OwReplies { get; set; }
         #endregion 论坛系统
+
+        #region 报表模板
+        /// <summary>
+        /// 报表模板表。
+        /// </summary>
+        public DbSet<PlReportTemplate> PlReportTemplates { get; set; }
+        #endregion 报表模板
     }
 
     /// <summary>

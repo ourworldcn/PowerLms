@@ -1,2 +1,8 @@
-﻿# 变更日志
-- 海关报关业务相关字典的CRUD及导入导出操作封装在CustomsDictionary控制器中。
+﻿# CHANGELOG
+
+## [未发布] - 2026
+
+增加了以下字段：EsMbl.CreateBy, EsMbl.CreateDateTime, EsHbl.CreateBy, EsHbl.CreateDateTime, CustomsDeclaration.TaskNumber2
+
+
+

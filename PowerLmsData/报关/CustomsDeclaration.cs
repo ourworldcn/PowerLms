@@ -33,13 +33,13 @@ namespace PowerLms.Data
         /// 申报单位代码。
         /// </summary>
         [Comment("申报单位代码")]
-        [MaxLength(18)]
+        [MaxLength(32)]
         public string AgentCode { get; set; }
         /// <summary>
         /// 申报单位名称。
         /// </summary>
         [Comment("申报单位名称")]
-        [MaxLength(70)]
+        [MaxLength(128)]
         public string AgentName { get; set; }
         /// <summary>
         /// 批准文号。实填"外汇核销单号"。
@@ -69,7 +69,7 @@ namespace PowerLms.Data
         /// 录入单位名称。必填。
         /// </summary>
         [Comment("录入单位名称，必填")]
-        [MaxLength(70)]
+        [MaxLength(128)]
         public string CopName { get; set; }
         /// <summary>
         /// 主管海关（申报地海关）。简单字典CustomMaster。
@@ -111,7 +111,7 @@ namespace PowerLms.Data
         /// 海关编号。
         /// </summary>
         [Comment("海关编号")]
-        [MaxLength(18)]
+        [MaxLength(32)]
         public string EntryId { get; set; }
         /// <summary>
         /// 报关单类型。0普通，L带清单，W无纸，D清单且无纸，M无纸化通关，默认0。
@@ -189,7 +189,7 @@ namespace PowerLms.Data
         /// 许可证编号。
         /// </summary>
         [Comment("许可证编号")]
-        [MaxLength(20)]
+        [MaxLength(32)]
         public string LicenseNo { get; set; }
         /// <summary>
         /// 备案号。
@@ -230,13 +230,13 @@ namespace PowerLms.Data
         /// 消费使用/生产销售单位代码。10位或9位，或NO。
         /// </summary>
         [Comment("消费使用/生产销售单位代码")]
-        [MaxLength(18)]
+        [MaxLength(32)]
         public string OwnerCode { get; set; }
         /// <summary>
         /// 消费使用/生产销售单位名称。
         /// </summary>
         [Comment("消费使用/生产销售单位名称")]
-        [MaxLength(70)]
+        [MaxLength(128)]
         public string OwnerName { get; set; }
         /// <summary>
         /// 件数。
@@ -247,7 +247,7 @@ namespace PowerLms.Data
         /// 申报人标识（申报人姓名）。
         /// </summary>
         [Comment("申报人标识（申报人姓名）")]
-        [MaxLength(20)]
+        [MaxLength(32)]
         public string PartenerID { get; set; }
         /// <summary>
         /// 打印日期（预录入日期）。
@@ -271,13 +271,13 @@ namespace PowerLms.Data
         /// 数据中心统一编号。首次导入传空值，由系统自动生成并返回客户端。
         /// </summary>
         [Comment("数据中心统一编号，首次导入传空值由系统生成")]
-        [MaxLength(18)]
+        [MaxLength(32)]
         public string SeqNo { get; set; }
         /// <summary>
         /// 关联单据号。空值，预留字段。
         /// </summary>
         [Comment("关联单据号，空值预留字段")]
-        [MaxLength(18)]
+        [MaxLength(32)]
         public string TgdNo { get; set; }
         /// <summary>
         /// 启运国/运抵国。国家3位code（进口：起运国；出口：运抵国）。
@@ -295,7 +295,7 @@ namespace PowerLms.Data
         /// 境内收发货人编号。私有通道导入时必填。
         /// </summary>
         [Comment("境内收发货人编号，私有通道导入时必填")]
-        [MaxLength(18)]
+        [MaxLength(32)]
         public string TradeCode { get; set; }
         /// <summary>
         /// 运输方式代码。字典运输方式Custom-TrafMode海关编码。
@@ -307,13 +307,13 @@ namespace PowerLms.Data
         /// 运输工具代码及名称。
         /// </summary>
         [Comment("运输工具代码及名称")]
-        [MaxLength(50)]
+        [MaxLength(64)]
         public string TrafName { get; set; }
         /// <summary>
         /// 境内收发货人名称。私有通道导入时必填。
         /// </summary>
         [Comment("境内收发货人名称，私有通道导入时必填")]
-        [MaxLength(70)]
+        [MaxLength(128)]
         public string TradeName { get; set; }
         /// <summary>
         /// 成交方式。简单字典TransMode海关编码。
@@ -331,7 +331,7 @@ namespace PowerLms.Data
         /// 录入员IC卡号。导入暂存时必填。
         /// </summary>
         [Comment("录入员IC卡号，导入暂存时必填")]
-        [MaxLength(30)]
+        [MaxLength(32)]
         public string TypistNo { get; set; }
         /// <summary>
         /// 包装种类。
@@ -355,25 +355,25 @@ namespace PowerLms.Data
         /// 录入单位统一编码。
         /// </summary>
         [Comment("录入单位统一编码")]
-        [MaxLength(18)]
+        [MaxLength(32)]
         public string CopCodeScc { get; set; }
         /// <summary>
         /// 收发货人统一编码。
         /// </summary>
         [Comment("收发货人统一编码")]
-        [MaxLength(18)]
+        [MaxLength(32)]
         public string TradeCoScc { get; set; }
         /// <summary>
         /// 申报单位统一编码。
         /// </summary>
         [Comment("申报单位统一编码")]
-        [MaxLength(18)]
+        [MaxLength(32)]
         public string AgentCodeScc { get; set; }
         /// <summary>
         /// 消费使用/生产销售单位统一编码。
         /// </summary>
         [Comment("消费使用/生产销售单位统一编码")]
-        [MaxLength(18)]
+        [MaxLength(32)]
         public string OwnerCodeScc { get; set; }
         /// <summary>
         /// 贸易国别。国家字典3位code。
@@ -414,13 +414,13 @@ namespace PowerLms.Data
         /// 存放地点。货物存放地点【报检时货物的存放地点】。
         /// </summary>
         [Comment("存放地点")]
-        [MaxLength(100)]
+        [MaxLength(128)]
         public string GoodsPlace { get; set; }
         /// <summary>
         /// B/L号。提货单号【本批货物的提货单或出库单号码】。
         /// </summary>
         [Comment("B/L号，提货单号")]
-        [MaxLength(50)]
+        [MaxLength(64)]
         public string BLNo { get; set; }
         /// <summary>
         /// 口岸检验检疫机关。简单字典InspOrgCode海关编码。
@@ -474,7 +474,7 @@ namespace PowerLms.Data
         /// 申报人员姓名。
         /// </summary>
         [Comment("申报人员姓名")]
-        [MaxLength(50)]
+        [MaxLength(64)]
         public string DeclareName { get; set; }
         /// <summary>
         /// 无其他包装。0未选/有其他包装；1选中/无其他包装。
@@ -492,49 +492,49 @@ namespace PowerLms.Data
         /// 境外发货人代码。
         /// </summary>
         [Comment("境外发货人代码")]
-        [MaxLength(50)]
+        [MaxLength(64)]
         public string OverseasConsignorCode { get; set; }
         /// <summary>
         /// 境外收发货人中文名称。
         /// </summary>
         [Comment("境外收发货人中文名称")]
-        [MaxLength(150)]
+        [MaxLength(256)]
         public string OverseasConsignorCname { get; set; }
         /// <summary>
         /// 境外发货人名称（外文）。
         /// </summary>
         [Comment("境外发货人名称（外文）")]
-        [MaxLength(100)]
+        [MaxLength(128)]
         public string OverseasConsignorEname { get; set; }
         /// <summary>
         /// 境外收发货人地址。
         /// </summary>
         [Comment("境外收发货人地址")]
-        [MaxLength(100)]
+        [MaxLength(128)]
         public string OverseasConsignorAddr { get; set; }
         /// <summary>
         /// 境外收货人编码。
         /// </summary>
         [Comment("境外收货人编码")]
-        [MaxLength(50)]
+        [MaxLength(64)]
         public string OverseasConsigneeCode { get; set; }
         /// <summary>
         /// 境外收货人名称（外文）。
         /// </summary>
         [Comment("境外收货人名称（外文）")]
-        [MaxLength(400)]
+        [MaxLength(512)]
         public string OverseasConsigneeEname { get; set; }
         /// <summary>
         /// 境内收发货人名称（外文）。
         /// </summary>
         [Comment("境内收发货人名称（外文）")]
-        [MaxLength(400)]
+        [MaxLength(512)]
         public string DomesticConsigneeEname { get; set; }
         /// <summary>
         /// 关联号码。
         /// </summary>
         [Comment("关联号码")]
-        [MaxLength(500)]
+        [MaxLength(512)]
         public string CorrelationNo { get; set; }
         /// <summary>
         /// EDI申报备注。大文本。
@@ -608,7 +608,7 @@ namespace PowerLms.Data
         /// 保证金_缴款书号。
         /// </summary>
         [Comment("保证金_缴款书号")]
-        [MaxLength(20)]
+        [MaxLength(32)]
         public string ContriNO { get; set; }
         /// <summary>
         /// 保证金_押宝日期。
@@ -638,7 +638,7 @@ namespace PowerLms.Data
         /// 税单_税号。
         /// </summary>
         [Comment("税单_税号")]
-        [MaxLength(20)]
+        [MaxLength(32)]
         public string Tax_TaxNo { get; set; }
         /// <summary>
         /// 税单_增值税。
@@ -650,7 +650,7 @@ namespace PowerLms.Data
         /// 税单_增值税号。
         /// </summary>
         [Comment("税单_增值税号")]
-        [MaxLength(20)]
+        [MaxLength(32)]
         public string Tax_AddedtaxNo { get; set; }
         /// <summary>
         /// 税单_滞纳金。
@@ -662,25 +662,25 @@ namespace PowerLms.Data
         /// 税单_滞纳金号。
         /// </summary>
         [Comment("税单_滞纳金号")]
-        [MaxLength(20)]
+        [MaxLength(32)]
         public string Tax_OverdueNo { get; set; }
         /// <summary>
         /// 运输工具编码。
         /// </summary>
         [Comment("运输工具编码")]
-        [MaxLength(20)]
+        [MaxLength(32)]
         public string VoyageNumber { get; set; }
         /// <summary>
         /// 关联报关单号。
         /// </summary>
         [Comment("关联报关单号")]
-        [MaxLength(50)]
+        [MaxLength(64)]
         public string RelatedCustomsNO { get; set; }
         /// <summary>
         /// 关联备案号。
         /// </summary>
         [Comment("关联备案号")]
-        [MaxLength(50)]
+        [MaxLength(64)]
         public string AssRecordNO { get; set; }
         /// <summary>
         /// 纳税单位。001：经营单位，002：收货单位，003：申报单位。
@@ -704,5 +704,11 @@ namespace PowerLms.Data
         /// </summary>
         [Comment("附加说明（备注）")]
         public string Remark { get; set; }
+        /// <summary>
+        /// 两步申报任务编号。
+        /// </summary>
+        [Comment("两步申报任务编号")]
+        [MaxLength(64)]
+        public string TaskNumber2 { get; set; }
     }
 }
