@@ -111,8 +111,7 @@ namespace PowerLmsWebApi.Controllers.System
         public ActionResult<RemoveDataDicCatalogReturnDto> RemoveDataDicCatalog(RemoveDataDicCatalogParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out var err, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new RemoveDataDicCatalogReturnDto();
             var id = model.Id;
             var item = _DbContext.DD_DataDicCatalogs.Find(id);
@@ -135,8 +134,7 @@ namespace PowerLmsWebApi.Controllers.System
         public ActionResult<CopySimpleDataDicReturnDto> CopySimpleDataDic(CopySimpleDataDicParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out var err, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new CopySimpleDataDicReturnDto();
             //var merch = _DbContext.Merchants.Find(model.SrcOrgId);
             //if (merch == null) return NotFound();
@@ -177,8 +175,7 @@ namespace PowerLmsWebApi.Controllers.System
         public ActionResult<ImportDataDicReturnDto> ImportDataDic(IFormFile formFile, Guid token, Guid rId)
         {
             if (_AccountManager.GetOrLoadContextByToken(token, _ServiceProvider) is not OwContext context) return Unauthorized(OwHelper.GetLastErrorMessage());
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out var err, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ImportDataDicReturnDto();
             var srTask = _DbContext.DD_SystemResources.FindAsync(rId).AsTask();
             var workbook = WorkbookFactory.Create(formFile.OpenReadStream());
@@ -469,8 +466,7 @@ namespace PowerLmsWebApi.Controllers.System
         public ActionResult<AddSimpleDataDicReturnDto> AddSimpleDataDic(AddSimpleDataDicParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out var err, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new AddSimpleDataDicReturnDto();
             if (_DbContext.DD_SimpleDataDics.Any(c => c.DataDicId == model.Item.DataDicId && c.Code == model.Item.Code))   //如果重复
                 return BadRequest("Id重复");
@@ -509,8 +505,7 @@ namespace PowerLmsWebApi.Controllers.System
         public ActionResult<ModifySimpleDataDicReturnDto> ModifySimpleDataDic(ModifySimpleDataDicParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out var err, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ModifySimpleDataDicReturnDto();
             var modifiedEntities = new List<SimpleDataDic>();
             if (!_EntityManager.Modify(model.Items, modifiedEntities))
@@ -542,8 +537,7 @@ namespace PowerLmsWebApi.Controllers.System
         public ActionResult<RemoveSimpleDataDicReturnDto> RemoveSimpleDataDic(RemoveSimpleDataDicParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out var err, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new RemoveSimpleDataDicReturnDto();
             var id = model.Id;
             DbSet<SimpleDataDic> dbSet = _DbContext.DD_SimpleDataDics;
@@ -566,8 +560,7 @@ namespace PowerLmsWebApi.Controllers.System
         public ActionResult<RestoreSimpleDataDicReturnDto> RestoreSimpleDataDic(RestoreSimpleDataDicParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out var err, "B.0")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new RestoreSimpleDataDicReturnDto();
             if (!_EntityManager.Restore<SimpleDataDic>(model.Id))
             {

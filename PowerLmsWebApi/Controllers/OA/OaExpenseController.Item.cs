@@ -331,7 +331,7 @@ namespace PowerLmsWebApi.Controllers.OA
         {
             if (string.IsNullOrEmpty(voucherNumber) || !voucherNumber.StartsWith(pattern))
                 return null;
-            var sequencePart = voucherNumber.Substring(pattern.Length);
+            var sequencePart = voucherNumber[pattern.Length..];
             return int.TryParse(sequencePart, out var sequence) ? sequence : (int?)null;
         }
         /// <summary>

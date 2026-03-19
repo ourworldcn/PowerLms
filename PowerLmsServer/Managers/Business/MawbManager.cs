@@ -76,13 +76,13 @@ namespace PowerLmsServer.Managers
             var normalized = mawbNo.Replace(" ", "").Replace("-", "");
             if (normalized.Length != 11)
                 return (false, "主单号长度不正确，应为3位前缀+8位数字（共11位）");
-            var prefix = normalized.Substring(0, 3);
-            var numbers = normalized.Substring(3, 8);
+            var prefix = normalized[..3];
+            var numbers = normalized[3..11];
             if (!prefix.All(char.IsDigit))
                 return (false, "前缀必须为3位数字");
             if (!numbers.All(char.IsDigit))
                 return (false, "后8位必须全为数字");
-            if (!int.TryParse(numbers.Substring(0, 7), out var first7) || !int.TryParse(numbers.Substring(7, 1), out var checkDigit))
+            if (!int.TryParse(numbers[..7], out var first7) || !int.TryParse(numbers[7..8], out var checkDigit))
                 return (false, "主单号数字格式错误");
             if ((first7 - checkDigit) % 7 != 0)
                 return (false, "校验位不正确");
@@ -117,7 +117,7 @@ namespace PowerLmsServer.Managers
                 throw new ArgumentException("当前主单号必须为8位数字（支持 '12345678' 或 '1234 5678' 格式）", nameof(currentNo));
             if (prefix.Length != 3 || !prefix.All(char.IsDigit))
                 throw new ArgumentException("前缀必须为3位数字", nameof(prefix));
-            var first7 = int.Parse(cleanedCurrent.Substring(0, 7));
+            var first7 = int.Parse(cleanedCurrent[..7]);
             if (first7 >= 9999999)
                 throw new InvalidOperationException($"主单号序列已达到最大值（{prefix}-99999996），无法继续生成");
             first7++;
@@ -154,7 +154,7 @@ namespace PowerLmsServer.Managers
             if (!validation.isValid)
                 throw new ArgumentException($"起始主单号不合法: {validation.errorMsg}");
             var result = new List<string>(count);
-            var first7 = int.Parse(startNo.Substring(0, 7));
+            var first7 = int.Parse(startNo[..7]);
             if (first7 + count - 1 > 9999999)
                 throw new InvalidOperationException($"批量生成会导致序列号超过最大值9999999，起始号={first7}，数量={count}");
             for (int i = 0; i < count; i++)
@@ -186,7 +186,7 @@ namespace PowerLmsServer.Managers
             var cleaned = mawbNo.Replace(" ", "");
             if (cleaned.Length == 11 && !cleaned.Contains("-"))
             {
-                return $"{cleaned.Substring(0, 3)}-{cleaned.Substring(3, 8)}";
+                return $"{cleaned[..3]}-{cleaned[3..11]}";
             }
             return cleaned;
         }
@@ -202,7 +202,7 @@ namespace PowerLmsServer.Managers
             if (normalized.Length == 12 && normalized[3] == '-')
                 return normalized;
             if (normalized.Length == 11)
-                return $"{normalized.Substring(0, 3)}-{normalized.Substring(3, 8)}";
+                return $"{normalized[..3]}-{normalized[3..11]}";
             return mawbNo;
         }
 

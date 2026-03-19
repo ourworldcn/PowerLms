@@ -422,9 +422,8 @@ namespace PowerLmsServer.Managers
                   .AsNoTracking()
           .Where(c => c.UserId == userId)
               .FirstOrDefault();
-            if (userOrg == null)
-                throw new InvalidOperationException($"用户 {userId} 未找到所属组织机构");
-            var merchantId = ResolveMerchantIdFromDatabaseCore(dbContext, userOrg.OrgId);
+            var merchantId = ResolveMerchantIdFromDatabaseCore(dbContext,
+                (userOrg ?? throw new InvalidOperationException($"用户 {userId} 未找到所属组织机构")).OrgId);
             if (!merchantId.HasValue)
                 throw new InvalidOperationException($"用户 {userId} 所属组织机构 {userOrg.OrgId} 未找到关联的商户");
             return merchantId.Value;
@@ -485,8 +484,7 @@ namespace PowerLmsServer.Managers
             // ✅ 移除 AsNoTracking,让EF Core跟踪实体并自动加载导航属性
             var merchant = dbContext.Set<PlMerchant>()
                 .FirstOrDefault(c => c.Id == merchantId);
-            if (merchant is null)
-                throw new InvalidOperationException($"商户 {merchantId} 未找到");
+            _ = merchant ?? throw new InvalidOperationException($"商户 {merchantId} 未找到");
             // ✅ 查询根组织机构(ParentId为null)
             var rootOrgs = dbContext.Set<PlOrganization>()
                 .Where(c => c.MerchantId == merchantId && c.ParentId == null)

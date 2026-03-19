@@ -128,7 +128,7 @@ namespace PowerLmsWebApi.Controllers
                     {
                         if (condition.Key.StartsWith(accountRolePrefix, StringComparison.OrdinalIgnoreCase))
                         {
-                            string propName = condition.Key.Substring(accountRolePrefix.Length);
+                            string propName = condition.Key[accountRolePrefix.Length..];
                             accountRoleConditions.Add(propName, condition.Value);
                         }
                         else

@@ -188,7 +188,7 @@ internal class Program
             typeof(Account).Assembly, 
             typeof(SystemResourceManager).Assembly 
         };
-        HashSet<Assembly> hsAssm = new HashSet<Assembly>(AppDomain.CurrentDomain.GetAssemblies());
+        var hsAssm = new HashSet<Assembly>(AppDomain.CurrentDomain.GetAssemblies());
         assemblies.ForEach(c => hsAssm.Add(c));
         services.AutoRegister(hsAssm);
         services.AddAutoMapper(hsAssm);

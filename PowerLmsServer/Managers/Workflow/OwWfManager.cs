@@ -822,9 +822,8 @@ namespace PowerLmsServer.Managers
                 throw new ArgumentException("工作流ID不能为空", nameof(workflowId));
             if (newState > 2)
                 throw new ArgumentException("工作流状态值非法，必须是0、1或2", nameof(newState));
-            var workflow = LoadWorkflowById(workflowId);
-            if (workflow == null)
-                throw new InvalidOperationException($"工作流不存在：WorkflowId={workflowId}");
+            var workflow = LoadWorkflowById(workflowId)
+                ?? throw new InvalidOperationException($"工作流不存在：WorkflowId={workflowId}");
             if (workflow.State != 0 && newState != 0)
             {
                 _SqlAppLogger.LogGeneralInfo($"工作流状态变更失败：工作流已处于终态，无法再次变更。WorkflowId={workflowId}, CurrentState={workflow.State}, NewState={newState}");

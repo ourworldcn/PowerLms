@@ -136,6 +136,7 @@ namespace Microsoft.Extensions.Caching.Memory
                     _IsDisposed = true;
                 }
                 //Cache.AddItemCore(this);
+                GC.SuppressFinalize(this);
             }
             #endregion IDisposable接口相关
             #endregion ICacheEntry接口相关

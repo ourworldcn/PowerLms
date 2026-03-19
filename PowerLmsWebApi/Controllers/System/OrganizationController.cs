@@ -166,7 +166,7 @@ namespace PowerLmsWebApi.Controllers
                 {
                     if (condition.Key.StartsWith(accountOrgPrefix, StringComparison.OrdinalIgnoreCase))
                     {
-                        string propName = condition.Key.Substring(accountOrgPrefix.Length);
+                        string propName = condition.Key[accountOrgPrefix.Length..];
                         accountOrgConditions.Add(propName, condition.Value);
                     }
                     else

@@ -186,7 +186,7 @@ namespace PowerLmsWebApi.Controllers
                 // 保存所有更改
                 _DbContext.SaveChanges();
 
-                _Logger.LogInformation($"成功删除任务 {id}");
+                _Logger.LogInformation("成功删除任务 {Id}", id);
             }
             catch (Exception ex)
             {

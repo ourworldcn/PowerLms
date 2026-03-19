@@ -27,7 +27,7 @@ namespace OW.DDD
             if (svc is null)
             {
                 OwHelper.SetLastError(120);
-                return default(TResult);
+                return default;
             }
             else
                 return svc.Handle(command);

@@ -182,7 +182,7 @@ namespace PowerLmsWebApi.Controllers
             {
                 merchantId = _OrgManager.GetMerchantIdByOrgId(item.OrgId.Value);
             }
-            List<Guid> affectedUserIds = new List<Guid>();
+            var affectedUserIds = new List<Guid>();
             try
             {
                 // 删除角色-用户关联关系

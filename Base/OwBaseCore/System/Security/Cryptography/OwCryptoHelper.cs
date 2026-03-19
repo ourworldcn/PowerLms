@@ -46,9 +46,9 @@ namespace OW.Security
             var result = ArrayPool<byte>.Shared.Rent(requiredLength);
             using var aesGcm = new AesGcm(key);
             Span<byte> resultSpan = result.AsSpan(0, requiredLength);
-            var nonceSpan = resultSpan.Slice(0, NonceSize);
-            var tagSpan = resultSpan.Slice(NonceSize, TagSize);
-            var cipherSpan = resultSpan.Slice(Overhead);
+            var nonceSpan = resultSpan[..NonceSize];
+            var tagSpan = resultSpan[NonceSize..(NonceSize + TagSize)];
+            var cipherSpan = resultSpan[Overhead..];
             RandomNumberGenerator.Fill(nonceSpan);
             aesGcm.Encrypt(nonceSpan, plainData, cipherSpan, tagSpan);
             return new ArraySegment<byte>(result, 0, requiredLength);
@@ -76,14 +76,14 @@ namespace OW.Security
             if (plainLength == 0)
             {
                 using var aesGcm = new AesGcm(key);
-                aesGcm.Decrypt(encryptedData.Slice(0, NonceSize), ReadOnlySpan<byte>.Empty, encryptedData.Slice(NonceSize, TagSize), Span<byte>.Empty);
+                aesGcm.Decrypt(encryptedData[..NonceSize], ReadOnlySpan<byte>.Empty, encryptedData[NonceSize..(NonceSize + TagSize)], Span<byte>.Empty);
                 return new ArraySegment<byte>(Array.Empty<byte>());
             }
             var result = ArrayPool<byte>.Shared.Rent(plainLength);
             try
             {
                 using var aesGcm = new AesGcm(key);
-                aesGcm.Decrypt(encryptedData.Slice(0, NonceSize), encryptedData.Slice(Overhead), encryptedData.Slice(NonceSize, TagSize), result.AsSpan(0, plainLength));
+                aesGcm.Decrypt(encryptedData[..NonceSize], encryptedData[Overhead..], encryptedData[NonceSize..(NonceSize + TagSize)], result.AsSpan(0, plainLength));
                 return new ArraySegment<byte>(result, 0, plainLength);
             }
             catch (CryptographicException ex)

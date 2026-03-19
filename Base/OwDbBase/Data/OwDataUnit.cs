@@ -240,12 +240,10 @@ namespace OW.Data
         /// <returns>主键属性数组</returns>
         private static PropertyInfo[] GetPrimaryKeyProperties(Type entityType, DbContext dbContext)
         {
-            var entityTypeMetadata = dbContext.Model.FindEntityType(entityType);
-            if (entityTypeMetadata == null)
-                throw new InvalidOperationException($"找不到实体类型 {entityType.Name} 的EF Core元数据，请确保该实体已配置在DbContext中");
-            var primaryKey = entityTypeMetadata.FindPrimaryKey();
-            if (primaryKey == null)
-                throw new InvalidOperationException($"实体类型 {entityType.Name} 未配置主键");
+            var entityTypeMetadata = dbContext.Model.FindEntityType(entityType)
+                ?? throw new InvalidOperationException($"找不到实体类型 {entityType.Name} 的EF Core元数据，请确保该实体已配置在DbContext中");
+            var primaryKey = entityTypeMetadata.FindPrimaryKey()
+                ?? throw new InvalidOperationException($"实体类型 {entityType.Name} 未配置主键");
             return primaryKey.Properties.Select(p => entityType.GetProperty(p.Name)).Where(p => p != null).ToArray();
         }
         /// <summary>

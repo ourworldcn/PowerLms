@@ -294,8 +294,7 @@ namespace PowerLmsWebApi.Controllers.Financial
                     subDirectory: "FinancialExports",
                     skipValidation: true
                 );
-                if (fileInfoRecord == null)
-                    throw new InvalidOperationException("文件保存失败");
+                _ = fileInfoRecord ?? throw new InvalidOperationException("文件保存失败");
                 currentStep = "标记申请单为已导出";
                 var markedCount = exportManager.MarkAsExported(requisitions, userId);
                 dbContext.SaveChanges(); // 保存导出标记

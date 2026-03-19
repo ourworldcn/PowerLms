@@ -464,15 +464,13 @@ namespace System.Threading
         public void Dispose()
         {
             if (_disposed) return;
-
             _disposed = true;
-
             if (_executionThread.IsAlive && !_executionThread.Join(10000))
             {
                 _logger?.LogWarning("执行线程未能在超时时间内结束");
             }
-
             _logger?.LogInformation("TaskDispatcher 已释放资源");
+            GC.SuppressFinalize(this);
         }
 
         /// <summary>

@@ -386,20 +386,20 @@ namespace PowerLmsWebApi.Controllers.OA
             try
             {
                 // 从条件中分离出不同前缀的条件
-                Dictionary<string, string> wfConditions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                Dictionary<string, string> reqConditions = conditional != null
+                var wfConditions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                var reqConditions = conditional != null
                     ? new Dictionary<string, string>(conditional, StringComparer.OrdinalIgnoreCase)
                     : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 byte wfState = 15; // 默认值，意味着获取指定操作人相关的所有工作流节点项
                 if (reqConditions.Count > 0)
                 {
-                    List<string> keysToRemove = new List<string>();
+                    var keysToRemove = new List<string>();
                     foreach (var pair in reqConditions)
                     {
                         // 处理工作流条件
                         if (pair.Key.StartsWith("OwWf.", StringComparison.OrdinalIgnoreCase))
                         {
-                            string wfFieldName = pair.Key.Substring(5); // 去掉"OwWf."前缀
+                            string wfFieldName = pair.Key[5..]; // 去掉"OwWf."前缀
                             // 处理 State 的特殊情况
                             if (string.Equals(wfFieldName, "State", StringComparison.OrdinalIgnoreCase))
                             {

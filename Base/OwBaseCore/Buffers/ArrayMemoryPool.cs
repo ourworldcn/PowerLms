@@ -75,8 +75,7 @@ namespace OW.Buffers
             {
                 get
                 {
-                    var array = _array;
-                    if (array == null) throw new ObjectDisposedException(nameof(ArrayMemoryOwner));
+                    var array = _array ?? throw new ObjectDisposedException(nameof(ArrayMemoryOwner));
                     return array.AsMemory();
                 }
             }

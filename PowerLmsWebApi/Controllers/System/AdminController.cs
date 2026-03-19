@@ -720,8 +720,7 @@ namespace PowerLmsWebApi.Controllers.System
         public ActionResult<AddShippingContainersKindReturnDto> AddShippingContainersKind(AddShippingContainersKindParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "B.9")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out var err, "B.9")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new AddShippingContainersKindReturnDto();
             model.Item.GenerateNewId();
             var id = model.Item.Id;

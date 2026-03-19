@@ -103,28 +103,36 @@ namespace PowerLms.Data
         /// 主件单数。
         /// </summary>
         [Comment("主件单数。")]
+#pragma warning disable IDE1006
         public int M_PkgsCount { get; set; }
+#pragma warning restore IDE1006
 
         /// <summary>
         /// 主单重量，3位小数。
         /// </summary>
         [Comment("主单重量，3位小数")]
         [Precision(18, 3)]
+#pragma warning disable IDE1006
         public decimal M_weight { get; set; }
+#pragma warning restore IDE1006
 
         /// <summary>
         /// 主单体积，3位小数。
         /// </summary>
         [Comment("主单体积，3位小数")]
         [Precision(18, 3)]
+#pragma warning disable IDE1006
         public decimal M_MeasureMent { get; set; }
+#pragma warning restore IDE1006
 
         /// <summary>
         /// 主单计费重量，3位小数。
         /// </summary>
         [Comment("主单计费重量，3位小数")]
         [Precision(18, 3)]
+#pragma warning disable IDE1006
         public decimal M_Netweigh { get; set; }
+#pragma warning restore IDE1006
 
         /// <summary>
         /// 包装件单数。结算件数。

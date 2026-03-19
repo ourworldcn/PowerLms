@@ -108,7 +108,7 @@ namespace PowerLmsServer.Managers
             if (invoiceInfo == null) // 参数检查
             {
                 errorMessage = "传入的发票信息对象为null";
-                _logger?.LogError(errorMessage);
+                _logger?.LogError("{ErrorMessage}", errorMessage);
                 OwHelper.SetLastErrorAndMessage((int)HttpStatusCode.BadRequest, errorMessage);
                 return null;
             }
@@ -133,7 +133,7 @@ namespace PowerLmsServer.Managers
                 _logger?.LogInformation("成功获取发票ID {TaxInvoiceInfoId} 对应的渠道账号配置", invoiceInfo.Id);
                 return channelAccount; // 返回成功结果
             ErrorHandler: // 统一错误处理标签
-                _logger?.LogError(errorMessage);
+                _logger?.LogError("{ErrorMessage}", errorMessage);
                 OwHelper.SetLastErrorAndMessage(errorCode, errorMessage);
                 return null;
             }
@@ -155,7 +155,7 @@ namespace PowerLmsServer.Managers
             if (channelAccount == null)
             {
                 string errorMessage = "传入的渠道账号实体为null";
-                _logger?.LogError(errorMessage);
+                _logger?.LogError("{ErrorMessage}", errorMessage);
                 OwHelper.SetLastErrorAndMessage((int)HttpStatusCode.BadRequest, errorMessage);
                 return null;
             }
@@ -166,7 +166,7 @@ namespace PowerLmsServer.Managers
                 if (channelAccount.ParentlId.GetValueOrDefault() != nuoNuoManagerGuid)
                 {
                     string errorMessage = $"渠道账号ID {channelAccount.Id} 不是诺诺发票渠道";
-                    _logger?.LogError(errorMessage);
+                    _logger?.LogError("渠道账号ID {ChannelAccountId} 不是诺诺发票渠道", channelAccount.Id);
                     OwHelper.SetLastErrorAndMessage((int)HttpStatusCode.BadRequest, errorMessage);
                     return null;
                 }
@@ -174,7 +174,7 @@ namespace PowerLmsServer.Managers
                 if (string.IsNullOrEmpty(channelAccount.JsonObjectString))
                 {
                     string errorMessage = $"渠道账号ID {channelAccount.Id} 的配置信息为空";
-                    _logger?.LogError(errorMessage);
+                    _logger?.LogError("渠道账号ID {ChannelAccountId} 的配置信息为空", channelAccount.Id);
                     OwHelper.SetLastErrorAndMessage((int)HttpStatusCode.BadRequest, errorMessage);
                     return null;
                 }
@@ -183,7 +183,7 @@ namespace PowerLmsServer.Managers
                 if (nnChannelAccount == null)
                 {
                     string errorMessage = $"渠道账号ID {channelAccount.Id} 的配置信息无法解析";
-                    _logger?.LogError(errorMessage);
+                    _logger?.LogError("渠道账号ID {ChannelAccountId} 的配置信息无法解析", channelAccount.Id);
                     OwHelper.SetLastErrorAndMessage((int)HttpStatusCode.BadRequest, errorMessage);
                     return null;
                 }
@@ -191,7 +191,7 @@ namespace PowerLmsServer.Managers
                 if (string.IsNullOrEmpty(nnChannelAccount.AppKey) || string.IsNullOrEmpty(nnChannelAccount.AppSecret))
                 {
                     string errorMessage = $"渠道账号ID {channelAccount.Id} 的AppKey或AppSecret为空";
-                    _logger?.LogError(errorMessage);
+                    _logger?.LogError("渠道账号ID {ChannelAccountId} 的AppKey或AppSecret为空", channelAccount.Id);
                     OwHelper.SetLastErrorAndMessage((int)HttpStatusCode.BadRequest, errorMessage);
                     return null;
                 }

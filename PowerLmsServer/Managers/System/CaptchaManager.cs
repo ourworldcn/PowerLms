@@ -123,7 +123,7 @@ namespace PowerLmsServer.Managers
                 // 设置文字样式和渐变色画笔
                 var font = new Font("Arial", 12, FontStyle.Bold | FontStyle.Italic); // 12号加粗斜体Arial字体
                 var brush = new LinearGradientBrush(new Rectangle(0, 0, image.Width, image.Height), Color.Blue, Color.DarkRed, 1.2f, true); // 蓝色到深红色的线性渐变
-                StringFormat drawFormat = new StringFormat(); // 字符串格式设置
+                var drawFormat = new StringFormat(); // 字符串格式设置
                 drawFormat.Alignment = StringAlignment.Center; // 水平居中对齐
                 var rect = new Rectangle(Point.Empty, image.Size); // 创建绘制矩形区域
                 rect.Inflate(-2, -1); // 缩小绘制区域，留出边距

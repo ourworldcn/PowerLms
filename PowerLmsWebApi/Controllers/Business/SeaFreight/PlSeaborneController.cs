@@ -345,7 +345,7 @@ namespace PowerLmsWebApi.Controllers
                 c.GenerateIdIfEmpty();
                 c.ParentId = model.ParentId;
             });
-            List<ContainerKindCount> list = new List<ContainerKindCount>();
+            var list = new List<ContainerKindCount>();
             if (!EfHelper.SetChildren(model.Items, model.ParentId, _DbContext, list))
             {
                 return BadRequest(OwHelper.GetLastErrorMessage());

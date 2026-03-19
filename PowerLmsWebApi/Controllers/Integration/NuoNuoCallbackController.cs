@@ -80,7 +80,7 @@ namespace PowerLmsWebApi.Controllers
                     case "redConfirmCallback": // 红字确认单申请结果回调
                         return HandleRedConfirmCallback(form);
                     default:
-                        _logger.LogWarning($"未知的操作类型: {operater}");
+                        _logger.LogWarning("未知的操作类型: {Operater}", operater);
                         return BadRequest(new { status = "9999", message = "未知的操作类型" });
                 }
             }

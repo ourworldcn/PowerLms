@@ -171,10 +171,7 @@ namespace PowerLmsServer.Managers.OA
                     .Where(e => e.Entity.Id == workflow.TemplateId)
                     .Select(e => e.Entity)
                     .FirstOrDefault();
-                if (template == null)
-                {
-                    template = dbContext.WfTemplates.Local.FirstOrDefault(t => t.Id == workflow.TemplateId);
-                }
+                template ??= dbContext.WfTemplates.Local.FirstOrDefault(t => t.Id == workflow.TemplateId);
                 if (template == null)
                 {
                     _SqlAppLogger.LogGeneralInfo($"OA费用回调：未找到工作流模板（本地缓存），WorkflowId={workflow.Id}");
@@ -214,10 +211,7 @@ namespace PowerLmsServer.Managers.OA
                 .Where(e => e.Entity.Id == requisitionId)
                 .Select(e => e.Entity)
                 .FirstOrDefault();
-            if (requisition == null)
-            {
-                requisition = dbContext.OaExpenseRequisitions.Local.FirstOrDefault(r => r.Id == requisitionId);
-            }
+            requisition ??= dbContext.OaExpenseRequisitions.Local.FirstOrDefault(r => r.Id == requisitionId);
             if (requisition == null)
             {
                 _SqlAppLogger.LogGeneralInfo($"OA费用回调：申请单不存在（本地缓存），RequisitionId={requisitionId}");

@@ -283,8 +283,7 @@ namespace PowerLmsServer.Managers
             {
                 // 商户管理员可以访问整个商户下的所有组织机构
                 var allOrgIds = orgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs.Keys.ToList();
-                allowedOrgIds = new HashSet<Guid?>(allOrgIds.Cast<Guid?>());
-                allowedOrgIds.Add(merchantId.Value);
+                allowedOrgIds = new HashSet<Guid?>(allOrgIds.Cast<Guid?>()) { merchantId.Value };
             }
             else
             {
@@ -292,8 +291,7 @@ namespace PowerLmsServer.Managers
                 var companyId = user.OrgId.HasValue ? orgManager.GetCompanyIdByOrgId(user.OrgId.Value) : null;
                 if (!companyId.HasValue) return query.Where(_ => false);
                 var companyOrgIds = orgManager.GetOrgIdsByCompanyId(companyId.Value).ToList();
-                allowedOrgIds = new HashSet<Guid?>(companyOrgIds.Cast<Guid?>());
-                allowedOrgIds.Add(merchantId.Value);
+                allowedOrgIds = new HashSet<Guid?>(companyOrgIds.Cast<Guid?>()) { merchantId.Value };
             }
             return query.Where(entity => allowedOrgIds.Contains(entity.OrgId));
         }

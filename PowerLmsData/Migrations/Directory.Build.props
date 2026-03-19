@@ -1,0 +1,6 @@
+﻿<Project>
+  <PropertyGroup>
+    <!-- 此目录为 EF Core 自动生成的迁移文件，统一忽略 XML 注释警告 -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+</Project>

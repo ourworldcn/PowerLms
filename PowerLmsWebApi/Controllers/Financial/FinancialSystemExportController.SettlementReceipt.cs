@@ -860,16 +860,14 @@ namespace PowerLmsWebApi.Controllers.Financial
             if (user.IsMerchantAdmin)
             {
                 var allOrgIds = _OrgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs.Keys.ToList();
-                allowedOrgIds = new HashSet<Guid?>(allOrgIds.Cast<Guid?>());
-                allowedOrgIds.Add(merchantId.Value);
+                allowedOrgIds = new HashSet<Guid?>(allOrgIds.Cast<Guid?>()) { merchantId.Value };
             }
             else
             {
                 var companyId = user.OrgId.HasValue ? _OrgManager.GetCompanyIdByOrgId(user.OrgId.Value) : null;
                 if (!companyId.HasValue) return query.Where(i => false);
                 var companyOrgIds = _OrgManager.GetOrgIdsByCompanyId(companyId.Value).ToList();
-                allowedOrgIds = new HashSet<Guid?>(companyOrgIds.Cast<Guid?>());
-                allowedOrgIds.Add(merchantId.Value);
+                allowedOrgIds = new HashSet<Guid?>(companyOrgIds.Cast<Guid?>()) { merchantId.Value };
             }
             var filteredQuery = from invoice in query
                                 join invoiceItem in _DbContext.PlInvoicesItems
@@ -917,16 +915,14 @@ namespace PowerLmsWebApi.Controllers.Financial
             if (user.IsMerchantAdmin)
             {
                 var allOrgIds = orgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs.Keys.ToList();
-                allowedOrgIds = new HashSet<Guid?>(allOrgIds.Cast<Guid?>());
-                allowedOrgIds.Add(merchantId.Value);
+                allowedOrgIds = new HashSet<Guid?>(allOrgIds.Cast<Guid?>()) { merchantId.Value };
             }
             else
             {
                 var companyId = user.OrgId.HasValue ? orgManager.GetCompanyIdByOrgId(user.OrgId.Value) : null;
                 if (!companyId.HasValue) return query.Where(i => false);
                 var companyOrgIds = orgManager.GetOrgIdsByCompanyId(companyId.Value).ToList();
-                allowedOrgIds = new HashSet<Guid?>(companyOrgIds.Cast<Guid?>());
-                allowedOrgIds.Add(merchantId.Value);
+                allowedOrgIds = new HashSet<Guid?>(companyOrgIds.Cast<Guid?>()) { merchantId.Value };
             }
             var filteredQuery = from invoice in query
                                 join invoiceItem in dbContext.PlInvoicesItems

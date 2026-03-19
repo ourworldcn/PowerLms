@@ -242,10 +242,10 @@ namespace PowerLmsWebApi.Controllers
             try
             {
                 _DbContext.SaveChanges();
-                var logMessage = rejectedItems.Any() 
-                    ? $"用户 {context.User.Id} 成功修改了 {itemsToUpdate.Count} 个财务科目设置，拒绝了 {rejectedItems.Count} 个项目"
-                    : $"用户 {context.User.Id} 成功修改了 {itemsToUpdate.Count} 个财务科目设置";
-                _Logger.LogInformation(logMessage);
+                if (rejectedItems.Any())
+                    _Logger.LogInformation("用户 {UserId} 成功修改了 {UpdateCount} 个财务科目设置，拒绝了 {RejectCount} 个项目", context.User.Id, itemsToUpdate.Count, rejectedItems.Count);
+                else
+                    _Logger.LogInformation("用户 {UserId} 成功修改了 {UpdateCount} 个财务科目设置", context.User.Id, itemsToUpdate.Count);
                 if (rejectedItems.Any())
                 {
                     _Logger.LogInformation("被拒绝的项目详情：{RejectedItems}", string.Join(", ", rejectedItems));
@@ -280,11 +280,9 @@ namespace PowerLmsWebApi.Controllers
         public ActionResult<RemoveSubjectConfigurationReturnDto> RemoveSubjectConfiguration([FromBody] RemoveSubjectConfigurationParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-
             // 权限检查：需要B.11权限
-            string err;
             if (!context.User.IsAdmin())
-                if (!_AuthorizationManager.Demand(out err, "B.11")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+                if (!_AuthorizationManager.Demand(out var err, "B.11")) return StatusCode((int)HttpStatusCode.Forbidden, err);
 
             var result = new RemoveSubjectConfigurationReturnDto();
 

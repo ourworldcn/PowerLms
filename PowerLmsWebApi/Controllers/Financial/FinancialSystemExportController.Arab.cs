@@ -473,8 +473,7 @@ namespace PowerLmsWebApi.Controllers.Financial
             {
                 // 商户管理员可以访问整个商户下的所有组织机构
                 var allOrgIds = orgManager.GetOrLoadOrgCacheItem(merchantId.Value).Orgs.Keys.ToList();
-                allowedOrgIds = new HashSet<Guid?>(allOrgIds.Cast<Guid?>());
-                allowedOrgIds.Add(merchantId.Value); // 添加商户ID本身
+                allowedOrgIds = new HashSet<Guid?>(allOrgIds.Cast<Guid?>()) { merchantId.Value };
             }
             else
             {
@@ -485,8 +484,7 @@ namespace PowerLmsWebApi.Controllers.Financial
                     return feesQuery.Where(f => false);
                 }
                 var companyOrgIds = orgManager.GetOrgIdsByCompanyId(companyId.Value).ToList();
-                allowedOrgIds = new HashSet<Guid?>(companyOrgIds.Cast<Guid?>());
-                allowedOrgIds.Add(merchantId.Value); // 添加商户ID本身
+                allowedOrgIds = new HashSet<Guid?>(companyOrgIds.Cast<Guid?>()) { merchantId.Value };
             }
             // 通过关联的业务过滤费用
             var filteredQuery = from fee in feesQuery

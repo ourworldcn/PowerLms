@@ -159,7 +159,7 @@ namespace PowerLmsWebApi.Controllers
                 byte wfState = 15; // 默认值，意味着获取指定操作人相关的所有工作流节点项
                 if (otherConditions.Count > 0)
                 {
-                    List<string> keysToRemove = new List<string>();
+                    var keysToRemove = new List<string>();
                     foreach (var pair in otherConditions)
                     {
                         // 处理工作流条件
@@ -363,20 +363,20 @@ namespace PowerLmsWebApi.Controllers
             try
             {
                 var id = model.Id;
-                _Logger.LogInformation($"开始处理删除业务费用申请单请求，申请单ID：{id}");
+                _Logger.LogInformation("开始处理删除业务费用申请单请求，申请单ID：{Id}", id);
                 // 查找申请单
                 var dbSet = _DbContext.DocFeeRequisitions;
                 var item = dbSet.Find(id);
                 if (item is null)
                 {
-                    _Logger.LogWarning($"未找到指定的申请单，ID：{id}");
+                    _Logger.LogWarning("未找到指定的申请单，ID：{Id}", id);
                     return BadRequest("找不到指定的申请单");
                 }
                 // 获取所有关联的申请单明细项
                 var items = _DbContext.DocFeeRequisitionItems.Where(c => c.ParentId == id).ToList();
                 if (items.Count > 0)
                 {
-                    _Logger.LogInformation($"申请单 {id} 包含 {items.Count} 个明细项，正在检查是否可删除");
+                    _Logger.LogInformation("申请单 {Id} 包含 {Count} 个明细项，正在检查是否可删除", id, items.Count);
                     // 检查明细项是否已结算 - 仅通过直接查询数据库中是否存在关联的结算单明细
                     foreach (var detail in items)
                     {
@@ -385,7 +385,7 @@ namespace PowerLmsWebApi.Controllers
                             invoiceItem.RequisitionItemId == detail.Id);
                         if (hasInvoiceItems)
                         {
-                            _Logger.LogWarning($"申请单明细(ID:{detail.Id})存在关联的结算单明细，无法删除申请单");
+                            _Logger.LogWarning("申请单明细(ID:{DetailId})存在关联的结算单明细，无法删除申请单", detail.Id);
                             return BadRequest($"申请单明细(ID:{detail.Id})已被关联到结算单，无法删除申请单");
                         }
                     }
@@ -402,14 +402,14 @@ namespace PowerLmsWebApi.Controllers
                 // 如果有关联的明细项，先删除它们
                 if (items.Count > 0)
                 {
-                    _Logger.LogInformation($"删除业务费用申请单 {id} 的 {items.Count} 个明细项");
+                    _Logger.LogInformation("删除业务费用申请单 {Id} 的 {Count} 个明细项", id, items.Count);
                     _DbContext.DocFeeRequisitionItems.RemoveRange(items);
                 }
                 // 删除申请单
                 _EntityManager.Remove(item);
                 // 保存所有更改
                 _DbContext.SaveChanges();
-                _Logger.LogInformation($"成功删除业务费用申请单 {id} 及其所有关联明细项");
+                _Logger.LogInformation("成功删除业务费用申请单 {Id} 及其所有关联明细项", id);
             }
             catch (Exception ex)
             {

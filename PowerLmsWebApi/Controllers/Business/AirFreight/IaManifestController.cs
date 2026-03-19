@@ -424,7 +424,7 @@ namespace PowerLmsWebApi.Controllers
             var cleaned = mawbNo.Replace(" ", "");
             if (cleaned.Length == 11 && !cleaned.Contains("-"))
             {
-                return $"{cleaned.Substring(0, 3)}-{cleaned.Substring(3, 8)}";
+                return $"{cleaned[..3]}-{cleaned[3..11]}";
             }
             return cleaned;
         }

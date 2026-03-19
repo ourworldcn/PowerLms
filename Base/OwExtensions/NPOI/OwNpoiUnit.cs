@@ -99,8 +99,8 @@ namespace OwExtensions.NPOI
             var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
                 .Where(p => p.CanWrite)
                 .ToDictionary(p => p.Name, p => p, StringComparer.OrdinalIgnoreCase);
-            var headerRow = sheet.GetRow(sheet.FirstRowNum);
-            if (headerRow == null) throw new InvalidOperationException("工作表第一行为空，无法获取列名");
+            var headerRow = sheet.GetRow(sheet.FirstRowNum)
+                ?? throw new InvalidOperationException("工作表第一行为空，无法获取列名");
             var columnMappings = new List<(int columnIndex, PropertyInfo property)>();
             for (int columnIndex = 0; columnIndex < headerRow.PhysicalNumberOfCells; columnIndex++)
             {

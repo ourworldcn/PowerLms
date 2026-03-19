@@ -100,6 +100,7 @@ namespace PowerLmsServer.Managers
         public void Dispose()
         {
             // 释放资源
+            GC.SuppressFinalize(this);
         }
         #endregion 释放资源
     }

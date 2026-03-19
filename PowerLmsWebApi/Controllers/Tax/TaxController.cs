@@ -258,7 +258,7 @@ namespace PowerLmsWebApi.Controllers
                         if (pair.Key.StartsWith(docFeeRequisitionPrefix, StringComparison.OrdinalIgnoreCase))
                         {
                             // 提取申请单条件，去掉前缀
-                            string fieldName = pair.Key.Substring(docFeeRequisitionPrefix.Length);
+                            string fieldName = pair.Key[docFeeRequisitionPrefix.Length..];
                             reqConditions[fieldName] = pair.Value;
                         }
                         else

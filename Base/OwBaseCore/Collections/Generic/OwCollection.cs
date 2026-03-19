@@ -105,7 +105,7 @@ namespace OW.Collections.Generic
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Span<T> AsSpan()
         {
-            return _owner == null ? Span<T>.Empty : _owner.Memory.Span.Slice(0, _count);
+            return _owner == null ? Span<T>.Empty : _owner.Memory.Span[.._count];
         }
         /// <summary>
         /// 返回包含集合中指定范围元素的 Span
@@ -203,7 +203,7 @@ namespace OW.Collections.Generic
         /// <returns>内存句柄，如果集合为空则返回默认句柄</returns>
         public MemoryHandle Pin()
         {
-            return _owner == null ? default : _owner.Memory.Slice(0, _count).Pin();
+            return _owner == null ? default : _owner.Memory[.._count].Pin();
         }
         #endregion [内存管理]
         #region [空间操作]
@@ -226,9 +226,9 @@ namespace OW.Collections.Generic
             var span = _owner.Memory.Span;
             if (index < _count) // 需要移动现有元素
             {
-                span.Slice(index, _count - index).CopyTo(span.Slice(index + count)); // 后移元素
+                span[index.._count].CopyTo(span[(index + count)..]);
             }
-            var reserved = span.Slice(index, count); // 获取预留区域
+            var reserved = span[index..(index + count)]; // 获取预留区域
             if (clear)
             {
                 reserved.Clear(); // 可选清零
@@ -258,7 +258,7 @@ namespace OW.Collections.Generic
             var span = _owner.Memory.Span;
             if (index + count < _count) // 需要前移后续元素
             {
-                span.Slice(index + count, _count - index - count).CopyTo(span.Slice(index));
+                span.Slice(index + count, _count - index - count).CopyTo(span[index..]);
             }
             if (RuntimeHelpers.IsReferenceOrContainsReferences<T>()) // 引用类型需要清理
             {
@@ -354,7 +354,7 @@ namespace OW.Collections.Generic
                 // 复制幸存块（仅当需要移动时）
                 if (writePos != blockStart)
                 {
-                    span.Slice(blockStart, blockLength).CopyTo(span.Slice(writePos));
+                span.Slice(blockStart, blockLength).CopyTo(span[writePos..]);
                 }
                 writePos += blockLength;
                 searchPos = blockStart + blockLength;
@@ -362,13 +362,13 @@ namespace OW.Collections.Generic
             // 前移尾部元素（处理区间之后的部分）
             if (regionEnd < _count)
             {
-                span.Slice(regionEnd, _count - regionEnd).CopyTo(span.Slice(writePos));
+                span[regionEnd.._count].CopyTo(span[writePos..]);
                 writePos += _count - regionEnd;
             }
             // 清理尾部（引用类型需要清零）
             if (RuntimeHelpers.IsReferenceOrContainsReferences<T>())
             {
-                span.Slice(writePos, _count - writePos).Clear();
+                span[writePos..].Clear();
             }
             _count = writePos; // 更新计数
             return removedCount;
@@ -383,13 +383,14 @@ namespace OW.Collections.Generic
             if (_owner != null)
             {
                 if (_count > 0 && RuntimeHelpers.IsReferenceOrContainsReferences<T>()) // 清理视野内的引用
-                    _owner.Memory.Span.Slice(0, _count).Clear();
+                    _owner.Memory.Span[.._count].Clear();
                 _owner.Dispose(); // 归还内存到池
                 _owner = null;
             }
             if (_disposePool) // 如果使用的是默认池
                 _pool?.Dispose();
             _count = 0;
+            GC.SuppressFinalize(this);
         }
         #endregion [IDisposable Members]
         #region [辅助方法]

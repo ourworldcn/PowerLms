@@ -640,8 +640,7 @@ namespace PowerLmsWebApi.Controllers
             if (_DbContext.PlJobs.Find(model.JobId) is not PlJob job) return NotFound($"未找到指定的任务 ，Id={model.JobId}");
 
             #region 验证权限
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "F.2.8"))
+            if (!_AuthorizationManager.Demand(out var err, "F.2.8"))
             {
                 if (job.JobTypeId == ProjectContent.AeId)
                 {

@@ -815,6 +815,7 @@ namespace OW.Collections.Generic
         public void Dispose()
         {
             _collection?.Dispose();
+            GC.SuppressFinalize(this);
         }
         #endregion [IDisposable Members]
         #endregion [接口成员实现]

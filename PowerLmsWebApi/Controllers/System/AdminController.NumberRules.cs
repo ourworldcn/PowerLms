@@ -64,8 +64,7 @@ namespace PowerLmsWebApi.Controllers.System
         public ActionResult<AddJobNumberRuleReturnDto> AddJobNumberRule(AddJobNumberRuleParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "B.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out var err, "B.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             if (model.Item.BusinessTypeId == ProjectContent.AeId)    //若是空运出口业务
             {
                 if (!_AuthorizationManager.Demand(out err, "D0.1.1.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
@@ -95,8 +94,7 @@ namespace PowerLmsWebApi.Controllers.System
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
             if (model.Items == null || model.Items.Count == 0) return BadRequest($"{nameof(model.Items)} 为空集合。");
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "B.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out var err, "B.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             if (model.Items.Any(item => item.BusinessTypeId == ProjectContent.AeId))
                 if (!_AuthorizationManager.Demand(out err, "D0.1.1.3")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new ModifyJobNumberRuleReturnDto();
@@ -138,8 +136,7 @@ namespace PowerLmsWebApi.Controllers.System
         public ActionResult<RemoveJobNumberRuleReturnDto> RemoveJobNumberRule(RemoveJobNumberRuleParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "B.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out var err, "B.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new RemoveJobNumberRuleReturnDto();
             var id = model.Id;
             var dbSet = _DbContext.DD_JobNumberRules;
@@ -173,8 +170,7 @@ namespace PowerLmsWebApi.Controllers.System
         public ActionResult<RestoreJobNumberRuleReturnDto> RestoreJobNumberRule(RestoreJobNumberRuleParamsDto model)
         {
             if (_AccountManager.GetOrLoadContextByToken(model.Token, _ServiceProvider) is not OwContext context) return Unauthorized();
-            string err;
-            if (!_AuthorizationManager.Demand(out err, "B.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
+            if (!_AuthorizationManager.Demand(out var err, "B.2")) return StatusCode((int)HttpStatusCode.Forbidden, err);
             var result = new RestoreJobNumberRuleReturnDto();
             if (!_EntityManager.Restore<JobNumberRule>(model.Id))
             {

@@ -229,9 +229,8 @@ namespace OW.Data
             SaveFileToDisk(fileStream, fileInfo.FilePath);
             // 保存到数据库
             using var dbContext = _dbContextFactory.CreateDbContext();
-            var plFileInfosProperty = typeof(TDbContext).GetProperty("PlFileInfos");
-            if (plFileInfosProperty is null)
-                throw new InvalidOperationException($"数据库上下文 {typeof(TDbContext).Name} 不包含 PlFileInfos 属性");
+            var plFileInfosProperty = typeof(TDbContext).GetProperty("PlFileInfos")
+                ?? throw new InvalidOperationException($"数据库上下文 {typeof(TDbContext).Name} 不包含 PlFileInfos 属性");
             var plFileInfosDbSet = plFileInfosProperty.GetValue(dbContext) as DbSet<PlFileInfo>;
             plFileInfosDbSet.Add(fileInfo);
             dbContext.SaveChanges();
@@ -269,9 +268,8 @@ namespace OW.Data
             try
             {
                 using var dbContext = _dbContextFactory.CreateDbContext();
-                var plFileInfosProperty = typeof(TDbContext).GetProperty("PlFileInfos");
-                if (plFileInfosProperty is null)
-                    throw new InvalidOperationException($"数据库上下文 {typeof(TDbContext).Name} 不包含 PlFileInfos 属性");
+                var plFileInfosProperty = typeof(TDbContext).GetProperty("PlFileInfos")
+                    ?? throw new InvalidOperationException($"数据库上下文 {typeof(TDbContext).Name} 不包含 PlFileInfos 属性");
                 var plFileInfosDbSet = plFileInfosProperty.GetValue(dbContext) as DbSet<PlFileInfo>;
                 var fileInfo = plFileInfosDbSet.Find(fileId);
                 if (fileInfo is null) return false;

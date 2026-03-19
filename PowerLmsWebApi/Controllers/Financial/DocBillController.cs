@@ -558,7 +558,7 @@ namespace PowerLmsWebApi.Controllers
         /// <returns>账单号</returns>
         private string GenerateBillNo(Guid orgId, DateTime createTime)
         {
-            return $"BILL-{createTime:yyyyMMddHHmmss}-{Guid.NewGuid().ToString().Substring(0, 4).ToUpper()}";
+            return $"BILL-{createTime:yyyyMMddHHmmss}-{Guid.NewGuid().ToString()[..4].ToUpper()}";
         }
 
         private IEnumerable<PlJob> GetJobsFromFeeIds(IEnumerable<Guid> feeIds)

@@ -427,6 +427,7 @@ namespace OW.Collections
             _array?.Dispose();
             _array = null;
             _length = 0;
+            GC.SuppressFinalize(this);
         }
         #endregion [IDisposable Members]
         #region [ICloneable Members]
