@@ -57,4 +57,34 @@ schtasks /query /tn "WeeklyReboot_Monday_0400" /v
   /ru SYSTEM /rl HIGHEST = SYSTEM账户最高权限运行
   /f = 若任务已存在则强制覆盖
 
-1
+================================================================================
+MSDeploy 服务器端自动备份配置（在远程服务器上执行）
+================================================================================
+前提：服务器已安装 Web Deploy V3（路径：C:\Program Files (x86)\IIS\Microsoft Web Deploy V3）
+
+1. 打开 PowerShell（管理员），加载备份脚本：
+   cd "C:\Program Files (x86)\IIS\Microsoft Web Deploy V3\scripts"
+   . .\BackupScripts.ps1
+
+2. 全局开启备份功能：
+   TurnOn-Backups -On $true
+
+3. 配置站点备份（以 Plms 站点为例）：
+   Configure-Backups -SiteName "Plms" -Enabled $true -BackupPath "C:\inetpub\MsDeploy\Backups\{siteName}" -NumberOfBackups 5
+
+   以 PowerLms 站点为例：
+   Configure-Backups -SiteName "PowerLms" -Enabled $true -BackupPath "C:\inetpub\MsDeploy\Backups\{siteName}" -NumberOfBackups 5
+
+4. 验证配置：
+   Get-BackupSettings -SiteName "Plms"
+
+配置完成后，每次从 Visual Studio 发布时 MSDeploy 会在服务器端自动创建备份。
+备份保存在服务器 BackupPath 指定的目录中，保留最近 NumberOfBackups 个。
+
+手动恢复备份：
+   msdeploy.exe -verb:sync -source:backupManager -dest:backupManager=<站点名>,useLatest=true
+
+查看备份列表：
+   msdeploy.exe -verb:dump -source:backupManager=<站点名>
+
+参考文档：https://learn.microsoft.com/iis/publish/using-web-deploy/web-deploy-automatic-backups

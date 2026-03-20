@@ -59,6 +59,7 @@
 
   <ItemGroup>
     <None Include="Properties\PublishProfiles\RemoteIIS.pubxml.user" />
+    <None Include="Properties\PublishProfiles\RemoteIIS_LaoGuo.pubxml.user" />
   </ItemGroup>
 
 </Project>
